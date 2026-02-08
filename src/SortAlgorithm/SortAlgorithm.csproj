@@ -8,7 +8,7 @@
       <_Parameter1>SortAlgorithm.Tests</_Parameter1>
     </AssemblyAttribute>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>SandboxBenchmark</_Parameter1>
+      <_Parameter1>SortAlgorithm.Benchmark</_Parameter1>
     </AssemblyAttribute>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>SortAlgorithm.VisualizationWeb</_Parameter1>

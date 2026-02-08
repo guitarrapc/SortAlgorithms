@@ -16,10 +16,10 @@
   <Folder Name="/sandbox/">
     <Project Path="sandbox/AntiQuickSortDemo/AntiQuickSortDemo.csproj" />
     <Project Path="sandbox/BitonicCompareTest/BitonicCompareTest.csproj" />
-    <Project Path="sandbox/SandboxBenchmark/SandboxBenchmark.csproj" />
-    <Project Path="sandbox/SortAlgorithm.VisualizationWeb/SortAlgorithm.VisualizationWeb.csproj" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/SortAlgorithm.Benchmark/SortAlgorithm.Benchmark.csproj" />
+    <Project Path="src/SortAlgorithm.VisualizationWeb/SortAlgorithm.VisualizationWeb.csproj" />
     <Project Path="src/SortAlgorithm/SortAlgorithm.csproj" />
   </Folder>
   <Folder Name="/tests/">

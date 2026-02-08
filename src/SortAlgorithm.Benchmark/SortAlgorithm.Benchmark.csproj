@@ -9,7 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SortAlgorithm\SortAlgorithm.csproj" />
+    <ProjectReference Include="..\SortAlgorithm\SortAlgorithm.csproj" />
   </ItemGroup>
 
 </Project>
