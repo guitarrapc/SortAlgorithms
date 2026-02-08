@@ -1,12 +1,13 @@
 ﻿namespace SandboxBenchmark;
 
 [MemoryDiagnoser]
+[RankColumn]
 public class PartitionBenchmark
 {
-    [Params(256, 1024, 2048)]
+    [Params(256, 1024, 8192)]
     public int Size { get; set; }
 
-    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.NearlySorted)]
+    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.AntiQuicksort)]
     public DataPattern Pattern { get; set; }
 
     private int[] _blockQuickArray = default!;
@@ -18,6 +19,7 @@ public class PartitionBenchmark
     private int[] _quickMedian9Array = default!;
     private int[] _stableQuickArray = default!;
     private int[] _stdArray = default!;
+    private int[] _dotnetArray = default!;
 
     [IterationSetup]
     public void Setup()
@@ -31,6 +33,7 @@ public class PartitionBenchmark
         _quickMedian9Array = BenchmarkData.GenerateIntArray(Size, Pattern);
         _stableQuickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _stdArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _dotnetArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark]
@@ -51,7 +54,7 @@ public class PartitionBenchmark
         SortAlgorithm.Algorithms.PDQSort.Sort(_pdqArray.AsSpan());
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public void QuickSort()
     {
         SortAlgorithm.Algorithms.QuickSort.Sort(_quickArray.AsSpan());
@@ -85,5 +88,11 @@ public class PartitionBenchmark
     public void StdSort()
     {
         SortAlgorithm.Algorithms.StdSort.Sort(_stdArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void DotnetSort()
+    {
+        _dotnetArray.AsSpan().Sort();
     }
 }

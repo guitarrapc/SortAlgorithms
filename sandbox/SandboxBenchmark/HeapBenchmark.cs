@@ -1,12 +1,13 @@
 ﻿namespace SandboxBenchmark;
 
 [MemoryDiagnoser]
+[RankColumn]
 public class HeapBenchmark
 {
-    [Params(256, 1024, 2048)]
+    [Params(256, 1024, 8192)]
     public int Size { get; set; }
 
-    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.NearlySorted)]
+    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.AntiQuicksort)]
     public DataPattern Pattern { get; set; }
 
     private int[] _bottomupHeapArray = default!;
@@ -31,7 +32,7 @@ public class HeapBenchmark
         SortAlgorithm.Algorithms.BottomupHeapSort.Sort(_bottomupHeapArray.AsSpan());
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public void HeapSort()
     {
         SortAlgorithm.Algorithms.HeapSort.Sort(_heapArray.AsSpan());

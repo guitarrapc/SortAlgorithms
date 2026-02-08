@@ -1,12 +1,13 @@
 ﻿namespace SandboxBenchmark;
 
 [MemoryDiagnoser]
+[RankColumn]
 public class InsertionBenchmark
 {
-    [Params(256, 1024, 2048)]
+    [Params(256, 1024)]
     public int Size { get; set; }
 
-    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.NearlySorted)]
+    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.AntiQuicksort)]
     public DataPattern Pattern { get; set; }
 
     private int[] _binaryinsertArray = default!;
@@ -37,7 +38,7 @@ public class InsertionBenchmark
         SortAlgorithm.Algorithms.BinaryInsertionSort.Sort(_binaryinsertArray.AsSpan());
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public void InsertionSort()
     {
         SortAlgorithm.Algorithms.InsertionSort.Sort(_insertionArray.AsSpan());

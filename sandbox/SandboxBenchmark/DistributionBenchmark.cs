@@ -1,12 +1,13 @@
 ﻿namespace SandboxBenchmark;
 
 [MemoryDiagnoser]
+[RankColumn]
 public class DistributionBenchmark
 {
-    [Params(256, 1024, 2048)]
+    [Params(256, 1024)]
     public int Size { get; set; }
 
-    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.NearlySorted)]
+    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.AntiQuicksort)]
     public DataPattern Pattern { get; set; }
 
     private int[] _americanflagArray = default!;
@@ -45,7 +46,7 @@ public class DistributionBenchmark
         SortAlgorithm.Algorithms.BucketSortInteger.Sort(_bucketArray.AsSpan());
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public void CountingSort()
     {
         SortAlgorithm.Algorithms.CountingSortInteger.Sort(_countingArray.AsSpan());

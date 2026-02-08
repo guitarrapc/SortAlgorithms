@@ -10,7 +10,7 @@ public enum DataPattern
     Random,
     Sorted,
     Reversed,
-    NearlySorted
+    AntiQuicksort,
 }
 
 public static class BenchmarkData
@@ -23,7 +23,7 @@ public static class BenchmarkData
             DataPattern.Random => ArrayPatterns.GenerateRandom(size, random),
             DataPattern.Sorted => ArrayPatterns.GenerateSorted(size),
             DataPattern.Reversed => ArrayPatterns.GenerateReversed(size),
-            DataPattern.NearlySorted => ArrayPatterns.GenerateNearlySorted(size, random),
+            DataPattern.AntiQuicksort => ArrayPatterns.GenerateQuickSortAdversary(size),
             _ => throw new ArgumentException($"Unknown pattern: {pattern}")
         };
     }
@@ -37,7 +37,7 @@ public static class BenchmarkData
             DataPattern.Random => ArrayPatterns.GenerateRandom(size, random).Select(i => $"String_{i:D6}").ToArray(),
             DataPattern.Sorted => ArrayPatterns.GenerateSorted(size).Select(i => $"String_{i:D6}").ToArray(),
             DataPattern.Reversed => ArrayPatterns.GenerateReversed(size).Select(i => $"String_{i:D6}").ToArray(),
-            DataPattern.NearlySorted => ArrayPatterns.GenerateNearlySorted(size, random).Select(i => $"String_{i:D6}").ToArray(),
+            DataPattern.AntiQuicksort => ArrayPatterns.GenerateQuickSortAdversary(size).Select(i => $"String_{i:D6}").ToArray(),
             _ => throw new ArgumentException($"Unknown pattern: {pattern}")
         };
         return baseArray;

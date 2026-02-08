@@ -1,12 +1,13 @@
 ﻿namespace SandboxBenchmark;
 
 [MemoryDiagnoser]
+[RankColumn]
 public class TreeBenchmark
 {
-    [Params(256, 1024, 2048)]
+    [Params(256, 1024)]
     public int Size { get; set; }
 
-    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.NearlySorted)]
+    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.AntiQuicksort)]
     public DataPattern Pattern { get; set; }
 
     private int[] _balancedbinarytreeArray = default!;
@@ -25,7 +26,7 @@ public class TreeBenchmark
         SortAlgorithm.Algorithms.BalancedBinaryTreeSort.Sort(_balancedbinarytreeArray.AsSpan());
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public void BinaryTreeSort()
     {
         SortAlgorithm.Algorithms.BinaryTreeSort.Sort(_binarytreeArray.AsSpan());

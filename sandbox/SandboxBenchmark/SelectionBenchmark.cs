@@ -1,12 +1,13 @@
 ﻿namespace SandboxBenchmark;
 
 [MemoryDiagnoser]
+[RankColumn]
 public class SelectionBenchmark
 {
-    [Params(256, 1024, 2048)]
+    [Params(256, 1024)]
     public int Size { get; set; }
 
-    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.NearlySorted)]
+    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.AntiQuicksort)]
     public DataPattern Pattern { get; set; }
 
     private int[] _cycleArray = default!;
@@ -41,7 +42,7 @@ public class SelectionBenchmark
         SortAlgorithm.Algorithms.PancakeSort.Sort(_pancakeArray.AsSpan());
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public void SelectionSort()
     {
         SortAlgorithm.Algorithms.SelectionSort.Sort(_selectionArray.AsSpan());
