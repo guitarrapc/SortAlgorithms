@@ -13,6 +13,26 @@ public static class ArrayPatterns
     }
 
     /// <summary>
+    /// 負の値と正の値のランダム配列を生成
+    /// <br/>
+    /// Generate negative and positive random array
+    /// </summary>
+    public static int[] GenerateNegativePositiveRandom(int size, Random random)
+    {
+        return Enumerable.Range(-1 * (size / 2), size).OrderBy(_ => random.Next()).ToArray();
+    }
+
+    /// <summary>
+    /// 負の値のランダム配列を生成
+    /// <br/>
+    /// Generate negative random array
+    /// </summary>
+    public static int[] GenerateNegativeeRandom(int size, Random random)
+    {
+        return Enumerable.Range(-1 * size, size).OrderBy(_ => random.Next()).ToArray();
+    }
+
+    /// <summary>
     /// ソート済み配列を生成（昇順）
     /// <br/>
     /// Generate sorted array (ascending order)

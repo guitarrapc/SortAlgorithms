@@ -1,23 +1,27 @@
-﻿namespace SortAlgorithm.Tests;
+﻿using SortAlgorithm.Utils;
+
+namespace SortAlgorithm.Tests;
 
 public static class MockNegativePositiveRandomData
 {
     public static IEnumerable<Func<InputSample<int>>> Generate()
     {
+        var random = new Random(42);
+
         yield return () => new InputSample<int>()
         {
             InputType = InputType.MixRandom,
-            Samples = Enumerable.Range(-50, 100).Sample(100).ToArray()
+            Samples = ArrayPatterns.GenerateNegativePositiveRandom(100, random),
         };
         yield return () => new InputSample<int>()
         {
             InputType = InputType.MixRandom,
-            Samples = Enumerable.Range(-500, 1000).Sample(1000).ToArray()
+            Samples = ArrayPatterns.GenerateNegativePositiveRandom(1000, random),
         };
         yield return () => new InputSample<int>()
         {
             InputType = InputType.MixRandom,
-            Samples = Enumerable.Range(-5000, 10000).Sample(10000).ToArray()
+            Samples = ArrayPatterns.GenerateNegativePositiveRandom(10000, random),
         };
     }
 }

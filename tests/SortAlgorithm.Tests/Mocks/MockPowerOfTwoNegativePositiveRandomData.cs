@@ -1,39 +1,43 @@
-﻿namespace SortAlgorithm.Tests;
+﻿using SortAlgorithm.Utils;
+
+namespace SortAlgorithm.Tests;
 
 public static class MockPowerOfTwoNegativePositiveRandomData
 {
 
     public static IEnumerable<Func<InputSample<int>>> Generate()
     {
+        var random = new Random(42);
+
         yield return () => new InputSample<int>()
         {
             InputType = InputType.Random,
-            Samples = Enumerable.Range(-8, 16).Sample(16).ToArray()
+            Samples = ArrayPatterns.GenerateNegativePositiveRandom(16, random),
         };
         yield return () => new InputSample<int>()
         {
             InputType = InputType.Random,
-            Samples = Enumerable.Range(-32, 64).Sample(64).ToArray()
+            Samples = ArrayPatterns.GenerateNegativePositiveRandom(64, random),
         };
         yield return () => new InputSample<int>()
         {
             InputType = InputType.Random,
-            Samples = Enumerable.Range(-128, 256).Sample(256).ToArray()
+            Samples = ArrayPatterns.GenerateNegativePositiveRandom(256, random),
         };
         yield return () => new InputSample<int>()
         {
             InputType = InputType.Random,
-            Samples = Enumerable.Range(-256, 512).Sample(512).ToArray()
+            Samples = ArrayPatterns.GenerateNegativePositiveRandom(512, random),
         };
         yield return () => new InputSample<int>()
         {
             InputType = InputType.Random,
-            Samples = Enumerable.Range(-512, 1024).Sample(1024).ToArray()
+            Samples = ArrayPatterns.GenerateNegativePositiveRandom(1024, random),
         };
         yield return () => new InputSample<int>()
         {
             InputType = InputType.Random,
-            Samples = Enumerable.Range(-1024, 2048).Sample(2048).ToArray()
+            Samples = ArrayPatterns.GenerateNegativePositiveRandom(2048, random),
         };
     }
 }

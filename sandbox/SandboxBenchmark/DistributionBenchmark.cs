@@ -3,7 +3,7 @@
 [MemoryDiagnoser]
 public class DistributionBenchmark
 {
-    [Params(100, 256)]
+    [Params(256, 1024, 2048)]
     public int Size { get; set; }
 
     [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.NearlySorted)]

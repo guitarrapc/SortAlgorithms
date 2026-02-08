@@ -18,7 +18,7 @@ public class IntroSortThresholdBenchmark
     /// - 1000: Medium arrays where Ninther kicks in
     /// - 10000: Large arrays to measure overall impact
     /// </summary>
-    [Params(100, 1000, 10000)]
+    [Params(256, 1024, 2048)]
     public int Size { get; set; }
 
     /// <summary>
