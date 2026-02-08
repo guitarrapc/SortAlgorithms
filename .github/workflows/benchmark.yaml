@@ -1,0 +1,69 @@
+name: Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        type: choice
+        description: Specify benchmark name to run. Use "*" to run all benchmarks.
+        default: "*"
+        options:
+          - "*"
+          - "AdaptiveBenchmark"
+          - "DistributionBenchmark"
+          - "ExchangeBenchmark"
+          - "HeapBenchmark"
+          - "InsertionBenchmark"
+          - "MergeBenchmark"
+          - "NetworkBenchmark"
+          - "PartitionBenchmark"
+          - "SelectionBenchmark"
+          - "TreeBenchmark"
+
+jobs:
+  benchmark:
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: guitarrapc/actions/.github/actions/setup-dotnet@main
+        with:
+          restore-wasm-workload: true
+      - name: dotnet build
+        run: dotnet build -c Release
+      - name: benchmark
+        run: dotnet run -c Release --no-build --no-launch-profile --project ./src/SortAlgorithm.Benchmark/SortAlgorithm.Benchmark.csproj "${{ inputs.benchmark }}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 #v5.0.0
+        with:
+          name: BenchmarkDotNet.Artifacts
+          path: BenchmarkDotNet.Artifacts/
+          if-no-files-found: error
+
+      - name: Output results to JobSummary
+        run: |
+          for file in $(find BenchmarkDotNet.Artifacts/results -name "*.md"); do
+            title=$(basename "$file" .md | sed 's/-report-default//g')
+            echo "## $title" >> $GITHUB_STEP_SUMMARY
+            cat "$file" >> $GITHUB_STEP_SUMMARY
+          done
+
+      - name: Update README.md benchmark report link
+        if: ${{ inputs.benchmark == '*' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sed -E -i 's|(https://github\.com/[^/]+/[^/]+/actions/runs/)[0-9]+|\1${{ github.run_id }}|g' README.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://github-actions:${GITHUB_TOKEN}@github.com/${{ github.repository }}"
+
+          git add README.md
+          git commit -m 'docs: update benchmark report link' -m "updated in run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}"
+          git push
