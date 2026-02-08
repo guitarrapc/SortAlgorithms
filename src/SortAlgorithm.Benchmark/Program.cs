@@ -7,7 +7,13 @@ using System.Reflection;
 var config = ManualConfig.CreateMinimumViable()
     .AddDiagnoser(MemoryDiagnoser.Default)
     //.AddExporter(DefaultExporters.Plain)
-    .AddExporter(MarkdownExporter.Default)
-    .AddJob(Job.ShortRun);
+    .AddExporter(MarkdownExporter.Default);
+
+// In Local environment, run the short benchmark.
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
+{
+    config.AddJob(Job.ShortRun);
+}
+    
 
 BenchmarkSwitcher.FromAssembly(Assembly.GetEntryAssembly()!).Run(args, config);
