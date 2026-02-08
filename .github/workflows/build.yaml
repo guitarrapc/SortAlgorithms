@@ -24,7 +24,6 @@ jobs:
           restore-wasm-workload: true
       - name: dotnet build
         run: dotnet build -c Release
-      # Should run with Debug. Statistics will be omit on Release build
       - name: dotnet test
         run: dotnet test -c Release
       - name: dotnet publish
