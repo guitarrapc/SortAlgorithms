@@ -55,8 +55,7 @@ jobs:
         run: |
           for file in $(find BenchmarkDotNet.Artifacts/results -name "*.md"); do
             title=$(basename "$file" .md | sed 's/-report-default//g')
-            content=$(cat "$file")
-            tableContent=$(echo "$content" | grep '|')
+            tableContent=$(sed -n 's/^[[:space:]]*//; /^\|/p' "$file" | grep "|")
             echo "## $title" >> $GITHUB_STEP_SUMMARY
             echo "$tableContent" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
