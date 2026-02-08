@@ -1,4 +1,4 @@
-﻿namespace SandboxBenchmark;
+﻿namespace SortAlgorithm.Benchmark;
 
 [MemoryDiagnoser]
 [RankColumn]

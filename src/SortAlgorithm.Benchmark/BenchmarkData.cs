@@ -1,6 +1,6 @@
 ﻿using SortAlgorithm.Utils;
 
-namespace SandboxBenchmark;
+namespace SortAlgorithm.Benchmark;
 
 /// <summary>
 /// Data patterns for benchmark testing.
