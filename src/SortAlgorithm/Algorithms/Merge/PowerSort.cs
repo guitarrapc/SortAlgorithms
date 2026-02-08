@@ -133,7 +133,7 @@ public static class PowerSort
         // For very small arrays, use binary insertion sort directly
         if (n < MIN_MERGE)
         {
-            BinaryInsertSort.Sort(span, first, last, context);
+            BinaryInsertionSort.Sort(span, first, last, context);
             return;
         }
 
@@ -263,7 +263,7 @@ public static class PowerSort
         if (runLength < MIN_MERGE)
         {
             var force = Math.Min(MIN_MERGE, last - start);
-            BinaryInsertSort.SortCore(s, start, start + force, start + runLength);
+            BinaryInsertionSort.SortCore(s, start, start + force, start + runLength);
             runEnd = start + force;
         }
 

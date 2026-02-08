@@ -10,7 +10,6 @@ public class PartitionBenchmark
     public DataPattern Pattern { get; set; }
 
     private int[] _blockQuickArray = default!;
-    private int[] _dropMergeArray = default!;
     private int[] _introArray = default!;
     private int[] _pdqArray = default!;
     private int[] _quickArray = default!;
@@ -24,7 +23,6 @@ public class PartitionBenchmark
     public void Setup()
     {
         _blockQuickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _dropMergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _introArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _pdqArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _quickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
@@ -39,12 +37,6 @@ public class PartitionBenchmark
     public void BlockQuickSort()
     {
         SortAlgorithm.Algorithms.BlockQuickSort.Sort(_blockQuickArray.AsSpan());
-    }
-
-    [Benchmark]
-    public void DropMergeSort()
-    {
-        SortAlgorithm.Algorithms.DropMergeSort.Sort(_dropMergeArray.AsSpan());
     }
 
     [Benchmark]

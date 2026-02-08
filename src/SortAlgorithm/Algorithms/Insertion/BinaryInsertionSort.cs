@@ -68,7 +68,7 @@ Span ...
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Insertion_sort</para>
 /// </remarks>
-public static class BinaryInsertSort
+public static class BinaryInsertionSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array

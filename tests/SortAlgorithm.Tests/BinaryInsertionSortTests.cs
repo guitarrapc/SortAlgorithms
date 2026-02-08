@@ -4,7 +4,7 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class BinaryInsertSortTests
+public class BinaryInsertionSortTests
 {
     [Test]
     [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
@@ -27,7 +27,7 @@ public class BinaryInsertSortTests
         var array = inputSample.Samples.ToArray();
 
 
-        BinaryInsertSort.Sort(array.AsSpan(), stats);
+        BinaryInsertionSort.Sort(array.AsSpan(), stats);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
@@ -41,7 +41,7 @@ public class BinaryInsertSortTests
         // Test stability: equal elements should maintain relative order
         var stats = new StatisticsContext();
 
-        BinaryInsertSort.Sort(items.AsSpan(), stats);
+        BinaryInsertionSort.Sort(items.AsSpan(), stats);
 
         // Verify sorting correctness - values should be in ascending order
         await Assert.That(items.Select(x => x.Value).ToArray()).IsEquivalentTo(MockStabilityData.Sorted, CollectionOrdering.Matching);
@@ -68,7 +68,7 @@ public class BinaryInsertSortTests
         // Test stability with more complex scenario - multiple equal values
         var stats = new StatisticsContext();
 
-        BinaryInsertSort.Sort(items.AsSpan(), stats);
+        BinaryInsertionSort.Sort(items.AsSpan(), stats);
 
         // Expected: [2:B, 2:D, 2:F, 5:A, 5:C, 5:G, 8:E]
         // Keys are sorted, and elements with the same key maintain original order
@@ -88,7 +88,7 @@ public class BinaryInsertSortTests
         // They should remain in original order
         var stats = new StatisticsContext();
 
-        BinaryInsertSort.Sort(items.AsSpan(), stats);
+        BinaryInsertionSort.Sort(items.AsSpan(), stats);
 
         // All values are 1
         foreach (var item in items) await Assert.That(item.Value).IsEqualTo(1);
@@ -104,7 +104,7 @@ public class BinaryInsertSortTests
         var array = new[] { 5, 3, 8, 1, 9, 2, 7, 4, 6 };
 
         // Sort only the range [2, 6) -> indices 2, 3, 4, 5
-        BinaryInsertSort.Sort(array.AsSpan(), 2, 6, stats);
+        BinaryInsertionSort.Sort(array.AsSpan(), 2, 6, stats);
 
         // Expected: first 2 elements unchanged, middle 4 sorted, last 3 unchanged
         await Assert.That(array).IsEquivalentTo([5, 3, 1, 2, 8, 9, 7, 4, 6 ], CollectionOrdering.Matching);
@@ -117,7 +117,7 @@ public class BinaryInsertSortTests
         var array = new[] { 5, 3, 8, 1, 9, 2, 7, 4, 6 };
 
         // Sort the entire array using range API
-        BinaryInsertSort.Sort(array.AsSpan(), 0, array.Length, stats);
+        BinaryInsertionSort.Sort(array.AsSpan(), 0, array.Length, stats);
 
         await Assert.That(array).IsEquivalentTo([1, 2, 3, 4, 5, 6, 7, 8, 9], CollectionOrdering.Matching);
     }
@@ -129,7 +129,7 @@ public class BinaryInsertSortTests
         var array = new[] { 5, 3, 8, 1, 9 };
 
         // Sort a single element range [2, 3)
-        BinaryInsertSort.Sort(array.AsSpan(), 2, 3, stats);
+        BinaryInsertionSort.Sort(array.AsSpan(), 2, 3, stats);
 
         // Array should be unchanged (single element is already sorted)
         await Assert.That(array).IsEquivalentTo([5, 3, 8, 1, 9], CollectionOrdering.Matching);
@@ -142,7 +142,7 @@ public class BinaryInsertSortTests
         var array = new[] { 9, 7, 5, 3, 1, 2, 4, 6, 8 };
 
         // Sort only the first 5 elements [0, 5)
-        BinaryInsertSort.Sort(array.AsSpan(), 0, 5, stats);
+        BinaryInsertionSort.Sort(array.AsSpan(), 0, 5, stats);
 
         // Expected: first 5 sorted, last 4 unchanged
         await Assert.That(array).IsEquivalentTo([1, 3, 5, 7, 9, 2, 4, 6, 8], CollectionOrdering.Matching);
@@ -155,7 +155,7 @@ public class BinaryInsertSortTests
         var array = new[] { 1, 3, 5, 7, 9, 8, 6, 4, 2 };
 
         // Sort only the last 4 elements [5, 9)
-        BinaryInsertSort.Sort(array.AsSpan(), 5, 9, stats);
+        BinaryInsertionSort.Sort(array.AsSpan(), 5, 9, stats);
 
         // Expected: first 5 unchanged, last 4 sorted
         await Assert.That(array).IsEquivalentTo([1, 3, 5, 7, 9, 2, 4, 6, 8], CollectionOrdering.Matching);
@@ -171,7 +171,7 @@ public class BinaryInsertSortTests
 
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
-        BinaryInsertSort.Sort(array.AsSpan(), stats);
+        BinaryInsertionSort.Sort(array.AsSpan(), stats);
 
         await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
@@ -189,7 +189,7 @@ public class BinaryInsertSortTests
     {
         var stats = new StatisticsContext();
         var sorted = Enumerable.Range(0, n).ToArray();
-        BinaryInsertSort.Sort(sorted.AsSpan(), stats);
+        BinaryInsertionSort.Sort(sorted.AsSpan(), stats);
 
         // Binary Insertion Sort performs binary search for each element from index 1 to n-1
         // For sorted data, binary search for element at position i searches in range [0..i)
@@ -223,7 +223,7 @@ public class BinaryInsertSortTests
     {
         var stats = new StatisticsContext();
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
-        BinaryInsertSort.Sort(reversed.AsSpan(), stats);
+        BinaryInsertionSort.Sort(reversed.AsSpan(), stats);
 
         // Binary Insertion Sort comparisons: at most ceiling(log2(i+1)) per search
         // For reversed data, binary search may take more comparisons than sorted data
@@ -262,7 +262,7 @@ public class BinaryInsertSortTests
     {
         var stats = new StatisticsContext();
         var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
-        BinaryInsertSort.Sort(random.AsSpan(), stats);
+        BinaryInsertionSort.Sort(random.AsSpan(), stats);
 
         // Binary Insertion Sort comparisons: at most ceiling(log2(i+1)) per search
         // Random data can vary widely, allow very wide range

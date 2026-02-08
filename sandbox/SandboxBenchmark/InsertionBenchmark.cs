@@ -9,10 +9,9 @@ public class InsertionBenchmark
     [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.NearlySorted)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _balancedbinarytreeArray = default!;
     private int[] _binaryinsertArray = default!;
-    private int[] _binarytreeArray = default!;
     private int[] _insertionArray = default!;
+    private int[] _pairinsertiontreeArray = default!;
     private int[] _shellArrayCiura2001 = default!;
     private int[] _shellArrayKnuth1973 = default!;
     private int[] _shellArrayLee2021 = default!;
@@ -22,10 +21,9 @@ public class InsertionBenchmark
     [IterationSetup]
     public void Setup()
     {
-        _balancedbinarytreeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _binaryinsertArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _binarytreeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _insertionArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pairinsertiontreeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _shellArrayCiura2001 = BenchmarkData.GenerateIntArray(Size, Pattern);
         _shellArrayKnuth1973 = BenchmarkData.GenerateIntArray(Size, Pattern);
         _shellArrayLee2021 = BenchmarkData.GenerateIntArray(Size, Pattern);
@@ -34,27 +32,21 @@ public class InsertionBenchmark
     }
 
     [Benchmark]
-    public void BalancedBinaryTreeSort()
-    {
-        SortAlgorithm.Algorithms.BalancedBinaryTreeSort.Sort(_balancedbinarytreeArray.AsSpan());
-    }
-
-    [Benchmark]
     public void BinaryInsertSort()
     {
-        SortAlgorithm.Algorithms.BinaryInsertSort.Sort(_binaryinsertArray.AsSpan());
-    }
-
-    [Benchmark]
-    public void BinaryTreeSort()
-    {
-        SortAlgorithm.Algorithms.BinaryTreeSort.Sort(_binarytreeArray.AsSpan());
+        SortAlgorithm.Algorithms.BinaryInsertionSort.Sort(_binaryinsertArray.AsSpan());
     }
 
     [Benchmark]
     public void InsertionSort()
     {
         SortAlgorithm.Algorithms.InsertionSort.Sort(_insertionArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void PairInsertionSort()
+    {
+        SortAlgorithm.Algorithms.PairInsertionSort.Sort(_pairinsertiontreeArray.AsSpan());
     }
 
     [Benchmark]

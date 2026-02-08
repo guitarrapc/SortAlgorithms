@@ -136,7 +136,7 @@ public static class TimSort
         // For very small arrays, use binary insertion sort directly
         if (n < MIN_MERGE)
         {
-            BinaryInsertSort.Sort(span, first, last, context);
+            BinaryInsertionSort.Sort(span, first, last, context);
             return;
         }
 
@@ -191,7 +191,7 @@ public static class TimSort
             if (runLength < minRun)
             {
                 var force = Math.Min(minRun, last - i);
-                BinaryInsertSort.SortCore(s, i, i + force, i + runLength);
+                BinaryInsertionSort.SortCore(s, i, i + force, i + runLength);
                 runEnd = i + force;
                 runLength = force;
             }
