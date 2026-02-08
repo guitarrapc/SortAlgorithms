@@ -4,7 +4,7 @@
 [RankColumn]
 public class DistributionBenchmark
 {
-    [Params(256, 1024)]
+    [Params(256, 1024, 8192)]
     public int Size { get; set; }
 
     [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.AntiQuicksort)]
