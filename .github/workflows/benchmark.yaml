@@ -59,7 +59,7 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           done
 
-          for file in $(find BenchmarkDotNet.Artifacts/results -name "*.md"); do
+          for file in $(find BenchmarkDotNet.Artifacts/results -name "*.md" | sort); do
             title=$(basename "$file" .md | sed 's/-report-default//g')
             content=$(sed -n 's/^[[:space:]]*//; /^\|/p' "$file" | grep "|")
             echo "## $title" >> $GITHUB_STEP_SUMMARY
