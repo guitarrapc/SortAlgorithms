@@ -41,10 +41,11 @@ public class AlgorithmRegistry
         Add("Cycle sort", "Selection Sorts", "O(n²)", MAX_SIZE, 256, (arr, ctx) => CycleSort.Sort(arr.AsSpan(), ctx));
         Add("Pancake sort", "Selection Sorts", "O(n²)", MAX_SIZE, 256, (arr, ctx) => PancakeSort.Sort(arr.AsSpan(), ctx));
 
-        // Insertion Sorts - O(n²) ~ O(n^1.5) - 推奨256-1024
+        // Insertion Sorts - O(n²) ~ O(n log n) - 推奨256-2048
         Add("Insertion sort", "Insertion Sorts", "O(n²)", MAX_SIZE, 256, (arr, ctx) => InsertionSort.Sort(arr.AsSpan(), ctx));
         Add("Pair insertion sort", "Insertion Sorts", "O(n²)", MAX_SIZE, 256, (arr, ctx) => PairInsertionSort.Sort(arr.AsSpan(), ctx));
         Add("Binary insert sort", "Insertion Sorts", "O(n²)", MAX_SIZE, 256, (arr, ctx) => BinaryInsertionSort.Sort(arr.AsSpan(), ctx));
+        Add("Library sort", "Insertion Sorts", "O(n log n)", MAX_SIZE, 2048, (arr, ctx) => LibrarySort.Sort(arr.AsSpan(), ctx));
         Add("Shell sort (Knuth 1973)", "Insertion Sorts", "O(n^1.5)", MAX_SIZE, 1024, (arr, ctx) => ShellSortKnuth1973.Sort(arr.AsSpan(), ctx));
         Add("Shell sort (Sedgewick 1986)", "Insertion Sorts", "O(n^1.5)", MAX_SIZE, 1024, (arr, ctx) => ShellSortSedgewick1986.Sort(arr.AsSpan(), ctx));
         Add("Shell sort (Tokuda 1992)", "Insertion Sorts", "O(n^1.5)", MAX_SIZE, 1024, (arr, ctx) => ShellSortTokuda1992.Sort(arr.AsSpan(), ctx));

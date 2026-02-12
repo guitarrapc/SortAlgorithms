@@ -12,6 +12,7 @@ public class InsertionBenchmark
 
     private int[] _binaryinsertArray = default!;
     private int[] _insertionArray = default!;
+    private int[] _libraryArray = default!;
     private int[] _pairinsertiontreeArray = default!;
     private int[] _shellArrayCiura2001 = default!;
     private int[] _shellArrayKnuth1973 = default!;
@@ -24,6 +25,7 @@ public class InsertionBenchmark
     {
         _binaryinsertArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _insertionArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _libraryArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _pairinsertiontreeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _shellArrayCiura2001 = BenchmarkData.GenerateIntArray(Size, Pattern);
         _shellArrayKnuth1973 = BenchmarkData.GenerateIntArray(Size, Pattern);
@@ -42,6 +44,12 @@ public class InsertionBenchmark
     public void InsertionSort()
     {
         SortAlgorithm.Algorithms.InsertionSort.Sort(_insertionArray.AsSpan());
+    }
+
+    [Benchmark(Baseline = true)]
+    public void LibrarySort()
+    {
+        SortAlgorithm.Algorithms.LibrarySort.Sort(_insertionArray.AsSpan());
     }
 
     [Benchmark]
