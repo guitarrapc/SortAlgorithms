@@ -312,7 +312,22 @@ public static class LibrarySort
         }
 
         // Try to find a gap in the target range
-        var gapPos = FindGap(aux, searchStart, searchEnd);
+        // Optimization: if range is too large, it likely indicates gap depletion
+        // Skip exhaustive search and go directly to shift-based insertion
+        var rangeSize = searchEnd - searchStart;
+        int gapPos;
+        
+        if (rangeSize > MaxGapSearchDistance)
+        {
+            // Large range - likely gap depletion, skip exhaustive search
+            // This prevents O(n) scan in pathological cases (e.g., insertIdx = 0 or posCount)
+            gapPos = -1;
+        }
+        else
+        {
+            // Small range - worth searching for a gap
+            gapPos = FindGap(aux, searchStart, searchEnd);
+        }
 
         if (gapPos != -1)
         {
@@ -372,10 +387,17 @@ public static class LibrarySort
         return largeShift; // Return true if rebalance is recommended
     }
 
+    /// <summary>
+    /// Finds the first gap in the specified range.
+    /// Returns -1 if no gap found.
+    /// </summary>
     private static int FindGap<T>(SortSpan<LibraryElement<T>> aux, int start, int end)
         where T : IComparable<T>
     {
-        for (var i = start; i < end; i++)
+        // Safety: limit the scan distance to prevent pathological cases
+        var limit = Math.Min(end, start + MaxGapSearchDistance * 2);
+        
+        for (var i = start; i < limit; i++)
         {
             if (!aux.Read(i).HasValue)
             {
