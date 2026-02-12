@@ -32,7 +32,7 @@ dotnet run --treenode-filter /<Assembly>/<Namespace>/<Class name>/<Test name>
 Run all tests in a specific test class `PowerSortTests`:
 
 ```shell
-dotnet run --treenode-filter /*/*/PowerSortTests/
+dotnet run --treenode-filter /*/*/PowerSortTests/*
 ```
 
 Run a specific test method:
