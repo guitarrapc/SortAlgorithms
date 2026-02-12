@@ -4,30 +4,6 @@ using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
-/*
-
-Arena-based (struct Node with ArrayPool, value caching) ...
-
-| Method           | Number | Mean         | Error        | StdDev      | Median       | Min          | Max          | Allocated |
-|----------------- |------- |-------------:|-------------:|------------:|-------------:|-------------:|-------------:|----------:|
-| BalancedTreeSort | 100    |      TBD us  |      TBD us  |     TBD us  |      TBD us  |      TBD us  |      TBD us  |      TBD B |
-| BalancedTreeSort | 1000   |      TBD us  |      TBD us  |     TBD us  |      TBD us  |      TBD us  |      TBD us  |      TBD B |
-| BalancedTreeSort | 10000  |      TBD us  |      TBD us  |     TBD us  |      TBD us  |      TBD us  |      TBD us  |      TBD B |
-
-Non-Optimized (class Node) ...
-
-| Method           | Number | Mean         | Error        | StdDev      | Median       | Min          | Max          | Allocated |
-|----------------- |------- |-------------:|-------------:|------------:|-------------:|-------------:|-------------:|----------:|
-| BalancedTreeSort | 100    |    37.700 us |   274.936 us |  15.0702 us |    29.200 us |    28.800 us |    55.100 us |   21344 B |
-| BalancedTreeSort | 1000   |   433.533 us |    93.762 us |   5.1394 us |   436.400 us |   427.600 us |   436.600 us |  342080 B |
-| BalancedTreeSort | 10000  | 5,281.433 us | 3,870.582 us | 212.1597 us | 5,187.100 us | 5,132.800 us | 5,524.400 us | 3654352 B |
-
-Note: True arena pattern (storing only indices, not values) causes significant performance degradation
-due to increased indirection (up to 3x slower compared to class-based implementation).
-This implementation uses value caching to avoid that overhead.
-
-*/
-
 /// <summary>
 /// Arena-based balanced binary tree sort (AVL tree) using struct nodes for optimal memory performance.
 /// 平衡二分木（AVL木）を用いた二分木ソート。挿入時に回転を行って常に高さが O(log n) に保たれ、木を中順巡回することで配列に要素を昇順で再割り当てします。

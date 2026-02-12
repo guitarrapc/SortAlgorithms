@@ -4,26 +4,6 @@ using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
-/*
- *
-Ref span ...
-
-| Method        | Number | Mean          | Error          | StdDev        | Median        | Min          | Max           | Allocated |
-|-------------- |------- |--------------:|---------------:|--------------:|--------------:|-------------:|--------------:|----------:|
-| SmoothSort    | 100    |      22.57 us |     103.626 us |      5.680 us |      19.80 us |     18.80 us |      29.10 us |     448 B |
-| SmoothSort    | 1000   |     921.87 us |  19,097.679 us |  1,046.808 us |     323.00 us |    312.00 us |   2,130.60 us |     736 B |
-| SmoothSort    | 10000  |   3,582.73 us |     290.198 us |     15.907 us |   3,573.70 us |  3,573.40 us |   3,601.10 us |     448 B |
-
-Span ...
-
-| Method        | Number | Mean          | Error          | StdDev       | Median       | Min          | Max           | Allocated |
-|-------------- |------- |--------------:|---------------:|-------------:|-------------:|-------------:|--------------:|----------:|
-| SmoothSort    | 100    |      19.47 us |       4.591 us |     0.252 us |     19.50 us |     19.20 us |      19.70 us |     736 B |
-| SmoothSort    | 1000   |     925.30 us |  18,632.536 us | 1,021.312 us |    339.80 us |    331.50 us |   2,104.60 us |     736 B |
-| SmoothSort    | 10000  |   3,857.30 us |     352.104 us |    19.300 us |  3,860.50 us |  3,836.60 us |   3,874.80 us |     736 B |
-
- */
-
 /// <summary>
 /// Leonardo数列に基づくヒープソートの変種で、ソート済みデータに対して適応的に高速に動作する高度なソートアルゴリズムです。
 /// 通常のヒープソートは二分ヒープを使用しますが、SmoothSortはLeonardo数列(L(k) = L(k-1) + L(k-2) + 1, L(0)=1, L(1)=1)に基づく

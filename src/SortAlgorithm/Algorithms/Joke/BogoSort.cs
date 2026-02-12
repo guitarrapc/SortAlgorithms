@@ -3,17 +3,6 @@ using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
-/*
-
-Span ...
-
-| Method   | Number | Mean         | Error          | StdDev       | Median         | Min         | Max           | Allocated |
-|--------- |------- |-------------:|---------------:|-------------:|---------------:|------------:|--------------:|----------:|
-| BogoSort | 10     |     2.350 ms |      62.034 ms |     3.400 ms |      0.4589 ms |   0.3152 ms |      6.275 ms |     448 B |
-| BogoSort | 13     | 9,342.105 ms | 136,583.409 ms | 7,486.598 ms | 13,532.8534 ms | 698.6498 ms | 13,794.812 ms |     736 B |
-
-*/
-
 /// <summary>
 /// 配列をランダムにシャッフルし、ソートされているかを確認することを繰り返す、非常に非効率なソートアルゴリズムです。Permutation Sortとも呼ばれます。
 /// 10要素程度が現実的な時間で終了する限界です。

@@ -5,16 +5,6 @@ using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
-/*
-
-| Method           | Number | Mean         | Error        | StdDev      | Median       | Min          | Max          | Allocated |
-|----------------- |------- |-------------:|-------------:|------------:|-------------:|-------------:|-------------:|----------:|
-| BinaryTreeSort   | 100    |     7.000 us |     8.360 us |   0.4583 us |     7.100 us |     6.500 us |     7.400 us |    4448 B |
-| BinaryTreeSort   | 1000   |   114.233 us |   162.629 us |   8.9142 us |   116.200 us |   104.500 us |   122.000 us |   40448 B |
-| BinaryTreeSort   | 10000  |   653.500 us |    14.249 us |   0.7810 us |   653.900 us |   652.600 us |   654.000 us |  400736 B |
-
-*/
-
 /// <summary>
 /// バイナリ検索木(Binary Search Tree, BST)を使用したソートアルゴリズム、二分木ソートとも呼ばれる。
 /// バイナリ検索木では、左の子ノードは親ノードより小さく、右の子ノードは親ノードより大きいことが保証される。

@@ -2,33 +2,6 @@
 
 namespace SortAlgorithm.Algorithms;
 
-/*
-Ref span ...
-
-| Method           | Number | Mean       | Error       | StdDev    | Median      | Min         | Max        | Allocated |
-|----------------- |------- |-----------:|------------:|----------:|------------:|------------:|-----------:|----------:|
-| BinaryInsertSort | 100    |   112.1 us | 2,820.79 us | 154.62 us |    31.50 us |    14.50 us |   290.4 us |     736 B |
-| BinaryInsertSort | 1000   |   112.4 us |    55.38 us |   3.04 us |   112.90 us |   109.10 us |   115.1 us |     736 B |
-| BinaryInsertSort | 10000  | 6,902.2 us |   897.73 us |  49.21 us | 6,929.30 us | 6,845.40 us | 6,931.9 us |     736 B |
-
-Ref span (start) ...
-
-| Method           | Number | Mean       | Error       | StdDev    | Median      | Min         | Max        | Allocated |
-|----------------- |------- |-----------:|------------:|----------:|------------:|------------:|-----------:|----------:|
-| BinaryInsertSort | 100    |   122.6 us | 3,383.21 us | 185.45 us |    15.70 us |    15.30 us |   336.7 us |     448 B |
-| BinaryInsertSort | 1000   |   121.1 us |    55.55 us |   3.04 us |   121.70 us |   117.80 us |   123.8 us |     448 B |
-| BinaryInsertSort | 10000  | 8,673.2 us | 4,841.61 us | 265.38 us | 8,720.50 us | 8,387.30 us | 8,911.7 us |     736 B |
-
-Span ...
-
-| Method                 | Number | Mean          | Error        | StdDev      | Median        | Min           | Max          | Allocated |
-|----------------------- |------- |--------------:|-------------:|------------:|--------------:|--------------:|-------------:|----------:|
-| BinaryInsertSort       | 100    |    135.333 us | 3,753.441 us | 205.7388 us |     16.600 us |     16.500 us |    372.90 us |     736 B |
-| BinaryInsertSort       | 1000   |    122.133 us |    39.312 us |   2.1548 us |    122.300 us |    119.900 us |    124.20 us |     736 B |
-| BinaryInsertSort       | 10000  |  6,903.433 us |   742.971 us |  40.7247 us |  6,898.500 us |  6,865.400 us |  6,946.40 us |     736 B |
-
-*/
-
 /// <summary>
 /// 挿入位置を二分探索で決定することで、通常の挿入ソートの比較回数を O(n log n) に削減した安定ソートアルゴリズムです。
 /// ただし、要素のシフト操作は依然として O(n^2) であるため、全体の時間計算量は O(n^2) となります。
