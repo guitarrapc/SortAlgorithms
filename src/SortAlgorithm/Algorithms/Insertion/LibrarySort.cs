@@ -215,11 +215,15 @@ public static class LibrarySort
         if (count == 0) return auxStart;
 
         // Range needed: (1+ε) * count
-        var range = (int)Math.Ceiling(count * (1 + GapRatio));
-        if (auxStart + range > auxSize)
-        {
-            range = auxSize - auxStart;
-        }
+        var rangeNeeded = (int)Math.Ceiling(count * (1 + GapRatio));
+        var rangeAvailable = auxSize - auxStart;
+        
+        // Strict validation: must have enough space for all elements
+        if (rangeAvailable < count)
+            throw new InvalidOperationException($"Insufficient auxiliary buffer space: need at least {count} positions, but only {rangeAvailable} available (auxStart={auxStart}, auxSize={auxSize})");
+        
+        // Use the minimum of needed and available, but ensure it's at least count
+        var range = Math.Min(rangeNeeded, rangeAvailable);
 
         // Clear range
         var gap = new LibraryElement<T>();
@@ -229,14 +233,22 @@ public static class LibrarySort
         }
 
         // Distribute: pos[i] = floor(i * range / count)
+        // This guarantees no collisions since range >= count
         for (var i = 0; i < count; i++)
         {
             var pos = auxStart + (int)((long)i * range / count);
-            if (pos >= auxSize) break;
+            
+            // Defensive check (should never happen with range >= count)
+            if (pos >= auxSize)
+                throw new InvalidOperationException($"Position overflow: calculated pos={pos}, but auxSize={auxSize} (i={i}, count={count}, range={range}, auxStart={auxStart})");
 
             aux.Write(pos, new LibraryElement<T>(src.Read(srcStart + i)));
             positions.Write(posCount++, pos);
         }
+        
+        // Verify all elements were placed
+        if (posCount != count)
+            throw new InvalidOperationException($"Data loss detected: expected {count} elements, but only placed {posCount}");
 
         return auxStart + range;
     }
@@ -401,11 +413,17 @@ public static class LibrarySort
         }
 
         // Calculate new range: (1+ε) * count
-        var range = (int)Math.Ceiling(count * (1 + GapRatio));
-        if (range > auxSize)
+        var rangeNeeded = (int)Math.Ceiling(count * (1 + GapRatio));
+        
+        // Strict validation: must have enough space for all elements
+        if (auxSize < count)
         {
-            range = auxSize;
+            throw new InvalidOperationException(
+                $"Insufficient auxiliary buffer space for rebalance: need at least {count} positions, " +
+                $"but auxSize={auxSize}. This indicates the buffer was too small from the start.");
         }
+        
+        var range = Math.Min(rangeNeeded, auxSize);
 
         // Clear
         var gap = new LibraryElement<T>();
@@ -415,14 +433,29 @@ public static class LibrarySort
         }
 
         // Redistribute: pos[i] = floor(i * range / count)
+        // This guarantees no collisions since range >= count
         posCount = 0;
         for (var i = 0; i < count; i++)
         {
             var pos = (int)((long)i * range / count);
-            if (pos >= auxSize) break;
+            
+            // Defensive check (should never happen with range >= count)
+            if (pos >= auxSize)
+            {
+                throw new InvalidOperationException(
+                    $"Position overflow in rebalance: calculated pos={pos}, but auxSize={auxSize} " +
+                    $"(i={i}, count={count}, range={range})");
+            }
 
             aux.Write(pos, new LibraryElement<T>(tempBuffer[i]));
             positions.Write(posCount++, pos);
+        }
+        
+        // Verify all elements were placed
+        if (posCount != count)
+        {
+            throw new InvalidOperationException(
+                $"Data loss detected in rebalance: expected {count} elements, but only placed {posCount}");
         }
 
         return range;
