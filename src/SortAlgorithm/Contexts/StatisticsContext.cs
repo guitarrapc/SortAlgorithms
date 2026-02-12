@@ -61,7 +61,7 @@ public sealed class StatisticsContext : ISortContext
         Interlocked.Increment(ref _indexWriteCount);
     }
 
-    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId)
+    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null)
     {
         // Range copy is counted as: length reads from source + length writes to destination
         // Exclude operations with negative buffer IDs (used for tree nodes or other non-array structures)

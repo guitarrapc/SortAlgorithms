@@ -497,19 +497,34 @@ public class PlaybackService : IDisposable
                 
                 if (applyToArray)
                 {
-                    var sourceArr = GetArray(operation.BufferId1);
-                    var destArr = GetArray(operation.BufferId2);
-                    
-                    var sourceSpan = sourceArr.AsSpan();
-                    var destSpan = destArr.AsSpan();
-                    
-                    if (operation.Index1 >= 0 && operation.Index2 >= 0 && 
-                        operation.Length > 0 &&
-                        operation.Index1 + operation.Length <= sourceSpan.Length &&
-                        operation.Index2 + operation.Length <= destSpan.Length)
+                    if (operation.Values is { Length: > 0 })
                     {
-                        sourceSpan.Slice(operation.Index1, operation.Length)
-                            .CopyTo(destSpan.Slice(operation.Index2, operation.Length));
+                        // 記録された値を直接書き込む（バッファー状態に依存しない正確な再生）
+                        var destArr = GetArray(operation.BufferId2);
+                        var destSpan = destArr.AsSpan();
+                        
+                        for (int i = 0; i < operation.Values.Length && operation.Index2 + i < destSpan.Length; i++)
+                        {
+                            destSpan[operation.Index2 + i] = operation.Values[i];
+                        }
+                    }
+                    else
+                    {
+                        // フォールバック: 値が記録されていない場合はソースからコピー
+                        var sourceArr = GetArray(operation.BufferId1);
+                        var destArr = GetArray(operation.BufferId2);
+                        
+                        var sourceSpan = sourceArr.AsSpan();
+                        var destSpan = destArr.AsSpan();
+                        
+                        if (operation.Index1 >= 0 && operation.Index2 >= 0 && 
+                            operation.Length > 0 &&
+                            operation.Index1 + operation.Length <= sourceSpan.Length &&
+                            operation.Index2 + operation.Length <= destSpan.Length)
+                        {
+                            sourceSpan.Slice(operation.Index1, operation.Length)
+                                .CopyTo(destSpan.Slice(operation.Index2, operation.Length));
+                        }
                     }
                 }
                 break;

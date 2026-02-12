@@ -28,4 +28,7 @@ public record SortOperation
     
     /// <summary>書き込まれる値（IndexWriteの場合）</summary>
     public int? Value { get; init; }
+    
+    /// <summary>コピーされる値の配列（RangeCopyの場合）</summary>
+    public int[]? Values { get; init; }
 }

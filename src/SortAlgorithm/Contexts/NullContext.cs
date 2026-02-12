@@ -27,7 +27,7 @@ public sealed class NullContext : ISortContext
     {
     }
 
-    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId)
+    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null)
     {
     }
 }

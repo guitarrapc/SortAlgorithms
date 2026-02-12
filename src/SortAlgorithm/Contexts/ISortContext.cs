@@ -47,6 +47,7 @@ public interface ISortContext
     /// <param name="length">Number of elements copied</param>
     /// <param name="sourceBufferId">Source buffer identifier (0 = main array, 1+ = auxiliary buffers, -1 = external)</param>
     /// <param name="destinationBufferId">Destination buffer identifier (0 = main array, 1+ = auxiliary buffers, -1 = external)</param>
-    void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId);
+    /// <param name="values">The actual values being copied (used for visualization accuracy). May be null if values are not available.</param>
+    void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null);
 }
 

@@ -171,7 +171,12 @@ internal ref struct SortSpan<T> where T: IComparable<T>
     public void CopyTo(int sourceIndex, SortSpan<T> destination, int destinationIndex, int length)
     {
 #if DEBUG
-        _context.OnRangeCopy(sourceIndex, destinationIndex, length, _bufferId, destination.BufferId);
+        var values = new object?[length];
+        for (int i = 0; i < length; i++)
+        {
+            values[i] = _span[sourceIndex + i];
+        }
+        _context.OnRangeCopy(sourceIndex, destinationIndex, length, _bufferId, destination.BufferId, values);
 #endif
         _span.Slice(sourceIndex, length).CopyTo(destination._span.Slice(destinationIndex, length));
     }
@@ -187,7 +192,12 @@ internal ref struct SortSpan<T> where T: IComparable<T>
     public void CopyTo(int sourceIndex, Span<T> destination, int destinationIndex, int length)
     {
 #if DEBUG
-        _context.OnRangeCopy(sourceIndex, destinationIndex, length, _bufferId, -1);
+        var values = new object?[length];
+        for (int i = 0; i < length; i++)
+        {
+            values[i] = _span[sourceIndex + i];
+        }
+        _context.OnRangeCopy(sourceIndex, destinationIndex, length, _bufferId, -1, values);
 #endif
         _span.Slice(sourceIndex, length).CopyTo(destination.Slice(destinationIndex, length));
     }

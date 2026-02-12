@@ -70,7 +70,7 @@ public class SortExecutor
                         Value = value as int?
                     });
                 },
-                onRangeCopy: (sourceIndex, destIndex, length, sourceBufferId, destBufferId) =>
+                onRangeCopy: (sourceIndex, destIndex, length, sourceBufferId, destBufferId, values) =>
                 {
                     operations.Add(new SortOperation
                     {
@@ -79,7 +79,10 @@ public class SortExecutor
                         Index2 = destIndex,
                         Length = length,
                         BufferId1 = sourceBufferId,
-                        BufferId2 = destBufferId
+                        BufferId2 = destBufferId,
+                        Values = values?.Length > 0
+                            ? Array.ConvertAll(values, v => v is int intVal ? intVal : 0)
+                            : null
                     });
                 }
             );

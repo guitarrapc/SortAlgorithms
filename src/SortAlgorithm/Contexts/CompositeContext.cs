@@ -50,11 +50,11 @@ public sealed class CompositeContext : ISortContext
         }
     }
 
-    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId)
+    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null)
     {
         foreach (var context in _contexts)
         {
-            context.OnRangeCopy(sourceIndex, destinationIndex, length, sourceBufferId, destinationBufferId);
+            context.OnRangeCopy(sourceIndex, destinationIndex, length, sourceBufferId, destinationBufferId, values);
         }
     }
 }
