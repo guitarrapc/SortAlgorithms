@@ -93,6 +93,9 @@ public static class LibrarySort
     // Maximum distance to search for a gap during insertion
     private const int MaxGapSearchDistance = 20;
 
+    // Trigger early rebalance if shift distance exceeds this threshold
+    private const int MaxShiftDistanceBeforeRebalance = 64;
+
     // Safety margin for auxiliary buffer size (1.05 = 5% extra space)
     private const double AuxSizeSafetyMargin = 1.05;
 
@@ -175,8 +178,15 @@ public static class LibrarySort
                 var elem = s.Read(i);
                 var insertIdx = BinarySearchPositions(aux, positions, posCount, elem);
 
-                InsertAndUpdate(aux, ref auxEnd, auxSize, elem, positions, ref posCount, insertIdx);
+                var needsRebalance = InsertAndUpdate(aux, ref auxEnd, auxSize, elem, positions, ref posCount, insertIdx);
                 sorted++;
+
+                // Early rebalance if large shift was detected (gaps are clustering)
+                if (needsRebalance && sorted < nextRebalance)
+                {
+                    auxEnd = Rebalance(aux, auxSize, positions, ref posCount, tempArray);
+                    nextRebalance = sorted * RebalanceFactor;
+                }
             }
 
             // Phase 3: Extract
@@ -260,8 +270,9 @@ public static class LibrarySort
 
     /// <summary>
     /// Inserts element and updates position buffer incrementally.
+    /// Returns true if a large shift occurred (suggesting rebalance is needed).
     /// </summary>
-    private static void InsertAndUpdate<T>(SortSpan<LibraryElement<T>> aux, ref int auxEnd, int maxSize,
+    private static bool InsertAndUpdate<T>(SortSpan<LibraryElement<T>> aux, ref int auxEnd, int maxSize,
         T value, SortSpan<int> positions, ref int posCount, int insertIdx) where T : IComparable<T>
     {
         // insertIdx is the index in positions[], not the position in aux[]
@@ -296,7 +307,7 @@ public static class LibrarySort
             // Gap found - use it directly
             aux.Write(gapPos, new LibraryElement<T>(value));
             InsertPosition(positions, ref posCount, insertIdx, gapPos);
-            return;
+            return false; // No large shift
         }
 
         // No gap in range - need to shift elements
@@ -314,18 +325,29 @@ public static class LibrarySort
             shiftGap = auxEnd++;
         }
 
+        // Check if shift distance is too large
+        var shiftDistance = shiftGap - targetPos;
+        var largeShift = shiftDistance > MaxShiftDistanceBeforeRebalance;
+
         // Shift elements from targetPos to shiftGap
         for (var i = shiftGap; i > targetPos; i--)
-            aux.Write(i, aux.Read(i - 1));
-
-        // Update positions that were shifted
-        for (var i = 0; i < posCount; i++)
         {
-            var pos = positions.Read(i);
-            if (pos >= targetPos && pos < shiftGap)
-                positions.Write(i, pos + 1);
+            aux.Write(i, aux.Read(i - 1));
         }
 
+        // Update positions that were shifted
+        // Optimization: positions is monotonically increasing, so only scan from insertIdx onwards
+        // and break early when we pass shiftGap
+        for (var i = insertIdx; i < posCount; i++)
+        {
+            var pos = positions.Read(i);
+            if (pos >= shiftGap)
+                break; // Positions are sorted, no more updates needed
+            if (pos >= targetPos)
+            {
+                positions.Write(i, pos + 1);
+            }
+        }
 
         // Write the new element
         aux.Write(targetPos, new LibraryElement<T>(value));
@@ -334,6 +356,8 @@ public static class LibrarySort
         // Update auxEnd to include the shift gap position
         // Use Math.Max to handle the case where we extended the array (shiftGap = auxEnd++ above)
         auxEnd = Math.Max(auxEnd, shiftGap + 1);
+
+        return largeShift; // Return true if rebalance is recommended
     }
 
     private static int FindGap<T>(SortSpan<LibraryElement<T>> aux, int start, int end)
