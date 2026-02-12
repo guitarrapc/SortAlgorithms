@@ -326,15 +326,14 @@ public static class LibrarySort
                 positions.Write(i, pos + 1);
         }
 
+
         // Write the new element
         aux.Write(targetPos, new LibraryElement<T>(value));
         InsertPosition(positions, ref posCount, insertIdx, targetPos);
 
-        // Update auxEnd if we extended
-        if (shiftGap >= auxEnd)
-        {
-            auxEnd = shiftGap + 1;
-        }
+        // Update auxEnd to include the shift gap position
+        // Use Math.Max to handle the case where we extended the array (shiftGap = auxEnd++ above)
+        auxEnd = Math.Max(auxEnd, shiftGap + 1);
     }
 
     private static int FindGap<T>(SortSpan<LibraryElement<T>> aux, int start, int end)
