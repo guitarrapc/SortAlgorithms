@@ -79,7 +79,7 @@ public static class LibrarySort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;        // Main input array
     private const int BUFFER_AUX = 1;         // Auxiliary array with gaps
-    private const int BUFFER_POSITIONS = 2;   // Position buffer (tracks non-gap element positions)
+    // Note: positions buffer is not tracked for performance (uses fast memcpy instead)
 
     // Gap ratio: ε = 0.5 means (1+ε)n = 1.5n space
     private const double GapRatio = 0.5;
@@ -147,7 +147,8 @@ public static class LibrarySort
         try
         {
             var aux = new SortSpan<LibraryElement<T>>(auxArray.AsSpan(0, auxSize), context, BUFFER_AUX);
-            var positions = new SortSpan<int>(positionsArray.AsSpan(0, length), context, BUFFER_POSITIONS);
+            // Note: positions uses Span<int> (not SortSpan) for O(1) memcpy performance
+            var positions = positionsArray.AsSpan(0, length);
 
             // Initialize as gaps
             var gap = new LibraryElement<T>();
@@ -192,7 +193,7 @@ public static class LibrarySort
             // Phase 3: Extract
             for (var i = 0; i < posCount && i < length; i++)
             {
-                var pos = positions.Read(i);
+                var pos = positions[i];
                 s.Write(i, aux.Read(pos).Value);
             }
         }
@@ -208,7 +209,7 @@ public static class LibrarySort
     /// Places elements with dynamic gap distribution and builds position buffer.
     /// </summary>
     private static int PlaceWithGaps<T>(SortSpan<LibraryElement<T>> aux, SortSpan<T> src,
-        int srcStart, int count, int auxStart, int auxSize, SortSpan<int> positions, out int posCount)
+        int srcStart, int count, int auxStart, int auxSize, Span<int> positions, out int posCount)
         where T : IComparable<T>
     {
         posCount = 0;
@@ -243,7 +244,7 @@ public static class LibrarySort
                 throw new InvalidOperationException($"Position overflow: calculated pos={pos}, but auxSize={auxSize} (i={i}, count={count}, range={range}, auxStart={auxStart})");
 
             aux.Write(pos, new LibraryElement<T>(src.Read(srcStart + i)));
-            positions.Write(posCount++, pos);
+            positions[posCount++] = pos;
         }
         
         // Verify all elements were placed
@@ -257,7 +258,7 @@ public static class LibrarySort
     /// Binary search in position buffer (O(log n)).
     /// </summary>
     private static int BinarySearchPositions<T>(SortSpan<LibraryElement<T>> aux,
-        SortSpan<int> positions, int count, T value) where T : IComparable<T>
+        Span<int> positions, int count, T value) where T : IComparable<T>
     {
         var left = 0;
         var right = count;
@@ -265,7 +266,7 @@ public static class LibrarySort
         while (left < right)
         {
             var mid = left + (right - left) / 2;
-            var cmp = value.CompareTo(aux.Read(positions.Read(mid)).Value);
+            var cmp = value.CompareTo(aux.Read(positions[mid]).Value);
 
             if (cmp < 0)
             {
@@ -285,7 +286,7 @@ public static class LibrarySort
     /// Returns true if a large shift occurred (suggesting rebalance is needed).
     /// </summary>
     private static bool InsertAndUpdate<T>(SortSpan<LibraryElement<T>> aux, ref int auxEnd, int maxSize,
-        T value, SortSpan<int> positions, ref int posCount, int insertIdx) where T : IComparable<T>
+        T value, Span<int> positions, ref int posCount, int insertIdx) where T : IComparable<T>
     {
         // insertIdx is the index in positions[], not the position in aux[]
         // We need to find the actual insertion position in aux[] based on the range
@@ -295,20 +296,20 @@ public static class LibrarySort
         if (insertIdx >= posCount)
         {
             // Insert at end (after last element)
-            searchStart = posCount > 0 ? positions.Read(posCount - 1) + 1 : 0;
+            searchStart = posCount > 0 ? positions[posCount - 1] + 1 : 0;
             searchEnd = auxEnd;
         }
         else if (insertIdx == 0)
         {
             // Insert at beginning (before first element)
             searchStart = 0;
-            searchEnd = positions.Read(0);
+            searchEnd = positions[0];
         }
         else
         {
             // Insert between positions[insertIdx-1] and positions[insertIdx]
-            searchStart = positions.Read(insertIdx - 1) + 1;
-            searchEnd = positions.Read(insertIdx);
+            searchStart = positions[insertIdx - 1] + 1;
+            searchEnd = positions[insertIdx];
         }
 
         // Try to find a gap in the target range
@@ -316,7 +317,7 @@ public static class LibrarySort
         // Skip exhaustive search and go directly to shift-based insertion
         var rangeSize = searchEnd - searchStart;
         int gapPos;
-        
+
         if (rangeSize > MaxGapSearchDistance)
         {
             // Large range - likely gap depletion, skip exhaustive search
@@ -339,7 +340,7 @@ public static class LibrarySort
 
         // No gap in range - need to shift elements
         // Target position is where we want to insert (at searchEnd, which is positions[insertIdx])
-        targetPos = insertIdx < posCount ? positions.Read(insertIdx) : auxEnd;
+        targetPos = insertIdx < posCount ? positions[insertIdx] : auxEnd;
 
         // Find gap to the right for shifting
         var shiftGap = FindGap(aux, targetPos, Math.Min(auxEnd + MaxGapSearchDistance, maxSize));
@@ -367,13 +368,11 @@ public static class LibrarySort
         // and break early when we pass shiftGap
         for (var i = insertIdx; i < posCount; i++)
         {
-            var pos = positions.Read(i);
+            var pos = positions[i];
             if (pos >= shiftGap)
                 break; // Positions are sorted, no more updates needed
             if (pos >= targetPos)
-            {
-                positions.Write(i, pos + 1);
-            }
+                positions[i] = pos + 1;
         }
 
         // Write the new element
@@ -407,13 +406,21 @@ public static class LibrarySort
         return -1;
     }
 
-    private static void InsertPosition(SortSpan<int> positions, ref int count, int idx, int pos)
+    /// <summary>
+    /// Inserts a position into the sorted position buffer.
+    /// Uses fast memcpy (O(1) operation) instead of element-by-element copy.
+    /// Note: Statistics tracking is skipped for performance.
+    /// </summary>
+    private static void InsertPosition(Span<int> positions, ref int count, int idx, int pos)
     {
-        for (var i = count; i > idx; i--)
+        // Shift elements: use Span.CopyTo for O(1) memcpy performance
+        if (idx < count)
         {
-            positions.Write(i, positions.Read(i - 1));
+            var source = positions.Slice(idx, count - idx);
+            var dest = positions.Slice(idx + 1, count - idx);
+            source.CopyTo(dest);
         }
-        positions.Write(idx, pos);
+        positions[idx] = pos;
         count++;
     }
 
@@ -421,13 +428,13 @@ public static class LibrarySort
     /// Rebalances with dynamic spacing to prevent data loss.
     /// </summary>
     private static int Rebalance<T>(SortSpan<LibraryElement<T>> aux, int auxSize,
-        SortSpan<int> positions, ref int posCount, T[] tempBuffer) where T : IComparable<T>
+        Span<int> positions, ref int posCount, Span<T> tempBuffer) where T : IComparable<T>
     {
         // Collect elements
         var count = 0;
         for (var i = 0; i < posCount; i++)
         {
-            var elem = aux.Read(positions.Read(i));
+            var elem = aux.Read(positions[i]);
             if (elem.HasValue)
             {
                 tempBuffer[count++] = elem.Value;
@@ -436,7 +443,7 @@ public static class LibrarySort
 
         // Calculate new range: (1+ε) * count
         var rangeNeeded = (int)Math.Ceiling(count * (1 + GapRatio));
-        
+
         // Strict validation: must have enough space for all elements
         if (auxSize < count)
         {
@@ -444,7 +451,7 @@ public static class LibrarySort
                 $"Insufficient auxiliary buffer space for rebalance: need at least {count} positions, " +
                 $"but auxSize={auxSize}. This indicates the buffer was too small from the start.");
         }
-        
+
         var range = Math.Min(rangeNeeded, auxSize);
 
         // Clear
@@ -460,7 +467,7 @@ public static class LibrarySort
         for (var i = 0; i < count; i++)
         {
             var pos = (int)((long)i * range / count);
-            
+
             // Defensive check (should never happen with range >= count)
             if (pos >= auxSize)
             {
@@ -470,9 +477,9 @@ public static class LibrarySort
             }
 
             aux.Write(pos, new LibraryElement<T>(tempBuffer[i]));
-            positions.Write(posCount++, pos);
+            positions[posCount++] = pos;
         }
-        
+
         // Verify all elements were placed
         if (posCount != count)
         {
