@@ -266,9 +266,8 @@ public static class QuickSortDualPivot
             for (int k = less; k <= great; k++)
             {
                 if (s.Compare(k, left) == 0)
-                {
                     continue; // Element equals pivot, skip
-                }
+
                 if (s.Compare(k, left) < 0)
                 {
                     s.Swap(k, less);

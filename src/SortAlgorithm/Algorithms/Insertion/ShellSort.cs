@@ -641,7 +641,9 @@ public static class ShellSortLee2021
         // Find the largest gap index where gap <= (length/2)
         int gapIndex = leeSequence.Length - 1;
         while (gapIndex >= 0 && leeSequence[gapIndex] > length / 2)
+        {
             gapIndex--;
+        }
 
         // Decrease gap by moving to previous index
         for (; gapIndex >= 0; gapIndex--)

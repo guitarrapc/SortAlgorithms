@@ -232,11 +232,8 @@ public static class StableQuickSort
                 }
             }
 
-            // Phase 3: Copy back to original array (SortSpan経由)
-            for (var i = 0; i < length; i++)
-            {
-                s.Write(left + i, tempSortSpan.Read(i));
-            }
+            // Phase 3: Copy back to original array using CopyTo for efficiency
+            tempSortSpan.CopyTo(0, s, left, length);
 
             return (left + lessEnd, left + equalEnd);
         }

@@ -371,8 +371,11 @@ public static class LibrarySort
             var pos = positions[i];
             if (pos >= shiftGap)
                 break; // Positions are sorted, no more updates needed
+
             if (pos >= targetPos)
+            {
                 positions[i] = pos + 1;
+            }
         }
 
         // Write the new element
