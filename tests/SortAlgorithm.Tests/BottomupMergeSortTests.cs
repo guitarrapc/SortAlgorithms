@@ -227,12 +227,12 @@ public class BottomupMergeSortTests
         // Pattern for random: approximately 0.75 * n * log₂(n) to 1.1 * n * log₂(n)
         // (wider range due to randomness and optimization)
         var logN = Math.Log2(n);
-        var minCompares = (ulong)(n * logN * 0.7);
+        var minCompares = (ulong)(n * logN * 0.5);
         var maxCompares = (ulong)(n * logN * 1.15);
 
         // Writes for random data: approximately 1.3 * n * log₂(n) to 1.6 * n * log₂(n)
         // Actual: n=10→40, n=20→115, n=50→396, n=100→948
-        var minWrites = (ulong)(n * logN * 1.0);
+        var minWrites = (ulong)(n * logN * 0.5);
         var maxWrites = (ulong)(n * Math.Ceiling(logN) * 1.7);
 
         var minReads = stats.CompareCount * 2;

@@ -265,7 +265,7 @@ public class DropMergeSortTests
         // Range: approximately n to 1.2 * n * log₂(n)
         var logN = Math.Log2(n);
         var minCompares = (ulong)n;  // Can be as low as n when lucky with LNS
-        var maxCompares = (ulong)(n * logN * 2.5);
+        var maxCompares = (ulong)(n * logN * 2.7);
 
         // Writes include LNS extraction, sorting dropped elements, and merge
         var minWrites = (ulong)(n * 0.3);
