@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -197,13 +198,18 @@ public static class PDQSort
                 continue;
             }
 
-            // Partition and get results
-            var (pivotPos, alreadyPartitioned) = PartitionRight(s, begin, end);
+            // Partition and detect equal elements block
+            var (equalLeft, equalRight, alreadyPartitioned) = PartitionRightSkipEquals(s, begin, end);
 
-            // Check for a highly unbalanced partition
-            var lSize = pivotPos - begin;
-            var rSize = end - (pivotPos + 1);
-            var highlyUnbalanced = lSize < size / 8 || rSize < size / 8;
+            // Calculate sizes excluding the equal block
+            var lSize = equalLeft - begin;        // Elements < pivot
+            var rSize = end - equalRight;          // Elements > pivot
+            var eqSize = equalRight - equalLeft;         // Elements == pivot (to be excluded from recursion)
+            var effective = size - eqSize;  // Effective size excluding equal elements
+
+            // Check for highly unbalanced partition (using effective size)
+            // If effective is small, the array is mostly equal elements and will finish soon
+            var highlyUnbalanced = effective > 0 && (lSize < effective / 8 || rSize < effective / 8);
 
             // If we got a highly unbalanced partition we shuffle elements to break many patterns
             if (highlyUnbalanced)
@@ -218,26 +224,26 @@ public static class PDQSort
                 if (lSize >= InsertionSortThreshold)
                 {
                     s.Swap(begin, begin + lSize / 4);
-                    s.Swap(pivotPos - 1, pivotPos - lSize / 4);
+                    s.Swap(equalLeft - 1, equalLeft - lSize / 4);
 
                     if (lSize > NintherThreshold)
                     {
                         s.Swap(begin + 1, begin + (lSize / 4 + 1));
                         s.Swap(begin + 2, begin + (lSize / 4 + 2));
-                        s.Swap(pivotPos - 2, pivotPos - (lSize / 4 + 1));
-                        s.Swap(pivotPos - 3, pivotPos - (lSize / 4 + 2));
+                        s.Swap(equalLeft - 2, equalLeft - (lSize / 4 + 1));
+                        s.Swap(equalLeft - 3, equalLeft - (lSize / 4 + 2));
                     }
                 }
 
                 if (rSize >= InsertionSortThreshold)
                 {
-                    s.Swap(pivotPos + 1, pivotPos + (1 + rSize / 4));
+                    s.Swap(equalRight, equalRight + rSize / 4);
                     s.Swap(end - 1, end - rSize / 4);
 
                     if (rSize > NintherThreshold)
                     {
-                        s.Swap(pivotPos + 2, pivotPos + (2 + rSize / 4));
-                        s.Swap(pivotPos + 3, pivotPos + (3 + rSize / 4));
+                        s.Swap(equalRight + 1, equalRight + (1 + rSize / 4));
+                        s.Swap(equalRight + 2, equalRight + (2 + rSize / 4));
                         s.Swap(end - 2, end - (1 + rSize / 4));
                         s.Swap(end - 3, end - (2 + rSize / 4));
                     }
@@ -246,10 +252,10 @@ public static class PDQSort
             else
             {
                 // If we were decently balanced and we tried to sort an already partitioned
-                // sequence try to use insertion sort
+                // sequence try to use insertion sort (excluding equal elements block)
                 if (alreadyPartitioned &&
-                    PartialInsertionSort(s, begin, pivotPos) &&
-                    PartialInsertionSort(s, pivotPos + 1, end))
+                    PartialInsertionSort(s, begin, equalLeft) &&
+                    PartialInsertionSort(s, equalRight, end))
                 {
                     return;
                 }
@@ -258,23 +264,24 @@ public static class PDQSort
             // Tail recursion optimization: always recurse on smaller partition, loop on larger
             // This guarantees O(log n) stack depth even for pathological inputs
             // (similar to IntroSort and LLVM std::sort implementation)
-            var leftSize = pivotPos - begin;
-            var rightSize = end - (pivotPos + 1);
+            // Exclude equal elements block [eqL, eqR) from recursion
+            var leftSize = equalLeft - begin;
+            var rightSize = end - equalRight;
 
             if (leftSize < rightSize)
             {
                 // Recurse on smaller left partition (preserves leftmost flag)
-                PDQSortLoop(s, begin, pivotPos, badAllowed, leftmost, context);
+                PDQSortLoop(s, begin, equalLeft, badAllowed, leftmost, context);
                 // Tail recursion: continue loop with larger right partition
-                begin = pivotPos + 1;
+                begin = equalRight;
                 leftmost = false;
             }
             else
             {
                 // Recurse on smaller right partition (always non-leftmost)
-                PDQSortLoop(s, pivotPos + 1, end, badAllowed, false, context);
+                PDQSortLoop(s, equalRight, end, badAllowed, false, context);
                 // Tail recursion: continue loop with larger left partition
-                end = pivotPos;
+                end = equalLeft;
                 // Preserve leftmost flag for left partition
             }
         }
@@ -293,18 +300,19 @@ public static class PDQSort
         var first = begin;
         var last = end;
 
-        // Find the first element greater than or equal to the pivot
-        while (s.Compare(++first, pivot) < 0) { }
+        // Find the first element greater than or equal to the pivot (first can reach end)
+        do
+        {
+            first++;
+            if (first == end) break;
+        } while (s.Compare(first, pivot) < 0);
 
-        // Find the first element strictly smaller than the pivot
-        if (first - 1 == begin)
+        // Find the first element strictly smaller than the pivot (last can reach begin)
+        do
         {
-            while (first < last && s.Compare(--last, pivot) >= 0) { }
-        }
-        else
-        {
-            while (s.Compare(--last, pivot) >= 0) { }
-        }
+            last--;
+            if (last == begin) break;
+        } while (first < last && s.Compare(last, pivot) >= 0);
 
         // If the first pair of elements that should be swapped to partition are the same element,
         // the passed in sequence already was correctly partitioned
@@ -314,8 +322,14 @@ public static class PDQSort
         while (first < last)
         {
             s.Swap(first, last);
-            while (s.Compare(++first, pivot) < 0) { }
-            while (s.Compare(--last, pivot) >= 0) { }
+            do
+            {
+                first++;
+            } while (first < last && s.Compare(first, pivot) < 0);
+            do
+            {
+                last--;
+            } while (first < last && s.Compare(last, pivot) >= 0);
         }
 
         // Put the pivot in the right place
@@ -324,6 +338,38 @@ public static class PDQSort
         s.Write(pivotPos, pivot);
 
         return (pivotPos, alreadyPartitioned);
+    }
+
+    /// <summary>
+    /// Partitions using PartitionRight and then detects consecutive elements equal to the pivot.
+    /// Returns the bounds of the equal block (eqL, eqR) to exclude from further recursion.
+    /// This optimization is critical for handling inputs with many duplicate elements efficiently.
+    /// </summary>
+    /// <returns>
+    /// eqL: Start of equal block (inclusive) - all elements in [eqL, eqR) equal pivot
+    /// eqR: End of equal block (exclusive)
+    /// alreadyPartitioned: Whether the input was already partitioned
+    /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static (int eqL, int eqR, bool alreadyPartitioned) PartitionRightSkipEquals<T>(
+        SortSpan<T> s, int begin, int end) where T : IComparable<T>
+    {
+        var (pivotPos, alreadyPartitioned) = PartitionRight(s, begin, end);
+
+        // Read pivot value once to minimize SortSpan access
+        var pivot = s.Read(pivotPos);
+
+        // Expand left: find consecutive elements equal to pivot
+        var eqL = pivotPos;
+        while (eqL > begin && s.Compare(eqL - 1, pivot) == 0)
+            eqL--;
+
+        // Expand right: find consecutive elements equal to pivot
+        var eqR = pivotPos + 1;
+        while (eqR < end && s.Compare(eqR, pivot) == 0)
+            eqR++;
+
+        return (eqL, eqR, alreadyPartitioned);
     }
 
     /// <summary>
@@ -337,22 +383,31 @@ public static class PDQSort
         var first = begin;
         var last = end;
 
-        while (s.Compare(pivot, s.Read(--last)) < 0) { }
+        // Find the first element from the right that is greater than or equal to pivot (last can reach begin)
+        do
+        {
+            last--;
+            if (last == begin) break;
+        } while (s.Compare(pivot, s.Read(last)) < 0);
 
-        if (last + 1 == end)
+        // Find the first element from the left that is less than pivot
+        do
         {
-            while (first < last && s.Compare(pivot, s.Read(++first)) >= 0) { }
-        }
-        else
-        {
-            while (s.Compare(pivot, s.Read(++first)) >= 0) { }
-        }
+            first++;
+            if (first > last) break;
+        } while (first < last && s.Compare(pivot, s.Read(first)) >= 0);
 
         while (first < last)
         {
             s.Swap(first, last);
-            while (s.Compare(pivot, s.Read(--last)) < 0) { }
-            while (s.Compare(pivot, s.Read(++first)) >= 0) { }
+            do
+            {
+                last--;
+            } while (first < last && s.Compare(pivot, s.Read(last)) < 0);
+            do
+            {
+                first++;
+            } while (first < last && s.Compare(pivot, s.Read(first)) >= 0);
         }
 
         var pivotPos = last;
@@ -390,6 +445,10 @@ public static class PDQSort
 
                 s.Write(sift, siftValue);
                 limit += cur - sift;
+                
+                // Check limit immediately after increment to catch last iteration overflow
+                if (limit > PartialInsertionSortLimit)
+                    return false;
             }
         }
 
@@ -409,16 +468,18 @@ public static class PDQSort
 
     /// <summary>
     /// Returns floor(log2(n)), assumes n > 0.
+    /// Uses hardware-accelerated bit operations for optimal performance.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int Log2(int n)
     {
-        var log = 0;
-        while (n > 1)
-        {
-            n >>= 1;
-            log++;
-        }
-        return log;
+        // var log = 0;
+        // while (n > 1)
+        // {
+        //     n >>= 1;
+        //     log++;
+        // }
+        // return log;
+        return BitOperations.Log2((uint)n);
     }
 }

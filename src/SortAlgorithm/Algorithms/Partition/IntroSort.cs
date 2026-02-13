@@ -1,4 +1,6 @@
 ﻿using SortAlgorithm.Contexts;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -162,7 +164,7 @@ public static class IntroSort
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     internal static void SortCore<T>(SortSpan<T> s, int left, int right, ISortContext context) where T : IComparable<T>
     {
-        var depthLimit = 2 * FloorLog2(right - left + 1);
+        var depthLimit = 2 * Log2(right - left + 1);
         IntroSortInternal(s, left, right, depthLimit, 30, true, context);
     }
 
@@ -179,7 +181,7 @@ public static class IntroSort
         if (span.Length <= 1) return;
 
         var s = new SortSpan<T>(span, NullContext.Default, BUFFER_MAIN);
-        var depthLimit = 2 * FloorLog2(span.Length);
+        var depthLimit = 2 * Log2(span.Length);
         IntroSortInternal(s, 0, span.Length - 1, depthLimit, insertionSortThreshold, true, NullContext.Default);
     }
 
@@ -488,14 +490,16 @@ public static class IntroSort
     /// </summary>
     /// <param name="n">The positive integer to compute the logarithm for.</param>
     /// <returns>The floor of log2(n).</returns>
-    private static int FloorLog2(int n)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int Log2(int n)
     {
-        var result = 0;
-        while (n > 1)
-        {
-            result++;
-            n >>= 1;
-        }
-        return result;
+        // var log = 0;
+        // while (n > 1)
+        // {
+        //     n >>= 1;
+        //     log++;
+        // }
+        // return log;
+        return BitOperations.Log2((uint)n);
     }
 }
