@@ -109,6 +109,9 @@ public static class IntroSort
     // Algorithm correctness: InsertionSort, HeapSort, and QuickSort are all proven correct sorting algorithms
     // Complexity guarantee: Depth limit of 2⌊log₂(n)⌋ ensures HeapSort fallback before stack overflow or quadratic behavior
 
+    // Follow to dotnet runtime https://github.com/dotnet/dotnet/blob/a6dd645cee9a1f6d40c3b151f80fb82bcbb87a4d/src/runtime/src/libraries/System.Private.CoreLib/src/System/Array.cs#L25
+    private const int IntrosortSizeThreshold = 16;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
@@ -152,42 +155,7 @@ public static class IntroSort
         if (last - first <= 1) return;
 
         var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
-        SortCore(s, first, last - 1, context);
-    }
-
-    /// <summary>
-    /// Sorts the subrange [left..right] using the provided sort context.
-    /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
-    /// <param name="s">The SortSpan wrapping the span to sort.</param>
-    /// <param name="left">The inclusive start index of the range to sort.</param>
-    /// <param name="right">The inclusive end index of the range to sort.</param>
-    /// <param name="context">The sort context for tracking statistics and observations.</param>
-    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, ISortContext context) where TComparer : IComparer<T>
-    {
-        var depthLimit = 2 * Log2(right - left + 1);
-        IntroSortInternal(s, left, right, depthLimit, 30, true, context);
-    }
-
-    /// <summary>
-    /// INTERNAL BENCHMARK ONLY: Sorts the span with a custom InsertionSort threshold.
-    /// This method is used for benchmarking to test different threshold values.
-    /// DO NOT use this method in production code.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the span.</typeparam>
-    /// <param name="span">The span to sort.</param>
-    /// <param name="insertionSortThreshold">The threshold at which to switch to InsertionSort.</param>
-    internal static void SortWithCustomThreshold<T>(Span<T> span, int insertionSortThreshold) where T : IComparable<T>
-        => SortWithCustomThreshold(span, new ComparableComparer<T>(), insertionSortThreshold);
-
-    internal static void SortWithCustomThreshold<T, TComparer>(Span<T> span, TComparer comparer, int insertionSortThreshold) where TComparer : IComparer<T>
-    {
-        if (span.Length <= 1) return;
-
-        var s = new SortSpan<T, TComparer>(span, NullContext.Default, comparer, BUFFER_MAIN);
-        var depthLimit = 2 * Log2(span.Length);
-        IntroSortInternal(s, 0, span.Length - 1, depthLimit, insertionSortThreshold, true, NullContext.Default);
+        IntroSortInternal(s, first, last -1, 2 * Log2(s.Length + 1), true, context);
     }
 
     /// <summary>
@@ -198,11 +166,10 @@ public static class IntroSort
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The inclusive end index of the range to sort.</param>
     /// <param name="depthLimit">The recursion depth limit before switching to HeapSort.</param>
-    /// <param name="insertionSortThreshold">The threshold size at which to switch to InsertionSort.</param>
     /// <param name="leftmost">True if this is the leftmost partition (requires boundary checks in InsertionSort),
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     /// false otherwise (can use unguarded InsertionSort).</param>
-    private static void IntroSortInternal<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int depthLimit, int insertionSortThreshold, bool leftmost, ISortContext context) where TComparer : IComparer<T>
+    private static void IntroSortInternal<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int depthLimit, bool leftmost, ISortContext context) where TComparer : IComparer<T>
     {
         while (right > left)
         {
@@ -211,7 +178,7 @@ public static class IntroSort
             // Small arrays: use InsertionSort
             // For leftmost partitions, use guarded version (needs boundary checks)
             // For non-leftmost partitions, use unguarded version (pivot acts as sentinel)
-            if (size <= insertionSortThreshold)
+            if (size <= IntrosortSizeThreshold)
             {
                 if (leftmost)
                 {
@@ -382,7 +349,7 @@ public static class IntroSort
                 // Recurse on smaller left partition (preserves leftmost flag)
                 if (left < r)
                 {
-                    IntroSortInternal(s, left, r, depthLimit, insertionSortThreshold, leftmost, context);
+                    IntroSortInternal(s, left, r, depthLimit, leftmost, context);
                 }
                 // Tail recursion: continue loop with larger right partition
                 // Right partition is never leftmost (element at position r acts as sentinel)
@@ -394,7 +361,7 @@ public static class IntroSort
                 // Recurse on smaller right partition (always non-leftmost)
                 if (l < right)
                 {
-                    IntroSortInternal(s, l, right, depthLimit, insertionSortThreshold, false, context);
+                    IntroSortInternal(s, l, right, depthLimit, leftmost, context);
                 }
                 // Tail recursion: continue loop with larger left partition
                 // Preserve leftmost flag for left partition
