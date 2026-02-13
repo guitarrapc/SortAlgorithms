@@ -59,18 +59,22 @@ public static class CountingSort
     /// Sorts the elements in the specified span using a key selector function.
     /// </summary>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-    {
-        Sort(span, keySelector, NullContext.Default);
-    }
+        => Sort(span, keySelector, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
     /// </summary>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector, ISortContext context) where T : IComparable<T>
+        => Sort(span, keySelector, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, Func<T, int> keySelector, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var keysArray = ArrayPool<int>.Shared.Rent(span.Length);
@@ -78,7 +82,7 @@ public static class CountingSort
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T>(tempArray.AsSpan(0, span.Length), context, BUFFER_MAIN);
+            var tempSpan = new SortSpan<T, TComparer>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_MAIN);
             var keys = keysArray.AsSpan(0, span.Length);
 
             SortCore(span, keySelector, s, tempSpan, keys);
@@ -90,7 +94,7 @@ public static class CountingSort
         }
     }
 
-    private static void SortCore<T>(Span<T> span, Func<T, int> keySelector, SortSpan<T> s, SortSpan<T> tempSpan, Span<int> keys) where T : IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer> s, SortSpan<T, TComparer> tempSpan, Span<int> keys) where TComparer : IComparer<T>
     {
         // Find min/max and cache keys in single pass
         var min = int.MaxValue;
@@ -140,7 +144,7 @@ public static class CountingSort
     /// Core counting sort implementation.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CountSort<T>(SortSpan<T> s, Span<int> keys, SortSpan<T> tempSpan, Span<int> countArray, int offset) where T : IComparable<T>
+    private static void CountSort<T, TComparer>(SortSpan<T, TComparer> s, Span<int> keys, SortSpan<T, TComparer> tempSpan, Span<int> countArray, int offset) where TComparer : IComparer<T>
     {
         // Count occurrences of each key
         for (var i = 0; i < s.Length; i++)
@@ -212,31 +216,39 @@ public static class CountingSortInteger
     /// <summary>
     /// Sorts integer values in the specified span (generic version for IBinaryInteger types).
     /// </summary>
-    public static void Sort<T>(Span<T> span) 
+    public static void Sort<T>(Span<T> span)
         where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
     {
-        Sort(span, NullContext.Default);
+        Sort(span, Comparer<T>.Default, NullContext.Default);
     }
 
     /// <summary>
     /// Sorts integer values in the specified span with sort context (generic version for IBinaryInteger types).
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context) 
+    public static void Sort<T>(Span<T> span, ISortContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts integer values in the specified span with comparer and sort context (generic version for IBinaryInteger types).
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
         // Check if type is supported (64-bit or less)
         var bitSize = GetBitSize<T>();
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T>(tempArray.AsSpan(0, span.Length), context, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, TComparer>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
 
             SortCore(span, s, tempSpan);
         }
@@ -246,8 +258,9 @@ public static class CountingSortInteger
         }
     }
 
-    private static void SortCore<T>(Span<T> span, SortSpan<T> s, SortSpan<T> tempSpan)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, SortSpan<T, TComparer> s, SortSpan<T, TComparer> tempSpan)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
     {
         // Find min and max to determine range
         // Convert to long for range calculation
@@ -298,8 +311,9 @@ public static class CountingSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CountSort<T>(SortSpan<T> s, SortSpan<T> tempSpan, Span<int> countArray, long offset) 
-        where T : IBinaryInteger<T>, IComparable<T>
+    private static void CountSort<T, TComparer>(SortSpan<T, TComparer> s, SortSpan<T, TComparer> tempSpan, Span<int> countArray, long offset)
+        where T : IBinaryInteger<T>
+        where TComparer : IComparer<T>
     {
         // Count occurrences
         for (var i = 0; i < s.Length; i++)

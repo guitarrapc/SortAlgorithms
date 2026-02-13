@@ -20,7 +20,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Sign-Bit Flipping for Signed Integers:</strong> For signed types, the sign bit is flipped to convert signed values to unsigned keys.
 /// This ensures negative values are ordered correctly before positive values without separate processing.
 /// This technique avoids the MinValue overflow issue with Abs() and maintains stability.</description></item>
-/// <item><description><strong>Digit Extraction Consistency:</strong> For a given position from most significant digit, extract the digit using (key / divisor) % 10 
+/// <item><description><strong>Digit Extraction Consistency:</strong> For a given position from most significant digit, extract the digit using (key / divisor) % 10
 /// where divisor = 10^(digitCount - 1 - d) for digit position d.</description></item>
 /// <item><description><strong>MSD Processing Order:</strong> Digits must be processed from most significant (d=digitCount-1) to least significant (d=0).
 /// This top-down approach partitions the array into buckets recursively, processing each bucket independently for subsequent digits.</description></item>
@@ -71,13 +71,21 @@ public static class RadixMSD10Sort
     /// </summary>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
     {
-        Sort(span, NullContext.Default);
+        Sort(span, Comparer<T>.Default, NullContext.Default);
     }
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
     /// </summary>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    {
+        Sort(span, Comparer<T>.Default, context);
+    }
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
@@ -90,7 +98,7 @@ public static class RadixMSD10Sort
             var tempBuffer = tempArray.AsSpan(0, span.Length);
             var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixBase + 1);
 
-            SortCore(span, tempBuffer, bucketOffsets, context);
+            SortCore<T, TComparer>(span, tempBuffer, bucketOffsets, comparer, context);
         }
         finally
         {
@@ -100,11 +108,11 @@ public static class RadixMSD10Sort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, ISortContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, ISortContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
     {
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
-        var temp = new SortSpan<T>(tempBuffer, context, BUFFER_TEMP);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var temp = new SortSpan<T, TComparer>(tempBuffer, context, comparer, BUFFER_TEMP);
 
         // Determine the bit size for sign-bit flipping
         var bitSize = GetBitSize<T>();
@@ -118,8 +126,8 @@ public static class RadixMSD10Sort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void MSDSort<T>(SortSpan<T> s, SortSpan<T> temp, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    private static void MSDSort<T, TComparer>(SortSpan<T, TComparer> s, SortSpan<T, TComparer> temp, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
+        where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
     {
         // Base case: if length is small, use insertion sort
         if (length <= InsertionSortCutoff)
@@ -224,13 +232,13 @@ public static class RadixMSD10Sort
     /// Sign-bit flipping technique:
     /// - 32-bit signed: key = (uint)value ^ 0x8000_0000
     /// - 64-bit signed: key = (ulong)value ^ 0x8000_0000_0000_0000
-    /// 
+    ///
     /// This ensures:
     /// - int.MinValue (-2147483648) → 0x0000_0000 (sorts first)
     /// - -1 → 0x7FFF_FFFF (sorts before 0)
     /// - 0 → 0x8000_0000 (sorts after negatives)
     /// - int.MaxValue (2147483647) → 0xFFFF_FFFF (sorts last)
-    /// 
+    ///
     /// Advantages:
     /// - No Abs() needed, avoids MinValue overflow
     /// - Single unified pass for all values

@@ -110,9 +110,7 @@ public static class QuickSortMedian9
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, NullContext.Default);
-    }
+        => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -121,9 +119,7 @@ public static class QuickSortMedian9
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, context);
-    }
+        => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -134,6 +130,19 @@ public static class QuickSortMedian9
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+        => Sort(span, first, last, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span containing elements to sort.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context for tracking statistics and observations.</param>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -141,19 +150,20 @@ public static class QuickSortMedian9
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
-        SortCore(s, first, last - 1, context);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        SortCore(s, first, last - 1);
     }
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The exclusive end index of the range to sort.</param>
-    internal static void SortCore<T>(SortSpan<T> s, int left, int right, ISortContext context) where T : IComparable<T>
+    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int left, int right) where TComparer : IComparer<T>
     {
         if (left >= right) return;
 
@@ -188,11 +198,11 @@ public static class QuickSortMedian9
         // Phase 2. Recursively sort left and right partitions
         if (left < r)
         {
-            SortCore(s, left, r, context);
+            SortCore(s, left, r);
         }
         if (l < right)
         {
-            SortCore(s, l, right, context);
+            SortCore(s, l, right);
         }
     }
 
@@ -200,7 +210,7 @@ public static class QuickSortMedian9
     /// Returns the median value among three elements at specified indices.
     /// This method performs exactly 2-3 comparisons to determine the median value.
     /// </summary>
-    private static T MedianOf3Value<T>(SortSpan<T> s, int lowIdx, int midIdx, int highIdx) where T : IComparable<T>
+    private static T MedianOf3Value<T, TComparer>(SortSpan<T, TComparer> s, int lowIdx, int midIdx, int highIdx) where TComparer : IComparer<T>
     {
         // Use SortSpan.Compare to track statistics
         var cmpLowMid = s.Compare(lowIdx, midIdx);
@@ -238,7 +248,7 @@ public static class QuickSortMedian9
     /// This method samples elements at evenly distributed positions and computes
     /// the median of medians to select a high-quality pivot.
     /// </summary>
-    private static T MedianOf9Value<T>(SortSpan<T> s, int low, int high) where T : IComparable<T>
+    private static T MedianOf9Value<T, TComparer>(SortSpan<T, TComparer> s, int low, int high) where TComparer : IComparer<T>
     {
         var m2 = (high - low) / 2;
         var m4 = m2 / 2;
@@ -260,23 +270,23 @@ public static class QuickSortMedian9
         var median2 = MedianOf3Value(s, i4, i5, i6);
         var median3 = MedianOf3Value(s, i7, i8, i9);
         
-        // Return median of the three medians (using value comparison)
-        if (median1.CompareTo(median2) > 0)
+        // Return median of the three medians (using comparer for value comparison)
+        if (s.Comparer.Compare(median1, median2) > 0)
         {
-            if (median2.CompareTo(median3) > 0)
+            if (s.Comparer.Compare(median2, median3) > 0)
             {
                 return median2; // median1 > median2 > median3
             }
             else
             {
-                return median1.CompareTo(median3) > 0 ? median3 : median1;
+                return s.Comparer.Compare(median1, median3) > 0 ? median3 : median1;
             }
         }
         else // median1 <= median2
         {
-            if (median2.CompareTo(median3) > 0)
+            if (s.Comparer.Compare(median2, median3) > 0)
             {
-                return median1.CompareTo(median3) > 0 ? median1 : median3;
+                return s.Comparer.Compare(median1, median3) > 0 ? median1 : median3;
             }
             else
             {

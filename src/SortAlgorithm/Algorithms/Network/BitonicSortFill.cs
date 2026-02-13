@@ -95,6 +95,19 @@ public static class BitonicSortFill
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// If the length is not a power of 2, the array is padded with the maximum value,
+    /// sorted, and then trimmed back to the original size.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
@@ -103,7 +116,7 @@ public static class BitonicSortFill
         // If length is already a power of 2, sort directly
         if (IsPowerOfTwo(originalLength))
         {
-            var sortSpan = new SortSpan<T>(span, context, BUFFER_MAIN);
+            var sortSpan = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
             SortCore(sortSpan, 0, originalLength, ascending: true);
             return;
         }
@@ -113,7 +126,7 @@ public static class BitonicSortFill
         
         // Find the maximum value in the input for padding
         // Create SortSpan for statistics tracking during max value search
-        var tempSortSpan = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var tempSortSpan = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         T maxValue = tempSortSpan.Read(0);
         for (int i = 1; i < originalLength; i++)
         {
@@ -139,7 +152,7 @@ public static class BitonicSortFill
             }
 
             // Sort the padded array
-            var paddedSortSpan = new SortSpan<T>(workingSpan, context, BUFFER_MAIN);
+            var paddedSortSpan = new SortSpan<T, TComparer>(workingSpan, context, comparer, BUFFER_MAIN);
             SortCore(paddedSortSpan, 0, paddedLength, ascending: true);
 
             // Copy back only the original elements
@@ -159,7 +172,7 @@ public static class BitonicSortFill
     /// <param name="count">The length of the sequence.</param>
     /// <param name="ascending">True to sort in ascending order, false for descending.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void SortCore<T>(SortSpan<T> span, int low, int count, bool ascending) where T : IComparable<T>
+    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> span, int low, int count, bool ascending) where TComparer : IComparer<T>
     {
         if (count > 1)
         {
@@ -183,7 +196,7 @@ public static class BitonicSortFill
     /// <param name="count">The length of the bitonic sequence.</param>
     /// <param name="ascending">True to merge in ascending order, false for descending.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void BitonicMerge<T>(SortSpan<T> span, int low, int count, bool ascending) where T : IComparable<T>
+    private static void BitonicMerge<T, TComparer>(SortSpan<T, TComparer> span, int low, int count, bool ascending) where TComparer : IComparer<T>
     {
         if (count > 1)
         {
@@ -209,7 +222,7 @@ public static class BitonicSortFill
     /// <param name="j">The index of the second element.</param>
     /// <param name="ascending">True if elements should be in ascending order, false for descending.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CompareAndSwap<T>(SortSpan<T> span, int i, int j, bool ascending) where T : IComparable<T>
+    private static void CompareAndSwap<T, TComparer>(SortSpan<T, TComparer> span, int i, int j, bool ascending) where TComparer : IComparer<T>
     {
         int cmp = span.Compare(i, j);
         

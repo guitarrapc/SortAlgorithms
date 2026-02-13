@@ -93,9 +93,7 @@ public static class RotateMergeSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -104,10 +102,21 @@ public static class RotateMergeSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, 0, span.Length - 1);
     }
 
@@ -117,7 +126,7 @@ public static class RotateMergeSort
     /// <param name="s">The SortSpan wrapping the span to sort</param>
     /// <param name="left">The inclusive start index of the range to sort</param>
     /// <param name="right">The inclusive end index of the range to sort</param>
-    private static void SortCore<T>(SortSpan<T> s, int left, int right) where T : IComparable<T>
+    private static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int left, int right) where TComparer : IComparer<T>
     {
         if (right <= left) return; // Base case: array of size 0 or 1 is sorted
 
@@ -159,7 +168,7 @@ public static class RotateMergeSort
     /// <param name="left">The inclusive start index of the left subarray</param>
     /// <param name="mid">The inclusive end index of the left subarray</param>
     /// <param name="right">The inclusive end index of the right subarray</param>
-    private static void MergeInPlace<T>(SortSpan<T> s, int left, int mid, int right) where T : IComparable<T>
+    private static void MergeInPlace<T, TComparer>(SortSpan<T, TComparer> s, int left, int mid, int right) where TComparer : IComparer<T>
     {
         var start1 = left;
         var start2 = mid + 1;
@@ -206,7 +215,7 @@ public static class RotateMergeSort
     /// <param name="start">The start position in the right partition</param>
     /// <param name="end">The end position in the right partition</param>
     /// <returns>The last index where elements should still be inserted before insertPos</returns>
-    private static int GallopingSearchEnd<T>(SortSpan<T> s, int insertPos, int start, int end) where T : IComparable<T>
+    private static int GallopingSearchEnd<T, TComparer>(SortSpan<T, TComparer> s, int insertPos, int start, int end) where TComparer : IComparer<T>
     {
         // Phase 1: Exponential search (galloping) - find rough upper bound
         // Step size: 1, 2, 4, 8, 16, ... (exponentially increasing)
@@ -250,7 +259,7 @@ public static class RotateMergeSort
     /// <param name="left">The start index of the subarray to rotate</param>
     /// <param name="right">The end index of the subarray to rotate</param>
     /// <param name="k">The number of positions to rotate left</param>
-    private static void Rotate<T>(SortSpan<T> s, int left, int right, int k) where T : IComparable<T>
+    private static void Rotate<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int k) where TComparer : IComparer<T>
     {
         if (k == 0 || left >= right) return;
 
@@ -318,7 +327,7 @@ public static class RotateMergeSort
     /// <param name="value">The value to search for</param>
     /// <returns>The index where the value should be inserted</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int BinarySearch<T>(SortSpan<T> s, int left, int right, T value) where T : IComparable<T>
+    private static int BinarySearch<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, T value) where TComparer : IComparer<T>
     {
         while (left <= right)
         {
@@ -418,9 +427,7 @@ public static class RotateMergeSortNonOptimized
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -429,10 +436,21 @@ public static class RotateMergeSortNonOptimized
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, 0, span.Length - 1);
     }
 
@@ -443,7 +461,7 @@ public static class RotateMergeSortNonOptimized
     /// <param name="left">The inclusive start index of the range to sort</param>
     /// <param name="right">The inclusive end index of the range to sort</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T>(SortSpan<T> s, int left, int right) where T : IComparable<T>
+    private static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int left, int right) where TComparer : IComparer<T>
     {
         if (right <= left) return; // Base case: array of size 0 or 1 is sorted
 
@@ -472,7 +490,7 @@ public static class RotateMergeSortNonOptimized
     /// <param name="left">The inclusive start index of the left subarray</param>
     /// <param name="mid">The inclusive end index of the left subarray</param>
     /// <param name="right">The inclusive end index of the right subarray</param>
-    private static void MergeInPlace<T>(SortSpan<T> s, int left, int mid, int right) where T : IComparable<T>
+    private static void MergeInPlace<T, TComparer>(SortSpan<T, TComparer> s, int left, int mid, int right) where TComparer : IComparer<T>
     {
         var start1 = left;
         var start2 = mid + 1;
@@ -522,7 +540,7 @@ public static class RotateMergeSortNonOptimized
     /// <param name="right">The end index of the subarray to rotate</param>
     /// <param name="k">The number of positions to rotate left</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Rotate<T>(SortSpan<T> s, int left, int right, int k) where T : IComparable<T>
+    private static void Rotate<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int k) where TComparer : IComparer<T>
     {
         if (k == 0 || left >= right) return;
 
@@ -544,7 +562,7 @@ public static class RotateMergeSortNonOptimized
     /// <param name="left">The start index of the subarray to reverse</param>
     /// <param name="right">The end index of the subarray to reverse</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Reverse<T>(SortSpan<T> s, int left, int right) where T : IComparable<T>
+    private static void Reverse<T, TComparer>(SortSpan<T, TComparer> s, int left, int right) where TComparer : IComparer<T>
     {
         while (left < right)
         {
@@ -564,7 +582,7 @@ public static class RotateMergeSortNonOptimized
     /// <param name="value">The value to search for</param>
     /// <returns>The index where the value should be inserted</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int BinarySearch<T>(SortSpan<T> s, int left, int right, T value) where T : IComparable<T>
+    private static int BinarySearch<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, T value) where TComparer : IComparer<T>
     {
         while (left <= right)
         {

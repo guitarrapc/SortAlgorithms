@@ -48,9 +48,7 @@ public static class CocktailShakerSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -59,10 +57,16 @@ public static class CocktailShakerSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         var min = 0;
         var max = s.Length - 1;
@@ -143,9 +147,7 @@ public static class CocktailShakerSortNonOptimized
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -154,10 +156,16 @@ public static class CocktailShakerSortNonOptimized
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // half calculation
         for (int i = 0; i < s.Length / 2; i++)

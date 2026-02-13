@@ -1,4 +1,5 @@
-﻿using SortAlgorithm.Contexts;
+﻿using System.Collections.Generic;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -90,13 +91,41 @@ public static class PairInsertionSort
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
     {
+        Sort<T, Comparer<T>>(span, first, last, Comparer<T>.Default, context);
+    }
+
+    /// <summary>
+    /// Sorts the elements in the specified span using a custom comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use. Must implement <see cref="IComparer{T}"/>.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer used to compare elements.</param>
+    /// <param name="context">The sort context for tracking statistics and observations during sorting. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    {
+        Sort(span, 0, span.Length, comparer, context);
+    }
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using pair insertion sort with a custom comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use. Must implement <see cref="IComparer{T}"/>.</typeparam>
+    /// <param name="span">The span containing elements to sort.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="comparer">The comparer used to compare elements.</param>
+    /// <param name="context">The sort context for tracking statistics and observations.</param>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(first, last);
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last);
     }
 
@@ -104,11 +133,12 @@ public static class PairInsertionSort
     /// Core pair insertion sort implementation that processes elements in pairs.
     /// This is the guarded version suitable for sorting from the beginning of an array.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use. Must implement <see cref="IComparer{T}"/>.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
-    internal static void SortCore<T>(SortSpan<T> s, int first, int last) where T : IComparable<T>
+    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
     {
         var length = last - first;
         if (length <= 1) return;
@@ -179,7 +209,8 @@ public static class PairInsertionSort
     /// that is less than or equal to all elements in the range [first, last).
     /// This allows both elements of each pair to be inserted without boundary checks.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use. Must implement <see cref="IComparer{T}"/>.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The inclusive start index of the range to sort. Must be > 0.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
@@ -191,7 +222,7 @@ public static class PairInsertionSort
     /// Performance improvement: Removes ALL boundary checks from both pair element insertions,
     /// providing maximum performance benefit for non-leftmost partitions.
     /// </remarks>
-    internal static void UnguardedSortCore<T>(SortSpan<T> s, int first, int last) where T : IComparable<T>
+    internal static void UnguardedSortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
     {
         var length = last - first;
         if (length <= 1) return;

@@ -47,9 +47,7 @@ public static class StdSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, NullContext.Default);
-    }
+        => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -58,9 +56,7 @@ public static class StdSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, context);
-    }
+        => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -71,6 +67,12 @@ public static class StdSort
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+        => Sort(span, first, last, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -78,7 +80,7 @@ public static class StdSort
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last, context);
     }
 
@@ -91,7 +93,7 @@ public static class StdSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    internal static void SortCore<T>(SortSpan<T> s, int first, int last, ISortContext context) where T : IComparable<T>
+    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last, ISortContext context) where TComparer : IComparer<T>
     {
         if (last - first <= 1) return;
 
@@ -120,7 +122,7 @@ public static class StdSort
     /// <summary>
     /// Sorts 3 elements. Stable, 2-3 compares, 0-2 swaps.
     /// </summary>
-    private static void Sort3<T>(SortSpan<T> s, int x, int y, int z) where T : IComparable<T>
+    private static void Sort3<T, TComparer>(SortSpan<T, TComparer> s, int x, int y, int z) where TComparer : IComparer<T>
     {
         // if x <= y
         if (s.Compare(y, x) >= 0)
@@ -151,7 +153,7 @@ public static class StdSort
     /// <summary>
     /// Sorts 4 elements. Stable, 3-6 compares, 0-5 swaps.
     /// </summary>
-    private static void Sort4<T>(SortSpan<T> s, int x1, int x2, int x3, int x4) where T : IComparable<T>
+    private static void Sort4<T, TComparer>(SortSpan<T, TComparer> s, int x1, int x2, int x3, int x4) where TComparer : IComparer<T>
     {
         Sort3(s, x1, x2, x3);
         if (s.Compare(x4, x3) < 0)
@@ -171,7 +173,7 @@ public static class StdSort
     /// <summary>
     /// Sorts 5 elements. Stable, 4-10 compares, 0-9 swaps.
     /// </summary>
-    private static void Sort5<T>(SortSpan<T> s, int x1, int x2, int x3, int x4, int x5) where T : IComparable<T>
+    private static void Sort5<T, TComparer>(SortSpan<T, TComparer> s, int x1, int x2, int x3, int x4, int x5) where TComparer : IComparer<T>
     {
         Sort4(s, x1, x2, x3, x4);
         if (s.Compare(x5, x4) < 0)
@@ -195,7 +197,7 @@ public static class StdSort
     /// <summary>
     /// Main Introsort algorithm combining quicksort, heapsort, and insertion sort.
     /// </summary>
-    private static void IntroSort<T>(SortSpan<T> s, int first, int last, int depth, ISortContext context, bool leftmost) where T : IComparable<T>
+    private static void IntroSort<T, TComparer>(SortSpan<T, TComparer> s, int first, int last, int depth, ISortContext context, bool leftmost) where TComparer : IComparer<T>
     {
         while (true)
         {
@@ -304,7 +306,7 @@ public static class StdSort
     /// Insertion sort without bounds checking (unguarded).
     /// Assumes there is an element at position (first - 1) smaller than all elements in range.
     /// </summary>
-    private static void InsertionSortUnguarded<T>(SortSpan<T> s, int first, int last) where T : IComparable<T>
+    private static void InsertionSortUnguarded<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
     {
         if (first == last) return;
 
@@ -330,7 +332,7 @@ public static class StdSort
     /// Attempts insertion sort and returns true if array is already sorted or nearly sorted.
     /// Returns false if too many inversions are found (limit of 8 inversions).
     /// </summary>
-    private static bool InsertionSortIncomplete<T>(SortSpan<T> s, int first, int last) where T : IComparable<T>
+    private static bool InsertionSortIncomplete<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
     {
         var len = last - first;
         switch (len)
@@ -390,7 +392,7 @@ public static class StdSort
     /// Partitions range with equal elements kept to the right of pivot.
     /// Returns (pivot position, already partitioned flag).
     /// </summary>
-    private static (int pivotPos, bool alreadyPartitioned) PartitionWithEqualsOnRight<T>(SortSpan<T> s, int first, int last) where T : IComparable<T>
+    private static (int pivotPos, bool alreadyPartitioned) PartitionWithEqualsOnRight<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
     {
         var pivot = s.Read(first);
         
@@ -437,7 +439,7 @@ public static class StdSort
     /// Partitions range with equal elements kept to the left of pivot.
     /// Returns the first index of the right partition.
     /// </summary>
-    private static int PartitionWithEqualsOnLeft<T>(SortSpan<T> s, int first, int last) where T : IComparable<T>
+    private static int PartitionWithEqualsOnLeft<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
     {
         var pivot = s.Read(first);
         

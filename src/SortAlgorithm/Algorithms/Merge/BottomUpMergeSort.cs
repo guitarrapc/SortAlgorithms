@@ -82,9 +82,7 @@ public static class BottomupMergeSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -93,6 +91,17 @@ public static class BottomupMergeSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
@@ -100,8 +109,8 @@ public static class BottomupMergeSort
         var buffer = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
-            var s = new SortSpan<T>(span, context, BUFFER_MAIN);
-            var b = new SortSpan<T>(buffer.AsSpan(0, span.Length), context, BUFFER_MERGE);
+            var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+            var b = new SortSpan<T, TComparer>(buffer.AsSpan(0, span.Length), context, comparer, BUFFER_MERGE);
             SortCore(s, b);
         }
         finally
@@ -116,7 +125,7 @@ public static class BottomupMergeSort
     /// </summary>
     /// <param name="s">The SortSpan wrapping the span to sort</param>
     /// <param name="b">The SortSpan wrapping the auxiliary buffer for merging</param>
-    private static void SortCore<T>(SortSpan<T> s, SortSpan<T> b) where T : IComparable<T>
+    private static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, SortSpan<T, TComparer> b) where TComparer : IComparer<T>
     {
         var n = s.Length;
 
@@ -149,7 +158,7 @@ public static class BottomupMergeSort
     /// <param name="left">The inclusive start index of the left subarray</param>
     /// <param name="mid">The inclusive end index of the left subarray</param>
     /// <param name="right">The inclusive end index of the right subarray</param>
-    private static void Merge<T>(SortSpan<T> s, SortSpan<T> b, int left, int mid, int right) where T : IComparable<T>
+    private static void Merge<T, TComparer>(SortSpan<T, TComparer> s, SortSpan<T, TComparer> b, int left, int mid, int right) where TComparer : IComparer<T>
     {
         var leftLength = mid - left + 1;
 

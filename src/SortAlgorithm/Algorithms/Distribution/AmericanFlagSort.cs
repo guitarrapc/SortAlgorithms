@@ -84,14 +84,20 @@ public static class AmericanFlagSort
     /// Sorts the elements in the specified span using American Flag Sort.
     /// </summary>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using American Flag Sort with sort context.
     /// </summary>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using American Flag Sort with comparer and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
@@ -101,7 +107,7 @@ public static class AmericanFlagSort
         try
         {
             var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixSize + 1);
-            SortCore(span, bucketOffsets, context);
+            SortCore(span, bucketOffsets, comparer, context);
         }
         finally
         {
@@ -110,10 +116,11 @@ public static class AmericanFlagSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T>(Span<T> span, Span<int> bucketOffsets, ISortContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, Span<int> bucketOffsets, TComparer comparer, ISortContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
     {
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // Determine the number of digits based on type size
         // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
@@ -127,8 +134,9 @@ public static class AmericanFlagSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void AmericanFlagSortRecursive<T>(SortSpan<T> s, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    private static void AmericanFlagSortRecursive<T, TComparer>(SortSpan<T, TComparer> s, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
     {
         // Base case: if length is small, use insertion sort
         if (length <= InsertionSortCutoff)
@@ -191,8 +199,9 @@ public static class AmericanFlagSort
     /// Uses a technique similar to cyclic permutation to avoid using auxiliary buffer.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PermuteInPlace<T>(SortSpan<T> s, int start, int length, int shift, int bitSize, Span<int> bucketOffsets, Span<int> bucketStarts)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    private static void PermuteInPlace<T, TComparer>(SortSpan<T, TComparer> s, int start, int length, int shift, int bitSize, Span<int> bucketOffsets, Span<int> bucketStarts)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
     {
         // Reset bucket offsets to their starting positions
         bucketStarts.CopyTo(bucketOffsets);
@@ -260,13 +269,13 @@ public static class AmericanFlagSort
     /// Sign-bit flipping technique:
     /// - 32-bit signed: key = (uint)value ^ 0x8000_0000
     /// - 64-bit signed: key = (ulong)value ^ 0x8000_0000_0000_0000
-    /// 
+    ///
     /// This ensures:
     /// - int.MinValue (-2147483648) → 0x0000_0000 (sorts first)
     /// - -1 → 0x7FFF_FFFF (sorts before 0)
     /// - 0 → 0x8000_0000 (sorts after negatives)
     /// - int.MaxValue (2147483647) → 0xFFFF_FFFF (sorts last)
-    /// 
+    ///
     /// Advantages:
     /// - No Abs() needed, avoids MinValue overflow
     /// - Single unified pass for all values

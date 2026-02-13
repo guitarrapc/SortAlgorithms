@@ -114,6 +114,18 @@ public static class BitonicSortParallel
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     /// <exception cref="ArgumentException">Thrown when the array length is not a power of 2.</exception>
     public static void Sort<T>(T[] array, ISortContext context) where T : IComparable<T>
+        => Sort(array, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified array using the provided comparer, sort context, and parallel execution.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the array.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="array">The array of elements to sort. The elements within this array will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    /// <exception cref="ArgumentException">Thrown when the array length is not a power of 2.</exception>
+    public static void Sort<T, TComparer>(T[] array, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         ArgumentNullException.ThrowIfNull(array);
         ArgumentNullException.ThrowIfNull(context);
@@ -124,7 +136,7 @@ public static class BitonicSortParallel
         if (!IsPowerOfTwo(array.Length))
             throw new ArgumentException($"Bitonic sort requires input length to be a power of 2. Actual length: {array.Length}", nameof(array));
 
-        SortCore(array, 0, array.Length, ascending: true, context);
+        SortCore(array, 0, array.Length, ascending: true, comparer, context);
     }
 
     /// <summary>
@@ -135,7 +147,7 @@ public static class BitonicSortParallel
     /// <param name="count">The length of the sequence.</param>
     /// <param name="ascending">True to sort in ascending order, false for descending.</param>
     /// <param name="context">The sort context for statistics tracking.</param>
-    internal static void SortCore<T>(T[] array, int low, int count, bool ascending, ISortContext context) where T : IComparable<T>
+    internal static void SortCore<T, TComparer>(T[] array, int low, int count, bool ascending, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (count > 1)
         {
@@ -147,20 +159,20 @@ public static class BitonicSortParallel
             {
                 Parallel.Invoke(
                     parallelOptions,
-                    () => SortCore(array, low, k, ascending: true, context),
-                    () => SortCore(array, low + k, k, ascending: false, context)
+                    () => SortCore(array, low, k, ascending: true, comparer, context),
+                    () => SortCore(array, low + k, k, ascending: false, comparer, context)
                 );
             }
             else
             {
                 // Recursively sort first half in ascending order
-                SortCore(array, low, k, ascending: true, context);
+                SortCore(array, low, k, ascending: true, comparer, context);
                 // Recursively sort second half in descending order to create bitonic sequence
-                SortCore(array, low + k, k, ascending: false, context);
+                SortCore(array, low + k, k, ascending: false, comparer, context);
             }
 
             // Merge the bitonic sequence in the desired order
-            BitonicMerge(array, low, count, ascending, context);
+            BitonicMerge(array, low, count, ascending, comparer, context);
         }
     }
 
@@ -172,7 +184,7 @@ public static class BitonicSortParallel
     /// <param name="count">The length of the bitonic sequence.</param>
     /// <param name="ascending">True to merge in ascending order, false for descending.</param>
     /// <param name="context">The sort context for statistics tracking.</param>
-    private static void BitonicMerge<T>(T[] array, int low, int count, bool ascending, ISortContext context) where T : IComparable<T>
+    private static void BitonicMerge<T, TComparer>(T[] array, int low, int count, bool ascending, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (count > 1)
         {
@@ -180,7 +192,7 @@ public static class BitonicSortParallel
 
             // Perform compare-and-swap sequentially
             // Parallelizing this loop has too much overhead for the lightweight comparison operations
-            var span = new SortSpan<T>(array.AsSpan(), context, BUFFER_MAIN);
+            var span = new SortSpan<T, TComparer>(array.AsSpan(), context, comparer, BUFFER_MAIN);
             for (int i = low; i < low + k; i++)
             {
                 CompareAndSwap(span, i, i + k, ascending);
@@ -192,14 +204,14 @@ public static class BitonicSortParallel
             {
                 Parallel.Invoke(
                     parallelOptions,
-                    () => BitonicMerge(array, low, k, ascending, context),
-                    () => BitonicMerge(array, low + k, k, ascending, context)
+                    () => BitonicMerge(array, low, k, ascending, comparer, context),
+                    () => BitonicMerge(array, low + k, k, ascending, comparer, context)
                 );
             }
             else
             {
-                BitonicMerge(array, low, k, ascending, context);
-                BitonicMerge(array, low + k, k, ascending, context);
+                BitonicMerge(array, low, k, ascending, comparer, context);
+                BitonicMerge(array, low + k, k, ascending, comparer, context);
             }
         }
     }
@@ -212,7 +224,7 @@ public static class BitonicSortParallel
     /// <param name="j">The index of the second element.</param>
     /// <param name="ascending">True if elements should be in ascending order, false for descending.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CompareAndSwap<T>(SortSpan<T> span, int i, int j, bool ascending) where T : IComparable<T>
+    private static void CompareAndSwap<T, TComparer>(SortSpan<T, TComparer> span, int i, int j, bool ascending) where TComparer : IComparer<T>
     {
         int cmp = span.Compare(i, j);
 

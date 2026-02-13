@@ -130,9 +130,7 @@ public static class BlockQuickSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, NullContext.Default);
-    }
+        => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -141,9 +139,7 @@ public static class BlockQuickSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, context);
-    }
+        => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -154,6 +150,12 @@ public static class BlockQuickSort
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+        => Sort(span, first, last, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -161,7 +163,7 @@ public static class BlockQuickSort
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last - 1, context);
     }
 
@@ -174,7 +176,7 @@ public static class BlockQuickSort
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The inclusive end index of the range to sort.</param>
-    internal static void SortCore<T>(SortSpan<T> s, int left, int right, ISortContext context) where T : IComparable<T>
+    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, ISortContext context) where TComparer : IComparer<T>
     {
         while (right > left)
         {
@@ -228,7 +230,7 @@ public static class BlockQuickSort
     /// <param name="right">The inclusive end index.</param>
     /// <returns>The range of elements equal to the pivot.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static PartitionResult HoareBlockPartition<T>(SortSpan<T> s, int left, int right, ISortContext context) where T : IComparable<T>
+    static PartitionResult HoareBlockPartition<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, ISortContext context) where TComparer : IComparer<T>
     {
         var size = right - left + 1;
         int pivotIndex;
@@ -280,7 +282,7 @@ public static class BlockQuickSort
     /// </para>
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static int HoareBlockPartitionCore<T>(SortSpan<T> s, int left, int right, int pivotIndex, ISortContext context) where T : IComparable<T>
+    static int HoareBlockPartitionCore<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int pivotIndex, ISortContext context) where TComparer : IComparer<T>
     {
         // Move pivot to the end and extract its value
         var pivotEnd = right;
@@ -292,8 +294,8 @@ public static class BlockQuickSort
         // indexR: stores offsets of elements <= pivot on the right side
         Span<int> indexL = stackalloc int[BLOCKSIZE];
         Span<int> indexR = stackalloc int[BLOCKSIZE];
-        var sIndexL = new SortSpan<int>(indexL, context, BUFFER_INDEX_L);
-        var sIndexR = new SortSpan<int>(indexR, context, BUFFER_INDEX_R);
+        var sIndexL = new SortSpan<int, Comparer<int>>(indexL, context, Comparer<int>.Default, BUFFER_INDEX_L);
+        var sIndexR = new SortSpan<int, Comparer<int>>(indexR, context, Comparer<int>.Default, BUFFER_INDEX_R);
 
         var begin = left;
         var end = last;
@@ -493,7 +495,7 @@ public static class BlockQuickSort
     /// Partially sorts the three elements in place.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static int MedianOf3<T>(SortSpan<T> s, int i1, int i2, int i3) where T : IComparable<T>
+    static int MedianOf3<T, TComparer>(SortSpan<T, TComparer> s, int i1, int i2, int i3) where TComparer : IComparer<T>
     {
         // Sort pairs to find median
         if (s.Compare(i1, i2) > 0) s.Swap(i1, i2);
@@ -507,7 +509,7 @@ public static class BlockQuickSort
     /// Selects median of 5 elements.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static int MedianOf5<T>(SortSpan<T> s, int i1, int i2, int i3, int i4, int i5) where T : IComparable<T>
+    static int MedianOf5<T, TComparer>(SortSpan<T, TComparer> s, int i1, int i2, int i3, int i4, int i5) where TComparer : IComparer<T>
     {
         // Network for median-of-5
         if (s.Compare(i1, i2) > 0) s.Swap(i1, i2);
@@ -525,7 +527,7 @@ public static class BlockQuickSort
     /// Median-of-3-medians-of-3 for arrays > 100 elements.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static int MedianOf3MediansOf3<T>(SortSpan<T> s, int left, int right) where T : IComparable<T>
+    static int MedianOf3MediansOf3<T, TComparer>(SortSpan<T, TComparer> s, int left, int right) where TComparer : IComparer<T>
     {
         var length = right - left + 1;
         var first = MedianOf3(s, left, left + 1, left + 2);
@@ -543,7 +545,7 @@ public static class BlockQuickSort
     /// Median-of-5-medians-of-5 for arrays > 800 elements.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static int MedianOf5MediansOf5<T>(SortSpan<T> s, int left, int right) where T : IComparable<T>
+    static int MedianOf5MediansOf5<T, TComparer>(SortSpan<T, TComparer> s, int left, int right) where TComparer : IComparer<T>
     {
         var length = right - left + 1;
         
@@ -576,7 +578,7 @@ public static class BlockQuickSort
     /// Uses systematic sampling across the array and selects the median.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static int MedianOfK<T>(SortSpan<T> s, int left, int right, int k) where T : IComparable<T>
+    static int MedianOfK<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int k) where TComparer : IComparer<T>
     {
         var length = right - left + 1;
         
@@ -617,7 +619,7 @@ public static class BlockQuickSort
     /// Uses QuickSelect algorithm.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static void PartialSort<T>(SortSpan<T> s, int left, int right, int k) where T : IComparable<T>
+    static void PartialSort<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int k) where TComparer : IComparer<T>
     {
         while (right > left)
         {
@@ -682,7 +684,7 @@ public static class BlockQuickSort
     /// <param name="pivotPos">The current position of the pivot element.</param>
     /// <returns>The range [Left, Right] of elements equal to the pivot (inclusive).</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static PartitionResult CheckForDuplicates<T>(SortSpan<T> s, int left, int right, int pivotPos) where T : IComparable<T>
+    static PartitionResult CheckForDuplicates<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int pivotPos) where TComparer : IComparer<T>
     {
         var leftSize = pivotPos - left;
         var rightSize = right - pivotPos;

@@ -1,5 +1,6 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -130,13 +131,26 @@ public static class DropMergeSort
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
     {
+        Sort(span, context, Comparer<T>.Default);
+    }
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided sort context and comparer.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    public static void Sort<T, TComparer>(Span<T> span, ISortContext context, TComparer comparer) where TComparer : IComparer<T>
+    {
         if (span.Length <= 1) return;
 
         // Rent buffer from ArrayPool for dropped elements (O(K) auxiliary space where K is the number of out-of-order elements)
         var droppedBuffer = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
-            SortCore(span, droppedBuffer.AsSpan(0, span.Length), context);
+            SortCore(span, droppedBuffer.AsSpan(0, span.Length), context, comparer);
         }
         finally
         {
@@ -150,11 +164,12 @@ public static class DropMergeSort
     /// <param name="span">The span to sort</param>
     /// <param name="droppedBuffer">Auxiliary buffer for dropped elements (same size as span)</param>
     /// <param name="context">Sort context for statistics tracking</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T>(Span<T> span, Span<T> droppedBuffer, ISortContext context) where T : IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, Span<T> droppedBuffer, ISortContext context, TComparer comparer) where TComparer : IComparer<T>
     {
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
-        var dropped = new SortSpan<T>(droppedBuffer, context, BUFFER_DROPPED);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var dropped = new SortSpan<T, TComparer>(droppedBuffer, context, comparer, BUFFER_DROPPED);
 
         // First step: heuristically find the Longest Nondecreasing Subsequence (LNS).
         // The LNS is kept in-place at span[0..write] while dropped elements go to the dropped buffer.
@@ -269,7 +284,7 @@ public static class DropMergeSort
         {
             var droppedSpan = droppedBuffer.Slice(0, droppedCount);
             // Use SortSpan for dropped elements to track statistics correctly
-            var droppedSortSpan = new SortSpan<T>(droppedSpan, context, BUFFER_DROPPED);
+            var droppedSortSpan = new SortSpan<T, TComparer>(droppedSpan, context, comparer, BUFFER_DROPPED);
             QuickSortMedian3.SortCore(droppedSortSpan, 0, droppedCount - 1, context);
         }
 
@@ -294,7 +309,7 @@ public static class DropMergeSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static T MaxInRange<T>(SortSpan<T> s, int start, int count) where T : IComparable<T>
+    private static T MaxInRange<T, TComparer>(SortSpan<T, TComparer> s, int start, int count) where TComparer : IComparer<T>
     {
         var max = s.Read(start);
         for (var i = 1; i < count; i++)

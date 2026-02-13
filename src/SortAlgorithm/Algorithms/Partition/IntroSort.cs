@@ -118,9 +118,7 @@ public static class IntroSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, NullContext.Default);
-    }
+        => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -129,9 +127,7 @@ public static class IntroSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, context);
-    }
+        => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -142,6 +138,12 @@ public static class IntroSort
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+        => Sort(span, first, last, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -149,7 +151,7 @@ public static class IntroSort
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last - 1, context);
     }
 
@@ -162,7 +164,7 @@ public static class IntroSort
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The inclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    internal static void SortCore<T>(SortSpan<T> s, int left, int right, ISortContext context) where T : IComparable<T>
+    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, ISortContext context) where TComparer : IComparer<T>
     {
         var depthLimit = 2 * Log2(right - left + 1);
         IntroSortInternal(s, left, right, depthLimit, 30, true, context);
@@ -177,10 +179,13 @@ public static class IntroSort
     /// <param name="span">The span to sort.</param>
     /// <param name="insertionSortThreshold">The threshold at which to switch to InsertionSort.</param>
     internal static void SortWithCustomThreshold<T>(Span<T> span, int insertionSortThreshold) where T : IComparable<T>
+        => SortWithCustomThreshold(span, Comparer<T>.Default, insertionSortThreshold);
+
+    internal static void SortWithCustomThreshold<T, TComparer>(Span<T> span, TComparer comparer, int insertionSortThreshold) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, NullContext.Default, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, NullContext.Default, comparer, BUFFER_MAIN);
         var depthLimit = 2 * Log2(span.Length);
         IntroSortInternal(s, 0, span.Length - 1, depthLimit, insertionSortThreshold, true, NullContext.Default);
     }
@@ -197,7 +202,7 @@ public static class IntroSort
     /// <param name="leftmost">True if this is the leftmost partition (requires boundary checks in InsertionSort), 
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     /// false otherwise (can use unguarded InsertionSort).</param>
-    private static void IntroSortInternal<T>(SortSpan<T> s, int left, int right, int depthLimit, int insertionSortThreshold, bool leftmost, ISortContext context) where T : IComparable<T>
+    private static void IntroSortInternal<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int depthLimit, int insertionSortThreshold, bool leftmost, ISortContext context) where TComparer : IComparer<T>
     {
         while (right > left)
         {
@@ -402,7 +407,7 @@ public static class IntroSort
     /// Returns the median value among three elements at specified indices.
     /// This method performs exactly 2-3 comparisons to determine the median value.
     /// </summary>
-    private static T MedianOf3Value<T>(SortSpan<T> s, int lowIdx, int midIdx, int highIdx) where T : IComparable<T>
+    private static T MedianOf3Value<T, TComparer>(SortSpan<T, TComparer> s, int lowIdx, int midIdx, int highIdx) where TComparer : IComparer<T>
     {
         // Use SortSpan.Compare to track statistics
         var cmpLowMid = s.Compare(lowIdx, midIdx);
@@ -446,7 +451,7 @@ public static class IntroSort
     /// This provides better pivot selection than simple 3-point sampling, especially for large arrays
     /// with patterns like partially-sorted or mountain-shaped distributions.
     /// </remarks>
-    private static T MedianOf5Value<T>(SortSpan<T> s, int i1, int i2, int i3, int i4, int i5) where T : IComparable<T>
+    private static T MedianOf5Value<T, TComparer>(SortSpan<T, TComparer> s, int i1, int i2, int i3, int i4, int i5) where TComparer : IComparer<T>
     {
         // Sort the 5 indices using a sorting network (6 comparisons minimum for 5 elements)
         // We'll use a simplified approach: sort pairs, then find median

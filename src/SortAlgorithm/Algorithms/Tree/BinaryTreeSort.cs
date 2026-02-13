@@ -67,9 +67,7 @@ public static class BinaryTreeSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -78,10 +76,21 @@ public static class BinaryTreeSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // The root node of the binary tree (null == the tree is empty).
         Node<T>? root = null;
@@ -92,7 +101,7 @@ public static class BinaryTreeSort
         for (var i = 0; i < s.Length; i++)
         {
             var value = s.Read(i);
-            InsertIterative(ref root, value, context, ref nodeCounter);
+            InsertIterative(ref root, value, comparer, context, ref nodeCounter);
         }
 
         // Traverse the tree in inorder and write elements back into the array.
@@ -103,7 +112,7 @@ public static class BinaryTreeSort
     /// <summary>
     /// Iterative insertion. Instead of using recursion, it loops to find the child nodes.
     /// </summary>
-    private static void InsertIterative<T>(ref Node<T>? node, T value, ISortContext context, ref int nodeCounter) where T : IComparable<T>
+    private static void InsertIterative<T, TComparer>(ref Node<T>? node, T value, TComparer comparer, ISortContext context, ref int nodeCounter) where TComparer : IComparer<T>
     {
         // If the tree is empty, create a new root and return.
         if (node is null)
@@ -118,7 +127,7 @@ public static class BinaryTreeSort
         while (true)
         {
             // Compare value with current node's item (reads node value for visualization)
-            var cmp = CompareWithNode(value, current, context);
+            var cmp = CompareWithNode(value, current, comparer, context);
 
             // If the value is smaller than the current node, go left.
             if (cmp < 0)
@@ -146,7 +155,7 @@ public static class BinaryTreeSort
         }
     }
 
-    private static void Inorder<T>(SortSpan<T> s, Node<T>? node, ref int i, ISortContext context) where T : IComparable<T>
+    private static void Inorder<T, TComparer>(SortSpan<T, TComparer> s, Node<T>? node, ref int i, ISortContext context) where TComparer : IComparer<T>
     {
         if (node is null) return;
 
@@ -190,7 +199,7 @@ public static class BinaryTreeSort
     /// Also records the node access for visualization.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CompareWithNode<T>(T value, Node<T> node, ISortContext context) where T : IComparable<T>
+    private static int CompareWithNode<T, TComparer>(T value, Node<T> node, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         // Visualize node access during tree traversal
         context.OnIndexRead(node.Id, BUFFER_TREE);
@@ -198,7 +207,7 @@ public static class BinaryTreeSort
         // Compare value with node's item
         // Note: This comparison is counted as a main array comparison (bufferId 0)
         // because the values originated from the main array
-        var cmp = value.CompareTo(node.Item);
+        var cmp = comparer.Compare(value, node.Item);
         context.OnCompare(-1, -1, cmp, 0, 0);
         
         return cmp;

@@ -65,18 +65,22 @@ public static class PigeonholeSort
     /// Sorts the elements in the specified span using a key selector function.
     /// </summary>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-    {
-        Sort(span, keySelector, NullContext.Default);
-    }
+        => Sort(span, keySelector, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
     /// </summary>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector, ISortContext context) where T : IComparable<T>
+        => Sort(span, keySelector, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, Func<T, int> keySelector, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var keysArray = ArrayPool<int>.Shared.Rent(span.Length);
@@ -84,7 +88,7 @@ public static class PigeonholeSort
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T>(tempArray.AsSpan(0, span.Length), context, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, TComparer>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
 
             SortCore(span, keySelector, s, tempSpan, keys);
@@ -96,7 +100,7 @@ public static class PigeonholeSort
         }
     }
 
-    private static void SortCore<T>(Span<T> span, Func<T, int> keySelector, SortSpan<T> s, SortSpan<T> tempSpan, Span<int> keys) where T : IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer> s, SortSpan<T, TComparer> tempSpan, Span<int> keys) where TComparer : IComparer<T>
     {
         // Find min/max and cache keys in single pass
         var min = int.MaxValue;
@@ -147,7 +151,7 @@ public static class PigeonholeSort
     /// Achieves O(n + k) complexity by processing elements in a single pass.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PigeonholeDistribute<T>(SortSpan<T> source, SortSpan<T> temp, Span<int> keys, Span<int> holes, int offset) where T : IComparable<T>
+    private static void PigeonholeDistribute<T, TComparer>(SortSpan<T, TComparer> source, SortSpan<T, TComparer> temp, Span<int> keys, Span<int> holes, int offset) where TComparer : IComparer<T>
     {
         // Phase 1: Copy elements to temp array and count occurrences (O(n))
         for (var i = 0; i < source.Length; i++)
@@ -226,27 +230,35 @@ public static class PigeonholeSortInteger
     /// </summary>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
     {
-        Sort(span, NullContext.Default);
+        Sort(span, Comparer<T>.Default, NullContext.Default);
     }
 
     /// <summary>
     /// Sorts integer values in the specified span with sort context (generic version for IBinaryInteger types).
     /// </summary>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts integer values in the specified span with comparer and sort context (generic version for IBinaryInteger types).
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
         // Check if type is supported (64-bit or less)
         var bitSize = GetBitSize<T>();
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T>(tempArray.AsSpan(0, span.Length), context, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, TComparer>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
 
             SortCore(span, s, tempSpan);
         }
@@ -256,8 +268,9 @@ public static class PigeonholeSortInteger
         }
     }
 
-    private static void SortCore<T>(Span<T> span, SortSpan<T> s, SortSpan<T> tempSpan)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, SortSpan<T, TComparer> s, SortSpan<T, TComparer> tempSpan)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
     {
         // Find min and max to determine range
         var minValue = T.MaxValue;
@@ -307,8 +320,9 @@ public static class PigeonholeSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PigeonholeDistribute<T>(SortSpan<T> source, SortSpan<T> temp, Span<int> holes, long offset) 
-        where T : IBinaryInteger<T>, IComparable<T>
+    private static void PigeonholeDistribute<T, TComparer>(SortSpan<T, TComparer> source, SortSpan<T, TComparer> temp, Span<int> holes, long offset)
+        where T : IBinaryInteger<T>
+        where TComparer : IComparer<T>
     {
         // Phase 1: Copy elements to temp array and count occurrences (O(n))
         for (var i = 0; i < source.Length; i++)
