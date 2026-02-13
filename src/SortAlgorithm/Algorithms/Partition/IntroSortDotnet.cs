@@ -119,14 +119,14 @@ public static class IntroSortDotnet
                     return;
                 }
 
-                InsertionSort.SortCore(s, left, left + partitionSize);
+                InsertionSortInternal(s, left, partitionSize);
                 return;
             }
 
             // Max depth reached: switch to HeapSort to guarantee O(n log n)
             if (depthLimit == 0)
             {
-                HeapSort.SortCore(s, left, left + partitionSize);
+                HeapSortInternal(s, left, partitionSize);
                 return;
             }
             depthLimit--;
@@ -210,5 +210,104 @@ public static class IntroSortDotnet
         
         // Return position relative to offset (0-based within partition)
         return left;
+    }
+
+    /// <summary>
+    /// InsertionSort implementation following dotnet runtime's approach.
+    /// Works with a partition starting at 'offset' with size 'partitionSize'.
+    /// Uses 0-based indexing within the partition.
+    /// </summary>
+    /// <remarks>
+    /// This is a direct port of dotnet runtime's InsertionSort but adapted for SortSpan.
+    /// Unlike the shared InsertionSort.SortCore, this version:
+    /// - Uses 0-based indexing within partition (matches dotnet runtime)
+    /// - Always writes the final value (no j != i-1 optimization)
+    /// - Simpler loop structure for better JIT optimization
+    /// </remarks>
+    private static void InsertionSortInternal<T, TComparer>(SortSpan<T, TComparer> s, int offset, int partitionSize) where TComparer : IComparer<T>
+    {
+        for (int i = 0; i < partitionSize - 1; i++)
+        {
+            T t = s.Read(offset + i + 1);
+
+            int j = i;
+            while (j >= 0 && s.Compare(offset + j, t) > 0)
+            {
+                s.Write(offset + j + 1, s.Read(offset + j));
+                j--;
+            }
+
+            s.Write(offset + j + 1, t);
+        }
+    }
+
+    /// <summary>
+    /// HeapSort implementation following dotnet runtime's approach.
+    /// Works with a partition starting at 'offset' with size 'partitionSize'.
+    /// Uses 1-based heap indexing (parent: i/2, left child: 2*i, right child: 2*i+1).
+    /// </summary>
+    /// <remarks>
+    /// This is a direct port of dotnet runtime's HeapSort but adapted for SortSpan.
+    /// Key differences from shared HeapSort:
+    /// - Uses 1-based heap indexing (simpler parent/child calculations)
+    /// - No Floyd's algorithm (uses standard sift-down for both build and extract)
+    /// - Simpler implementation optimized for JIT
+    /// </remarks>
+    private static void HeapSortInternal<T, TComparer>(SortSpan<T, TComparer> s, int offset, int partitionSize) where TComparer : IComparer<T>
+    {
+        int n = partitionSize;
+        
+        // Build heap (heapify from bottom to top)
+        for (int i = n >> 1; i >= 1; i--)
+        {
+            DownHeap(s, offset, i, n);
+        }
+
+        // Extract elements from heap one by one
+        for (int i = n; i > 1; i--)
+        {
+            s.Swap(offset + 0, offset + i - 1);
+            DownHeap(s, offset, 1, i - 1);
+        }
+    }
+
+    /// <summary>
+    /// Restores the heap property for a subtree using sift-down operation.
+    /// Uses 1-based heap indexing where:
+    /// - Parent of node i is at i/2
+    /// - Left child of node i is at 2*i
+    /// - Right child of node i is at 2*i+1
+    /// </summary>
+    /// <param name="s">The SortSpan to operate on</param>
+    /// <param name="offset">Starting position of the heap in the span</param>
+    /// <param name="i">1-based index of the node to sift down</param>
+    /// <param name="n">Size of the heap (1-based)</param>
+    private static void DownHeap<T, TComparer>(SortSpan<T, TComparer> s, int offset, int i, int n) where TComparer : IComparer<T>
+    {
+        // Store the value to sift down
+        T d = s.Read(offset + i - 1);
+        
+        // Continue while node has at least a left child
+        while (i <= n >> 1)
+        {
+            int child = 2 * i;  // Left child
+            
+            // If right child exists and is greater than left child, use right child
+            if (child < n && s.Compare(offset + child - 1, offset + child) < 0)
+            {
+                child++;
+            }
+
+            // If current value is greater than or equal to the larger child, we're done
+            if (s.Compare(d, s.Read(offset + child - 1)) >= 0)
+                break;
+
+            // Move the larger child up
+            s.Write(offset + i - 1, s.Read(offset + child - 1));
+            i = child;
+        }
+
+        // Place the value in its final position
+        s.Write(offset + i - 1, d);
     }
 }
