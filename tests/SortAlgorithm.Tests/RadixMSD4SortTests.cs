@@ -155,11 +155,11 @@ public class RadixMSD4SortTests
         }
     }
 
-    private static bool IsSorted<T>(T[] array) where T : IComparable<T>
+    private static bool IsSorted<T>(T[] array)
     {
         for (int i = 1; i < array.Length; i++)
         {
-            if (array[i - 1].CompareTo(array[i]) > 0)
+            if (Comparer<T>.Default.Compare(array[i - 1], array[i]) > 0)
                 return false;
         }
         return true;

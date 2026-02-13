@@ -82,11 +82,12 @@ catch (Exception ex)
 
 Console.WriteLine("\n=== All Tests Completed ===");
 
-static bool IsSorted<T>(T[] array) where T : IComparable<T>
+static bool IsSorted<T>(T[] array)
 {
+    var comparer = Comparer<T>.Default;
     for (int i = 1; i < array.Length; i++)
     {
-        if (array[i].CompareTo(array[i - 1]) < 0)
+        if (comparer.Compare(array[i], array[i - 1]) < 0)
             return false;
     }
     return true;

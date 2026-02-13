@@ -104,11 +104,12 @@ Console.WriteLine($"  All equal (10K):   {stats1.CompareCount} compares (vs ~133
 Console.WriteLine($"  Boolean (5K):      {stats2.CompareCount} compares");
 Console.WriteLine($"  5 categories (8K): {stats3.CompareCount} compares");
 
-static bool IsSorted<T>(T[] array) where T : IComparable<T>
+static bool IsSorted<T>(T[] array)
 {
+    var comparer = Comparer<T>.Default;
     for (int i = 1; i < array.Length; i++)
     {
-        if (array[i].CompareTo(array[i - 1]) < 0)
+        if (comparer.Compare(array[i], array[i - 1]) < 0)
             return false;
     }
     return true;

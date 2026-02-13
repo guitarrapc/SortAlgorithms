@@ -212,18 +212,18 @@ var (
 
 for {
     // ...
-    
+
     // 前回の状態に基づいて最適化
     if wasBalanced && wasPartitioned && hint == increasingHint {
         if partialInsertionSort_func(data, a, b) {
             return
         }
     }
-    
+
     // Partition後に状態を更新
     mid, alreadyPartitioned := partition_func(data, a, b, pivot)
     wasPartitioned = alreadyPartitioned
-    
+
     wasBalanced = leftLen >= balanceThreshold || rightLen >= balanceThreshold
 }
 ```
@@ -303,7 +303,7 @@ for {
    ```csharp
    // Pivot選択時にhintを計算
    var (pivot, hint) = ChoosePivot(s, begin, end);
-   
+
    // ソート済み検出
    if (hint == SortedHint.Increasing && alreadyPartitionedLastTime) {
        if (PartialInsertionSort(s, begin, end)) {
@@ -328,8 +328,8 @@ private enum SortedHint
     Decreasing = 2
 }
 
-private static (int pivot, SortedHint hint) ChoosePivot<T>(
-    SortSpan<T> s, int begin, int end) where T : IComparable<T>
+private static (int pivot, SortedHint hint) ChoosePivot<T, TComparer>(
+    SortSpan<T, TComparer> s, int begin, int end) where TComparer : IComparer<T>
 {
     const int MaxSwaps = 4 * 3;
     var size = end - begin;
@@ -366,9 +366,9 @@ private static (int pivot, SortedHint hint) ChoosePivot<T>(
 ### メインループ（Go準拠）
 
 ```csharp
-private static void PDQSortLoop<T>(
-    SortSpan<T> s, int begin, int end, int badAllowed, 
-    bool leftmost, ISortContext context) where T : IComparable<T>
+private static void PDQSortLoop<T, TComparer>(
+    SortSpan<T, TComparer> s, int begin, int end, int badAllowed,
+    bool leftmost, ISortContext context) where TComparer : IComparer<T>
 {
     var wasBalanced = true;
     var wasPartitioned = true;
@@ -419,7 +419,7 @@ private static void PDQSortLoop<T>(
         var lSize = pivotPos - begin;
         var rSize = end - (pivotPos + 1);
         var balanceThreshold = size / 8;
-        
+
         if (lSize < balanceThreshold || rSize < balanceThreshold) {
             wasBalanced = false;
             if (badAllowed == 0) {
@@ -446,15 +446,15 @@ private static void PDQSortLoop<T>(
 ### PartitionRight（pivotインデックスを受け取る）
 
 ```csharp
-private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T>(
-    SortSpan<T> s, int begin, int end, int pivotIndex) where T : IComparable<T>
+private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T, TComparer>(
+    SortSpan<T, TComparer> s, int begin, int end, int pivotIndex) where TComparer : IComparer<T>
 {
     // Pivotをbeginに移動（Go実装と同じ）
     s.Swap(begin, pivotIndex);
-    
+
     // Pivot値を読み取り
     var pivot = s.Read(begin);
-    
+
     // ... 既存のpartitioning logic
 }
 ```
@@ -514,6 +514,6 @@ private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T>(
 
 ---
 
-**作成日:** 2026-01-02  
-**作成者:** GitHub Copilot Analysis  
+**作成日:** 2026-01-02
+**作成者:** GitHub Copilot Analysis
 **対象バージョン:** C# (.NET 10), C++ (orlp/pdqsort), Go 1.19+

@@ -29,9 +29,9 @@ private enum SortedHint
 **Step 1.2: Sort3WithSwapCount関数の追加**
 
 ```csharp
-private static void Sort3WithSwapCount<T>(
-    SortSpan<T> s, int a, int b, int c, ref int swaps)
-    where T : IComparable<T>
+private static void Sort3WithSwapCount<T, TComparer>(
+    SortSpan<T, TComparer> s, int a, int b, int c, ref int swaps)
+    where TComparer : IComparer<T>
 {
     if (s.Compare(b, a) < 0) { s.Swap(a, b); swaps++; }
     if (s.Compare(c, b) < 0) { s.Swap(b, c); swaps++; }
@@ -44,9 +44,9 @@ private static void Sort3WithSwapCount<T>(
 ⚠️ **注意:** この関数は`pos - 1`と`pos + 1`にアクセスするため、呼び出し側で範囲チェックが必要
 
 ```csharp
-private static int MedianAdjacent<T>(
-    SortSpan<T> s, int pos, ref int swaps)
-    where T : IComparable<T>
+private static int MedianAdjacent<T, TComparer>(
+    SortSpan<T, TComparer> s, int pos, ref int swaps)
+    where TComparer : IComparer<T>
 {
     // 範囲チェック: pos-1 >= begin && pos+1 < end
     Sort3WithSwapCount(s, pos - 1, pos, pos + 1, ref swaps);
@@ -57,9 +57,9 @@ private static int MedianAdjacent<T>(
 **Step 1.4: ChoosePivot関数の実装**
 
 ```csharp
-private static (int pivot, SortedHint hint) ChoosePivot<T>(
-    SortSpan<T> s, int begin, int end)
-    where T : IComparable<T>
+private static (int pivot, SortedHint hint) ChoosePivot<T, TComparer>(
+    SortSpan<T, TComparer> s, int begin, int end)
+    where TComparer : IComparer<T>
 {
     const int MaxSwaps = 4 * 3;  // 3回のmedian x 各4 swap
     var size = end - begin;
@@ -101,13 +101,13 @@ private static (int pivot, SortedHint hint) ChoosePivot<T>(
 ```csharp
 // ソート済み配列
 var sorted = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-var s = new SortSpan<int>(sorted, context, 0);
+var s = new SortSpan<int, Comparer<int>>(sorted, Comparer<int>.Default, context, 0);
 var (pivot, hint) = ChoosePivot(s, 0, 10);
 // Expected: hint == SortedHint.Increasing
 
 // 逆順配列
 var reversed = new[] { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
-var s2 = new SortSpan<int>(reversed, context, 0);
+var s2 = new SortSpan<int, Comparer<int>>(reversed, Comparer<int>.Default, context, 0);
 var (pivot2, hint2) = ChoosePivot(s2, 0, 10);
 // Expected: hint2 == SortedHint.Decreasing
 ```
@@ -123,10 +123,10 @@ var (pivot2, hint2) = ChoosePivot(s2, 0, 10);
 **Step 2.1: PDQSortLoop関数の修正**
 
 ```csharp
-private static void PDQSortLoop<T>(
-    SortSpan<T> s, int begin, int end, int badAllowed,
+private static void PDQSortLoop<T, TComparer>(
+    SortSpan<T, TComparer> s, int begin, int end, int badAllowed,
     bool leftmost, ISortContext context)
-    where T : IComparable<T>
+    where TComparer : IComparer<T>
 {
     // 状態フラグの初期化
     var wasBalanced = true;      // 前回のpartitionがバランスしていたか
@@ -222,9 +222,9 @@ while (true)
 **Step 3.2: ReverseRange関数の追加**
 
 ```csharp
-private static void ReverseRange<T>(
-    SortSpan<T> s, int begin, int end)
-    where T : IComparable<T>
+private static void ReverseRange<T, TComparer>(
+    SortSpan<T, TComparer> s, int begin, int end)
+    where TComparer : IComparer<T>
 {
     var i = begin;
     var j = end - 1;
@@ -248,9 +248,9 @@ private static void ReverseRange<T>(
 **Step 4.1: PartitionRight関数の修正**
 
 ```csharp
-private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T>(
-    SortSpan<T> s, int begin, int end, int pivotIndex)
-    where T : IComparable<T>
+private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T, TComparer>(
+    SortSpan<T, TComparer> s, int begin, int end, int pivotIndex)
+    where TComparer : IComparer<T>
 {
     // ⚠️ 重要: pivotIndexをbeginにSwap
     s.Swap(begin, pivotIndex);
@@ -292,9 +292,9 @@ private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T>(
 同様に、pivotIndexを受け取り、最初にSwapを実行:
 
 ```csharp
-private static int PartitionLeft<T>(
-    SortSpan<T> s, int begin, int end, int pivotIndex)
-    where T : IComparable<T>
+private static int PartitionLeft<T, TComparer>(
+    SortSpan<T, TComparer> s, int begin, int end, int pivotIndex)
+    where TComparer : IComparer<T>
 {
     s.Swap(begin, pivotIndex);
     var pivot = s.Read(begin);
@@ -353,9 +353,9 @@ private static int NextPowerOfTwo(int n)
 **Step 5.3: BreakPatterns関数**
 
 ```csharp
-private static void BreakPatterns<T>(
-    SortSpan<T> s, int begin, int end)
-    where T : IComparable<T>
+private static void BreakPatterns<T, TComparer>(
+    SortSpan<T, TComparer> s, int begin, int end)
+    where TComparer : IComparer<T>
 {
     var length = end - begin;
     if (length >= 8)
@@ -481,10 +481,11 @@ private static void PDQSortLoop<T>(...)
 
 Option 2: 状態を引数として渡す
 ```csharp
-private static void PDQSortLoop<T>(
-    SortSpan<T> s, int begin, int end, int badAllowed,
+private static void PDQSortLoop<T, TComparer>(
+    SortSpan<T, TComparer> s, int begin, int end, int badAllowed,
     bool leftmost, bool wasBalanced, bool wasPartitioned,
     ISortContext context)
+    where TComparer : IComparer<T>
 {
     // ...
 }
@@ -549,7 +550,7 @@ var other = (int)(random.Next() & (modulus - 1));
 public void ChoosePivot_SortedArray_ReturnsIncreasingHint()
 {
     var sorted = Enumerable.Range(1, 200).ToArray();
-    var s = new SortSpan<int>(sorted, NullContext.Default, 0);
+    var s = new SortSpan<int, Comparer<int>>(sorted, Comparer<int>.Default, NullContext.Default, 0);
 
     var (pivot, hint) = ChoosePivot(s, 0, 200);
 
@@ -560,7 +561,7 @@ public void ChoosePivot_SortedArray_ReturnsIncreasingHint()
 public void ChoosePivot_ReversedArray_ReturnsDecreasingHint()
 {
     var reversed = Enumerable.Range(1, 200).Reverse().ToArray();
-    var s = new SortSpan<int>(reversed, NullContext.Default, 0);
+    var s = new SortSpan<int, Comparer<int>>(reversed, Comparer<int>.Default, NullContext.Default, 0);
 
     var (pivot, hint) = ChoosePivot(s, 0, 200);
 
