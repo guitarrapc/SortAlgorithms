@@ -71,7 +71,7 @@ public static class ShiftSort
 {
     // Threshold for using stackalloc vs ArrayPool (128 int = 512 bytes)
     private const int StackallocThreshold = 256; // (128 * 2) - 2 = max span.Length for stackalloc
-    
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;           // Main input array
     private const int BUFFER_TEMP_FIRST = 1;     // Temporary buffer for first partition
@@ -83,7 +83,7 @@ public static class ShiftSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -92,7 +92,7 @@ public static class ShiftSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, Comparer<T>.Default, context);
 
     /// <summary>
@@ -229,7 +229,7 @@ public static class ShiftSort
             try
             {
                 var tmp2ndSpan = new SortSpan<T, TComparer>(tmp2nd.AsSpan(0, bufferSize), context, s.Comparer, BUFFER_TEMP_SECOND);
-                
+
                 // Copy second partition to buffer using CopyTo for efficiency
                 s.CopyTo(second, tmp2ndSpan, 0, bufferSize);
 
@@ -264,7 +264,7 @@ public static class ShiftSort
             try
             {
                 var tmp1stSpan = new SortSpan<T, TComparer>(tmp1st.AsSpan(0, bufferSize), context, s.Comparer, BUFFER_TEMP_FIRST);
-                
+
                 // Copy first partition to buffer using CopyTo for efficiency
                 s.CopyTo(first, tmp1stSpan, 0, bufferSize);
 

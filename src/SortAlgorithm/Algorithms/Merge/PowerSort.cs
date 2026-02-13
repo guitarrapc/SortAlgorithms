@@ -76,7 +76,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Large datasets where merge cost optimization matters</description></item>
 /// </list>
 /// <para><strong>References:</strong></para>
-/// <para>Paper: "Nearly-Optimal Mergesort: Fast, Practical Sorting Methods That Optimally Adapt to Existing Runs" 
+/// <para>Paper: "Nearly-Optimal Mergesort: Fast, Practical Sorting Methods That Optimally Adapt to Existing Runs"
 /// by J. Ian Munro and Sebastian Wild (2018)</para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Powersort#cite_note-acmtechnews-2</para>
 /// <para>ICALP 2022: https://drops.dagstuhl.de/storage/00lipics/lipics-vol229-icalp2022/LIPIcs.ICALP.2022.68/LIPIcs.ICALP.2022.68.pdf</para>
@@ -97,7 +97,7 @@ public static class PowerSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -106,7 +106,7 @@ public static class PowerSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
@@ -117,7 +117,7 @@ public static class PowerSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
         => Sort(span, first, last, Comparer<T>.Default, context);
 
     /// <summary>
@@ -167,18 +167,18 @@ public static class PowerSort
         // Find the leftmost run (s1, e1)
         var s1 = first;
         var e1 = FindAndPrepareRun(s, s1, last);
-        
+
         // Process runs using PowerSort algorithm
         while (e1 < last)
         {
             // Find next run (s2, e2)
             var s2 = e1;
             var e2 = FindAndPrepareRun(s, s2, last);
-            
+
             // Calculate node power between current run [s1..e1) and next run [s2..e2)
             // Convert to relative positions (0-based from 'first')
             var p = ComputeNodePower(s1 - first, e1 - first, s2 - first, e2 - first, n);
-            
+
             // Merge while P.top() > p (previous merge deeper in tree than current)
             while (stackSize > 0 && power[stackSize - 1] > p)
             {
@@ -187,27 +187,27 @@ public static class PowerSort
                 var prevBase = runBase[stackSize];
                 var prevLen = runLen[stackSize];
                 var currentLen = e1 - s1;
-                
+
                 // Merge prevRun [prevBase..prevBase+prevLen) with current run [s1..e1)
                 // These two runs are always adjacent (prevBase + prevLen == s1)
                 MergeRuns(span, prevBase, prevLen, s1, currentLen, comparer, context);
-                
+
                 // Update s1 to represent the merged result
                 s1 = prevBase;
                 // e1 stays the same (end of the merged region)
             }
-            
+
             // Push current run onto stack with its power
             runBase[stackSize] = s1;
             runLen[stackSize] = e1 - s1;
             power[stackSize] = p;
             stackSize++;
-            
+
             // Move to next run
             s1 = s2;
             e1 = e2;
         }
-        
+
         // Now [s1..e1) is the rightmost run
         // Merge all remaining runs from the stack with the rightmost run
         while (stackSize > 0)
@@ -215,17 +215,17 @@ public static class PowerSort
             stackSize--;
             var prevBase = runBase[stackSize];
             var prevLen = runLen[stackSize];
-            
+
             var currentLen = e1 - s1;
-            
+
             // The previous run should be immediately before the current run [s1..e1)
             if (prevBase + prevLen != s1)
             {
                 throw new InvalidOperationException($"Runs are not adjacent in final collapse: prev ends at {prevBase + prevLen}, current starts at {s1}");
             }
-            
+
             MergeRuns(span, prevBase, prevLen, s1, currentLen, comparer, context);
-            
+
             s1 = prevBase;
             // e1 stays the same
         }
@@ -240,12 +240,12 @@ public static class PowerSort
     private static int FindAndPrepareRun<T, TComparer>(SortSpan<T, TComparer> s, int start, int last) where TComparer : IComparer<T>
     {
         var runEnd = start + 1;
-        
+
         if (runEnd >= last)
         {
             return last;  // Single element run
         }
-        
+
         // Check if descending
         if (s.Compare(start, runEnd) > 0)
         {
@@ -311,24 +311,24 @@ public static class PowerSort
         // Our implementation uses 0-based indexing with exclusive end [s1..e1)
         // So we adjust: n1 = e1 - s1 (not +1), and the formula becomes:
         // a = (s1 + n1/2) / n (not -1 since we're 0-based)
-        
+
         var n1 = e1 - s1;
         var n2 = e2 - s2;
-        
+
         // Calculate midpoint positions (as floating point for precision)
         var a = (s1 + n1 / 2.0) / n;
         var b = (s2 + n2 / 2.0) / n;
-        
+
         // Find the power: the level where a and b diverge in the binary tree
         var power = 0;
         var scale = 1;
-        
+
         while ((int)(a * scale) == (int)(b * scale))
         {
             power++;
             scale <<= 1;  // scale *= 2
         }
-        
+
         return power;
     }
 

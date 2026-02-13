@@ -57,13 +57,13 @@ public static class DoubleSelectionSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -72,7 +72,7 @@ public static class DoubleSelectionSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
@@ -84,7 +84,7 @@ public static class DoubleSelectionSort
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
         => Sort(span, first, last, Comparer<T>.Default, context);
 
     /// <summary>
@@ -145,7 +145,7 @@ public static class DoubleSelectionSort
             if (max == left)
             {
                 s.Swap(left, right);
-                
+
                 // After swap: what was at right is now at left
                 // If min was at right, after the swap min is now at left
                 // If min was at left (same as max), after swap it's at right
@@ -158,7 +158,7 @@ public static class DoubleSelectionSort
                 {
                     min = right;
                 }
-                
+
                 // Now place min at left if it's not already there
                 if (min != left)
                 {
@@ -169,14 +169,14 @@ public static class DoubleSelectionSort
             else if (min == right)
             {
                 s.Swap(right, left);
-                
+
                 // After swap: what was at left is now at right
                 // If max was at left, it's now at right - adjust max index
                 if (max == left)
                 {
                     max = right;
                 }
-                
+
                 // Now place max at right if it's not already there
                 if (max != right)
                 {
@@ -190,14 +190,14 @@ public static class DoubleSelectionSort
                 if (min != left)
                 {
                     s.Swap(min, left);
-                    
+
                     // If max was at left, it's now at min's old position
                     if (max == left)
                     {
                         max = min;
                     }
                 }
-                
+
                 // Then swap max to right
                 if (max != right)
                 {

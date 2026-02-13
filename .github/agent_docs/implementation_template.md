@@ -24,13 +24,13 @@ public static class MySort
     /// <summary>
     /// Sorts the span using {Algorithm Name}.
     /// </summary>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the span using {Algorithm Name} with context tracking.
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, Comparer<T>.Default, context);
 
     /// <summary>
@@ -67,8 +67,9 @@ public static class MySort
 
 ## Key Points
 
-1. **Three overloads**: Two convenience overloads (`IComparable<T>`, delegating via `Comparer<T>.Default`) + one main implementation with `TComparer`
+1. **Three overloads**: Two convenience overloads (no constraint, delegating via `Comparer<T>.Default`) + one main implementation with `TComparer : IComparer<T>`
 2. **Generic TComparer pattern**: Main implementation uses `<T, TComparer> where TComparer : IComparer<T>` for zero-alloc devirtualized comparisons
+3. **Runtime validation**: Convenience overloads matching `MemoryExtensions.Sort` pattern. `Comparer<T>.Default` performs runtime checks
 3. **Early returns**: Check for trivial cases (`Length <= 1`)
 4. **Hybrid approach**: Use insertion sort for small subarrays
 5. **AggressiveInlining**: Mark hot-path helper methods

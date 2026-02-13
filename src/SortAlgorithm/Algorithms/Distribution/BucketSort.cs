@@ -60,13 +60,13 @@ public static class BucketSort
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function.
     /// </summary>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, Func<T, int> keySelector)
         => Sort(span, keySelector, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, Func<T, int> keySelector, ISortContext context)
         => Sort(span, keySelector, Comparer<T>.Default, context);
 
     /// <summary>
@@ -263,8 +263,7 @@ public static class BucketSortInteger
     /// <summary>
     /// Sorts integer values in the specified span (generic version for IBinaryInteger types).
     /// </summary>
-    public static void Sort<T>(Span<T> span)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
         Sort(span, Comparer<T>.Default, NullContext.Default);
     }
@@ -272,8 +271,7 @@ public static class BucketSortInteger
     /// <summary>
     /// Sorts integer values in the specified span with sort context (generic version for IBinaryInteger types).
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
         => Sort(span, Comparer<T>.Default, context);
 
     /// <summary>

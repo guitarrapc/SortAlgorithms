@@ -100,7 +100,7 @@ public static class BottomupHeapSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -109,7 +109,7 @@ public static class BottomupHeapSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
@@ -120,7 +120,7 @@ public static class BottomupHeapSort
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
         => Sort(span, first, last, Comparer<T>.Default, context);
 
     /// <summary>
@@ -223,7 +223,7 @@ public static class BottomupHeapSort
         while (hole > root)
         {
             var parent = offset + (hole - offset - 1) / 2;
-            
+
             // If parent is greater than or equal to value, we found the correct position
             // Use Compare(value, parent) which compares value against span[parent]
             if (s.Compare(value, parent) <= 0)
@@ -262,7 +262,7 @@ public static class BottomupHeapSort
     {
         var rootValue = s.Read(root);
         var hole = root;
-        
+
         // Phase 1: Percolate down to a leaf, always taking the larger child
         var child = 2 * (hole - offset) + 1 + offset;
         while (child < offset + size)
@@ -272,13 +272,13 @@ public static class BottomupHeapSort
             {
                 child++;
             }
-            
+
             // Move larger child up
             s.Write(hole, s.Read(child));
             hole = child;
             child = 2 * (hole - offset) + 1 + offset;
         }
-        
+
         // Phase 2: Sift up the original root value to its correct position
         var parent = offset + (hole - offset - 1) / 2;
         while (hole > root && s.Compare(rootValue, parent) > 0)

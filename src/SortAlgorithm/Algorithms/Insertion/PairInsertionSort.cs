@@ -65,7 +65,7 @@ public static class PairInsertionSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
     {
         Sort(span, 0, span.Length, NullContext.Default);
     }
@@ -76,7 +76,7 @@ public static class PairInsertionSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context for tracking statistics and observations during sorting. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
     {
         Sort(span, 0, span.Length, context);
     }
@@ -89,7 +89,7 @@ public static class PairInsertionSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
     {
         Sort<T, Comparer<T>>(span, first, last, Comparer<T>.Default, context);
     }
@@ -205,7 +205,7 @@ public static class PairInsertionSort
     }
 
     /// <summary>
-    /// Unguarded pair insertion sort: assumes that there is an element at position (first - 1) 
+    /// Unguarded pair insertion sort: assumes that there is an element at position (first - 1)
     /// that is less than or equal to all elements in the range [first, last).
     /// This allows both elements of each pair to be inserted without boundary checks.
     /// </summary>
@@ -218,7 +218,7 @@ public static class PairInsertionSort
     /// PRECONDITION: first > 0 and s[first-1] <= s[i] for all i in [first, last)
     /// This precondition is guaranteed by partitioning schemes in algorithms like IntroSort.
     /// Violating this precondition will cause out-of-bounds access.
-    /// 
+    ///
     /// Performance improvement: Removes ALL boundary checks from both pair element insertions,
     /// providing maximum performance benefit for non-leftmost partitions.
     /// </remarks>

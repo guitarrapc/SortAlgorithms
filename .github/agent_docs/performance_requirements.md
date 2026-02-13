@@ -43,7 +43,7 @@ else
 
 - Use `<T, TComparer> where TComparer : IComparer<T>` on the main implementation method
 - When `TComparer` is a struct (e.g., `Comparer<T>.Default`), the JIT devirtualizes and inlines `Compare()` calls
-- Convenience overloads constrain `T : IComparable<T>` and delegate via `Comparer<T>.Default`
+- Convenience overloads delegate via `Comparer<T>.Default`
 - Never use `IComparer<T>` as a parameter type directly (use the generic `TComparer` pattern instead)
 
 ### 3. Aggressive Inlining

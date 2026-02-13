@@ -92,7 +92,7 @@ public static class RotateMergeSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -101,7 +101,7 @@ public static class RotateMergeSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, Comparer<T>.Default, context);
 
     /// <summary>
@@ -186,14 +186,14 @@ public static class RotateMergeSort
                 // Use binary search to find the position where start2 element should be inserted in [start1..mid]
                 var value = s.Read(start2);
                 var insertPos = BinarySearch(s, start1, mid, value);
-                
+
                 // Galloping optimization: Find the end of consecutive elements in right partition
                 // that belong before insertPos using exponential search + binary search
                 var start2End = GallopingSearchEnd(s, insertPos, start2, right);
-                
+
                 var blockSize = start2End - start2 + 1;
                 var rotateDistance = start2 - insertPos;
-                
+
                 // Rotate the block [insertPos..start2End] to move all elements at once
                 Rotate(s, insertPos, start2End, rotateDistance);
 
@@ -221,22 +221,22 @@ public static class RotateMergeSort
         // Step size: 1, 2, 4, 8, 16, ... (exponentially increasing)
         var lastGood = start;
         var step = 1;
-        
+
         while (start + step <= end && s.Compare(insertPos, start + step) > 0)
         {
             lastGood = start + step;
             step *= 2;  // Exponential growth
         }
-        
+
         // Phase 2: Binary search for exact boundary in [lastGood..min(start+step, end)]
         var low = lastGood;
         var high = Math.Min(start + step, end);
-        
+
         // Binary search to find the last element that should be before insertPos
         while (low < high)
         {
             var mid = low + (high - low + 1) / 2;
-            
+
             if (s.Compare(insertPos, mid) > 0)
             {
                 low = mid;
@@ -246,7 +246,7 @@ public static class RotateMergeSort
                 high = mid - 1;
             }
         }
-        
+
         return low;
     }
 
@@ -270,7 +270,7 @@ public static class RotateMergeSort
         // GCD-cycle rotation (Juggling algorithm)
         // Divide rotation into gcd(n, k) independent cycles
         var cycles = GCD(n, k);
-        
+
         for (var cycle = 0; cycle < cycles; cycle++)
         {
             // Save the first element of this cycle
@@ -426,7 +426,7 @@ public static class RotateMergeSortNonOptimized
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -435,7 +435,7 @@ public static class RotateMergeSortNonOptimized
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, Comparer<T>.Default, context);
 
     /// <summary>

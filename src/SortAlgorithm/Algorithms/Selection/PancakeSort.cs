@@ -38,7 +38,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Reads : 2 × comparisons + 2 × swaps - Comparisons read 2 elements; swaps read and write 2 elements each</description></item>
 /// <item><description>Index Writes: 2 × swaps - Each swap writes 2 elements</description></item>
 /// </list>
-/// <para><strong>Note:</strong> The Pancake Sorting Problem asks for the minimum number of flips to sort any array. 
+/// <para><strong>Note:</strong> The Pancake Sorting Problem asks for the minimum number of flips to sort any array.
 /// This implementation uses a simple greedy approach (not necessarily optimal) that guarantees at most 2(n-1) flips.
 /// The optimal bound is between (15n/14) and (18n/11) flips for worst-case inputs.</para>
 /// <para><strong>Reference:</strong></para>
@@ -48,13 +48,13 @@ public static class PancakeSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -63,7 +63,7 @@ public static class PancakeSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
@@ -74,7 +74,7 @@ public static class PancakeSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
         => Sort(span, first, last, Comparer<T>.Default, context);
 
     /// <summary>

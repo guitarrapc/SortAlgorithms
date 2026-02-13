@@ -11,8 +11,8 @@ Sorting algorithms follow a consistent architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  BubbleSort.Sort<T>(span)              // IComparable<T>    │
-│  BubbleSort.Sort<T>(span, context)     // IComparable<T>    │
+│  BubbleSort.Sort<T>(span)              // No constraint     │
+│  BubbleSort.Sort<T>(span, context)     // No constraint     │
 │  BubbleSort.Sort<T,TComparer>(span, comparer, context)      │
 │  ─────────────────────────────────────────────────────────  │
 │  • Static methods (no instance required)                    │
@@ -24,15 +24,15 @@ Sorting algorithms follow a consistent architecture:
 
 ## Public API Pattern
 
-Each algorithm exposes **convenience overloads** that constrain `T : IComparable<T>` and delegate to the main implementation via `Comparer<T>.Default`:
+Each algorithm exposes **convenience overloads** (no constraint) that delegate to the main implementation via `Comparer<T>.Default`. This matches the `MemoryExtensions.Sort` pattern from dotnet/runtime - runtime validation instead of compile-time constraints:
 
 ```csharp
 // Convenience: no context
-public static void Sort<T>(Span<T> span) where T : IComparable<T>
+public static void Sort<T>(Span<T> span)
     => Sort(span, Comparer<T>.Default, NullContext.Default);
 
 // Convenience: with context
-public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+public static void Sort<T>(Span<T> span, ISortContext context)
     => Sort(span, Comparer<T>.Default, context);
 
 // Main implementation: generic TComparer for zero-alloc devirtualization

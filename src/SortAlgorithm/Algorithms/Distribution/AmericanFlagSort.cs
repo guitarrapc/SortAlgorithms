@@ -83,13 +83,13 @@ public static class AmericanFlagSort
     /// <summary>
     /// Sorts the elements in the specified span using American Flag Sort.
     /// </summary>
-    public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
         => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using American Flag Sort with sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
         => Sort(span, Comparer<T>.Default, context);
 
     /// <summary>

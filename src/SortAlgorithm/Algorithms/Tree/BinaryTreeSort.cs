@@ -66,7 +66,7 @@ public static class BinaryTreeSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -75,7 +75,7 @@ public static class BinaryTreeSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, Comparer<T>.Default, context);
 
     /// <summary>
@@ -160,11 +160,11 @@ public static class BinaryTreeSort
         if (node is null) return;
 
         Inorder(s, node.Left, ref i, context);
-        
+
         // Read node value for visualization and write to array
         var value = ReadNodeValue(node, context);
         s.Write(i++, value);
-        
+
         Inorder(s, node.Right, ref i, context);
     }
 
@@ -203,13 +203,13 @@ public static class BinaryTreeSort
     {
         // Visualize node access during tree traversal
         context.OnIndexRead(node.Id, BUFFER_TREE);
-        
+
         // Compare value with node's item
         // Note: This comparison is counted as a main array comparison (bufferId 0)
         // because the values originated from the main array
         var cmp = comparer.Compare(value, node.Item);
         context.OnCompare(-1, -1, cmp, 0, 0);
-        
+
         return cmp;
     }
 

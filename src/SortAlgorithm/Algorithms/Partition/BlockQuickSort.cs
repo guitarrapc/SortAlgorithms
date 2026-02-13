@@ -89,21 +89,21 @@ public static class BlockQuickSort
 {
     // Block size for partitioning - matches reference implementation
     const int BLOCKSIZE = 128;
-    
+
     // Threshold for switching to insertion sort - matches reference implementation
     const int InsertionSortThreshold = 20;
-    
+
     // Threshold for duplicate check: only check for small arrays
     const int DuplicateCheckThreshold = 512;
-    
+
     // Minimum ratio of duplicates to continue scanning (1 in 4 = 25%)
     const int DuplicateScanRatio = 4;
-    
+
     // Buffer identifiers for visualization
     const int BUFFER_MAIN = 0;       // Main input array
     const int BUFFER_INDEX_L = 1;    // Left index buffer for block partitioning
     const int BUFFER_INDEX_R = 2;    // Right index buffer for block partitioning
-    
+
     /// <summary>
     /// Result of partitioning operation.
     /// Contains the range of elements equal to the pivot (inclusive).
@@ -112,13 +112,13 @@ public static class BlockQuickSort
     {
         public readonly int Left;   // First index of pivot-equal elements
         public readonly int Right;  // Last index of pivot-equal elements
-        
+
         public PartitionResult(int left, int right)
         {
             Left = left;
             Right = right;
         }
-        
+
         public PartitionResult(int pivotIndex) : this(pivotIndex, pivotIndex)
         {
         }
@@ -129,7 +129,7 @@ public static class BlockQuickSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -138,7 +138,7 @@ public static class BlockQuickSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
@@ -149,7 +149,7 @@ public static class BlockQuickSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
         => Sort(span, first, last, Comparer<T>.Default, context);
 
     /// <summary>
@@ -181,7 +181,7 @@ public static class BlockQuickSort
         while (right > left)
         {
             var size = right - left + 1;
-            
+
             // Use insertion sort for small subarrays
             if (size <= InsertionSortThreshold)
             {
@@ -234,7 +234,7 @@ public static class BlockQuickSort
     {
         var size = right - left + 1;
         int pivotIndex;
-        
+
         // Adaptive pivot selection based on array size (mosqrt implementation)
         if (size > 20000)
         {
@@ -258,15 +258,15 @@ public static class BlockQuickSort
             // For small arrays, use simple median-of-3
             pivotIndex = MedianOf3(s, left, (left + right) / 2, right);
         }
-        
+
         var pivotPos = HoareBlockPartitionCore(s, left, right, pivotIndex, context);
-        
+
         // Apply duplicate check for small arrays
         if (size <= DuplicateCheckThreshold)
         {
             return CheckForDuplicates(s, left, right, pivotPos);
         }
-        
+
         return new PartitionResult(pivotPos);
     }
 
@@ -369,7 +369,7 @@ public static class BlockQuickSort
                 // Left: count elements >= pivot
                 sIndexL.Write(numLeft, j);
                 numLeft += s.Compare(begin + j, pivotEnd) < 0 ? 0 : 1;
-                
+
                 // Right: count elements <= pivot
                 sIndexR.Write(numRight, j);
                 numRight += s.Compare(pivotEnd, end - j) < 0 ? 0 : 1;
@@ -477,7 +477,7 @@ public static class BlockQuickSort
                 lowerI--;
             }
 
-            // Place pivot in final position  
+            // Place pivot in final position
             var pivotPos = end - upper;
             s.Swap(pivotEnd, pivotPos);
             return pivotPos;
@@ -501,7 +501,7 @@ public static class BlockQuickSort
         if (s.Compare(i1, i2) > 0) s.Swap(i1, i2);
         if (s.Compare(i2, i3) > 0) s.Swap(i2, i3);
         if (s.Compare(i1, i2) > 0) s.Swap(i1, i2);
-        
+
         return i2;
     }
 
@@ -519,7 +519,7 @@ public static class BlockQuickSort
         if (s.Compare(i3, i4) > 0) s.Swap(i3, i4);
         if (s.Compare(i2, i3) > 0) s.Swap(i2, i3);
         if (s.Compare(i3, i4) > 0) s.Swap(i3, i4);
-        
+
         return i3;
     }
 
@@ -533,11 +533,11 @@ public static class BlockQuickSort
         var first = MedianOf3(s, left, left + 1, left + 2);
         var mid = MedianOf3(s, left + length / 2 - 1, left + length / 2, left + length / 2 + 1);
         var last = MedianOf3(s, right - 2, right - 1, right);
-        
+
         // Move medians to boundaries
         s.Swap(left, first);
         s.Swap(right, last);
-        
+
         return MedianOf3(s, left, mid, right);
     }
 
@@ -548,28 +548,28 @@ public static class BlockQuickSort
     static int MedianOf5MediansOf5<T, TComparer>(SortSpan<T, TComparer> s, int left, int right) where TComparer : IComparer<T>
     {
         var length = right - left + 1;
-        
+
         // Need at least 25 elements for 5 groups of 5, with proper spacing
         // Also ensure quartile positions are valid
         if (length < 70)
         {
             return MedianOf3MediansOf3(s, left, right);
         }
-        
+
         var q1 = left + length / 4 - 2;
         var mid = left + length / 2 - 2;
         var q3 = left + (3 * length) / 4 - 3;
-        
+
         var first = MedianOf5(s, left, left + 1, left + 2, left + 3, left + 4);
         var m1 = MedianOf5(s, q1, q1 + 1, q1 + 2, q1 + 3, q1 + 4);
         var m2 = MedianOf5(s, mid, mid + 1, mid + 2, mid + 3, mid + 4);
         var m3 = MedianOf5(s, q3, q3 + 1, q3 + 2, q3 + 3, q3 + 4);
         var last = MedianOf5(s, right - 4, right - 3, right - 2, right - 1, right);
-        
+
         // Move medians to boundaries
         s.Swap(left, first);
         s.Swap(right, last);
-        
+
         return MedianOf5(s, left, m1, m2, m3, right);
     }
 
@@ -581,7 +581,7 @@ public static class BlockQuickSort
     static int MedianOfK<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int k) where TComparer : IComparer<T>
     {
         var length = right - left + 1;
-        
+
         if (length < k + 3)
         {
             return MedianOf3(s, left, (left + right) / 2, right);
@@ -602,7 +602,7 @@ public static class BlockQuickSort
             searchLeft += step;
             searchRight -= step;
         }
-        
+
         // Add middle element
         s.Swap(placeIt, (left + right) / 2);
         placeIt++;
@@ -610,7 +610,7 @@ public static class BlockQuickSort
         // Find median of sampled elements using partial sort
         var middleIndex = left + (placeIt - left) / 2;
         PartialSort(s, left, placeIt, middleIndex);
-        
+
         return middleIndex;
     }
 
@@ -625,7 +625,7 @@ public static class BlockQuickSort
         {
             // Use median-of-3 for pivot
             var pivotIdx = MedianOf3(s, left, (left + right) / 2, right - 1);
-            
+
             // Partition
             s.Swap(pivotIdx, right - 1);
             var pivotPos = right - 1;
@@ -636,7 +636,7 @@ public static class BlockQuickSort
             {
                 while (i < right - 1 && s.Compare(i, pivotPos) < 0) i++;
                 while (j > left && s.Compare(j, pivotPos) > 0) j--;
-                
+
                 if (i <= j)
                 {
                     s.Swap(i, j);
@@ -644,7 +644,7 @@ public static class BlockQuickSort
                     j--;
                 }
             }
-            
+
             s.Swap(i, right - 1);
 
             // Recurse on the side containing k
@@ -671,7 +671,7 @@ public static class BlockQuickSort
     /// The duplicate check is applied when:
     /// 1. The array size is small enough (≤ DuplicateCheckThreshold)
     /// 2. There are potentially many duplicates (checked during scan)
-    /// 
+    ///
     /// The algorithm scans the larger partition for elements equal to the pivot.
     /// Scanning continues as long as at least 1 in DuplicateScanRatio (25%) elements are equal to pivot.
     /// Equal elements are moved adjacent to the pivot position, forming a contiguous group [left, right]
@@ -688,7 +688,7 @@ public static class BlockQuickSort
     {
         var leftSize = pivotPos - left;
         var rightSize = right - pivotPos;
-        
+
         // Check the larger partition for duplicates
         if (leftSize > rightSize)
         {
@@ -696,11 +696,11 @@ public static class BlockQuickSort
             var equalLeft = pivotPos;
             var scanned = 0;
             var found = 0;
-            
+
             for (var i = pivotPos - 1; i >= left; i--)
             {
                 scanned++;
-                
+
                 // Check if element equals pivot (elements on left are <= pivot, so only need == check)
                 if (s.Compare(i, pivotPos) == 0)
                 {
@@ -712,14 +712,14 @@ public static class BlockQuickSort
                         s.Swap(i, equalLeft);
                     }
                 }
-                
+
                 // Stop if duplicates are too sparse (less than 25%)
                 if (scanned >= DuplicateScanRatio && found * DuplicateScanRatio < scanned)
                 {
                     break;
                 }
             }
-            
+
             return new PartitionResult(equalLeft, pivotPos);
         }
         else
@@ -728,11 +728,11 @@ public static class BlockQuickSort
             var equalRight = pivotPos;
             var scanned = 0;
             var found = 0;
-            
+
             for (var i = pivotPos + 1; i <= right; i++)
             {
                 scanned++;
-                
+
                 // Check if element equals pivot (elements on right are >= pivot, so only need == check)
                 if (s.Compare(i, pivotPos) == 0)
                 {
@@ -744,14 +744,14 @@ public static class BlockQuickSort
                         s.Swap(i, equalRight);
                     }
                 }
-                
+
                 // Stop if duplicates are too sparse (less than 25%)
                 if (scanned >= DuplicateScanRatio && found * DuplicateScanRatio < scanned)
                 {
                     break;
                 }
             }
-            
+
             return new PartitionResult(pivotPos, equalRight);
         }
     }

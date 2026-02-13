@@ -12,10 +12,10 @@ namespace SortAlgorithm.Algorithms;
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct QuickSort with Quartile-Based Median-of-3:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Quartile-Based Median-of-3 Pivot Selection:</strong> The pivot value is selected as the median of three sampled elements 
+/// <item><description><strong>Quartile-Based Median-of-3 Pivot Selection:</strong> The pivot value is selected as the median of three sampled elements
 /// at quartile positions: array[q1], array[mid], and array[q3], where q1 = left + length/4, mid = left + length/2, q3 = left + 3*length/4.
 /// This selection method is computed using 2-3 comparisons and ensures better pivot quality than random selection or simple left/mid/right sampling.
-/// The quartile-based median-of-3 strategy provides robust performance across various data patterns including mountain-shaped, valley-shaped, 
+/// The quartile-based median-of-3 strategy provides robust performance across various data patterns including mountain-shaped, valley-shaped,
 /// and partially sorted arrays, while maintaining the O(1/n³) probability of worst-case partitioning.</description></item>
 /// <item><description><strong>Hoare Partition Scheme:</strong> The array is partitioned into two regions using bidirectional scanning:
 /// <list type="bullet">
@@ -94,7 +94,7 @@ public static class QuickSortMedian3
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -103,7 +103,7 @@ public static class QuickSortMedian3
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
@@ -114,7 +114,7 @@ public static class QuickSortMedian3
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
         => Sort(span, first, last, Comparer<T>.Default, context);
 
     /// <summary>
@@ -150,7 +150,7 @@ public static class QuickSortMedian3
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The exclusive end index of the range to sort.</param>
     internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, ISortContext context) where TComparer : IComparer<T>
-    { 
+    {
         while (left < right)
         {
             // Phase 1. Select pivot using median-of-3 strategy with improved sampling
@@ -210,7 +210,7 @@ public static class QuickSortMedian3
     {
         // Use SortSpan.Compare to track statistics
         var cmpLowMid = s.Compare(lowIdx, midIdx);
-        
+
         if (cmpLowMid > 0) // low > mid
         {
             var cmpMidHigh = s.Compare(midIdx, highIdx);

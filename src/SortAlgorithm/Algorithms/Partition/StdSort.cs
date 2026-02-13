@@ -35,7 +35,7 @@ public static class StdSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    
+
     // Upper bound for using insertion sort for sorting
     private const int INSERTION_SORT_LIMIT = 24;
     // Lower bound for using Tuckey's ninther technique for median computation
@@ -46,7 +46,7 @@ public static class StdSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -55,7 +55,7 @@ public static class StdSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
@@ -66,7 +66,7 @@ public static class StdSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
         => Sort(span, first, last, Comparer<T>.Default, context);
 
     /// <summary>
@@ -100,7 +100,7 @@ public static class StdSort
         // Calculate depth limit: 2 * log2(n)
         var len = last - first;
         var depthLimit = 2 * Log2((uint)len);
-        
+
         IntroSort(s, first, last, depthLimit, context, leftmost: true);
     }
 
@@ -130,21 +130,21 @@ public static class StdSort
             // if y <= z: x <= y <= z (already sorted)
             if (s.Compare(z, y) >= 0)
                 return;
-            
+
             // x <= y && y > z
             s.Swap(y, z);   // x <= z && y < z
             if (s.Compare(y, x) < 0)  // if x > y
                 s.Swap(x, y); // x < y && y <= z
             return;
         }
-        
+
         // x > y
         if (s.Compare(z, y) < 0) // if y > z
         {
             s.Swap(x, z); // x < y && y < z
             return;
         }
-        
+
         s.Swap(x, y); // x > y && y <= z -> x < y && x <= z
         if (s.Compare(z, y) < 0)  // if y > z
             s.Swap(y, z); // x <= y && y < z
@@ -202,7 +202,7 @@ public static class StdSort
         while (true)
         {
             var len = last - first;
-            
+
             // Handle small arrays with specialized sorting networks
             switch (len)
             {
@@ -280,7 +280,7 @@ public static class StdSort
             {
                 var leftSorted = InsertionSortIncomplete(s, first, pivotPos);
                 var rightSorted = InsertionSortIncomplete(s, pivotPos + 1, last);
-                
+
                 if (leftSorted && rightSorted)
                     return;
                 if (leftSorted)
@@ -360,10 +360,10 @@ public static class StdSort
         // Try insertion sort with inversion limit
         var j = first + 2;
         Sort3(s, first, first + 1, j);
-        
+
         const int limit = 8;
         var count = 0;
-        
+
         for (var i = j + 1; i < last; i++)
         {
             if (s.Compare(i, j) < 0)
@@ -395,7 +395,7 @@ public static class StdSort
     private static (int pivotPos, bool alreadyPartitioned) PartitionWithEqualsOnRight<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
     {
         var pivot = s.Read(first);
-        
+
         // Find first element >= pivot
         var i = first;
         do
@@ -419,7 +419,7 @@ public static class StdSort
         while (i < j)
         {
             s.Swap(i, j);
-            
+
             do { i++; } while (s.Compare(i, pivot) < 0);
             do { j--; } while (s.Compare(j, pivot) >= 0);
         }
@@ -442,7 +442,7 @@ public static class StdSort
     private static int PartitionWithEqualsOnLeft<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
     {
         var pivot = s.Read(first);
-        
+
         // Find first element > pivot
         var i = first;
         do
@@ -464,7 +464,7 @@ public static class StdSort
         while (i < j)
         {
             s.Swap(i, j);
-            
+
             do { i++; } while (s.Compare(pivot, i) >= 0);
             do { j--; } while (s.Compare(pivot, j) < 0);
         }

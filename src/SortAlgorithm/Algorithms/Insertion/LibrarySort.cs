@@ -104,7 +104,7 @@ public static class LibrarySort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -113,7 +113,7 @@ public static class LibrarySort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context for tracking statistics and observations during sorting. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, Comparer<T>.Default, context);
 
     /// <summary>
@@ -228,11 +228,11 @@ public static class LibrarySort
         // Range needed: (1+ε) * count
         var rangeNeeded = (int)Math.Ceiling(count * (1 + GapRatio));
         var rangeAvailable = auxSize - auxStart;
-        
+
         // Strict validation: must have enough space for all elements
         if (rangeAvailable < count)
             throw new InvalidOperationException($"Insufficient auxiliary buffer space: need at least {count} positions, but only {rangeAvailable} available (auxStart={auxStart}, auxSize={auxSize})");
-        
+
         // Use the minimum of needed and available, but ensure it's at least count
         var range = Math.Min(rangeNeeded, rangeAvailable);
 
@@ -248,7 +248,7 @@ public static class LibrarySort
         for (var i = 0; i < count; i++)
         {
             var pos = auxStart + (int)((long)i * range / count);
-            
+
             // Defensive check (should never happen with range >= count)
             if (pos >= auxSize)
                 throw new InvalidOperationException($"Position overflow: calculated pos={pos}, but auxSize={auxSize} (i={i}, count={count}, range={range}, auxStart={auxStart})");
@@ -256,7 +256,7 @@ public static class LibrarySort
             aux.Write(pos, new LibraryElement<T>(src.Read(srcStart + i)));
             positions[posCount++] = pos;
         }
-        
+
         // Verify all elements were placed
         if (posCount != count)
             throw new InvalidOperationException($"Data loss detected: expected {count} elements, but only placed {posCount}");
@@ -408,7 +408,7 @@ public static class LibrarySort
     {
         // Safety: limit the scan distance to prevent pathological cases
         var limit = Math.Min(end, start + MaxGapSearchDistance * 2);
-        
+
         for (var i = start; i < limit; i++)
         {
             if (!aux.Read(i).HasValue)

@@ -80,7 +80,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Insertion Sort Fallback (TINY_SIZE = 17):</strong> Arrays smaller than 17 elements are sorted using insertion sort for better constant-factor performance.</description></item>
 /// <item><description><strong>5-Sample Pivot Selection:</strong> For arrays ≥47 elements, uses 5-sample method to select pivots, reducing worst-case probability.</description></item>
 /// <item><description><strong>Inner While Loop:</strong> Partitioning uses inner while loop to scan from right when element &gt; pivot2, matching Yaroslavskiy's specification.</description></item>
-/// <item><description><strong>Equal Elements Optimization (DIST_SIZE = 13):</strong> When center region is large (&gt; length - 13) and pivots are different, 
+/// <item><description><strong>Equal Elements Optimization (DIST_SIZE = 13):</strong> When center region is large (&gt; length - 13) and pivots are different,
 /// segregates elements equal to pivots from the center region before recursing. This improves performance on arrays with many duplicate values.</description></item>
 /// <item><description><strong>Dual-Pivot Partitioning:</strong> Separate handling for equal pivots vs. different pivots cases.</description></item>
 /// <item><description>Reference: https://web.archive.org/web/20151002230717/http://iaroslavski.narod.ru/quicksort/DualPivotQuicksort.pdf</description></item>
@@ -126,7 +126,7 @@ public static class QuickSortDualPivot
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
     {
         Sort<T, Comparer<T>>(span, 0, span.Length, NullContext.Default, Comparer<T>.Default);
     }
@@ -137,7 +137,7 @@ public static class QuickSortDualPivot
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
     {
         Sort<T, Comparer<T>>(span, 0, span.Length, context, Comparer<T>.Default);
     }
@@ -150,7 +150,7 @@ public static class QuickSortDualPivot
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
     {
         Sort<T, Comparer<T>>(span, first, last, context, Comparer<T>.Default);
     }
@@ -216,14 +216,14 @@ public static class QuickSortDualPivot
         if (right <= left) return;
 
         int length = right - left + 1;
-        
+
         // For tiny arrays, use insertion sort (Yaroslavskiy 2009 optimization)
         if (length < TINY_SIZE)
         {
             InsertionSort.SortCore(s, left, right + 1);
             return;
         }
-        
+
         // For small arrays, use simple pivot selection (left and right)
         if (length < PivotThreshold)
         {
@@ -237,14 +237,14 @@ public static class QuickSortDualPivot
         {
             // Phase 0. Choose pivots using 5-sample method (Java's DualPivotQuicksort)
             int seventh = (length >> 3) + (length >> 6) + 1; // ≈ length/7
-            
+
             // Sample 5 evenly distributed elements
             int e3 = (left + right) >> 1; // middle
             int e2 = e3 - seventh;
             int e1 = e2 - seventh;
             int e4 = e3 + seventh;
             int e5 = e4 + seventh;
-            
+
             // Sort these 5 elements using bubble sort (2 passes)
             // This is the same approach as Java's DualPivotQuicksort
             // Pass 1: bubble largest elements to the right
@@ -252,12 +252,12 @@ public static class QuickSortDualPivot
             if (s.Compare(e3, e2) < 0) s.Swap(e3, e2);
             if (s.Compare(e4, e3) < 0) s.Swap(e4, e3);
             if (s.Compare(e5, e4) < 0) s.Swap(e5, e4);
-            
+
             // Pass 2: ensure complete ordering
             if (s.Compare(e2, e1) < 0) s.Swap(e2, e1);
             if (s.Compare(e3, e2) < 0) s.Swap(e3, e2);
             if (s.Compare(e4, e3) < 0) s.Swap(e4, e3);
-            
+
             // Now: e1 <= e2 <= e3 <= e4 <= e5
             // Move pivots to the edges (will be swapped to final positions later)
             s.Swap(e2, left);
@@ -267,7 +267,7 @@ public static class QuickSortDualPivot
         // Phase 1. Partition array into three regions using dual pivots
         var less = left + 1;
         var great = right - 1;
-        
+
         // Check if pivots are different (used for optimization later)
         var diffPivots = s.Compare(left, right) != 0;
 
@@ -291,7 +291,7 @@ public static class QuickSortDualPivot
                     }
                     s.Swap(k, great);
                     great--;
-                    
+
                     // Re-check swapped element
                     if (s.Compare(k, left) < 0)
                     {
@@ -323,7 +323,7 @@ public static class QuickSortDualPivot
                     }
                     s.Swap(k, great);
                     great--;
-                    
+
                     if (s.Compare(k, left) < 0)
                     {
                         s.Swap(k, less);
@@ -356,7 +356,7 @@ public static class QuickSortDualPivot
                 {
                     s.Swap(k, great);
                     great--;
-                    
+
                     // Re-check swapped element
                     if (s.Compare(k, less - 1) == 0)
                     {

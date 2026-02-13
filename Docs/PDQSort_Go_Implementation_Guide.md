@@ -30,7 +30,7 @@ private enum SortedHint
 
 ```csharp
 private static void Sort3WithSwapCount<T>(
-    SortSpan<T> s, int a, int b, int c, ref int swaps) 
+    SortSpan<T> s, int a, int b, int c, ref int swaps)
     where T : IComparable<T>
 {
     if (s.Compare(b, a) < 0) { s.Swap(a, b); swaps++; }
@@ -45,7 +45,7 @@ private static void Sort3WithSwapCount<T>(
 
 ```csharp
 private static int MedianAdjacent<T>(
-    SortSpan<T> s, int pos, ref int swaps) 
+    SortSpan<T> s, int pos, ref int swaps)
     where T : IComparable<T>
 {
     // 範囲チェック: pos-1 >= begin && pos+1 < end
@@ -58,7 +58,7 @@ private static int MedianAdjacent<T>(
 
 ```csharp
 private static (int pivot, SortedHint hint) ChoosePivot<T>(
-    SortSpan<T> s, int begin, int end) 
+    SortSpan<T> s, int begin, int end)
     where T : IComparable<T>
 {
     const int MaxSwaps = 4 * 3;  // 3回のmedian x 各4 swap
@@ -124,8 +124,8 @@ var (pivot2, hint2) = ChoosePivot(s2, 0, 10);
 
 ```csharp
 private static void PDQSortLoop<T>(
-    SortSpan<T> s, int begin, int end, int badAllowed, 
-    bool leftmost, ISortContext context) 
+    SortSpan<T> s, int begin, int end, int badAllowed,
+    bool leftmost, ISortContext context)
     where T : IComparable<T>
 {
     // 状態フラグの初期化
@@ -152,7 +152,7 @@ private static void PDQSortLoop<T>(
         var lSize = pivotPos - begin;
         var rSize = end - (pivotPos + 1);
         var balanceThreshold = size / 8;
-        
+
         if (lSize < balanceThreshold || rSize < balanceThreshold) {
             wasBalanced = false;  // ← 状態を保存
             // ...
@@ -223,7 +223,7 @@ while (true)
 
 ```csharp
 private static void ReverseRange<T>(
-    SortSpan<T> s, int begin, int end) 
+    SortSpan<T> s, int begin, int end)
     where T : IComparable<T>
 {
     var i = begin;
@@ -249,17 +249,17 @@ private static void ReverseRange<T>(
 
 ```csharp
 private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T>(
-    SortSpan<T> s, int begin, int end, int pivotIndex) 
+    SortSpan<T> s, int begin, int end, int pivotIndex)
     where T : IComparable<T>
 {
     // ⚠️ 重要: pivotIndexをbeginにSwap
     s.Swap(begin, pivotIndex);
-    
+
     // Pivot値を読み取り
     var pivot = s.Read(begin);
-    
+
     // ... 既存のpartitioning logic（変更なし）
-    
+
     var first = begin;
     var last = end;
 
@@ -293,12 +293,12 @@ private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T>(
 
 ```csharp
 private static int PartitionLeft<T>(
-    SortSpan<T> s, int begin, int end, int pivotIndex) 
+    SortSpan<T> s, int begin, int end, int pivotIndex)
     where T : IComparable<T>
 {
     s.Swap(begin, pivotIndex);
     var pivot = s.Read(begin);
-    
+
     // ... 既存のpartitioning logic
 }
 ```
@@ -354,7 +354,7 @@ private static int NextPowerOfTwo(int n)
 
 ```csharp
 private static void BreakPatterns<T>(
-    SortSpan<T> s, int begin, int end) 
+    SortSpan<T> s, int begin, int end)
     where T : IComparable<T>
 {
     var length = end - begin;
@@ -364,8 +364,8 @@ private static void BreakPatterns<T>(
         var modulus = (ulong)NextPowerOfTwo(length);
 
         // 中央付近の3要素をランダムな位置とSwap
-        for (var idx = begin + (length / 4) * 2 - 1; 
-             idx <= begin + (length / 4) * 2 + 1; 
+        for (var idx = begin + (length / 4) * 2 - 1;
+             idx <= begin + (length / 4) * 2 + 1;
              idx++)
         {
             var other = (int)(random.Next() & (modulus - 1));
@@ -421,7 +421,7 @@ if (size > NintherThreshold)
     Debug.Assert(i >= begin + 1 && i < end - 1);
     Debug.Assert(j >= begin + 1 && j < end - 1);
     Debug.Assert(k >= begin + 1 && k < end - 1);
-    
+
     i = MedianAdjacent(s, i, ref swaps);
     j = MedianAdjacent(s, j, ref swaps);
     k = MedianAdjacent(s, k, ref swaps);
@@ -465,14 +465,14 @@ if (!leftmost && s.Compare(begin - 1, s.Read(pivot)) >= 0)
 
 Option 1: 各再帰レベルで独立した状態（Go実装）
 ```csharp
-private static void PDQSortLoop<T>(...) 
+private static void PDQSortLoop<T>(...)
 {
     var wasBalanced = true;  // ← このレベル専用
     var wasPartitioned = true;
-    
+
     while (true) {
         // ...
-        
+
         // 再帰呼び出しは新しいwasBalanced/wasPartitionedを持つ
         PDQSortLoop(s, begin, pivotPos, badAllowed, leftmost, context);
     }
@@ -482,8 +482,8 @@ private static void PDQSortLoop<T>(...)
 Option 2: 状態を引数として渡す
 ```csharp
 private static void PDQSortLoop<T>(
-    SortSpan<T> s, int begin, int end, int badAllowed, 
-    bool leftmost, bool wasBalanced, bool wasPartitioned, 
+    SortSpan<T> s, int begin, int end, int badAllowed,
+    bool leftmost, bool wasBalanced, bool wasPartitioned,
     ISortContext context)
 {
     // ...
@@ -509,12 +509,12 @@ var (pivotPos, _) = PartitionRight(s, begin, end, pivot);  // ← 間違ったpi
 ```csharp
 if (hint == SortedHint.Decreasing) {
     ReverseRange(s, begin, end);
-    
+
     // ★ pivotインデックスを再計算 ★
     // 元のpivotがbeginからの距離: (pivot - begin)
     // Reverse後は、endからの距離が同じ
     pivot = (end - 1) - (pivot - begin);
-    
+
     hint = SortedHint.Increasing;
 }
 ```
@@ -523,7 +523,7 @@ if (hint == SortedHint.Decreasing) {
 
 **症状:**
 ```csharp
-var other = (int)(random.Next() & (modulus - 1));  
+var other = (int)(random.Next() & (modulus - 1));
 // CS0019: Operator '&' cannot be applied to operands of type 'ulong' and 'int'
 ```
 
@@ -550,9 +550,9 @@ public void ChoosePivot_SortedArray_ReturnsIncreasingHint()
 {
     var sorted = Enumerable.Range(1, 200).ToArray();
     var s = new SortSpan<int>(sorted, NullContext.Default, 0);
-    
+
     var (pivot, hint) = ChoosePivot(s, 0, 200);
-    
+
     Assert.Equal(SortedHint.Increasing, hint);
 }
 
@@ -561,9 +561,9 @@ public void ChoosePivot_ReversedArray_ReturnsDecreasingHint()
 {
     var reversed = Enumerable.Range(1, 200).Reverse().ToArray();
     var s = new SortSpan<int>(reversed, NullContext.Default, 0);
-    
+
     var (pivot, hint) = ChoosePivot(s, 0, 200);
-    
+
     Assert.Equal(SortedHint.Decreasing, hint);
 }
 ```
@@ -575,9 +575,9 @@ public void PDQSort_SortedArray_ZeroSwaps()
 {
     var sorted = Enumerable.Range(1, 200).ToArray();
     var stats = new StatisticsContext();
-    
+
     PDQSort.Sort(sorted.AsSpan(), stats);
-    
+
     Assert.Equal(0UL, stats.SwapCount);  // ← Go準拠なら0
 }
 ```
@@ -648,12 +648,12 @@ private static void PDQSortLoop<T>(...)
     {
         iteration++;
         Console.WriteLine($"[Iteration {iteration}] begin={begin}, end={end}, size={end-begin}");
-        
+
         // ...
-        
+
         var (pivot, hint) = ChoosePivot(s, begin, end);
         Console.WriteLine($"  Pivot={pivot}, Hint={hint}");
-        
+
         // ...
     }
 }
@@ -723,5 +723,5 @@ if (wasBalanced && wasPartitioned && hint == SortedHint.Increasing) {
 
 ---
 
-**作成日:** 2026-01-02  
+**作成日:** 2026-01-02
 **推奨実装期間:** 2-3週間（テストとデバッグ含む）

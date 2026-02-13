@@ -85,7 +85,7 @@ public static class BalancedBinaryTreeSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -94,7 +94,7 @@ public static class BalancedBinaryTreeSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, Comparer<T>.Default, context);
 
     /// <summary>
@@ -350,13 +350,13 @@ public static class BalancedBinaryTreeSort
     {
         // Visualize node access during tree traversal
         context.OnIndexRead(arena[nodeIndex].Id, BUFFER_TREE);
-        
+
         // Compare value with node's item
         // Note: This comparison is counted as a main array comparison (bufferId 0)
         // because the values originated from the main array
         var cmp = comparer.Compare(value, arena[nodeIndex].Value);
         context.OnCompare(-1, -1, cmp, 0, 0);
-        
+
         return cmp;
     }
 
@@ -480,7 +480,7 @@ public static class BalancedBinaryTreeSort
     /// Left and Right are indices into the arena array (-1 represents null).
     /// Value caches the actual T instance directly to avoid span[index] indirection on every comparison.
     /// Height is maintained for AVL balancing.
-    /// 
+    ///
     /// Design Note: Storing only indices (without Value field) would make Node smaller but requires
     /// span[index] lookup on every comparison, causing up to 3x performance degradation compared to
     /// the class-based reference implementation. Value caching trades memory for speed.
@@ -572,7 +572,7 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
         => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
@@ -581,7 +581,7 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, Comparer<T>.Default, context);
 
     /// <summary>

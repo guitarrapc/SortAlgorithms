@@ -81,7 +81,7 @@ public static class BitonicSortFill
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span)
     {
         Sort(span, NullContext.Default);
     }
@@ -94,7 +94,7 @@ public static class BitonicSortFill
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
         => Sort(span, Comparer<T>.Default, context);
 
     /// <summary>
@@ -123,7 +123,7 @@ public static class BitonicSortFill
 
         // Calculate next power of 2
         int paddedLength = NextPowerOfTwo(originalLength);
-        
+
         // Find the maximum value in the input for padding
         // Create SortSpan for statistics tracking during max value search
         var tempSortSpan = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
@@ -201,13 +201,13 @@ public static class BitonicSortFill
         if (count > 1)
         {
             int k = count / 2;
-            
+
             // Compare and swap elements at distance k apart
             for (int i = low; i < low + k; i++)
             {
                 CompareAndSwap(span, i, i + k, ascending);
             }
-            
+
             // Recursively merge both halves
             BitonicMerge(span, low, k, ascending);
             BitonicMerge(span, low + k, k, ascending);
@@ -225,7 +225,7 @@ public static class BitonicSortFill
     private static void CompareAndSwap<T, TComparer>(SortSpan<T, TComparer> span, int i, int j, bool ascending) where TComparer : IComparer<T>
     {
         int cmp = span.Compare(i, j);
-        
+
         // If ascending and i > j, or if descending and i < j, then swap
         if ((ascending && cmp > 0) || (!ascending && cmp < 0))
         {
@@ -253,7 +253,7 @@ public static class BitonicSortFill
     private static int NextPowerOfTwo(int n)
     {
         if (n <= 0) return 1;
-        
+
         n--;
         n |= n >> 1;
         n |= n >> 2;

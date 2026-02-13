@@ -82,7 +82,7 @@ public static class RadixLSD4Sort
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function.
     /// </summary>
-    public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
         Sort(span, Comparer<T>.Default, NullContext.Default);
     }
@@ -90,7 +90,7 @@ public static class RadixLSD4Sort
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
         Sort(span, Comparer<T>.Default, context);
     }
