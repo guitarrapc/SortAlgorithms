@@ -191,27 +191,26 @@ public class BinaryInsertionSortTests
         var sorted = Enumerable.Range(0, n).ToArray();
         BinaryInsertionSort.Sort(sorted.AsSpan(), stats);
 
-        // Binary Insertion Sort performs binary search for each element from index 1 to n-1
-        // For sorted data, binary search for element at position i searches in range [0..i)
-        // The number of comparisons is at most ceiling(log2(i+1)) per search
+        // With early continuation optimization:
+        // For sorted data, each element at position i is compared with element at i-1
+        // If comparison shows i-1 <= i (sorted), we skip binary search and insertion
+        // This results in exactly (n-1) comparisons for sorted data
         //
-        // The actual count depends on the binary search implementation and can vary
-        // based on the comparison results. We use a wide tolerance to account for this.
-        var expectedCompares = CalculateBinaryInsertSortComparisons(n);
-
-        // Binary search can vary significantly based on data, allow ±50% tolerance
-        var minCompares = expectedCompares / 2;
-        var maxCompares = (expectedCompares * 3) / 2;
+        // Early continuation check: if (i > first && s.Compare(i - 1, i) <= 0) continue;
+        // - For sorted data, all elements pass this check
+        // - Each element from position 1 to n-1 requires exactly 1 comparison
+        var expectedCompares = (ulong)(n - 1);
 
         // Sorted data: no shifts needed (all elements are already in correct positions)
         var expectedWrites = 0UL;
 
-        // IndexReadCount: At minimum, each comparison reads 1 element during binary search
-        var minIndexReads = minCompares;
+        // IndexReadCount: 2 reads per comparison (read i-1 and i)
+        // For sorted data with early continuation, (n-1) comparisons × 2 reads = 2(n-1) reads
+        var expectedIndexReads = (ulong)(2 * (n - 1));
 
-        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
+        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedIndexReads);
     }
 
     [Test]
