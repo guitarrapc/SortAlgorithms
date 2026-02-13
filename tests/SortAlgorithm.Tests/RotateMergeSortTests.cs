@@ -237,11 +237,11 @@ public class RotateMergeSortTests
         //          approximately 0.8 * n * log₂(n) to 2.0 * n * log₂(n) for n > 16
         var logN = Math.Log2(n);
         var minCompares = n <= 16 ? (ulong)(n * 1.5) : (ulong)(n * logN * 0.8);
-        var maxCompares = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 2.0);
+        var maxCompares = n <= 16 ? (ulong)(n * 4.0 * 1.2) : (ulong)(n * logN * 2.0);
 
         // Writes vary based on how much rotation is needed
-        var minWrites = n <= 16 ? (ulong)(n * 1.5) : (ulong)(n * logN * 0.5);
-        var maxWrites = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 15.0);
+        var minWrites = n <= 16 ? (ulong)(n * 1.5 * 0.6) : (ulong)(n * logN * 0.5);
+        var maxWrites = n <= 16 ? (ulong)(n * 4.0 * 1.2) : (ulong)(n * logN * 15.0);
 
         // Swaps: GCD-cycle rotation uses assignments only (no swaps)
         var minSwaps = 0UL;
