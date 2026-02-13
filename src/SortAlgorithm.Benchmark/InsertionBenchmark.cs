@@ -46,7 +46,7 @@ public class InsertionBenchmark
         SortAlgorithm.Algorithms.InsertionSort.Sort(_insertionArray.AsSpan());
     }
 
-    [Benchmark(Baseline = true)]
+    [Benchmark]
     public void LibrarySort()
     {
         SortAlgorithm.Algorithms.LibrarySort.Sort(_insertionArray.AsSpan());
