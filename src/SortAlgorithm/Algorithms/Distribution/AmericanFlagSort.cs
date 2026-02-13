@@ -195,10 +195,7 @@ public static class AmericanFlagSort
         where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
     {
         // Reset bucket offsets to their starting positions
-        for (var i = 0; i < RadixSize; i++)
-        {
-            bucketOffsets[i] = bucketStarts[i];
-        }
+        bucketStarts.CopyTo(bucketOffsets);
 
         // In-place permutation using bucket positions
         // Process each bucket sequentially
