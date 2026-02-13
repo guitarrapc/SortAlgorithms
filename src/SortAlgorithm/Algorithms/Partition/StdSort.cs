@@ -1,4 +1,5 @@
 ﻿using SortAlgorithm.Contexts;
+using System.Numerics;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -96,7 +97,7 @@ public static class StdSort
 
         // Calculate depth limit: 2 * log2(n)
         var len = last - first;
-        var depthLimit = 2 * BitLog2((uint)len);
+        var depthLimit = 2 * Log2((uint)len);
         
         IntroSort(s, first, last, depthLimit, context, leftmost: true);
     }
@@ -104,15 +105,16 @@ public static class StdSort
     /// <summary>
     /// Computes log2 of an unsigned integer (bit width)
     /// </summary>
-    private static int BitLog2(uint n)
+    private static int Log2(uint n)
     {
-        int log = 0;
-        while (n > 1)
-        {
-            n >>= 1;
-            log++;
-        }
-        return log;
+        // var log = 0;
+        // while (n > 1)
+        // {
+        //     n >>= 1;
+        //     log++;
+        // }
+        // return log;
+        return BitOperations.Log2((uint)n);
     }
 
     /// <summary>

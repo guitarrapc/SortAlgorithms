@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -429,16 +430,18 @@ public static class PDQSort
 
     /// <summary>
     /// Returns floor(log2(n)), assumes n > 0.
+    /// Uses hardware-accelerated bit operations for optimal performance.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int Log2(int n)
     {
-        var log = 0;
-        while (n > 1)
-        {
-            n >>= 1;
-            log++;
-        }
-        return log;
+        // var log = 0;
+        // while (n > 1)
+        // {
+        //     n >>= 1;
+        //     log++;
+        // }
+        // return log;
+        return BitOperations.Log2((uint)n);
     }
 }
