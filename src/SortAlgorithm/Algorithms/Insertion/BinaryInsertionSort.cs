@@ -117,6 +117,14 @@ public static class BinaryInsertionSort
         {
             var tmp = s.Read(i);
 
+            // Early termination: if element is already in correct position, skip binary search and shifts
+            // This optimization significantly improves performance on sorted or nearly-sorted data
+            if (i > first && s.Compare(i - 1, tmp) <= 0)
+            {
+                // Element is already in the correct position (greater than or equal to previous element)
+                continue;
+            }
+
             // Find the insertion position using binary search in the sorted range [first..i)
             var pos = BinarySearch(s, tmp, first, i);
 

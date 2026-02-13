@@ -121,6 +121,7 @@ public static class InsertionSort
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
     {
         for (var i = first + 1; i < last; i++)
