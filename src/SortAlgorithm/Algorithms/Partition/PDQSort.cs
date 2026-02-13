@@ -293,17 +293,29 @@ public static class PDQSort
         var first = begin;
         var last = end;
 
-        // Find the first element greater than or equal to the pivot (with boundary guard)
-        while (++first < end && s.Compare(first, pivot) < 0) { }
+        // Find the first element greater than or equal to the pivot (first can reach end)
+        do
+        {
+            first++;
+            if (first == end) break;
+        } while (s.Compare(first, pivot) < 0);
 
-        // Find the first element strictly smaller than the pivot
+        // Find the first element strictly smaller than the pivot (last can reach begin)
         if (first - 1 == begin)
         {
-            while (first < last && --last >= begin && s.Compare(last, pivot) >= 0) { }
+            do
+            {
+                last--;
+                if (last == begin) break;
+            } while (first < last && s.Compare(last, pivot) >= 0);
         }
         else
         {
-            while (--last >= first && s.Compare(last, pivot) >= 0) { }
+            do
+            {
+                last--;
+                if (last == begin) break;
+            } while (s.Compare(last, pivot) >= 0);
         }
 
         // If the first pair of elements that should be swapped to partition are the same element,
@@ -314,8 +326,14 @@ public static class PDQSort
         while (first < last)
         {
             s.Swap(first, last);
-            while (++first < last && s.Compare(first, pivot) < 0) { }
-            while (--last >= first && s.Compare(last, pivot) >= 0) { }
+            do
+            {
+                first++;
+            } while (first < last && s.Compare(first, pivot) < 0);
+            do
+            {
+                last--;
+            } while (first < last && s.Compare(last, pivot) >= 0);
         }
 
         // Put the pivot in the right place
@@ -337,22 +355,42 @@ public static class PDQSort
         var first = begin;
         var last = end;
 
-        while (--last >= begin && s.Compare(pivot, s.Read(last)) < 0) { }
+        // Find the first element from the right that is greater than or equal to pivot (last can reach begin)
+        do
+        {
+            last--;
+            if (last == begin) break;
+        } while (s.Compare(pivot, s.Read(last)) < 0);
 
+        // Find the first element from the left that is less than pivot
         if (last + 1 == end)
         {
-            while (++first < last && s.Compare(pivot, s.Read(first)) >= 0) { }
+            do
+            {
+                first++;
+                if (first == last) break;
+            } while (s.Compare(pivot, s.Read(first)) >= 0);
         }
         else
         {
-            while (++first <= last && s.Compare(pivot, s.Read(first)) >= 0) { }
+            do
+            {
+                first++;
+                if (first > last) break;
+            } while (s.Compare(pivot, s.Read(first)) >= 0);
         }
 
         while (first < last)
         {
             s.Swap(first, last);
-            while (--last >= first && s.Compare(pivot, s.Read(last)) < 0) { }
-            while (++first <= last && s.Compare(pivot, s.Read(first)) >= 0) { }
+            do
+            {
+                last--;
+            } while (first < last && s.Compare(pivot, s.Read(last)) < 0);
+            do
+            {
+                first++;
+            } while (first < last && s.Compare(pivot, s.Read(first)) >= 0);
         }
 
         var pivotPos = last;
