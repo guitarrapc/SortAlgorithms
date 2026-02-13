@@ -1,0 +1,205 @@
+﻿using SortAlgorithm.Contexts;
+using System.Numerics;
+using System.Runtime.CompilerServices;
+
+namespace SortAlgorithm.Algorithms;
+
+/// <summary>
+/// Dotnet runtime style IntroSort implementation.
+/// This is a simplified version based on dotnet runtime's ArraySortHelper&lt;T&gt;,
+/// optimized for JIT performance with minimal overhead.
+/// <br/>
+/// A hybrid sorting algorithm that combines QuickSort, HeapSort, and InsertionSort.
+/// It primarily uses QuickSort, but switches to InsertionSort for small arrays and HeapSort when recursion depth becomes too deep,
+/// avoiding QuickSort's worst-case O(n²) and guaranteeing O(n log n) in all cases.
+/// </summary>
+/// <remarks>
+/// <para><strong>Key Differences from IntroSort:</strong></para>
+/// <list type="bullet">
+/// <item><description><strong>Simpler pivot selection:</strong> Uses simple median-of-3 (lo, mid, hi) instead of quartile-based or Ninther</description></item>
+/// <item><description><strong>Lomuto-style partitioning:</strong> Places pivot in final position, excludes it from recursion</description></item>
+/// <item><description><strong>No extra optimizations:</strong> No swap counting, no nearly-sorted detection, no duplicate detection</description></item>
+/// <item><description><strong>JIT-friendly:</strong> Smaller code size, marked with NoInlining for recursive method</description></item>
+/// </list>
+/// <para><strong>Performance Characteristics:</strong></para>
+/// <list type="bullet">
+/// <item><description>Family      : Hybrid (Partition (base) + Heap + Insertion)</description></item>
+/// <item><description>Stable      : No (QuickSort and HeapSort are unstable; element order is not preserved for equal values)</description></item>
+/// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack, no additional arrays allocated)</description></item>
+/// <item><description>Best case   : Θ(n log n) - Occurs when QuickSort consistently creates balanced partitions and InsertionSort handles small subarrays efficiently</description></item>
+/// <item><description>Average case: Θ(n log n) - Expected ~1.386n log₂ n comparisons from QuickSort</description></item>
+/// <item><description>Worst case  : O(n log n) - Guaranteed by HeapSort fallback when recursion depth exceeds 2⌊log₂(n)⌋</description></item>
+/// </list>
+/// <para><strong>Reference:</strong></para>
+/// <para>dotnet runtime: https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Collections/Generic/ArraySortHelper.cs</para>
+/// </remarks>
+public static class IntroSortDotnet
+{
+    // Buffer identifiers for visualization
+    private const int BUFFER_MAIN = 0;       // Main input array
+
+    // Follow dotnet runtime threshold
+    private const int IntrosortSizeThreshold = 16;
+
+    /// <summary>
+    /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <param name="span">The span of elements to sort in place.</param>
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <param name="span">The span containing elements to sort.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="context">The sort context for tracking statistics and observations.</param>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+        => Sort(span, first, last, new ComparableComparer<T>(), context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(first);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(first, last);
+
+        if (last - first <= 1) return;
+
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var depthLimit = 2 * (BitOperations.Log2((uint)(last - first)) + 1);
+        IntroSortInternal(s, first, last, depthLimit);
+    }
+
+    /// <summary>
+    /// Internal IntroSort implementation. This is marked with NoInlining to prevent
+    /// the JIT from inlining recursive calls into itself, which would hurt performance.
+    /// </summary>
+    /// <remarks>
+    /// From dotnet runtime comments:
+    /// "IntroSort is recursive; block it from being inlined into itself as this is currently not profitable."
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void IntroSortInternal<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int depthLimit) where TComparer : IComparer<T>
+    {
+        int partitionSize = right - left;
+        while (partitionSize > 1)
+        {
+            // Small arrays: use InsertionSort
+            if (partitionSize <= IntrosortSizeThreshold)
+            {
+                if (partitionSize == 2)
+                {
+                    SwapIfGreater(s, left, left + 1);
+                    return;
+                }
+
+                if (partitionSize == 3)
+                {
+                    SwapIfGreater(s, left, left + 1);
+                    SwapIfGreater(s, left, left + 2);
+                    SwapIfGreater(s, left + 1, left + 2);
+                    return;
+                }
+
+                InsertionSort.SortCore(s, left, right);
+                return;
+            }
+
+            // Max depth reached: switch to HeapSort to guarantee O(n log n)
+            if (depthLimit == 0)
+            {
+                HeapSort.SortCore(s, left, right);
+                return;
+            }
+            depthLimit--;
+
+            // Partition and get pivot position
+            int p = PickPivotAndPartition(s, left, right);
+
+            // Recursively sort right partition, loop on left (tail recursion elimination)
+            // Note: pivot at position p is already in final position, exclude from recursion
+            IntroSortInternal(s, p + 1, right, depthLimit);
+            partitionSize = p - left;
+            right = p;
+        }
+    }
+
+    /// <summary>
+    /// Swaps elements at indices i and j if element at i is greater than element at j.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void SwapIfGreater<T, TComparer>(SortSpan<T, TComparer> s, int i, int j) where TComparer : IComparer<T>
+    {
+        if (s.Compare(i, j) > 0)
+        {
+            s.Swap(i, j);
+        }
+    }
+
+    /// <summary>
+    /// Picks a pivot using median-of-3 and partitions the range [left..right).
+    /// Returns the final position of the pivot.
+    /// This follows dotnet runtime's implementation:
+    /// - Sorts lo, mid, hi using SwapIfGreater (median-of-3)
+    /// - Moves pivot (mid) to position hi-1
+    /// - Partitions using two-pointer scan
+    /// - Places pivot in final position
+    /// </summary>
+    private static int PickPivotAndPartition<T, TComparer>(SortSpan<T, TComparer> s, int left, int right) where TComparer : IComparer<T>
+    {
+        int hi = right - 1;
+        int middle = left + ((hi - left) >> 1);
+
+        // Sort lo, mid and hi appropriately, then pick mid as the pivot.
+        // This is the dotnet runtime's median-of-3 implementation.
+        SwapIfGreater(s, left, middle);    // swap the low with the mid point
+        SwapIfGreater(s, left, hi);        // swap the low with the high
+        SwapIfGreater(s, middle, hi);      // swap the middle with the high
+
+        // Select the middle value as the pivot, and move it to be just before the last element.
+        T pivot = s.Read(middle);
+        s.Swap(middle, hi - 1);
+
+        // We already partitioned lo and hi and put the pivot in hi - 1.
+        // And we pre-increment & decrement below.
+        int l = left;
+        int r = hi - 1;
+
+        // Walk the left and right pointers, swapping elements as necessary, until they cross.
+        while (l < r)
+        {
+            // Move left pointer forward while elements are less than pivot
+            while (l < hi - 1 && s.Compare(++l, pivot) < 0) ;
+
+            // Move right pointer backward while elements are greater than pivot
+            while (r > left && s.Compare(pivot, --r) < 0) ;
+
+            if (l >= r)
+                break;
+
+            s.Swap(l, r);
+        }
+
+        // Put pivot in the right location.
+        if (l != hi - 1)
+        {
+            s.Swap(l, hi - 1);
+        }
+        return l;
+    }
+}

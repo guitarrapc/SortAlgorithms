@@ -12,6 +12,7 @@ public class PartitionBenchmark
 
     private int[] _blockQuickArray = default!;
     private int[] _introArray = default!;
+    private int[] _introDotnetArray = default!;
     private int[] _pdqArray = default!;
     private int[] _quickArray = default!;
     private int[] _quickDualPivotArray = default!;
@@ -26,6 +27,7 @@ public class PartitionBenchmark
     {
         _blockQuickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _introArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _introDotnetArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _pdqArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _quickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _quickDualPivotArray = BenchmarkData.GenerateIntArray(Size, Pattern);
@@ -46,6 +48,12 @@ public class PartitionBenchmark
     public void IntroSort()
     {
         SortAlgorithm.Algorithms.IntroSort.Sort(_introArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void IntroSortDotnet()
+    {
+        SortAlgorithm.Algorithms.IntroSortDotnet.Sort(_introDotnetArray.AsSpan());
     }
 
     [Benchmark]
