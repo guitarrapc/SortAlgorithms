@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -126,10 +125,8 @@ public static class QuickSortDualPivot
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span)
-    {
-        Sort<T, Comparer<T>>(span, 0, span.Length, NullContext.Default, Comparer<T>.Default);
-    }
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -137,10 +134,8 @@ public static class QuickSortDualPivot
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context)
-    {
-        Sort<T, Comparer<T>>(span, 0, span.Length, context, Comparer<T>.Default);
-    }
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -150,22 +145,8 @@ public static class QuickSortDualPivot
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
-    {
-        Sort<T, Comparer<T>>(span, first, last, context, Comparer<T>.Default);
-    }
-
-    /// <summary>
-    /// Sorts the elements in the specified span using the provided comparer.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the span.</typeparam>
-    /// <typeparam name="TComparer">The type of comparer to use. Must implement <see cref="IComparer{T}"/>.</typeparam>
-    /// <param name="span">The span of elements to sort in place.</param>
-    /// <param name="comparer">The comparer used to compare elements.</param>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer) where TComparer : IComparer<T>
-    {
-        Sort<T, TComparer>(span, 0, span.Length, NullContext.Default, comparer);
-    }
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+        => Sort(span, first, last, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context and comparer.
@@ -173,24 +154,24 @@ public static class QuickSortDualPivot
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use. Must implement <see cref="IComparer{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
-    /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
     /// <param name="comparer">The comparer used to compare elements.</param>
-    public static void Sort<T, TComparer>(Span<T> span, ISortContext context, TComparer comparer) where TComparer : IComparer<T>
+    /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
-        Sort<T, TComparer>(span, 0, span.Length, context, comparer);
+        Sort(span, 0, span.Length, comparer, context);
     }
 
     /// <summary>
-    /// Sorts the subrange [first..last) using the provided sort context and comparer.
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use. Must implement <see cref="IComparer{T}"/>.</typeparam>
     /// <param name="span">The span containing elements to sort.</param>
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
-    /// <param name="context">The sort context for tracking statistics and observations.</param>
     /// <param name="comparer">The comparer used to compare elements.</param>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, ISortContext context, TComparer comparer) where TComparer : IComparer<T>
+    /// <param name="context">The sort context for tracking statistics and observations.</param>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);

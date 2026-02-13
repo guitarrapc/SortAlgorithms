@@ -58,14 +58,14 @@ public static class CountingSort
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function.
     /// </summary>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector)
-        => Sort(span, keySelector, Comparer<T>.Default, NullContext.Default);
+    public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
+        => Sort(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector, ISortContext context)
-        => Sort(span, keySelector, Comparer<T>.Default, context);
+    public static void Sort<T>(Span<T> span, Func<T, int> keySelector, ISortContext context) where T : IComparable<T>
+        => Sort(span, keySelector, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
@@ -218,14 +218,14 @@ public static class CountingSortInteger
     /// </summary>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
-        Sort(span, Comparer<T>.Default, NullContext.Default);
+        Sort(span, new ComparableComparer<T>(), NullContext.Default);
     }
 
     /// <summary>
     /// Sorts integer values in the specified span with sort context (generic version for IBinaryInteger types).
     /// </summary>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, Comparer<T>.Default, context);
+        => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts integer values in the specified span with comparer and sort context (generic version for IBinaryInteger types).

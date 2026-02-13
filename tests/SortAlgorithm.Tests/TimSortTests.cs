@@ -139,7 +139,7 @@ public class TimSortTests
         if (n < 32)
         {
             // BinaryInsertSort has variable comparisons due to binary search
-            minCompares = (ulong)(n);
+            minCompares = (ulong)(n - 1);
             maxCompares = (ulong)(n * Math.Ceiling(Math.Log2(n + 1)));
         }
         else

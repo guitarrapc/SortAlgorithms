@@ -310,11 +310,11 @@ public class SlowSortTests
 
 #endif
 
-    private static bool IsSorted<T>(T[] array)
+    private static bool IsSorted<T>(T[] array) where T : IComparable<T>
     {
         for (int i = 1; i < array.Length; i++)
         {
-            if (Comparer<T>.Default.Compare(array[i - 1], array[i]) > 0)
+            if (new ComparableComparer<T>().Compare(array[i - 1], array[i]) > 0)
                 return false;
         }
         return true;

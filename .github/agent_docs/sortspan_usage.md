@@ -54,7 +54,7 @@ public int Compare(int i, int j)
 }
 ```
 
-**Result:** In RELEASE builds, SortSpan operations compile to simple Span operations with zero abstraction overhead. When `TComparer` is a struct (e.g., `Comparer<T>.Default`), the JIT devirtualizes and inlines the comparison call.
+**Result:** In RELEASE builds, SortSpan operations compile to simple Span operations with zero abstraction overhead. When `TComparer` is a struct (e.g., `new ComparableComparer<T>()`), the JIT devirtualizes and inlines the comparison call.
 
 ## Required Operations
 
