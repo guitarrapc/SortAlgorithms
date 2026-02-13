@@ -4,7 +4,7 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class IntroSortDotnetDotnetTests
+public class IntroSortDotnetTests
 {
     [Test]
     [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]

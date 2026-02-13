@@ -92,6 +92,9 @@ public static class IntroSortDotnet
     /// <remarks>
     /// From dotnet runtime comments:
     /// "IntroSort is recursive; block it from being inlined into itself as this is currently not profitable."
+    /// 
+    /// This implementation follows dotnet runtime's approach of using Slice to always work with
+    /// 0-based spans, which improves performance especially for sorted/reversed data.
     /// </remarks>
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void IntroSortInternal<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int depthLimit) where TComparer : IComparer<T>
@@ -116,26 +119,25 @@ public static class IntroSortDotnet
                     return;
                 }
 
-                InsertionSort.SortCore(s, left, right);
+                InsertionSort.SortCore(s, left, left + partitionSize);
                 return;
             }
 
             // Max depth reached: switch to HeapSort to guarantee O(n log n)
             if (depthLimit == 0)
             {
-                HeapSort.SortCore(s, left, right);
+                HeapSort.SortCore(s, left, left + partitionSize);
                 return;
             }
             depthLimit--;
 
-            // Partition and get pivot position
-            int p = PickPivotAndPartition(s, left, right);
+            // Partition and get pivot position (returns position relative to left)
+            int p = PickPivotAndPartition(s, left, partitionSize);
 
             // Recursively sort right partition, loop on left (tail recursion elimination)
-            // Note: pivot at position p is already in final position, exclude from recursion
-            IntroSortInternal(s, p + 1, right, depthLimit);
-            partitionSize = p - left;
-            right = p;
+            // Note: pivot at position (left + p) is already in final position, exclude from recursion
+            IntroSortInternal(s, left + p + 1, left + partitionSize, depthLimit);
+            partitionSize = p;
         }
     }
 
@@ -152,54 +154,61 @@ public static class IntroSortDotnet
     }
 
     /// <summary>
-    /// Picks a pivot using median-of-3 and partitions the range [left..right).
-    /// Returns the final position of the pivot.
-    /// This follows dotnet runtime's implementation:
-    /// - Sorts lo, mid, hi using SwapIfGreater (median-of-3)
+    /// Picks a pivot using median-of-3 and partitions the range.
+    /// This follows dotnet runtime's implementation exactly:
+    /// - Works with a partition of size 'partitionSize' starting at 'offset'
+    /// - Sorts lo(0), mid, hi using SwapIfGreater (median-of-3)
     /// - Moves pivot (mid) to position hi-1
-    /// - Partitions using two-pointer scan
+    /// - Partitions using two-pointer scan from both ends
     /// - Places pivot in final position
+    /// - Returns the final pivot position RELATIVE to offset (0-based within partition)
     /// </summary>
-    private static int PickPivotAndPartition<T, TComparer>(SortSpan<T, TComparer> s, int left, int right) where TComparer : IComparer<T>
+    private static int PickPivotAndPartition<T, TComparer>(SortSpan<T, TComparer> s, int offset, int partitionSize) where TComparer : IComparer<T>
     {
-        int hi = right - 1;
-        int middle = left + ((hi - left) >> 1);
+        // All operations are relative to offset, but we work with indices as if 0-based
+        int hi = partitionSize - 1;
+        int middle = hi >> 1;
 
         // Sort lo, mid and hi appropriately, then pick mid as the pivot.
         // This is the dotnet runtime's median-of-3 implementation.
-        SwapIfGreater(s, left, middle);    // swap the low with the mid point
-        SwapIfGreater(s, left, hi);        // swap the low with the high
-        SwapIfGreater(s, middle, hi);      // swap the middle with the high
+        // Indices are adjusted by offset to access actual array positions
+        SwapIfGreater(s, offset + 0, offset + middle);    // swap the low with the mid point
+        SwapIfGreater(s, offset + 0, offset + hi);        // swap the low with the high
+        SwapIfGreater(s, offset + middle, offset + hi);   // swap the middle with the high
 
         // Select the middle value as the pivot, and move it to be just before the last element.
-        T pivot = s.Read(middle);
-        s.Swap(middle, hi - 1);
+        T pivot = s.Read(offset + middle);
+        s.Swap(offset + middle, offset + hi - 1);
 
         // We already partitioned lo and hi and put the pivot in hi - 1.
         // And we pre-increment & decrement below.
-        int l = left;
-        int r = hi - 1;
+        int left = 0;
+        int right = hi - 1;
 
         // Walk the left and right pointers, swapping elements as necessary, until they cross.
-        while (l < r)
+        while (left < right)
         {
             // Move left pointer forward while elements are less than pivot
-            while (l < hi - 1 && s.Compare(++l, pivot) < 0) ;
+            // Pre-increment: ++left first, then compare
+            while (left < hi - 1 && s.Compare(offset + (++left), pivot) < 0) ;
 
             // Move right pointer backward while elements are greater than pivot
-            while (r > left && s.Compare(pivot, --r) < 0) ;
+            // Pre-decrement: --right first, then compare
+            while (right > 0 && s.Compare(pivot, offset + (--right)) < 0) ;
 
-            if (l >= r)
+            if (left >= right)
                 break;
 
-            s.Swap(l, r);
+            s.Swap(offset + left, offset + right);
         }
 
         // Put pivot in the right location.
-        if (l != hi - 1)
+        if (left != hi - 1)
         {
-            s.Swap(l, hi - 1);
+            s.Swap(offset + left, offset + hi - 1);
         }
-        return l;
+        
+        // Return position relative to offset (0-based within partition)
+        return left;
     }
 }
