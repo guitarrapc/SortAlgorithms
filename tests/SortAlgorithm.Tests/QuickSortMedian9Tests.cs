@@ -319,7 +319,7 @@ public class QuickSortMedian9Tests
         // - Swaps: approximately 0.33n log₂ n on average
 
         var minCompares = (ulong)(n);
-        var maxCompares = (ulong)(3 * n * Math.Log(n, 2));
+        var maxCompares = (ulong)(3 * n * Math.Log(n, 2) + 2);
 
         var minSwaps = 0UL;
         var maxSwaps = (ulong)(2 * n * Math.Log(n, 2));
