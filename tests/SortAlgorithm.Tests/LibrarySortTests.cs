@@ -88,7 +88,7 @@ public class LibrarySortTests
 
         LibrarySort.Sort(array.AsSpan(), stats);
 
-        await Assert.That(array).HasCount().EqualTo(0);
+        await Assert.That(array).Count().IsEqualTo(0);
     }
 
     [Test]
@@ -99,7 +99,7 @@ public class LibrarySortTests
 
         LibrarySort.Sort(array.AsSpan(), stats);
 
-        await Assert.That(array).HasCount().EqualTo(1);
+        await Assert.That(array).Count().IsEqualTo(1);
         await Assert.That(array[0]).IsEqualTo(42);
     }
 
