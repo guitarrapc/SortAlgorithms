@@ -57,7 +57,37 @@ public int Compare(int i, int j)
 
 ## Required Operations
 
-### 1. Reading Elements: `s.Read(i)`
+### 1. Copying Ranges: `s.CopyTo(sourceIndex, destination, destinationIndex, length)`
+
+Copies a range of elements from source to destination, notifies context via `OnRangeCopy(sourceIndex, destinationIndex, length, sourceBufferId, destBufferId, values)`
+
+```csharp
+// ✅ Correct - copying from temp to main buffer
+temp.CopyTo(0, s, 0, s.Length);
+
+// ✅ Correct - copying from source to destination SortSpan
+source.CopyTo(sourceStart, dest, destStart, count);
+
+// ✅ Correct - copying to regular Span (also tracked)
+temp.CopyTo(0, regularSpan, 0, length);
+
+// ❌ Incorrect - manual loop bypasses context
+for (var i = 0; i < length; i++)
+{
+    s.Write(i, temp.Read(i));  // Each operation tracked separately, slower
+}
+
+// ❌ Incorrect - direct CopyTo bypasses context
+temp._span.CopyTo(s._span);  // No tracking!
+```
+
+**When to use `CopyTo`:**
+- ✅ Copying entire buffers after sorting (e.g., merge sort, bucket sort)
+- ✅ Copying ranges between SortSpan instances
+- ✅ Better performance than manual loops (SIMD optimization potential)
+- ✅ Clearer intent - "copy this range" vs "loop and write each element"
+
+### 2. Reading Elements: `s.Read(i)`
 
 Notifies context via `OnIndexRead(i)`
 
@@ -69,7 +99,7 @@ var value = s.Read(i);
 var value = span[i];
 ```
 
-### 2. Writing Elements: `s.Write(i, value)`
+### 3. Writing Elements: `s.Write(i, value)`
 
 Notifies context via `OnIndexWrite(i)`
 
@@ -81,7 +111,7 @@ s.Write(i, value);
 span[i] = value;
 ```
 
-### 3. Comparing Elements: `s.Compare(i, j)`
+### 4. Comparing Elements: `s.Compare(i, j)`
 
 Reads both elements, compares, and notifies context via `OnCompare(i, j, result)`
 
@@ -110,7 +140,7 @@ if (s.Read(i).CompareTo(value) < 0) { ... }
 
 **Important:** Never use `CompareTo()` directly. All comparisons must go through `SortSpan` methods.
 
-### 4. Swapping Elements: `s.Swap(i, j)`
+### 5. Swapping Elements: `s.Swap(i, j)`
 
 Reads both elements, notifies context via `OnSwap(i, j)`, then writes
 

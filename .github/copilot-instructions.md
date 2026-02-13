@@ -86,7 +86,7 @@ When implementing or reviewing sorting algorithms, refer to these detailed guide
 - **[Coding Style](.github/agent_docs/coding_style.md)** - C# style conventions for this project
 - **[Testing Guidelines](.github/agent_docs/testing_guidelines.md)** - Writing/Run effective unit tests
 
-**Key Rule:** Always use `SortSpan<T>` methods (`Read`, `Write`, `Compare`, `Swap`) instead of direct array access. This ensures accurate statistics tracking.
+**Key Rule:** Always use `SortSpan<T>` methods (`Read`, `Write`, `Compare`, `Swap`, `CopyTo`) instead of direct array access. This ensures accurate statistics tracking.
 
 ## Progressive Disclosure
 
