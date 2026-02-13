@@ -1,4 +1,5 @@
 ﻿using SortAlgorithm.Contexts;
+using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -107,6 +108,7 @@ public static class BinaryInsertionSort
     /// <param name="first">The inclusive start index of the sorted range.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="start">The position from which to start inserting elements. Elements before this are already sorted.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last, int start) where TComparer : IComparer<T>
     {
         // If 'start' equals 'first', move it forward to begin insertion from the next element
@@ -115,15 +117,16 @@ public static class BinaryInsertionSort
 
         for (var i = start; i < last; i++)
         {
-            var tmp = s.Read(i);
-
-            // Early termination: if element is already in correct position, skip binary search and shifts
+            // Early termination: if element is already in correct position, skip everything
+            // Compare indices directly to avoid reading tmp unnecessarily
             // This optimization significantly improves performance on sorted or nearly-sorted data
-            if (i > first && s.Compare(i - 1, tmp) <= 0)
+            if (i > first && s.Compare(i - 1, i) <= 0)
             {
                 // Element is already in the correct position (greater than or equal to previous element)
                 continue;
             }
+
+            var tmp = s.Read(i);
 
             // Find the insertion position using binary search in the sorted range [first..i)
             var pos = BinarySearch(s, tmp, first, i);
