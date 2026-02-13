@@ -392,6 +392,10 @@ public static class PDQSort
 
                 s.Write(sift, siftValue);
                 limit += cur - sift;
+                
+                // Check limit immediately after increment to catch last iteration overflow
+                if (limit > PartialInsertionSortLimit)
+                    return false;
             }
         }
 
