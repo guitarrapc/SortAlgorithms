@@ -301,22 +301,11 @@ public static class PDQSort
         } while (s.Compare(first, pivot) < 0);
 
         // Find the first element strictly smaller than the pivot (last can reach begin)
-        if (first - 1 == begin)
+        do
         {
-            do
-            {
-                last--;
-                if (last == begin) break;
-            } while (first < last && s.Compare(last, pivot) >= 0);
-        }
-        else
-        {
-            do
-            {
-                last--;
-                if (last == begin) break;
-            } while (s.Compare(last, pivot) >= 0);
-        }
+            last--;
+            if (last == begin) break;
+        } while (first < last && s.Compare(last, pivot) >= 0);
 
         // If the first pair of elements that should be swapped to partition are the same element,
         // the passed in sequence already was correctly partitioned
@@ -363,22 +352,11 @@ public static class PDQSort
         } while (s.Compare(pivot, s.Read(last)) < 0);
 
         // Find the first element from the left that is less than pivot
-        if (last + 1 == end)
+        do
         {
-            do
-            {
-                first++;
-                if (first == last) break;
-            } while (s.Compare(pivot, s.Read(first)) >= 0);
-        }
-        else
-        {
-            do
-            {
-                first++;
-                if (first > last) break;
-            } while (s.Compare(pivot, s.Read(first)) >= 0);
-        }
+            first++;
+            if (first > last) break;
+        } while (first < last && s.Compare(pivot, s.Read(first)) >= 0);
 
         while (first < last)
         {
