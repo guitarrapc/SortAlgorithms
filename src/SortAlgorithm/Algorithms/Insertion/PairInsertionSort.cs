@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -65,7 +64,7 @@ public static class PairInsertionSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span)
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>
     {
         Sort(span, 0, span.Length, NullContext.Default);
     }
@@ -76,7 +75,7 @@ public static class PairInsertionSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context for tracking statistics and observations during sorting. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context)
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
     {
         Sort(span, 0, span.Length, context);
     }
@@ -89,9 +88,9 @@ public static class PairInsertionSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
     {
-        Sort<T, Comparer<T>>(span, first, last, Comparer<T>.Default, context);
+        Sort(span, first, last, new ComparableComparer<T>(), context);
     }
 
     /// <summary>

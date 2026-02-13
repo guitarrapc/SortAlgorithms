@@ -73,7 +73,7 @@ public static class RadixMSD4Sort
     /// </summary>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
-        Sort(span, Comparer<T>.Default, NullContext.Default);
+        Sort(span, new ComparableComparer<T>(), NullContext.Default);
     }
 
     /// <summary>
@@ -81,7 +81,7 @@ public static class RadixMSD4Sort
     /// </summary>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
-        Sort(span, Comparer<T>.Default, context);
+        Sort(span, new ComparableComparer<T>(), context);
     }
 
     /// <summary>

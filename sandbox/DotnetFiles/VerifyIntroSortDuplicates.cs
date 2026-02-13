@@ -106,7 +106,7 @@ Console.WriteLine($"  5 categories (8K): {stats3.CompareCount} compares");
 
 static bool IsSorted<T>(T[] array)
 {
-    var comparer = Comparer<T>.Default;
+    var comparer = new ComparableComparer<T>();
     for (int i = 1; i < array.Length; i++)
     {
         if (comparer.Compare(array[i], array[i - 1]) < 0)

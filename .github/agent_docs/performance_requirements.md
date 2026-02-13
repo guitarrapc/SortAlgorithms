@@ -42,8 +42,8 @@ else
 ### 2. Generic TComparer for Devirtualized Comparisons
 
 - Use `<T, TComparer> where TComparer : IComparer<T>` on the main implementation method
-- When `TComparer` is a struct (e.g., `Comparer<T>.Default`), the JIT devirtualizes and inlines `Compare()` calls
-- Convenience overloads delegate via `Comparer<T>.Default`
+- When `TComparer` is a struct (e.g., `new ComparableComparer<T>()`), the JIT devirtualizes and inlines `Compare()` calls
+- Convenience overloads delegate via `new ComparableComparer<T>()`
 - Never use `IComparer<T>` as a parameter type directly (use the generic `TComparer` pattern instead)
 
 ### 3. Aggressive Inlining

@@ -68,8 +68,8 @@ public static class InsertionSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span)
-        => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -77,8 +77,8 @@ public static class InsertionSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context for tracking statistics and observations during sorting. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context)
-        => Sort(span, 0, span.Length, Comparer<T>.Default, context);
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -95,8 +95,8 @@ public static class InsertionSort
     /// - Writes the element to its correct position
     /// This reduces the number of writes compared to swap-based insertion sort.
     /// </remarks>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
-        => Sort(span, first, last, Comparer<T>.Default, context);
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+        => Sort(span, first, last, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
@@ -436,8 +436,8 @@ public static class InsertionSortNonOptimized
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span)
-        => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -445,8 +445,8 @@ public static class InsertionSortNonOptimized
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context for tracking statistics and observations during sorting. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context)
-        => Sort(span, 0, span.Length, Comparer<T>.Default, context);
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -465,8 +465,8 @@ public static class InsertionSortNonOptimized
     /// This approach is intuitive but performs more write operations than the optimized shift-based version.
     /// Each swap requires 2 reads + 2 writes, while a shift requires 1 read + 1 write.
     /// </remarks>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
-        => Sort(span, first, last, Comparer<T>.Default, context);
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+        => Sort(span, first, last, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.

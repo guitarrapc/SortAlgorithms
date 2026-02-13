@@ -129,8 +129,8 @@ public static class BlockQuickSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span)
-        => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -138,8 +138,8 @@ public static class BlockQuickSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context)
-        => Sort(span, 0, span.Length, Comparer<T>.Default, context);
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -149,8 +149,8 @@ public static class BlockQuickSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
-        => Sort(span, first, last, Comparer<T>.Default, context);
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+        => Sort(span, first, last, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.

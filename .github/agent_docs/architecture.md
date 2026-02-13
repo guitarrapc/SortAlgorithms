@@ -24,16 +24,16 @@ Sorting algorithms follow a consistent architecture:
 
 ## Public API Pattern
 
-Each algorithm exposes **convenience overloads** (no constraint) that delegate to the main implementation via `Comparer<T>.Default`. This matches the `MemoryExtensions.Sort` pattern from dotnet/runtime - runtime validation instead of compile-time constraints:
+Each algorithm exposes **convenience overloads** (no constraint) that delegate to the main implementation via `new ComparableComparer<T>()`. This matches the `MemoryExtensions.Sort` pattern from dotnet/runtime - runtime validation instead of compile-time constraints:
 
 ```csharp
 // Convenience: no context
 public static void Sort<T>(Span<T> span)
-    => Sort(span, Comparer<T>.Default, NullContext.Default);
+    => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
 // Convenience: with context
 public static void Sort<T>(Span<T> span, ISortContext context)
-    => Sort(span, Comparer<T>.Default, context);
+    => Sort(span, new ComparableComparer<T>(), context);
 
 // Main implementation: generic TComparer for zero-alloc devirtualization
 public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)

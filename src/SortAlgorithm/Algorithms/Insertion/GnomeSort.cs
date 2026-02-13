@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -52,8 +51,8 @@ public static class GnomeSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span)
-        => Sort(span, Comparer<T>.Default, NullContext.Default);
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -61,8 +60,8 @@ public static class GnomeSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context)
-        => Sort(span, Comparer<T>.Default, context);
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using a custom comparer and sort context.
@@ -135,11 +134,11 @@ public static class GnomeSortNonOptimized
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span)
-        => Sort(span, Comparer<T>.Default, NullContext.Default);
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
-    public static void Sort<T>(Span<T> span, ISortContext context)
-        => Sort(span, Comparer<T>.Default, context);
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+        => Sort(span, new ComparableComparer<T>(), context);
 
     public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {

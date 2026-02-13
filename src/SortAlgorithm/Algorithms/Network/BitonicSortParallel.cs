@@ -101,7 +101,7 @@ public static class BitonicSortParallel
     /// <typeparam name="T">The type of elements in the array. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="array">The array of elements to sort in place.</param>
     /// <exception cref="ArgumentException">Thrown when the array length is not a power of 2.</exception>
-    public static void Sort<T>(T[] array)
+    public static void Sort<T>(T[] array) where T : IComparable<T>
     {
         Sort(array, NullContext.Default);
     }
@@ -113,8 +113,8 @@ public static class BitonicSortParallel
     /// <param name="array">The array of elements to sort. The elements within this array will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     /// <exception cref="ArgumentException">Thrown when the array length is not a power of 2.</exception>
-    public static void Sort<T>(T[] array, ISortContext context)
-        => Sort(array, Comparer<T>.Default, context);
+    public static void Sort<T>(T[] array, ISortContext context) where T : IComparable<T>
+        => Sort(array, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified array using the provided comparer, sort context, and parallel execution.

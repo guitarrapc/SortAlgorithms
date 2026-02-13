@@ -307,10 +307,10 @@ namespace SortAlgorithm.Algorithms;
 public static class BubbleSort
 {
     public static void Sort<T>(Span<T> span)
-        => Sort(span, Comparer<T>.Default, NullContext.Default);
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     public static void Sort<T>(Span<T> span, ISortContext context)
-        => Sort(span, Comparer<T>.Default, context);
+        => Sort(span, new ComparableComparer<T>(), context);
 
     public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
         where TComparer : IComparer<T>

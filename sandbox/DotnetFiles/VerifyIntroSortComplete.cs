@@ -152,7 +152,7 @@ Console.WriteLine($"📊 Average Performance (50K elements): {avgCompares:N0} co
 
 static bool IsSorted<T>(T[] array)
 {
-    var comparer = Comparer<T>.Default;
+    var comparer = new ComparableComparer<T>();
     for (int i = 1; i < array.Length; i++)
     {
         if (comparer.Compare(array[i], array[i - 1]) < 0)

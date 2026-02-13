@@ -62,7 +62,7 @@ public static class RadixLSD10Sort
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
-        Sort(span, Comparer<T>.Default, NullContext.Default);
+        Sort(span, new ComparableComparer<T>(), NullContext.Default);
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ public static class RadixLSD10Sort
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
-        Sort(span, Comparer<T>.Default, context);
+        Sort(span, new ComparableComparer<T>(), context);
     }
 
     /// <summary>

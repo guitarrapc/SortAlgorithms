@@ -1,6 +1,5 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -118,7 +117,7 @@ public static class DropMergeSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span)
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>
     {
         Sort(span, NullContext.Default);
     }
@@ -129,9 +128,9 @@ public static class DropMergeSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context)
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
     {
-        Sort(span, context, Comparer<T>.Default);
+        Sort(span, context, new ComparableComparer<T>());
     }
 
     /// <summary>
