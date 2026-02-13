@@ -1,4 +1,5 @@
 ﻿using SortAlgorithm.Contexts;
+using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -162,6 +163,7 @@ public static class InsertionSort
     /// reducing branch mispredictions and improving CPU pipeline efficiency.
     /// Typical speedup: 10-20% for small arrays compared to guarded version.
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void UnguardedSortCore<T>(SortSpan<T> s, int first, int last) where T : IComparable<T>
     {
         for (var i = first + 1; i < last; i++)
@@ -306,6 +308,7 @@ public static class InsertionSort
     /// <summary>
     /// Sorts exactly 3 elements using a sorting network (2-3 comparisons, 0-2 swaps).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort3<T>(SortSpan<T> s, int i0, int i1, int i2) where T : IComparable<T>
     {
         if (s.Compare(i1, i0) < 0) s.Swap(i0, i1);
@@ -319,6 +322,7 @@ public static class InsertionSort
     /// <summary>
     /// Sorts exactly 4 elements using a sorting network (3-6 comparisons, 0-5 swaps).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort4<T>(SortSpan<T> s, int i0, int i1, int i2, int i3) where T : IComparable<T>
     {
         Sort3(s, i0, i1, i2);
@@ -336,6 +340,7 @@ public static class InsertionSort
     /// <summary>
     /// Sorts exactly 5 elements using a sorting network (4-10 comparisons, 0-9 swaps).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort5<T>(SortSpan<T> s, int i0, int i1, int i2, int i3, int i4) where T : IComparable<T>
     {
         Sort4(s, i0, i1, i2, i3);

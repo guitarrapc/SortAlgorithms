@@ -167,7 +167,7 @@ public static class PDQSort
                 }
                 else
                 {
-                    UnguardedInsertionSort(s, begin, end);
+                    InsertionSort.UnguardedSortCore(s, begin, end);
                 }
                 return;
             }
@@ -394,33 +394,6 @@ public static class PDQSort
         }
 
         return true;
-    }
-
-    /// <summary>
-    /// Insertion sort assuming *(begin - 1) is a sentinel (smaller than or equal to any element in [begin, end)).
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void UnguardedInsertionSort<T>(SortSpan<T> s, int begin, int end) where T : IComparable<T>
-    {
-        if (begin == end) return;
-
-        for (var cur = begin + 1; cur < end; cur++)
-        {
-            var sift = cur;
-            var siftValue = s.Read(cur);
-
-            if (s.Compare(sift, sift - 1) < 0)
-            {
-                do
-                {
-                    s.Write(sift, s.Read(sift - 1));
-                    sift--;
-                }
-                while (s.Compare(siftValue, s.Read(sift - 1)) < 0);
-
-                s.Write(sift, siftValue);
-            }
-        }
     }
 
     /// <summary>
