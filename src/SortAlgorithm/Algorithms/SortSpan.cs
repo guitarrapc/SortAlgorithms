@@ -11,9 +11,9 @@ namespace SortAlgorithm.Algorithms;
 /// </summary>
 /// <typeparam name="T">The type of elements in the span</typeparam>
 /// <typeparam name="TComparer">The type of comparer to use for element comparisons</typeparam>
-internal ref struct SortSpan<T, TComparer> where TComparer : IComparer<T>
+internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<T>
 {
-    private Span<T> _span;
+    private readonly Span<T> _span;
     private readonly ISortContext _context;
     private readonly TComparer _comparer;
     private readonly int _bufferId;
