@@ -103,14 +103,14 @@ PDQSortは高品質なピボット選択とパターン検出を行うため、C
 1. **小配列でのInsertionSort切り替え**
    - Threshold = 24要素
    - キャッシュに完全に収まる → 1 cycle/compare達成
-   
+
 2. **UnguardedInsertionSort最適化**
    - 境界チェックを排除 → 分岐予測ミスを削減
-   
+
 3. **パターン検出による早期終了**
    - ソート済み配列を O(n) で処理
    - PartialInsertionSortで最大8要素移動時点で判定
-   
+
 4. **HeapSortフォールバック**
    - 最悪ケースでも O(n log n) を保証
    - キャッシュ効率の良い実装
@@ -124,11 +124,11 @@ PDQSortは高品質なピボット選択とパターン検出を行うため、C
 1. **シンプルなHoare Partition**
    - オーバーヘッドが少ない
    - 分岐予測しやすいパターン
-   
+
 2. **Swapの多さ**
    - Hoare schemeの特性
    - Swapはキャッシュミス時にコスト大
-   
+
 3. **パターン検出なし**
    - ソート済み配列でも O(n log n)
    - 特殊ケース最適化がない
@@ -156,53 +156,53 @@ public class WeightedCostContext : ISortContext
     private const double SWAP_WEIGHT = 0.5;      // Swapは内部Read/Write込みで評価
     private const double READ_WEIGHT = 0.3;      // キャッシュヒット前提
     private const double WRITE_WEIGHT = 0.3;     // キャッシュヒット前提
-    
+
     private double _totalCost;
     private ulong _compareCount;
     private ulong _swapCount;
     private ulong _readCount;
     private ulong _writeCount;
-    
+
     public double TotalCost => _totalCost;
     public ulong CompareCount => _compareCount;
     public ulong SwapCount => _swapCount;
     public ulong ReadCount => _readCount;
     public ulong WriteCount => _writeCount;
-    
+
     public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ)
     {
         Interlocked.Increment(ref _compareCount);
         // Compareのみカウント（インデックス計算は無視）
         AddCost(COMPARE_WEIGHT);
     }
-    
+
     public void OnSwap(int i, int j, int bufferId)
     {
         if (bufferId < 0) return;
-        
+
         Interlocked.Increment(ref _swapCount);
         // SwapはRead×2 + Write×2を含むが、重み付きコストでは1回としてカウント
         // これによりStatisticsContextとの二重カウントを防ぐ
         AddCost(SWAP_WEIGHT);
     }
-    
+
     public void OnIndexRead(int index, int bufferId)
     {
         if (bufferId < 0) return;
-        
+
         Interlocked.Increment(ref _readCount);
         AddCost(READ_WEIGHT);
     }
-    
+
     public void OnIndexWrite(int index, int bufferId, object? value = null)
     {
         if (bufferId < 0) return;
-        
+
         Interlocked.Increment(ref _writeCount);
         AddCost(WRITE_WEIGHT);
     }
-    
-    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, 
+
+    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length,
                            int sourceBufferId, int destinationBufferId)
     {
         if (sourceBufferId >= 0)
@@ -210,14 +210,14 @@ public class WeightedCostContext : ISortContext
             Interlocked.Add(ref _readCount, (ulong)length);
             AddCost(READ_WEIGHT * length);
         }
-        
+
         if (destinationBufferId >= 0)
         {
             Interlocked.Add(ref _writeCount, (ulong)length);
             AddCost(WRITE_WEIGHT * length);
         }
     }
-    
+
     private void AddCost(double cost)
     {
         // Thread-safe addition using lock-free algorithm
@@ -253,13 +253,13 @@ public enum AlgorithmProfile
 {
     /// <summary>キャッシュ効率が高い (InsertionSort, PDQSort, IntroSort)</summary>
     CacheFriendly,
-    
+
     /// <summary>分岐が多い (QuickSort系)</summary>
     BranchHeavy,
-    
+
     /// <summary>メモリ集約的 (MergeSort, RadixSort)</summary>
     MemoryIntensive,
-    
+
     /// <summary>標準 (デフォルト)</summary>
     Standard
 }
@@ -272,13 +272,13 @@ public class ProfiledWeightedCostContext : ISortContext
 {
     private readonly WeightedCostContext _baseContext;
     private readonly double _algorithmMultiplier;
-    
+
     public ProfiledWeightedCostContext(AlgorithmProfile profile)
     {
         _baseContext = new WeightedCostContext();
         _algorithmMultiplier = GetMultiplier(profile);
     }
-    
+
     /// <summary>
     /// アルゴリズムプロファイルに基づく補正係数
     /// </summary>
@@ -288,36 +288,36 @@ public class ProfiledWeightedCostContext : ISortContext
         {
             // キャッシュ効率の高いアルゴリズムは実行時間が短い
             AlgorithmProfile.CacheFriendly => 0.7,      // PDQSort, IntroSort
-            
+
             // 分岐予測ミスが多いアルゴリズムは標準
             AlgorithmProfile.BranchHeavy => 1.0,        // QuickSort, BlockQuickSort
-            
+
             // メモリアクセスが多いアルゴリズムは実行時間が長い
             AlgorithmProfile.MemoryIntensive => 1.3,    // MergeSort
-            
+
             AlgorithmProfile.Standard => 1.0,
             _ => 1.0
         };
     }
-    
+
     public double GetAdjustedCost() => _baseContext.TotalCost * _algorithmMultiplier;
-    
+
     // ISortContext implementation delegates to _baseContext
-    public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) 
+    public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ)
         => _baseContext.OnCompare(i, j, result, bufferIdI, bufferIdJ);
-    
-    public void OnSwap(int i, int j, int bufferId) 
+
+    public void OnSwap(int i, int j, int bufferId)
         => _baseContext.OnSwap(i, j, bufferId);
-    
-    public void OnIndexRead(int index, int bufferId) 
+
+    public void OnIndexRead(int index, int bufferId)
         => _baseContext.OnIndexRead(index, bufferId);
-    
-    public void OnIndexWrite(int index, int bufferId, object? value = null) 
+
+    public void OnIndexWrite(int index, int bufferId, object? value = null)
         => _baseContext.OnIndexWrite(index, bufferId, value);
-    
-    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, 
+
+    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length,
                            int sourceBufferId, int destinationBufferId)
-        => _baseContext.OnRangeCopy(sourceIndex, destinationIndex, length, 
+        => _baseContext.OnRangeCopy(sourceIndex, destinationIndex, length,
                                     sourceBufferId, destinationBufferId);
 }
 ```
@@ -344,7 +344,7 @@ public class BenchmarkNormalizedCostContext : ISortContext
 {
     private readonly WeightedCostContext _baseContext;
     private readonly double _normalizationFactor;
-    
+
     /// <summary>
     /// コンストラクタ
     /// </summary>
@@ -355,9 +355,9 @@ public class BenchmarkNormalizedCostContext : ISortContext
         _baseContext = new WeightedCostContext();
         _normalizationFactor = benchmarkTimeMs / expectedOperations;
     }
-    
+
     public double GetNormalizedTime() => _baseContext.TotalCost * _normalizationFactor;
-    
+
     // ISortContext implementation delegates to _baseContext...
 }
 ```
@@ -428,7 +428,7 @@ public class IntegratedCostContext : ISortContext
     private readonly WeightedCostContext _baseContext;
     private readonly AlgorithmProfile _profile;
     private readonly double? _benchmarkNormalizer;
-    
+
     public IntegratedCostContext(
         AlgorithmProfile profile = AlgorithmProfile.Standard,
         double? benchmarkTimeMs = null,
@@ -436,13 +436,13 @@ public class IntegratedCostContext : ISortContext
     {
         _baseContext = new WeightedCostContext();
         _profile = profile;
-        
+
         if (benchmarkTimeMs.HasValue && expectedOperations.HasValue)
         {
             _benchmarkNormalizer = benchmarkTimeMs.Value / expectedOperations.Value;
         }
     }
-    
+
     /// <summary>
     /// 最終的な調整済みコストを取得
     /// Gets the final adjusted cost
@@ -451,20 +451,20 @@ public class IntegratedCostContext : ISortContext
     {
         // Layer 1: Base weighted cost
         var baseCost = _baseContext.TotalCost;
-        
+
         // Layer 2: Algorithm profile correction
         var profileMultiplier = GetProfileMultiplier(_profile);
         var profiledCost = baseCost * profileMultiplier;
-        
+
         // Layer 3: Benchmark normalization (optional)
         if (_benchmarkNormalizer.HasValue)
         {
             return profiledCost * _benchmarkNormalizer.Value;
         }
-        
+
         return profiledCost;
     }
-    
+
     private static double GetProfileMultiplier(AlgorithmProfile profile)
     {
         return profile switch
@@ -475,23 +475,23 @@ public class IntegratedCostContext : ISortContext
             _ => 1.0
         };
     }
-    
+
     // ISortContext implementation...
-    public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) 
+    public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ)
         => _baseContext.OnCompare(i, j, result, bufferIdI, bufferIdJ);
-    
-    public void OnSwap(int i, int j, int bufferId) 
+
+    public void OnSwap(int i, int j, int bufferId)
         => _baseContext.OnSwap(i, j, bufferId);
-    
-    public void OnIndexRead(int index, int bufferId) 
+
+    public void OnIndexRead(int index, int bufferId)
         => _baseContext.OnIndexRead(index, bufferId);
-    
-    public void OnIndexWrite(int index, int bufferId, object? value = null) 
+
+    public void OnIndexWrite(int index, int bufferId, object? value = null)
         => _baseContext.OnIndexWrite(index, bufferId, value);
-    
-    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, 
+
+    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length,
                            int sourceBufferId, int destinationBufferId)
-        => _baseContext.OnRangeCopy(sourceIndex, destinationIndex, length, 
+        => _baseContext.OnRangeCopy(sourceIndex, destinationIndex, length,
                                     sourceBufferId, destinationBufferId);
 }
 ```
@@ -503,10 +503,9 @@ public class IntegratedCostContext : ISortContext
 public class SortVisualizationService
 {
     public async Task VisualizeSortAsync<T>(
-        T[] array, 
+        T[] array,
         string algorithmName,
-        CancellationToken cancellationToken) 
-        where T : IComparable<T>
+        CancellationToken cancellationToken)
     {
         // アルゴリズムに応じたプロファイル選択
         var profile = algorithmName switch
@@ -518,25 +517,25 @@ public class SortVisualizationService
             "MergeSort" => AlgorithmProfile.MemoryIntensive,
             _ => AlgorithmProfile.Standard
         };
-        
+
         // Context作成
         var context = new IntegratedCostContext(profile);
-        
+
         // カスタムVisualizationContext (アニメーション用)
         var vizContext = new VisualizationContext(
-            onCompare: (i, j, result, bufIdI, bufIdJ) => 
+            onCompare: (i, j, result, bufIdI, bufIdJ) =>
             {
                 context.OnCompare(i, j, result, bufIdI, bufIdJ);
                 // アニメーション描画...
             },
-            onSwap: (i, j, bufId) => 
+            onSwap: (i, j, bufId) =>
             {
                 context.OnSwap(i, j, bufId);
                 // アニメーション描画...
             }
             // ... 他の操作も同様
         );
-        
+
         // ソート実行
         switch (algorithmName)
         {
@@ -548,7 +547,7 @@ public class SortVisualizationService
                 break;
             // ... 他のアルゴリズム
         }
-        
+
         // 最終コスト表示
         var finalCost = context.GetFinalCost();
         Console.WriteLine($"Algorithm: {algorithmName}, Adjusted Cost: {finalCost:F2}");
@@ -564,35 +563,35 @@ public class SortVisualizationService
 @* Blazor Component *@
 <div class="weight-configuration">
     <h3>Cost Weight Configuration</h3>
-    
+
     <label>
-        Compare Weight: 
-        <input type="range" min="0.1" max="2.0" step="0.1" 
+        Compare Weight:
+        <input type="range" min="0.1" max="2.0" step="0.1"
                @bind="CompareWeight" @bind:event="oninput" />
         <span>@CompareWeight</span>
     </label>
-    
+
     <label>
-        Swap Weight: 
-        <input type="range" min="0.1" max="2.0" step="0.1" 
+        Swap Weight:
+        <input type="range" min="0.1" max="2.0" step="0.1"
                @bind="SwapWeight" @bind:event="oninput" />
         <span>@SwapWeight</span>
     </label>
-    
+
     <label>
-        Read Weight: 
-        <input type="range" min="0.1" max="2.0" step="0.1" 
+        Read Weight:
+        <input type="range" min="0.1" max="2.0" step="0.1"
                @bind="ReadWeight" @bind:event="oninput" />
         <span>@ReadWeight</span>
     </label>
-    
+
     <label>
-        Write Weight: 
-        <input type="range" min="0.1" max="2.0" step="0.1" 
+        Write Weight:
+        <input type="range" min="0.1" max="2.0" step="0.1"
                @bind="WriteWeight" @bind:event="oninput" />
         <span>@WriteWeight</span>
     </label>
-    
+
     <button @onclick="ResetToDefault">Reset to Default</button>
 </div>
 
@@ -601,7 +600,7 @@ public class SortVisualizationService
     private double SwapWeight { get; set; } = 0.5;
     private double ReadWeight { get; set; } = 0.3;
     private double WriteWeight { get; set; } = 0.3;
-    
+
     private void ResetToDefault()
     {
         CompareWeight = 1.0;
@@ -627,10 +626,10 @@ using BenchmarkDotNet.Running;
 public class SortAlgorithmBenchmark
 {
     private int[] _randomArray = null!;
-    
+
     [Params(1000, 10000, 100000)]
     public int N;
-    
+
     [GlobalSetup]
     public void Setup()
     {
@@ -639,26 +638,26 @@ public class SortAlgorithmBenchmark
             .Select(_ => random.Next(N))
             .ToArray();
     }
-    
+
     [IterationSetup]
     public void IterationSetup()
     {
         // 各反復で新しいコピーを作成
         _randomArray = _randomArray.ToArray();
     }
-    
+
     [Benchmark]
     public void QuickSortMedian3_Random()
     {
         QuickSortMedian3.Sort(_randomArray.AsSpan());
     }
-    
+
     [Benchmark]
     public void PDQSort_Random()
     {
         PDQSort.Sort(_randomArray.AsSpan());
     }
-    
+
     [Benchmark]
     public void IntroSort_Random()
     {
@@ -680,39 +679,38 @@ public class BenchmarkStatisticsCollector
         int ArraySize,
         double AverageTimeMs,
         WeightedCostStats Statistics);
-    
+
     public record WeightedCostStats(
         ulong Compares,
         ulong Swaps,
         ulong Reads,
         ulong Writes,
         double TotalCost);
-    
+
     public static BenchmarkResult CollectStatistics<T>(
         string algorithmName,
         T[] inputArray,
         Action<Span<T>, ISortContext> sortAction,
-        int iterations = 10) 
-        where T : IComparable<T>
+        int iterations = 10)
     {
         var times = new List<double>();
         WeightedCostContext? lastStats = null;
-        
+
         for (int i = 0; i < iterations; i++)
         {
             var arrayCopy = inputArray.ToArray();
             var context = new WeightedCostContext();
-            
+
             var sw = Stopwatch.StartNew();
             sortAction(arrayCopy.AsSpan(), context);
             sw.Stop();
-            
+
             times.Add(sw.Elapsed.TotalMilliseconds);
             lastStats = context;
         }
-        
+
         var avgTime = times.Average();
-        
+
         return new BenchmarkResult(
             algorithmName,
             inputArray.Length,
@@ -832,7 +830,7 @@ Console.WriteLine($"PDQSort: {pdqSortResult.AverageTimeMs:F2}ms, Cost: {pdqSortR
    // 複数のContextが混在していないか確認
    var stats = new StatisticsContext();
    var viz = new VisualizationContext(/* ... */);
-   
+
    // 統計収集には stats を使用
    QuickSortMedian3.Sort(array, stats);
    ```
@@ -852,4 +850,3 @@ Console.WriteLine($"PDQSort: {pdqSortResult.AverageTimeMs:F2}ms, Cost: {pdqSortR
 | Date | Version | Author | Changes |
 |------|---------|--------|---------|
 | 2025-01-XX | 1.0 | AI Assistant | 初版作成 |
-

@@ -60,19 +60,23 @@ public static class BucketSort
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function.
     /// </summary>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-    {
-        Sort(span, keySelector, NullContext.Default);
-    }
+    public static void Sort<T>(Span<T> span, Func<T, int> keySelector)
+        => Sort(span, keySelector, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, Func<T, int> keySelector, ISortContext context)
+        => Sort(span, keySelector, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, Func<T, int> keySelector, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var keysArray = ArrayPool<int>.Shared.Rent(span.Length);
@@ -80,7 +84,7 @@ public static class BucketSort
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T>(tempArray.AsSpan(0, span.Length), context, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, TComparer>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
 
             SortCore(span, keySelector, s, tempSpan, tempArray.AsSpan(0, span.Length), keys, context);
@@ -92,7 +96,7 @@ public static class BucketSort
         }
     }
 
-    private static void SortCore<T>(Span<T> span, Func<T, int> keySelector, SortSpan<T> s, SortSpan<T> tempSpan, Span<T> tempArray, Span<int> keys, ISortContext context) where T : IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer> s, SortSpan<T, TComparer> tempSpan, Span<T> tempArray, Span<int> keys, ISortContext context) where TComparer : IComparer<T>
     {
         // Find min/max and cache keys in single pass
         var min = int.MaxValue;
@@ -129,7 +133,7 @@ public static class BucketSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void BucketDistribute<T>(SortSpan<T> s, SortSpan<T> temp, Span<T> tempArray, Span<int> keys, int bucketCount, long bucketSize, int min, ISortContext context) where T : IComparable<T>
+    private static void BucketDistribute<T, TComparer>(SortSpan<T, TComparer> s, SortSpan<T, TComparer> temp, Span<T> tempArray, Span<int> keys, int bucketCount, long bucketSize, int min, ISortContext context) where TComparer : IComparer<T>
     {
         // Count elements per bucket and calculate bucket positions (stackalloc)
         Span<int> bucketCounts = stackalloc int[bucketCount];
@@ -178,7 +182,7 @@ public static class BucketSort
             if (count > 1)
             {
                 var start = bucketStarts[i];
-                var bucketSpan = new SortSpan<T>(tempArray.Slice(start, count), context, BUFFER_BUCKET_BASE + i);
+                var bucketSpan = new SortSpan<T, TComparer>(tempArray.Slice(start, count), context, s.Comparer, BUFFER_BUCKET_BASE + i);
                 InsertionSortBucket(bucketSpan);
             }
         }
@@ -192,7 +196,7 @@ public static class BucketSort
     /// Uses SortSpan to track all operations for statistics and visualization
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void InsertionSortBucket<T>(SortSpan<T> s) where T : IComparable<T>
+    private static void InsertionSortBucket<T, TComparer>(SortSpan<T, TComparer> s) where TComparer : IComparer<T>
     {
         for (var i = 1; i < s.Length; i++)
         {
@@ -259,24 +263,30 @@ public static class BucketSortInteger
     /// <summary>
     /// Sorts integer values in the specified span (generic version for IBinaryInteger types).
     /// </summary>
-    public static void Sort<T>(Span<T> span)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
-        Sort(span, NullContext.Default);
+        Sort(span, Comparer<T>.Default, NullContext.Default);
     }
 
     /// <summary>
     /// Sorts integer values in the specified span with sort context (generic version for IBinaryInteger types).
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts integer values in the specified span with comparer and sort context (generic version for IBinaryInteger types).
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
         // Check if type is supported (64-bit or less)
         var bitSize = GetBitSize<T>();
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var indicesArray = ArrayPool<int>.Shared.Rent(span.Length);
@@ -284,7 +294,7 @@ public static class BucketSortInteger
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T>(tempArray.AsSpan(0, span.Length), context, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, TComparer>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var indices = indicesArray.AsSpan(0, span.Length);
 
             SortCore(span, s, tempSpan, tempArray.AsSpan(0, span.Length), indices, context);
@@ -296,8 +306,9 @@ public static class BucketSortInteger
         }
     }
 
-    private static void SortCore<T>(Span<T> span, SortSpan<T> s, SortSpan<T> tempSpan, Span<T> tempArray, Span<int> bucketIndices, ISortContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, SortSpan<T, TComparer> s, SortSpan<T, TComparer> tempSpan, Span<T> tempArray, Span<int> bucketIndices, ISortContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
     {
         // Find min and max
         var minValue = s.Read(0);
@@ -337,8 +348,9 @@ public static class BucketSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void BucketDistribute<T>(SortSpan<T> source, SortSpan<T> temp, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, long bucketSize, long min, ISortContext context)
-        where T : IBinaryInteger<T>, IComparable<T>
+    private static void BucketDistribute<T, TComparer>(SortSpan<T, TComparer> source, SortSpan<T, TComparer> temp, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, long bucketSize, long min, ISortContext context)
+        where T : IBinaryInteger<T>
+        where TComparer : IComparer<T>
     {
         // Count elements per bucket and calculate bucket positions (stackalloc)
         Span<int> bucketCounts = stackalloc int[bucketCount];
@@ -388,7 +400,7 @@ public static class BucketSortInteger
             if (count > 1)
             {
                 var start = bucketStarts[i];
-                InsertionSortGenericBucket(tempArray.Slice(start, count));
+                InsertionSortGenericBucket(tempArray.Slice(start, count), source.Comparer);
             }
         }
 
@@ -400,15 +412,15 @@ public static class BucketSortInteger
     /// Insertion sort for generic bucket contents (stable sort)
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void InsertionSortGenericBucket<T>(Span<T> bucket)
-        where T : IComparable<T>
+    private static void InsertionSortGenericBucket<T, TComparer>(Span<T> bucket, TComparer comparer)
+        where TComparer : IComparer<T>
     {
         for (var i = 1; i < bucket.Length; i++)
         {
             var key = bucket[i];
             var j = i - 1;
 
-            while (j >= 0 && bucket[j].CompareTo(key) > 0)
+            while (j >= 0 && comparer.Compare(bucket[j], key) > 0)
             {
                 bucket[j + 1] = bucket[j];
                 j--;

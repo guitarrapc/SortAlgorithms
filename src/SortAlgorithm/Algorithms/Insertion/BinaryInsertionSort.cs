@@ -51,10 +51,8 @@ public static class BinaryInsertionSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, NullContext.Default);
-    }
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -62,10 +60,8 @@ public static class BinaryInsertionSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context for tracking statistics and observations during sorting. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, context);
-    }
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -75,7 +71,20 @@ public static class BinaryInsertionSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
+        => Sort(span, first, last, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span containing elements to sort.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="comparer">The comparer used to compare elements.</param>
+    /// <param name="context">The sort context for tracking statistics and observations.</param>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -83,7 +92,7 @@ public static class BinaryInsertionSort
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last, first);
     }
 
@@ -92,12 +101,13 @@ public static class BinaryInsertionSort
     /// Elements in [first..start) are assumed to already be sorted.
     /// This is useful for hybrid algorithms that pre-sort a portion of the array.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The inclusive start index of the sorted range.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="start">The position from which to start inserting elements. Elements before this are already sorted.</param>
-    internal static void SortCore<T>(SortSpan<T> s, int first, int last, int start) where T : IComparable<T>
+    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last, int start) where TComparer : IComparer<T>
     {
         // If 'start' equals 'first', move it forward to begin insertion from the next element
         if (start == first)
@@ -130,7 +140,8 @@ public static class BinaryInsertionSort
     /// Performs a stable binary search in the sorted range [first..index) to find the insertion point for the given value.
     /// Returns the position where the value should be inserted to maintain sort order and stability.
     /// </summary>
-    /// <typeparam name="T">The type of elements being compared. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements being compared.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
     /// <param name="s">The SortSpan containing the elements to search.</param>
     /// <param name="tmp">The value to find the insertion position for.</param>
     /// <param name="first">The inclusive start index of the sorted range to search.</param>
@@ -141,7 +152,7 @@ public static class BinaryInsertionSort
     /// When the element at mid equals tmp, we continue searching to the right (left = mid + 1),
     /// ensuring that tmp is inserted after all equal elements, preserving their original order.
     /// </remarks>
-    private static int BinarySearch<T>(SortSpan<T> s, T tmp, int first, int index) where T : IComparable<T>
+    private static int BinarySearch<T, TComparer>(SortSpan<T, TComparer> s, T tmp, int first, int index) where TComparer : IComparer<T>
     {
         var left = first;
         var right = index;

@@ -19,7 +19,7 @@ All sorting algorithms must be implemented with **maximum attention to performan
 if (span.Length <= 128)
 {
     Span<T> tempBuffer = stackalloc T[span.Length];
-    var temp = new SortSpan<T>(tempBuffer, context, BUFFER_TEMP);
+    var temp = new SortSpan<T, TComparer>(tempBuffer, context, comparer, BUFFER_TEMP);
     // ...sorting logic...
 }
 // ✅ For large buffers - use ArrayPool (reusable, no GC pressure)
@@ -29,7 +29,7 @@ else
     try
     {
         var tempBuffer = rentedArray.AsSpan(0, span.Length);
-        var temp = new SortSpan<T>(tempBuffer, context, BUFFER_TEMP);
+        var temp = new SortSpan<T, TComparer>(tempBuffer, context, comparer, BUFFER_TEMP);
         // ...sorting logic...
     }
     finally
@@ -39,19 +39,26 @@ else
 }
 ```
 
-### 2. Aggressive Inlining
+### 2. Generic TComparer for Devirtualized Comparisons
+
+- Use `<T, TComparer> where TComparer : IComparer<T>` on the main implementation method
+- When `TComparer` is a struct (e.g., `Comparer<T>.Default`), the JIT devirtualizes and inlines `Compare()` calls
+- Convenience overloads delegate via `Comparer<T>.Default`
+- Never use `IComparer<T>` as a parameter type directly (use the generic `TComparer` pattern instead)
+
+### 3. Aggressive Inlining
 
 - Mark hot-path methods with `[MethodImpl(MethodImplOptions.AggressiveInlining)]`
 - Especially for methods called frequently in loops (comparisons, swaps, etc.)
 
-### 3. Loop Optimization
+### 4. Loop Optimization
 
 - Cache frequently accessed values outside loops
 - Use `for` loops with indices instead of `foreach`
 - Minimize redundant comparisons
 - Avoid repeated property access or method calls
 
-### 4. Hybrid Approaches
+### 5. Hybrid Approaches
 
 - Use insertion sort for small subarrays (typically < 16-32 elements)
 - Switch algorithms based on data characteristics when beneficial

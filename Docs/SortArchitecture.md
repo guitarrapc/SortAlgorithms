@@ -243,7 +243,8 @@ public sealed class CompositeContext : ISortContext
 ```csharp
 namespace SortAlgorithm.Algorithms;
 
-internal ref struct SortSpan<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+internal ref struct SortSpan<T, TComparer>(Span<T> span, ISortContext context, TComparer comparer, int bufferId)
+    where TComparer : IComparer<T>
 {
     private Span<T> _span = span;
     private readonly ISortContext _context = context;
@@ -305,12 +306,16 @@ namespace SortAlgorithm.Algorithms;
 
 public static class BubbleSort
 {
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, NullContext.Default);
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, Comparer<T>.Default, context);
+
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
     {
-        var s = new SortSpan<T>(span, context);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, 0);
 
         for (var i = 0; i < s.Length; i++)
         {
@@ -421,12 +426,12 @@ src/SortAlgorithm/
 internal static class SortHelper
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int Compare<T>(Span<T> span, int i, int j, ISortContext context)
-        where T : IComparable<T>
+    public static int Compare<T, TComparer>(Span<T> span, int i, int j, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
     {
         context.OnIndexRead(i);
         context.OnIndexRead(j);
-        var result = span[i].CompareTo(span[j]);
+        var result = comparer.Compare(span[i], span[j]);
         context.OnCompare(i, j, result);
         return result;
     }
@@ -464,24 +469,27 @@ if (SortHelper.Compare(span, j, j - 1, context) < 0)
 `Span<T>` と `ISortContext` をまとめたラッパーを作る。現在の `SortBase<T>` に近い書き心地。
 
 ```csharp
-internal ref struct SortSpan<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+internal ref struct SortSpan<T, TComparer>(Span<T> span, ISortContext context, TComparer comparer, int bufferId)
+    where TComparer : IComparer<T>
 {
     private Span<T> _span = span;
     private readonly ISortContext _context = context;
+    private readonly TComparer _comparer = comparer;
+    private readonly int _bufferId = bufferId;
 
     public int Length => _span.Length;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T Read(int i)
     {
-        _context.OnIndexRead(i);
+        _context.OnIndexRead(i, _bufferId);
         return _span[i];
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Write(int i, T value)
     {
-        _context.OnIndexWrite(i);
+        _context.OnIndexWrite(i, _bufferId);
         _span[i] = value;
     }
 
@@ -490,8 +498,8 @@ internal ref struct SortSpan<T>(Span<T> span, ISortContext context) where T : IC
     {
         var a = Read(i);
         var b = Read(j);
-        var result = a.CompareTo(b);
-        _context.OnCompare(i, j, result);
+        var result = _comparer.Compare(a, b);
+        _context.OnCompare(i, j, result, _bufferId, _bufferId);
         return result;
     }
 
@@ -534,7 +542,7 @@ Contextが観察だけでなく操作も担当する設計。
 ```csharp
 public interface ISortContext
 {
-    int Compare<T>(Span<T> span, int i, int j) where T : IComparable<T>;
+    int Compare<T, TComparer>(Span<T> span, int i, int j, TComparer comparer) where TComparer : IComparer<T>;
     void Swap<T>(Span<T> span, int i, int j);
     T Read<T>(Span<T> span, int index);
     void Write<T>(Span<T> span, int index, T value);
@@ -545,8 +553,8 @@ public sealed class NullContext : ISortContext
     public static readonly NullContext Default = new();
     private NullContext() { }
 
-    public int Compare<T>(Span<T> span, int i, int j) where T : IComparable<T>
-        => span[i].CompareTo(span[j]);
+    public int Compare<T, TComparer>(Span<T> span, int i, int j, TComparer comparer) where TComparer : IComparer<T>
+        => comparer.Compare(span[i], span[j]);
 
     public void Swap<T>(Span<T> span, int i, int j)
         => (span[i], span[j]) = (span[j], span[i]);
@@ -568,9 +576,9 @@ public sealed class VisualizationContext : ISortContext
         // ...
     }
 
-    public int Compare<T>(Span<T> span, int i, int j) where T : IComparable<T>
+    public int Compare<T, TComparer>(Span<T> span, int i, int j, TComparer comparer) where TComparer : IComparer<T>
     {
-        var result = _inner.Compare(span, i, j);
+        var result = _inner.Compare(span, i, j, comparer);
         _onCompare?.Invoke(i, j, result);
         return result;
     }
@@ -625,7 +633,7 @@ public static class BubbleSort
 
 ```csharp
 [Obsolete("Use static BubbleSort.Sort() instead")]
-public class BubbleSortLegacy<T> : ISort<T> where T : IComparable<T>
+public class BubbleSortLegacy<T> : ISort<T>
 {
     public void Sort(Span<T> span) => BubbleSort.Sort(span);
 }

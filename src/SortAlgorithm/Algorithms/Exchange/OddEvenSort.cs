@@ -19,7 +19,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Even-Odd Phase: Compare and swap pairs (1,2), (3,4), (5,6), ... (indices i, i+1 where i is odd)</description></item>
 /// </list>
 /// Each phase must process all applicable pairs before moving to the next phase.</description></item>
-/// <item><description><strong>Termination Condition:</strong> The algorithm continues alternating phases until a complete pass 
+/// <item><description><strong>Termination Condition:</strong> The algorithm continues alternating phases until a complete pass
 /// (both odd-even and even-odd phases) occurs with no swaps. This guarantees the array is fully sorted.
 /// Setting sorted = true at the start of each iteration and only setting it to false when a swap occurs ensures correct termination.</description></item>
 /// <item><description><strong>Comparison and Swap Logic:</strong> For each pair (i, i+1), if elements are out of order (i > i+1),
@@ -59,10 +59,8 @@ public static class OddEvenSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -70,11 +68,17 @@ public static class OddEvenSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         var sorted = false;
         while (!sorted)

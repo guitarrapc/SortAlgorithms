@@ -7,33 +7,43 @@ namespace SortAlgorithm.Algorithms;
 /// <summary>
 /// A wrapper around Span&lt;T&gt; that tracks sorting operations through ISortContext.
 /// Supports buffer identification for visualization purposes.
+/// Uses a generic TComparer for comparison operations, enabling JIT devirtualization when a struct comparer is used.
 /// </summary>
 /// <typeparam name="T">The type of elements in the span</typeparam>
-internal ref struct SortSpan<T> where T: IComparable<T>
+/// <typeparam name="TComparer">The type of comparer to use for element comparisons</typeparam>
+internal ref struct SortSpan<T, TComparer> where TComparer : IComparer<T>
 {
     private Span<T> _span;
     private readonly ISortContext _context;
+    private readonly TComparer _comparer;
     private readonly int _bufferId;
 
     /// <summary>
-    /// Initializes a new instance of SortSpan with the specified span and context.
+    /// Initializes a new instance of SortSpan with the specified span, context, and comparer.
     /// </summary>
     /// <param name="span">The span to wrap</param>
     /// <param name="context">The context for tracking operations</param>
+    /// <param name="comparer">The comparer to use for element comparisons</param>
     /// <param name="bufferId">Buffer identifier (0 = main array, 1+ = auxiliary buffers). Default is 0.</param>
-    public SortSpan(Span<T> span, ISortContext context, int bufferId)
+    public SortSpan(Span<T> span, ISortContext context, TComparer comparer, int bufferId)
     {
         _span = span;
         _context = context;
+        _comparer = comparer;
         _bufferId = bufferId;
     }
 
     public int Length => _span.Length;
-    
+
     /// <summary>
     /// Gets the buffer identifier for this span.
     /// </summary>
     public int BufferId => _bufferId;
+
+    /// <summary>
+    /// Gets the comparer used by this SortSpan.
+    /// </summary>
+    public TComparer Comparer => _comparer;
 
     /// <summary>
     /// Retrieves the element at the specified zero-based index. (Equivalent to span[i].)
@@ -64,7 +74,7 @@ internal ref struct SortSpan<T> where T: IComparable<T>
     }
 
     /// <summary>
-    /// Compares the elements at the specified indices and returns an integer that indicates their relative order. (Equivalent to span[i].CompareTo(span[j]).)
+    /// Compares the elements at the specified indices and returns an integer that indicates their relative order. (Equivalent to comparer.Compare(span[i], span[j]).)
     /// </summary>
     /// <param name="i">The index of the first element to compare.</param>
     /// <param name="j">The index of the second element to compare.</param>
@@ -77,16 +87,16 @@ internal ref struct SortSpan<T> where T: IComparable<T>
 #if DEBUG
         var a = Read(i);
         var b = Read(j);
-        var result = a.CompareTo(b);
+        var result = _comparer.Compare(a, b);
         _context.OnCompare(i, j, result, _bufferId, _bufferId);
         return result;
 #else
-        return _span[i].CompareTo(_span[j]);
+        return _comparer.Compare(_span[i], _span[j]);
 #endif
     }
 
     /// <summary>
-    /// Compares the element at the specified index with a given value. (Equivalent to span[i].CompareTo(value).)
+    /// Compares the element at the specified index with a given value. (Equivalent to comparer.Compare(span[i], value).)
     /// </summary>
     /// <param name="i">The index of the element to compare.</param>
     /// <param name="value">The value to compare against.</param>
@@ -97,16 +107,16 @@ internal ref struct SortSpan<T> where T: IComparable<T>
     {
 #if DEBUG
         var a = Read(i);
-        var result = a.CompareTo(value);
+        var result = _comparer.Compare(a, value);
         _context.OnCompare(i, -1, result, _bufferId, -1);
         return result;
 #else
-        return _span[i].CompareTo(value);
+        return _comparer.Compare(_span[i], value);
 #endif
     }
 
     /// <summary>
-    /// Compares a given value with the element at the specified index. (Equivalent to value.CompareTo(span[i]).)
+    /// Compares a given value with the element at the specified index. (Equivalent to comparer.Compare(value, span[i]).)
     /// </summary>
     /// <param name="value">The value to compare.</param>
     /// <param name="i">The index of the element to compare against.</param>
@@ -117,16 +127,16 @@ internal ref struct SortSpan<T> where T: IComparable<T>
     {
 #if DEBUG
         var b = Read(i);
-        var result = value.CompareTo(b);
+        var result = _comparer.Compare(value, b);
         _context.OnCompare(-1, i, result, -1, _bufferId);
         return result;
 #else
-        return value.CompareTo(_span[i]);
+        return _comparer.Compare(value, _span[i]);
 #endif
     }
 
     /// <summary>
-    /// Compares two values directly (not from the span). (Equivalent to a.CompareTo(b).)
+    /// Compares two values directly (not from the span). (Equivalent to comparer.Compare(a, b).)
     /// </summary>
     /// <param name="a">The first value to compare.</param>
     /// <param name="b">The second value to compare.</param>
@@ -136,11 +146,11 @@ internal ref struct SortSpan<T> where T: IComparable<T>
     public int Compare(T a, T b)
     {
 #if DEBUG
-        var result = a.CompareTo(b);
+        var result = _comparer.Compare(a, b);
         _context.OnCompare(-1, -1, result, -1, -1);
         return result;
 #else
-        return a.CompareTo(b);
+        return _comparer.Compare(a, b);
 #endif
     }
 
@@ -168,7 +178,7 @@ internal ref struct SortSpan<T> where T: IComparable<T>
     /// <param name="destinationIndex">The starting index in the destination span.</param>
     /// <param name="length">The number of elements to copy.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void CopyTo(int sourceIndex, SortSpan<T> destination, int destinationIndex, int length)
+    public void CopyTo(int sourceIndex, SortSpan<T, TComparer> destination, int destinationIndex, int length)
     {
 #if DEBUG
         var values = new object?[length];
@@ -202,4 +212,3 @@ internal ref struct SortSpan<T> where T: IComparable<T>
         _span.Slice(sourceIndex, length).CopyTo(destination.Slice(destinationIndex, length));
     }
 }
-

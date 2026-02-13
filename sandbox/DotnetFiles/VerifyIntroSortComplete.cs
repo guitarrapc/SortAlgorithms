@@ -150,11 +150,12 @@ var avgCompares = results.Average(r => (double)r.Compares);
 var avgTime = results.Average(r => (double)r.TimeMs);
 Console.WriteLine($"📊 Average Performance (50K elements): {avgCompares:N0} compares, {avgTime:F1}ms");
 
-static bool IsSorted<T>(T[] array) where T : IComparable<T>
+static bool IsSorted<T>(T[] array)
 {
+    var comparer = Comparer<T>.Default;
     for (int i = 1; i < array.Length; i++)
     {
-        if (array[i].CompareTo(array[i - 1]) < 0)
+        if (comparer.Compare(array[i], array[i - 1]) < 0)
             return false;
     }
     return true;

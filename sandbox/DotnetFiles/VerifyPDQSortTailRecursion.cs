@@ -152,11 +152,12 @@ var expected = 100000 * Math.Log2(100000) * 1.4;
 var ratio = avgCompares / expected;
 Console.WriteLine($"📈 Efficiency: {ratio:P0} of expected O(n log n) = {expected:N0} compares");
 
-static bool IsSorted<T>(T[] array) where T : IComparable<T>
+static bool IsSorted<T>(T[] array)
 {
+    var comparer = Comparer<T>.Default;
     for (int i = 1; i < array.Length; i++)
     {
-        if (array[i].CompareTo(array[i - 1]) < 0)
+        if (comparer.Compare(array[i], array[i - 1]) < 0)
             return false;
     }
     return true;

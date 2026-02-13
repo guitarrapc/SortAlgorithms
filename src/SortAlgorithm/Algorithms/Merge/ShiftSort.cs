@@ -71,7 +71,7 @@ public static class ShiftSort
 {
     // Threshold for using stackalloc vs ArrayPool (128 int = 512 bytes)
     private const int StackallocThreshold = 256; // (128 * 2) - 2 = max span.Length for stackalloc
-    
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;           // Main input array
     private const int BUFFER_TEMP_FIRST = 1;     // Temporary buffer for first partition
@@ -83,10 +83,8 @@ public static class ShiftSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -94,7 +92,18 @@ public static class ShiftSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
@@ -104,7 +113,7 @@ public static class ShiftSort
         if (span.Length <= StackallocThreshold)
         {
             Span<int> zeroIndices = stackalloc int[indicesLength];
-            SortCore(span, context, zeroIndices);
+            SortCore(span, comparer, context, zeroIndices);
         }
         else
         {
@@ -112,7 +121,7 @@ public static class ShiftSort
             try
             {
                 var zeroIndices = indicesBuffer.AsSpan(0, indicesLength);
-                SortCore(span, context, zeroIndices);
+                SortCore(span, comparer, context, zeroIndices);
             }
             finally
             {
@@ -125,9 +134,9 @@ public static class ShiftSort
     /// Core sorting logic - detects runs and merges them.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T>(Span<T> span, ISortContext context, Span<int> zeroIndices) where T : IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context, Span<int> zeroIndices) where TComparer : IComparer<T>
     {
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // Phase 1: Run Detection - Identify natural sorted sequences and their boundaries
         zeroIndices[0] = s.Length;
@@ -177,7 +186,7 @@ public static class ShiftSort
     /// Recursively divides the run index list and merges runs bottom-up.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Split<T>(SortSpan<T> s, Span<int> zeroIndices, int i, int j, ISortContext context) where T : IComparable<T>
+    private static void Split<T, TComparer>(SortSpan<T, TComparer> s, Span<int> zeroIndices, int i, int j, ISortContext context) where TComparer : IComparer<T>
     {
         // Base case: 2 runs - merge them directly
         if ((j - i) == 2)
@@ -210,7 +219,7 @@ public static class ShiftSort
     /// The smaller partition is buffered to minimize memory allocation and write operations.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Merge<T>(SortSpan<T> s, int first, int second, int third, ISortContext context) where T : IComparable<T>
+    private static void Merge<T, TComparer>(SortSpan<T, TComparer> s, int first, int second, int third, ISortContext context) where TComparer : IComparer<T>
     {
         if (second - first > third - second)
         {
@@ -219,8 +228,8 @@ public static class ShiftSort
             var tmp2nd = ArrayPool<T>.Shared.Rent(bufferSize);
             try
             {
-                var tmp2ndSpan = new SortSpan<T>(tmp2nd.AsSpan(0, bufferSize), context, BUFFER_TEMP_SECOND);
-                
+                var tmp2ndSpan = new SortSpan<T, TComparer>(tmp2nd.AsSpan(0, bufferSize), context, s.Comparer, BUFFER_TEMP_SECOND);
+
                 // Copy second partition to buffer using CopyTo for efficiency
                 s.CopyTo(second, tmp2ndSpan, 0, bufferSize);
 
@@ -254,8 +263,8 @@ public static class ShiftSort
             var tmp1st = ArrayPool<T>.Shared.Rent(bufferSize);
             try
             {
-                var tmp1stSpan = new SortSpan<T>(tmp1st.AsSpan(0, bufferSize), context, BUFFER_TEMP_FIRST);
-                
+                var tmp1stSpan = new SortSpan<T, TComparer>(tmp1st.AsSpan(0, bufferSize), context, s.Comparer, BUFFER_TEMP_FIRST);
+
                 // Copy first partition to buffer using CopyTo for efficiency
                 s.CopyTo(first, tmp1stSpan, 0, bufferSize);
 

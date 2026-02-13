@@ -50,16 +50,14 @@ public static class CycleSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -67,11 +65,22 @@ public static class CycleSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         for (var cycleStart = 0; cycleStart < span.Length - 1; cycleStart++)
         {
@@ -103,7 +112,7 @@ public static class CycleSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int FindPosition<T>(ref SortSpan<T> s, T value, int start) where T : IComparable<T>
+    private static int FindPosition<T, TComparer>(ref SortSpan<T, TComparer> s, T value, int start) where TComparer : IComparer<T>
     {
         var pos = start;
         for (var i = start + 1; i < s.Length; i++)
@@ -117,7 +126,7 @@ public static class CycleSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int SkipDuplicates<T>(ref SortSpan<T> s, T value, int pos) where T : IComparable<T>
+    private static int SkipDuplicates<T, TComparer>(ref SortSpan<T, TComparer> s, T value, int pos) where TComparer : IComparer<T>
     {
         while (pos < s.Length && s.Compare(value, pos) == 0)
         {

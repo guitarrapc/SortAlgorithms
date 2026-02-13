@@ -1,6 +1,6 @@
 # SortSpan Usage Guidelines
 
-When implementing sorting algorithms, **always use SortSpan<T>** for all array/span operations.
+When implementing sorting algorithms, **always use SortSpan<T, TComparer>** for all array/span operations.
 
 ## Why SortSpan?
 
@@ -9,6 +9,7 @@ When implementing sorting algorithms, **always use SortSpan<T>** for all array/s
 - **Minimal performance impact** with conditional compilation
 - **Consistent code style** across all sorting implementations
 - **Separation of concerns** - algorithm logic vs observation
+- **Zero-alloc comparisons** - generic `TComparer : IComparer<T>` enables devirtualization
 
 ## Performance: DEBUG vs RELEASE Builds
 
@@ -24,7 +25,7 @@ When implementing sorting algorithms, **always use SortSpan<T>** for all array/s
 - ✅ **Zero overhead** - context calls are omitted
 - ✅ **Direct Span operations** - `_span[i]` instead of `context.OnIndexRead()`
 - ✅ **Maximum performance** - equivalent to raw Span operations
-- ✅ **Inlined comparisons** - `_span[i].CompareTo(_span[j])`
+- ✅ **Inlined comparisons** - `_comparer.Compare(_span[i], _span[j])` (devirtualized when TComparer is a struct)
 
 **Example:**
 
@@ -44,16 +45,16 @@ public int Compare(int i, int j)
 #if DEBUG
     var a = Read(i);
     var b = Read(j);
-    var result = a.CompareTo(b);
+    var result = _comparer.Compare(a, b);
     _context.OnCompare(i, j, result, _bufferId, _bufferId);
     return result;
 #else
-    return _span[i].CompareTo(_span[j]);  // ← Direct comparison in RELEASE
+    return _comparer.Compare(_span[i], _span[j]);  // ← Devirtualized comparison in RELEASE
 #endif
 }
 ```
 
-**Result:** In RELEASE builds, SortSpan operations compile to simple Span operations with zero abstraction overhead.
+**Result:** In RELEASE builds, SortSpan operations compile to simple Span operations with zero abstraction overhead. When `TComparer` is a struct (e.g., `Comparer<T>.Default`), the JIT devirtualizes and inlines the comparison call.
 
 ## Required Operations
 
@@ -113,14 +114,14 @@ span[i] = value;
 
 ### 4. Comparing Elements: `s.Compare(i, j)`
 
-Reads both elements, compares, and notifies context via `OnCompare(i, j, result)`
+Reads both elements, compares via `_comparer.Compare()`, and notifies context via `OnCompare(i, j, result)`
 
 ```csharp
 // ✅ Correct - comparing two indices
 if (s.Compare(i, j) < 0) { ... }
 
 // ❌ Incorrect - bypasses context
-if (span[i].CompareTo(span[j]) < 0) { ... }
+if (comparer.Compare(span[i], span[j]) < 0) { ... }
 ```
 
 For comparing with a value (not an index):
@@ -134,11 +135,11 @@ if (s.Compare(i, value) < 0) { ... }
 // ✅ Correct - comparing value with index
 if (s.Compare(value, i) < 0) { ... }
 
-// ❌ Incorrect - direct CompareTo bypasses context
-if (s.Read(i).CompareTo(value) < 0) { ... }
+// ❌ Incorrect - direct comparer.Compare bypasses context
+if (s.Comparer.Compare(s.Read(i), value) < 0) { ... }
 ```
 
-**Important:** Never use `CompareTo()` directly. All comparisons must go through `SortSpan` methods.
+**Important:** Never use `comparer.Compare()` or `.CompareTo()` directly. All comparisons must go through `SortSpan` methods. Access `s.Comparer` only when absolutely necessary (e.g., passing to a helper that cannot take a SortSpan).
 
 ### 5. Swapping Elements: `s.Swap(i, j)`
 
@@ -160,21 +161,22 @@ Even though RELEASE builds optimize away the overhead, **always write code using
 
 ```csharp
 // ✅ Correct - works efficiently in both DEBUG and RELEASE
-private static void InsertIterative<T>(Span<Node> arena, ..., SortSpan<T> s)
+private static void InsertIterative<T, TComparer>(Span<Node> arena, ..., SortSpan<T, TComparer> s)
+    where TComparer : IComparer<T>
 {
     // Cache value (reduces Read() calls in DEBUG, direct access in RELEASE)
     var insertValue = s.Read(itemIndex);
     var currentValue = s.Read(current.ItemIndex);
-    
-    // Direct comparison (tracked in DEBUG, inlined in RELEASE)
+
+    // Direct comparison (tracked in DEBUG, devirtualized+inlined in RELEASE)
     var cmp = s.Compare(insertValue, currentValue);
 }
 
 // ❌ Incorrect - bypasses statistics in DEBUG
-private static void InsertIterative<T>(Span<T> span, ...)
+private static void InsertIterative<T>(Span<T> span, IComparer<T> comparer, ...)
 {
     var insertValue = span[itemIndex];  // No tracking!
-    var cmp = insertValue.CompareTo(span[j]);  // No tracking!
+    var cmp = comparer.Compare(insertValue, span[j]);  // No tracking!
 }
 ```
 
@@ -210,13 +212,14 @@ public static class MySort
     private const int BUFFER_TEMP = 1;       // Temporary merge buffer
     private const int BUFFER_AUX = 2;        // Auxiliary buffer
 
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
     {
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
-        // For temporary buffers
+        // For temporary buffers - reuse the same comparer
         Span<T> tempBuffer = stackalloc T[span.Length];
-        var temp = new SortSpan<T>(tempBuffer, context, BUFFER_TEMP);
+        var temp = new SortSpan<T, TComparer>(tempBuffer, context, comparer, BUFFER_TEMP);
     }
 }
 ```

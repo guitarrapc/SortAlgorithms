@@ -54,7 +54,7 @@ using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 
 var stats = new StatisticsContext();
-PowerSort.Sort([ 5, 3, 8, 1, 2 ], stats);
+PowerSort.Sort<int>([ 5, 3, 8, 1, 2 ], stats);
 
 Console.WriteLine("Sorted array with PowerSort.");
 Console.WriteLine($"Compares: {stats.CompareCount}, Swaps: {stats.SwapCount}, IndexReads: {stats.IndexReadCount}, IndexWrites: {stats.IndexWriteCount}");
@@ -86,7 +86,7 @@ When implementing or reviewing sorting algorithms, refer to these detailed guide
 - **[Coding Style](.github/agent_docs/coding_style.md)** - C# style conventions for this project
 - **[Testing Guidelines](.github/agent_docs/testing_guidelines.md)** - Writing/Run effective unit tests
 
-**Key Rule:** Always use `SortSpan<T>` methods (`Read`, `Write`, `Compare`, `Swap`, `CopyTo`) instead of direct array access. This ensures accurate statistics tracking.
+**Key Rule:** Always use `SortSpan<T, TComparer>` methods (`Read`, `Write`, `Compare`, `Swap`, `CopyTo`) instead of direct array access. This ensures accurate statistics tracking. All algorithms use the generic `TComparer : IComparer<T>` pattern for zero-allocation devirtualized comparisons, with convenience overloads that delegate via `Comparer<T>.Default`. This follows the same pattern as `MemoryExtensions.Sort` in dotnet/runtime - runtime validation instead of compile-time constraints.
 
 ## Progressive Disclosure
 

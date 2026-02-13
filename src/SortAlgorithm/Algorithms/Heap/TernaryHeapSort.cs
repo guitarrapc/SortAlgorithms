@@ -7,7 +7,7 @@ namespace SortAlgorithm.Algorithms;
 /// その後、ルート要素をソート済み配列の末尾に移動し、ヒープの末端をルートに持ってきて再度ヒープ構造を維持します。これを繰り返すことで、ヒープの最大値が常にルートに保たれ、ソート済み配列に追加されることで自然とソートが行われます。
 /// <br/>
 /// Builds a ternary heap (3-ary heap) from the array where the root always contains the maximum element (which is inherently unstable).
-/// Then, the root element is moved to the end of the sorted array, the last element is moved to the root, and the heap structure is re-established. 
+/// Then, the root element is moved to the end of the sorted array, the last element is moved to the root, and the heap structure is re-established.
 /// Repeating this process ensures that the maximum value in the heap is always at the root, allowing elements to be naturally sorted as they are moved to the sorted array.
 /// </summary>
 /// <remarks>
@@ -60,10 +60,8 @@ public static class TernaryHeapSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, NullContext.Default);
-    }
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -71,10 +69,8 @@ public static class TernaryHeapSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, context);
-    }
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -84,7 +80,13 @@ public static class TernaryHeapSort
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
+        => Sort(span, first, last, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -92,7 +94,7 @@ public static class TernaryHeapSort
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last);
     }
 
@@ -104,7 +106,7 @@ public static class TernaryHeapSort
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
-    internal static void SortCore<T>(SortSpan<T> s, int first, int last) where T : IComparable<T>
+    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
     {
         var n = last - first;
 
@@ -145,11 +147,11 @@ public static class TernaryHeapSort
     /// <para>Time Complexity: O(log₃ n) - Same asymptotic complexity but fewer comparisons in practice.</para>
     /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
     /// </remarks>
-    private static void FloydHeapify<T>(SortSpan<T> s, int root, int size, int offset) where T : IComparable<T>
+    private static void FloydHeapify<T, TComparer>(SortSpan<T, TComparer> s, int root, int size, int offset) where TComparer : IComparer<T>
     {
         var rootValue = s.Read(root);
         var hole = root;
-        
+
         // Phase 1: Percolate down to a leaf, always taking the largest of three children
         var child = 3 * (hole - offset) + 1 + offset;
         while (child < offset + size)
@@ -164,13 +166,13 @@ public static class TernaryHeapSort
             {
                 maxChild = child + 2;
             }
-            
+
             // Move largest child up
             s.Write(hole, s.Read(maxChild));
             hole = maxChild;
             child = 3 * (hole - offset) + 1 + offset;
         }
-        
+
         // Phase 2: Sift up the original root value to its correct position
         var parent = offset + (hole - offset - 1) / 3;
         while (hole > root && s.Compare(rootValue, s.Read(parent)) > 0)
@@ -199,7 +201,7 @@ public static class TernaryHeapSort
     /// <para>Time Complexity: O(log₃ n) - Worst case traverses from root to leaf (height of the tree is log₃ n).</para>
     /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
     /// </remarks>
-    private static void Heapify<T>(SortSpan<T> s, int root, int size, int offset) where T : IComparable<T>
+    private static void Heapify<T, TComparer>(SortSpan<T, TComparer> s, int root, int size, int offset) where TComparer : IComparer<T>
     {
         while (true)
         {

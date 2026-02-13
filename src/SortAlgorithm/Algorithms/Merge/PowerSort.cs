@@ -76,7 +76,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Large datasets where merge cost optimization matters</description></item>
 /// </list>
 /// <para><strong>References:</strong></para>
-/// <para>Paper: "Nearly-Optimal Mergesort: Fast, Practical Sorting Methods That Optimally Adapt to Existing Runs" 
+/// <para>Paper: "Nearly-Optimal Mergesort: Fast, Practical Sorting Methods That Optimally Adapt to Existing Runs"
 /// by J. Ian Munro and Sebastian Wild (2018)</para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Powersort#cite_note-acmtechnews-2</para>
 /// <para>ICALP 2022: https://drops.dagstuhl.de/storage/00lipics/lipics-vol229-icalp2022/LIPIcs.ICALP.2022.68/LIPIcs.ICALP.2022.68.pdf</para>
@@ -97,10 +97,8 @@ public static class PowerSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, NullContext.Default);
-    }
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -108,10 +106,8 @@ public static class PowerSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, context);
-    }
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -121,7 +117,20 @@ public static class PowerSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
+        => Sort(span, first, last, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span containing elements to sort.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context for tracking statistics and observations.</param>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -133,21 +142,21 @@ public static class PowerSort
         // For very small arrays, use binary insertion sort directly
         if (n < MIN_MERGE)
         {
-            BinaryInsertionSort.Sort(span, first, last, context);
+            BinaryInsertionSort.Sort(span, first, last, comparer, context);
             return;
         }
 
-        SortCore(span, first, last, context);
+        SortCore(span, first, last, comparer, context);
     }
 
     /// <summary>
     /// Core PowerSort implementation.
     /// Based on the algorithm from the PowerSort paper (Algorithm in Section 5.3).
     /// </summary>
-    private static void SortCore<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         var n = last - first;
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // PowerSort uses a stack with node-power values to determine merge order
         Span<int> runBase = stackalloc int[85]; // 85 is enough for 2^64 elements
@@ -158,18 +167,18 @@ public static class PowerSort
         // Find the leftmost run (s1, e1)
         var s1 = first;
         var e1 = FindAndPrepareRun(s, s1, last);
-        
+
         // Process runs using PowerSort algorithm
         while (e1 < last)
         {
             // Find next run (s2, e2)
             var s2 = e1;
             var e2 = FindAndPrepareRun(s, s2, last);
-            
+
             // Calculate node power between current run [s1..e1) and next run [s2..e2)
             // Convert to relative positions (0-based from 'first')
             var p = ComputeNodePower(s1 - first, e1 - first, s2 - first, e2 - first, n);
-            
+
             // Merge while P.top() > p (previous merge deeper in tree than current)
             while (stackSize > 0 && power[stackSize - 1] > p)
             {
@@ -178,27 +187,27 @@ public static class PowerSort
                 var prevBase = runBase[stackSize];
                 var prevLen = runLen[stackSize];
                 var currentLen = e1 - s1;
-                
+
                 // Merge prevRun [prevBase..prevBase+prevLen) with current run [s1..e1)
                 // These two runs are always adjacent (prevBase + prevLen == s1)
-                MergeRuns(span, prevBase, prevLen, s1, currentLen, context);
-                
+                MergeRuns(span, prevBase, prevLen, s1, currentLen, comparer, context);
+
                 // Update s1 to represent the merged result
                 s1 = prevBase;
                 // e1 stays the same (end of the merged region)
             }
-            
+
             // Push current run onto stack with its power
             runBase[stackSize] = s1;
             runLen[stackSize] = e1 - s1;
             power[stackSize] = p;
             stackSize++;
-            
+
             // Move to next run
             s1 = s2;
             e1 = e2;
         }
-        
+
         // Now [s1..e1) is the rightmost run
         // Merge all remaining runs from the stack with the rightmost run
         while (stackSize > 0)
@@ -206,17 +215,17 @@ public static class PowerSort
             stackSize--;
             var prevBase = runBase[stackSize];
             var prevLen = runLen[stackSize];
-            
+
             var currentLen = e1 - s1;
-            
+
             // The previous run should be immediately before the current run [s1..e1)
             if (prevBase + prevLen != s1)
             {
                 throw new InvalidOperationException($"Runs are not adjacent in final collapse: prev ends at {prevBase + prevLen}, current starts at {s1}");
             }
-            
-            MergeRuns(span, prevBase, prevLen, s1, currentLen, context);
-            
+
+            MergeRuns(span, prevBase, prevLen, s1, currentLen, comparer, context);
+
             s1 = prevBase;
             // e1 stays the same
         }
@@ -228,15 +237,15 @@ public static class PowerSort
     /// A run is either ascending or strictly descending (which is then reversed).
     /// Short runs are extended to MIN_MERGE using binary insertion sort.
     /// </summary>
-    private static int FindAndPrepareRun<T>(SortSpan<T> s, int start, int last) where T : IComparable<T>
+    private static int FindAndPrepareRun<T, TComparer>(SortSpan<T, TComparer> s, int start, int last) where TComparer : IComparer<T>
     {
         var runEnd = start + 1;
-        
+
         if (runEnd >= last)
         {
             return last;  // Single element run
         }
-        
+
         // Check if descending
         if (s.Compare(start, runEnd) > 0)
         {
@@ -274,7 +283,7 @@ public static class PowerSort
     /// Reverses the elements in the range [lo..hi].
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Reverse<T>(SortSpan<T> s, int lo, int hi) where T : IComparable<T>
+    private static void Reverse<T, TComparer>(SortSpan<T, TComparer> s, int lo, int hi) where TComparer : IComparer<T>
     {
         while (lo < hi)
         {
@@ -302,33 +311,33 @@ public static class PowerSort
         // Our implementation uses 0-based indexing with exclusive end [s1..e1)
         // So we adjust: n1 = e1 - s1 (not +1), and the formula becomes:
         // a = (s1 + n1/2) / n (not -1 since we're 0-based)
-        
+
         var n1 = e1 - s1;
         var n2 = e2 - s2;
-        
+
         // Calculate midpoint positions (as floating point for precision)
         var a = (s1 + n1 / 2.0) / n;
         var b = (s2 + n2 / 2.0) / n;
-        
+
         // Find the power: the level where a and b diverge in the binary tree
         var power = 0;
         var scale = 1;
-        
+
         while ((int)(a * scale) == (int)(b * scale))
         {
             power++;
             scale <<= 1;  // scale *= 2
         }
-        
+
         return power;
     }
 
     /// <summary>
     /// Merges two adjacent runs with galloping mode optimization.
     /// </summary>
-    private static void MergeRuns<T>(Span<T> span, int base1, int len1, int base2, int len2, ISortContext context) where T : IComparable<T>
+    private static void MergeRuns<T, TComparer>(Span<T> span, int base1, int len1, int base2, int len2, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         var ms = new MergeState();
 
         // Optimize: Find where first element of run2 goes in run1
@@ -346,11 +355,11 @@ public static class PowerSort
         // Merge remaining runs using galloping
         if (len1 <= len2)
         {
-            MergeLow(span, base1, len1, base2, len2, ref ms, context);
+            MergeLow(span, base1, len1, base2, len2, ref ms, comparer, context);
         }
         else
         {
-            MergeHigh(span, base1, len1, base2, len2, ref ms, context);
+            MergeHigh(span, base1, len1, base2, len2, ref ms, comparer, context);
         }
     }
 
@@ -360,7 +369,7 @@ public static class PowerSort
     /// and all elements in [base+k..base+len) are greater than or equal to key.
     /// Uses galloping (exponential search followed by binary search).
     /// </summary>
-    private static int GallopLeft<T>(SortSpan<T> s, T key, int baseIdx, int len, int hint) where T : IComparable<T>
+    private static int GallopLeft<T, TComparer>(SortSpan<T, TComparer> s, T key, int baseIdx, int len, int hint) where TComparer : IComparer<T>
     {
         var lastOfs = 0;
         var ofs = 1;
@@ -433,7 +442,7 @@ public static class PowerSort
     /// and all elements in [base+k..base+len) are greater than key.
     /// Uses galloping (exponential search followed by binary search).
     /// </summary>
-    private static int GallopRight<T>(SortSpan<T> s, T key, int baseIdx, int len, int hint) where T : IComparable<T>
+    private static int GallopRight<T, TComparer>(SortSpan<T, TComparer> s, T key, int baseIdx, int len, int hint) where TComparer : IComparer<T>
     {
         var lastOfs = 0;
         var ofs = 1;
@@ -504,15 +513,15 @@ public static class PowerSort
     /// Merges two adjacent runs where the first run is smaller or equal.
     /// Uses galloping mode when one run consistently wins.
     /// </summary>
-    private static void MergeLow<T>(Span<T> span, int base1, int len1, int base2, int len2, ref MergeState ms, ISortContext context) where T : IComparable<T>
+    private static void MergeLow<T, TComparer>(Span<T> span, int base1, int len1, int base2, int len2, ref MergeState ms, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // Rent temp array from ArrayPool
         var tmp = ArrayPool<T>.Shared.Rent(len1);
         try
         {
-            var t = new SortSpan<T>(tmp.AsSpan(0, len1), context, BUFFER_TEMP);
+            var t = new SortSpan<T, TComparer>(tmp.AsSpan(0, len1), context, comparer, BUFFER_TEMP);
             s.CopyTo(base1, t, 0, len1);
 
             var cursor1 = 0;          // Index in temp (first run)
@@ -649,15 +658,15 @@ public static class PowerSort
     /// Merges two adjacent runs where the second run is smaller.
     /// Uses galloping mode when one run consistently wins.
     /// </summary>
-    private static void MergeHigh<T>(Span<T> span, int base1, int len1, int base2, int len2, ref MergeState ms, ISortContext context) where T : IComparable<T>
+    private static void MergeHigh<T, TComparer>(Span<T> span, int base1, int len1, int base2, int len2, ref MergeState ms, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // Rent temp array from ArrayPool
         var tmp = ArrayPool<T>.Shared.Rent(len2);
         try
         {
-            var t = new SortSpan<T>(tmp.AsSpan(0, len2), context, BUFFER_TEMP);
+            var t = new SortSpan<T, TComparer>(tmp.AsSpan(0, len2), context, comparer, BUFFER_TEMP);
             s.CopyTo(base2, t, 0, len2);
 
             var cursor1 = base1 + len1 - 1;  // Index in span (first run, from end)

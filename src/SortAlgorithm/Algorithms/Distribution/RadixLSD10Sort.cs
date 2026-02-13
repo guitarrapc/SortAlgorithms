@@ -60,9 +60,9 @@ public static class RadixLSD10Sort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/> and <see cref="IBinaryInteger{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>, IBinaryInteger<T>, IMinMaxValue<T>
+    public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
-        Sort(span, NullContext.Default);
+        Sort(span, Comparer<T>.Default, NullContext.Default);
     }
 
     /// <summary>
@@ -71,7 +71,20 @@ public static class RadixLSD10Sort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/> and <see cref="IBinaryInteger{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>, IBinaryInteger<T>, IMinMaxValue<T>
+    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
+    {
+        Sort(span, Comparer<T>.Default, context);
+    }
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IBinaryInteger{T}"/>.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
@@ -84,7 +97,7 @@ public static class RadixLSD10Sort
             var tempBuffer = tempArray.AsSpan(0, span.Length);
             var bucketCounts = bucketCountsArray.AsSpan(0, RadixBase);
 
-            SortCore(span, tempBuffer, bucketCounts, context);
+            SortCore<T, TComparer>(span, tempBuffer, bucketCounts, comparer, context);
         }
         finally
         {
@@ -95,11 +108,11 @@ public static class RadixLSD10Sort
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T>(Span<T> span, Span<T> tempBuffer, Span<int> bucketCounts, ISortContext context) 
-        where T : IComparable<T>, IBinaryInteger<T>, IMinMaxValue<T>
+    private static void SortCore<T, TComparer>(Span<T> span, Span<T> tempBuffer, Span<int> bucketCounts, TComparer comparer, ISortContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
     {
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
-        var temp = new SortSpan<T>(tempBuffer, context, BUFFER_TEMP);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var temp = new SortSpan<T, TComparer>(tempBuffer, context, comparer, BUFFER_TEMP);
 
         // Determine bit size for sign-bit flipping
         var bitSize = GetBitSize<T>();
@@ -125,8 +138,8 @@ public static class RadixLSD10Sort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void LSDSort<T>(SortSpan<T> source, SortSpan<T> temp, int digitCount, int bitSize, Span<int> bucketCounts)
-        where T : IComparable<T>, IBinaryInteger<T>, IMinMaxValue<T>
+    private static void LSDSort<T, TComparer>(SortSpan<T, TComparer> source, SortSpan<T, TComparer> temp, int digitCount, int bitSize, Span<int> bucketCounts)
+        where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
     {
         Span<int> bucketStarts = stackalloc int[RadixBase];
         var divisor = 1UL;
@@ -199,13 +212,13 @@ public static class RadixLSD10Sort
     /// Sign-bit flipping technique:
     /// - 32-bit signed: key = (uint)value ^ 0x8000_0000
     /// - 64-bit signed: key = (ulong)value ^ 0x8000_0000_0000_0000
-    /// 
+    ///
     /// This ensures:
     /// - int.MinValue (-2147483648) → 0x0000_0000 (sorts first)
     /// - -1 → 0x7FFF_FFFF (sorts before 0)
     /// - 0 → 0x8000_0000 (sorts after negatives)
     /// - int.MaxValue (2147483647) → 0xFFFF_FFFF (sorts last)
-    /// 
+    ///
     /// Advantages:
     /// - No Abs() needed, avoids MinValue overflow
     /// - Single unified pass for all values

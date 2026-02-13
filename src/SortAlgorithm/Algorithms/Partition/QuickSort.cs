@@ -14,11 +14,11 @@ namespace SortAlgorithm.Algorithms;
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct QuickSort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Pivot Selection:</strong> A pivot element is selected from the array. 
+/// <item><description><strong>Pivot Selection:</strong> A pivot element is selected from the array.
 /// This implementation uses the middle element of the range as the pivot.
 /// While this is simple, it can lead to worst-case O(n²) performance on sorted or reverse-sorted arrays.
 /// More sophisticated implementations use median-of-three, median-of-nine, or random pivot selection to reduce worst-case probability.</description></item>
-/// <item><description><strong>Partitioning (Hoare Partition Scheme):</strong> The array is rearranged so that elements less than the pivot are on the left, 
+/// <item><description><strong>Partitioning (Hoare Partition Scheme):</strong> The array is rearranged so that elements less than the pivot are on the left,
 /// and elements greater than the pivot are on the right. This implementation uses Hoare's partitioning scheme:
 /// <list type="bullet">
 /// <item><description>Two pointers (i, j) start from opposite ends and move toward each other</description></item>
@@ -76,10 +76,8 @@ public static class QuickSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, NullContext.Default);
-    }
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, 0, span.Length, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -87,10 +85,8 @@ public static class QuickSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-    {
-        Sort(span, 0, span.Length, context);
-    }
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, 0, span.Length, Comparer<T>.Default, context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -100,7 +96,20 @@ public static class QuickSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context)
+        => Sort(span, first, last, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span containing elements to sort.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context for tracking statistics and observations.</param>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -108,7 +117,7 @@ public static class QuickSort
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last - 1);
     }
 
@@ -117,17 +126,18 @@ public static class QuickSort
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
     /// Uses Hoare's partitioning scheme with the middle element as pivot.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The inclusive end index of the range to sort.</param>
-    internal static void SortCore<T>(SortSpan<T> s, int left, int right) where T : IComparable<T>
+    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int left, int right) where TComparer : IComparer<T>
     {
         if (right <= left) return;
 
         // Select pivot as the middle element
         var pivot = s.Read((left + right) / 2);
-        
+
         // Hoare partition: two pointers moving from opposite ends
         var i = left;
         var j = right;
@@ -139,13 +149,13 @@ public static class QuickSort
             {
                 i++;
             }
-            
+
             // Move j backward while elements are greater than pivot
             while (s.Compare(pivot, j) < 0)
             {
                 j--;
             }
-            
+
             // Swap if pointers haven't crossed
             if (i <= j)
             {
@@ -159,12 +169,12 @@ public static class QuickSort
         // After partitioning: [left..j] <= pivot, [i..right] >= pivot
         if (left < j)
         {
-            SortCore(s, left, j);
+            SortCore<T, TComparer>(s, left, j);
         }
 
         if (i < right)
         {
-            SortCore(s, i, right);
+            SortCore<T, TComparer>(s, i, right);
         }
     }
 }

@@ -85,10 +85,8 @@ public static class BalancedBinaryTreeSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -96,7 +94,18 @@ public static class BalancedBinaryTreeSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
@@ -118,7 +127,7 @@ public static class BalancedBinaryTreeSort
         try
         {
             var arenaSpan = arena.AsSpan(0, span.Length);
-            SortCore(span, context, arenaSpan, pathStack);
+            SortCore(span, comparer, context, arenaSpan, pathStack);
         }
         finally
         {
@@ -139,9 +148,9 @@ public static class BalancedBinaryTreeSort
     /// <param name="arena">Preallocated arena for tree nodes</param>
     /// <param name="pathStack">Preallocated stack for tracking insertion path</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T>(Span<T> span, ISortContext context, Span<Node<T>> arena, Span<int> pathStack) where T : IComparable<T>
+    private static void SortCore<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context, Span<Node<T>> arena, Span<int> pathStack) where TComparer : IComparer<T>
     {
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
         var rootIndex = NULL_INDEX;
         var nodeCount = 0;
 
@@ -165,7 +174,7 @@ public static class BalancedBinaryTreeSort
     /// <param name="itemIndex">Index in the original span to read the value from.</param>
     /// <returns>Index of the new root of the tree.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int InsertIterative<T>(Span<Node<T>> arena, int rootIndex, ref int nodeCount, int itemIndex, SortSpan<T> s, Span<int> pathStack, ISortContext context) where T : IComparable<T>
+    private static int InsertIterative<T, TComparer>(Span<Node<T>> arena, int rootIndex, ref int nodeCount, int itemIndex, SortSpan<T, TComparer> s, Span<int> pathStack, ISortContext context) where TComparer : IComparer<T>
     {
         // Read the value to insert (tracked by SortSpan for statistics)
         var insertValue = s.Read(itemIndex);
@@ -184,7 +193,7 @@ public static class BalancedBinaryTreeSort
         {
             pathStack[stackTop++] = currentIndex;
             // Compare against cached value (no span indirection needed)
-            var cmp = CompareWithNode(arena, currentIndex, insertValue, context);
+            var cmp = CompareWithNode(arena, currentIndex, insertValue, s.Comparer, context);
 
             if (cmp < 0)
             {
@@ -259,7 +268,7 @@ public static class BalancedBinaryTreeSort
     /// Uses ArrayPool to avoid GC pressure.
     /// Reads actual data from original span using ItemIndex.
     /// </remarks>
-    private static void Inorder<T>(SortSpan<T> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex, ISortContext context) where T : IComparable<T>
+    private static void Inorder<T, TComparer>(SortSpan<T, TComparer> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex, ISortContext context) where TComparer : IComparer<T>
     {
         if (rootIndex == NULL_INDEX) return;
 
@@ -337,17 +346,17 @@ public static class BalancedBinaryTreeSort
     /// Returns: value.CompareTo(node.Value)
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CompareWithNode<T>(Span<Node<T>> arena, int nodeIndex, T value, ISortContext context) where T : IComparable<T>
+    private static int CompareWithNode<T, TComparer>(Span<Node<T>> arena, int nodeIndex, T value, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         // Visualize node access during tree traversal
         context.OnIndexRead(arena[nodeIndex].Id, BUFFER_TREE);
-        
+
         // Compare value with node's item
         // Note: This comparison is counted as a main array comparison (bufferId 0)
         // because the values originated from the main array
-        var cmp = value.CompareTo(arena[nodeIndex].Value);
+        var cmp = comparer.Compare(value, arena[nodeIndex].Value);
         context.OnCompare(-1, -1, cmp, 0, 0);
-        
+
         return cmp;
     }
 
@@ -471,7 +480,7 @@ public static class BalancedBinaryTreeSort
     /// Left and Right are indices into the arena array (-1 represents null).
     /// Value caches the actual T instance directly to avoid span[index] indirection on every comparison.
     /// Height is maintained for AVL balancing.
-    /// 
+    ///
     /// Design Note: Storing only indices (without Value field) would make Node smaller but requires
     /// span[index] lookup on every comparison, causing up to 3x performance degradation compared to
     /// the class-based reference implementation. Value caching trades memory for speed.
@@ -563,10 +572,8 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -574,11 +581,22 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         Node<T>? root = null;
 
@@ -598,7 +616,7 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <summary>
     /// Insert a value into the AVL tree iteratively and rebalance if necessary.
     /// </summary>
-    private static Node<T> InsertIterative<T>(Node<T>? root, T value, SortSpan<T> s) where T : IComparable<T>
+    private static Node<T> InsertIterative<T, TComparer>(Node<T>? root, T value, SortSpan<T, TComparer> s) where TComparer : IComparer<T>
     {
         // If the tree is empty, just create a new node.
         if (root is null)
@@ -664,7 +682,7 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <summary>
     /// Insert into the AVL tree, then rebalance.
     /// </summary>
-    private static Node<T> InsertRecursive<T>(Node<T>? node, T value, SortSpan<T> s) where T : IComparable<T>
+    private static Node<T> InsertRecursive<T, TComparer>(Node<T>? node, T value, SortSpan<T, TComparer> s) where TComparer : IComparer<T>
     {
         // If the tree is empty, return a new node.
         if (node is null)
@@ -690,7 +708,7 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <summary>
     /// Traverse the tree in order to collect elements in ascending order.
     /// </summary>
-    private static void Inorder<T>(SortSpan<T> s, Node<T>? node, ref int index) where T : IComparable<T>
+    private static void Inorder<T, TComparer>(SortSpan<T, TComparer> s, Node<T>? node, ref int index) where TComparer : IComparer<T>
     {
         if (node is null) return;
 
@@ -705,7 +723,7 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// Update the node's height based on the heights of its children.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void UpdateHeight<T>(Node<T> node) where T : IComparable<T>
+    private static void UpdateHeight<T>(Node<T> node)
     {
         // Get the heights of the left and right children.
         int leftHeight = (node.Left is null) ? 0 : node.Left.Height;
@@ -719,7 +737,7 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// Returns the balance factor (left height - right height).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetBalance<T>(Node<T> node) where T : IComparable<T>
+    private static int GetBalance<T>(Node<T> node)
     {
         int leftHeight = (node.Left is null) ? 0 : node.Left.Height;
         int rightHeight = (node.Right is null) ? 0 : node.Right.Height;
@@ -729,7 +747,7 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <summary>
     /// Rebalance the node after insertion using AVL rotations.
     /// </summary>
-    private static Node<T> Balance<T>(Node<T> node) where T : IComparable<T>
+    private static Node<T> Balance<T>(Node<T> node)
     {
         int balance = GetBalance(node);
 
@@ -761,7 +779,7 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <summary>
     /// Right rotation on the given node.
     /// </summary>
-    private static Node<T> RotateRight<T>(Node<T> y) where T : IComparable<T>
+    private static Node<T> RotateRight<T>(Node<T> y)
     {
         Node<T> x = y.Left!;
         Node<T>? t2 = x.Right;
@@ -781,7 +799,7 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <summary>
     /// Left rotation on the given node.
     /// </summary>
-    private static Node<T> RotateLeft<T>(Node<T> x) where T : IComparable<T>
+    private static Node<T> RotateLeft<T>(Node<T> x)
     {
         Node<T> y = x.Right!;
         Node<T>? t2 = y.Left;
@@ -798,7 +816,7 @@ public static class BalancedBinaryTreeSortNonOptimized
         return y;
     }
 
-    private class Node<T> where T : IComparable<T>
+    private class Node<T>
     {
         public T Item;
         public Node<T>? Left;

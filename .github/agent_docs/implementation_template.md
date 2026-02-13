@@ -24,22 +24,29 @@ public static class MySort
     /// <summary>
     /// Sorts the span using {Algorithm Name}.
     /// </summary>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, NullContext.Default);
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the span using {Algorithm Name} with context tracking.
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the span using {Algorithm Name} with a custom comparer and context tracking.
+    /// </summary>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         // Use insertion sort for small arrays
         if (s.Length <= InsertionSortThreshold)
         {
-            InsertionSort.Sort(span, context);
+            InsertionSort.Sort(span, comparer, context);
             return;
         }
 
@@ -47,7 +54,8 @@ public static class MySort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T>(SortSpan<T> s, int left, int right) where T : IComparable<T>
+    private static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int left, int right)
+        where TComparer : IComparer<T>
     {
         // Implementation here
         // Use s.Read(), s.Write(), s.Compare(), s.Swap() consistently
@@ -59,10 +67,13 @@ public static class MySort
 
 ## Key Points
 
-1. **Two overloads**: One without context (uses `NullContext.Default`), one with context
-2. **Early returns**: Check for trivial cases (`Length <= 1`)
-3. **Hybrid approach**: Use insertion sort for small subarrays
-4. **AggressiveInlining**: Mark hot-path helper methods
-5. **SortSpan operations**: Always use `s.Read()`, `s.Write()`, `s.Compare()`, `s.Swap()`
-6. **Buffer IDs**: Use constants for buffer identification
-7. **XML documentation**: Include time/space complexity and stability
+1. **Three overloads**: Two convenience overloads (no constraint, delegating via `Comparer<T>.Default`) + one main implementation with `TComparer : IComparer<T>`
+2. **Generic TComparer pattern**: Main implementation uses `<T, TComparer> where TComparer : IComparer<T>` for zero-alloc devirtualized comparisons
+3. **Runtime validation**: Convenience overloads matching `MemoryExtensions.Sort` pattern. `Comparer<T>.Default` performs runtime checks
+3. **Early returns**: Check for trivial cases (`Length <= 1`)
+4. **Hybrid approach**: Use insertion sort for small subarrays
+5. **AggressiveInlining**: Mark hot-path helper methods
+6. **SortSpan operations**: Always use `s.Read()`, `s.Write()`, `s.Compare()`, `s.Swap()`
+7. **Buffer IDs**: Use constants for buffer identification
+8. **XML documentation**: Include time/space complexity and stability
+9. **Comparer propagation**: When calling other algorithms' `SortCore`, the comparer propagates automatically through the `SortSpan<T, TComparer>` type

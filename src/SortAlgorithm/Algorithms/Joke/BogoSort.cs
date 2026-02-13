@@ -44,10 +44,8 @@ public static class BogoSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+    public static void Sort<T>(Span<T> span)
+        => Sort(span, Comparer<T>.Default, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -55,11 +53,22 @@ public static class BogoSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T>(Span<T> span, ISortContext context)
+        => Sort(span, Comparer<T>.Default, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use. Must implement <see cref="IComparer{T}"/>.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T>(span, context, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
 
         while (!IsSorted(s))
         {
@@ -68,7 +77,7 @@ public static class BogoSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Shuffle<T>(SortSpan<T> s) where T : IComparable<T>
+    private static void Shuffle<T, TComparer>(SortSpan<T, TComparer> s) where TComparer : IComparer<T>
     {
         // Fisher-Yates shuffle - すべての順列を均等な確率で生成
         var length = s.Length;
@@ -78,7 +87,7 @@ public static class BogoSort
         }
     }
 
-    private static bool IsSorted<T>(SortSpan<T> s) where T : IComparable<T>
+    private static bool IsSorted<T, TComparer>(SortSpan<T, TComparer> s) where TComparer : IComparer<T>
     {
         var length = s.Length;
         for (var i = 0; i < length - 1; i++)
