@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using SortAlgorithm.Contexts;
@@ -55,6 +55,22 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     private ref T UnguardedAccess(int i)
     {
         return ref Unsafe.Add(ref MemoryMarshal.GetReference(_span), i);
+    }
+
+    /// <summary>
+    /// Creates a span that represents a subrange of the specified span, starting at the given begin index and ending
+    /// before the end index, without performing bounds checks.
+    /// </summary>
+    /// <remarks>This method does not perform any bounds checking on the provided indices. It is the caller's
+    /// responsibility to ensure that begin and end specify a valid range within the span. Using invalid indices may
+    /// result in undefined behavior.</remarks>
+    /// <param name="begin">The zero-based index at which the subrange starts, inclusive.</param>
+    /// <param name="end">The zero-based index at which the subrange ends, exclusive.</param>
+    /// <returns>A span representing the elements in the specified range of the original span.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private Span<T> UnguardedSlice(int begin, int end)
+    {
+        return MemoryMarshal.CreateSpan(ref UnguardedAccess(begin), end - begin);
     }
 
     /// <summary>
@@ -181,9 +197,9 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
 #if DEBUG
         _context.OnSwap(i, j, _bufferId);
 #endif
-        var a = UnguardedAccess(i);
-        var b = UnguardedAccess(j);
-        (a, b) = (b, a);
+        // Should no use UnguardedAccess here since compiler can't optimize tuple swap pattern and will generate unnecessary code for it.
+        // Regular tuple swap pattern is the fastest way to swap two elements in a span, and the compiler will optimize it well.
+        (_span[i], _span[j]) = (_span[j], _span[i]);
     }
 
     /// <summary>
