@@ -81,6 +81,22 @@ public class BinaryTreeSortTests
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
+    [Test]
+    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
+    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
+    {
+        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
+
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        BinaryTreeSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
 #if DEBUG
 
     [Test]

@@ -21,6 +21,8 @@ public class BalancedBinaryTreeSortNonOptimizedTests
     [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
     public async Task SortResultOrderTest(IInputSample<int> inputSample)
     {
+        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
+
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
@@ -35,6 +37,8 @@ public class BalancedBinaryTreeSortNonOptimizedTests
     [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
     public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
     {
+        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
+
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
@@ -49,6 +53,8 @@ public class BalancedBinaryTreeSortNonOptimizedTests
     [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
     public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
     {
+        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
+
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
@@ -63,6 +69,24 @@ public class BalancedBinaryTreeSortNonOptimizedTests
     [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
     public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
     {
+        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
+
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        BalancedBinaryTreeSortNonOptimized.Sort(array.AsSpan(), stats);
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
+    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
+    {
+        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
+
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 

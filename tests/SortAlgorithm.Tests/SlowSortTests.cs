@@ -22,12 +22,10 @@ public class SlowSortTests
     public async Task SortResultOrderTest(IInputSample<int> inputSample)
     {
         // Slow Sort is extremely slow, so we limit to small arrays
-        if (inputSample.Samples.Length > 10)
-            return;
+        Skip.When(inputSample.Samples.Length > 10, "Skip large inputs for order test");
 
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
-
 
         SlowSort.Sort(array.AsSpan(), stats);
 
@@ -43,8 +41,7 @@ public class SlowSortTests
     public async Task StatisticsSortedTest(IInputSample<int> inputSample)
     {
         // Slow Sort is extremely slow, so we limit to small arrays
-        if (inputSample.Samples.Length > 10)
-            return;
+        Skip.When(inputSample.Samples.Length > 10, "Skip large inputs for order test");
 
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();

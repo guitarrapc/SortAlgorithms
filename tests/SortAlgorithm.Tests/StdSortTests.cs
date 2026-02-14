@@ -74,6 +74,20 @@ public class StdSortTests
     }
 
     [Test]
+    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
+    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        StdSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
     public async Task EdgeCaseEmptyArrayTest()
     {
         var stats = new StatisticsContext();

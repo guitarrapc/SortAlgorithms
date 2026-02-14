@@ -82,6 +82,22 @@ public class CocktailShakerSortTests
     }
 
     [Test]
+    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
+    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
+    {
+        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
+
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        CocktailShakerSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
     [MethodDataSource(typeof(MockStabilityData), nameof(MockStabilityData.Generate))]
     public async Task StabilityTest(StabilityTestItem[] items)
     {

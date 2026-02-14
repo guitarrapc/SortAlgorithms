@@ -74,6 +74,20 @@ public class ShiftSortTests
     }
 
     [Test]
+    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
+    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        ShiftSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
     [Arguments(256)]  // Stackalloc threshold
     [Arguments(257)]  // Just over threshold (should use ArrayPool)
     [Arguments(512)]  // ArrayPool

@@ -22,12 +22,10 @@ public class BogoSortTests
     public async Task SortResultOrderTest(IInputSample<int> inputSample)
     {
         // Bogo Sort is extremely slow, so we limit to small arrays
-        if (inputSample.Samples.Length > 10)
-            return;
+        Skip.When(inputSample.Samples.Length > 10, "Skip large inputs for order test");
 
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
-
 
         BogoSort.Sort(array.AsSpan(), stats);
 
@@ -43,18 +41,17 @@ public class BogoSortTests
     public async Task StatisticsSortedTest(IInputSample<int> inputSample)
     {
         // Bogo Sort is extremely slow, so we limit to small arrays
-        if (inputSample.Samples.Length <= 10)
-        {
-            var stats = new StatisticsContext();
-            var array = inputSample.Samples.ToArray();
-            BogoSort.Sort(array.AsSpan(), stats);
+        Skip.When(inputSample.Samples.Length > 10, "Skip large inputs for order test");
 
-            await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-            await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-            await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
-            await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
-            await Assert.That(stats.SwapCount).IsEqualTo(0UL);
-        }
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+        BogoSort.Sort(array.AsSpan(), stats);
+
+        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
+        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
+        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
     [Test, SkipCI]
