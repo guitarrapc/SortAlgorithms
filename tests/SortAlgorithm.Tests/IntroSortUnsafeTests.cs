@@ -30,6 +30,45 @@ public class IntroSortUnsafeTests
     }
 
     [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
+    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
+    {
+        var array = inputSample.Samples.ToArray();
+
+        IntroSortUnsafe.Sort(array.AsSpan());
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
+    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
+    {
+        var array = inputSample.Samples.ToArray();
+
+        IntroSortUnsafe.Sort(array.AsSpan());
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
+    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
+    {
+        var array = inputSample.Samples.ToArray();
+
+        IntroSortUnsafe.Sort(array.AsSpan());
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
     public async Task EdgeCaseEmptyArrayTest()
     {
         var empty = Array.Empty<int>();

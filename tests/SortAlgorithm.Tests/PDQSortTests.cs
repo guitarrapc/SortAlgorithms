@@ -24,7 +24,6 @@ public class PDQSortTests
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
-
         PDQSort.Sort(array.AsSpan(), stats);
 
         // Check is sorted
@@ -38,7 +37,6 @@ public class PDQSortTests
     {
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
-
 
         PDQSort.Sort(array.AsSpan(), stats);
 
@@ -54,7 +52,6 @@ public class PDQSortTests
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
-
         PDQSort.Sort(array.AsSpan(), stats);
 
         // Check is sorted
@@ -68,7 +65,6 @@ public class PDQSortTests
     {
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
-
 
         PDQSort.Sort(array.AsSpan(), stats);
 

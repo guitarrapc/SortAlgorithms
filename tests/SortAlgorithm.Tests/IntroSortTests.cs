@@ -24,7 +24,6 @@ public class IntroSortTests
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
-
         IntroSort.Sort(array.AsSpan(), stats);
 
         // Check is sorted
@@ -39,7 +38,6 @@ public class IntroSortTests
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
-
         IntroSort.Sort(array.AsSpan(), stats);
 
         // Check is sorted
@@ -53,7 +51,6 @@ public class IntroSortTests
     {
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
-
 
         IntroSort.Sort(array.AsSpan(), stats);
 
