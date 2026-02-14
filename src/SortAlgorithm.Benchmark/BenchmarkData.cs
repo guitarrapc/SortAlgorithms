@@ -34,6 +34,9 @@ public static class BenchmarkData
         return pattern switch
         {
             DataPattern.Random => ArrayPatterns.GenerateRandomIntKey(size, random),
+            DataPattern.Sorted => ArrayPatterns.GenerateSortedIntKey(size),
+            DataPattern.Reversed => ArrayPatterns.GenerateReversedIntKey(size),
+            DataPattern.AntiQuicksort => ArrayPatterns.GenerateQuickSortAdversaryIntKey(size),
             _ => throw new ArgumentException($"Unknown pattern: {pattern}")
         };
     }

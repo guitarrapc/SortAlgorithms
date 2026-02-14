@@ -1,4 +1,4 @@
-namespace SortAlgorithm.Utils;
+﻿namespace SortAlgorithm.Utils;
 
 public static class ArrayPatterns
 {
@@ -1865,20 +1865,6 @@ public static class ArrayPatterns
     }
 
     /// <summary>
-    /// ランダム配列を生成（IntKey版）
-    /// <br/>
-    /// Generate random array (IntKey version)
-    /// </summary>
-    public static IntKey[] GenerateRandomIntKey(int size, Random random)
-    {
-        return Enumerable.Range(1, size)
-            .OrderBy(_ => random.Next())
-            .Select(x => new IntKey(x))
-            .ToArray();
-    }
-
-
-    /// <summary>
     /// オイラーのトーシェント関数分布
     /// <br/>
     /// Generate Euler's totient function distribution
@@ -2632,7 +2618,8 @@ public static class ArrayPatterns
         }
     }
 
-    #region Floating-Point with NaN Pattern Generators
+
+    // Floating-Point with NaN Pattern Generators
 
     /// <summary>
     /// ランダムな float 配列を生成（NaN を含む）
@@ -2786,5 +2773,182 @@ public static class ArrayPatterns
         return array;
     }
 
-    #endregion
+    // IntKey Pattern Generators (for JIT optimization verification)
+
+    /// <summary>
+    /// ランダム配列を生成（IntKey版）
+    /// <br/>
+    /// Generate random array (IntKey version)
+    /// </summary>
+    public static IntKey[] GenerateRandomIntKey(int size, Random random)
+    {
+        return Enumerable.Range(1, size)
+            .OrderBy(_ => random.Next())
+            .Select(x => new IntKey(x))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// ソート済み配列を生成（IntKey版・昇順）
+    /// <br/>
+    /// Generate sorted array (IntKey version - ascending order)
+    /// </summary>
+    public static IntKey[] GenerateSortedIntKey(int size)
+    {
+        return Enumerable.Range(1, size)
+            .Select(x => new IntKey(x))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// 逆順配列を生成（IntKey版・降順）
+    /// <br/>
+    /// Generate reversed array (IntKey version - descending order)
+    /// </summary>
+    public static IntKey[] GenerateReversedIntKey(int size)
+    {
+        return Enumerable.Range(1, size)
+            .Reverse()
+            .Select(x => new IntKey(x))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// ほぼソート済み配列を生成（IntKey版・要素の10%をランダムに入れ替え）
+    /// <br/>
+    /// Generate nearly sorted array (IntKey version - randomly swap 10% of elements)
+    /// </summary>
+    public static IntKey[] GenerateNearlySortedIntKey(int size, Random random)
+    {
+        var array = Enumerable.Range(1, size)
+            .Select(x => new IntKey(x))
+            .ToArray();
+
+        // 要素の10%をランダムに入れ替え
+        var swapCount = Math.Max(1, size / 10);
+        for (int i = 0; i < swapCount; i++)
+        {
+            var index1 = random.Next(size);
+            var index2 = random.Next(size);
+            (array[index1], array[index2]) = (array[index2], array[index1]);
+        }
+
+        return array;
+    }
+
+    /// <summary>
+    /// 負の値と正の値のランダム配列を生成（IntKey版）
+    /// <br/>
+    /// Generate negative and positive random array (IntKey version)
+    /// </summary>
+    public static IntKey[] GenerateNegativePositiveRandomIntKey(int size, Random random)
+    {
+        return Enumerable.Range(-1 * (size / 2), size)
+            .OrderBy(_ => random.Next())
+            .Select(x => new IntKey(x))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// パイプオルガン型（IntKey版・偶数要素が前半、奇数要素が後半逆順）
+    /// <br/>
+    /// Generate pipe organ (IntKey version - even elements in first half, odd elements in reversed second half)
+    /// </summary>
+    public static IntKey[] GeneratePipeOrganIntKey(int size)
+    {
+        var array = new IntKey[size];
+        var sorted = Enumerable.Range(1, size).ToArray();
+        var left = 0;
+        var right = size - 1;
+
+        for (var i = 0; i < size; i++)
+        {
+            if (i % 2 == 0)
+            {
+                array[left++] = new IntKey(sorted[i]);
+            }
+            else
+            {
+                array[right--] = new IntKey(sorted[i]);
+            }
+        }
+
+        return array;
+    }
+
+    /// <summary>
+    /// 少数ユニーク値（IntKey版・16種類の値）
+    /// <br/>
+    /// Generate few unique values (IntKey version - 16 distinct values)
+    /// </summary>
+    public static IntKey[] GenerateFewUniqueIntKey(int size, Random random)
+    {
+        return GenerateFewUniqueIntKey(size, 16, random);
+    }
+
+    /// <summary>
+    /// 少数ユニーク値（IntKey版・指定されたユニーク数）
+    /// <br/>
+    /// Generate few unique values (IntKey version - specified number of distinct values)
+    /// </summary>
+    public static IntKey[] GenerateFewUniqueIntKey(int size, int uniqueCount, Random random)
+    {
+        if (uniqueCount < 1)
+            throw new ArgumentException("Unique count must be at least 1", nameof(uniqueCount));
+        if (uniqueCount > size)
+            uniqueCount = size;
+
+        // Generate evenly distributed unique values across the range
+        var values = new IntKey[uniqueCount];
+        for (var i = 0; i < uniqueCount; i++)
+        {
+            values[i] = new IntKey((int)((i + 1) * (double)size / (uniqueCount + 1)));
+        }
+
+        // Evenly distribute counts for each unique value
+        var baseCount = size / uniqueCount;
+        var remainder = size % uniqueCount;
+
+        // Build result array
+        var result = new IntKey[size];
+        var index = 0;
+        for (var i = 0; i < uniqueCount; i++)
+        {
+            // Each unique value gets baseCount occurrences, plus 1 for the first 'remainder' values
+            var count = baseCount + (i < remainder ? 1 : 0);
+            for (var j = 0; j < count; j++)
+            {
+                result[index++] = values[i];
+            }
+        }
+
+        // Shuffle using Fisher-Yates algorithm
+        for (var i = size - 1; i > 0; i--)
+        {
+            var j = random.Next(i + 1);
+            (result[i], result[j]) = (result[j], result[i]);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// QuickSort最悪ケース（IntKey版・median-of-3 pivot選択用）
+    /// <br/>
+    /// Generate QuickSort adversary (IntKey version - worst case for median-of-3 pivot selection)
+    /// </summary>
+    public static IntKey[] GenerateQuickSortAdversaryIntKey(int size)
+    {
+        var array = Enumerable.Range(1, size)
+            .Select(x => new IntKey(x))
+            .ToArray();
+
+        // Swap elements to create worst case for median-of-3 quicksort
+        for (int j = size - size % 2 - 2, i = j - 1; i >= 0; i -= 2, j--)
+        {
+            (array[i], array[j]) = (array[j], array[i]);
+        }
+
+        return array;
+    }
 }

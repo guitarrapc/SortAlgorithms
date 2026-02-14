@@ -19,6 +19,8 @@ on:
           - "*PartitionBenchmark*"
           - "*SelectionBenchmark*"
           - "*TreeBenchmark*"
+          - "*IntKeyBenchmark*"
+          - "*StringBenchmark*"
 
 jobs:
   benchmark:

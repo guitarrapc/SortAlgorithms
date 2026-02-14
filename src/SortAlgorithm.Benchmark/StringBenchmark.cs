@@ -1,6 +1,4 @@
-﻿using SortAlgorithm.Utils;
-
-namespace SortAlgorithm.Benchmark;
+﻿namespace SortAlgorithm.Benchmark;
 
 [MemoryDiagnoser]
 [RankColumn]
