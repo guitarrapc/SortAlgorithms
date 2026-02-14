@@ -15,7 +15,6 @@ public class IntKeyBenchmark
     private IntKey[] _blockQuickArray = default!;
     private IntKey[] _introArray = default!;
     private IntKey[] _introDotnetArray = default!;
-    private IntKey[] _introUnsafeArray = default!;
     private IntKey[] _pdqArray = default!;
     private IntKey[] _quickArray = default!;
     private IntKey[] _quickDualPivotArray = default!;
@@ -31,7 +30,6 @@ public class IntKeyBenchmark
         _blockQuickArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
         _introArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
         _introDotnetArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _introUnsafeArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
         _pdqArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
         _quickArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
         _quickDualPivotArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
@@ -58,12 +56,6 @@ public class IntKeyBenchmark
     public void IntroSortDotnet()
     {
         SortAlgorithm.Algorithms.IntroSortDotnet.Sort(_introDotnetArray.AsSpan());
-    }
-
-    [Benchmark]
-    public void IntroSortUnsafe()
-    {
-        SortAlgorithm.Algorithms.IntroSortUnsafe.Sort(_introUnsafeArray.AsSpan());
     }
 
     [Benchmark]

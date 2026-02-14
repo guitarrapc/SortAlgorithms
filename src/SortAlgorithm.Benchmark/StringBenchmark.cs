@@ -13,7 +13,6 @@ public class StringBenchmark
     private string[] _blockQuickArray = default!;
     private string[] _introArray = default!;
     private string[] _introDotnetArray = default!;
-    private string[] _introUnsafeArray = default!;
     private string[] _pdqArray = default!;
     private string[] _quickArray = default!;
     private string[] _quickDualPivotArray = default!;
@@ -29,7 +28,6 @@ public class StringBenchmark
         _blockQuickArray = BenchmarkData.GenerateStringArray(Size, Pattern);
         _introArray = BenchmarkData.GenerateStringArray(Size, Pattern);
         _introDotnetArray = BenchmarkData.GenerateStringArray(Size, Pattern);
-        _introUnsafeArray = BenchmarkData.GenerateStringArray(Size, Pattern);
         _pdqArray = BenchmarkData.GenerateStringArray(Size, Pattern);
         _quickArray = BenchmarkData.GenerateStringArray(Size, Pattern);
         _quickDualPivotArray = BenchmarkData.GenerateStringArray(Size, Pattern);
@@ -56,12 +54,6 @@ public class StringBenchmark
     public void IntroSortDotnet()
     {
         SortAlgorithm.Algorithms.IntroSortDotnet.Sort(_introDotnetArray.AsSpan());
-    }
-
-    [Benchmark]
-    public void IntroSortUnsafe()
-    {
-        SortAlgorithm.Algorithms.IntroSortUnsafe.Sort(_introUnsafeArray.AsSpan());
     }
 
     [Benchmark]
