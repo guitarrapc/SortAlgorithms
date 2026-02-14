@@ -2617,4 +2617,160 @@ public static class ArrayPatterns
             return a;
         }
     }
+
+    #region Floating-Point with NaN Pattern Generators
+
+    /// <summary>
+    /// ランダムな float 配列を生成（NaN を含む）
+    /// <br/>
+    /// Generate random float array with NaN values
+    /// </summary>
+    /// <param name="size">配列サイズ</param>
+    /// <param name="random">乱数生成器</param>
+    /// <param name="nanRatio">NaN の割合（0.0〜1.0）。デフォルトは 0.1（10%）</param>
+    /// <returns>NaN を含むランダムな float 配列</returns>
+    public static float[] GenerateRandomFloatWithNaN(int size, Random random, double nanRatio = 0.1)
+    {
+        var array = new float[size];
+        var nanCount = (int)(size * nanRatio);
+
+        // Generate random float values
+        for (int i = 0; i < size; i++)
+        {
+            array[i] = (float)(random.NextDouble() * 1000.0 - 500.0); // Range: -500 to 500
+        }
+
+        // Replace random positions with NaN
+        for (int i = 0; i < nanCount; i++)
+        {
+            var index = random.Next(size);
+            array[index] = float.NaN;
+        }
+
+        return array;
+    }
+
+    /// <summary>
+    /// ランダムな double 配列を生成（NaN を含む）
+    /// <br/>
+    /// Generate random double array with NaN values
+    /// </summary>
+    /// <param name="size">配列サイズ</param>
+    /// <param name="random">乱数生成器</param>
+    /// <param name="nanRatio">NaN の割合（0.0〜1.0）。デフォルトは 0.1（10%）</param>
+    /// <returns>NaN を含むランダムな double 配列</returns>
+    public static double[] GenerateRandomDoubleWithNaN(int size, Random random, double nanRatio = 0.1)
+    {
+        var array = new double[size];
+        var nanCount = (int)(size * nanRatio);
+
+        // Generate random double values
+        for (int i = 0; i < size; i++)
+        {
+            array[i] = random.NextDouble() * 1000.0 - 500.0; // Range: -500 to 500
+        }
+
+        // Replace random positions with NaN
+        for (int i = 0; i < nanCount; i++)
+        {
+            var index = random.Next(size);
+            array[index] = double.NaN;
+        }
+
+        return array;
+    }
+
+    /// <summary>
+    /// ランダムな Half 配列を生成（NaN を含む）
+    /// <br/>
+    /// Generate random Half array with NaN values
+    /// </summary>
+    /// <param name="size">配列サイズ</param>
+    /// <param name="random">乱数生成器</param>
+    /// <param name="nanRatio">NaN の割合（0.0〜1.0）。デフォルトは 0.1（10%）</param>
+    /// <returns>NaN を含むランダムな Half 配列</returns>
+    public static Half[] GenerateRandomHalfWithNaN(int size, Random random, double nanRatio = 0.1)
+    {
+        var array = new Half[size];
+        var nanCount = (int)(size * nanRatio);
+
+        // Generate random Half values
+        for (int i = 0; i < size; i++)
+        {
+            array[i] = (Half)(random.NextDouble() * 100.0 - 50.0); // Range: -50 to 50 (Half has limited range)
+        }
+
+        // Replace random positions with NaN
+        for (int i = 0; i < nanCount; i++)
+        {
+            var index = random.Next(size);
+            array[index] = Half.NaN;
+        }
+
+        return array;
+    }
+
+    /// <summary>
+    /// ソート済み float 配列を生成（先頭に NaN）
+    /// <br/>
+    /// Generate sorted float array with NaN at the beginning
+    /// </summary>
+    /// <param name="size">配列サイズ</param>
+    /// <param name="nanCount">NaN の個数</param>
+    /// <returns>先頭に NaN、残りがソート済みの float 配列</returns>
+    public static float[] GenerateSortedFloatWithNaN(int size, int nanCount = 3)
+    {
+        var array = new float[size];
+        
+        // NaN at the beginning
+        for (int i = 0; i < Math.Min(nanCount, size); i++)
+        {
+            array[i] = float.NaN;
+        }
+
+        // Sorted values after NaN
+        for (int i = nanCount; i < size; i++)
+        {
+            array[i] = i - nanCount + 1;
+        }
+
+        return array;
+    }
+
+    /// <summary>
+    /// 全て NaN の float 配列を生成
+    /// <br/>
+    /// Generate float array with all NaN values
+    /// </summary>
+    /// <param name="size">配列サイズ</param>
+    /// <returns>全て NaN の float 配列</returns>
+    public static float[] GenerateAllNaN(int size)
+    {
+        var array = new float[size];
+        for (int i = 0; i < size; i++)
+        {
+            array[i] = float.NaN;
+        }
+        return array;
+    }
+
+    /// <summary>
+    /// NaN なしの float 配列を生成（最適化の効果測定用）
+    /// <br/>
+    /// Generate float array without NaN (for optimization measurement)
+    /// </summary>
+    /// <param name="size">配列サイズ</param>
+    /// <param name="random">乱数生成器</param>
+    /// <returns>NaN を含まないランダムな float 配列</returns>
+    public static float[] GenerateRandomFloatNoNaN(int size, Random random)
+    {
+        var array = new float[size];
+        for (int i = 0; i < size; i++)
+        {
+            array[i] = (float)(random.NextDouble() * 1000.0 - 500.0);
+        }
+        return array;
+    }
+
+    #endregion
 }
