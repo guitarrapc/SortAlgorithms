@@ -28,6 +28,16 @@ public static class BenchmarkData
         };
     }
 
+    public static IntKey[] GenerateIntKeyArray(int size, DataPattern pattern)
+    {
+        var random = new Random(42);
+        return pattern switch
+        {
+            DataPattern.Random => ArrayPatterns.GenerateRandomIntKey(size, random),
+            _ => throw new ArgumentException($"Unknown pattern: {pattern}")
+        };
+    }
+
     public static string[] GenerateStringArray(int size, DataPattern pattern)
     {
         var random = new Random(42);
