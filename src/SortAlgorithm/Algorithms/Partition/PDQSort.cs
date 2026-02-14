@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -147,8 +147,20 @@ public static class PDQSort
         if (last - first <= 1) return;
 
         var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
-        var badAllowed = Log2(last - first);
-        PDQSortLoop(s, first, last, badAllowed, true, context);
+
+        // For floating-point types, move NaN values to the front
+        // This improves performance and enhances PDQSort's pattern detection
+        int nanEnd = FloatingPointUtils.MoveNaNsToFront(s, first, last);
+
+        if (nanEnd >= last)
+        {
+            // All values are NaN, already "sorted"
+            return;
+        }
+
+        // Sort the non-NaN portion
+        var badAllowed = Log2(last - nanEnd);
+        PDQSortLoop(s, nanEnd, last, badAllowed, true, context);
     }
 
     /// <summary>

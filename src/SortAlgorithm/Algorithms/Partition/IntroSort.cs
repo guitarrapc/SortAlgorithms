@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -155,8 +155,21 @@ public static class IntroSort
         if (last - first <= 1) return;
 
         var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
-        var depthLimit = 2 * (BitOperations.Log2((uint)(last - first)) + 1);
-        IntroSortInternal(s, first, last -1, depthLimit, true, context);
+
+        // For floating-point types, move NaN values to the front
+        // This optimization is based on dotnet/runtime's ArraySortHelper implementation
+        // Reference: https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Collections/Generic/ArraySortHelper.cs
+        int nanEnd = FloatingPointUtils.MoveNaNsToFront(s, first, last);
+
+        if (nanEnd >= last)
+        {
+            // All values are NaN, already "sorted"
+            return;
+        }
+
+        // Sort the non-NaN portion
+        var depthLimit = 2 * (BitOperations.Log2((uint)(last - nanEnd)) + 1);
+        IntroSortInternal(s, nanEnd, last - 1, depthLimit, true, context);
     }
 
     /// <summary>
