@@ -1,4 +1,4 @@
-﻿namespace SortAlgorithm.Utils;
+namespace SortAlgorithm.Utils;
 
 public static class ArrayPatterns
 {
@@ -1863,6 +1863,20 @@ public static class ArrayPatterns
 
         return array;
     }
+
+    /// <summary>
+    /// ランダム配列を生成（IntKey版）
+    /// <br/>
+    /// Generate random array (IntKey version)
+    /// </summary>
+    public static IntKey[] GenerateRandomIntKey(int size, Random random)
+    {
+        return Enumerable.Range(1, size)
+            .OrderBy(_ => random.Next())
+            .Select(x => new IntKey(x))
+            .ToArray();
+    }
+
 
     /// <summary>
     /// オイラーのトーシェント関数分布

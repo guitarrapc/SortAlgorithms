@@ -1,4 +1,4 @@
-﻿namespace SortAlgorithm.Tests;
+namespace SortAlgorithm.Tests;
 
 public enum InputType
 {
@@ -28,6 +28,9 @@ public enum InputType
     SortedWithNaN,
     AllNaN,
     RandomNoNaN,
+
+    // IntKey patterns (for JIT optimization verification)
+    IntKeyRandom,
 }
 
 public interface IInputSample<T> where T : IComparable
