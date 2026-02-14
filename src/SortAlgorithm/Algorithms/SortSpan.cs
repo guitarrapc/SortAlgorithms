@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using SortAlgorithm.Contexts;
 
@@ -46,6 +47,17 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     public TComparer Comparer => _comparer;
 
     /// <summary>
+    /// Gets a reference to the element at the specified index without bounds checking.
+    /// </summary>
+    /// <param name="i">The zero-based index of the element to access.</param>
+    /// <returns>A reference to the element at the specified index.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ref T UnguardedAccess(int i)
+    {
+        return ref Unsafe.Add(ref MemoryMarshal.GetReference(_span), i);
+    }
+
+    /// <summary>
     /// Retrieves the element at the specified zero-based index. (Equivalent to span[i].)
     /// </summary>
     /// <param name="i">The zero-based index of the element to retrieve. Must be within the bounds of the collection.</param>
@@ -56,7 +68,9 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
 #if DEBUG
         _context.OnIndexRead(i, _bufferId);
 #endif
-        return _span[i];
+        // Optimize span access by avoiding bounds checking
+        // _span[i];
+        return UnguardedAccess(i);
     }
 
     /// <summary>
@@ -70,7 +84,9 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
 #if DEBUG
         _context.OnIndexWrite(i, _bufferId, value);
 #endif
-        _span[i] = value;
+        // Optimize span access by avoiding bounds checking
+        // _span[i] = value;
+        UnguardedAccess(i) = value;
     }
 
     /// <summary>
@@ -85,13 +101,11 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     public int Compare(int i, int j)
     {
 #if DEBUG
-        var a = Read(i);
-        var b = Read(j);
-        var result = _comparer.Compare(a, b);
+        var result = _comparer.Compare(Read(i), Read(j));
         _context.OnCompare(i, j, result, _bufferId, _bufferId);
         return result;
 #else
-        return _comparer.Compare(_span[i], _span[j]);
+        return _comparer.Compare(Read(i), Read(j));
 #endif
     }
 
@@ -111,7 +125,7 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
         _context.OnCompare(i, -1, result, _bufferId, -1);
         return result;
 #else
-        return _comparer.Compare(_span[i], value);
+        return _comparer.Compare(Read(i), value);
 #endif
     }
 
@@ -131,7 +145,7 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
         _context.OnCompare(-1, i, result, -1, _bufferId);
         return result;
 #else
-        return _comparer.Compare(value, _span[i]);
+        return _comparer.Compare(value, Read(i));
 #endif
     }
 
@@ -167,7 +181,9 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
 #if DEBUG
         _context.OnSwap(i, j, _bufferId);
 #endif
-        (_span[i], _span[j]) = (_span[j], _span[i]);
+        var a = UnguardedAccess(i);
+        var b = UnguardedAccess(j);
+        (a, b) = (b, a);
     }
 
     /// <summary>
