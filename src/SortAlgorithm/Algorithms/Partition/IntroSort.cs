@@ -155,7 +155,8 @@ public static class IntroSort
         if (last - first <= 1) return;
 
         var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
-        IntroSortInternal(s, first, last -1, 2 * Log2(s.Length + 1), true, context);
+        var depthLimit = 2 * (BitOperations.Log2((uint)(last - first)) + 1);
+        IntroSortInternal(s, first, last -1, depthLimit, true, context);
     }
 
     /// <summary>

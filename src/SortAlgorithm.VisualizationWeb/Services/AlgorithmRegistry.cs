@@ -76,6 +76,7 @@ public class AlgorithmRegistry
         Add("Quicksort (Stable)", "Partition Sorts", "O(n log n)", MAX_SIZE, 2048, (arr, ctx) => StableQuickSort.Sort(arr.AsSpan(), ctx));
         Add("BlockQuickSort", "Partition Sorts", "O(n log n)", MAX_SIZE, 2048, (arr, ctx) => BlockQuickSort.Sort(arr.AsSpan(), ctx));
         Add("Introsort", "Partition Sorts", "O(n log n)", MAX_SIZE, 4096, (arr, ctx) => IntroSort.Sort(arr.AsSpan(), ctx));
+        Add("IntrosortDotnet", "Partition Sorts", "O(n log n)", MAX_SIZE, 4096, (arr, ctx) => IntroSortDotnet.Sort(arr.AsSpan(), ctx));
         Add("Pattern-defeating quicksort", "Partition Sorts", "O(n log n)", MAX_SIZE, 4096, (arr, ctx) => PDQSort.Sort(arr.AsSpan(), ctx));
         Add("C++ std::sort", "Partition Sorts", "O(n log n)", MAX_SIZE, 4096, (arr, ctx) => StdSort.Sort(arr.AsSpan(), ctx));
 
