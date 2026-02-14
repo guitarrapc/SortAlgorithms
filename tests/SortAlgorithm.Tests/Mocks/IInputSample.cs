@@ -21,6 +21,13 @@ public enum InputType
     HalfZeroHalfOne,
     ManyDuplicatesSqrtRange,
     HighlySkewed,
+
+    // Floating-point with NaN patterns
+    RandomWithNaN,
+    RandomWithHighNaN,
+    SortedWithNaN,
+    AllNaN,
+    RandomNoNaN,
 }
 
 public interface IInputSample<T> where T : IComparable
