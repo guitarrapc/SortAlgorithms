@@ -2,6 +2,8 @@
 
 using SortAlgorithm.Contexts;
 
+using Unsafe = System.Runtime.CompilerServices.Unsafe;
+
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
@@ -46,6 +48,110 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     public TComparer Comparer => _comparer;
 
     /// <summary>
+    /// Type-specialized comparison optimized for primitive types.
+    /// When TComp is ComparableComparer&lt;TValue&gt; and TValue is a primitive type,
+    /// this compiles to a single CPU instruction. Otherwise falls back to the comparer.
+    /// </summary>
+    /// <remarks>
+    /// This optimization applies to both DEBUG and RELEASE builds, ensuring consistent
+    /// behavior while providing maximum performance for benchmarks.
+    /// JIT will eliminate all typeof() checks at compile time when types are known.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int CompareOptimized<TValue, TComp>(ref TValue left, ref TValue right, TComp comparer)
+        where TComp : IComparer<TValue>
+    {
+        // Only optimize when using ComparableComparer<T>
+        // Use typeof() for compile-time type checking (JIT can eliminate this branch)
+        if (typeof(TComp).Name == "ComparableComparer`1")
+        {
+            // Type-specialized comparisons for primitive types
+            // These compile to single CPU instructions (e.g., cmp, jl, setl)
+            if (typeof(TValue) == typeof(byte))
+            {
+                var l = Unsafe.As<TValue, byte>(ref left);
+                var r = Unsafe.As<TValue, byte>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(sbyte))
+            {
+                var l = Unsafe.As<TValue, sbyte>(ref left);
+                var r = Unsafe.As<TValue, sbyte>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(ushort))
+            {
+                var l = Unsafe.As<TValue, ushort>(ref left);
+                var r = Unsafe.As<TValue, ushort>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(short))
+            {
+                var l = Unsafe.As<TValue, short>(ref left);
+                var r = Unsafe.As<TValue, short>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(uint))
+            {
+                var l = Unsafe.As<TValue, uint>(ref left);
+                var r = Unsafe.As<TValue, uint>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(int))
+            {
+                var l = Unsafe.As<TValue, int>(ref left);
+                var r = Unsafe.As<TValue, int>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(ulong))
+            {
+                var l = Unsafe.As<TValue, ulong>(ref left);
+                var r = Unsafe.As<TValue, ulong>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(long))
+            {
+                var l = Unsafe.As<TValue, long>(ref left);
+                var r = Unsafe.As<TValue, long>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(nuint))
+            {
+                var l = Unsafe.As<TValue, nuint>(ref left);
+                var r = Unsafe.As<TValue, nuint>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(nint))
+            {
+                var l = Unsafe.As<TValue, nint>(ref left);
+                var r = Unsafe.As<TValue, nint>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(float))
+            {
+                var l = Unsafe.As<TValue, float>(ref left);
+                var r = Unsafe.As<TValue, float>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(double))
+            {
+                var l = Unsafe.As<TValue, double>(ref left);
+                var r = Unsafe.As<TValue, double>(ref right);
+                return l.CompareTo(r);
+            }
+            if (typeof(TValue) == typeof(Half))
+            {
+                var l = Unsafe.As<TValue, Half>(ref left);
+                var r = Unsafe.As<TValue, Half>(ref right);
+                return l.CompareTo(r);
+            }
+        }
+
+        // Fallback to comparer for non-primitive types or custom comparers
+        return comparer.Compare(left, right);
+    }
+
+    /// <summary>
     /// Retrieves the element at the specified zero-based index. (Equivalent to span[i].)
     /// </summary>
     /// <param name="i">The zero-based index of the element to retrieve. Must be within the bounds of the collection.</param>
@@ -87,11 +193,11 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
 #if DEBUG
         var a = Read(i);
         var b = Read(j);
-        var result = _comparer.Compare(a, b);
+        var result = CompareOptimized(ref a, ref b, _comparer);
         _context.OnCompare(i, j, result, _bufferId, _bufferId);
         return result;
 #else
-        return _comparer.Compare(_span[i], _span[j]);
+        return CompareOptimized(ref _span[i], ref _span[j], _comparer);
 #endif
     }
 
@@ -107,11 +213,11 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     {
 #if DEBUG
         var a = Read(i);
-        var result = _comparer.Compare(a, value);
+        var result = CompareOptimized(ref a, ref value, _comparer);
         _context.OnCompare(i, -1, result, _bufferId, -1);
         return result;
 #else
-        return _comparer.Compare(_span[i], value);
+        return CompareOptimized(ref _span[i], ref value, _comparer);
 #endif
     }
 
@@ -127,11 +233,11 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     {
 #if DEBUG
         var b = Read(i);
-        var result = _comparer.Compare(value, b);
+        var result = CompareOptimized(ref value, ref b, _comparer);
         _context.OnCompare(-1, i, result, -1, _bufferId);
         return result;
 #else
-        return _comparer.Compare(value, _span[i]);
+        return CompareOptimized(ref value, ref _span[i], _comparer);
 #endif
     }
 
@@ -146,11 +252,11 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     public int Compare(T a, T b)
     {
 #if DEBUG
-        var result = _comparer.Compare(a, b);
+        var result = CompareOptimized(ref a, ref b, _comparer);
         _context.OnCompare(-1, -1, result, -1, -1);
         return result;
 #else
-        return _comparer.Compare(a, b);
+        return CompareOptimized(ref a, ref b, _comparer);
 #endif
     }
 
