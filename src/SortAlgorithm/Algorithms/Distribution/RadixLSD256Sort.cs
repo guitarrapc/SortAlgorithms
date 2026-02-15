@@ -79,26 +79,52 @@ public static class RadixLSD256Sort
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary buffer for digit redistribution
 
+    private readonly struct RadixLSD256SortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+    {
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, comparer, context);
+        }
+    }
+
     /// <summary>
-    /// Sorts the elements in the specified span using a key selector function.
+    /// Sorts the elements in the specified span using LSD Radix Sort (base-256).
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
-        Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), NullContext.Default);
     }
 
     /// <summary>
-    /// Sorts the elements in the specified span using a key selector function and sort context.
+    /// Sorts the elements in the specified span using LSD Radix Sort (base-256) with sort context.
     /// </summary>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
     {
-        Sort(span, new ComparableComparer<T>(), context);
+        ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new RadixLSD256SortAction<T, ComparableComparer<T>>());
     }
 
     /// <summary>
-    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// Sorts the elements in the specified span using LSD Radix Sort (base-256) with comparer and sort context.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+    {
+        ContextDispatcher.DispatchSort(span, comparer, context, new RadixLSD256SortAction<T, TComparer>());
+    }
+
+    /// <summary>
+    /// Sorts integer values in the specified span with comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
@@ -111,7 +137,7 @@ public static class RadixLSD256Sort
             var tempBuffer = tempArray.AsSpan(0, span.Length);
             var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixSize + 1);
 
-            SortCore<T, TComparer>(span, tempBuffer, bucketOffsets, comparer, context);
+            SortCore<T, TComparer, TContext>(span, tempBuffer, bucketOffsets, comparer, context);
         }
         finally
         {
@@ -121,11 +147,13 @@ public static class RadixLSD256Sort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, ISortContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
-        var temp = new SortSpan<T, TComparer>(tempBuffer, context, comparer, BUFFER_TEMP);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
 
         // Determine the number of digits based on type size
         // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
@@ -155,8 +183,10 @@ public static class RadixLSD256Sort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void LSDSort<T, TComparer>(SortSpan<T, TComparer> s, SortSpan<T, TComparer> temp, int digitCount, int bitSize, Span<int> bucketOffsets)
-        where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
+    private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int digitCount, int bitSize, Span<int> bucketOffsets)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Perform LSD radix sort (only required passes)
         for (int d = 0; d < digitCount; d++)

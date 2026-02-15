@@ -80,17 +80,29 @@ public static class AmericanFlagSort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
+    private readonly struct AmericanFlagSortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+    {
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, comparer, context);
+        }
+    }
+
     /// <summary>
     /// Sorts the elements in the specified span using American Flag Sort.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using American Flag Sort with sort context.
     /// </summary>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new AmericanFlagSortAction<T, ComparableComparer<T>>());
 
     /// <summary>
     /// Sorts the elements in the specified span using American Flag Sort with comparer and sort context.
@@ -98,6 +110,16 @@ public static class AmericanFlagSort
     public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
+        => ContextDispatcher.DispatchSort(span, comparer, context, new AmericanFlagSortAction<T, TComparer>());
+
+    /// <summary>
+    /// Sorts integer values in the specified span with comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
@@ -116,11 +138,12 @@ public static class AmericanFlagSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer>(Span<T> span, Span<int> bucketOffsets, TComparer comparer, ISortContext context)
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<int> bucketOffsets, TComparer comparer, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Determine the number of digits based on type size
         // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
@@ -134,9 +157,10 @@ public static class AmericanFlagSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void AmericanFlagSortRecursive<T, TComparer>(SortSpan<T, TComparer> s, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
+    private static void AmericanFlagSortRecursive<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Base case: if length is small, use insertion sort
         if (length <= InsertionSortCutoff)
@@ -199,9 +223,10 @@ public static class AmericanFlagSort
     /// Uses a technique similar to cyclic permutation to avoid using auxiliary buffer.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PermuteInPlace<T, TComparer>(SortSpan<T, TComparer> s, int start, int length, int shift, int bitSize, Span<int> bucketOffsets, Span<int> bucketStarts)
+    private static void PermuteInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int length, int shift, int bitSize, Span<int> bucketOffsets, Span<int> bucketStarts)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Reset bucket offsets to their starting positions
         bucketStarts.CopyTo(bucketOffsets);
