@@ -254,7 +254,9 @@ public static class PairInsertionSort
     /// Performance improvement: Removes ALL boundary checks from both pair element insertions,
     /// providing maximum performance benefit for non-leftmost partitions.
     /// </remarks>
-    internal static void UnguardedSortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
+    internal static void UnguardedSortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var length = last - first;
         if (length <= 1) return;
