@@ -247,9 +247,10 @@ public static class LibrarySort
     /// <summary>
     /// Places elements with dynamic gap distribution and builds position buffer.
     /// </summary>
-    private static int PlaceWithGaps<T, TComparer>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>> aux, SortSpan<T, TComparer> src,
+    private static int PlaceWithGaps<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, SortSpan<T, TComparer, TContext> src,
         int srcStart, int count, int auxStart, int auxSize, Span<int> positions, out int posCount)
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         posCount = 0;
         if (count == 0) return auxStart;
@@ -296,8 +297,10 @@ public static class LibrarySort
     /// <summary>
     /// Binary search in position buffer (O(log n)).
     /// </summary>
-    private static int BinarySearchPositions<T, TComparer>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>> aux,
-        Span<int> positions, int count, T value, TComparer comparer) where TComparer : IComparer<T>
+    private static int BinarySearchPositions<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux,
+        Span<int> positions, int count, T value, TComparer comparer)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var left = 0;
         var right = count;
@@ -324,8 +327,10 @@ public static class LibrarySort
     /// Inserts element and updates position buffer incrementally.
     /// Returns true if a large shift occurred (suggesting rebalance is needed).
     /// </summary>
-    private static bool InsertAndUpdate<T, TComparer>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>> aux, ref int auxEnd, int maxSize,
-        T value, Span<int> positions, ref int posCount, int insertIdx) where TComparer : IComparer<T>
+    private static bool InsertAndUpdate<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, ref int auxEnd, int maxSize,
+        T value, Span<int> positions, ref int posCount, int insertIdx)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // insertIdx is the index in positions[], not the position in aux[]
         // We need to find the actual insertion position in aux[] based on the range
@@ -432,8 +437,9 @@ public static class LibrarySort
     /// Finds the first gap in the specified range.
     /// Returns -1 if no gap found.
     /// </summary>
-    private static int FindGap<T, TComparer>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>> aux, int start, int end)
+    private static int FindGap<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, int start, int end)
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Safety: limit the scan distance to prevent pathological cases
         var limit = Math.Min(end, start + MaxGapSearchDistance * 2);
@@ -469,8 +475,10 @@ public static class LibrarySort
     /// <summary>
     /// Rebalances with dynamic spacing to prevent data loss.
     /// </summary>
-    private static int Rebalance<T, TComparer>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>> aux, int auxSize,
-        Span<int> positions, ref int posCount, Span<T> tempBuffer) where TComparer : IComparer<T>
+    private static int Rebalance<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, int auxSize,
+        Span<int> positions, ref int posCount, Span<T> tempBuffer)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Collect elements
         var count = 0;
