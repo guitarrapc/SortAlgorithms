@@ -160,7 +160,6 @@ public class BubbleSortTests
         await Assert.That(items.Select(x => x.OriginalIndex).ToArray()).IsEquivalentTo(MockStabilityAllEqualsData.Sorted, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -271,7 +270,5 @@ public class BubbleSortTests
         var expectedMaxWrites = maxSwaps * 2;
         await Assert.That(stats.IndexWriteCount).IsBetween(expectedMinWrites, expectedMaxWrites);
     }
-
-#endif
 
 }

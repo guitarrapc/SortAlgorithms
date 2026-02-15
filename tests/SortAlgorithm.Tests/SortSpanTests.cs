@@ -1,5 +1,4 @@
-﻿#if DEBUG
-using SortAlgorithm.Algorithms;
+﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 using TUnit.Assertions.Enums;
 
@@ -104,5 +103,3 @@ public class SortSpanTests
         await Assert.That(contextLoop.IndexWriteCount).IsEqualTo(10UL);
     }
 }
-
-#endif

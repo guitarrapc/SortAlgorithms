@@ -97,7 +97,6 @@ public class CycleSortTests
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -220,7 +219,5 @@ public class CycleSortTests
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minCompares).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minCompares}");
     }
-
-#endif
 
 }

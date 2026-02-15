@@ -228,7 +228,6 @@ public class TernaryHeapSortTests
         await Assert.That(array).IsEquivalentTo([5, 5, 5, 5, 5], CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -372,6 +371,4 @@ public class TernaryHeapSortTests
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
-
-#endif
 }

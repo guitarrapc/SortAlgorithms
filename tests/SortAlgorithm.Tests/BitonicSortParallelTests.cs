@@ -133,7 +133,6 @@ public class BitonicSortParallelTests
         await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockPowerOfTwoSortedData), nameof(MockPowerOfTwoSortedData.Generate))]
@@ -237,6 +236,4 @@ public class BitonicSortParallelTests
 
         return (ulong)(n * k * (k + 1) / 4);
     }
-
-#endif
 }

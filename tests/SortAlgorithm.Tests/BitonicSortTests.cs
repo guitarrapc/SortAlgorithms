@@ -91,7 +91,6 @@ public class BitonicSortTests
         foreach (var item in array) await Assert.That(item).IsEqualTo(42);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockPowerOfTwoSortedData), nameof(MockPowerOfTwoSortedData.Generate))]
@@ -221,6 +220,4 @@ public class BitonicSortTests
         // Formula: n * k * (k+1) / 4
         return (ulong)(n * k * (k + 1) / 4);
     }
-
-#endif
 }

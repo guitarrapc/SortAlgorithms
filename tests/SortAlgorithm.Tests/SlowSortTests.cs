@@ -34,7 +34,6 @@ public class SlowSortTests
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test, SkipCI]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -304,8 +303,6 @@ public class SlowSortTests
         await Assert.That(statsSorted.SwapCount).IsEqualTo(0UL); // Sorted has no swaps
         await Assert.That(statsSorted.SwapCount).IsNotEqualTo(statsReversed.SwapCount); // Reversed has many swaps
     }
-
-#endif
 
     private static bool IsSorted<T>(T[] array) where T : IComparable<T>
     {

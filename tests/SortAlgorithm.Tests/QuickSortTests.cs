@@ -247,7 +247,6 @@ public class QuickSortTests
         await Assert.That(strings).IsEquivalentTo(["apple", "banana", "cherry", "mango", "zebra"], CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -428,7 +427,5 @@ public class QuickSortTests
         var expectedWrites = stats.SwapCount * 2;
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
     }
-
-#endif
 
 }

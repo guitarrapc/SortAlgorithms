@@ -160,7 +160,6 @@ public class CocktailShakerSortTests
         await Assert.That(items.Select(x => x.OriginalIndex).ToArray()).IsEquivalentTo(MockStabilityAllEqualsData.Sorted, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -265,7 +264,5 @@ public class CocktailShakerSortTests
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(stats.SwapCount * 2);
     }
-
-#endif
 
 }

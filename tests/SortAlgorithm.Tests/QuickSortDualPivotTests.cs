@@ -247,7 +247,6 @@ public class QuickSortDualPivotTests
         await Assert.That(strings).IsEquivalentTo(["apple", "banana", "cherry", "mango", "zebra"], CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -418,7 +417,5 @@ public class QuickSortDualPivotTests
         // Verify the array is still correct (all values unchanged)
         foreach(var item in sameValues) await Assert.That(item).IsEqualTo(42);
     }
-
-#endif
 
 }

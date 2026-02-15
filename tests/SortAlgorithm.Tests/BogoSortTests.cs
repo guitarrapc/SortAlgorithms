@@ -34,7 +34,6 @@ public class BogoSortTests
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test, SkipCI]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -155,7 +154,5 @@ public class BogoSortTests
         await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
     }
-
-#endif
 
 }
