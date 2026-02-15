@@ -247,7 +247,6 @@ public class QuickSortMedian9Tests
         await Assert.That(strings).IsEquivalentTo(["apple", "banana", "cherry", "mango", "zebra"], CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -430,7 +429,5 @@ public class QuickSortMedian9Tests
         var minIndexWrites = stats.SwapCount * 2;
         await Assert.That(stats.IndexWriteCount >= minIndexWrites).IsTrue().Because($"IndexWriteCount ({stats.IndexWriteCount}) should be >= {minIndexWrites}");
     }
-
-#endif
 
 }

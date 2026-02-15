@@ -165,7 +165,6 @@ public class RadixLSD10SortTests
         return true;
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -347,7 +346,5 @@ public class RadixLSD10SortTests
         }
         return count;
     }
-
-#endif
 
 }

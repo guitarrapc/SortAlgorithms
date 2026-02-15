@@ -67,25 +67,39 @@ public static class RadixMSD10Sort
     private const int BUFFER_TEMP = 1;       // Temporary buffer for digit redistribution
 
     /// <summary>
-    /// Sorts the elements in the specified span using a key selector function.
+    /// Sorts the elements in the specified span using American Flag Sort.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-    {
-        Sort(span, new ComparableComparer<T>(), NullContext.Default);
-    }
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span using a key selector function and sort context.
+    /// Sorts the elements in the specified span using American Flag Sort with sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
-    {
-        Sort(span, new ComparableComparer<T>(), context);
-    }
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TContext : ISortContext
+        => Sort(span, new ComparableComparer<T>(), context);
+
+    /// <summary>
+    /// Sorts integer values in the specified span with comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
@@ -98,7 +112,7 @@ public static class RadixMSD10Sort
             var tempBuffer = tempArray.AsSpan(0, span.Length);
             var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixBase + 1);
 
-            SortCore<T, TComparer>(span, tempBuffer, bucketOffsets, comparer, context);
+            SortCore<T, TComparer, TContext>(span, tempBuffer, bucketOffsets, comparer, context);
         }
         finally
         {
@@ -108,11 +122,13 @@ public static class RadixMSD10Sort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, ISortContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
-        var temp = new SortSpan<T, TComparer>(tempBuffer, context, comparer, BUFFER_TEMP);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
 
         // Determine the bit size for sign-bit flipping
         var bitSize = GetBitSize<T>();
@@ -126,8 +142,10 @@ public static class RadixMSD10Sort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void MSDSort<T, TComparer>(SortSpan<T, TComparer> s, SortSpan<T, TComparer> temp, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
-        where T : IBinaryInteger<T>, IMinMaxValue<T> where TComparer : IComparer<T>
+    private static void MSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Base case: if length is small, use insertion sort
         if (length <= InsertionSortCutoff)

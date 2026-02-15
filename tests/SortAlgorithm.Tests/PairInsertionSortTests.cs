@@ -206,7 +206,6 @@ public class PairInsertionSortTests
         await Assert.That(array).IsEquivalentTo(new[] { 1, 2, 3, 5, 8 }, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
 [Test]
 [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -221,7 +220,7 @@ public async Task StatisticsSortedTest(IInputSample<int> inputSample)
 
     await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
     await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        
+
     // Pair Insertion Sort writes pairs even when data is sorted
     // The number of writes depends on whether data is truly sorted or not
     // For sorted data: writes = 2 * number_of_pairs (because we read pairs upfront)
@@ -251,14 +250,14 @@ public async Task StatisticsSortedTest(IInputSample<int> inputSample)
         //   5. Write b to its position: 1 write
         // Number of pairs: floor(n/2) - 1 (excluding first element, which is trivially sorted)
         // If n is odd, last element needs 1 comparison + 0 writes (already in position)
-        
+
         var numPairs = (n - 1) / 2;  // Pairs starting from index 1
         var hasOdd = (n - 1) % 2 == 1;
-        
+
         // Each pair: 1 (a vs b) + 1 (j vs a) + 1 (j vs b) = 3 comparisons
         // Odd element: 1 comparison
         var expectedCompares = (ulong)(numPairs * 3 + (hasOdd ? 1 : 0));
-        
+
         // Each pair writes both elements even if already sorted (read them upfront)
         // Odd element: no write if already sorted
         var expectedWrites = (ulong)(numPairs * 2);
@@ -284,14 +283,14 @@ public async Task StatisticsSortedTest(IInputSample<int> inputSample)
         // Empirical observation: approximately n*(n-1)/2 + small overhead from pair comparisons
         var minCompares = (ulong)(n * (n - 1) / 2);
         var maxCompares = (ulong)(n * (n - 1) / 2 + n);  // Allow some overhead
-        
+
         await Assert.That(stats.CompareCount >= minCompares).IsTrue()
             .Because($"CompareCount ({stats.CompareCount}) should be >= {minCompares}");
         await Assert.That(stats.CompareCount <= maxCompares).IsTrue()
             .Because($"CompareCount ({stats.CompareCount}) should be <= {maxCompares}");
         await Assert.That(stats.IndexWriteCount > 0UL).IsTrue();
         await Assert.That(stats.SwapCount).IsEqualTo(0UL); // Insertion sort uses shifts, not swaps
-        
+
         // Verify array is sorted
         var expected = Enumerable.Range(0, n).ToArray();
         await Assert.That(reversed).IsEquivalentTo(expected, CollectionOrdering.Matching);
@@ -322,7 +321,5 @@ public async Task StatisticsSortedTest(IInputSample<int> inputSample)
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL); // Insertion sort uses shifts, not swaps
     }
-
-#endif
 
 }

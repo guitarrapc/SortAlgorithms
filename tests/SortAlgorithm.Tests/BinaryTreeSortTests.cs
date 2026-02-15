@@ -97,7 +97,6 @@ public class BinaryTreeSortTests
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -251,7 +250,5 @@ public class BinaryTreeSortTests
         AddMiddle(0, n - 1);
         return result.AsSpan();
     }
-
-#endif
 
 }

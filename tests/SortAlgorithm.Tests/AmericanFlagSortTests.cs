@@ -204,7 +204,6 @@ public class AmericanFlagSortTests
         await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -289,6 +288,4 @@ public class AmericanFlagSortTests
             await Assert.That(stats.SwapCount).IsNotEqualTo(0UL);
         }
     }
-
-#endif
 }

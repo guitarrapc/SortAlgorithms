@@ -124,7 +124,6 @@ public class PigeonholeSortTests
         await Assert.That(array).IsEmpty();
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -231,7 +230,5 @@ public class PigeonholeSortTests
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
     }
-
-#endif
 
 }

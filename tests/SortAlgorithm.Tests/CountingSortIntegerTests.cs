@@ -211,7 +211,6 @@ public class CountingSortIntegerTests
         return true;
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -321,7 +320,5 @@ public class CountingSortIntegerTests
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
     }
-
-#endif
 
 }

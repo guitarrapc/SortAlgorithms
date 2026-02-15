@@ -32,7 +32,6 @@ public class BucketSortIntegerTests
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -140,7 +139,5 @@ public class BucketSortIntegerTests
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
-
-#endif
 
 }

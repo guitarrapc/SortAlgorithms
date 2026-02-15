@@ -8,13 +8,17 @@ namespace SortAlgorithm.Algorithms;
 /// A wrapper around Span&lt;T&gt; that tracks sorting operations through ISortContext.
 /// Supports buffer identification for visualization purposes.
 /// Uses a generic TComparer for comparison operations, enabling JIT devirtualization when a struct comparer is used.
+/// Uses a generic TContext to enable zero-overhead optimization when NullContext is used (JIT eliminates all tracking code).
 /// </summary>
 /// <typeparam name="T">The type of elements in the span</typeparam>
 /// <typeparam name="TComparer">The type of comparer to use for element comparisons</typeparam>
-internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<T>
+/// <typeparam name="TContext">The type of context for tracking operations (use NullContext for zero-overhead fast path)</typeparam>
+internal readonly ref struct SortSpan<T, TComparer, TContext> 
+    where TComparer : IComparer<T>
+    where TContext : ISortContext
 {
     private readonly Span<T> _span;
-    private readonly ISortContext _context;
+    private readonly TContext _context;
     private readonly TComparer _comparer;
     private readonly int _bufferId;
 
@@ -25,7 +29,7 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     /// <param name="context">The context for tracking operations</param>
     /// <param name="comparer">The comparer to use for element comparisons</param>
     /// <param name="bufferId">Buffer identifier (0 = main array, 1+ = auxiliary buffers). Default is 0.</param>
-    public SortSpan(Span<T> span, ISortContext context, TComparer comparer, int bufferId)
+    public SortSpan(Span<T> span, TContext context, TComparer comparer, int bufferId)
     {
         _span = span;
         _context = context;
@@ -53,9 +57,11 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T Read(int i)
     {
-#if DEBUG
-        _context.OnIndexRead(i, _bufferId);
-#endif
+        // JIT optimizes this away when TContext is NullContext (Dead Code Elimination)
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            _context.OnIndexRead(i, _bufferId);
+        }
         return _span[i];
     }
 
@@ -67,9 +73,11 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Write(int i, T value)
     {
-#if DEBUG
-        _context.OnIndexWrite(i, _bufferId, value);
-#endif
+        // JIT optimizes this away when TContext is NullContext (Dead Code Elimination)
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            _context.OnIndexWrite(i, _bufferId, value);
+        }
         _span[i] = value;
     }
 
@@ -84,15 +92,20 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Compare(int i, int j)
     {
-#if DEBUG
-        var a = Read(i);
-        var b = Read(j);
-        var result = _comparer.Compare(a, b);
-        _context.OnCompare(i, j, result, _bufferId, _bufferId);
-        return result;
-#else
-        return _comparer.Compare(_span[i], _span[j]);
-#endif
+        // JIT optimizes this entire path when TContext is NullContext
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = Read(i);
+            var b = Read(j);
+            var result = _comparer.Compare(a, b);
+            _context.OnCompare(i, j, result, _bufferId, _bufferId);
+            return result;
+        }
+        else
+        {
+            // Fast path: direct array access without tracking
+            return _comparer.Compare(_span[i], _span[j]);
+        }
     }
 
     /// <summary>
@@ -105,14 +118,19 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Compare(int i, T value)
     {
-#if DEBUG
-        var a = Read(i);
-        var result = _comparer.Compare(a, value);
-        _context.OnCompare(i, -1, result, _bufferId, -1);
-        return result;
-#else
-        return _comparer.Compare(_span[i], value);
-#endif
+        // JIT optimizes this entire path when TContext is NullContext
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = Read(i);
+            var result = _comparer.Compare(a, value);
+            _context.OnCompare(i, -1, result, _bufferId, -1);
+            return result;
+        }
+        else
+        {
+            // Fast path: direct array access without tracking
+            return _comparer.Compare(_span[i], value);
+        }
     }
 
     /// <summary>
@@ -125,14 +143,19 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Compare(T value, int i)
     {
-#if DEBUG
-        var b = Read(i);
-        var result = _comparer.Compare(value, b);
-        _context.OnCompare(-1, i, result, -1, _bufferId);
-        return result;
-#else
-        return _comparer.Compare(value, _span[i]);
-#endif
+        // JIT optimizes this entire path when TContext is NullContext
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var b = Read(i);
+            var result = _comparer.Compare(value, b);
+            _context.OnCompare(-1, i, result, -1, _bufferId);
+            return result;
+        }
+        else
+        {
+            // Fast path: direct array access without tracking
+            return _comparer.Compare(value, _span[i]);
+        }
     }
 
     /// <summary>
@@ -145,13 +168,18 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Compare(T a, T b)
     {
-#if DEBUG
-        var result = _comparer.Compare(a, b);
-        _context.OnCompare(-1, -1, result, -1, -1);
-        return result;
-#else
-        return _comparer.Compare(a, b);
-#endif
+        // JIT optimizes this entire path when TContext is NullContext
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var result = _comparer.Compare(a, b);
+            _context.OnCompare(-1, -1, result, -1, -1);
+            return result;
+        }
+        else
+        {
+            // Fast path: direct comparison without tracking
+            return _comparer.Compare(a, b);
+        }
     }
 
     /// <summary>
@@ -164,9 +192,11 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Swap(int i, int j)
     {
-#if DEBUG
-        _context.OnSwap(i, j, _bufferId);
-#endif
+        // JIT optimizes this away when TContext is NullContext (Dead Code Elimination)
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            _context.OnSwap(i, j, _bufferId);
+        }
         (_span[i], _span[j]) = (_span[j], _span[i]);
     }
 
@@ -178,16 +208,18 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     /// <param name="destinationIndex">The starting index in the destination span.</param>
     /// <param name="length">The number of elements to copy.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void CopyTo(int sourceIndex, SortSpan<T, TComparer> destination, int destinationIndex, int length)
+    public void CopyTo(int sourceIndex, SortSpan<T, TComparer, TContext> destination, int destinationIndex, int length)
     {
-#if DEBUG
-        var values = new object?[length];
-        for (int i = 0; i < length; i++)
+        // JIT optimizes this away when TContext is NullContext (Dead Code Elimination)
+        if (typeof(TContext) != typeof(NullContext))
         {
-            values[i] = _span[sourceIndex + i];
+            var values = new object?[length];
+            for (int i = 0; i < length; i++)
+            {
+                values[i] = _span[sourceIndex + i];
+            }
+            _context.OnRangeCopy(sourceIndex, destinationIndex, length, _bufferId, destination.BufferId, values);
         }
-        _context.OnRangeCopy(sourceIndex, destinationIndex, length, _bufferId, destination.BufferId, values);
-#endif
         _span.Slice(sourceIndex, length).CopyTo(destination._span.Slice(destinationIndex, length));
     }
 
@@ -201,14 +233,16 @@ internal readonly ref struct SortSpan<T, TComparer> where TComparer : IComparer<
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void CopyTo(int sourceIndex, Span<T> destination, int destinationIndex, int length)
     {
-#if DEBUG
-        var values = new object?[length];
-        for (int i = 0; i < length; i++)
+        // JIT optimizes this away when TContext is NullContext (Dead Code Elimination)
+        if (typeof(TContext) != typeof(NullContext))
         {
-            values[i] = _span[sourceIndex + i];
+            var values = new object?[length];
+            for (int i = 0; i < length; i++)
+            {
+                values[i] = _span[sourceIndex + i];
+            }
+            _context.OnRangeCopy(sourceIndex, destinationIndex, length, _bufferId, -1, values);
         }
-        _context.OnRangeCopy(sourceIndex, destinationIndex, length, _bufferId, -1, values);
-#endif
         _span.Slice(sourceIndex, length).CopyTo(destination.Slice(destinationIndex, length));
     }
 }

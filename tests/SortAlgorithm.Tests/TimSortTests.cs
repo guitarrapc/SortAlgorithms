@@ -150,7 +150,6 @@ public class TimSortTests
         await Assert.That(items.Select(x => x.OriginalIndex).ToArray()).IsEquivalentTo(MockStabilityAllEqualsData.Sorted, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -300,7 +299,5 @@ public class TimSortTests
         // Random data may have descending runs that get reversed with swaps
         await Assert.That(stats.SwapCount < (ulong)(n / 4)).IsTrue().Because($"SwapCount ({stats.SwapCount}) should be less than n/4 ({n / 4})");
     }
-
-#endif
 
 }

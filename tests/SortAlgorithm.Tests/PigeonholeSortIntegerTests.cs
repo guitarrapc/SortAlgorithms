@@ -86,7 +86,6 @@ public class PigeonholeSortIntegerTests
         await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -199,7 +198,5 @@ public class PigeonholeSortIntegerTests
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
     }
-
-#endif
 
 }

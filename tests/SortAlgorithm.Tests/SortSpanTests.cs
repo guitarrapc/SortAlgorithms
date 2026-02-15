@@ -1,5 +1,4 @@
-﻿#if DEBUG
-using SortAlgorithm.Algorithms;
+﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 using TUnit.Assertions.Enums;
 
@@ -15,8 +14,8 @@ public class SortSpanTests
         var destination = new int[5];
         var context = new StatisticsContext();
 
-        var sourceSpan = new SortSpan<int, Comparer<int>>(source.AsSpan(), context, Comparer<int>.Default, 0);
-        var destSpan = new SortSpan<int, Comparer<int>>(destination.AsSpan(), context, Comparer<int>.Default, 1);
+        var sourceSpan = new SortSpan<int, Comparer<int>, StatisticsContext>(source.AsSpan(), context, Comparer<int>.Default, 0);
+        var destSpan = new SortSpan<int, Comparer<int>, StatisticsContext>(destination.AsSpan(), context, Comparer<int>.Default, 1);
 
         // Act
         sourceSpan.CopyTo(1, destSpan, 0, 3); // Copy [2, 3, 4] to destination[0..3]
@@ -37,8 +36,8 @@ public class SortSpanTests
         var destination = new int[5];
         var context = new StatisticsContext();
 
-        var sourceSpan = new SortSpan<int, Comparer<int>>(source.AsSpan(), context, Comparer<int>.Default, 0);
-        var destSpan = new SortSpan<int, Comparer<int>>(destination.AsSpan(), context, Comparer<int>.Default, 1);
+        var sourceSpan = new SortSpan<int, Comparer<int>, StatisticsContext>(source.AsSpan(), context, Comparer<int>.Default, 0);
+        var destSpan = new SortSpan<int, Comparer<int>, StatisticsContext>(destination.AsSpan(), context, Comparer<int>.Default, 1);
 
         // Act
         sourceSpan.CopyTo(0, destSpan, 0, 3); // Copy 3 elements
@@ -56,7 +55,7 @@ public class SortSpanTests
         var destination = new int[5];
         var context = new StatisticsContext();
 
-        var sourceSpan = new SortSpan<int, Comparer<int>>(source.AsSpan(), context, Comparer<int>.Default, 0);
+        var sourceSpan = new SortSpan<int, Comparer<int>, StatisticsContext>(source.AsSpan(), context, Comparer<int>.Default, 0);
 
         // Act
         sourceSpan.CopyTo(2, destination.AsSpan(), 1, 2); // Copy [3, 4] to destination[1..3]
@@ -78,11 +77,11 @@ public class SortSpanTests
         var contextCopyTo = new StatisticsContext();
         var contextLoop = new StatisticsContext();
 
-        var sourceSpan1 = new SortSpan<int, Comparer<int>>(source.AsSpan(), contextCopyTo, Comparer<int>.Default, 0);
-        var destSpan1 = new SortSpan<int, Comparer<int>>(destination1.AsSpan(), contextCopyTo, Comparer<int>.Default, 1);
+        var sourceSpan1 = new SortSpan<int, Comparer<int>, StatisticsContext>(source.AsSpan(), contextCopyTo, Comparer<int>.Default, 0);
+        var destSpan1 = new SortSpan<int, Comparer<int>, StatisticsContext>(destination1.AsSpan(), contextCopyTo, Comparer<int>.Default, 1);
 
-        var sourceSpan2 = new SortSpan<int, Comparer<int>>(source.AsSpan(), contextLoop, Comparer<int>.Default, 0);
-        var destSpan2 = new SortSpan<int, Comparer<int>>(destination2.AsSpan(), contextLoop, Comparer<int>.Default, 1);
+        var sourceSpan2 = new SortSpan<int, Comparer<int>, StatisticsContext>(source.AsSpan(), contextLoop, Comparer<int>.Default, 0);
+        var destSpan2 = new SortSpan<int, Comparer<int>, StatisticsContext>(destination2.AsSpan(), contextLoop, Comparer<int>.Default, 1);
 
         // Act - using CopyTo
         sourceSpan1.CopyTo(0, destSpan1, 0, 10);
@@ -104,5 +103,3 @@ public class SortSpanTests
         await Assert.That(contextLoop.IndexWriteCount).IsEqualTo(10UL);
     }
 }
-
-#endif

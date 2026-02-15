@@ -177,7 +177,6 @@ public class DropMergeSortTests
         await Assert.That(array).IsEquivalentTo([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20], CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -334,7 +333,5 @@ public class DropMergeSortTests
         await Assert.That(stats.IndexReadCount).IsBetween(minReads, maxReads);
         // DropMergeSort may use swaps in QuickSort for dropped elements
     }
-
-#endif
 
 }

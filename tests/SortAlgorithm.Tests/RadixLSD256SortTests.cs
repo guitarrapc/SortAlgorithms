@@ -165,7 +165,6 @@ public class RadixLSD256SortTests
         return true;
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -301,7 +300,5 @@ public class RadixLSD256SortTests
         // Verify result is sorted
         await Assert.That(mixed).IsEquivalentTo(mixed.OrderBy(x => x), CollectionOrdering.Matching);
     }
-
-#endif
 
 }

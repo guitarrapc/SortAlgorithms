@@ -101,6 +101,7 @@ public static class LibrarySort
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
@@ -110,21 +111,28 @@ public static class LibrarySort
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}\"/>.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
-    /// <param name="context">The sort context for tracking statistics and observations during sorting. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
         => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="comparer">The comparer to use for element comparisons.</param>
-    /// <param name="context">The sort context for tracking statistics and observations during sorting. Cannot be null.</param>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    /// <param name="context">The sort context for tracking statistics and observations during sorting.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var length = span.Length;
         if (length <= 1) return;
@@ -136,14 +144,16 @@ public static class LibrarySort
             return;
         }
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, length, comparer, context);
     }
 
     /// <summary>
     /// Core sorting logic with proper gap management and O(log n) search.
     /// </summary>
-    private static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int length, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int length, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Auxiliary array size: (1+ε)n with safety margin
         // With ε=0.5: (1.5 * 1.05)n ≈ 1.575n
@@ -156,7 +166,7 @@ public static class LibrarySort
         try
         {
             var auxComparer = new LibraryElementComparer<T, TComparer>(comparer);
-            var aux = new SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>>(auxArray.AsSpan(0, auxSize), context, auxComparer, BUFFER_AUX);
+            var aux = new SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext>(auxArray.AsSpan(0, auxSize), context, auxComparer, BUFFER_AUX);
             // Note: positions uses Span<int> (not SortSpan) for O(1) memcpy performance
             var positions = positionsArray.AsSpan(0, length);
 
@@ -218,9 +228,10 @@ public static class LibrarySort
     /// <summary>
     /// Places elements with dynamic gap distribution and builds position buffer.
     /// </summary>
-    private static int PlaceWithGaps<T, TComparer>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>> aux, SortSpan<T, TComparer> src,
+    private static int PlaceWithGaps<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, SortSpan<T, TComparer, TContext> src,
         int srcStart, int count, int auxStart, int auxSize, Span<int> positions, out int posCount)
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         posCount = 0;
         if (count == 0) return auxStart;
@@ -267,8 +278,10 @@ public static class LibrarySort
     /// <summary>
     /// Binary search in position buffer (O(log n)).
     /// </summary>
-    private static int BinarySearchPositions<T, TComparer>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>> aux,
-        Span<int> positions, int count, T value, TComparer comparer) where TComparer : IComparer<T>
+    private static int BinarySearchPositions<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux,
+        Span<int> positions, int count, T value, TComparer comparer)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var left = 0;
         var right = count;
@@ -295,8 +308,10 @@ public static class LibrarySort
     /// Inserts element and updates position buffer incrementally.
     /// Returns true if a large shift occurred (suggesting rebalance is needed).
     /// </summary>
-    private static bool InsertAndUpdate<T, TComparer>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>> aux, ref int auxEnd, int maxSize,
-        T value, Span<int> positions, ref int posCount, int insertIdx) where TComparer : IComparer<T>
+    private static bool InsertAndUpdate<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, ref int auxEnd, int maxSize,
+        T value, Span<int> positions, ref int posCount, int insertIdx)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // insertIdx is the index in positions[], not the position in aux[]
         // We need to find the actual insertion position in aux[] based on the range
@@ -403,8 +418,9 @@ public static class LibrarySort
     /// Finds the first gap in the specified range.
     /// Returns -1 if no gap found.
     /// </summary>
-    private static int FindGap<T, TComparer>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>> aux, int start, int end)
+    private static int FindGap<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, int start, int end)
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Safety: limit the scan distance to prevent pathological cases
         var limit = Math.Min(end, start + MaxGapSearchDistance * 2);
@@ -440,8 +456,10 @@ public static class LibrarySort
     /// <summary>
     /// Rebalances with dynamic spacing to prevent data loss.
     /// </summary>
-    private static int Rebalance<T, TComparer>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>> aux, int auxSize,
-        Span<int> positions, ref int posCount, Span<T> tempBuffer) where TComparer : IComparer<T>
+    private static int Rebalance<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, int auxSize,
+        Span<int> positions, ref int posCount, Span<T> tempBuffer)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Collect elements
         var count = 0;

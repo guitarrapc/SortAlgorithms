@@ -59,6 +59,7 @@ public static class BucketSort
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
         => Sort(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
@@ -66,17 +67,22 @@ public static class BucketSort
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector, ISortContext context) where T : IComparable<T>
+    public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
         => Sort(span, keySelector, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, Func<T, int> keySelector, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var keysArray = ArrayPool<int>.Shared.Rent(span.Length);
@@ -84,7 +90,7 @@ public static class BucketSort
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T, TComparer>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
 
             SortCore(span, keySelector, s, tempSpan, tempArray.AsSpan(0, span.Length), keys, context);
@@ -96,7 +102,9 @@ public static class BucketSort
         }
     }
 
-    private static void SortCore<T, TComparer>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer> s, SortSpan<T, TComparer> tempSpan, Span<T> tempArray, Span<int> keys, ISortContext context) where TComparer : IComparer<T>
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> keys, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Find min/max and cache keys in single pass
         var min = int.MaxValue;
@@ -133,7 +141,9 @@ public static class BucketSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void BucketDistribute<T, TComparer>(SortSpan<T, TComparer> s, SortSpan<T, TComparer> temp, Span<T> tempArray, Span<int> keys, int bucketCount, long bucketSize, int min, ISortContext context) where TComparer : IComparer<T>
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> keys, int bucketCount, long bucketSize, int min, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Count elements per bucket and calculate bucket positions (stackalloc)
         Span<int> bucketCounts = stackalloc int[bucketCount];
@@ -182,7 +192,7 @@ public static class BucketSort
             if (count > 1)
             {
                 var start = bucketStarts[i];
-                var bucketSpan = new SortSpan<T, TComparer>(tempArray.Slice(start, count), context, s.Comparer, BUFFER_BUCKET_BASE + i);
+                var bucketSpan = new SortSpan<T, TComparer, TContext>(tempArray.Slice(start, count), context, s.Comparer, BUFFER_BUCKET_BASE + i);
                 InsertionSortBucket(bucketSpan);
             }
         }
@@ -196,7 +206,9 @@ public static class BucketSort
     /// Uses SortSpan to track all operations for statistics and visualization
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void InsertionSortBucket<T, TComparer>(SortSpan<T, TComparer> s) where TComparer : IComparer<T>
+    private static void InsertionSortBucket<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         for (var i = 1; i < s.Length; i++)
         {
@@ -261,32 +273,41 @@ public static class BucketSortInteger
     private const int BUFFER_TEMP = 1;       // Temporary buffer
 
     /// <summary>
-    /// Sorts integer values in the specified span (generic version for IBinaryInteger types).
+    /// Sorts the elements in the specified span using American Flag Sort.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-    {
-        Sort(span, new ComparableComparer<T>(), NullContext.Default);
-    }
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts integer values in the specified span with sort context (generic version for IBinaryInteger types).
+    /// Sorts the elements in the specified span using American Flag Sort with sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TContext : ISortContext
         => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
-    /// Sorts integer values in the specified span with comparer and sort context (generic version for IBinaryInteger types).
+    /// Sorts integer values in the specified span with comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
         // Check if type is supported (64-bit or less)
         var bitSize = GetBitSize<T>();
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var indicesArray = ArrayPool<int>.Shared.Rent(span.Length);
@@ -294,7 +315,7 @@ public static class BucketSortInteger
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T, TComparer>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var indices = indicesArray.AsSpan(0, span.Length);
 
             SortCore(span, s, tempSpan, tempArray.AsSpan(0, span.Length), indices, context);
@@ -306,9 +327,10 @@ public static class BucketSortInteger
         }
     }
 
-    private static void SortCore<T, TComparer>(Span<T> span, SortSpan<T, TComparer> s, SortSpan<T, TComparer> tempSpan, Span<T> tempArray, Span<int> bucketIndices, ISortContext context)
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> bucketIndices, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Find min and max
         var minValue = s.Read(0);
@@ -348,9 +370,10 @@ public static class BucketSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void BucketDistribute<T, TComparer>(SortSpan<T, TComparer> source, SortSpan<T, TComparer> temp, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, long bucketSize, long min, ISortContext context)
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, long bucketSize, long min, TContext context)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Count elements per bucket and calculate bucket positions (stackalloc)
         Span<int> bucketCounts = stackalloc int[bucketCount];

@@ -63,6 +63,7 @@ public static class PigeonholeSort
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
         => Sort(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
@@ -70,17 +71,22 @@ public static class PigeonholeSort
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector, ISortContext context) where T : IComparable<T>
+    public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
         => Sort(span, keySelector, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, Func<T, int> keySelector, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var keysArray = ArrayPool<int>.Shared.Rent(span.Length);
@@ -88,7 +94,7 @@ public static class PigeonholeSort
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T, TComparer>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
 
             SortCore(span, keySelector, s, tempSpan, keys);
@@ -100,7 +106,9 @@ public static class PigeonholeSort
         }
     }
 
-    private static void SortCore<T, TComparer>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer> s, SortSpan<T, TComparer> tempSpan, Span<int> keys) where TComparer : IComparer<T>
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<int> keys)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Find min/max and cache keys in single pass
         var min = int.MaxValue;
@@ -151,7 +159,9 @@ public static class PigeonholeSort
     /// Achieves O(n + k) complexity by processing elements in a single pass.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PigeonholeDistribute<T, TComparer>(SortSpan<T, TComparer> source, SortSpan<T, TComparer> temp, Span<int> keys, Span<int> holes, int offset) where TComparer : IComparer<T>
+    private static void PigeonholeDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<int> keys, Span<int> holes, int offset)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Phase 1: Copy elements to temp array and count occurrences (O(n))
         for (var i = 0; i < source.Length; i++)
@@ -226,39 +236,48 @@ public static class PigeonholeSortInteger
     private const int BUFFER_TEMP = 1;       // Temporary buffer for elements
 
     /// <summary>
-    /// Sorts integer values in the specified span (generic version for IBinaryInteger types).
+    /// Sorts the elements in the specified span using American Flag Sort.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-    {
-        Sort(span, new ComparableComparer<T>(), NullContext.Default);
-    }
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts integer values in the specified span with sort context (generic version for IBinaryInteger types).
+    /// Sorts the elements in the specified span using American Flag Sort with sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TContext : ISortContext
         => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
-    /// Sorts integer values in the specified span with comparer and sort context (generic version for IBinaryInteger types).
+    /// Sorts integer values in the specified span with comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
         // Check if type is supported (64-bit or less)
         var bitSize = GetBitSize<T>();
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T, TComparer>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
 
             SortCore(span, s, tempSpan);
         }
@@ -268,9 +287,10 @@ public static class PigeonholeSortInteger
         }
     }
 
-    private static void SortCore<T, TComparer>(Span<T> span, SortSpan<T, TComparer> s, SortSpan<T, TComparer> tempSpan)
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Find min and max to determine range
         var minValue = T.MaxValue;
@@ -320,9 +340,10 @@ public static class PigeonholeSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PigeonholeDistribute<T, TComparer>(SortSpan<T, TComparer> source, SortSpan<T, TComparer> temp, Span<int> holes, long offset)
+    private static void PigeonholeDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<int> holes, long offset)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Phase 1: Copy elements to temp array and count occurrences (O(n))
         for (var i = 0; i < source.Length; i++)

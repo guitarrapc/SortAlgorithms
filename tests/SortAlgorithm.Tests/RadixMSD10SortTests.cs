@@ -220,7 +220,6 @@ public class RadixMSD10SortTests
         await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -404,7 +403,5 @@ public class RadixMSD10SortTests
         await Assert.That(stats.CompareCount).IsEqualTo(0UL);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
-
-#endif
 
 }

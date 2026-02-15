@@ -159,7 +159,6 @@ public class RotateMergeSortTests
         await Assert.That(resultOrder).IsEquivalentTo(originalOrder, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -316,7 +315,5 @@ public class RotateMergeSortTests
         await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
         await Assert.That(stats.IndexReadCount >= minReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minReads}");
     }
-
-#endif
 
 }

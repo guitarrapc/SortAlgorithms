@@ -258,7 +258,6 @@ public class LibrarySortTests
     }
 
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -278,6 +277,4 @@ public class LibrarySortTests
         await Assert.That(stats.IndexWriteCount).IsGreaterThan(0UL); // Library sort always writes to aux array
         await Assert.That(stats.SwapCount).IsEqualTo(0UL); // Library sort doesn't use swaps
     }
-
-#endif
 }

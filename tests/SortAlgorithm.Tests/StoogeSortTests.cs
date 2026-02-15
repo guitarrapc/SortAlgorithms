@@ -34,7 +34,6 @@ public class StoogeSortTests
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test, SkipCI]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -225,8 +224,6 @@ public class StoogeSortTests
         await Assert.That(stats.IndexReadCount).IsEqualTo(4UL); // 1 comparison (2 reads) + 1 swap (2 reads) = 4 reads
         await Assert.That(array).IsEquivalentTo([1, 2], CollectionOrdering.Matching);
     }
-
-#endif
 
     private static bool IsSorted<T>(T[] array) where T : IComparable<T>
     {

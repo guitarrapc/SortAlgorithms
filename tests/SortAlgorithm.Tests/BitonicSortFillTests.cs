@@ -159,7 +159,6 @@ public class BitonicSortFillTests
         await Assert.That(array).IsEquivalentTo(Enumerable.Range(0, 100).ToArray(), CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockPowerOfTwoSortedData), nameof(MockPowerOfTwoSortedData.Generate))]
@@ -296,6 +295,4 @@ public class BitonicSortFillTests
         // Formula: n * k * (k+1) / 4
         return (ulong)(paddedN * k * (k + 1) / 4);
     }
-
-#endif
 }
