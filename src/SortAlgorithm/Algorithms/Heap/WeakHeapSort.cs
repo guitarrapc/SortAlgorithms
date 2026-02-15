@@ -102,14 +102,13 @@ public static class WeakHeapSort
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of the comparer</typeparam>
     /// <typeparam name="TContext">The type of the sort context.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="comparer">The comparer to use for element comparisons.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
-        where T : IComparable<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
         => Sort(span, 0, span.Length, comparer, context);
