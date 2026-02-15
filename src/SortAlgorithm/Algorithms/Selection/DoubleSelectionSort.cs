@@ -58,13 +58,33 @@ public static class DoubleSelectionSort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
+    private readonly struct DoubleSelectionSortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        private readonly int _first;
+        private readonly int _last;
+
+        public DoubleSelectionSortAction(int first, int last)
+        {
+            _first = first;
+            _last = last;
+        }
+
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, _first, _last, comparer, context);
+        }
+    }
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -73,7 +93,7 @@ public static class DoubleSelectionSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new DoubleSelectionSortAction<T, ComparableComparer<T>>(0, span.Length));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -85,7 +105,7 @@ public static class DoubleSelectionSort
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => Sort(span, first, last, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new DoubleSelectionSortAction<T, ComparableComparer<T>>(first, last));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
@@ -97,7 +117,17 @@ public static class DoubleSelectionSort
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <param name="comparer">The comparer to use for element comparisons.</param>
     /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
+        => ContextDispatcher.DispatchSort(span, comparer, context, new DoubleSelectionSortAction<T, TComparer>(first, last));
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -105,7 +135,7 @@ public static class DoubleSelectionSort
 
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last);
     }
 
@@ -117,7 +147,9 @@ public static class DoubleSelectionSort
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
-    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var left = first;
         var right = last - 1;
