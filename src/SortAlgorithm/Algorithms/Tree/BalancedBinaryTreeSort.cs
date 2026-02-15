@@ -148,7 +148,7 @@ public static class BalancedBinaryTreeSort
         try
         {
             var arenaSpan = arena.AsSpan(0, span.Length);
-            SortCore(span, comparer, context, arenaSpan, pathStack);
+            SortCore<T, TComparer, TContext>(span, comparer, context, arenaSpan, pathStack);
         }
         finally
         {
@@ -165,13 +165,16 @@ public static class BalancedBinaryTreeSort
     /// Builds a balanced binary search tree iteratively, then performs in-order traversal.
     /// </summary>
     /// <param name="span">The span to sort</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
     /// <param name="context">Sort context for statistics tracking</param>
     /// <param name="arena">Preallocated arena for tree nodes</param>
     /// <param name="pathStack">Preallocated stack for tracking insertion path</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context, Span<Node<T>> arena, Span<int> pathStack) where TComparer : IComparer<T>
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context, Span<Node<T>> arena, Span<int> pathStack)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         var rootIndex = NULL_INDEX;
         var nodeCount = 0;
 
@@ -614,14 +617,17 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="comparer">The comparer to use for element comparisons.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         Node<T>? root = null;
 
