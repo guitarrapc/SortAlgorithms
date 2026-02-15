@@ -134,9 +134,11 @@ public static class ShiftSort
     /// Core sorting logic - detects runs and merges them.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context, Span<int> zeroIndices) where TComparer : IComparer<T>
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context, Span<int> zeroIndices)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Phase 1: Run Detection - Identify natural sorted sequences and their boundaries
         zeroIndices[0] = s.Length;
@@ -186,7 +188,9 @@ public static class ShiftSort
     /// Recursively divides the run index list and merges runs bottom-up.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Split<T, TComparer>(SortSpan<T, TComparer> s, Span<int> zeroIndices, int i, int j, ISortContext context) where TComparer : IComparer<T>
+    private static void Split<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> zeroIndices, int i, int j, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Base case: 2 runs - merge them directly
         if ((j - i) == 2)
@@ -219,7 +223,9 @@ public static class ShiftSort
     /// The smaller partition is buffered to minimize memory allocation and write operations.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Merge<T, TComparer>(SortSpan<T, TComparer> s, int first, int second, int third, ISortContext context) where TComparer : IComparer<T>
+    private static void Merge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int second, int third, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (second - first > third - second)
         {
@@ -228,7 +234,7 @@ public static class ShiftSort
             var tmp2nd = ArrayPool<T>.Shared.Rent(bufferSize);
             try
             {
-                var tmp2ndSpan = new SortSpan<T, TComparer>(tmp2nd.AsSpan(0, bufferSize), context, s.Comparer, BUFFER_TEMP_SECOND);
+                var tmp2ndSpan = new SortSpan<T, TComparer, TContext>(tmp2nd.AsSpan(0, bufferSize), context, s.Comparer, BUFFER_TEMP_SECOND);
 
                 // Copy second partition to buffer using CopyTo for efficiency
                 s.CopyTo(second, tmp2ndSpan, 0, bufferSize);
@@ -263,7 +269,7 @@ public static class ShiftSort
             var tmp1st = ArrayPool<T>.Shared.Rent(bufferSize);
             try
             {
-                var tmp1stSpan = new SortSpan<T, TComparer>(tmp1st.AsSpan(0, bufferSize), context, s.Comparer, BUFFER_TEMP_FIRST);
+                var tmp1stSpan = new SortSpan<T, TComparer, TContext>(tmp1st.AsSpan(0, bufferSize), context, s.Comparer, BUFFER_TEMP_FIRST);
 
                 // Copy first partition to buffer using CopyTo for efficiency
                 s.CopyTo(first, tmp1stSpan, 0, bufferSize);

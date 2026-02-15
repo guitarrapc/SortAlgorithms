@@ -92,13 +92,33 @@ public static class PowerSort
     private const int MIN_MERGE = 32;        // Minimum sized sequence to merge
     private const int MIN_GALLOP = 7;        // Threshold for entering galloping mode
 
+    private readonly struct PowerSortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        private readonly int _first;
+        private readonly int _last;
+
+        public PowerSortAction(int first, int last)
+        {
+            _first = first;
+            _last = last;
+        }
+
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, _first, _last, comparer, context);
+        }
+    }
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -107,7 +127,7 @@ public static class PowerSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new PowerSortAction<T, ComparableComparer<T>>(0, span.Length));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -118,7 +138,7 @@ public static class PowerSort
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => Sort(span, first, last, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new PowerSortAction<T, ComparableComparer<T>>(first, last));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
@@ -130,7 +150,17 @@ public static class PowerSort
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="comparer">The comparer to use for element comparisons.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
+        => ContextDispatcher.DispatchSort(span, comparer, context, new PowerSortAction<T, TComparer>(first, last));
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -153,10 +183,12 @@ public static class PowerSort
     /// Core PowerSort implementation.
     /// Based on the algorithm from the PowerSort paper (Algorithm in Section 5.3).
     /// </summary>
-    private static void SortCore<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var n = last - first;
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // PowerSort uses a stack with node-power values to determine merge order
         Span<int> runBase = stackalloc int[85]; // 85 is enough for 2^64 elements
@@ -237,7 +269,9 @@ public static class PowerSort
     /// A run is either ascending or strictly descending (which is then reversed).
     /// Short runs are extended to MIN_MERGE using binary insertion sort.
     /// </summary>
-    private static int FindAndPrepareRun<T, TComparer>(SortSpan<T, TComparer> s, int start, int last) where TComparer : IComparer<T>
+    private static int FindAndPrepareRun<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var runEnd = start + 1;
 
@@ -283,7 +317,9 @@ public static class PowerSort
     /// Reverses the elements in the range [lo..hi].
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Reverse<T, TComparer>(SortSpan<T, TComparer> s, int lo, int hi) where TComparer : IComparer<T>
+    private static void Reverse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lo, int hi)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         while (lo < hi)
         {
@@ -335,9 +371,11 @@ public static class PowerSort
     /// <summary>
     /// Merges two adjacent runs with galloping mode optimization.
     /// </summary>
-    private static void MergeRuns<T, TComparer>(Span<T> span, int base1, int len1, int base2, int len2, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    private static void MergeRuns<T, TComparer, TContext>(Span<T> span, int base1, int len1, int base2, int len2, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         var ms = new MergeState();
 
         // Optimize: Find where first element of run2 goes in run1
@@ -369,7 +407,9 @@ public static class PowerSort
     /// and all elements in [base+k..base+len) are greater than or equal to key.
     /// Uses galloping (exponential search followed by binary search).
     /// </summary>
-    private static int GallopLeft<T, TComparer>(SortSpan<T, TComparer> s, T key, int baseIdx, int len, int hint) where TComparer : IComparer<T>
+    private static int GallopLeft<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, T key, int baseIdx, int len, int hint)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var lastOfs = 0;
         var ofs = 1;
@@ -442,7 +482,9 @@ public static class PowerSort
     /// and all elements in [base+k..base+len) are greater than key.
     /// Uses galloping (exponential search followed by binary search).
     /// </summary>
-    private static int GallopRight<T, TComparer>(SortSpan<T, TComparer> s, T key, int baseIdx, int len, int hint) where TComparer : IComparer<T>
+    private static int GallopRight<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, T key, int baseIdx, int len, int hint)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var lastOfs = 0;
         var ofs = 1;
@@ -513,15 +555,17 @@ public static class PowerSort
     /// Merges two adjacent runs where the first run is smaller or equal.
     /// Uses galloping mode when one run consistently wins.
     /// </summary>
-    private static void MergeLow<T, TComparer>(Span<T> span, int base1, int len1, int base2, int len2, ref MergeState ms, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    private static void MergeLow<T, TComparer, TContext>(Span<T> span, int base1, int len1, int base2, int len2, ref MergeState ms, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Rent temp array from ArrayPool
         var tmp = ArrayPool<T>.Shared.Rent(len1);
         try
         {
-            var t = new SortSpan<T, TComparer>(tmp.AsSpan(0, len1), context, comparer, BUFFER_TEMP);
+            var t = new SortSpan<T, TComparer, TContext>(tmp.AsSpan(0, len1), context, comparer, BUFFER_TEMP);
             s.CopyTo(base1, t, 0, len1);
 
             var cursor1 = 0;          // Index in temp (first run)
@@ -658,15 +702,17 @@ public static class PowerSort
     /// Merges two adjacent runs where the second run is smaller.
     /// Uses galloping mode when one run consistently wins.
     /// </summary>
-    private static void MergeHigh<T, TComparer>(Span<T> span, int base1, int len1, int base2, int len2, ref MergeState ms, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    private static void MergeHigh<T, TComparer, TContext>(Span<T> span, int base1, int len1, int base2, int len2, ref MergeState ms, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Rent temp array from ArrayPool
         var tmp = ArrayPool<T>.Shared.Rent(len2);
         try
         {
-            var t = new SortSpan<T, TComparer>(tmp.AsSpan(0, len2), context, comparer, BUFFER_TEMP);
+            var t = new SortSpan<T, TComparer, TContext>(tmp.AsSpan(0, len2), context, comparer, BUFFER_TEMP);
             s.CopyTo(base2, t, 0, len2);
 
             var cursor1 = base1 + len1 - 1;  // Index in span (first run, from end)
