@@ -114,12 +114,13 @@ public static class DropMergeSort
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
     {
-        Sort(span, NullContext.Default);
+        Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), NullContext.Default);
     }
 
     /// <summary>
@@ -130,7 +131,24 @@ public static class DropMergeSort
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
     {
-        Sort(span, context, new ComparableComparer<T>());
+        // Dispatch to appropriate overload based on context type
+        switch (context)
+        {
+            case NullContext ctx:
+                Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), ctx);
+                break;
+            case StatisticsContext ctx:
+                Sort<T, ComparableComparer<T>, StatisticsContext>(span, new ComparableComparer<T>(), ctx);
+                break;
+            case VisualizationContext ctx:
+                Sort<T, ComparableComparer<T>, VisualizationContext>(span, new ComparableComparer<T>(), ctx);
+                break;
+            case CompositeContext ctx:
+                Sort<T, ComparableComparer<T>, CompositeContext>(span, new ComparableComparer<T>(), ctx);
+                break;
+            default:
+                throw new ArgumentException($"Unsupported context type: {context.GetType().Name}", nameof(context));
+        }
     }
 
     /// <summary>
@@ -143,13 +161,47 @@ public static class DropMergeSort
     /// <param name="comparer">The comparer to use for element comparisons.</param>
     public static void Sort<T, TComparer>(Span<T> span, ISortContext context, TComparer comparer) where TComparer : IComparer<T>
     {
+        // Dispatch to appropriate overload based on context type
+        switch (context)
+        {
+            case NullContext ctx:
+                Sort<T, TComparer, NullContext>(span, comparer, ctx);
+                break;
+            case StatisticsContext ctx:
+                Sort<T, TComparer, StatisticsContext>(span, comparer, ctx);
+                break;
+            case VisualizationContext ctx:
+                Sort<T, TComparer, VisualizationContext>(span, comparer, ctx);
+                break;
+            case CompositeContext ctx:
+                Sort<T, TComparer, CompositeContext>(span, comparer, ctx);
+                break;
+            default:
+                throw new ArgumentException($"Unsupported context type: {context.GetType().Name}", nameof(context));
+        }
+    }
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
         if (span.Length <= 1) return;
 
         // Rent buffer from ArrayPool for dropped elements (O(K) auxiliary space where K is the number of out-of-order elements)
         var droppedBuffer = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
-            SortCore(span, droppedBuffer.AsSpan(0, span.Length), context, comparer);
+            SortCore(span, droppedBuffer.AsSpan(0, span.Length), comparer, context);
         }
         finally
         {
@@ -160,15 +212,20 @@ public static class DropMergeSort
     /// <summary>
     /// Core drop-merge sort implementation.
     /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span to sort</param>
     /// <param name="droppedBuffer">Auxiliary buffer for dropped elements (same size as span)</param>
-    /// <param name="context">Sort context for statistics tracking</param>
     /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">Sort context for statistics tracking</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer>(Span<T> span, Span<T> droppedBuffer, ISortContext context, TComparer comparer) where TComparer : IComparer<T>
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> droppedBuffer, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
-        var dropped = new SortSpan<T, TComparer>(droppedBuffer, context, comparer, BUFFER_DROPPED);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        var dropped = new SortSpan<T, TComparer, TContext>(droppedBuffer, context, comparer, BUFFER_DROPPED);
 
         // First step: heuristically find the Longest Nondecreasing Subsequence (LNS).
         // The LNS is kept in-place at span[0..write] while dropped elements go to the dropped buffer.
@@ -185,7 +242,7 @@ public static class DropMergeSort
             {
                 // Restore dropped elements back to array using CopyTo for efficiency
                 dropped.CopyTo(0, s, write, droppedCount);
-                QuickSortMedian3.SortCore(s, 0, s.Length - 1, context);
+                QuickSortMedian3.SortCore(s, 0, s.Length - 1);
                 return;
             }
 
@@ -283,8 +340,8 @@ public static class DropMergeSort
         {
             var droppedSpan = droppedBuffer.Slice(0, droppedCount);
             // Use SortSpan for dropped elements to track statistics correctly
-            var droppedSortSpan = new SortSpan<T, TComparer>(droppedSpan, context, comparer, BUFFER_DROPPED);
-            QuickSortMedian3.SortCore(droppedSortSpan, 0, droppedCount - 1, context);
+            var droppedSortSpan = new SortSpan<T, TComparer, TContext>(droppedSpan, context, comparer, BUFFER_DROPPED);
+            QuickSortMedian3.SortCore(droppedSortSpan, 0, droppedCount - 1);
         }
 
         // Third step: merge span[0..write] and droppedBuffer[0..droppedCount]
@@ -308,7 +365,9 @@ public static class DropMergeSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static T MaxInRange<T, TComparer>(SortSpan<T, TComparer> s, int start, int count) where TComparer : IComparer<T>
+    private static T MaxInRange<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int count)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var max = s.Read(start);
         for (var i = 1; i < count; i++)
