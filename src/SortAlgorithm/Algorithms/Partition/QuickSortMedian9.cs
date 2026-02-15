@@ -1,4 +1,5 @@
 ﻿using SortAlgorithm.Contexts;
+using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -104,13 +105,33 @@ public static class QuickSortMedian9
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
+    private readonly struct QuickSortMedian9Action<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        private readonly int _first;
+        private readonly int _last;
+
+        public QuickSortMedian9Action(int first, int last)
+        {
+            _first = first;
+            _last = last;
+        }
+
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, _first, _last, comparer, context);
+        }
+    }
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -119,7 +140,7 @@ public static class QuickSortMedian9
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new QuickSortMedian9Action<T, ComparableComparer<T>>(0, span.Length));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -130,7 +151,7 @@ public static class QuickSortMedian9
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => Sort(span, first, last, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new QuickSortMedian9Action<T, ComparableComparer<T>>(first, last));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
@@ -144,13 +165,32 @@ public static class QuickSortMedian9
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
+        ContextDispatcher.DispatchSort(span, comparer, context, new QuickSortMedian9Action<T, TComparer>(first, last));
+    }
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span">The span containing elements to sort.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context for tracking statistics and observations.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(first, last);
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last - 1);
     }
 
@@ -160,10 +200,14 @@ public static class QuickSortMedian9
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The exclusive end index of the range to sort.</param>
-    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int left, int right) where TComparer : IComparer<T>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (left >= right) return;
 
@@ -210,7 +254,10 @@ public static class QuickSortMedian9
     /// Returns the median value among three elements at specified indices.
     /// This method performs exactly 2-3 comparisons to determine the median value.
     /// </summary>
-    private static T MedianOf3Value<T, TComparer>(SortSpan<T, TComparer> s, int lowIdx, int midIdx, int highIdx) where TComparer : IComparer<T>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static T MedianOf3Value<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Use SortSpan.Compare to track statistics
         var cmpLowMid = s.Compare(lowIdx, midIdx);
@@ -248,7 +295,10 @@ public static class QuickSortMedian9
     /// This method samples elements at evenly distributed positions and computes
     /// the median of medians to select a high-quality pivot.
     /// </summary>
-    private static T MedianOf9Value<T, TComparer>(SortSpan<T, TComparer> s, int low, int high) where TComparer : IComparer<T>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static T MedianOf9Value<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int low, int high)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var m2 = (high - low) / 2;
         var m4 = m2 / 2;
