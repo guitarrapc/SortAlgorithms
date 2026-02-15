@@ -55,25 +55,6 @@ public static class SelectionSort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
-    private readonly struct SelectionSortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
-        where TComparer : IComparer<T>
-    {
-        private readonly int _first;
-        private readonly int _last;
-
-        public SelectionSortAction(int first, int last)
-        {
-            _first = first;
-            _last = last;
-        }
-
-        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
-            where TContext : ISortContext
-        {
-            Sort<T, TComparer, TContext>(span, _first, _last, comparer, context);
-        }
-    }
-
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// Uses NullContext for zero-overhead fast path.
@@ -81,42 +62,48 @@ public static class SelectionSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort<T, ComparableComparer<T>, NullContext>(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new SelectionSortAction<T, ComparableComparer<T>>(0, span.Length));
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
 
     /// <summary>
-    /// Sorts the subrange [first..last) using the provided sort context.
-    /// Elements in [first..start) are assumed to already be sorted.
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
-    /// <param name="span">The span containing the elements to sort.</param>
-    /// <param name="first">The zero-based index of the first element in the range to sort.</param>
-    /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
-    /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new SelectionSortAction<T, ComparableComparer<T>>(first, last));
+    /// <typeparam name="TComparer">The type of the comparer</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where T : IComparable<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => Sort(span, 0, span.Length, comparer, context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span.</typeparam>
-    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
-    /// <param name="span">The span containing the elements to sort.</param>
-    /// <param name="first">The zero-based index of the first element in the range to sort.</param>
-    /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
-    /// <param name="comparer">The comparer to use for element comparisons.</param>
-    /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context)
-        where TComparer : IComparer<T>
-        => ContextDispatcher.DispatchSort(span, comparer, context, new SelectionSortAction<T, TComparer>(first, last));
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, int first, int last, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, first, last, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.

@@ -68,43 +68,26 @@ public static class RadixMSD4Sort
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary buffer for digit redistribution
 
-    private readonly struct RadixMSD4SortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-    {
-        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
-            where TContext : ISortContext
-        {
-            Sort<T, TComparer, TContext>(span, comparer, context);
-        }
-    }
-
     /// <summary>
-    /// Sorts the elements in the specified span using MSD Radix Sort (base-4).
+    /// Sorts the elements in the specified span using American Flag Sort.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-    {
-        Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), NullContext.Default);
-    }
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span using MSD Radix Sort (base-4) with sort context.
+    /// Sorts the elements in the specified span using American Flag Sort with sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
-    {
-        ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new RadixMSD4SortAction<T, ComparableComparer<T>>());
-    }
-
-    /// <summary>
-    /// Sorts the elements in the specified span using the provided comparer and sort context.
-    /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-    {
-        ContextDispatcher.DispatchSort(span, comparer, context, new RadixMSD4SortAction<T, TComparer>());
-    }
+        where TContext : ISortContext
+        => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts integer values in the specified span with comparer and sort context.

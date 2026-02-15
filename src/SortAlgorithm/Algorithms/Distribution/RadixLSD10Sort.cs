@@ -54,65 +54,26 @@ public static class RadixLSD10Sort
     private const int BUFFER_MAIN = 0;           // Main input array
     private const int BUFFER_TEMP = 1;           // Temporary buffer for digit redistribution
 
-    private readonly struct RadixLSD10SortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-    {
-        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
-            where TContext : ISortContext
-        {
-            Sort<T, TComparer, TContext>(span, comparer, context);
-        }
-    }
-
-
     /// <summary>
-    /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Sorts the elements in the specified span using American Flag Sort.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/> and <see cref="IBinaryInteger{T}"/>.</typeparam>
-    /// <param name="span">The span of elements to sort in place.</param>
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-    {
-        Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), NullContext.Default);
-    }
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span using the provided sort context.
+    /// Sorts the elements in the specified span using American Flag Sort with sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/> and <see cref="IBinaryInteger{T}"/>.</typeparam>
-    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
-    {
-        ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new RadixLSD10SortAction<T, ComparableComparer<T>>());
-    }
-
-    /// <summary>
-    /// Sorts the elements in the specified span using the provided comparer and sort context.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IBinaryInteger{T}"/>.</typeparam>
-    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
-    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
-    /// <param name="comparer">The comparer to use for element comparisons.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-    {
-        if (context is NullContext)
-        {
-            Sort<T, TComparer, NullContext>(span, comparer, NullContext.Default);
-        }
-        else if (context is StatisticsContext stats)
-        {
-            Sort<T, TComparer, StatisticsContext>(span, comparer, stats);
-        }
-        else
-        {
-            Sort<T, TComparer, ISortContext>(span, comparer, context);
-        }
-    }
+        where TContext : ISortContext
+        => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.

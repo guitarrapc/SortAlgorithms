@@ -94,62 +94,26 @@ public static class BitonicSortParallel
         }
     }
 
-    private readonly struct BitonicSortParallelAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
-        where TComparer : IComparer<T>
-    {
-        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
-            where TContext : ISortContext
-        {
-            // BitonicSortParallel works with arrays, not Span
-            T[] array = span.ToArray();
-            Sort<T, TComparer, TContext>(array, comparer, context);
-            array.AsSpan().CopyTo(span);
-        }
-    }
-
     /// <summary>
-    /// Sorts the elements in the specified array in ascending order using the default comparer.
+    /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// Uses NullContext for zero-overhead fast path.
-    /// Uses parallel execution for improved performance on multi-core systems.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the array. Must implement <see cref="IComparable{T}"/>.</typeparam>
-    /// <param name="array">The array of elements to sort in place.</param>
-    /// <exception cref="ArgumentException">Thrown when the array length is not a power of 2.</exception>
-    public static void Sort<T>(T[] array) where T : IComparable<T>
-    {
-        Sort<T, ComparableComparer<T>, NullContext>(array, new ComparableComparer<T>(), NullContext.Default);
-    }
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <param name="span">The span of elements to sort in place.</param>
+    public static void Sort<T>(T[] span) where T : IComparable<T>
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified array using the provided sort context and parallel execution.
+    /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the array. Must implement <see cref="IComparable{T}"/>.</typeparam>
-    /// <param name="array">The array of elements to sort. The elements within this array will be reordered in place.</param>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}\"/>.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    /// <exception cref="ArgumentException">Thrown when the array length is not a power of 2.</exception>
-    public static void Sort<T>(T[] array, ISortContext context) where T : IComparable<T>
-    {
-        ArgumentNullException.ThrowIfNull(array);
-        ArgumentNullException.ThrowIfNull(context);
-        ContextDispatcher.DispatchSort(array.AsSpan(), new ComparableComparer<T>(), context, new BitonicSortParallelAction<T, ComparableComparer<T>>());
-    }
-
-    /// <summary>
-    /// Sorts the elements in the specified array using the provided comparer, sort context, and parallel execution.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the array.</typeparam>
-    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
-    /// <param name="array">The array of elements to sort. The elements within this array will be reordered in place.</param>
-    /// <param name="comparer">The comparer to use for element comparisons.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    /// <exception cref="ArgumentException">Thrown when the array length is not a power of 2.</exception>
-    public static void Sort<T, TComparer>(T[] array, TComparer comparer, ISortContext context)
-        where TComparer : IComparer<T>
-    {
-        ArgumentNullException.ThrowIfNull(array);
-        ArgumentNullException.ThrowIfNull(context);
-        ContextDispatcher.DispatchSort(array.AsSpan(), comparer, context, new BitonicSortParallelAction<T, TComparer>());
-    }
+    public static void Sort<T, TContext>(T[] span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified array using the provided comparer, sort context, and parallel execution.

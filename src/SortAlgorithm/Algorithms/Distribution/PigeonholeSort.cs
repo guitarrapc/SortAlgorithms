@@ -61,42 +61,20 @@ public static class PigeonholeSort
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary buffer for elements
 
-    private readonly struct PigeonholeSortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
-        where TComparer : IComparer<T>
-    {
-        private readonly Func<T, int> _keySelector;
-
-        public PigeonholeSortAction(Func<T, int> keySelector)
-        {
-            _keySelector = keySelector;
-        }
-
-        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
-            where TContext : ISortContext
-        {
-            Sort<T, TComparer, TContext>(span, _keySelector, comparer, context);
-        }
-    }
-
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-        => Sort<T, ComparableComparer<T>, NullContext>(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector, ISortContext context) where T : IComparable<T>
-        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new PigeonholeSortAction<T, ComparableComparer<T>>(keySelector));
-
-    /// <summary>
-    /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
-    /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, Func<T, int> keySelector, TComparer comparer, ISortContext context)
-        where TComparer : IComparer<T>
-        => ContextDispatcher.DispatchSort(span, comparer, context, new PigeonholeSortAction<T, TComparer>(keySelector));
+    public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, keySelector, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
@@ -257,39 +235,26 @@ public static class PigeonholeSortInteger
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary buffer for elements
 
-    private readonly struct PigeonholeSortIntegerAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-    {
-        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
-            where TContext : ISortContext
-        {
-            Sort<T, TComparer, TContext>(span, comparer, context);
-        }
-    }
-
     /// <summary>
-    /// Sorts integer values in the specified span (generic version for IBinaryInteger types).
+    /// Sorts the elements in the specified span using American Flag Sort.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-    {
-        Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), NullContext.Default);
-    }
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts integer values in the specified span with sort context (generic version for IBinaryInteger types).
+    /// Sorts the elements in the specified span using American Flag Sort with sort context.
     /// </summary>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new PigeonholeSortIntegerAction<T, ComparableComparer<T>>());
-
-    /// <summary>
-    /// Sorts integer values in the specified span with comparer and sort context (generic version for IBinaryInteger types).
-    /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+    /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span"> The span of elements to sort.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-        => ContextDispatcher.DispatchSort(span, comparer, context, new PigeonholeSortIntegerAction<T, TComparer>());
+        where TContext : ISortContext
+        => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts integer values in the specified span with comparer and sort context.

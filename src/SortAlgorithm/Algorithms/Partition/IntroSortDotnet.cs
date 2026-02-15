@@ -41,16 +41,6 @@ public static class IntroSortDotnet
     // Follow dotnet runtime threshold
     private const int IntrosortSizeThreshold = 16;
 
-    private readonly struct IntroSortDotnetAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
-        where TComparer : IComparer<T>
-    {
-        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
-            where TContext : ISortContext
-        {
-            Sort<T, TComparer, TContext>(span, 0, span.Length, comparer, context);
-        }
-    }
-
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// Uses NullContext for zero-overhead fast path.
@@ -58,27 +48,48 @@ public static class IntroSortDotnet
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort<T, ComparableComparer<T>, NullContext>(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
-    /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new IntroSortDotnetAction<T, ComparableComparer<T>>());
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
 
     /// <summary>
-    /// Sorts the subrange [first..last) using the provided sort context.
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
-    /// <param name="span">The span containing elements to sort.</param>
+    /// <typeparam name="TComparer">The type of the comparer</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where T : IComparable<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => Sort(span, 0, span.Length, comparer, context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
-    /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => ContextDispatcher.DispatchSort(span.Slice(first, last - first), new ComparableComparer<T>(), context, new IntroSortDotnetAction<T, ComparableComparer<T>>());
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, int first, int last, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, first, last, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
@@ -114,7 +125,7 @@ public static class IntroSortDotnet
     /// <remarks>
     /// From dotnet runtime comments:
     /// "IntroSort is recursive; block it from being inlined into itself as this is currently not profitable."
-    /// 
+    ///
     /// This implementation follows dotnet runtime's approach of using Slice to always work with
     /// 0-based spans, which improves performance especially for sorted/reversed data.
     /// </remarks>
@@ -235,7 +246,7 @@ public static class IntroSortDotnet
         {
             s.Swap(offset + left, offset + hi - 1);
         }
-        
+
         // Return position relative to offset (0-based within partition)
         return left;
     }
@@ -288,7 +299,7 @@ public static class IntroSortDotnet
         where TContext : ISortContext
     {
         int n = partitionSize;
-        
+
         // Build heap (heapify from bottom to top)
         for (int i = n >> 1; i >= 1; i--)
         {
@@ -320,12 +331,12 @@ public static class IntroSortDotnet
     {
         // Store the value to sift down
         T d = s.Read(offset + i - 1);
-        
+
         // Continue while node has at least a left child
         while (i <= n >> 1)
         {
             int child = 2 * i;  // Left child
-            
+
             // If right child exists and is greater than left child, use right child
             if (child < n && s.Compare(offset + child - 1, offset + child) < 0)
             {

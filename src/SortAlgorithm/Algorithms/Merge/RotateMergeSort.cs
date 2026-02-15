@@ -87,16 +87,6 @@ public static class RotateMergeSort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array (in-place operations only)
 
-    private readonly struct RotateMergeSortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
-        where TComparer : IComparer<T>
-    {
-        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
-            where TContext : ISortContext
-        {
-            Sort<T, TComparer, TContext>(span, comparer, context);
-        }
-    }
-
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// Uses NullContext for zero-overhead fast path.
@@ -104,28 +94,19 @@ public static class RotateMergeSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}\"/>.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new RotateMergeSortAction<T, ComparableComparer<T>>());
-
-    /// <summary>
-    /// Sorts the elements in the specified span using the provided comparer and sort context.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the span.</typeparam>
-    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
-    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
-    /// <param name="comparer">The comparer to use for element comparisons.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
-        where TComparer : IComparer<T>
-        => ContextDispatcher.DispatchSort(span, comparer, context, new RotateMergeSortAction<T, TComparer>());
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.
@@ -452,16 +433,6 @@ public static class RotateMergeSortNonOptimized
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array (in-place operations only)
 
-    private readonly struct RotateMergeSortNonOptimizedAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
-        where TComparer : IComparer<T>
-    {
-        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
-            where TContext : ISortContext
-        {
-            Sort<T, TComparer, TContext>(span, comparer, context);
-        }
-    }
-
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// Uses NullContext for zero-overhead fast path.
@@ -469,28 +440,19 @@ public static class RotateMergeSortNonOptimized
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}\"/>.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new RotateMergeSortNonOptimizedAction<T, ComparableComparer<T>>());
-
-    /// <summary>
-    /// Sorts the elements in the specified span using the provided comparer and sort context.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the span.</typeparam>
-    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
-    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
-    /// <param name="comparer">The comparer to use for element comparisons.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
-        where TComparer : IComparer<T>
-        => ContextDispatcher.DispatchSort(span, comparer, context, new RotateMergeSortNonOptimizedAction<T, TComparer>());
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.
