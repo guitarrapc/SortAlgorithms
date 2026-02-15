@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using SortAlgorithm.Contexts;
+using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -34,8 +35,9 @@ internal static class FloatingPointUtils
     /// <param name="end">Ending index (exclusive)</param>
     /// <returns>Starting index of non-NaN elements. Returns begin as-is for non-floating-point types.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int MoveNaNsToFront<T, TComparer>(SortSpan<T, TComparer> s, int begin, int end)
+    public static int MoveNaNsToFront<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Do nothing for non-floating-point types (JIT optimizes typeof check)
         if (typeof(T) != typeof(float) && typeof(T) != typeof(double) && typeof(T) != typeof(Half))
