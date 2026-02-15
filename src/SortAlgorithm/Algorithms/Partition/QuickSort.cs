@@ -75,10 +75,19 @@ public static class QuickSort
     private readonly struct QuickSortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
         where TComparer : IComparer<T>
     {
+        private readonly int _first;
+        private readonly int _last;
+
+        public QuickSortAction(int first, int last)
+        {
+            _first = first;
+            _last = last;
+        }
+
         public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
             where TContext : ISortContext
         {
-            Sort<T, TComparer, TContext>(span, 0, span.Length, comparer, context);
+            Sort<T, TComparer, TContext>(span, _first, _last, comparer, context);
         }
     }
 
@@ -98,7 +107,7 @@ public static class QuickSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new QuickSortAction<T, ComparableComparer<T>>());
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new QuickSortAction<T, ComparableComparer<T>>(0, span.Length));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -109,7 +118,7 @@ public static class QuickSort
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new QuickSortAction<T, ComparableComparer<T>>());
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new QuickSortAction<T, ComparableComparer<T>>(first, last));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
@@ -123,7 +132,7 @@ public static class QuickSort
     /// <param name="context">The sort context for tracking statistics and observations.</param>
     public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
     {
-        ContextDispatcher.DispatchSort(span, comparer, context, new QuickSortAction<T, TComparer>());
+        ContextDispatcher.DispatchSort(span, comparer, context, new QuickSortAction<T, TComparer>(first, last));
     }
 
     /// <summary>
