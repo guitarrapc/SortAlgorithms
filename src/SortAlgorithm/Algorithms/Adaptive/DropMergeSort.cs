@@ -112,6 +112,16 @@ public static class DropMergeSort
     /// </summary>
     private const double EarlyOutDisorderFraction = 0.6;
 
+    private readonly struct DropMergeSortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+    where TComparer : IComparer<T>
+    {
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, comparer, context);
+        }
+    }
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// Uses NullContext for zero-overhead fast path.
@@ -131,24 +141,7 @@ public static class DropMergeSort
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
     {
-        // Dispatch to appropriate overload based on context type
-        switch (context)
-        {
-            case NullContext ctx:
-                Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), ctx);
-                break;
-            case StatisticsContext ctx:
-                Sort<T, ComparableComparer<T>, StatisticsContext>(span, new ComparableComparer<T>(), ctx);
-                break;
-            case VisualizationContext ctx:
-                Sort<T, ComparableComparer<T>, VisualizationContext>(span, new ComparableComparer<T>(), ctx);
-                break;
-            case CompositeContext ctx:
-                Sort<T, ComparableComparer<T>, CompositeContext>(span, new ComparableComparer<T>(), ctx);
-                break;
-            default:
-                throw new ArgumentException($"Unsupported context type: {context.GetType().Name}", nameof(context));
-        }
+        ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new DropMergeSortAction<T, ComparableComparer<T>>());
     }
 
     /// <summary>
@@ -161,24 +154,7 @@ public static class DropMergeSort
     /// <param name="comparer">The comparer to use for element comparisons.</param>
     public static void Sort<T, TComparer>(Span<T> span, ISortContext context, TComparer comparer) where TComparer : IComparer<T>
     {
-        // Dispatch to appropriate overload based on context type
-        switch (context)
-        {
-            case NullContext ctx:
-                Sort<T, TComparer, NullContext>(span, comparer, ctx);
-                break;
-            case StatisticsContext ctx:
-                Sort<T, TComparer, StatisticsContext>(span, comparer, ctx);
-                break;
-            case VisualizationContext ctx:
-                Sort<T, TComparer, VisualizationContext>(span, comparer, ctx);
-                break;
-            case CompositeContext ctx:
-                Sort<T, TComparer, CompositeContext>(span, comparer, ctx);
-                break;
-            default:
-                throw new ArgumentException($"Unsupported context type: {context.GetType().Name}", nameof(context));
-        }
+        ContextDispatcher.DispatchSort(span, comparer, context, new DropMergeSortAction<T, TComparer>());
     }
 
     /// <summary>
