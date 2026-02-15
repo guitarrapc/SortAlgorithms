@@ -46,13 +46,24 @@ public static class GnomeSort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
+    private readonly struct GnomeSortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, comparer, context);
+        }
+    }
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -61,7 +72,7 @@ public static class GnomeSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => Sort(span, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new GnomeSortAction<T, ComparableComparer<T>>());
 
     /// <summary>
     /// Sorts the elements in the specified span using a custom comparer and sort context.
@@ -71,11 +82,27 @@ public static class GnomeSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="comparer">The comparer used to determine the order of elements.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
+        => ContextDispatcher.DispatchSort(span, comparer, context, new GnomeSortAction<T, TComparer>());
+
+    /// <summary>
+    /// Sorts the elements in the specified span using a custom comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of the comparer. Must implement <see cref="IComparer{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer used to determine the order of elements.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         for (var i = 0; i < s.Length; i++)
         {
@@ -129,22 +156,39 @@ public static class GnomeSortNonOptimized
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
+    private readonly struct GnomeSortNonOptimizedAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, comparer, context);
+        }
+    }
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, new ComparableComparer<T>(), NullContext.Default);
 
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => Sort(span, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new GnomeSortNonOptimizedAction<T, ComparableComparer<T>>());
 
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
+        => ContextDispatcher.DispatchSort(span, comparer, context, new GnomeSortNonOptimizedAction<T, TComparer>());
+
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         var i = 0;
         while (i < s.Length)

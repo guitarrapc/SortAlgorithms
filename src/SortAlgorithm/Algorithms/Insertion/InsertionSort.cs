@@ -63,13 +63,33 @@ public static class InsertionSort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
+    private readonly struct InsertionSortAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        private readonly int _first;
+        private readonly int _last;
+
+        public InsertionSortAction(int first, int last)
+        {
+            _first = first;
+            _last = last;
+        }
+
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, _first, _last, comparer, context);
+        }
+    }
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -78,7 +98,7 @@ public static class InsertionSort
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context for tracking statistics and observations during sorting. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new InsertionSortAction<T, ComparableComparer<T>>(0, span.Length));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -96,12 +116,22 @@ public static class InsertionSort
     /// This reduces the number of writes compared to swap-based insertion sort.
     /// </remarks>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => Sort(span, first, last, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new InsertionSortAction<T, ComparableComparer<T>>(first, last));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
+        => ContextDispatcher.DispatchSort(span, comparer, context, new InsertionSortAction<T, TComparer>(first, last));
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -109,7 +139,7 @@ public static class InsertionSort
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last);
     }
 
@@ -118,11 +148,15 @@ public static class InsertionSort
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         for (var i = first + 1; i < last; i++)
         {
@@ -167,7 +201,9 @@ public static class InsertionSort
     /// Typical speedup: 10-20% for small arrays compared to guarded version.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void UnguardedSortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
+    internal static void UnguardedSortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         for (var i = first + 1; i < last; i++)
         {
@@ -218,7 +254,9 @@ public static class InsertionSort
     /// - If one returns false: that partition needs further QuickSort/HeapSort
     /// - If one returns true: one partition done, only recurse on the other
     /// </remarks>
-    internal static bool SortIncomplete<T, TComparer>(SortSpan<T, TComparer> s, int first, int last, bool leftmost) where TComparer : IComparer<T>
+    internal static bool SortIncomplete<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, bool leftmost)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var length = last - first;
 
@@ -312,7 +350,9 @@ public static class InsertionSort
     /// Sorts exactly 3 elements using a sorting network (2-3 comparisons, 0-2 swaps).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Sort3<T, TComparer>(SortSpan<T, TComparer> s, int i0, int i1, int i2) where TComparer : IComparer<T>
+    private static void Sort3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i0, int i1, int i2)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (s.Compare(i1, i0) < 0) s.Swap(i0, i1);
         if (s.Compare(i2, i1) < 0)
@@ -326,7 +366,9 @@ public static class InsertionSort
     /// Sorts exactly 4 elements using a sorting network (3-6 comparisons, 0-5 swaps).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Sort4<T, TComparer>(SortSpan<T, TComparer> s, int i0, int i1, int i2, int i3) where TComparer : IComparer<T>
+    private static void Sort4<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i0, int i1, int i2, int i3)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         Sort3(s, i0, i1, i2);
         if (s.Compare(i3, i2) < 0)
@@ -344,7 +386,9 @@ public static class InsertionSort
     /// Sorts exactly 5 elements using a sorting network (4-10 comparisons, 0-9 swaps).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Sort5<T, TComparer>(SortSpan<T, TComparer> s, int i0, int i1, int i2, int i3, int i4) where TComparer : IComparer<T>
+    private static void Sort5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i0, int i1, int i2, int i3, int i4)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         Sort4(s, i0, i1, i2, i3);
         if (s.Compare(i4, i3) < 0)
@@ -471,16 +515,37 @@ public static class InsertionSortNonOptimized
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(first);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(first, last);
+        // Delegate to appropriate context dispatcher for old API
+        ContextDispatcher.DispatchSort(span, comparer, context, new InsertionSortNonOptimizedAction<T, TComparer>(first, last));
+    }
 
-        if (span.Length <= 1) return;
+    private readonly struct InsertionSortNonOptimizedAction<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        private readonly int _first;
+        private readonly int _last;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
-        SortCore(s, first, last);
+        public InsertionSortNonOptimizedAction(int first, int last)
+        {
+            _first = first;
+            _last = last;
+        }
+
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(_first);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(_last, span.Length);
+            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(_first, _last);
+
+            if (span.Length <= 1) return;
+
+            var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+            SortCore(s, _first, _last);
+        }
     }
 
     /// <summary>
@@ -491,7 +556,9 @@ public static class InsertionSortNonOptimized
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
-    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         for (var i = first + 1; i < last; i++)
         {

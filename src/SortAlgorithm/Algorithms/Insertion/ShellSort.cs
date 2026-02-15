@@ -51,6 +51,25 @@ public static class ShellSortKnuth1973
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
+    private readonly struct ShellSortKnuth1973Action<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        private readonly int _first;
+        private readonly int _last;
+
+        public ShellSortKnuth1973Action(int first, int last)
+        {
+            _first = first;
+            _last = last;
+        }
+
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, _first, _last, comparer, context);
+        }
+    }
+
     // Characteristics:
     // - Most famous and classic gap sequence
     // - Easy to implement with simple formula
@@ -59,36 +78,47 @@ public static class ShellSortKnuth1973
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}\"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new ShellSortKnuth1973Action<T, ComparableComparer<T>>(0, span.Length));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}\"/>.</typeparam>
     /// <param name="span">The span containing the elements to sort.</param>
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => Sort(span, first, last, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new ShellSortKnuth1973Action<T, ComparableComparer<T>>(first, last));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
+        => ContextDispatcher.DispatchSort(span, comparer, context, new ShellSortKnuth1973Action<T, TComparer>(first, last));
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -96,19 +126,21 @@ public static class ShellSortKnuth1973
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last);
     }
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}\"/>.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <remarks>
-    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var length = last - first;
         if (length < 2) return;
@@ -187,13 +219,33 @@ public static class ShellSortSedgewick1986
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
+    private readonly struct ShellSortSedgewick1986Action<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        private readonly int _first;
+        private readonly int _last;
+
+        public ShellSortSedgewick1986Action(int first, int last)
+        {
+            _first = first;
+            _last = last;
+        }
+
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, _first, _last, comparer, context);
+        }
+    }
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -202,7 +254,7 @@ public static class ShellSortSedgewick1986
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new ShellSortSedgewick1986Action<T, ComparableComparer<T>>(0, span.Length));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -213,12 +265,22 @@ public static class ShellSortSedgewick1986
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => Sort(span, first, last, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new ShellSortSedgewick1986Action<T, ComparableComparer<T>>(first, last));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
+        => ContextDispatcher.DispatchSort(span, comparer, context, new ShellSortSedgewick1986Action<T, TComparer>(first, last));
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -226,7 +288,7 @@ public static class ShellSortSedgewick1986
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last);
     }
 
@@ -238,7 +300,9 @@ public static class ShellSortSedgewick1986
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <remarks>
-    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var length = last - first;
         if (length < 2) return;
@@ -319,15 +383,35 @@ public static class ShellSortTokuda1992
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
+    private readonly struct ShellSortTokuda1992Action<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        private readonly int _first;
+        private readonly int _last;
+
+        public ShellSortTokuda1992Action(int first, int last)
+        {
+            _first = first;
+            _last = last;
+        }
+
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, _first, _last, comparer, context);
+        }
+    }
+
     // - Widely used in production systems
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -336,7 +420,7 @@ public static class ShellSortTokuda1992
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new ShellSortTokuda1992Action<T, ComparableComparer<T>>(0, span.Length));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -347,12 +431,22 @@ public static class ShellSortTokuda1992
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => Sort(span, first, last, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new ShellSortTokuda1992Action<T, ComparableComparer<T>>(first, last));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
+        => ContextDispatcher.DispatchSort(span, comparer, context, new ShellSortTokuda1992Action<T, TComparer>(first, last));
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -360,7 +454,7 @@ public static class ShellSortTokuda1992
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last);
     }
 
@@ -372,7 +466,9 @@ public static class ShellSortTokuda1992
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <remarks>
-    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var length = last - first;
         if (length < 2) return;
@@ -455,13 +551,33 @@ public static class ShellSortCiura2001
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
+    private readonly struct ShellSortCiura2001Action<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        private readonly int _first;
+        private readonly int _last;
+
+        public ShellSortCiura2001Action(int first, int last)
+        {
+            _first = first;
+            _last = last;
+        }
+
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, _first, _last, comparer, context);
+        }
+    }
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -470,7 +586,7 @@ public static class ShellSortCiura2001
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new ShellSortCiura2001Action<T, ComparableComparer<T>>(0, span.Length));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -481,12 +597,22 @@ public static class ShellSortCiura2001
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => Sort(span, first, last, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new ShellSortCiura2001Action<T, ComparableComparer<T>>(first, last));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
+        => ContextDispatcher.DispatchSort(span, comparer, context, new ShellSortCiura2001Action<T, TComparer>(first, last));
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -494,7 +620,7 @@ public static class ShellSortCiura2001
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last);
     }
 
@@ -506,7 +632,9 @@ public static class ShellSortCiura2001
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <remarks>
-    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var length = last - first;
         if (length < 2) return;
@@ -588,13 +716,33 @@ public static class ShellSortLee2021
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
+    private readonly struct ShellSortLee2021Action<T, TComparer> : ContextDispatcher.SortAction<T, TComparer>
+        where TComparer : IComparer<T>
+    {
+        private readonly int _first;
+        private readonly int _last;
+
+        public ShellSortLee2021Action(int first, int last)
+        {
+            _first = first;
+            _last = last;
+        }
+
+        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
+            where TContext : ISortContext
+        {
+            Sort<T, TComparer, TContext>(span, _first, _last, comparer, context);
+        }
+    }
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+        => Sort<T, ComparableComparer<T>, NullContext>(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -603,7 +751,7 @@ public static class ShellSortLee2021
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
-        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new ShellSortLee2021Action<T, ComparableComparer<T>>(0, span.Length));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
@@ -614,12 +762,22 @@ public static class ShellSortLee2021
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
     /// <param name="context">The sort context to use during the sorting operation for tracking statistics and visualization.</param>
     public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => Sort(span, first, last, new ComparableComparer<T>(), context);
+        => ContextDispatcher.DispatchSort(span, new ComparableComparer<T>(), context, new ShellSortLee2021Action<T, ComparableComparer<T>>(first, last));
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context)
+        where TComparer : IComparer<T>
+        => ContextDispatcher.DispatchSort(span, comparer, context, new ShellSortLee2021Action<T, TComparer>(first, last));
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -627,7 +785,7 @@ public static class ShellSortLee2021
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last);
     }
 
@@ -639,7 +797,9 @@ public static class ShellSortLee2021
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
-    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> s, int first, int last) where TComparer : IComparer<T>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var length = last - first;
         if (length < 2) return;
