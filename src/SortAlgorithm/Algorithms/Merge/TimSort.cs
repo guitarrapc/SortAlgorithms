@@ -189,6 +189,10 @@ public static class TimSort
         // Start with minRun size (reasonable initial capacity)
         var tmpBufferSize = Math.Min(minRun, n / 2);
         var tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
+        
+        // Adaptive galloping threshold - shared across all merges for learning
+        var minGallop = MIN_GALLOP;
+        
         try
         {
             var i = first;
@@ -236,13 +240,13 @@ public static class TimSort
                 stackSize++;
 
                 // Merge runs to maintain invariants
-                MergeCollapse(s, runBase, runLen, ref stackSize, ref tmpBuffer, ref tmpBufferSize);
+                MergeCollapse(s, runBase, runLen, ref stackSize, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
 
                 i = runEnd;
             }
 
             // Force merge all remaining runs
-            MergeForceCollapse(s, runBase, runLen, ref stackSize, ref tmpBuffer, ref tmpBufferSize);
+            MergeForceCollapse(s, runBase, runLen, ref stackSize, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
         }
         finally
         {
@@ -286,7 +290,7 @@ public static class TimSort
     /// <summary>
     /// Maintains the run stack invariants by merging runs when necessary.
     /// </summary>
-    private static void MergeCollapse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, ref T[] tmpBuffer, ref int tmpBufferSize)
+    private static void MergeCollapse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -304,11 +308,11 @@ public static class TimSort
                 {
                     n--;
                 }
-                MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref tmpBufferSize);
+                MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
             }
             else if (runLen[n] <= runLen[n + 1])
             {
-                MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref tmpBufferSize);
+                MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
             }
             else
             {
@@ -320,7 +324,7 @@ public static class TimSort
     /// <summary>
     /// Merges all runs on the stack until only one remains.
     /// </summary>
-    private static void MergeForceCollapse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, ref T[] tmpBuffer, ref int tmpBufferSize)
+    private static void MergeForceCollapse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -331,14 +335,14 @@ public static class TimSort
             {
                 n--;
             }
-            MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref tmpBufferSize);
+            MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
         }
     }
 
     /// <summary>
     /// Merges the run at stack position i with the run at position i+1.
     /// </summary>
-    private static void MergeAt<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, int i, ref T[] tmpBuffer, ref int tmpBufferSize)
+    private static void MergeAt<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, int i, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -348,7 +352,7 @@ public static class TimSort
         var len2 = runLen[i + 1];
 
         // Merge runs
-        MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize);
+        MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
 
         // Update stack
         runLen[i] = len1 + len2;
@@ -363,12 +367,10 @@ public static class TimSort
     /// <summary>
     /// Merges two adjacent runs with galloping mode optimization.
     /// </summary>
-    private static void MergeRuns<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref T[] tmpBuffer, ref int tmpBufferSize)
+    private static void MergeRuns<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var ms = new MergeState();
-
         // Optimize: Find where first element of run2 goes in run1
         // Elements before this point are already in their final positions
         var k = GallopRight(s, s.Read(base2), base1, len1, 0);
@@ -384,11 +386,11 @@ public static class TimSort
         // Merge remaining runs using galloping
         if (len1 <= len2)
         {
-            MergeLow(s, base1, len1, base2, len2, ref ms, ref tmpBuffer, ref tmpBufferSize);
+            MergeLow(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
         }
         else
         {
-            MergeHigh(s, base1, len1, base2, len2, ref ms, ref tmpBuffer, ref tmpBufferSize);
+            MergeHigh(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
         }
     }
 
@@ -546,7 +548,7 @@ public static class TimSort
     /// Merges two adjacent runs where the first run is smaller or equal.
     /// Uses galloping mode when one run consistently wins.
     /// </summary>
-    private static void MergeLow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref MergeState ms, ref T[] tmpBuffer, ref int tmpBufferSize)
+    private static void MergeLow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -580,8 +582,6 @@ public static class TimSort
             s.Write(dest + len2, t.Read(cursor1));
             return;
         }
-
-        var minGallop = ms.MinGallop;
 
         while (true)
         {
@@ -671,22 +671,22 @@ public static class TimSort
             minGallop += 2;  // Penalize for leaving galloping mode
         }
 
-    exitMerge:
-        ms.MinGallop = minGallop < 1 ? 1 : minGallop;
+            exitMerge:
+            minGallop = minGallop < 1 ? 1 : minGallop;
 
-        if (len2 == 0)
-        {
-            // Run2 is exhausted, copy remaining run1 from temp
-            t.CopyTo(cursor1, s, dest, len1);
-        }
-        // else: len1 == 0, run2 is already in correct position
+            if (len2 == 0)
+            {
+                // Run2 is exhausted, copy remaining run1 from temp
+                t.CopyTo(cursor1, s, dest, len1);
+            }
+            // else: len1 == 0, run2 is already in correct position
     }
 
     /// <summary>
     /// Merges two adjacent runs where the second run is smaller.
     /// Uses galloping mode when one run consistently wins.
     /// </summary>
-    private static void MergeHigh<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref MergeState ms, ref T[] tmpBuffer, ref int tmpBufferSize)
+    private static void MergeHigh<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -722,8 +722,6 @@ public static class TimSort
             s.Write(dest, t.Read(0));
             return;
         }
-
-        var minGallop = ms.MinGallop;
 
         while (true)
         {
@@ -813,27 +811,15 @@ public static class TimSort
             minGallop += 2;  // Penalize for leaving galloping mode
         }
 
-    exitMerge:
-        ms.MinGallop = minGallop < 1 ? 1 : minGallop;
+            exitMerge:
+            minGallop = minGallop < 1 ? 1 : minGallop;
 
-        if (len1 == 0)
-        {
-            // Run1 is exhausted, copy remaining run2 from temp
-            t.CopyTo(0, s, dest - (len2 - 1), len2);
-        }
-        // else: len2 == 0, run1 is already in correct position
+            if (len1 == 0)
+            {
+                // Run1 is exhausted, copy remaining run2 from temp
+                t.CopyTo(0, s, dest - (len2 - 1), len2);
+            }
+            // else: len2 == 0, run1 is already in correct position
     }
 
-    /// <summary>
-    /// Merge state structure to track galloping threshold dynamically.
-    /// </summary>
-    private ref struct MergeState
-    {
-        public int MinGallop;
-
-        public MergeState()
-        {
-            MinGallop = MIN_GALLOP;
-        }
-    }
 }
