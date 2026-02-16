@@ -171,6 +171,15 @@ public static class PowerSort
     /// Core PowerSort implementation.
     /// Based on the algorithm from the PowerSort paper (Algorithm in Section 5.3).
     /// </summary>
+    /// <remarks>
+    /// <para><strong>Algorithm Structure:</strong></para>
+    /// <list type="bullet">
+    /// <item><description>power[i] = boundary power between run[i] and run[i+1]</description></item>
+    /// <item><description>For N runs on stack, there are N-1 boundary powers</description></item>
+    /// <item><description>Merge condition: power[stackSize-2] > p where p = boundary(top, nextRun)</description></item>
+    /// <item><description>After merge: recalculate p with new top and nextRun</description></item>
+    /// </list>
+    /// </remarks>
     private static void SortCore<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -179,9 +188,10 @@ public static class PowerSort
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // PowerSort uses a stack with node-power values to determine merge order
+        // power[i] represents the power of the boundary BETWEEN run[i] and run[i+1]
         Span<int> runBase = stackalloc int[85]; // 85 is enough for 2^64 elements
         Span<int> runLen = stackalloc int[85];
-        Span<int> power = stackalloc int[85];   // power[i] is the power of node BETWEEN run[i-1] and run[i]
+        Span<int> power = stackalloc int[85];   // power[i] is the power of node BETWEEN run[i] and run[i+1]
         var stackSize = 0;
 
         // Reusable temporary buffer for merging
@@ -193,70 +203,78 @@ public static class PowerSort
 
         try
         {
-            // Find the leftmost run (s1, e1)
-            var s1 = first;
-            var e1 = FindAndPrepareRun(s, s1, last);
+            // Find and push the first run onto the stack
+            var runStart = first;
+            var runEnd = FindAndPrepareRun(s, runStart, last);
+            runBase[0] = runStart;
+            runLen[0] = runEnd - runStart;
+            stackSize = 1;
 
-            // Process runs using PowerSort algorithm
-            while (e1 < last)
+            // Process remaining runs
+            runStart = runEnd;
+            while (runStart < last)
             {
-                // Find next run (s2, e2)
-                var s2 = e1;
-                var e2 = FindAndPrepareRun(s, s2, last);
+                // Find next run (but don't push yet)
+                var nextStart = runStart;
+                var nextEnd = FindAndPrepareRun(s, nextStart, last);
 
-                // Calculate node power between current run [s1..e1) and next run [s2..e2)
-                // Convert to relative positions (0-based from 'first')
-                var p = ComputeNodePower(s1 - first, e1 - first, s2 - first, e2 - first, n);
+                // Compute the power of the boundary between current stack top and next run
+                var topBase = runBase[stackSize - 1];
+                var topLen = runLen[stackSize - 1];
+                var p = ComputeNodePower(topBase - first, topBase + topLen - first, nextStart - first, nextEnd - first, n);
 
-                // Merge while P.top() > p (previous merge deeper in tree than current)
-                while (stackSize > 0 && power[stackSize - 1] > p)
+                // Merge while the previous boundary has higher power than current boundary
+                // power[stackSize-2] is the boundary between run[stackSize-2] and run[stackSize-1]
+                // p is the boundary between run[stackSize-1] and nextRun
+                // If power[stackSize-2] > p, merge run[stackSize-2] and run[stackSize-1]
+                while (stackSize >= 2 && power[stackSize - 2] > p)
                 {
-                    // Pop from stack and merge
+                    // Merge run[stackSize-2] and run[stackSize-1]
+                    var base1 = runBase[stackSize - 2];
+                    var len1 = runLen[stackSize - 2];
+                    var base2 = runBase[stackSize - 1];
+                    var len2 = runLen[stackSize - 1];
+
+                    MergeRuns(span, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
+
+                    // Replace the two runs with the merged result
+                    runLen[stackSize - 2] = len1 + len2;
                     stackSize--;
-                    var prevBase = runBase[stackSize];
-                    var prevLen = runLen[stackSize];
-                    var currentLen = e1 - s1;
+                    // power[stackSize-2] is now unused (boundary removed by merge)
+                    // power[stackSize-1] is also unused (we're about to recalculate p)
 
-                    // Merge prevRun [prevBase..prevBase+prevLen) with current run [s1..e1)
-                    // These two runs are always adjacent (prevBase + prevLen == s1)
-                    MergeRuns(span, prevBase, prevLen, s1, currentLen, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
-
-                    // Update s1 to represent the merged result
-                    s1 = prevBase;
-                    // e1 stays the same (end of the merged region)
+                    // Recalculate p: boundary between new top (merged result) and nextRun
+                    if (stackSize >= 1)
+                    {
+                        topBase = runBase[stackSize - 1];
+                        topLen = runLen[stackSize - 1];
+                        p = ComputeNodePower(topBase - first, topBase + topLen - first, nextStart - first, nextEnd - first, n);
+                    }
                 }
 
-                // Push current run onto stack with its power
-                runBase[stackSize] = s1;
-                runLen[stackSize] = e1 - s1;
-                power[stackSize] = p;
+                // Push the next run onto the stack
+                runBase[stackSize] = nextStart;
+                runLen[stackSize] = nextEnd - nextStart;
+                power[stackSize - 1] = p;  // Store power of boundary between run[stackSize-1] and run[stackSize]
                 stackSize++;
 
-                // Move to next run
-                s1 = s2;
-                e1 = e2;
+                runStart = nextEnd;
             }
 
-            // Now [s1..e1) is the rightmost run
-            // Merge all remaining runs from the stack with the rightmost run
-            while (stackSize > 0)
+            // Force merge all remaining runs from right to left
+            while (stackSize >= 2)
             {
+                // Always merge the last two runs
+                var base1 = runBase[stackSize - 2];
+                var len1 = runLen[stackSize - 2];
+                var base2 = runBase[stackSize - 1];
+                var len2 = runLen[stackSize - 1];
+
+                MergeRuns(span, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
+
+                // Replace the two runs with the merged result
+                runLen[stackSize - 2] = len1 + len2;
                 stackSize--;
-                var prevBase = runBase[stackSize];
-                var prevLen = runLen[stackSize];
-
-                var currentLen = e1 - s1;
-
-                // The previous run should be immediately before the current run [s1..e1)
-                if (prevBase + prevLen != s1)
-                {
-                    throw new InvalidOperationException($"Runs are not adjacent in final collapse: prev ends at {prevBase + prevLen}, current starts at {s1}");
-                }
-
-                MergeRuns(span, prevBase, prevLen, s1, currentLen, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
-
-                s1 = prevBase;
-                // e1 stays the same
             }
         }
         finally
