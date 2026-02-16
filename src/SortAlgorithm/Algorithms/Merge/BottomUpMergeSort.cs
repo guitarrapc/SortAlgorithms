@@ -117,7 +117,7 @@ public static class BottomupMergeSort
         }
         finally
         {
-            ArrayPool<T>.Shared.Return(buffer, clearArray: true);
+            ArrayPool<T>.Shared.Return(buffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 

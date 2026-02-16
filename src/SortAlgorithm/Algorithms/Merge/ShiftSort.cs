@@ -266,7 +266,7 @@ public static class ShiftSort
             }
             finally
             {
-                ArrayPool<T>.Shared.Return(tmp2nd, clearArray: true);
+                ArrayPool<T>.Shared.Return(tmp2nd, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             }
         }
         else
@@ -302,7 +302,7 @@ public static class ShiftSort
             }
             finally
             {
-                ArrayPool<T>.Shared.Return(tmp1st, clearArray: true);
+                ArrayPool<T>.Shared.Return(tmp1st, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             }
         }
     }

@@ -98,7 +98,7 @@ public static class BucketSort
         finally
         {
             ArrayPool<int>.Shared.Return(keysArray);
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: true);
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 
@@ -323,7 +323,7 @@ public static class BucketSortInteger
         finally
         {
             ArrayPool<int>.Shared.Return(indicesArray);
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: true);
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 

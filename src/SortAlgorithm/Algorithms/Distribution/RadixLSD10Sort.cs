@@ -99,7 +99,7 @@ public static class RadixLSD10Sort
         }
         finally
         {
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: true);
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             ArrayPool<int>.Shared.Return(bucketCountsArray);
         }
     }

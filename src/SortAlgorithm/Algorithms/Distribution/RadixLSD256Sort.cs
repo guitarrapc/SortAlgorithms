@@ -124,7 +124,7 @@ public static class RadixLSD256Sort
         }
         finally
         {
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: true);
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             ArrayPool<int>.Shared.Return(bucketOffsetsArray);
         }
     }

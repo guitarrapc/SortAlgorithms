@@ -113,7 +113,7 @@ public static class RadixMSD4Sort
         }
         finally
         {
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: true);
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             ArrayPool<int>.Shared.Return(bucketOffsetsArray);
         }
     }

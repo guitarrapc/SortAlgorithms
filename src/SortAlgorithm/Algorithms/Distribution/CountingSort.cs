@@ -96,7 +96,7 @@ public static class CountingSort
         finally
         {
             ArrayPool<int>.Shared.Return(keysArray);
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: true);
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 
@@ -271,7 +271,7 @@ public static class CountingSortInteger
         }
         finally
         {
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: true);
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 

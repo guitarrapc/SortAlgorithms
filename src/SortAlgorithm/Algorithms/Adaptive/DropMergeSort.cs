@@ -157,7 +157,7 @@ public static class DropMergeSort
         }
         finally
         {
-            ArrayPool<T>.Shared.Return(droppedBuffer, clearArray: true);
+            ArrayPool<T>.Shared.Return(droppedBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 

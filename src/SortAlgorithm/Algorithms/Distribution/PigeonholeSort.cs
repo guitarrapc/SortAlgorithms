@@ -102,7 +102,7 @@ public static class PigeonholeSort
         finally
         {
             ArrayPool<int>.Shared.Return(keysArray);
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: true);
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 
@@ -283,7 +283,7 @@ public static class PigeonholeSortInteger
         }
         finally
         {
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: true);
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 
