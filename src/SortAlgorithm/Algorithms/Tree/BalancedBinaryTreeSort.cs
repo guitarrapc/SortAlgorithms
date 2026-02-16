@@ -179,7 +179,7 @@ public static class BalancedBinaryTreeSort
     /// <param name="itemIndex">Index in the original span to read the value from.</param>
     /// <returns>Index of the new root of the tree.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int InsertIterative<T, TComparer, TContext>(Span<Node<T>> arena, int rootIndex, ref int nodeCount, int itemIndex, SortSpan<T, TComparer, TContext> s, Span<int> pathStack, ISortContext context)
+    private static int InsertIterative<T, TComparer, TContext>(Span<Node<T>> arena, int rootIndex, ref int nodeCount, int itemIndex, SortSpan<T, TComparer, TContext> s, Span<int> pathStack, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -329,7 +329,7 @@ public static class BalancedBinaryTreeSort
     /// Creates a new tree node in the arena and records its creation for visualization.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CreateNode<T>(Span<Node<T>> arena, T value, ref int nodeCount, ISortContext context)
+    private static int CreateNode<T, TContext>(Span<Node<T>> arena, T value, ref int nodeCount, TContext context) where TContext : ISortContext
     {
         var nodeId = nodeCount++;
         arena[nodeId] = new Node<T>(value, nodeId);
@@ -342,7 +342,7 @@ public static class BalancedBinaryTreeSort
     /// Reads a node's value and records the access for visualization.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static T ReadNodeValue<T>(Span<Node<T>> arena, int nodeIndex, ISortContext context)
+    private static T ReadNodeValue<T, TContext>(Span<Node<T>> arena, int nodeIndex, TContext context) where TContext : ISortContext
     {
         // Visualize node access during traversal
         context.OnIndexRead(arena[nodeIndex].Id, BUFFER_TREE);
@@ -355,7 +355,9 @@ public static class BalancedBinaryTreeSort
     /// Returns: value.CompareTo(node.Value)
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CompareWithNode<T, TComparer>(Span<Node<T>> arena, int nodeIndex, T value, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    private static int CompareWithNode<T, TComparer, TContext>(Span<Node<T>> arena, int nodeIndex, T value, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Visualize node access during tree traversal
         context.OnIndexRead(arena[nodeIndex].Id, BUFFER_TREE);

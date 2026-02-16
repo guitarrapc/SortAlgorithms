@@ -150,7 +150,9 @@ public static class BitonicSortParallel
     /// <param name="count">The length of the sequence.</param>
     /// <param name="ascending">True to sort in ascending order, false for descending.</param>
     /// <param name="context">The sort context for statistics tracking.</param>
-    internal static void SortCore<T, TComparer>(T[] array, int low, int count, bool ascending, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    internal static void SortCore<T, TComparer, TContext>(T[] array, int low, int count, bool ascending, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (count > 1)
         {

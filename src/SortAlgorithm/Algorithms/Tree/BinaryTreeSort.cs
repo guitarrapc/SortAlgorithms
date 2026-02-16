@@ -112,12 +112,14 @@ public static class BinaryTreeSort
     /// <summary>
     /// Iterative insertion. Instead of using recursion, it loops to find the child nodes.
     /// </summary>
-    private static void InsertIterative<T, TComparer>(ref Node<T>? node, T value, TComparer comparer, ISortContext context, ref int nodeCounter) where TComparer : IComparer<T>
+    private static void InsertIterative<T, TComparer, TContext>(ref Node<T>? node, T value, TComparer comparer, TContext context, ref int nodeCounter)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // If the tree is empty, create a new root and return.
         if (node is null)
         {
-            node = CreateNode(value, ref nodeCounter, context);
+            node = CreateNode(value, ref nodeCounter);
             return;
         }
 
@@ -126,16 +128,13 @@ public static class BinaryTreeSort
         Node<T> current = node;
         while (true)
         {
-            // Compare value with current node's item (reads node value for visualization)
-            var cmp = CompareWithNode(value, current, comparer, context);
-
             // If the value is smaller than the current node, go left.
-            if (cmp < 0)
+            if (comparer.Compare(value, current.Item) < 0)
             {
                 // If the left child is null, insert here.
                 if (current.Left is null)
                 {
-                    current.Left = CreateNode(value, ref nodeCounter, context);
+                    current.Left = CreateNode(value, ref nodeCounter);
                     break;
                 }
                 // Otherwise, move further down to the left child.
@@ -146,7 +145,7 @@ public static class BinaryTreeSort
                 // If the value is greater or equal, go right.
                 if (current.Right is null)
                 {
-                    current.Right = CreateNode(value, ref nodeCounter, context);
+                    current.Right = CreateNode(value, ref nodeCounter);
                     break;
                 }
                 // Otherwise, move further down to the right child.
@@ -155,18 +154,14 @@ public static class BinaryTreeSort
         }
     }
 
-    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Node<T>? node, ref int i, ISortContext context)
+    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Node<T>? node, ref int i, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         if (node is null) return;
 
         Inorder(s, node.Left, ref i, context);
-
-        // Read node value for visualization and write to array
-        var value = ReadNodeValue(node, context);
-        s.Write(i++, value);
-
+        s.Write(i++, node.Item);
         Inorder(s, node.Right, ref i, context);
     }
 
@@ -176,43 +171,11 @@ public static class BinaryTreeSort
     /// Creates a new tree node and records its creation for visualization.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Node<T> CreateNode<T>(T value, ref int nodeCounter, ISortContext context)
+    private static Node<T> CreateNode<T>(T value, ref int nodeCounter)
     {
         var nodeId = nodeCounter++;
         var node = new Node<T>(value, nodeId);
-        // Record node creation in the tree buffer for visualization
-        context.OnIndexWrite(nodeId, BUFFER_TREE, value);
         return node;
-    }
-
-    /// <summary>
-    /// Reads a node's value and records the access for visualization.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static T ReadNodeValue<T>(Node<T> node, ISortContext context)
-    {
-        // Visualize node access during traversal
-        context.OnIndexRead(node.Id, BUFFER_TREE);
-        return node.Item;
-    }
-
-    /// <summary>
-    /// Compares a value with a node's value and records the comparison for statistics.
-    /// Also records the node access for visualization.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CompareWithNode<T, TComparer>(T value, Node<T> node, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
-    {
-        // Visualize node access during tree traversal
-        context.OnIndexRead(node.Id, BUFFER_TREE);
-
-        // Compare value with node's item
-        // Note: This comparison is counted as a main array comparison (bufferId 0)
-        // because the values originated from the main array
-        var cmp = comparer.Compare(value, node.Item);
-        context.OnCompare(-1, -1, cmp, 0, 0);
-
-        return cmp;
     }
 
     /// <summary>
