@@ -48,7 +48,7 @@ public class BitonicSortParallelTests
     {
         var array = new int[] { 1, 2, 3, 4 };
 
-        Assert.Throws<ArgumentNullException>(() => BitonicSortParallel.Sort(array, null!));
+        Assert.Throws<ArgumentNullException>(() => BitonicSortParallel.Sort(array, (StatisticsContext)null!));
     }
 
     [Test]
@@ -133,7 +133,6 @@ public class BitonicSortParallelTests
         await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockPowerOfTwoSortedData), nameof(MockPowerOfTwoSortedData.Generate))]
@@ -237,6 +236,4 @@ public class BitonicSortParallelTests
 
         return (ulong)(n * k * (k + 1) / 4);
     }
-
-#endif
 }

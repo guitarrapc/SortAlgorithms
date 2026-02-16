@@ -224,7 +224,6 @@ public class InsertionSortNonOptimizedTests
         await Assert.That(array).IsEquivalentTo([1, 3, 5, 7, 9, 2, 4, 6, 8], CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test, SkipCI]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -338,7 +337,5 @@ public class InsertionSortNonOptimizedTests
         // Each swap writes 2 elements
         await Assert.That(stats.IndexWriteCount).IsEqualTo(stats.SwapCount * 2);
     }
-
-#endif
 
 }

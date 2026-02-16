@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -109,6 +109,7 @@ public static class PDQSort
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
@@ -119,26 +120,57 @@ public static class PDQSort
     /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
-    /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
         => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
 
     /// <summary>
-    /// Sorts the subrange [first..last) using the provided sort context.
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
-    /// <param name="span">The span containing elements to sort.</param>
-    /// <param name="first">The inclusive start index of the range to sort.</param>
-    /// <param name="last">The exclusive end index of the range to sort.</param>
-    /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => Sort(span, first, last, new ComparableComparer<T>(), context);
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of the comparer.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => Sort(span, 0, span.Length, comparer, context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, int first, int last, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, first, last, new ComparableComparer<T>(), context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span containing elements to sort.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that tracks statistics and provides sorting operations.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -146,7 +178,7 @@ public static class PDQSort
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // For floating-point types, move NaN values to the front
         // This improves performance and enhances PDQSort's pattern detection
@@ -160,14 +192,16 @@ public static class PDQSort
 
         // Sort the non-NaN portion
         var badAllowed = Log2(last - nanEnd);
-        PDQSortLoop(s, nanEnd, last, badAllowed, true, context);
+        PDQSortLoop(s, nanEnd, last, badAllowed, true);
     }
 
     /// <summary>
     /// Main PDQSort loop with tail recursion elimination.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PDQSortLoop<T, TComparer>(SortSpan<T, TComparer> s, int begin, int end, int badAllowed, bool leftmost, ISortContext context) where TComparer : IComparer<T>
+    private static void PDQSortLoop<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end, int badAllowed, bool leftmost)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         while (true)
         {
@@ -285,7 +319,7 @@ public static class PDQSort
             if (leftSize < rightSize)
             {
                 // Recurse on smaller left partition (preserves leftmost flag)
-                PDQSortLoop(s, begin, equalLeft, badAllowed, leftmost, context);
+                PDQSortLoop(s, begin, equalLeft, badAllowed, leftmost);
                 // Tail recursion: continue loop with larger right partition
                 begin = equalRight;
                 leftmost = false;
@@ -293,7 +327,7 @@ public static class PDQSort
             else
             {
                 // Recurse on smaller right partition (always non-leftmost)
-                PDQSortLoop(s, equalRight, end, badAllowed, false, context);
+                PDQSortLoop(s, equalRight, end, badAllowed, false);
                 // Tail recursion: continue loop with larger left partition
                 end = equalLeft;
                 // Preserve leftmost flag for left partition
@@ -306,7 +340,9 @@ public static class PDQSort
     /// Returns the position of the pivot after partitioning and whether the passed sequence already was correctly partitioned.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T, TComparer>(SortSpan<T, TComparer> s, int begin, int end) where TComparer : IComparer<T>
+    private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Move pivot into local for speed
         var pivot = s.Read(begin);
@@ -365,8 +401,9 @@ public static class PDQSort
     /// alreadyPartitioned: Whether the input was already partitioned
     /// </returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static (int eqL, int eqR, bool alreadyPartitioned) PartitionRightSkipEquals<T, TComparer>(
-        SortSpan<T, TComparer> s, int begin, int end) where TComparer : IComparer<T>
+    private static (int eqL, int eqR, bool alreadyPartitioned) PartitionRightSkipEquals<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var (pivotPos, alreadyPartitioned) = PartitionRight(s, begin, end);
 
@@ -391,7 +428,9 @@ public static class PDQSort
     /// Used when many equal elements are detected.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int PartitionLeft<T, TComparer>(SortSpan<T, TComparer> s, int begin, int end) where TComparer : IComparer<T>
+    private static int PartitionLeft<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var pivot = s.Read(begin);
         var first = begin;
@@ -436,7 +475,9 @@ public static class PDQSort
     /// PartialInsertionSortLimit elements were moved, and abort sorting.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool PartialInsertionSort<T, TComparer>(SortSpan<T, TComparer> s, int begin, int end) where TComparer : IComparer<T>
+    private static bool PartialInsertionSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (begin == end) return true;
 
@@ -473,7 +514,9 @@ public static class PDQSort
     /// Sorts 3 elements at positions a, b, c.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Sort3<T, TComparer>(SortSpan<T, TComparer> s, int a, int b, int c) where TComparer : IComparer<T>
+    private static void Sort3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int a, int b, int c)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (s.Compare(b, a) < 0) s.Swap(a, b);
         if (s.Compare(c, b) < 0) s.Swap(b, c);

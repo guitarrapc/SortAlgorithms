@@ -150,7 +150,6 @@ public class MergeSortTests
         await Assert.That(items.Select(x => x.OriginalIndex).ToArray()).IsEquivalentTo(MockStabilityAllEqualsData.Sorted, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -286,7 +285,5 @@ public class MergeSortTests
         await Assert.That(stats.IndexReadCount >= minReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minReads}");
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
-
-#endif
 
 }

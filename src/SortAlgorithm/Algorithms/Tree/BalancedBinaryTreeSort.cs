@@ -82,6 +82,7 @@ public static class BalancedBinaryTreeSort
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
@@ -91,21 +92,22 @@ public static class BalancedBinaryTreeSort
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}\"/>.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
         => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span.</typeparam>
-    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
-    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
-    /// <param name="comparer">The comparer to use for element comparisons.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
@@ -127,7 +129,7 @@ public static class BalancedBinaryTreeSort
         try
         {
             var arenaSpan = arena.AsSpan(0, span.Length);
-            SortCore(span, comparer, context, arenaSpan, pathStack);
+            SortCore<T, TComparer, TContext>(span, comparer, context, arenaSpan, pathStack);
         }
         finally
         {
@@ -144,13 +146,16 @@ public static class BalancedBinaryTreeSort
     /// Builds a balanced binary search tree iteratively, then performs in-order traversal.
     /// </summary>
     /// <param name="span">The span to sort</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
     /// <param name="context">Sort context for statistics tracking</param>
     /// <param name="arena">Preallocated arena for tree nodes</param>
     /// <param name="pathStack">Preallocated stack for tracking insertion path</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context, Span<Node<T>> arena, Span<int> pathStack) where TComparer : IComparer<T>
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context, Span<Node<T>> arena, Span<int> pathStack)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         var rootIndex = NULL_INDEX;
         var nodeCount = 0;
 
@@ -174,7 +179,9 @@ public static class BalancedBinaryTreeSort
     /// <param name="itemIndex">Index in the original span to read the value from.</param>
     /// <returns>Index of the new root of the tree.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int InsertIterative<T, TComparer>(Span<Node<T>> arena, int rootIndex, ref int nodeCount, int itemIndex, SortSpan<T, TComparer> s, Span<int> pathStack, ISortContext context) where TComparer : IComparer<T>
+    private static int InsertIterative<T, TComparer, TContext>(Span<Node<T>> arena, int rootIndex, ref int nodeCount, int itemIndex, SortSpan<T, TComparer, TContext> s, Span<int> pathStack, ISortContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Read the value to insert (tracked by SortSpan for statistics)
         var insertValue = s.Read(itemIndex);
@@ -268,7 +275,9 @@ public static class BalancedBinaryTreeSort
     /// Uses ArrayPool to avoid GC pressure.
     /// Reads actual data from original span using ItemIndex.
     /// </remarks>
-    private static void Inorder<T, TComparer>(SortSpan<T, TComparer> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex, ISortContext context) where TComparer : IComparer<T>
+    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex, ISortContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (rootIndex == NULL_INDEX) return;
 
@@ -581,7 +590,9 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+    where T : IComparable<T>
+    where TContext : ISortContext
         => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
@@ -589,14 +600,17 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="comparer">The comparer to use for element comparisons.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         Node<T>? root = null;
 
@@ -616,7 +630,9 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <summary>
     /// Insert a value into the AVL tree iteratively and rebalance if necessary.
     /// </summary>
-    private static Node<T> InsertIterative<T, TComparer>(Node<T>? root, T value, SortSpan<T, TComparer> s) where TComparer : IComparer<T>
+    private static Node<T> InsertIterative<T, TComparer, TContext>(Node<T>? root, T value, SortSpan<T, TComparer, TContext> s)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // If the tree is empty, just create a new node.
         if (root is null)
@@ -682,7 +698,9 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <summary>
     /// Insert into the AVL tree, then rebalance.
     /// </summary>
-    private static Node<T> InsertRecursive<T, TComparer>(Node<T>? node, T value, SortSpan<T, TComparer> s) where TComparer : IComparer<T>
+    private static Node<T> InsertRecursive<T, TComparer, TContext>(Node<T>? node, T value, SortSpan<T, TComparer, TContext> s)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // If the tree is empty, return a new node.
         if (node is null)
@@ -708,7 +726,9 @@ public static class BalancedBinaryTreeSortNonOptimized
     /// <summary>
     /// Traverse the tree in order to collect elements in ascending order.
     /// </summary>
-    private static void Inorder<T, TComparer>(SortSpan<T, TComparer> s, Node<T>? node, ref int index) where TComparer : IComparer<T>
+    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Node<T>? node, ref int index)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (node is null) return;
 

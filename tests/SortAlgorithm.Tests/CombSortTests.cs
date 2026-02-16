@@ -115,7 +115,6 @@ public class CombSortTests
         await Assert.That(data).IsEquivalentTo(Enumerable.Range(0, n).ToArray(), CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -223,7 +222,5 @@ public class CombSortTests
         var minIndexReads = stats.CompareCount * 2;
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
-
-#endif
 
 }

@@ -152,7 +152,6 @@ public class ShellSortLee2021Tests
         await Assert.That(array).IsEquivalentTo([1, 3, 5, 7, 9, 2, 4, 6, 8], CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -262,7 +261,5 @@ public class ShellSortLee2021Tests
         var expectedReads = stats.CompareCount * 2 + stats.SwapCount * 2;
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
     }
-
-#endif
 
 }

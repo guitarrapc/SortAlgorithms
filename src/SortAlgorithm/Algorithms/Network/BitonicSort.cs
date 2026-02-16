@@ -75,35 +75,38 @@ public static class BitonicSort
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    /// <exception cref="ArgumentException">Thrown when the span length is not a power of 2.</exception>
     public static void Sort<T>(Span<T> span) where T : IComparable<T>
-    {
-        Sort(span, NullContext.Default);
-    }
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}\"/>.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    /// <exception cref="ArgumentException">Thrown when the span length is not a power of 2.</exception>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
         => Sort(span, new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="comparer">The comparer to use for element comparisons.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    /// <exception cref="ArgumentException">Thrown when the span length is not a power of 2.</exception>
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
@@ -111,7 +114,7 @@ public static class BitonicSort
         if (!IsPowerOfTwo(span.Length))
             throw new ArgumentException($"Bitonic sort requires input length to be a power of 2. Actual length: {span.Length}", nameof(span));
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, 0, span.Length, ascending: true);
     }
 
@@ -123,7 +126,9 @@ public static class BitonicSort
     /// <param name="count">The length of the sequence.</param>
     /// <param name="ascending">True to sort in ascending order, false for descending.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void SortCore<T, TComparer>(SortSpan<T, TComparer> span, int low, int count, bool ascending) where TComparer : IComparer<T>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int low, int count, bool ascending)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (count > 1)
         {
@@ -147,7 +152,9 @@ public static class BitonicSort
     /// <param name="count">The length of the bitonic sequence.</param>
     /// <param name="ascending">True to merge in ascending order, false for descending.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void BitonicMerge<T, TComparer>(SortSpan<T, TComparer> span, int low, int count, bool ascending) where TComparer : IComparer<T>
+    private static void BitonicMerge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int low, int count, bool ascending)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (count > 1)
         {
@@ -173,7 +180,9 @@ public static class BitonicSort
     /// <param name="j">The index of the second element.</param>
     /// <param name="ascending">True if elements should be in ascending order, false for descending.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CompareAndSwap<T, TComparer>(SortSpan<T, TComparer> span, int i, int j, bool ascending) where TComparer : IComparer<T>
+    private static void CompareAndSwap<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int i, int j, bool ascending)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         int cmp = span.Compare(i, j);
 

@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -117,6 +117,7 @@ public static class IntroSort
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
@@ -127,26 +128,57 @@ public static class IntroSort
     /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
-    /// <param name="context">The sort context that tracks statistics and provides sorting operations. Cannot be null.</param>
-    public static void Sort<T>(Span<T> span, ISortContext context) where T : IComparable<T>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
         => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
 
     /// <summary>
-    /// Sorts the subrange [first..last) using the provided sort context.
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
-    /// <param name="span">The span containing elements to sort.</param>
-    /// <param name="first">The inclusive start index of the range to sort.</param>
-    /// <param name="last">The exclusive end index of the range to sort.</param>
-    /// <param name="context">The sort context for tracking statistics and observations.</param>
-    public static void Sort<T>(Span<T> span, int first, int last, ISortContext context) where T : IComparable<T>
-        => Sort(span, first, last, new ComparableComparer<T>(), context);
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of the comparer</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => Sort(span, 0, span.Length, comparer, context);
 
     /// <summary>
     /// Sorts the subrange [first..last) using the provided comparer and sort context.
     /// </summary>
-    public static void Sort<T, TComparer>(Span<T> span, int first, int last, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, int first, int last, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, first, last, new ComparableComparer<T>(), context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span containing elements to sort.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that tracks statistics and provides sorting operations.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
@@ -154,7 +186,7 @@ public static class IntroSort
 
         if (last - first <= 1) return;
 
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // For floating-point types, move NaN values to the front
         // This optimization is based on dotnet/runtime's ArraySortHelper implementation
@@ -169,21 +201,15 @@ public static class IntroSort
 
         // Sort the non-NaN portion
         var depthLimit = 2 * (BitOperations.Log2((uint)(last - nanEnd)) + 1);
-        IntroSortInternal(s, nanEnd, last - 1, depthLimit, true, context);
+        IntroSortInternal(s, nanEnd, last - 1, depthLimit, true);
     }
 
     /// <summary>
     /// Internal IntroSort implementation that switches between QuickSort, HeapSort, and InsertionSort based on size and depth.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
-    /// <param name="s">The SortSpan wrapping the span to sort.</param>
-    /// <param name="left">The inclusive start index of the range to sort.</param>
-    /// <param name="right">The inclusive end index of the range to sort.</param>
-    /// <param name="depthLimit">The recursion depth limit before switching to HeapSort.</param>
-    /// <param name="leftmost">True if this is the leftmost partition (requires boundary checks in InsertionSort),
-    /// <param name="context">The sort context for tracking statistics and observations.</param>
-    /// false otherwise (can use unguarded InsertionSort).</param>
-    private static void IntroSortInternal<T, TComparer>(SortSpan<T, TComparer> s, int left, int right, int depthLimit, bool leftmost, ISortContext context) where TComparer : IComparer<T>
+    private static void IntroSortInternal<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int depthLimit, bool leftmost)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         while (right > left)
         {
@@ -363,7 +389,7 @@ public static class IntroSort
                 // Recurse on smaller left partition (preserves leftmost flag)
                 if (left < r)
                 {
-                    IntroSortInternal(s, left, r, depthLimit, leftmost, context);
+                    IntroSortInternal(s, left, r, depthLimit, leftmost);
                 }
                 // Tail recursion: continue loop with larger right partition
                 // Right partition is never leftmost (element at position r acts as sentinel)
@@ -375,7 +401,7 @@ public static class IntroSort
                 // Recurse on smaller right partition (always non-leftmost)
                 if (l < right)
                 {
-                    IntroSortInternal(s, l, right, depthLimit, leftmost, context);
+                    IntroSortInternal(s, l, right, depthLimit, leftmost);
                 }
                 // Tail recursion: continue loop with larger left partition
                 // Preserve leftmost flag for left partition
@@ -388,7 +414,9 @@ public static class IntroSort
     /// Returns the median value among three elements at specified indices.
     /// This method performs exactly 2-3 comparisons to determine the median value.
     /// </summary>
-    private static T MedianOf3Value<T, TComparer>(SortSpan<T, TComparer> s, int lowIdx, int midIdx, int highIdx) where TComparer : IComparer<T>
+    private static T MedianOf3Value<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Use SortSpan.Compare to track statistics
         var cmpLowMid = s.Compare(lowIdx, midIdx);
@@ -432,7 +460,9 @@ public static class IntroSort
     /// This provides better pivot selection than simple 3-point sampling, especially for large arrays
     /// with patterns like partially-sorted or mountain-shaped distributions.
     /// </remarks>
-    private static T MedianOf5Value<T, TComparer>(SortSpan<T, TComparer> s, int i1, int i2, int i3, int i4, int i5) where TComparer : IComparer<T>
+    private static T MedianOf5Value<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i1, int i2, int i3, int i4, int i5)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         // Sort the 5 indices using a sorting network (6 comparisons minimum for 5 elements)
         // We'll use a simplified approach: sort pairs, then find median

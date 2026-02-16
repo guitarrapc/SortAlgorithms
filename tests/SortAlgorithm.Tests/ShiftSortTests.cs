@@ -165,7 +165,6 @@ public class ShiftSortTests
         await Assert.That(items.Select(x => x.OriginalIndex).ToArray()).IsEquivalentTo(MockStabilityAllEqualsData.Sorted, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -324,7 +323,5 @@ public class ShiftSortTests
         await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
     }
-
-#endif
 
 }

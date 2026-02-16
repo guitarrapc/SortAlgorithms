@@ -160,7 +160,6 @@ public class OddEvenSortTests
         await Assert.That(items.Select(x => x.OriginalIndex).ToArray()).IsEquivalentTo(MockStabilityAllEqualsData.Sorted, CollectionOrdering.Matching);
     }
 
-#if DEBUG
 
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
@@ -282,7 +281,5 @@ public class OddEvenSortTests
         await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
-
-#endif
 
 }
