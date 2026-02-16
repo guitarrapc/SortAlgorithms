@@ -165,14 +165,14 @@ public static class PowerSort
         }
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        SortCore(s, first, last, comparer, context);
+        SortCore(s, first, last);
     }
 
     /// <summary>
     /// Core PowerSort implementation.
     /// Based on the algorithm from the PowerSort paper (Algorithm in Section 5.3).
     /// </summary>
-    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, TComparer comparer, TContext context)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -210,7 +210,7 @@ public static class PowerSort
 
                 // Merge prevRun [prevBase..prevBase+prevLen) with current run [s1..e1)
                 // These two runs are always adjacent (prevBase + prevLen == s1)
-                MergeRuns(s, prevBase, prevLen, s1, currentLen, comparer, context);
+                MergeRuns(s, prevBase, prevLen, s1, currentLen);
 
                 // Update s1 to represent the merged result
                 s1 = prevBase;
@@ -244,7 +244,7 @@ public static class PowerSort
                 throw new InvalidOperationException($"Runs are not adjacent in final collapse: prev ends at {prevBase + prevLen}, current starts at {s1}");
             }
 
-            MergeRuns(s, prevBase, prevLen, s1, currentLen, comparer, context);
+            MergeRuns(s, prevBase, prevLen, s1, currentLen);
 
             s1 = prevBase;
             // e1 stays the same
@@ -381,7 +381,7 @@ public static class PowerSort
     /// <summary>
     /// Merges two adjacent runs with galloping mode optimization.
     /// </summary>
-    private static void MergeRuns<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, TComparer comparer, TContext context)
+    private static void MergeRuns<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -402,11 +402,11 @@ public static class PowerSort
         // Merge remaining runs using galloping
         if (len1 <= len2)
         {
-            MergeLow(s, base1, len1, base2, len2, ref ms, comparer, context);
+            MergeLow(s, base1, len1, base2, len2, ref ms);
         }
         else
         {
-            MergeHigh(s, base1, len1, base2, len2, ref ms, comparer, context);
+            MergeHigh(s, base1, len1, base2, len2, ref ms);
         }
     }
 
@@ -564,7 +564,7 @@ public static class PowerSort
     /// Merges two adjacent runs where the first run is smaller or equal.
     /// Uses galloping mode when one run consistently wins.
     /// </summary>
-    private static void MergeLow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref MergeState ms, TComparer comparer, TContext context)
+    private static void MergeLow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref MergeState ms)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -572,7 +572,7 @@ public static class PowerSort
         var tmp = ArrayPool<T>.Shared.Rent(len1);
         try
         {
-            var t = new SortSpan<T, TComparer, TContext>(tmp.AsSpan(0, len1), context, comparer, BUFFER_TEMP);
+            var t = new SortSpan<T, TComparer, TContext>(tmp.AsSpan(0, len1), s.Context, s.Comparer, BUFFER_TEMP);
             s.CopyTo(base1, t, 0, len1);
 
             var cursor1 = 0;          // Index in temp (first run)
@@ -709,7 +709,7 @@ public static class PowerSort
     /// Merges two adjacent runs where the second run is smaller.
     /// Uses galloping mode when one run consistently wins.
     /// </summary>
-    private static void MergeHigh<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref MergeState ms, TComparer comparer, TContext context)
+    private static void MergeHigh<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref MergeState ms)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -717,7 +717,7 @@ public static class PowerSort
         var tmp = ArrayPool<T>.Shared.Rent(len2);
         try
         {
-            var t = new SortSpan<T, TComparer, TContext>(tmp.AsSpan(0, len2), context, comparer, BUFFER_TEMP);
+            var t = new SortSpan<T, TComparer, TContext>(tmp.AsSpan(0, len2), s.Context, s.Comparer, BUFFER_TEMP);
             s.CopyTo(base2, t, 0, len2);
 
             var cursor1 = base1 + len1 - 1;  // Index in span (first run, from end)
