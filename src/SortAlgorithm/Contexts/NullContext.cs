@@ -1,33 +1,26 @@
-﻿namespace SortAlgorithm.Contexts;
+﻿using System.Runtime.CompilerServices;
+
+namespace SortAlgorithm.Contexts;
 
 /// <summary>
 /// No-op implementation of ISortContext.
 /// </summary>
-public sealed class NullContext : ISortContext
+public readonly struct NullContext : ISortContext
 {
-    public static readonly NullContext Default = new();
+    public static readonly NullContext Default = default;
 
-    private NullContext()
-    {
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) { }
 
-    public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ)
-    {
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnSwap(int i, int j, int bufferId) { }
 
-    public void OnSwap(int i, int j, int bufferId)
-    {
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnIndexRead(int index, int bufferId) { }
 
-    public void OnIndexRead(int index, int bufferId)
-    {
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnIndexWrite(int index, int bufferId, object? value = null) { }
 
-    public void OnIndexWrite(int index, int bufferId, object? value = null)
-    {
-    }
-
-    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null)
-    {
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null) { }
 }
