@@ -164,7 +164,8 @@ public static class PowerSort
             return;
         }
 
-        SortCore(span, first, last, comparer, context);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        SortCore(s, first, last, comparer, context);
     }
 
     /// <summary>
@@ -180,12 +181,11 @@ public static class PowerSort
     /// <item><description>After merge: recalculate p with new top and nextRun</description></item>
     /// </list>
     /// </remarks>
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var n = last - first;
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Compute adaptive minimum run length based on array size
         // Same strategy as TimSort: ensures n/minRun is close to or slightly less than a power of 2
@@ -239,7 +239,7 @@ public static class PowerSort
                     var base2 = runBase[stackSize - 1];
                     var len2 = runLen[stackSize - 1];
 
-                    MergeRuns(span, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
+                    MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
 
                     // Replace the two runs with the merged result
                     runLen[stackSize - 2] = len1 + len2;
@@ -274,7 +274,7 @@ public static class PowerSort
                 var base2 = runBase[stackSize - 1];
                 var len2 = runLen[stackSize - 1];
 
-                MergeRuns(span, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
+                MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
 
                 // Replace the two runs with the merged result
                 runLen[stackSize - 2] = len1 + len2;
@@ -445,13 +445,11 @@ public static class PowerSort
     /// Merges two adjacent runs with galloping mode optimization.
     /// The temporary buffer is reused across multiple merges for efficiency.
     /// </summary>
-    private static void MergeRuns<T, TComparer, TContext>(Span<T> span, int base1, int len1, int base2, int len2,
+    private static void MergeRuns<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
         ref T[] tmpBuffer, ref int tmpBufferSize, ref MergeState ms, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-
         // Optimize: Find where first element of run2 goes in run1
         // Elements before this point are already in their final positions
         var k = GallopRight(s, s.Read(base2), base1, len1, 0);
@@ -467,11 +465,11 @@ public static class PowerSort
         // Merge remaining runs using galloping
         if (len1 <= len2)
         {
-            MergeLow(span, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
+            MergeLow(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
         }
         else
         {
-            MergeHigh(span, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
+            MergeHigh(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
         }
     }
 
@@ -630,13 +628,11 @@ public static class PowerSort
     /// Uses galloping mode when one run consistently wins.
     /// Reuses the provided temporary buffer, expanding it if necessary.
     /// </summary>
-    private static void MergeLow<T, TComparer, TContext>(Span<T> span, int base1, int len1, int base2, int len2,
+    private static void MergeLow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
         ref T[] tmpBuffer, ref int tmpBufferSize, ref MergeState ms, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-
         // Ensure tmpBuffer is large enough for len1
         if (tmpBufferSize < len1)
         {
@@ -780,13 +776,11 @@ public static class PowerSort
     /// Uses galloping mode when one run consistently wins.
     /// Reuses the provided temporary buffer, expanding it if necessary.
     /// </summary>
-    private static void MergeHigh<T, TComparer, TContext>(Span<T> span, int base1, int len1, int base2, int len2,
+    private static void MergeHigh<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
         ref T[] tmpBuffer, ref int tmpBufferSize, ref MergeState ms, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-
         // Ensure tmpBuffer is large enough for len2
         if (tmpBufferSize < len2)
         {
