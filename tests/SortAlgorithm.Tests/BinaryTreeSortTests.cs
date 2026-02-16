@@ -112,7 +112,7 @@ public class BinaryTreeSortTests
         await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
         await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
@@ -136,7 +136,7 @@ public class BinaryTreeSortTests
         var expectedReads = (ulong)n;  // Reading during insertion
         var expectedWrites = (ulong)n; // Writing during in-order traversal
 
-        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
@@ -162,7 +162,7 @@ public class BinaryTreeSortTests
         var expectedReads = (ulong)n;  // Reading during insertion
         var expectedWrites = (ulong)n; // Writing during in-order traversal
 
-        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
@@ -195,7 +195,7 @@ public class BinaryTreeSortTests
         var expectedReads = (ulong)n;  // Reading during insertion
         var expectedWrites = (ulong)n; // Writing during in-order traversal
 
-        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
@@ -222,7 +222,7 @@ public class BinaryTreeSortTests
         var expectedReads = (ulong)n;  // Reading during insertion
         var expectedWrites = (ulong)n; // Writing during in-order traversal
 
-        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
