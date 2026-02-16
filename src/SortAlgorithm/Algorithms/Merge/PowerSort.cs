@@ -203,28 +203,29 @@ public static class PowerSort
         var runCount = 0;   // Number of runs on stack
         var bpCount = 0;    // Number of boundary powers (always runCount - 1)
 
+        // Find and push the first run onto the stack
+        var runStart = first;
+        var runEnd = FindAndPrepareRun(s, runStart, last, minRun);
+        runBase[0] = runStart;
+        runLen[0] = runEnd - runStart;
+        runCount = 1;
+
+        // Early exit: if the entire array is a single run, we're done
+        // This avoids unnecessary buffer allocation for already sorted or reversed arrays
+        if (runEnd >= last)
+        {
+            return; // Already sorted (either ascending or reversed and then reversed back)
+        }
+
         // Reusable temporary buffer for merging
         // Start with minRun size (reasonable initial capacity)
         // MergeLow needs len1, MergeHigh needs len2, so we track the smaller run size
         var tmpBufferSize = Math.Min(minRun * 2, n / 2);
-        var tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
+        T[] tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
         var minGallop = MIN_GALLOP;
 
         try
         {
-            // Find and push the first run onto the stack
-            var runStart = first;
-            var runEnd = FindAndPrepareRun(s, runStart, last, minRun);
-            runBase[0] = runStart;
-            runLen[0] = runEnd - runStart;
-            runCount = 1;
-
-            // Early exit: if the entire array is a single run, we're done
-            if (runEnd >= last)
-            {
-                return;  // Already sorted (either ascending or reversed and then reversed back)
-            }
-
             // No boundary yet (need at least 2 runs for a boundary)
 
             // Process remaining runs
