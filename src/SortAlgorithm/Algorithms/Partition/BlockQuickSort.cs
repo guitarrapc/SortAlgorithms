@@ -661,32 +661,32 @@ public static class BlockQuickSort
         
         // Network for median-of-5, detecting duplicates
         var cmp = s.Compare(i1, i2);
+        hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i1, i2);
-        else if (cmp == 0) hasDuplicate = true;
         
         cmp = s.Compare(i4, i5);
+        hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i4, i5);
-        else if (cmp == 0) hasDuplicate = true;
         
         cmp = s.Compare(i1, i4);
+        hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i1, i4);
-        else if (cmp == 0) hasDuplicate = true;
         
         cmp = s.Compare(i2, i5);
+        hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i2, i5);
-        else if (cmp == 0) hasDuplicate = true;
         
         cmp = s.Compare(i3, i4);
+        hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i3, i4);
-        else if (cmp == 0) hasDuplicate = true;
         
         cmp = s.Compare(i2, i3);
+        hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i2, i3);
-        else if (cmp == 0) hasDuplicate = true;
         
         cmp = s.Compare(i3, i4);
+        hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i3, i4);
-        else if (cmp == 0) hasDuplicate = true;
 
         return i3;
     }
