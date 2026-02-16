@@ -48,7 +48,7 @@ public class BitonicSortParallelTests
     {
         var array = new int[] { 1, 2, 3, 4 };
 
-        Assert.Throws<ArgumentNullException>(() => BitonicSortParallel.Sort(array, (NullContext)null!));
+        Assert.Throws<ArgumentNullException>(() => BitonicSortParallel.Sort(array, (StatisticsContext)null!));
     }
 
     [Test]
