@@ -171,7 +171,6 @@ public static class DropMergeSort
     /// <param name="droppedBuffer">Auxiliary buffer for dropped elements (same size as span)</param>
     /// <param name="comparer">The comparer to use for element comparisons.</param>
     /// <param name="context">Sort context for statistics tracking</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> droppedBuffer, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext

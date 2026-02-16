@@ -158,7 +158,6 @@ public static class PigeonholeSort
     /// Pigeonhole distribution implementation.
     /// Achieves O(n + k) complexity by processing elements in a single pass.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void PigeonholeDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<int> keys, Span<int> holes, int offset)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -339,7 +338,6 @@ public static class PigeonholeSortInteger
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void PigeonholeDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<int> holes, long offset)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>

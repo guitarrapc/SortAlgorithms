@@ -97,6 +97,7 @@ public static class BogoSort
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsSorted<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s)
         where TComparer : IComparer<T>
         where TContext : ISortContext

@@ -129,7 +129,6 @@ public static class RadixLSD256Sort
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
@@ -165,7 +164,6 @@ public static class RadixLSD256Sort
         LSDSort(s, temp, digitCount, bitSize, bucketOffsets);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int digitCount, int bitSize, Span<int> bucketOffsets)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>

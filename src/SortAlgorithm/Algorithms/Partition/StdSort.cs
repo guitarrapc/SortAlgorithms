@@ -120,7 +120,6 @@ public static class StdSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -236,7 +235,6 @@ public static class StdSort
     /// <summary>
     /// Main Introsort algorithm combining quicksort, heapsort, and insertion sort.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void IntroSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int depth, TContext context, bool leftmost)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -440,7 +438,6 @@ public static class StdSort
     /// Partitions range with equal elements kept to the right of pivot.
     /// Returns (pivot position, already partitioned flag).
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static (int pivotPos, bool alreadyPartitioned) PartitionWithEqualsOnRight<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -490,7 +487,6 @@ public static class StdSort
     /// Partitions range with equal elements kept to the left of pivot.
     /// Returns the first index of the right partition.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int PartitionWithEqualsOnLeft<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext

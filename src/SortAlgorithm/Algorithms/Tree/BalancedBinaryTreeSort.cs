@@ -129,7 +129,19 @@ public static class BalancedBinaryTreeSort
         try
         {
             var arenaSpan = arena.AsSpan(0, span.Length);
-            SortCore<T, TComparer, TContext>(span, comparer, context, arenaSpan, pathStack);
+            var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+            var rootIndex = NULL_INDEX;
+            var nodeCount = 0;
+
+            // Insert each element into the AVL tree (iteratively with rebalancing)
+            for (int i = 0; i < s.Length; i++)
+            {
+                rootIndex = InsertIterative(arena, rootIndex, ref nodeCount, i, s, pathStack, context);
+            }
+
+            // Traverse in order and write back into the array (iterative to avoid stack overflow)
+            var writeIndex = 0;
+            Inorder(s, arena, rootIndex, ref writeIndex, context);
         }
         finally
         {
@@ -142,35 +154,6 @@ public static class BalancedBinaryTreeSort
     }
 
     /// <summary>
-    /// Core AVL tree sort implementation.
-    /// Builds a balanced binary search tree iteratively, then performs in-order traversal.
-    /// </summary>
-    /// <param name="span">The span to sort</param>
-    /// <param name="comparer">The comparer to use for element comparisons.</param>
-    /// <param name="context">Sort context for statistics tracking</param>
-    /// <param name="arena">Preallocated arena for tree nodes</param>
-    /// <param name="pathStack">Preallocated stack for tracking insertion path</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context, Span<Node<T>> arena, Span<int> pathStack)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        var rootIndex = NULL_INDEX;
-        var nodeCount = 0;
-
-        // Insert each element into the AVL tree (iteratively with rebalancing)
-        for (int i = 0; i < s.Length; i++)
-        {
-            rootIndex = InsertIterative(arena, rootIndex, ref nodeCount, i, s, pathStack, context);
-        }
-
-        // Traverse in order and write back into the array (iterative to avoid stack overflow)
-        var writeIndex = 0;
-        Inorder(s, arena, rootIndex, ref writeIndex, context);
-    }
-
-    /// <summary>
     /// Iteratively insert into the AVL tree using path stack, then rebalance.
     /// Completely recursion-free to avoid stack overhead.
     /// The value is read once from SortSpan (tracked) and then cached in the node.
@@ -178,7 +161,6 @@ public static class BalancedBinaryTreeSort
     /// </summary>
     /// <param name="itemIndex">Index in the original span to read the value from.</param>
     /// <returns>Index of the new root of the tree.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int InsertIterative<T, TComparer, TContext>(Span<Node<T>> arena, int rootIndex, ref int nodeCount, int itemIndex, SortSpan<T, TComparer, TContext> s, Span<int> pathStack, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -443,7 +425,6 @@ public static class BalancedBinaryTreeSort
     /// Right rotation on the given node using arena indices.
     /// </summary>
     /// <returns>Index of the new root after rotation.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RotateRight<T>(Span<Node<T>> arena, int yIndex)
     {
         var xIndex = arena[yIndex].Left;
@@ -465,7 +446,6 @@ public static class BalancedBinaryTreeSort
     /// Left rotation on the given node using arena indices.
     /// </summary>
     /// <returns>Index of the new root after rotation.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RotateLeft<T>(Span<Node<T>> arena, int xIndex)
     {
         var yIndex = arena[xIndex].Right;

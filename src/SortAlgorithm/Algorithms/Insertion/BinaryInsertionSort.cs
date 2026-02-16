@@ -134,7 +134,6 @@ public static class BinaryInsertionSort
     /// <param name="first">The inclusive start index of the sorted range.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="start">The position from which to start inserting elements. Elements before this are already sorted.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int start)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -192,6 +191,7 @@ public static class BinaryInsertionSort
     /// When the element at mid equals tmp, we continue searching to the right (left = mid + 1),
     /// ensuring that tmp is inserted after all equal elements, preserving their original order.
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int BinarySearch<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, T tmp, int first, int index)
         where TComparer : IComparer<T>
         where TContext : ISortContext

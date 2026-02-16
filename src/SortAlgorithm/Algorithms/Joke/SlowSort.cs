@@ -1,5 +1,4 @@
 ﻿using SortAlgorithm.Contexts;
-using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -117,7 +116,6 @@ public static class SlowSort
         SortCore(s, 0, span.Length - 1);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int start, int end)
         where TComparer : IComparer<T>
         where TContext : ISortContext

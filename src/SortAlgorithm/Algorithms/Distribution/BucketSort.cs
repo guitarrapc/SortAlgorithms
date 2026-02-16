@@ -140,7 +140,6 @@ public static class BucketSort
         BucketDistribute(s, tempSpan, tempArray, keys, bucketCount, bucketSize, min, context);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> keys, int bucketCount, long bucketSize, int min, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -369,7 +368,6 @@ public static class BucketSortInteger
         BucketDistribute(s, tempSpan, tempArray, bucketIndices, bucketCount, bucketSize, min, context);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, long bucketSize, long min, TContext context)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>

@@ -198,7 +198,6 @@ public static class PDQSort
     /// <summary>
     /// Main PDQSort loop with tail recursion elimination.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void PDQSortLoop<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end, int badAllowed, bool leftmost)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -336,10 +335,45 @@ public static class PDQSort
     }
 
     /// <summary>
+    /// Partitions using PartitionRight and then detects consecutive elements equal to the pivot.
+    /// Returns the bounds of the equal block (eqL, eqR) to exclude from further recursion.
+    /// This optimization is critical for handling inputs with many duplicate elements efficiently.
+    /// </summary>
+    /// <returns>
+    /// eqL: Start of equal block (inclusive) - all elements in [eqL, eqR) equal pivot
+    /// eqR: End of equal block (exclusive)
+    /// alreadyPartitioned: Whether the input was already partitioned
+    /// </returns>
+    private static (int eqL, int eqR, bool alreadyPartitioned) PartitionRightSkipEquals<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var (pivotPos, alreadyPartitioned) = PartitionRight(s, begin, end);
+
+        // Read pivot value once to minimize SortSpan access
+        var pivot = s.Read(pivotPos);
+
+        // Expand left: find consecutive elements equal to pivot
+        var eqL = pivotPos;
+        while (eqL > begin && s.Compare(eqL - 1, pivot) == 0)
+        {
+            eqL--;
+        }
+
+        // Expand right: find consecutive elements equal to pivot
+        var eqR = pivotPos + 1;
+        while (eqR < end && s.Compare(eqR, pivot) == 0)
+        {
+            eqR++;
+        }
+
+        return (eqL, eqR, alreadyPartitioned);
+    }
+
+    /// <summary>
     /// Partitions [begin, end) around pivot *begin. Elements equal to the pivot are put in the right-hand partition.
     /// Returns the position of the pivot after partitioning and whether the passed sequence already was correctly partitioned.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -391,43 +425,9 @@ public static class PDQSort
     }
 
     /// <summary>
-    /// Partitions using PartitionRight and then detects consecutive elements equal to the pivot.
-    /// Returns the bounds of the equal block (eqL, eqR) to exclude from further recursion.
-    /// This optimization is critical for handling inputs with many duplicate elements efficiently.
-    /// </summary>
-    /// <returns>
-    /// eqL: Start of equal block (inclusive) - all elements in [eqL, eqR) equal pivot
-    /// eqR: End of equal block (exclusive)
-    /// alreadyPartitioned: Whether the input was already partitioned
-    /// </returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static (int eqL, int eqR, bool alreadyPartitioned) PartitionRightSkipEquals<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var (pivotPos, alreadyPartitioned) = PartitionRight(s, begin, end);
-
-        // Read pivot value once to minimize SortSpan access
-        var pivot = s.Read(pivotPos);
-
-        // Expand left: find consecutive elements equal to pivot
-        var eqL = pivotPos;
-        while (eqL > begin && s.Compare(eqL - 1, pivot) == 0)
-            eqL--;
-
-        // Expand right: find consecutive elements equal to pivot
-        var eqR = pivotPos + 1;
-        while (eqR < end && s.Compare(eqR, pivot) == 0)
-            eqR++;
-
-        return (eqL, eqR, alreadyPartitioned);
-    }
-
-    /// <summary>
     /// Partitions [begin, end) around pivot *begin. Elements equal to the pivot are put to the left.
     /// Used when many equal elements are detected.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int PartitionLeft<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
         where TComparer : IComparer<T>
         where TContext : ISortContext

@@ -140,7 +140,6 @@ public static class ShiftSort
     /// <summary>
     /// Core sorting logic - detects runs and merges them.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SortCore<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context, Span<int> zeroIndices)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -194,7 +193,6 @@ public static class ShiftSort
     /// <summary>
     /// Recursively divides the run index list and merges runs bottom-up.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Split<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> zeroIndices, int i, int j, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -229,7 +227,6 @@ public static class ShiftSort
     /// Merges two adjacent sorted runs using adaptive direction based on partition sizes.
     /// The smaller partition is buffered to minimize memory allocation and write operations.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Merge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int second, int third, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext

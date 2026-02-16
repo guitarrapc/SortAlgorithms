@@ -528,32 +528,6 @@ public static class InsertionSortNonOptimized
         SortCore(s, first, last);
     }
 
-    private readonly struct InsertionSortNonOptimizedAction<T, TComparer>
-        where TComparer : IComparer<T>
-    {
-        private readonly int _first;
-        private readonly int _last;
-
-        public InsertionSortNonOptimizedAction(int first, int last)
-        {
-            _first = first;
-            _last = last;
-        }
-
-        public void Invoke<TContext>(Span<T> span, TComparer comparer, TContext context)
-            where TContext : ISortContext
-        {
-            ArgumentOutOfRangeException.ThrowIfNegative(_first);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(_last, span.Length);
-            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(_first, _last);
-
-            if (span.Length <= 1) return;
-
-            var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-            SortCore(s, _first, _last);
-        }
-    }
-
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.

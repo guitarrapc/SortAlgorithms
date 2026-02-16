@@ -177,7 +177,6 @@ public static class StableQuickSort
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The inclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -216,7 +215,6 @@ public static class StableQuickSort
     /// - [lessEnd, greaterStart): elements equal to pivot
     /// - [greaterStart, right + 1): elements greater than pivot
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static (int lessEnd, int greaterStart) StablePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, T pivot, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext

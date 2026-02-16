@@ -190,7 +190,6 @@ public static class QuickSortMedian9
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The exclusive end index of the range to sort.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext

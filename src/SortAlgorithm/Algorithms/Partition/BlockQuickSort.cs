@@ -263,7 +263,6 @@ public static class BlockQuickSort
     /// <param name="left">The inclusive start index.</param>
     /// <param name="right">The inclusive end index.</param>
     /// <returns>The range of elements equal to the pivot.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static PartitionResult HoareBlockPartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -317,7 +316,6 @@ public static class BlockQuickSort
     /// This approach improves cache efficiency and enables better branch prediction.
     /// </para>
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static int HoareBlockPartitionCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -568,7 +566,6 @@ public static class BlockQuickSort
     /// <summary>
     /// Median-of-3-medians-of-3 for arrays > 100 elements.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static int MedianOf3MediansOf3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -588,7 +585,6 @@ public static class BlockQuickSort
     /// <summary>
     /// Median-of-5-medians-of-5 for arrays > 800 elements.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static int MedianOf5MediansOf5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -623,7 +619,6 @@ public static class BlockQuickSort
     /// Median-of-k sampling for very large arrays (> 20000 elements).
     /// Uses systematic sampling across the array and selects the median.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static int MedianOfK<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int k)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -666,7 +661,6 @@ public static class BlockQuickSort
     /// Partial sort to find the k-th element (simplified nth_element).
     /// Uses QuickSelect algorithm.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static void PartialSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int k)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -733,7 +727,6 @@ public static class BlockQuickSort
     /// <param name="right">The right boundary of the partition.</param>
     /// <param name="pivotPos">The current position of the pivot element.</param>
     /// <returns>The range [Left, Right] of elements equal to the pivot (inclusive).</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static PartitionResult CheckForDuplicates<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotPos)
         where TComparer : IComparer<T>
         where TContext : ISortContext

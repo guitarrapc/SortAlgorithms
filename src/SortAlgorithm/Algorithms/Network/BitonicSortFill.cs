@@ -172,7 +172,6 @@ public static class BitonicSortFill
     /// <param name="low">The starting index of the sequence.</param>
     /// <param name="count">The length of the sequence.</param>
     /// <param name="ascending">True to sort in ascending order, false for descending.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int low, int count, bool ascending)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -198,7 +197,6 @@ public static class BitonicSortFill
     /// <param name="low">The starting index of the bitonic sequence.</param>
     /// <param name="count">The length of the bitonic sequence.</param>
     /// <param name="ascending">True to merge in ascending order, false for descending.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void BitonicMerge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int low, int count, bool ascending)
         where TComparer : IComparer<T>
         where TContext : ISortContext

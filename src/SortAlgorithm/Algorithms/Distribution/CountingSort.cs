@@ -151,7 +151,6 @@ public static class CountingSort
     /// <summary>
     /// Core counting sort implementation.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void CountSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> keys, SortSpan<T, TComparer, TContext> tempSpan, Span<int> countArray, int offset)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -328,7 +327,6 @@ public static class CountingSortInteger
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void CountSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<int> countArray, long offset)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>

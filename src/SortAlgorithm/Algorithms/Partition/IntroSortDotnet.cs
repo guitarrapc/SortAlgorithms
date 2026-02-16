@@ -128,7 +128,6 @@ public static class IntroSortDotnet
     /// This implementation follows dotnet runtime's approach of using Slice to always work with
     /// 0-based spans, which improves performance especially for sorted/reversed data.
     /// </remarks>
-    [MethodImpl(MethodImplOptions.NoInlining)]
     private static void IntroSortInternal<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int depthLimit)
         where TComparer : IComparer<T>
         where TContext : ISortContext
