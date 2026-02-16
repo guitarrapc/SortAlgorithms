@@ -106,7 +106,7 @@ public static class StdSort
         if (last - first <= 1) return;
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        SortCore(s, first, last, context);
+        SortCore(s, first, last);
     }
 
     /// <summary>
@@ -120,7 +120,7 @@ public static class StdSort
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, TContext context)
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -130,7 +130,7 @@ public static class StdSort
         var len = last - first;
         var depthLimit = 2 * Log2((uint)len);
 
-        IntroSort(s, first, last, depthLimit, context, leftmost: true);
+        IntroSort(s, first, last, depthLimit, leftmost: true);
     }
 
     /// <summary>
@@ -235,7 +235,7 @@ public static class StdSort
     /// <summary>
     /// Main Introsort algorithm combining quicksort, heapsort, and insertion sort.
     /// </summary>
-    private static void IntroSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int depth, TContext context, bool leftmost)
+    private static void IntroSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int depth, bool leftmost)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -336,7 +336,7 @@ public static class StdSort
             }
 
             // Recursively sort left partition, loop on right (tail recursion elimination)
-            IntroSort(s, first, pivotPos, depth, context, leftmost);
+            IntroSort(s, first, pivotPos, depth, leftmost);
             leftmost = false;
             first = pivotPos + 1;
         }

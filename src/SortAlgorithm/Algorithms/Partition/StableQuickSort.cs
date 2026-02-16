@@ -193,7 +193,7 @@ public static class StableQuickSort
             var pivot = MedianOf3Value(s, q1, mid, q3);
 
             // Phase 2. Stable partition using ArrayPool buffer
-            var (lessEnd, greaterStart) = StablePartition(s, left, right, pivot, context);
+            var (lessEnd, greaterStart) = StablePartition(s, left, right, pivot);
 
             // Phase 3. Recursively sort partitions with tail recursion optimization
             // Always sort left partition first (recursively), then loop on right partition
@@ -215,7 +215,7 @@ public static class StableQuickSort
     /// - [lessEnd, greaterStart): elements equal to pivot
     /// - [greaterStart, right + 1): elements greater than pivot
     /// </summary>
-    private static (int lessEnd, int greaterStart) StablePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, T pivot, TContext context)
+    private static (int lessEnd, int greaterStart) StablePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, T pivot)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -223,7 +223,7 @@ public static class StableQuickSort
         // BufferId=1: TEMPバッファーとして可視化・統計に反映
         var tempBuffer = ArrayPool<T>.Shared.Rent(length);
         var tempSpan = new Span<T>(tempBuffer, 0, length);
-        var tempSortSpan = new SortSpan<T, TComparer, TContext>(tempSpan, context, s.Comparer, 1);
+        var tempSortSpan = new SortSpan<T, TComparer, TContext>(tempSpan, s.Context, s.Comparer, 1);
 
         try
         {

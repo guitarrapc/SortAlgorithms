@@ -136,12 +136,12 @@ public static class BalancedBinaryTreeSort
             // Insert each element into the AVL tree (iteratively with rebalancing)
             for (int i = 0; i < s.Length; i++)
             {
-                rootIndex = InsertIterative(arena, rootIndex, ref nodeCount, i, s, pathStack, context);
+                rootIndex = InsertIterative(arena, rootIndex, ref nodeCount, i, s, pathStack);
             }
 
             // Traverse in order and write back into the array (iterative to avoid stack overflow)
             var writeIndex = 0;
-            Inorder(s, arena, rootIndex, ref writeIndex, context);
+            Inorder(s, arena, rootIndex, ref writeIndex);
         }
         finally
         {
@@ -161,7 +161,7 @@ public static class BalancedBinaryTreeSort
     /// </summary>
     /// <param name="itemIndex">Index in the original span to read the value from.</param>
     /// <returns>Index of the new root of the tree.</returns>
-    private static int InsertIterative<T, TComparer, TContext>(Span<Node<T>> arena, int rootIndex, ref int nodeCount, int itemIndex, SortSpan<T, TComparer, TContext> s, Span<int> pathStack, TContext context)
+    private static int InsertIterative<T, TComparer, TContext>(Span<Node<T>> arena, int rootIndex, ref int nodeCount, int itemIndex, SortSpan<T, TComparer, TContext> s, Span<int> pathStack)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -171,7 +171,7 @@ public static class BalancedBinaryTreeSort
         // If tree is empty, create root
         if (rootIndex == NULL_INDEX)
         {
-            return CreateNode(arena, insertValue, ref nodeCount, context);
+            return CreateNode(arena, insertValue, ref nodeCount, s.Context);
         }
 
         // Phase 1: Navigate to insertion point and track path
@@ -182,7 +182,7 @@ public static class BalancedBinaryTreeSort
         {
             pathStack[stackTop++] = currentIndex;
             // Compare against cached value (no span indirection needed)
-            var cmp = CompareWithNode(arena, currentIndex, insertValue, s.Comparer, context);
+            var cmp = CompareWithNode(arena, currentIndex, insertValue, s.Comparer, s.Context);
 
             if (cmp < 0)
             {
@@ -191,7 +191,7 @@ public static class BalancedBinaryTreeSort
                 if (leftIndex == NULL_INDEX)
                 {
                     // Insert here
-                    var newIndex = CreateNode(arena, insertValue, ref nodeCount, context);
+                    var newIndex = CreateNode(arena, insertValue, ref nodeCount, s.Context);
                     arena[currentIndex].Left = newIndex;
                     currentIndex = newIndex;
                     break;
@@ -205,7 +205,7 @@ public static class BalancedBinaryTreeSort
                 if (rightIndex == NULL_INDEX)
                 {
                     // Insert here
-                    var newIndex = CreateNode(arena, insertValue, ref nodeCount, context);
+                    var newIndex = CreateNode(arena, insertValue, ref nodeCount, s.Context);
                     arena[currentIndex].Right = newIndex;
                     currentIndex = newIndex;
                     break;
@@ -257,7 +257,7 @@ public static class BalancedBinaryTreeSort
     /// Uses ArrayPool to avoid GC pressure.
     /// Reads actual data from original span using ItemIndex.
     /// </remarks>
-    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex, ISortContext context)
+    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -289,7 +289,7 @@ public static class BalancedBinaryTreeSort
                 // Process the node at top of stack
                 currentIndex = stack[--stackTop];
                 // Read node value for visualization and write to array
-                var value = ReadNodeValue(arena, currentIndex, context);
+                var value = ReadNodeValue(arena, currentIndex, s.Context);
                 s.Write(writeIndex++, value);
 
                 // Move to right subtree

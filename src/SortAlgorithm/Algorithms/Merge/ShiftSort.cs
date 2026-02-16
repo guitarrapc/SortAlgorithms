@@ -187,20 +187,20 @@ public static class ShiftSort
         zeroIndices[endTracker] = 0;
 
         // Phase 2: Adaptive Merge - Recursively merge detected runs
-        Split(s, zeroIndices, 0, endTracker, context);
+        Split(s, zeroIndices, 0, endTracker);
     }
 
     /// <summary>
     /// Recursively divides the run index list and merges runs bottom-up.
     /// </summary>
-    private static void Split<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> zeroIndices, int i, int j, TContext context)
+    private static void Split<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> zeroIndices, int i, int j)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Base case: 2 runs - merge them directly
         if ((j - i) == 2)
         {
-            Merge(s, zeroIndices[j], zeroIndices[j - 1], zeroIndices[i], context);
+            Merge(s, zeroIndices[j], zeroIndices[j - 1], zeroIndices[i]);
             return;
         }
         else if ((j - i) < 2)
@@ -214,20 +214,20 @@ public static class ShiftSort
         var i2 = j2 + 1;
 
         // Recursively sort first half of runs
-        Split(s, zeroIndices, i, j2, context);
+        Split(s, zeroIndices, i, j2);
         // Recursively sort second half of runs
-        Split(s, zeroIndices, i2, j, context);
+        Split(s, zeroIndices, i2, j);
 
         // Merge the two halves
-        Merge(s, zeroIndices[i2], zeroIndices[j2], zeroIndices[i], context);
-        Merge(s, zeroIndices[j], zeroIndices[i2], zeroIndices[i], context);
+        Merge(s, zeroIndices[i2], zeroIndices[j2], zeroIndices[i]);
+        Merge(s, zeroIndices[j], zeroIndices[i2], zeroIndices[i]);
     }
 
     /// <summary>
     /// Merges two adjacent sorted runs using adaptive direction based on partition sizes.
     /// The smaller partition is buffered to minimize memory allocation and write operations.
     /// </summary>
-    private static void Merge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int second, int third, TContext context)
+    private static void Merge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int second, int third)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -238,7 +238,7 @@ public static class ShiftSort
             var tmp2nd = ArrayPool<T>.Shared.Rent(bufferSize);
             try
             {
-                var tmp2ndSpan = new SortSpan<T, TComparer, TContext>(tmp2nd.AsSpan(0, bufferSize), context, s.Comparer, BUFFER_TEMP_SECOND);
+                var tmp2ndSpan = new SortSpan<T, TComparer, TContext>(tmp2nd.AsSpan(0, bufferSize), s.Context, s.Comparer, BUFFER_TEMP_SECOND);
 
                 // Copy second partition to buffer using CopyTo for efficiency
                 s.CopyTo(second, tmp2ndSpan, 0, bufferSize);
@@ -273,7 +273,7 @@ public static class ShiftSort
             var tmp1st = ArrayPool<T>.Shared.Rent(bufferSize);
             try
             {
-                var tmp1stSpan = new SortSpan<T, TComparer, TContext>(tmp1st.AsSpan(0, bufferSize), context, s.Comparer, BUFFER_TEMP_FIRST);
+                var tmp1stSpan = new SortSpan<T, TComparer, TContext>(tmp1st.AsSpan(0, bufferSize), s.Context, s.Comparer, BUFFER_TEMP_FIRST);
 
                 // Copy first partition to buffer using CopyTo for efficiency
                 s.CopyTo(first, tmp1stSpan, 0, bufferSize);

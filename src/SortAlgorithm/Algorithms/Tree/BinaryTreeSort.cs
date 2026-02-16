@@ -106,7 +106,7 @@ public static class BinaryTreeSort
 
         // Traverse the tree in inorder and write elements back into the array.
         var n = 0;
-        Inorder(s, root, ref n, context);
+        Inorder(s, root, ref n);
     }
 
     /// <summary>
@@ -154,15 +154,15 @@ public static class BinaryTreeSort
         }
     }
 
-    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Node<T>? node, ref int i, TContext context)
+    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Node<T>? node, ref int i)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         if (node is null) return;
 
-        Inorder(s, node.Left, ref i, context);
+        Inorder(s, node.Left, ref i);
         s.Write(i++, node.Item);
-        Inorder(s, node.Right, ref i, context);
+        Inorder(s, node.Right, ref i);
     }
 
     // Helper methods for node operations (encapsulates visualization tracking)

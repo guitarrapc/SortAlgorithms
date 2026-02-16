@@ -50,6 +50,11 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     public TComparer Comparer => _comparer;
 
     /// <summary>
+    /// Gets the comparer used by this SortSpan.
+    /// </summary>
+    public TContext Context => _context;
+
+    /// <summary>
     /// Retrieves the element at the specified zero-based index. (Equivalent to span[i].)
     /// </summary>
     /// <param name="i">The zero-based index of the element to retrieve. Must be within the bounds of the collection.</param>

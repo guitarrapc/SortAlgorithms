@@ -137,10 +137,10 @@ public static class BucketSort
         var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
 
         // Perform bucket distribution and sorting
-        BucketDistribute(s, tempSpan, tempArray, keys, bucketCount, bucketSize, min, context);
+        BucketDistribute(s, tempSpan, tempArray, keys, bucketCount, bucketSize, min);
     }
 
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> keys, int bucketCount, long bucketSize, int min, TContext context)
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> keys, int bucketCount, long bucketSize, int min)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -191,7 +191,7 @@ public static class BucketSort
             if (count > 1)
             {
                 var start = bucketStarts[i];
-                var bucketSpan = new SortSpan<T, TComparer, TContext>(tempArray.Slice(start, count), context, s.Comparer, BUFFER_BUCKET_BASE + i);
+                var bucketSpan = new SortSpan<T, TComparer, TContext>(tempArray.Slice(start, count), s.Context, s.Comparer, BUFFER_BUCKET_BASE + i);
                 InsertionSortBucket(bucketSpan);
             }
         }
@@ -365,10 +365,10 @@ public static class BucketSortInteger
         var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
 
         // Perform bucket distribution and sorting
-        BucketDistribute(s, tempSpan, tempArray, bucketIndices, bucketCount, bucketSize, min, context);
+        BucketDistribute(s, tempSpan, tempArray, bucketIndices, bucketCount, bucketSize, min);
     }
 
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, long bucketSize, long min, TContext context)
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, long bucketSize, long min)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext

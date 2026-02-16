@@ -196,7 +196,7 @@ public static class BlockQuickSort
         if (last - first <= 1) return;
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        SortCore(s, first, last - 1, context);
+        SortCore(s, first, last - 1);
     }
 
     /// <summary>
@@ -208,7 +208,7 @@ public static class BlockQuickSort
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The inclusive end index of the range to sort.</param>
-    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, TContext context)
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -224,7 +224,7 @@ public static class BlockQuickSort
             }
 
             // Partition using block-based Hoare partition
-            var result = HoareBlockPartition(s, left, right, context);
+            var result = HoareBlockPartition(s, left, right);
 
             // Tail recursion optimization: recurse on smaller partition, loop on larger
             // Note: elements in [result.Left, result.Right] are already in final position (equal to pivot)
@@ -233,7 +233,7 @@ public static class BlockQuickSort
                 // Left partition is smaller: recurse on left [left, result.Left-1], iterate on right [result.Right+1, right]
                 if (result.Left > left)
                 {
-                    SortCore(s, left, result.Left - 1, context);
+                    SortCore(s, left, result.Left - 1);
                 }
                 left = result.Right + 1;
             }
@@ -242,7 +242,7 @@ public static class BlockQuickSort
                 // Right partition is smaller: recurse on right [result.Right+1, right], iterate on left [left, result.Left-1]
                 if (result.Right < right)
                 {
-                    SortCore(s, result.Right + 1, right, context);
+                    SortCore(s, result.Right + 1, right);
                 }
                 right = result.Left - 1;
             }
@@ -263,7 +263,7 @@ public static class BlockQuickSort
     /// <param name="left">The inclusive start index.</param>
     /// <param name="right">The inclusive end index.</param>
     /// <returns>The range of elements equal to the pivot.</returns>
-    static PartitionResult HoareBlockPartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, TContext context)
+    static PartitionResult HoareBlockPartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -294,7 +294,7 @@ public static class BlockQuickSort
             pivotIndex = MedianOf3(s, left, (left + right) / 2, right);
         }
 
-        var pivotPos = HoareBlockPartitionCore<T, TComparer, TContext>(s, left, right, pivotIndex, context);
+        var pivotPos = HoareBlockPartitionCore<T, TComparer, TContext>(s, left, right, pivotIndex, s.Context);
 
         // Apply duplicate check for small arrays
         if (size <= DuplicateCheckThreshold)
