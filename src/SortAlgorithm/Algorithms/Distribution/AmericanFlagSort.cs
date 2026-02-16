@@ -118,17 +118,7 @@ public static class AmericanFlagSort
         try
         {
             var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixSize + 1);
-            var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-
-            // Determine the number of digits based on type size
-            // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
-            var bitSize = GetBitSize<T>();
-
-            // Calculate digit count from bit size (2 bits per digit)
-            var digitCount = (bitSize + RadixBits - 1) / RadixBits;
-
-            // Start American Flag Sort from the most significant digit
-            AmericanFlagSortRecursive(s, 0, s.Length, digitCount - 1, bitSize, bucketOffsets);
+            SortCore(span, bucketOffsets, comparer, context);
         }
         finally
         {
@@ -136,6 +126,26 @@ public static class AmericanFlagSort
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<int> bucketOffsets, TComparer comparer, TContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+
+        // Determine the number of digits based on type size
+        // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
+        var bitSize = GetBitSize<T>();
+
+        // Calculate digit count from bit size (2 bits per digit)
+        var digitCount = (bitSize + RadixBits - 1) / RadixBits;
+
+        // Start American Flag Sort from the most significant digit
+        AmericanFlagSortRecursive(s, 0, s.Length, digitCount - 1, bitSize, bucketOffsets);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void AmericanFlagSortRecursive<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
@@ -201,6 +211,7 @@ public static class AmericanFlagSort
     /// Permutes elements in-place into their correct buckets.
     /// Uses a technique similar to cyclic permutation to avoid using auxiliary buffer.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void PermuteInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int length, int shift, int bitSize, Span<int> bucketOffsets, Span<int> bucketStarts)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>

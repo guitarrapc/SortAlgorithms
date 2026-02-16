@@ -112,18 +112,7 @@ public static class RadixMSD10Sort
             var tempBuffer = tempArray.AsSpan(0, span.Length);
             var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixBase + 1);
 
-            var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-            var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
-
-            // Determine the bit size for sign-bit flipping
-            var bitSize = GetBitSize<T>();
-
-            // Calculate maximum number of decimal digits based on the type's bit size
-            // MSD doesn't need to scan for min/max - empty buckets are naturally skipped
-            var digitCount = GetMaxDigitCountFromBitSize(bitSize);
-
-            // Start MSD radix sort from the most significant digit
-            MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize, bucketOffsets);
+            SortCore<T, TComparer, TContext>(span, tempBuffer, bucketOffsets, comparer, context);
         }
         finally
         {
@@ -132,7 +121,27 @@ public static class RadixMSD10Sort
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
 
+        // Determine the bit size for sign-bit flipping
+        var bitSize = GetBitSize<T>();
+
+        // Calculate maximum number of decimal digits based on the type's bit size
+        // MSD doesn't need to scan for min/max - empty buckets are naturally skipped
+        var digitCount = GetMaxDigitCountFromBitSize(bitSize);
+
+        // Start MSD radix sort from the most significant digit
+        MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize, bucketOffsets);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void MSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
