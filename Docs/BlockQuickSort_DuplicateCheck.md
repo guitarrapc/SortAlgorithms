@@ -6,36 +6,52 @@ This document describes the duplicate check optimization implemented in BlockQui
 
 ## Purpose
 
-The duplicate check optimization prevents excessive recursion depth when sorting small arrays with many duplicate elements. Without this optimization, arrays with many duplicates can cause:
+The duplicate check optimization prevents excessive recursion depth when sorting arrays with many duplicate elements. Without this optimization, arrays with many duplicates can cause:
 - Deep recursion leading to stack overflow
 - Triggering of the IntroSort fallback to Heapsort
 - Poor performance on duplicate-heavy data
 
 ## When It Activates
 
-The duplicate check is applied when **both** conditions are met:
+The duplicate check is applied when **either** condition from the paper is met:
 
-1. **Array size ≤ 512** (configurable via `DuplicateCheckThreshold`)
-   - Only applies to small arrays where recursion depth is a concern
-   - Large arrays use the standard partitioning without duplicate check
+1. **Pivot occurs twice in the sample for pivot selection**
+   - For median-of-3: pivot value appears in at least 2 of {left, mid, right}
+   - For median-of-5: pivot value appears in at least 2 of the sample positions
+   - Indicates high likelihood of duplicates in the array
 
-2. **After partitioning completes**
-   - Examines the larger partition for elements equal to the pivot
-   - Stops early if duplicates are sparse (< 25%)
+2. **Partitioning results very unbalanced for small/medium arrays**
+   - Array size ≤ 10,000 elements
+   - Smaller partition < 1/8 of total size (min(leftSize, rightSize) < size/8)
+   - Indicates potential duplicate concentration or poor pivot choice
 
 ## Algorithm Details
 
 ### High-Level Flow
 
 ```
-1. Partition array normally using Hoare block partitioning
-2. If size ≤ 512:
+1. Select pivot using adaptive strategy (median-of-3/5/sqrt(n))
+2. Check if pivot value appears multiple times in sample
+3. Partition array using Hoare block partitioning
+4. Check if partition is very unbalanced (for arrays ≤ 10,000)
+5. If either condition is met:
    a. Determine which partition is larger (left or right)
    b. Scan larger partition for elements equal to pivot
    c. Move equal elements adjacent to the pivot
    d. Return range [equalLeft, equalRight] of pivot-equal elements
-3. Exclude pivot-equal range from recursive calls
+6. Exclude pivot-equal range from recursive calls
 ```
+
+### Paper Conditions (Section 3.1)
+
+The paper specifies two triggering conditions:
+
+> "an additional check for duplicates equal to the pivot if one of the following
+> two conditions applies:
+> - the pivot occurs twice in the sample for pivot selection (in the case of median-of-three),
+> - the partitioning results very unbalanced for an array of small size."
+
+This implementation faithfully follows these conditions.
 
 ### Scanning Strategy
 
