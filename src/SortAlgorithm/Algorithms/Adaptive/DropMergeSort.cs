@@ -35,10 +35,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Fast Backtracking:</strong> When enabled (FAST_BACKTRACKING = true), during backtracking the algorithm computes the maximum of recently dropped elements
 /// and backtracks until finding a position where this maximum can be inserted. This handles clumps of out-of-order elements more efficiently
 /// by backtracking multiple elements at once instead of one-by-one.</description></item>
-/// <item><description><strong>Early-Out Heuristic:</strong> When enabled (EARLY_OUT = true), the algorithm monitors the disorder ratio.
-/// After processing N/EARLY_OUT_TEST_AT elements (N/4), if dropped elements exceed EARLY_OUT_DISORDER_FRACTION (60%) of processed elements,
-/// the algorithm aborts and falls back to QuickSort.
-/// This prevents worst-case performance on heavily disordered data where Drop-Merge would be slower than general-purpose sorts.</description></item>
+/// <item><description><strong>Early-Out Heuristic:</strong> When enabled (EARLY_OUT = true), the algorithm monitors multiple disorder signals to detect worst-case scenarios:
+/// <list type="bullet">
+/// <item><description><strong>Dropped Ratio Check:</strong> After processing N/EARLY_OUT_TEST_AT elements (N/4), if dropped elements exceed EARLY_OUT_DISORDER_FRACTION (60%) of processed elements, abort and fallback to QuickSort.</description></item>
+/// <item><description><strong>Undo Count Check:</strong> If the number of undo operations (backtracking due to RECENCY) exceeds MAX_UNDO_COUNT (16), abort. This catches pathological cases where "Recency reached → backtrack" happens repeatedly.</description></item>
+/// <item><description><strong>Total Backtracked Check:</strong> If the cumulative number of backtracked elements exceeds N × MAX_BACKTRACKED_RATIO (N), abort. This detects adversarial inputs where backtracking occurs frequently even if dropped count is low.</description></item>
+/// </list>
+/// These combined checks prevent worst-case performance on heavily disordered data where Drop-Merge would be slower than general-purpose sorts.</description></item>
 /// <item><description><strong>Dropped Elements Sorting:</strong> After LNS extraction, dropped elements are sorted using QuickSort (O(K log K) where K is the number of dropped elements).
 /// Since K is expected to be small (K &lt; 0.2N for optimal performance), this step is efficient.</description></item>
 /// <item><description><strong>Merge Phase:</strong> The algorithm merges the in-place LNS (in array[0..write]) and sorted dropped elements by:
@@ -113,6 +116,18 @@ public static class DropMergeSort
     private const double EarlyOutDisorderFraction = 0.6;
 
     /// <summary>
+    /// Maximum number of undo operations (backtracking due to RECENCY) before falling back to QuickSort.
+    /// Prevents pathological cases where backtracking happens repeatedly.
+    /// </summary>
+    private const int MaxUndoCount = 16;
+
+    /// <summary>
+    /// Maximum total number of backtracked elements before falling back to QuickSort.
+    /// If totalBackTracked > n, the algorithm is likely in a worst-case scenario.
+    /// </summary>
+    private const int MaxBackTrackedRatio = 1; // totalBackTracked > n * MaxBackTrackedRatio
+
+    /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
@@ -182,19 +197,42 @@ public static class DropMergeSort
         // The LNS is kept in-place at span[0..write] while dropped elements go to the dropped buffer.
         var droppedCount = 0;
         var droppedInRow = 0;
+        var undoCount = 0;           // Track number of undo operations (backtracking due to RECENCY)
+        var totalBackTracked = 0;    // Track total number of backtracked elements
         var write = 0;
         var read = 0;
         while (read < s.Length)
         {
             // Early-out: fallback to QuickSort if too much disorder detected
-            if (EarlyOut
-                && read == s.Length / EarlyOutTestAt
-                && droppedCount > (int)(read * EarlyOutDisorderFraction))
+            if (EarlyOut)
             {
-                // Restore dropped elements back to array using CopyTo for efficiency
-                dropped.CopyTo(0, s, write, droppedCount);
-                QuickSortMedian3.SortCore(s, 0, s.Length - 1);
-                return;
+                // Check 1: Too many dropped elements (original check)
+                if (read == s.Length / EarlyOutTestAt
+                    && droppedCount > (int)(read * EarlyOutDisorderFraction))
+                {
+                    // Restore dropped elements back to array using CopyTo for efficiency
+                    dropped.CopyTo(0, s, write, droppedCount);
+                    QuickSortMedian3.SortCore(s, 0, s.Length - 1);
+                    return;
+                }
+
+                // Check 2: Too many undo operations (backtracking due to RECENCY)
+                if (undoCount > MaxUndoCount)
+                {
+                    // Restore dropped elements back to array using CopyTo for efficiency
+                    dropped.CopyTo(0, s, write, droppedCount);
+                    QuickSortMedian3.SortCore(s, 0, s.Length - 1);
+                    return;
+                }
+
+                // Check 3: Total backtracked elements exceeds threshold
+                if (totalBackTracked > s.Length * MaxBackTrackedRatio)
+                {
+                    // Restore dropped elements back to array using CopyTo for efficiency
+                    dropped.CopyTo(0, s, write, droppedCount);
+                    QuickSortMedian3.SortCore(s, 0, s.Length - 1);
+                    return;
+                }
             }
 
             if (write == 0 || s.Compare(read, write - 1) >= 0)
@@ -258,6 +296,9 @@ public static class DropMergeSort
                     //    This can lead us to backtracking RECENCY number of elements
                     //    as many times as the leading non-decreasing subsequence is long.
 
+                    // Track undo operation for early-out detection
+                    undoCount++;
+
                     // Undo dropping the last droppedInRow elements:
                     droppedCount -= droppedInRow;
                     read -= droppedInRow;
@@ -275,6 +316,9 @@ public static class DropMergeSort
                             write--;
                         }
                     }
+
+                    // Track total backtracked elements for early-out detection
+                    totalBackTracked += backTracked;
 
                     // Drop the back-tracked elements:
                     for (var i = 0; i < backTracked; i++)
