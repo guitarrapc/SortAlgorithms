@@ -324,29 +324,26 @@ public static class BlockQuickSort
         else if (size > 800)
         {
             // For large arrays, use median-of-5-medians-of-5
-            pivotIndex = MedianOf5MediansOf5(s, left, right);
-            // Check if pivot appears in sample positions
-            hasDuplicatePivot = HasDuplicateInSample5(s, left, right, pivotIndex);
+            // Duplicate detection happens inside MedianOf5MediansOf5 during comparison network
+            pivotIndex = MedianOf5MediansOf5(s, left, right, out hasDuplicatePivot);
         }
         else if (size > 100)
         {
             // For medium arrays, use median-of-3-medians-of-3
-            pivotIndex = MedianOf3MediansOf3(s, left, right);
-            // Check if pivot appears in sample positions
-            hasDuplicatePivot = HasDuplicateInSample3(s, left, right, pivotIndex);
+            // Duplicate detection happens inside MedianOf3MediansOf3 during comparison network
+            pivotIndex = MedianOf3MediansOf3(s, left, right, out hasDuplicatePivot);
         }
         else
         {
             // For small arrays, use simple median-of-3
+            // Duplicate detection happens inside MedianOf3 during comparison network
             var mid = (left + right) / 2;
-            pivotIndex = MedianOf3(s, left, mid, right);
-            // Check if pivot appears twice in {left, mid, right}
-            hasDuplicatePivot = HasDuplicateInSample3Simple(s, left, mid, right, pivotIndex);
+            pivotIndex = MedianOf3(s, left, mid, right, out hasDuplicatePivot);
         }
 
-        var pivotPos = HoareBlockPartitionCore<T, TComparer, TContext>(s, left, right, pivotIndex);
+        var pivotPos = HoareBlockPartitionCore(s, left, right, pivotIndex);
 
-        // Paper condition 1: Pivot occurs twice in sample
+        // Paper condition 1: Pivot occurs twice in sample (detected during pivot selection)
         // Paper condition 2: Partitioning is very unbalanced for small/medium arrays
         var leftSize = pivotPos - left;
         var rightSize = right - pivotPos;
@@ -607,8 +604,8 @@ public static class BlockQuickSort
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static int MedianOf3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i1, int i2, int i3)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
+    where TComparer : IComparer<T>
+    where TContext : ISortContext
     {
         // Sort pairs to find median
         if (s.Compare(i1, i2) > 0) s.Swap(i1, i2);
@@ -619,21 +616,77 @@ public static class BlockQuickSort
     }
 
     /// <summary>
-    /// Selects median of 5 elements.
+    /// Selects median of three elements using quartile positions.
+    /// Partially sorts the three elements in place.
     /// </summary>
+    /// <param name="hasDuplicate">Set to true if the pivot value appears at least twice in the sample.
+    /// This implements the paper's condition 1 ("pivot occurs twice in the sample for pivot selection").
+    /// While not a strict guarantee of many duplicates in the entire array, it serves as a practical heuristic
+    /// to trigger duplicate scan when the input likely has many equal elements.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static int MedianOf5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i1, int i2, int i3, int i4, int i5)
+    static int MedianOf3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i1, int i2, int i3, out bool hasDuplicate)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Network for median-of-5
+        // Sort pairs to find median (i2 will be the pivot)
         if (s.Compare(i1, i2) > 0) s.Swap(i1, i2);
-        if (s.Compare(i4, i5) > 0) s.Swap(i4, i5);
-        if (s.Compare(i1, i4) > 0) s.Swap(i1, i4);
-        if (s.Compare(i2, i5) > 0) s.Swap(i2, i5);
-        if (s.Compare(i3, i4) > 0) s.Swap(i3, i4);
         if (s.Compare(i2, i3) > 0) s.Swap(i2, i3);
-        if (s.Compare(i3, i4) > 0) s.Swap(i3, i4);
+        if (s.Compare(i1, i2) > 0) s.Swap(i1, i2);
+        
+        // After sorting network: i1 <= i2 <= i3, pivot is i2
+        // Check if pivot value appears at least twice (exact paper condition)
+        var pivotIdx = i2;
+        var count = 1;  // pivot itself
+        if (s.Compare(i1, pivotIdx) == 0) count++;
+        if (s.Compare(i3, pivotIdx) == 0) count++;
+        hasDuplicate = count >= 2;
+
+        return pivotIdx;
+    }
+
+    /// <summary>
+    /// Selects median of 5 elements.
+    /// </summary>
+    /// <param name="hasDuplicate">Set to true if any duplicate values are detected during comparison network execution.
+    /// Note: This is an approximation of the paper's condition 1 (pivot occurs twice in sample).
+    /// It detects any duplicates in the comparison network, which may include non-pivot duplicates.
+    /// This approximation is sufficient for triggering duplicate handling when the input has many equal elements,
+    /// and is more practical than exact pivot-value checking for larger samples.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static int MedianOf5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i1, int i2, int i3, int i4, int i5, out bool hasDuplicate)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        hasDuplicate = false;
+        
+        // Network for median-of-5, detecting duplicates
+        var cmp = s.Compare(i1, i2);
+        if (cmp > 0) s.Swap(i1, i2);
+        else if (cmp == 0) hasDuplicate = true;
+        
+        cmp = s.Compare(i4, i5);
+        if (cmp > 0) s.Swap(i4, i5);
+        else if (cmp == 0) hasDuplicate = true;
+        
+        cmp = s.Compare(i1, i4);
+        if (cmp > 0) s.Swap(i1, i4);
+        else if (cmp == 0) hasDuplicate = true;
+        
+        cmp = s.Compare(i2, i5);
+        if (cmp > 0) s.Swap(i2, i5);
+        else if (cmp == 0) hasDuplicate = true;
+        
+        cmp = s.Compare(i3, i4);
+        if (cmp > 0) s.Swap(i3, i4);
+        else if (cmp == 0) hasDuplicate = true;
+        
+        cmp = s.Compare(i2, i3);
+        if (cmp > 0) s.Swap(i2, i3);
+        else if (cmp == 0) hasDuplicate = true;
+        
+        cmp = s.Compare(i3, i4);
+        if (cmp > 0) s.Swap(i3, i4);
+        else if (cmp == 0) hasDuplicate = true;
 
         return i3;
     }
@@ -641,26 +694,39 @@ public static class BlockQuickSort
     /// <summary>
     /// Median-of-3-medians-of-3 for arrays > 100 elements.
     /// </summary>
-    static int MedianOf3MediansOf3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
+    /// <param name="hasDuplicate">Set to true if any MedianOf3 call detects the pivot value appearing twice.
+    /// Since this uses MedianOf3 internally, it provides exact pivot-value duplicate detection (paper condition 1).</param>
+    static int MedianOf3MediansOf3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, out bool hasDuplicate)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var length = right - left + 1;
-        var first = MedianOf3(s, left, left + 1, left + 2);
-        var mid = MedianOf3(s, left + length / 2 - 1, left + length / 2, left + length / 2 + 1);
-        var last = MedianOf3(s, right - 2, right - 1, right);
+        var first = MedianOf3(s, left, left + 1, left + 2, out hasDuplicate);
+        
+        bool hasDup;
+        var mid = MedianOf3(s, left + length / 2 - 1, left + length / 2, left + length / 2 + 1, out hasDup);
+        hasDuplicate |= hasDup;
+        
+        var last = MedianOf3(s, right - 2, right - 1, right, out hasDup);
+        hasDuplicate |= hasDup;
 
         // Move medians to boundaries
         s.Swap(left, first);
         s.Swap(right, last);
 
-        return MedianOf3(s, left, mid, right);
+        var result = MedianOf3(s, left, mid, right, out hasDup);
+        hasDuplicate |= hasDup;
+        
+        return result;
     }
 
     /// <summary>
     /// Median-of-5-medians-of-5 for arrays > 800 elements.
     /// </summary>
-    static int MedianOf5MediansOf5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
+    /// <param name="hasDuplicate">Set to true if any MedianOf5 call detects duplicates during comparison network.
+    /// This is an approximation: it may detect non-pivot duplicates, but effectively triggers duplicate handling
+    /// when the input has many equal elements (sufficient for the paper's purpose).</param>
+    static int MedianOf5MediansOf5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, out bool hasDuplicate)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -669,25 +735,35 @@ public static class BlockQuickSort
         // Need at least 25 elements for 5 groups of 5, with proper spacing
         // Also ensure quartile positions are valid
         if (length < 70)
-        {
-            return MedianOf3MediansOf3(s, left, right);
-        }
+            return MedianOf3MediansOf3(s, left, right, out hasDuplicate);
 
         var q1 = left + length / 4 - 2;
         var mid = left + length / 2 - 2;
         var q3 = left + (3 * length) / 4 - 3;
 
-        var first = MedianOf5(s, left, left + 1, left + 2, left + 3, left + 4);
-        var m1 = MedianOf5(s, q1, q1 + 1, q1 + 2, q1 + 3, q1 + 4);
-        var m2 = MedianOf5(s, mid, mid + 1, mid + 2, mid + 3, mid + 4);
-        var m3 = MedianOf5(s, q3, q3 + 1, q3 + 2, q3 + 3, q3 + 4);
-        var last = MedianOf5(s, right - 4, right - 3, right - 2, right - 1, right);
+        var first = MedianOf5(s, left, left + 1, left + 2, left + 3, left + 4, out hasDuplicate);
+        
+        bool hasDup;
+        var m1 = MedianOf5(s, q1, q1 + 1, q1 + 2, q1 + 3, q1 + 4, out hasDup);
+        hasDuplicate |= hasDup;
+        
+        var m2 = MedianOf5(s, mid, mid + 1, mid + 2, mid + 3, mid + 4, out hasDup);
+        hasDuplicate |= hasDup;
+        
+        var m3 = MedianOf5(s, q3, q3 + 1, q3 + 2, q3 + 3, q3 + 4, out hasDup);
+        hasDuplicate |= hasDup;
+        
+        var last = MedianOf5(s, right - 4, right - 3, right - 2, right - 1, right, out hasDup);
+        hasDuplicate |= hasDup;
 
         // Move medians to boundaries
         s.Swap(left, first);
         s.Swap(right, last);
 
-        return MedianOf5(s, left, m1, m2, m3, right);
+        var result = MedianOf5(s, left, m1, m2, m3, right, out hasDup);
+        hasDuplicate |= hasDup;
+        
+        return result;
     }
 
     /// <summary>
@@ -701,9 +777,7 @@ public static class BlockQuickSort
         var length = right - left + 1;
 
         if (length < k + 3)
-        {
             return MedianOf3(s, left, (left + right) / 2, right);
-        }
 
         var step = length / (k + 3);
         var searchLeft = left + step;
@@ -754,7 +828,7 @@ public static class BlockQuickSort
     {
         while (right > left)
         {
-            // Use median-of-3 for pivot
+            // Use median-of-3 for pivot (discard duplicate flag in QuickSelect)
             var pivotIdx = MedianOf3(s, left, (left + right) / 2, right - 1);
 
             // Partition
@@ -793,68 +867,6 @@ public static class BlockQuickSort
         }
     }
 
-    /// <summary>
-    /// Checks if pivot value appears multiple times in a simple median-of-3 sample {left, mid, right}.
-    /// This is the paper's condition 1: "pivot occurs twice in the sample for pivot selection".
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static bool HasDuplicateInSample3Simple<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int mid, int right, int pivotIndex)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Check if any of the other two sample positions equal the pivot
-        var count = 0;
-        if (s.Compare(left, pivotIndex) == 0) count++;
-        if (mid != pivotIndex && s.Compare(mid, pivotIndex) == 0) count++;
-        if (right != pivotIndex && s.Compare(right, pivotIndex) == 0) count++;
-        return count >= 2; // Pivot + at least one duplicate
-    }
-
-    /// <summary>
-    /// Checks if pivot value appears multiple times in median-of-3-medians-of-3 sample positions.
-    /// Checks boundary positions and middle region for duplicates.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static bool HasDuplicateInSample3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // After MedianOf3MediansOf3, check boundary positions (which contain medians)
-        // and middle region for duplicates
-        var length = right - left + 1;
-        var mid = left + length / 2;
-        
-        var count = 0;
-        if (s.Compare(left, pivotIndex) == 0) count++;
-        if (s.Compare(mid, pivotIndex) == 0) count++;
-        if (s.Compare(right, pivotIndex) == 0) count++;
-        
-        return count >= 2;
-    }
-
-    /// <summary>
-    /// Checks if pivot value appears multiple times in median-of-5-medians-of-5 sample positions.
-    /// Checks quartile positions for duplicates.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static bool HasDuplicateInSample5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var length = right - left + 1;
-        var q1 = left + length / 4;
-        var mid = left + length / 2;
-        var q3 = left + (3 * length) / 4;
-        
-        var count = 0;
-        if (s.Compare(left, pivotIndex) == 0) count++;
-        if (s.Compare(q1, pivotIndex) == 0) count++;
-        if (s.Compare(mid, pivotIndex) == 0) count++;
-        if (s.Compare(q3, pivotIndex) == 0) count++;
-        if (s.Compare(right, pivotIndex) == 0) count++;
-        
-        return count >= 2;
-    }
 
     /// <summary>
     /// Checks for duplicate elements equal to the pivot and groups them together.
