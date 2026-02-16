@@ -670,16 +670,28 @@ public static class BlockQuickSort
         // Sample k elements from across the array
         for (var j = 0; j < k / 2; j++)
         {
-            s.Swap(placeIt, searchLeft);
+            // Only swap if positions are different (avoid unnecessary swaps)
+            if (placeIt != searchLeft)
+            {
+                s.Swap(placeIt, searchLeft);
+            }
             placeIt++;
-            s.Swap(placeIt, searchRight);
+            
+            if (placeIt != searchRight)
+            {
+                s.Swap(placeIt, searchRight);
+            }
             placeIt++;
             searchLeft += step;
             searchRight -= step;
         }
 
         // Add middle element
-        s.Swap(placeIt, (left + right) / 2);
+        var mid = (left + right) / 2;
+        if (placeIt != mid)
+        {
+            s.Swap(placeIt, mid);
+        }
         placeIt++;
 
         // Find median of sampled elements using partial sort
