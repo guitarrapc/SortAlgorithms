@@ -93,9 +93,6 @@ public static class BlockQuickSort
     // Threshold for switching to insertion sort - matches reference implementation
     const int InsertionSortThreshold = 20;
 
-    // Threshold for duplicate check: only check for small arrays
-    const int DuplicateCheckThreshold = 512;
-
     // Minimum ratio of duplicates to continue scanning (1 in 4 = 25%)
     const int DuplicateScanRatio = 4;
 
@@ -262,6 +259,7 @@ public static class BlockQuickSort
     /// <param name="s">The SortSpan to partition.</param>
     /// <param name="left">The inclusive start index.</param>
     /// <param name="right">The inclusive end index.</param>
+    /// <param name="context">The sort context.</param>
     /// <returns>The range of elements equal to the pivot.</returns>
     static PartitionResult HoareBlockPartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
         where TComparer : IComparer<T>
@@ -269,6 +267,7 @@ public static class BlockQuickSort
     {
         var size = right - left + 1;
         int pivotIndex;
+        bool hasDuplicatePivot = false;
 
         // Adaptive pivot selection based on array size (mosqrt implementation)
         if (size > 20000)
@@ -277,27 +276,41 @@ public static class BlockQuickSort
             var sampleSize = (int)Math.Sqrt(size);
             sampleSize += (1 - (sampleSize % 2)); // Make it odd
             pivotIndex = MedianOfK(s, left, right, sampleSize);
+            // For large samples, skip duplicate check (too expensive)
         }
         else if (size > 800)
         {
             // For large arrays, use median-of-5-medians-of-5
             pivotIndex = MedianOf5MediansOf5(s, left, right);
+            // Check if pivot appears in sample positions
+            hasDuplicatePivot = HasDuplicateInSample5(s, left, right, pivotIndex);
         }
         else if (size > 100)
         {
             // For medium arrays, use median-of-3-medians-of-3
             pivotIndex = MedianOf3MediansOf3(s, left, right);
+            // Check if pivot appears in sample positions
+            hasDuplicatePivot = HasDuplicateInSample3(s, left, right, pivotIndex);
         }
         else
         {
             // For small arrays, use simple median-of-3
-            pivotIndex = MedianOf3(s, left, (left + right) / 2, right);
+            var mid = (left + right) / 2;
+            pivotIndex = MedianOf3(s, left, mid, right);
+            // Check if pivot appears twice in {left, mid, right}
+            hasDuplicatePivot = HasDuplicateInSample3Simple(s, left, mid, right, pivotIndex);
         }
 
         var pivotPos = HoareBlockPartitionCore<T, TComparer, TContext>(s, left, right, pivotIndex, s.Context);
 
-        // Apply duplicate check for small arrays
-        if (size <= DuplicateCheckThreshold)
+        // Paper condition 1: Pivot occurs twice in sample
+        // Paper condition 2: Partitioning is very unbalanced for small/medium arrays
+        var leftSize = pivotPos - left;
+        var rightSize = right - pivotPos;
+        var minPartitionSize = Math.Min(leftSize, rightSize);
+        var isBadPartition = size <= 10000 && minPartitionSize < size / 8;
+
+        if (hasDuplicatePivot || isBadPartition)
         {
             return CheckForDuplicates(s, left, right, pivotPos);
         }
@@ -726,14 +739,77 @@ public static class BlockQuickSort
     }
 
     /// <summary>
+    /// Checks if pivot value appears multiple times in a simple median-of-3 sample {left, mid, right}.
+    /// This is the paper's condition 1: "pivot occurs twice in the sample for pivot selection".
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static bool HasDuplicateInSample3Simple<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int mid, int right, int pivotIndex)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        // Check if any of the other two sample positions equal the pivot
+        var count = 0;
+        if (s.Compare(left, pivotIndex) == 0) count++;
+        if (mid != pivotIndex && s.Compare(mid, pivotIndex) == 0) count++;
+        if (right != pivotIndex && s.Compare(right, pivotIndex) == 0) count++;
+        return count >= 2; // Pivot + at least one duplicate
+    }
+
+    /// <summary>
+    /// Checks if pivot value appears multiple times in median-of-3-medians-of-3 sample positions.
+    /// Checks boundary positions and middle region for duplicates.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static bool HasDuplicateInSample3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        // After MedianOf3MediansOf3, check boundary positions (which contain medians)
+        // and middle region for duplicates
+        var length = right - left + 1;
+        var mid = left + length / 2;
+        
+        var count = 0;
+        if (s.Compare(left, pivotIndex) == 0) count++;
+        if (s.Compare(mid, pivotIndex) == 0) count++;
+        if (s.Compare(right, pivotIndex) == 0) count++;
+        
+        return count >= 2;
+    }
+
+    /// <summary>
+    /// Checks if pivot value appears multiple times in median-of-5-medians-of-5 sample positions.
+    /// Checks quartile positions for duplicates.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static bool HasDuplicateInSample5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var length = right - left + 1;
+        var q1 = left + length / 4;
+        var mid = left + length / 2;
+        var q3 = left + (3 * length) / 4;
+        
+        var count = 0;
+        if (s.Compare(left, pivotIndex) == 0) count++;
+        if (s.Compare(q1, pivotIndex) == 0) count++;
+        if (s.Compare(mid, pivotIndex) == 0) count++;
+        if (s.Compare(q3, pivotIndex) == 0) count++;
+        if (s.Compare(right, pivotIndex) == 0) count++;
+        
+        return count >= 2;
+    }
+
+    /// <summary>
     /// Checks for duplicate elements equal to the pivot and groups them together.
     /// Based on BlockQuickSort paper Section 3.1: "Further Tuning of Block Partitioning".
     /// This optimization helps prevent deep recursion when arrays have many duplicate values.
     /// </summary>
     /// <remarks>
-    /// The duplicate check is applied when:
-    /// 1. The array size is small enough (≤ DuplicateCheckThreshold)
-    /// 2. There are potentially many duplicates (checked during scan)
+    /// The duplicate check is applied when (paper conditions):
+    /// 1. The pivot occurs twice in the sample for pivot selection (median-of-3/5), OR
+    /// 2. The partitioning results very unbalanced for an array of small/medium size
     ///
     /// The algorithm scans the larger partition for elements equal to the pivot.
     /// Scanning continues as long as at least 1 in DuplicateScanRatio (25%) elements are equal to pivot.
