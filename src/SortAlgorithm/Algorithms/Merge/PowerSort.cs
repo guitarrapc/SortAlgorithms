@@ -1,5 +1,6 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -317,41 +318,63 @@ public static class PowerSort
     }
 
     /// <summary>
-    /// Computes the node power for PowerSort merge strategy.
-    /// This is the key innovation of PowerSort over TimSort.
-    /// The power value determines when to merge runs.
-    /// Based on the algorithm from the PowerSort paper:
+    /// Computes the node power for PowerSort merge strategy using integer-based fixed-point arithmetic.
+    /// This is the key innovation of PowerSort over TimSort - determining optimal merge timing based on
+    /// the tree depth where run midpoints diverge.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Based on the PowerSort paper algorithm:
+    /// <code>
     /// NodePower(s1, e1, s2, e2, n):
     ///   n1 = e1 - s1 + 1; n2 = e2 - s2 + 1; ℓ = 0
     ///   a = (s1 + n1/2 - 1) / n
     ///   b = (s2 + n2/2 - 1) / n
     ///   while floor(a * 2^ℓ) == floor(b * 2^ℓ) do ℓ = ℓ + 1
     ///   return ℓ
-    /// </summary>
+    /// </code>
+    /// </para>
+    /// The paper uses 1-based indexing with inclusive ranges [s1..e1].
+    /// Our implementation uses 0-based indexing with exclusive end [s1..e1).
+    /// Adjustment: n1 = e1 - s1 (not +1), formula becomes a = (s1 + n1/2) / n (not -1 for 0-based).
+    /// </remarks>
     private static int ComputeNodePower(int s1, int e1, int s2, int e2, int n)
     {
-        // Note: The paper uses 1-based indexing with inclusive ranges [s1..e1]
-        // Our implementation uses 0-based indexing with exclusive end [s1..e1)
-        // So we adjust: n1 = e1 - s1 (not +1), and the formula becomes:
-        // a = (s1 + n1/2) / n (not -1 since we're 0-based)
+        // Compute run lengths
+        uint n1 = (uint)(e1 - s1);
+        uint n2 = (uint)(e2 - s2);
 
-        var n1 = e1 - s1;
-        var n2 = e2 - s2;
+        // Represent midpoints in half-unit precision to avoid 0.5 floating-point
+        // Original: m = s + len/2.0  →  Transformed: 2*m = 2*s + len
+        // Numerator for 2*midpoint (range is approximately < 3n)
+        ulong M1 = (ulong)(2u * (uint)s1) + n1;
+        ulong M2 = (ulong)(2u * (uint)s2) + n2;
 
-        // Calculate midpoint positions (as floating point for precision)
-        var a = (s1 + n1 / 2.0) / n;
-        var b = (s2 + n2 / 2.0) / n;
+        // Normalization denominator: 2n (to match 2*midpoint scale)
+        ulong D = (ulong)(2u * (uint)n);
 
-        // Find the power: the level where a and b diverge in the binary tree
-        var power = 0;
-        var scale = 1;
+        // Compute 64-bit fixed-point normalized values: x = floor((M/D) * 2^64)
+        // Use UInt128 to prevent overflow during (M << 64) operation (requires .NET 7+)
+        ulong x1 = (ulong)(((UInt128)M1 << 64) / D);
+        ulong x2 = (ulong)(((UInt128)M2 << 64) / D);
 
-        while ((int)(a * scale) == (int)(b * scale))
+        // XOR reveals first differing bit position
+        ulong diff = x1 ^ x2;
+        if (diff == 0)
         {
-            power++;
-            scale <<= 1;  // scale *= 2
+            // Identical at 64-bit resolution → same point, return max practical power
+            return 64;
         }
 
+        // Count leading zero bits (common prefix length)
+        int commonPrefix = BitOperations.LeadingZeroCount(diff); // Returns 0..64
+
+        // floor(x*2^ℓ) matches while ℓ <= commonPrefix
+        // First divergence occurs at ℓ = commonPrefix + 1
+        int power = commonPrefix + 1;
+
+        // Cap at 64 for practical use (run stack size ~64 is sufficient)
+        if (power > 64) power = 64;
         return power;
     }
 
