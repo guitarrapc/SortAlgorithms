@@ -208,7 +208,7 @@ public static class PowerSort
         // MergeLow needs len1, MergeHigh needs len2, so we track the smaller run size
         var tmpBufferSize = Math.Min(minRun * 2, n / 2);
         var tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
-        var ms = new MergeState();
+        var minGallop = MIN_GALLOP;
 
         try
         {
@@ -258,7 +258,7 @@ public static class PowerSort
                     // Verify structural consistency: runs must be adjacent
                     Debug.Assert(base1 + len1 == base2, $"Runs are not adjacent: run[{runCount - 2}] ends at {base1 + len1}, run[{runCount - 1}] starts at {base2}");
 
-                    MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
+                    MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop, comparer, context);
 
                     // Replace the two runs with the merged result
                     runBase[runCount - 2] = base1;
@@ -308,7 +308,7 @@ public static class PowerSort
                 // Verify structural consistency
                 Debug.Assert(base1 + len1 == base2, $"Runs are not adjacent in final collapse: run[{runCount - 2}] ends at {base1 + len1}, run[{runCount - 1}] starts at {base2}");
 
-                MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
+                MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop, comparer, context);
 
                 // Replace the two runs with the merged result
                 runLen[runCount - 2] = len1 + len2;
@@ -487,7 +487,7 @@ public static class PowerSort
     /// The temporary buffer is reused across multiple merges for efficiency.
     /// </summary>
     private static void MergeRuns<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
-        ref T[] tmpBuffer, ref int tmpBufferSize, ref MergeState ms, TComparer comparer, TContext context)
+        ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -506,11 +506,11 @@ public static class PowerSort
         // Merge remaining runs using galloping
         if (len1 <= len2)
         {
-            MergeLow(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
+            MergeLow(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop, comparer, context);
         }
         else
         {
-            MergeHigh(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
+            MergeHigh(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop, comparer, context);
         }
     }
 
@@ -670,7 +670,7 @@ public static class PowerSort
     /// Reuses the provided temporary buffer, expanding it if necessary.
     /// </summary>
     private static void MergeLow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
-        ref T[] tmpBuffer, ref int tmpBufferSize, ref MergeState ms, TComparer comparer, TContext context)
+        ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -706,8 +706,6 @@ public static class PowerSort
             s.Write(dest + len2, t.Read(cursor1));
             return;
         }
-
-        var minGallop = ms.MinGallop;
 
         while (true)
         {
@@ -798,7 +796,7 @@ public static class PowerSort
         }
 
     exitMerge:
-        ms.MinGallop = minGallop < 1 ? 1 : minGallop;
+        minGallop = minGallop < 1 ? 1 : minGallop;
 
         if (len1 == 1)
         {
@@ -818,7 +816,7 @@ public static class PowerSort
     /// Reuses the provided temporary buffer, expanding it if necessary.
     /// </summary>
     private static void MergeHigh<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
-        ref T[] tmpBuffer, ref int tmpBufferSize, ref MergeState ms, TComparer comparer, TContext context)
+        ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -856,8 +854,6 @@ public static class PowerSort
             s.Write(dest, t.Read(0));
             return;
         }
-
-        var minGallop = ms.MinGallop;
 
         while (true)
         {
@@ -948,7 +944,7 @@ public static class PowerSort
         }
 
     exitMerge:
-        ms.MinGallop = minGallop < 1 ? 1 : minGallop;
+        minGallop = minGallop < 1 ? 1 : minGallop;
 
         if (len2 == 1)
         {
@@ -962,18 +958,5 @@ public static class PowerSort
             t.CopyTo(0, s, dest - (len2 - 1), len2);
         }
         // No finally block - buffer is managed by caller (SortCore)
-    }
-
-    /// <summary>
-    /// Merge state structure to track galloping threshold dynamically.
-    /// </summary>
-    private ref struct MergeState
-    {
-        public int MinGallop;
-
-        public MergeState()
-        {
-            MinGallop = MIN_GALLOP;
-        }
     }
 }
