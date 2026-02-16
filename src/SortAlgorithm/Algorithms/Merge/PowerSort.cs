@@ -1,18 +1,18 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
+using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
-// reference: https://drops.dagstuhl.de/storage/00lipics/lipics-vol229-icalp2022/LIPIcs.ICALP.2022.68/LIPIcs.ICALP.2022.68.pdf
-// reference: https://arxiv.org/abs/1805.04154
 /// <summary>
+/// PowerSortは、ランの「パワー」に基づいてマージ順序を最適化する改良型適応マージソートアルゴリズムです。
+/// TimSortよりも優れたパフォーマンスを発揮し、最悪ケースでもO(n log n)、ほぼソート済みデータではO(n)を実現します。
+/// <br/>
 /// PowerSort is an improved adaptive merge sort algorithm that optimizes the merge order
 /// based on the "power" of runs, resulting in better performance than TimSort.
 /// It maintains O(n log n) worst-case time complexity while achieving O(n) on nearly sorted data.
-/// <br/>
-/// PowerSortは、ランの「パワー」に基づいてマージ順序を最適化する改良型適応マージソートアルゴリズムです。
-/// TimSortよりも優れたパフォーマンスを発揮し、最悪ケースでもO(n log n)、ほぼソート済みデータではO(n)を実現します。
 /// </summary>
 /// <remarks>
 /// <para><strong>Key Innovations over TimSort:</strong></para>
@@ -163,90 +163,170 @@ public static class PowerSort
             return;
         }
 
-        SortCore(span, first, last, comparer, context);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        SortCore(s, first, last, comparer, context);
     }
 
     /// <summary>
     /// Core PowerSort implementation.
     /// Based on the algorithm from the PowerSort paper (Algorithm in Section 5.3).
     /// </summary>
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+    /// <remarks>
+    /// <para><strong>Algorithm Structure with Explicit Boundary Stack:</strong></para>
+    /// <list type="bullet">
+    /// <item><description>runCount = number of runs on stack</description></item>
+    /// <item><description>bpCount = number of boundary powers (always runCount - 1)</description></item>
+    /// <item><description>Invariant: bp[i] = boundary power between runs[i] and runs[i+1]</description></item>
+    /// <item><description>Merge condition: bp[bpCount-1] > p where p = boundary(top, nextRun)</description></item>
+    /// <item><description>After merge: runCount--, bpCount-- (boundary stack shrinks together with run stack)</description></item>
+    /// </list>
+    /// <para>This explicit management ensures data structure invariants are always maintained,
+    /// preventing future bugs from stale boundary values.</para>
+    /// </remarks>
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var n = last - first;
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // PowerSort uses a stack with node-power values to determine merge order
+        // Compute adaptive minimum run length based on array size
+        // Same strategy as TimSort: ensures n/minRun is close to or slightly less than a power of 2
+        var minRun = ComputeMinRun(n);
+
+        // PowerSort uses two parallel stacks:
+        // 1. Run stack (runBase, runLen) - stores the runs themselves
+        // 2. Boundary power stack (bp) - stores powers of boundaries between adjacent runs
+        // Invariant: if runCount = k, then bpCount = k - 1
         Span<int> runBase = stackalloc int[85]; // 85 is enough for 2^64 elements
         Span<int> runLen = stackalloc int[85];
-        Span<int> power = stackalloc int[85];   // power[i] is the power of node BETWEEN run[i-1] and run[i]
-        var stackSize = 0;
+        Span<int> bp = stackalloc int[85];      // bp[i] = power of boundary between runs[i] and runs[i+1]
+        var runCount = 0;   // Number of runs on stack
+        var bpCount = 0;    // Number of boundary powers (always runCount - 1)
 
-        // Find the leftmost run (s1, e1)
-        var s1 = first;
-        var e1 = FindAndPrepareRun(s, s1, last);
+        // Find and push the first run onto the stack
+        var runStart = first;
+        var runEnd = FindAndPrepareRun(s, runStart, last, minRun);
+        runBase[0] = runStart;
+        runLen[0] = runEnd - runStart;
+        runCount = 1;
 
-        // Process runs using PowerSort algorithm
-        while (e1 < last)
+        // Early exit: if the entire array is a single run, we're done
+        // This avoids unnecessary buffer allocation for already sorted or reversed arrays
+        if (runEnd >= last)
         {
-            // Find next run (s2, e2)
-            var s2 = e1;
-            var e2 = FindAndPrepareRun(s, s2, last);
-
-            // Calculate node power between current run [s1..e1) and next run [s2..e2)
-            // Convert to relative positions (0-based from 'first')
-            var p = ComputeNodePower(s1 - first, e1 - first, s2 - first, e2 - first, n);
-
-            // Merge while P.top() > p (previous merge deeper in tree than current)
-            while (stackSize > 0 && power[stackSize - 1] > p)
-            {
-                // Pop from stack and merge
-                stackSize--;
-                var prevBase = runBase[stackSize];
-                var prevLen = runLen[stackSize];
-                var currentLen = e1 - s1;
-
-                // Merge prevRun [prevBase..prevBase+prevLen) with current run [s1..e1)
-                // These two runs are always adjacent (prevBase + prevLen == s1)
-                MergeRuns(span, prevBase, prevLen, s1, currentLen, comparer, context);
-
-                // Update s1 to represent the merged result
-                s1 = prevBase;
-                // e1 stays the same (end of the merged region)
-            }
-
-            // Push current run onto stack with its power
-            runBase[stackSize] = s1;
-            runLen[stackSize] = e1 - s1;
-            power[stackSize] = p;
-            stackSize++;
-
-            // Move to next run
-            s1 = s2;
-            e1 = e2;
+            return; // Already sorted (either ascending or reversed and then reversed back)
         }
 
-        // Now [s1..e1) is the rightmost run
-        // Merge all remaining runs from the stack with the rightmost run
-        while (stackSize > 0)
+        // Reusable temporary buffer for merging
+        // Start with minRun size (reasonable initial capacity)
+        // MergeLow needs len1, MergeHigh needs len2, so we track the smaller run size
+        var tmpBufferSize = Math.Min(minRun * 2, n / 2);
+        T[] tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
+        var minGallop = MIN_GALLOP;
+
+        try
         {
-            stackSize--;
-            var prevBase = runBase[stackSize];
-            var prevLen = runLen[stackSize];
+            // No boundary yet (need at least 2 runs for a boundary)
 
-            var currentLen = e1 - s1;
-
-            // The previous run should be immediately before the current run [s1..e1)
-            if (prevBase + prevLen != s1)
+            // Process remaining runs
+            runStart = runEnd;
+            while (runStart < last)
             {
-                throw new InvalidOperationException($"Runs are not adjacent in final collapse: prev ends at {prevBase + prevLen}, current starts at {s1}");
+                // Find next run (but don't push yet)
+                var nextStart = runStart;
+                var nextEnd = FindAndPrepareRun(s, nextStart, last, minRun);
+
+                // Compute the power of the boundary between current stack top and next run
+                var topBase = runBase[runCount - 1];
+                var topLen = runLen[runCount - 1];
+                var p = ComputeNodePower(topBase - first, topBase + topLen - first, nextStart - first, nextEnd - first, n);
+
+                // Merge while the previous boundary has higher power than current boundary
+                // bp[bpCount-1] is the boundary between runs[runCount-2] and runs[runCount-1]
+                // p is the boundary between runs[runCount-1] and nextRun
+                // If bp[bpCount-1] > p, merge runs[runCount-2] and runs[runCount-1]
+                while (bpCount > 0 && bp[bpCount - 1] > p)
+                {
+                    // Verify invariant: bpCount should always equal runCount - 1
+                    Debug.Assert(bpCount == runCount - 1, $"Invariant violated before merge: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
+
+                    // Merge the top two runs: runs[runCount-2] and runs[runCount-1]
+                    var base1 = runBase[runCount - 2];
+                    var len1 = runLen[runCount - 2];
+                    var base2 = runBase[runCount - 1];
+                    var len2 = runLen[runCount - 1];
+
+                    // Verify structural consistency: runs must be adjacent
+                    Debug.Assert(base1 + len1 == base2, $"Runs are not adjacent: run[{runCount - 2}] ends at {base1 + len1}, run[{runCount - 1}] starts at {base2}");
+
+                    MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop, comparer, context);
+
+                    // Replace the two runs with the merged result
+                    runBase[runCount - 2] = base1;
+                    runLen[runCount - 2] = len1 + len2;
+                    runCount--;  // One less run on stack
+                    bpCount--;   // One less boundary (the boundary between the merged runs is gone)
+
+                    // Verify invariant after merge
+                    Debug.Assert(bpCount == runCount - 1, $"Invariant violated after merge: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
+
+                    // Recalculate p: boundary between new top (merged result) and nextRun
+                    if (runCount > 0)
+                    {
+                        topBase = runBase[runCount - 1];
+                        topLen = runLen[runCount - 1];
+                        p = ComputeNodePower(topBase - first, topBase + topLen - first, nextStart - first, nextEnd - first, n);
+                    }
+                }
+
+                // Push the next run onto the stack
+                runBase[runCount] = nextStart;
+                runLen[runCount] = nextEnd - nextStart;
+                runCount++;
+
+                // Push the boundary power between the new top and the previous top
+                bp[bpCount] = p;
+                bpCount++;
+
+                // Verify invariant after push: bpCount should always equal runCount - 1
+                Debug.Assert(bpCount == runCount - 1, $"Invariant violated after push: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
+
+                runStart = nextEnd;
             }
 
-            MergeRuns(span, prevBase, prevLen, s1, currentLen, comparer, context);
+            // Force merge all remaining runs from right to left
+            while (runCount > 1)
+            {
+                // Verify invariant before final merge
+                Debug.Assert(bpCount == runCount - 1, $"Invariant violated in final collapse before merge: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
 
-            s1 = prevBase;
-            // e1 stays the same
+                // Always merge the last two runs
+                var base1 = runBase[runCount - 2];
+                var len1 = runLen[runCount - 2];
+                var base2 = runBase[runCount - 1];
+                var len2 = runLen[runCount - 1];
+
+                // Verify structural consistency
+                Debug.Assert(base1 + len1 == base2, $"Runs are not adjacent in final collapse: run[{runCount - 2}] ends at {base1 + len1}, run[{runCount - 1}] starts at {base2}");
+
+                MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop, comparer, context);
+
+                // Replace the two runs with the merged result
+                runLen[runCount - 2] = len1 + len2;
+                runCount--;
+                bpCount--;  // One less boundary
+
+                // Verify invariant after final merge
+                Debug.Assert(bpCount == runCount - 1, $"Invariant violated in final collapse after merge: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
+            }
+
+            // Final check: should have exactly 1 run and 0 boundaries
+            Debug.Assert(runCount == 1 && bpCount == 0, $"Final state check failed: runCount={runCount}, bpCount={bpCount}, expected runCount=1 and bpCount=0");
+        }
+        finally
+        {
+            // Return the rented array to the pool
+            ArrayPool<T>.Shared.Return(tmpBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 
@@ -254,9 +334,9 @@ public static class PowerSort
     /// Finds and prepares a run starting at position 'start'.
     /// Returns the end position (exclusive) of the prepared run.
     /// A run is either ascending or strictly descending (which is then reversed).
-    /// Short runs are extended to MIN_MERGE using binary insertion sort.
+    /// Short runs are extended to minRun using binary insertion sort.
     /// </summary>
-    private static int FindAndPrepareRun<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int last)
+    private static int FindAndPrepareRun<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int last, int minRun)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -289,15 +369,41 @@ public static class PowerSort
 
         var runLength = runEnd - start;
 
-        // If run is too small, extend it to MIN_MERGE using binary insertion sort
-        if (runLength < MIN_MERGE)
+        // If run is too small, extend it to minRun using binary insertion sort
+        if (runLength < minRun)
         {
-            var force = Math.Min(MIN_MERGE, last - start);
+            var force = Math.Min(minRun, last - start);
             BinaryInsertionSort.SortCore(s, start, start + force, start + runLength);
             runEnd = start + force;
         }
 
         return runEnd;
+    }
+
+    /// <summary>
+    /// Computes the minimum run length for the given array size.
+    /// Uses the same strategy as TimSort: returns n + r where n is the top 6 bits of the original n,
+    /// and r is 1 if any of the remaining bits are set (ensuring n/minRun is close to or slightly less than a power of 2).
+    /// This results in minRun values in the range [32, 64] for large arrays, and smaller values for tiny arrays.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>Why this matters for PowerSort:</strong></para>
+    /// <list type="bullet">
+    /// <item><description>Too small minRun (e.g., fixed 32) → too many runs → loses PowerSort's adaptive merge tree advantage</description></item>
+    /// <item><description>Adaptive minRun → fewer, better-balanced runs → PowerSort's optimal merge strategy shines</description></item>
+    /// <item><description>n/minRun ≈ power of 2 → balanced merge tree depth → O(n log n) guarantee with optimal constants</description></item>
+    /// </list>
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ComputeMinRun(int n)
+    {
+        var r = 0;
+        while (n >= MIN_MERGE)
+        {
+            r |= n & 1;
+            n >>= 1;
+        }
+        return n + r;
     }
 
     /// <summary>
@@ -317,54 +423,75 @@ public static class PowerSort
     }
 
     /// <summary>
-    /// Computes the node power for PowerSort merge strategy.
-    /// This is the key innovation of PowerSort over TimSort.
-    /// The power value determines when to merge runs.
-    /// Based on the algorithm from the PowerSort paper:
+    /// Computes the node power for PowerSort merge strategy using integer-based fixed-point arithmetic.
+    /// This is the key innovation of PowerSort over TimSort - determining optimal merge timing based on
+    /// the tree depth where run midpoints diverge.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Based on the PowerSort paper algorithm:
+    /// <code>
     /// NodePower(s1, e1, s2, e2, n):
     ///   n1 = e1 - s1 + 1; n2 = e2 - s2 + 1; ℓ = 0
     ///   a = (s1 + n1/2 - 1) / n
     ///   b = (s2 + n2/2 - 1) / n
     ///   while floor(a * 2^ℓ) == floor(b * 2^ℓ) do ℓ = ℓ + 1
     ///   return ℓ
-    /// </summary>
+    /// </code>
+    /// </para>
+    /// The paper uses 1-based indexing with inclusive ranges [s1..e1].
+    /// Our implementation uses 0-based indexing with exclusive end [s1..e1).
+    /// Adjustment: n1 = e1 - s1 (not +1), formula becomes a = (s1 + n1/2) / n (not -1 for 0-based).
+    /// </remarks>
     private static int ComputeNodePower(int s1, int e1, int s2, int e2, int n)
     {
-        // Note: The paper uses 1-based indexing with inclusive ranges [s1..e1]
-        // Our implementation uses 0-based indexing with exclusive end [s1..e1)
-        // So we adjust: n1 = e1 - s1 (not +1), and the formula becomes:
-        // a = (s1 + n1/2) / n (not -1 since we're 0-based)
+        // Compute run lengths
+        uint n1 = (uint)(e1 - s1);
+        uint n2 = (uint)(e2 - s2);
 
-        var n1 = e1 - s1;
-        var n2 = e2 - s2;
+        // Represent midpoints in half-unit precision to avoid 0.5 floating-point
+        // Original: m = s + len/2.0  →  Transformed: 2*m = 2*s + len
+        // Numerator for 2*midpoint (range is approximately < 3n)
+        ulong M1 = (ulong)(2u * (uint)s1) + n1;
+        ulong M2 = (ulong)(2u * (uint)s2) + n2;
 
-        // Calculate midpoint positions (as floating point for precision)
-        var a = (s1 + n1 / 2.0) / n;
-        var b = (s2 + n2 / 2.0) / n;
+        // Normalization denominator: 2n (to match 2*midpoint scale)
+        ulong D = (ulong)(2u * (uint)n);
 
-        // Find the power: the level where a and b diverge in the binary tree
-        var power = 0;
-        var scale = 1;
+        // Compute 64-bit fixed-point normalized values: x = floor((M/D) * 2^64)
+        // Use UInt128 to prevent overflow during (M << 64) operation (requires .NET 7+)
+        ulong x1 = (ulong)(((UInt128)M1 << 64) / D);
+        ulong x2 = (ulong)(((UInt128)M2 << 64) / D);
 
-        while ((int)(a * scale) == (int)(b * scale))
+        // XOR reveals first differing bit position
+        ulong diff = x1 ^ x2;
+        if (diff == 0)
         {
-            power++;
-            scale <<= 1;  // scale *= 2
+            // Identical at 64-bit resolution → same point, return max practical power
+            return 64;
         }
 
+        // Count leading zero bits (common prefix length)
+        int commonPrefix = BitOperations.LeadingZeroCount(diff); // Returns 0..64
+
+        // floor(x*2^ℓ) matches while ℓ <= commonPrefix
+        // First divergence occurs at ℓ = commonPrefix + 1
+        int power = commonPrefix + 1;
+
+        // Cap at 64 for practical use (run stack size ~64 is sufficient)
+        if (power > 64) power = 64;
         return power;
     }
 
     /// <summary>
     /// Merges two adjacent runs with galloping mode optimization.
+    /// The temporary buffer is reused across multiple merges for efficiency.
     /// </summary>
-    private static void MergeRuns<T, TComparer, TContext>(Span<T> span, int base1, int len1, int base2, int len2, TComparer comparer, TContext context)
+    private static void MergeRuns<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
+        ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        var ms = new MergeState();
-
         // Optimize: Find where first element of run2 goes in run1
         // Elements before this point are already in their final positions
         var k = GallopRight(s, s.Read(base2), base1, len1, 0);
@@ -380,11 +507,11 @@ public static class PowerSort
         // Merge remaining runs using galloping
         if (len1 <= len2)
         {
-            MergeLow(span, base1, len1, base2, len2, ref ms, comparer, context);
+            MergeLow(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop, comparer, context);
         }
         else
         {
-            MergeHigh(span, base1, len1, base2, len2, ref ms, comparer, context);
+            MergeHigh(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop, comparer, context);
         }
     }
 
@@ -541,311 +668,296 @@ public static class PowerSort
     /// <summary>
     /// Merges two adjacent runs where the first run is smaller or equal.
     /// Uses galloping mode when one run consistently wins.
+    /// Reuses the provided temporary buffer, expanding it if necessary.
     /// </summary>
-    private static void MergeLow<T, TComparer, TContext>(Span<T> span, int base1, int len1, int base2, int len2, ref MergeState ms, TComparer comparer, TContext context)
+    private static void MergeLow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
+        ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-
-        // Rent temp array from ArrayPool
-        var tmp = ArrayPool<T>.Shared.Rent(len1);
-        try
+        // Ensure tmpBuffer is large enough for len1
+        if (tmpBufferSize < len1)
         {
-            var t = new SortSpan<T, TComparer, TContext>(tmp.AsSpan(0, len1), context, comparer, BUFFER_TEMP);
-            s.CopyTo(base1, t, 0, len1);
-
-            var cursor1 = 0;          // Index in temp (first run)
-            var cursor2 = base2;      // Index in span (second run)
-            var dest = base1;         // Destination index
-
-            // Move first element of second run
-            s.Write(dest++, s.Read(cursor2++));
-            len2--;
-
-            if (len2 == 0)
-            {
-                t.CopyTo(0, s, dest, len1);
-                return;
-            }
-            if (len1 == 1)
-            {
-                s.CopyTo(cursor2, s, dest, len2);
-                s.Write(dest + len2, t.Read(cursor1));
-                return;
-            }
-
-            var minGallop = ms.MinGallop;
-
-            while (true)
-            {
-                var count1 = 0;  // # of times run1 won in a row
-                var count2 = 0;  // # of times run2 won in a row
-
-                // One-pair-at-a-time mode
-                do
-                {
-                    var val1 = t.Read(cursor1);
-                    var val2 = s.Read(cursor2);
-
-                    if (s.Compare(val1, val2) <= 0)
-                    {
-                        s.Write(dest++, val1);
-                        cursor1++;
-                        count1++;
-                        count2 = 0;
-                        len1--;
-                        if (len1 == 0)
-                        {
-                            goto exitMerge;
-                        }
-                    }
-                    else
-                    {
-                        s.Write(dest++, val2);
-                        cursor2++;
-                        count2++;
-                        count1 = 0;
-                        len2--;
-                        if (len2 == 0)
-                        {
-                            goto exitMerge;
-                        }
-                    }
-                } while ((count1 | count2) < minGallop);
-
-                // Galloping mode: one run is winning consistently
-                do
-                {
-                    count1 = GallopRight(t, s.Read(cursor2), cursor1, len1, 0);
-                    if (count1 != 0)
-                    {
-                        t.CopyTo(cursor1, s, dest, count1);
-                        dest += count1;
-                        cursor1 += count1;
-                        len1 -= count1;
-                        if (len1 == 0)
-                        {
-                            goto exitMerge;
-                        }
-                    }
-                    s.Write(dest++, s.Read(cursor2++));
-                    len2--;
-                    if (len2 == 0)
-                    {
-                        goto exitMerge;
-                    }
-
-                    count2 = GallopLeft(s, t.Read(cursor1), cursor2, len2, 0);
-                    if (count2 != 0)
-                    {
-                        s.CopyTo(cursor2, s, dest, count2);
-                        dest += count2;
-                        cursor2 += count2;
-                        len2 -= count2;
-                        if (len2 == 0)
-                        {
-                            goto exitMerge;
-                        }
-                    }
-                    s.Write(dest++, t.Read(cursor1++));
-                    len1--;
-                    if (len1 == 1)
-                    {
-                        goto exitMerge;
-                    }
-
-                    minGallop--;
-                } while (count1 >= MIN_GALLOP || count2 >= MIN_GALLOP);
-
-                if (minGallop < 0)
-                {
-                    minGallop = 0;
-                }
-                minGallop += 2;  // Penalize for leaving galloping mode
-            }
-
-            exitMerge:
-            ms.MinGallop = minGallop < 1 ? 1 : minGallop;
-
-            if (len1 == 1)
-            {
-                s.CopyTo(cursor2, s, dest, len2);
-                s.Write(dest + len2, t.Read(cursor1));
-            }
-            else if (len1 > 0)
-            {
-                t.CopyTo(cursor1, s, dest, len1);
-            }
+            // Return old buffer and rent a larger one
+            ArrayPool<T>.Shared.Return(tmpBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            tmpBufferSize = len1;
+            tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
         }
-        finally
+
+        // Copy first run to temp buffer
+        var t = new SortSpan<T, TComparer, TContext>(tmpBuffer.AsSpan(0, len1), context, comparer, BUFFER_TEMP);
+        s.CopyTo(base1, t, 0, len1);
+
+        var cursor1 = 0;          // Index in temp (first run)
+        var cursor2 = base2;      // Index in span (second run)
+        var dest = base1;         // Destination index
+
+        // Move first element of second run
+        s.Write(dest++, s.Read(cursor2++));
+        len2--;
+
+        if (len2 == 0)
         {
-            // Return the rented array to the pool
-            ArrayPool<T>.Shared.Return(tmp, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            t.CopyTo(0, s, dest, len1);
+            return;
         }
-    }
-
-    /// <summary>
-    /// Merges two adjacent runs where the second run is smaller.
-    /// Uses galloping mode when one run consistently wins.
-    /// </summary>
-    private static void MergeHigh<T, TComparer, TContext>(Span<T> span, int base1, int len1, int base2, int len2, ref MergeState ms, TComparer comparer, TContext context)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-
-        // Rent temp array from ArrayPool
-        var tmp = ArrayPool<T>.Shared.Rent(len2);
-        try
+        if (len1 == 1)
         {
-            var t = new SortSpan<T, TComparer, TContext>(tmp.AsSpan(0, len2), context, comparer, BUFFER_TEMP);
-            s.CopyTo(base2, t, 0, len2);
+            s.CopyTo(cursor2, s, dest, len2);
+            s.Write(dest + len2, t.Read(cursor1));
+            return;
+        }
 
-            var cursor1 = base1 + len1 - 1;  // Index in span (first run, from end)
-            var cursor2 = len2 - 1;          // Index in temp (second run, from end)
-            var dest = base2 + len2 - 1;     // Destination index (from end)
+        while (true)
+        {
+            var count1 = 0;  // # of times run1 won in a row
+            var count2 = 0;  // # of times run2 won in a row
 
-            // Move last element of first run
-            s.Write(dest--, s.Read(cursor1--));
-            len1--;
-
-            if (len1 == 0)
+            // One-pair-at-a-time mode
+            do
             {
-                t.CopyTo(0, s, dest - (len2 - 1), len2);
-                return;
-            }
-            if (len2 == 1)
-            {
-                dest -= len1;
-                cursor1 -= len1;
-                s.CopyTo(cursor1 + 1, s, dest + 1, len1);
-                s.Write(dest, t.Read(0));
-                return;
-            }
+                var val1 = t.Read(cursor1);
+                var val2 = s.Read(cursor2);
 
-            var minGallop = ms.MinGallop;
-
-            while (true)
-            {
-                var count1 = 0;  // # of times run1 won in a row
-                var count2 = 0;  // # of times run2 won in a row
-
-                // One-pair-at-a-time mode
-                do
+                if (s.Compare(val1, val2) <= 0)
                 {
-                    var val1 = s.Read(cursor1);
-                    var val2 = t.Read(cursor2);
-
-                    if (s.Compare(val2, val1) >= 0)
-                    {
-                        s.Write(dest--, val2);
-                        cursor2--;
-                        count2++;
-                        count1 = 0;
-                        len2--;
-                        if (len2 == 0)
-                        {
-                            goto exitMerge;
-                        }
-                    }
-                    else
-                    {
-                        s.Write(dest--, val1);
-                        cursor1--;
-                        count1++;
-                        count2 = 0;
-                        len1--;
-                        if (len1 == 0)
-                        {
-                            goto exitMerge;
-                        }
-                    }
-                } while ((count1 | count2) < minGallop);
-
-                // Galloping mode: one run is winning consistently
-                do
-                {
-                    count1 = len1 - GallopRight(s, t.Read(cursor2), base1, len1, len1 - 1);
-                    if (count1 != 0)
-                    {
-                        dest -= count1;
-                        cursor1 -= count1;
-                        len1 -= count1;
-                        s.CopyTo(cursor1 + 1, s, dest + 1, count1);
-                        if (len1 == 0)
-                        {
-                            goto exitMerge;
-                        }
-                    }
-                    s.Write(dest--, t.Read(cursor2--));
-                    len2--;
-                    if (len2 == 1)
-                    {
-                        goto exitMerge;
-                    }
-
-                    count2 = len2 - GallopLeft(t, s.Read(cursor1), 0, len2, len2 - 1);
-                    if (count2 != 0)
-                    {
-                        dest -= count2;
-                        cursor2 -= count2;
-                        len2 -= count2;
-                        t.CopyTo(cursor2 + 1, s, dest + 1, count2);
-                        if (len2 == 0)
-                        {
-                            goto exitMerge;
-                        }
-                    }
-                    s.Write(dest--, s.Read(cursor1--));
+                    s.Write(dest++, val1);
+                    cursor1++;
+                    count1++;
+                    count2 = 0;
                     len1--;
                     if (len1 == 0)
                     {
                         goto exitMerge;
                     }
-
-                    minGallop--;
-                } while (count1 >= MIN_GALLOP || count2 >= MIN_GALLOP);
-
-                if (minGallop < 0)
-                {
-                    minGallop = 0;
                 }
-                minGallop += 2;  // Penalize for leaving galloping mode
-            }
+                else
+                {
+                    s.Write(dest++, val2);
+                    cursor2++;
+                    count2++;
+                    count1 = 0;
+                    len2--;
+                    if (len2 == 0)
+                    {
+                        goto exitMerge;
+                    }
+                }
+            } while ((count1 | count2) < minGallop);
 
-            exitMerge:
-            ms.MinGallop = minGallop < 1 ? 1 : minGallop;
+            // Galloping mode: one run is winning consistently
+            do
+            {
+                count1 = GallopRight(t, s.Read(cursor2), cursor1, len1, 0);
+                if (count1 != 0)
+                {
+                    t.CopyTo(cursor1, s, dest, count1);
+                    dest += count1;
+                    cursor1 += count1;
+                    len1 -= count1;
+                    if (len1 == 0)
+                    {
+                        goto exitMerge;
+                    }
+                }
+                s.Write(dest++, s.Read(cursor2++));
+                len2--;
+                if (len2 == 0)
+                {
+                    goto exitMerge;
+                }
 
-            if (len2 == 1)
+                count2 = GallopLeft(s, t.Read(cursor1), cursor2, len2, 0);
+                if (count2 != 0)
+                {
+                    s.CopyTo(cursor2, s, dest, count2);
+                    dest += count2;
+                    cursor2 += count2;
+                    len2 -= count2;
+                    if (len2 == 0)
+                    {
+                        goto exitMerge;
+                    }
+                }
+                s.Write(dest++, t.Read(cursor1++));
+                len1--;
+                if (len1 == 1)
+                {
+                    goto exitMerge;
+                }
+
+                minGallop--;
+            } while (count1 >= MIN_GALLOP || count2 >= MIN_GALLOP);
+
+            if (minGallop < 0)
             {
-                dest -= len1;
-                cursor1 -= len1;
-                s.CopyTo(cursor1 + 1, s, dest + 1, len1);
-                s.Write(dest, t.Read(cursor2));
+                minGallop = 0;
             }
-            else if (len2 > 0)
-            {
-                t.CopyTo(0, s, dest - (len2 - 1), len2);
-            }
+            minGallop += 2;  // Penalize for leaving galloping mode
         }
-        finally
+
+    exitMerge:
+        minGallop = minGallop < 1 ? 1 : minGallop;
+
+        if (len1 == 1)
         {
-            // Return the rented array to the pool
-            ArrayPool<T>.Shared.Return(tmp, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            s.CopyTo(cursor2, s, dest, len2);
+            s.Write(dest + len2, t.Read(cursor1));
         }
+        else if (len1 > 0)
+        {
+            t.CopyTo(cursor1, s, dest, len1);
+        }
+        // No finally block - buffer is managed by caller (SortCore)
     }
 
     /// <summary>
-    /// Merge state structure to track galloping threshold dynamically.
+    /// Merges two adjacent runs where the second run is smaller.
+    /// Uses galloping mode when one run consistently wins.
+    /// Reuses the provided temporary buffer, expanding it if necessary.
     /// </summary>
-    private ref struct MergeState
+    private static void MergeHigh<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
+        ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        public int MinGallop;
-
-        public MergeState()
+        // Ensure tmpBuffer is large enough for len2
+        if (tmpBufferSize < len2)
         {
-            MinGallop = MIN_GALLOP;
+            // Return old buffer and rent a larger one
+            ArrayPool<T>.Shared.Return(tmpBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            tmpBufferSize = len2;
+            tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
         }
+
+        // Copy second run to temp buffer
+        var t = new SortSpan<T, TComparer, TContext>(tmpBuffer.AsSpan(0, len2), context, comparer, BUFFER_TEMP);
+        s.CopyTo(base2, t, 0, len2);
+
+        var cursor1 = base1 + len1 - 1;  // Index in span (first run, from end)
+        var cursor2 = len2 - 1;          // Index in temp (second run, from end)
+        var dest = base2 + len2 - 1;     // Destination index (from end)
+
+        // Move last element of first run
+        s.Write(dest--, s.Read(cursor1--));
+        len1--;
+
+        if (len1 == 0)
+        {
+            t.CopyTo(0, s, dest - (len2 - 1), len2);
+            return;
+        }
+        if (len2 == 1)
+        {
+            dest -= len1;
+            cursor1 -= len1;
+            s.CopyTo(cursor1 + 1, s, dest + 1, len1);
+            s.Write(dest, t.Read(0));
+            return;
+        }
+
+        while (true)
+        {
+            var count1 = 0;  // # of times run1 won in a row
+            var count2 = 0;  // # of times run2 won in a row
+
+            // One-pair-at-a-time mode
+            do
+            {
+                var val1 = s.Read(cursor1);
+                var val2 = t.Read(cursor2);
+
+                if (s.Compare(val2, val1) >= 0)
+                {
+                    s.Write(dest--, val2);
+                    cursor2--;
+                    count2++;
+                    count1 = 0;
+                    len2--;
+                    if (len2 == 0)
+                    {
+                        goto exitMerge;
+                    }
+                }
+                else
+                {
+                    s.Write(dest--, val1);
+                    cursor1--;
+                    count1++;
+                    count2 = 0;
+                    len1--;
+                    if (len1 == 0)
+                    {
+                        goto exitMerge;
+                    }
+                }
+            } while ((count1 | count2) < minGallop);
+
+            // Galloping mode: one run is winning consistently
+            do
+            {
+                count1 = len1 - GallopRight(s, t.Read(cursor2), base1, len1, len1 - 1);
+                if (count1 != 0)
+                {
+                    dest -= count1;
+                    cursor1 -= count1;
+                    len1 -= count1;
+                    s.CopyTo(cursor1 + 1, s, dest + 1, count1);
+                    if (len1 == 0)
+                    {
+                        goto exitMerge;
+                    }
+                }
+                s.Write(dest--, t.Read(cursor2--));
+                len2--;
+                if (len2 == 1)
+                {
+                    goto exitMerge;
+                }
+
+                count2 = len2 - GallopLeft(t, s.Read(cursor1), 0, len2, len2 - 1);
+                if (count2 != 0)
+                {
+                    dest -= count2;
+                    cursor2 -= count2;
+                    len2 -= count2;
+                    t.CopyTo(cursor2 + 1, s, dest + 1, count2);
+                    if (len2 == 0)
+                    {
+                        goto exitMerge;
+                    }
+                }
+                s.Write(dest--, s.Read(cursor1--));
+                len1--;
+                if (len1 == 0)
+                {
+                    goto exitMerge;
+                }
+
+                minGallop--;
+            } while (count1 >= MIN_GALLOP || count2 >= MIN_GALLOP);
+
+            if (minGallop < 0)
+            {
+                minGallop = 0;
+            }
+            minGallop += 2;  // Penalize for leaving galloping mode
+        }
+
+    exitMerge:
+        minGallop = minGallop < 1 ? 1 : minGallop;
+
+        if (len2 == 1)
+        {
+            dest -= len1;
+            cursor1 -= len1;
+            s.CopyTo(cursor1 + 1, s, dest + 1, len1);
+            s.Write(dest, t.Read(cursor2));
+        }
+        else if (len2 > 0)
+        {
+            t.CopyTo(0, s, dest - (len2 - 1), len2);
+        }
+        // No finally block - buffer is managed by caller (SortCore)
     }
 }
