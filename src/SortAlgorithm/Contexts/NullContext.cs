@@ -5,6 +5,10 @@ namespace SortAlgorithm.Contexts;
 /// <summary>
 /// No-op implementation of ISortContext.
 /// </summary>
+/// <remarks>
+/// Struct is used to achieve zero cost abstraction for cases where no context is needed.
+/// All methods are implemented as no-ops, so there is no overhead for using this context. (Dead Code Elimination in <see cref="SortAlgorithm.Algorithms.SortSpan{T, TComparer, TContext}"/>)
+/// </remarks>
 public readonly struct NullContext : ISortContext
 {
     public static readonly NullContext Default = default;
