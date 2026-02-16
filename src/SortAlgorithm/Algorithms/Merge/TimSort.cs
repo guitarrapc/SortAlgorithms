@@ -274,7 +274,9 @@ public static class TimSort
     /// <summary>
     /// Maintains the run stack invariants by merging runs when necessary.
     /// </summary>
-    private static void MergeCollapse<T, TComparer>(Span<T> span, Span<int> runBase, Span<int> runLen, ref int stackSize, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    private static void MergeCollapse<T, TComparer, TContext>(Span<T> span, Span<int> runBase, Span<int> runLen, ref int stackSize, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         while (stackSize > 1)
         {
@@ -306,7 +308,9 @@ public static class TimSort
     /// <summary>
     /// Merges all runs on the stack until only one remains.
     /// </summary>
-    private static void MergeForceCollapse<T, TComparer>(Span<T> span, Span<int> runBase, Span<int> runLen, ref int stackSize, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    private static void MergeForceCollapse<T, TComparer, TContext>(Span<T> span, Span<int> runBase, Span<int> runLen, ref int stackSize, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         while (stackSize > 1)
         {
@@ -322,7 +326,9 @@ public static class TimSort
     /// <summary>
     /// Merges the run at stack position i with the run at position i+1.
     /// </summary>
-    private static void MergeAt<T, TComparer>(Span<T> span, Span<int> runBase, Span<int> runLen, ref int stackSize, int i, TComparer comparer, ISortContext context) where TComparer : IComparer<T>
+    private static void MergeAt<T, TComparer, TContext>(Span<T> span, Span<int> runBase, Span<int> runLen, ref int stackSize, int i, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var base1 = runBase[i];
         var len1 = runLen[i];

@@ -201,21 +201,13 @@ public static class IntroSort
 
         // Sort the non-NaN portion
         var depthLimit = 2 * (BitOperations.Log2((uint)(last - nanEnd)) + 1);
-        IntroSortInternal(s, nanEnd, last - 1, depthLimit, true, context);
+        IntroSortInternal(s, nanEnd, last - 1, depthLimit, true);
     }
 
     /// <summary>
     /// Internal IntroSort implementation that switches between QuickSort, HeapSort, and InsertionSort based on size and depth.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
-    /// <param name="s">The SortSpan wrapping the span to sort.</param>
-    /// <param name="left">The inclusive start index of the range to sort.</param>
-    /// <param name="right">The inclusive end index of the range to sort.</param>
-    /// <param name="depthLimit">The recursion depth limit before switching to HeapSort.</param>
-    /// <param name="leftmost">True if this is the leftmost partition (requires boundary checks in InsertionSort),
-    /// <param name="context">The sort context for tracking statistics and observations.</param>
-    /// false otherwise (can use unguarded InsertionSort).</param>
-    private static void IntroSortInternal<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int depthLimit, bool leftmost, ISortContext context)
+    private static void IntroSortInternal<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int depthLimit, bool leftmost)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -397,7 +389,7 @@ public static class IntroSort
                 // Recurse on smaller left partition (preserves leftmost flag)
                 if (left < r)
                 {
-                    IntroSortInternal(s, left, r, depthLimit, leftmost, context);
+                    IntroSortInternal(s, left, r, depthLimit, leftmost);
                 }
                 // Tail recursion: continue loop with larger right partition
                 // Right partition is never leftmost (element at position r acts as sentinel)
@@ -409,7 +401,7 @@ public static class IntroSort
                 // Recurse on smaller right partition (always non-leftmost)
                 if (l < right)
                 {
-                    IntroSortInternal(s, l, right, depthLimit, leftmost, context);
+                    IntroSortInternal(s, l, right, depthLimit, leftmost);
                 }
                 // Tail recursion: continue loop with larger left partition
                 // Preserve leftmost flag for left partition

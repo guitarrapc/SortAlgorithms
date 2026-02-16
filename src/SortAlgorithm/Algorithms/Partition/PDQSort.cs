@@ -192,14 +192,14 @@ public static class PDQSort
 
         // Sort the non-NaN portion
         var badAllowed = Log2(last - nanEnd);
-        PDQSortLoop(s, nanEnd, last, badAllowed, true, context);
+        PDQSortLoop(s, nanEnd, last, badAllowed, true);
     }
 
     /// <summary>
     /// Main PDQSort loop with tail recursion elimination.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PDQSortLoop<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end, int badAllowed, bool leftmost, ISortContext context)
+    private static void PDQSortLoop<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end, int badAllowed, bool leftmost)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -319,7 +319,7 @@ public static class PDQSort
             if (leftSize < rightSize)
             {
                 // Recurse on smaller left partition (preserves leftmost flag)
-                PDQSortLoop(s, begin, equalLeft, badAllowed, leftmost, context);
+                PDQSortLoop(s, begin, equalLeft, badAllowed, leftmost);
                 // Tail recursion: continue loop with larger right partition
                 begin = equalRight;
                 leftmost = false;
@@ -327,7 +327,7 @@ public static class PDQSort
             else
             {
                 // Recurse on smaller right partition (always non-leftmost)
-                PDQSortLoop(s, equalRight, end, badAllowed, false, context);
+                PDQSortLoop(s, equalRight, end, badAllowed, false);
                 // Tail recursion: continue loop with larger left partition
                 end = equalLeft;
                 // Preserve leftmost flag for left partition
