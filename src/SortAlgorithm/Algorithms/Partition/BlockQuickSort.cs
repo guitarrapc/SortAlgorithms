@@ -1,16 +1,17 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// ブロック単位の分割処理により、QuickSortのキャッシュ効率とブランチ予測性能を改善した最適化版QuickSortです。
-/// 適応的ピボット選択（median-of-sqrt(n)）、ブロックパーティショニング、InsertionSortへの切り替えを組み合わせることで、
+/// 適応的ピボット選択（median-of-sqrt(n)）、ブロックパーティショニング、IntroSortを組み合わせることで、
 /// 標準的なQuickSortより1.5～2倍高速に動作します。
 /// <br/>
 /// An optimized variant of QuickSort that improves cache efficiency and branch prediction performance through block-based partitioning.
-/// By combining adaptive pivot selection (median-of-sqrt(n)), block partitioning, and switching to InsertionSort for small arrays,
-/// it operates 1.5-2x faster than standard QuickSort.
+/// By combining adaptive pivot selection (median-of-sqrt(n)), block partitioning, and IntroSort,
+/// it operates 1.5-2x faster than standard QuickSort while maintaining worst-case guarantees.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct BlockQuickSort:</strong></para>
@@ -59,6 +60,17 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Tail recursion on smaller partition guarantees at most O(log n) depth before hitting base cases</description></item>
 /// </list>
 /// Maximum recursion depth: O(log n) in all cases due to smaller-partition-first recursion strategy.</description></item>
+/// <item><description><strong>IntroSort Fallback for Worst-Case Protection:</strong> To guarantee O(n log n) worst-case performance,
+/// the algorithm implements the IntroSort pattern (based on Musser's Introspective Sort):
+/// <list type="bullet">
+/// <item><description>Depth limit: 2⌊log₂(n)⌋ + 2 (calculated using BitOperations.Log2)</description></item>
+/// <item><description>When recursion depth exceeds this limit, the algorithm switches to HeapSort for the current partition</description></item>
+/// <item><description>HeapSort guarantees O(n log n) regardless of input distribution, preventing O(n²) on adversarial patterns</description></item>
+/// <item><description>This matches the BlockQuickSort paper's reference implementation (depth_limit = 2 * ilogb(n) + 3)</description></item>
+/// <item><description>The depth limit is only triggered on pathological inputs; typical inputs complete with QuickSort's superior average-case performance</description></item>
+/// </list>
+/// The paper explicitly mentions: "recursion depth becomes often higher than the threshold for switching to Heapsort" as motivation for duplicate checks.
+/// This IntroSort fallback is essential for production use, ensuring reliable O(n log n) worst-case behavior.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -69,12 +81,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack + O(1) for index buffers via stackalloc)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Balanced partitions from high-quality pivot selection</description></item>
 /// <item><description>Average case: Θ(n log n) - Expected ~1.2-1.4n log₂ n comparisons (better than standard QuickSort's 1.39n log₂ n due to improved pivot quality)</description></item>
-/// <item><description>Worst case  : O(n²) - Extremely rare due to median-of-√n providing O(√n) expected error from true median; InsertionSort threshold mitigates small-partition worst-case</description></item>
+/// <item><description>Worst case  : O(n log n) - Guaranteed by IntroSort fallback to HeapSort when recursion depth exceeds 2⌊log₂(n)⌋+2 (prevents QuickSort's O(n²) on adversarial inputs)</description></item>
 /// <item><description>Comparisons : ~1.2-1.4n log₂ n (average) - Block partitioning performs same logical comparisons but with better cache locality</description></item>
 /// <item><description>Swaps       : ~0.33n log₂ n (average) - Hoare scheme swaps fewer elements than Lomuto; block buffering reduces swap overhead via sequential memory access</description></item>
 /// </list>
 /// <para><strong>Advantages of BlockQuickSort over Standard QuickSort:</strong></para>
 /// <list type="bullet">
+/// <item><description>Worst-case guarantee: IntroSort fallback ensures O(n log n) even on adversarial inputs (standard QuickSort can degrade to O(n²))</description></item>
 /// <item><description>Cache efficiency: Block processing (128 elements) fits L1 cache, reducing cache misses by 30-50%</description></item>
 /// <item><description>Branch prediction: Separating comparisons from swaps makes comparison loops predictable (no data-dependent branches in tight loop)</description></item>
 /// <item><description>SIMD potential: Sequential scans can be vectorized by modern compilers (though not explicitly in this C# implementation)</description></item>
@@ -197,11 +210,14 @@ public static class BlockQuickSort
     }
 
     /// <summary>
-    /// Sorts the subrange [left..right] (inclusive) using block partitioning.
+    /// Sorts the subrange [left..right] (inclusive) using block partitioning with IntroSort fallback.
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
     /// Uses tail recursion optimization to limit stack depth to O(log n) by recursing only on smaller partition.
+    /// Implements IntroSort pattern: switches to HeapSort when recursion depth exceeds 2*log2(n)+1 to guarantee O(n log n) worst-case.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The inclusive end index of the range to sort.</param>
@@ -209,9 +225,33 @@ public static class BlockQuickSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        if (right <= left) return;
+        
+        // Calculate depth limit: 2 * log2(n) + 1
+        // Based on IntroSort pattern and BlockQuickSort paper reference implementation
+        var depthLimit = 2 * (BitOperations.Log2((uint)(right - left + 1)) + 1);
+        SortCoreInternal(s, left, right, depthLimit);
+    }
+
+    /// <summary>
+    /// Internal sorting method with depth tracking for IntroSort pattern.
+    /// Switches to HeapSort when depth limit is reached to guarantee O(n log n) worst-case performance.
+    /// </summary>
+    private static void SortCoreInternal<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int depthLimit)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
         while (right > left)
         {
             var size = right - left + 1;
+
+            // Depth limit reached: switch to HeapSort to guarantee O(n log n)
+            // This prevents worst-case O(n²) behavior on adversarial inputs
+            if (depthLimit == 0)
+            {
+                HeapSort.SortCore(s, left, right + 1);
+                return;
+            }
 
             // Use insertion sort for small subarrays
             if (size <= InsertionSortThreshold)
@@ -223,6 +263,9 @@ public static class BlockQuickSort
             // Partition using block-based Hoare partition
             var result = HoareBlockPartition(s, left, right);
 
+            // Decrement depth limit for next recursion level
+            depthLimit--;
+
             // Tail recursion optimization: recurse on smaller partition, loop on larger
             // Note: elements in [result.Left, result.Right] are already in final position (equal to pivot)
             if (result.Left - left < right - result.Right)
@@ -230,7 +273,7 @@ public static class BlockQuickSort
                 // Left partition is smaller: recurse on left [left, result.Left-1], iterate on right [result.Right+1, right]
                 if (result.Left > left)
                 {
-                    SortCore(s, left, result.Left - 1);
+                    SortCoreInternal(s, left, result.Left - 1, depthLimit);
                 }
                 left = result.Right + 1;
             }
@@ -239,7 +282,7 @@ public static class BlockQuickSort
                 // Right partition is smaller: recurse on right [result.Right+1, right], iterate on left [left, result.Left-1]
                 if (result.Right < right)
                 {
-                    SortCore(s, result.Right + 1, right);
+                    SortCoreInternal(s, result.Right + 1, right, depthLimit);
                 }
                 right = result.Left - 1;
             }
