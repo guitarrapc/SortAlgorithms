@@ -187,6 +187,10 @@ public static class PowerSort
         var n = last - first;
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
+        // Compute adaptive minimum run length based on array size
+        // Same strategy as TimSort: ensures n/minRun is close to or slightly less than a power of 2
+        var minRun = ComputeMinRun(n);
+
         // PowerSort uses a stack with node-power values to determine merge order
         // power[i] represents the power of the boundary BETWEEN run[i] and run[i+1]
         Span<int> runBase = stackalloc int[85]; // 85 is enough for 2^64 elements
@@ -195,9 +199,9 @@ public static class PowerSort
         var stackSize = 0;
 
         // Reusable temporary buffer for merging
-        // Start with MIN_MERGE size (reasonable initial capacity)
+        // Start with minRun size (reasonable initial capacity)
         // MergeLow needs len1, MergeHigh needs len2, so we track the smaller run size
-        var tmpBufferSize = Math.Min(MIN_MERGE, n / 2);
+        var tmpBufferSize = Math.Min(minRun, n / 2);
         var tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
         var ms = new MergeState();
 
@@ -205,7 +209,7 @@ public static class PowerSort
         {
             // Find and push the first run onto the stack
             var runStart = first;
-            var runEnd = FindAndPrepareRun(s, runStart, last);
+            var runEnd = FindAndPrepareRun(s, runStart, last, minRun);
             runBase[0] = runStart;
             runLen[0] = runEnd - runStart;
             stackSize = 1;
@@ -216,7 +220,7 @@ public static class PowerSort
             {
                 // Find next run (but don't push yet)
                 var nextStart = runStart;
-                var nextEnd = FindAndPrepareRun(s, nextStart, last);
+                var nextEnd = FindAndPrepareRun(s, nextStart, last, minRun);
 
                 // Compute the power of the boundary between current stack top and next run
                 var topBase = runBase[stackSize - 1];
@@ -288,9 +292,9 @@ public static class PowerSort
     /// Finds and prepares a run starting at position 'start'.
     /// Returns the end position (exclusive) of the prepared run.
     /// A run is either ascending or strictly descending (which is then reversed).
-    /// Short runs are extended to MIN_MERGE using binary insertion sort.
+    /// Short runs are extended to minRun using binary insertion sort.
     /// </summary>
-    private static int FindAndPrepareRun<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int last)
+    private static int FindAndPrepareRun<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int last, int minRun)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -323,15 +327,41 @@ public static class PowerSort
 
         var runLength = runEnd - start;
 
-        // If run is too small, extend it to MIN_MERGE using binary insertion sort
-        if (runLength < MIN_MERGE)
+        // If run is too small, extend it to minRun using binary insertion sort
+        if (runLength < minRun)
         {
-            var force = Math.Min(MIN_MERGE, last - start);
+            var force = Math.Min(minRun, last - start);
             BinaryInsertionSort.SortCore(s, start, start + force, start + runLength);
             runEnd = start + force;
         }
 
         return runEnd;
+    }
+
+    /// <summary>
+    /// Computes the minimum run length for the given array size.
+    /// Uses the same strategy as TimSort: returns n + r where n is the top 6 bits of the original n,
+    /// and r is 1 if any of the remaining bits are set (ensuring n/minRun is close to or slightly less than a power of 2).
+    /// This results in minRun values in the range [32, 64] for large arrays, and smaller values for tiny arrays.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>Why this matters for PowerSort:</strong></para>
+    /// <list type="bullet">
+    /// <item><description>Too small minRun (e.g., fixed 32) → too many runs → loses PowerSort's adaptive merge tree advantage</description></item>
+    /// <item><description>Adaptive minRun → fewer, better-balanced runs → PowerSort's optimal merge strategy shines</description></item>
+    /// <item><description>n/minRun ≈ power of 2 → balanced merge tree depth → O(n log n) guarantee with optimal constants</description></item>
+    /// </list>
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ComputeMinRun(int n)
+    {
+        var r = 0;
+        while (n >= MIN_MERGE)
+        {
+            r |= n & 1;
+            n >>= 1;
+        }
+        return n + r;
     }
 
     /// <summary>
