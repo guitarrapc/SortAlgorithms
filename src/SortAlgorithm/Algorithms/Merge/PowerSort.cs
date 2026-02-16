@@ -7,12 +7,12 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
+/// PowerSortは、ランの「パワー」に基づいてマージ順序を最適化する改良型適応マージソートアルゴリズムです。
+/// TimSortよりも優れたパフォーマンスを発揮し、最悪ケースでもO(n log n)、ほぼソート済みデータではO(n)を実現します。
+/// <br/>
 /// PowerSort is an improved adaptive merge sort algorithm that optimizes the merge order
 /// based on the "power" of runs, resulting in better performance than TimSort.
 /// It maintains O(n log n) worst-case time complexity while achieving O(n) on nearly sorted data.
-/// <br/>
-/// PowerSortは、ランの「パワー」に基づいてマージ順序を最適化する改良型適応マージソートアルゴリズムです。
-/// TimSortよりも優れたパフォーマンスを発揮し、最悪ケースでもO(n log n)、ほぼソート済みデータではO(n)を実現します。
 /// </summary>
 /// <remarks>
 /// <para><strong>Key Innovations over TimSort:</strong></para>
@@ -218,6 +218,13 @@ public static class PowerSort
             runBase[0] = runStart;
             runLen[0] = runEnd - runStart;
             runCount = 1;
+
+            // Early exit: if the entire array is a single run, we're done
+            if (runEnd >= last)
+            {
+                return;  // Already sorted (either ascending or reversed and then reversed back)
+            }
+
             // No boundary yet (need at least 2 runs for a boundary)
 
             // Process remaining runs

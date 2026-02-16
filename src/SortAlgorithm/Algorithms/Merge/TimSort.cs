@@ -178,6 +178,9 @@ public static class TimSort
         where TContext : ISortContext
     {
         var n = last - first;
+
+        // Compute adaptive minimum run length based on array size
+        // Same strategy as TimSort: ensures n/minRun is close to or slightly less than a power of 2
         var minRun = ComputeMinRun(n);
 
         // Stack to track runs (start position and length)
