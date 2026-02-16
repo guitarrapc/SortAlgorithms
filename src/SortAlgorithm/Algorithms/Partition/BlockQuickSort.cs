@@ -229,7 +229,7 @@ public static class BlockQuickSort
         
         // Calculate depth limit: 2 * log2(n) + 1
         // Based on IntroSort pattern and BlockQuickSort paper reference implementation
-        var depthLimit = 2 * (BitOperations.Log2((uint)(right - left + 1)) + 1);
+        var depthLimit = 2 * BitOperations.Log2((uint)(right - left + 1)) + 1;
         SortCoreInternal(s, left, right, depthLimit);
     }
 
@@ -344,7 +344,7 @@ public static class BlockQuickSort
             hasDuplicatePivot = HasDuplicateInSample3Simple(s, left, mid, right, pivotIndex);
         }
 
-        var pivotPos = HoareBlockPartitionCore<T, TComparer, TContext>(s, left, right, pivotIndex, s.Context);
+        var pivotPos = HoareBlockPartitionCore<T, TComparer, TContext>(s, left, right, pivotIndex);
 
         // Paper condition 1: Pivot occurs twice in sample
         // Paper condition 2: Partitioning is very unbalanced for small/medium arrays
@@ -372,7 +372,7 @@ public static class BlockQuickSort
     /// This approach improves cache efficiency and enables better branch prediction.
     /// </para>
     /// </summary>
-    static int HoareBlockPartitionCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex, TContext context)
+    static int HoareBlockPartitionCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -386,8 +386,8 @@ public static class BlockQuickSort
         // indexR: stores offsets of elements <= pivot on the right side
         Span<int> indexL = stackalloc int[BLOCKSIZE];
         Span<int> indexR = stackalloc int[BLOCKSIZE];
-        var sIndexL = new SortSpan<int, Comparer<int>, TContext>(indexL, context, Comparer<int>.Default, BUFFER_INDEX_L);
-        var sIndexR = new SortSpan<int, Comparer<int>, TContext>(indexR, context, Comparer<int>.Default, BUFFER_INDEX_R);
+        var sIndexL = new SortSpan<int, Comparer<int>, TContext>(indexL, s.Context, Comparer<int>.Default, BUFFER_INDEX_L);
+        var sIndexR = new SortSpan<int, Comparer<int>, TContext>(indexR, s.Context, Comparer<int>.Default, BUFFER_INDEX_R);
 
         var begin = left;
         var end = last;
