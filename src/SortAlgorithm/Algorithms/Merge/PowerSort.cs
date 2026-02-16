@@ -1,12 +1,11 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
-// reference: https://drops.dagstuhl.de/storage/00lipics/lipics-vol229-icalp2022/LIPIcs.ICALP.2022.68/LIPIcs.ICALP.2022.68.pdf
-// reference: https://arxiv.org/abs/1805.04154
 /// <summary>
 /// PowerSort is an improved adaptive merge sort algorithm that optimizes the merge order
 /// based on the "power" of runs, resulting in better performance than TimSort.
@@ -173,13 +172,16 @@ public static class PowerSort
     /// Based on the algorithm from the PowerSort paper (Algorithm in Section 5.3).
     /// </summary>
     /// <remarks>
-    /// <para><strong>Algorithm Structure:</strong></para>
+    /// <para><strong>Algorithm Structure with Explicit Boundary Stack:</strong></para>
     /// <list type="bullet">
-    /// <item><description>power[i] = boundary power between run[i] and run[i+1]</description></item>
-    /// <item><description>For N runs on stack, there are N-1 boundary powers</description></item>
-    /// <item><description>Merge condition: power[stackSize-2] > p where p = boundary(top, nextRun)</description></item>
-    /// <item><description>After merge: recalculate p with new top and nextRun</description></item>
+    /// <item><description>runCount = number of runs on stack</description></item>
+    /// <item><description>bpCount = number of boundary powers (always runCount - 1)</description></item>
+    /// <item><description>Invariant: bp[i] = boundary power between runs[i] and runs[i+1]</description></item>
+    /// <item><description>Merge condition: bp[bpCount-1] > p where p = boundary(top, nextRun)</description></item>
+    /// <item><description>After merge: runCount--, bpCount-- (boundary stack shrinks together with run stack)</description></item>
     /// </list>
+    /// <para>This explicit management ensures data structure invariants are always maintained,
+    /// preventing future bugs from stale boundary values.</para>
     /// </remarks>
     private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
@@ -191,17 +193,20 @@ public static class PowerSort
         // Same strategy as TimSort: ensures n/minRun is close to or slightly less than a power of 2
         var minRun = ComputeMinRun(n);
 
-        // PowerSort uses a stack with node-power values to determine merge order
-        // power[i] represents the power of the boundary BETWEEN run[i] and run[i+1]
+        // PowerSort uses two parallel stacks:
+        // 1. Run stack (runBase, runLen) - stores the runs themselves
+        // 2. Boundary power stack (bp) - stores powers of boundaries between adjacent runs
+        // Invariant: if runCount = k, then bpCount = k - 1
         Span<int> runBase = stackalloc int[85]; // 85 is enough for 2^64 elements
         Span<int> runLen = stackalloc int[85];
-        Span<int> power = stackalloc int[85];   // power[i] is the power of node BETWEEN run[i] and run[i+1]
-        var stackSize = 0;
+        Span<int> bp = stackalloc int[85];      // bp[i] = power of boundary between runs[i] and runs[i+1]
+        var runCount = 0;   // Number of runs on stack
+        var bpCount = 0;    // Number of boundary powers (always runCount - 1)
 
         // Reusable temporary buffer for merging
         // Start with minRun size (reasonable initial capacity)
         // MergeLow needs len1, MergeHigh needs len2, so we track the smaller run size
-        var tmpBufferSize = Math.Min(minRun, n / 2);
+        var tmpBufferSize = Math.Min(minRun * 2, n / 2);
         var tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
         var ms = new MergeState();
 
@@ -212,7 +217,8 @@ public static class PowerSort
             var runEnd = FindAndPrepareRun(s, runStart, last, minRun);
             runBase[0] = runStart;
             runLen[0] = runEnd - runStart;
-            stackSize = 1;
+            runCount = 1;
+            // No boundary yet (need at least 2 runs for a boundary)
 
             // Process remaining runs
             runStart = runEnd;
@@ -223,63 +229,91 @@ public static class PowerSort
                 var nextEnd = FindAndPrepareRun(s, nextStart, last, minRun);
 
                 // Compute the power of the boundary between current stack top and next run
-                var topBase = runBase[stackSize - 1];
-                var topLen = runLen[stackSize - 1];
+                var topBase = runBase[runCount - 1];
+                var topLen = runLen[runCount - 1];
                 var p = ComputeNodePower(topBase - first, topBase + topLen - first, nextStart - first, nextEnd - first, n);
 
                 // Merge while the previous boundary has higher power than current boundary
-                // power[stackSize-2] is the boundary between run[stackSize-2] and run[stackSize-1]
-                // p is the boundary between run[stackSize-1] and nextRun
-                // If power[stackSize-2] > p, merge run[stackSize-2] and run[stackSize-1]
-                while (stackSize >= 2 && power[stackSize - 2] > p)
+                // bp[bpCount-1] is the boundary between runs[runCount-2] and runs[runCount-1]
+                // p is the boundary between runs[runCount-1] and nextRun
+                // If bp[bpCount-1] > p, merge runs[runCount-2] and runs[runCount-1]
+                while (bpCount > 0 && bp[bpCount - 1] > p)
                 {
-                    // Merge run[stackSize-2] and run[stackSize-1]
-                    var base1 = runBase[stackSize - 2];
-                    var len1 = runLen[stackSize - 2];
-                    var base2 = runBase[stackSize - 1];
-                    var len2 = runLen[stackSize - 1];
+                    // Verify invariant: bpCount should always equal runCount - 1
+                    Debug.Assert(bpCount == runCount - 1, $"Invariant violated before merge: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
+
+                    // Merge the top two runs: runs[runCount-2] and runs[runCount-1]
+                    var base1 = runBase[runCount - 2];
+                    var len1 = runLen[runCount - 2];
+                    var base2 = runBase[runCount - 1];
+                    var len2 = runLen[runCount - 1];
+
+                    // Verify structural consistency: runs must be adjacent
+                    Debug.Assert(base1 + len1 == base2, $"Runs are not adjacent: run[{runCount - 2}] ends at {base1 + len1}, run[{runCount - 1}] starts at {base2}");
 
                     MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
 
                     // Replace the two runs with the merged result
-                    runLen[stackSize - 2] = len1 + len2;
-                    stackSize--;
-                    // power[stackSize-2] is now unused (boundary removed by merge)
-                    // power[stackSize-1] is also unused (we're about to recalculate p)
+                    runBase[runCount - 2] = base1;
+                    runLen[runCount - 2] = len1 + len2;
+                    runCount--;  // One less run on stack
+                    bpCount--;   // One less boundary (the boundary between the merged runs is gone)
+
+                    // Verify invariant after merge
+                    Debug.Assert(bpCount == runCount - 1, $"Invariant violated after merge: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
 
                     // Recalculate p: boundary between new top (merged result) and nextRun
-                    if (stackSize >= 1)
+                    if (runCount > 0)
                     {
-                        topBase = runBase[stackSize - 1];
-                        topLen = runLen[stackSize - 1];
+                        topBase = runBase[runCount - 1];
+                        topLen = runLen[runCount - 1];
                         p = ComputeNodePower(topBase - first, topBase + topLen - first, nextStart - first, nextEnd - first, n);
                     }
                 }
 
                 // Push the next run onto the stack
-                runBase[stackSize] = nextStart;
-                runLen[stackSize] = nextEnd - nextStart;
-                power[stackSize - 1] = p;  // Store power of boundary between run[stackSize-1] and run[stackSize]
-                stackSize++;
+                runBase[runCount] = nextStart;
+                runLen[runCount] = nextEnd - nextStart;
+                runCount++;
+
+                // Push the boundary power between the new top and the previous top
+                bp[bpCount] = p;
+                bpCount++;
+
+                // Verify invariant after push: bpCount should always equal runCount - 1
+                Debug.Assert(bpCount == runCount - 1, $"Invariant violated after push: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
 
                 runStart = nextEnd;
             }
 
             // Force merge all remaining runs from right to left
-            while (stackSize >= 2)
+            while (runCount > 1)
             {
+                // Verify invariant before final merge
+                Debug.Assert(bpCount == runCount - 1, $"Invariant violated in final collapse before merge: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
+
                 // Always merge the last two runs
-                var base1 = runBase[stackSize - 2];
-                var len1 = runLen[stackSize - 2];
-                var base2 = runBase[stackSize - 1];
-                var len2 = runLen[stackSize - 1];
+                var base1 = runBase[runCount - 2];
+                var len1 = runLen[runCount - 2];
+                var base2 = runBase[runCount - 1];
+                var len2 = runLen[runCount - 1];
+
+                // Verify structural consistency
+                Debug.Assert(base1 + len1 == base2, $"Runs are not adjacent in final collapse: run[{runCount - 2}] ends at {base1 + len1}, run[{runCount - 1}] starts at {base2}");
 
                 MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref ms, comparer, context);
 
                 // Replace the two runs with the merged result
-                runLen[stackSize - 2] = len1 + len2;
-                stackSize--;
+                runLen[runCount - 2] = len1 + len2;
+                runCount--;
+                bpCount--;  // One less boundary
+
+                // Verify invariant after final merge
+                Debug.Assert(bpCount == runCount - 1, $"Invariant violated in final collapse after merge: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
             }
+
+            // Final check: should have exactly 1 run and 0 boundaries
+            Debug.Assert(runCount == 1 && bpCount == 0, $"Final state check failed: runCount={runCount}, bpCount={bpCount}, expected runCount=1 and bpCount=0");
         }
         finally
         {
