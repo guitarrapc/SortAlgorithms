@@ -1,60 +1,69 @@
 # SortSpan Usage Guidelines
 
-When implementing sorting algorithms, **always use SortSpan<T, TComparer>** for all array/span operations.
+When implementing sorting algorithms, **always use SortSpan<T, TComparer, TContext>** for all array/span operations.
 
 ## Why SortSpan?
 
 - **Accurate statistics** for algorithm analysis via ISortContext
 - **Clean abstraction** for tracking operations
-- **Minimal performance impact** with conditional compilation
+- **Zero overhead** with NullContext via JIT optimization
 - **Consistent code style** across all sorting implementations
 - **Separation of concerns** - algorithm logic vs observation
 - **Zero-alloc comparisons** - generic `TComparer : IComparer<T>` enables devirtualization
 
-## Performance: DEBUG vs RELEASE Builds
+## Performance: TContext-Based Optimization
 
-**SortSpan uses conditional compilation (`#if DEBUG`) to optimize performance:**
+**SortSpan uses generic type parameter `TContext` to enable JIT-level optimization:**
 
-### DEBUG Build (Tests)
+### With Context (StatisticsContext, VisualizationContext)
 - ✅ **Full statistics tracking** - all operations recorded
 - ✅ **Accurate analysis** - perfect for testing and profiling
 - ✅ **Context callbacks** - OnIndexRead, OnIndexWrite, OnCompare, OnSwap
-- ⚠️ **Slight overhead** - acceptable for testing
+- ⚠️ **Slight overhead** - acceptable for analysis and visualization
 
-### RELEASE Build (Production)
-- ✅ **Zero overhead** - context calls are omitted
-- ✅ **Direct Span operations** - `_span[i]` instead of `context.OnIndexRead()`
-- ✅ **Maximum performance** - equivalent to raw Span operations
+### With NullContext (Production/Benchmarks)
+- ✅ **Zero overhead** - JIT eliminates all tracking code via Dead Code Elimination
+- ✅ **Direct Span operations** - equivalent to `_span[i]` access
+- ✅ **Maximum performance** - identical to raw Span operations
 - ✅ **Inlined comparisons** - `_comparer.Compare(_span[i], _span[j])` (devirtualized when TComparer is a struct)
 
-**Example:**
+**How it works:**
 
 ```csharp
 // SortSpan.Read() implementation
+[MethodImpl(MethodImplOptions.AggressiveInlining)]
 public T Read(int i)
 {
-#if DEBUG
-    _context.OnIndexRead(i, _bufferId);  // ← Only in DEBUG
-#endif
+    // JIT optimizes this away when TContext is NullContext (Dead Code Elimination)
+    if (typeof(TContext) != typeof(NullContext))
+    {
+        _context.OnIndexRead(i, _bufferId);
+    }
     return _span[i];  // ← Always direct access
 }
 
 // SortSpan.Compare() implementation
+[MethodImpl(MethodImplOptions.AggressiveInlining)]
 public int Compare(int i, int j)
 {
-#if DEBUG
-    var a = Read(i);
-    var b = Read(j);
-    var result = _comparer.Compare(a, b);
-    _context.OnCompare(i, j, result, _bufferId, _bufferId);
-    return result;
-#else
-    return _comparer.Compare(_span[i], _span[j]);  // ← Devirtualized comparison in RELEASE
-#endif
+    // JIT optimizes this entire path when TContext is NullContext
+    if (typeof(TContext) != typeof(NullContext))
+    {
+        var a = Read(i);
+        var b = Read(j);
+        var result = _comparer.Compare(a, b);
+        _context.OnCompare(i, j, result, _bufferId, _bufferId);
+        return result;
+    }
+    else
+    {
+        // Fast path: direct array access without tracking
+        return _comparer.Compare(_span[i], _span[j]);  // ← Devirtualized comparison
+    }
 }
 ```
 
-**Result:** In RELEASE builds, SortSpan operations compile to simple Span operations with zero abstraction overhead. When `TComparer` is a struct (e.g., `new ComparableComparer<T>()`), the JIT devirtualizes and inlines the comparison call.
+**Result:** When `TContext` is `NullContext`, the JIT compiler eliminates all tracking code at compile time, producing the same machine code as direct Span operations. When `TComparer` is a struct (e.g., `ComparableComparer<T>`), the JIT devirtualizes and inlines the comparison call.
 
 ## Required Operations
 
@@ -157,26 +166,78 @@ s.Swap(i, j);
 
 ### Always Use SortSpan Operations
 
-Even though RELEASE builds optimize away the overhead, **always write code using SortSpan methods**:
+Even with NullContext optimization, **always write code using SortSpan methods**:
 
 ```csharp
-// ✅ Correct - works efficiently in both DEBUG and RELEASE
-private static void InsertIterative<T, TComparer>(Span<Node> arena, ..., SortSpan<T, TComparer> s)
+// ✅ Correct - optimized when TContext is NullContext
+private static void InsertIterative<T, TComparer, TContext>(Span<Node> arena, ..., SortSpan<T, TComparer, TContext> s)
     where TComparer : IComparer<T>
+    where TContext : ISortContext
 {
-    // Cache value (reduces Read() calls in DEBUG, direct access in RELEASE)
+    // Cache value (reduces Read() calls when tracking, direct access with NullContext)
     var insertValue = s.Read(itemIndex);
     var currentValue = s.Read(current.ItemIndex);
 
-    // Direct comparison (tracked in DEBUG, devirtualized+inlined in RELEASE)
+    // Direct comparison (tracked when needed, devirtualized+inlined with NullContext)
     var cmp = s.Compare(insertValue, currentValue);
 }
 
-// ❌ Incorrect - bypasses statistics in DEBUG
+// ❌ Incorrect - bypasses statistics when tracking is enabled
 private static void InsertIterative<T>(Span<T> span, IComparer<T> comparer, ...)
 {
     var insertValue = span[itemIndex];  // No tracking!
     var cmp = comparer.Compare(insertValue, span[j]);  // No tracking!
+}
+```
+
+### Use Generic TContext in Internal Methods
+
+**Always use generic type parameter `TContext` in internal/private methods, not `ISortContext` interface:**
+
+```csharp
+// ✅ Correct - preserves JIT optimization
+private static void Helper<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TContext context, ...)
+    where TComparer : IComparer<T>
+    where TContext : ISortContext
+{
+    context.OnCustomEvent(...);  // JIT can optimize when TContext is NullContext
+}
+
+// ❌ Incorrect - forces interface dispatch, loses optimization
+private static void Helper<T, TComparer>(SortSpan<T, TComparer, NullContext> s, ISortContext context, ...)
+    where TComparer : IComparer<T>
+{
+    context.OnCustomEvent(...);  // Always virtual call, no optimization
+}
+```
+
+**Why this matters:**
+
+- ✅ **Generic `TContext`** - JIT can inline/eliminate calls when `TContext` is `NullContext`
+- ❌ **Interface `ISortContext`** - Forces virtual dispatch, loses Dead Code Elimination
+- ✅ **Type parameter propagation** - Pass `TContext` through the entire call stack
+- ❌ **Type erasure** - Converting to interface breaks the optimization chain
+
+**Pattern to follow:**
+
+```csharp
+public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+    where TComparer : IComparer<T>
+    where TContext : ISortContext
+{
+    var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+
+    // Pass TContext to internal method
+    SortCore(s, context);  // ← TContext is preserved
+}
+
+// Internal method also uses TContext
+private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TContext context)
+    where TComparer : IComparer<T>
+    where TContext : ISortContext
+{
+    // Your sorting logic
+    // context calls are optimized when TContext is NullContext
 }
 ```
 
@@ -193,7 +254,7 @@ while (...)
     if (s.Compare(insertValue, currentValue) < 0) { ... }  // Cached comparison
 }
 
-// ❌ Less efficient - reads twice per comparison in DEBUG
+// ❌ Less efficient - reads twice per comparison when tracking is enabled
 while (...)
 {
     if (s.Compare(itemIndex, current.ItemIndex) < 0) { ... }  // 2 reads per comparison
@@ -212,14 +273,15 @@ public static class MySort
     private const int BUFFER_TEMP = 1;       // Temporary merge buffer
     private const int BUFFER_AUX = 2;        // Auxiliary buffer
 
-    public static void Sort<T, TComparer>(Span<T> span, TComparer comparer, ISortContext context)
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // For temporary buffers - reuse the same comparer
+        // For temporary buffers - reuse the same comparer and context
         Span<T> tempBuffer = stackalloc T[span.Length];
-        var temp = new SortSpan<T, TComparer>(tempBuffer, context, comparer, BUFFER_TEMP);
+        var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
     }
 }
 ```
@@ -234,8 +296,8 @@ public static class MySort
 ## Usage Examples
 
 ```csharp
-// Production - no statistics
-MySort.Sort<int>(array);
+// Production/Benchmark - no statistics overhead (uses NullContext internally)
+MySort.Sort(array);
 
 // With statistics
 var stats = new StatisticsContext();
@@ -248,4 +310,8 @@ var viz = new VisualizationContext(
     onCompare: (i, j, result) => HighlightCompare(i, j)
 );
 MySort.Sort(array.AsSpan(), viz);
+
+// Full control with custom comparer and context
+var customComparer = new MyCustomComparer<int>();
+MySort.Sort<int, MyCustomComparer<int>, StatisticsContext>(array.AsSpan(), customComparer, stats);
 ```
