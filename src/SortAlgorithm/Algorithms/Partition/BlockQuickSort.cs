@@ -350,10 +350,12 @@ public static class BlockQuickSort
                 startLeft = 0;
                 for (var j = 0; j < BLOCKSIZE; j++)
                 {
-                    // Store index and compare element with pivot using SortSpan
-                    sIndexL.Write(numLeft, j);
-                    // Increment counter when: !(begin[j] < pivot), i.e., begin[j] >= pivot
-                    numLeft += s.Compare(begin + j, pivotEnd) < 0 ? 0 : 1;
+                    // Store index only if element >= pivot
+                    if (s.Compare(begin + j, pivotEnd) >= 0)
+                    {
+                        sIndexL.Write(numLeft, j);
+                        numLeft++;
+                    }
                 }
             }
 
@@ -364,10 +366,12 @@ public static class BlockQuickSort
                 startRight = 0;
                 for (var j = 0; j < BLOCKSIZE; j++)
                 {
-                    // Store index and compare pivot with element using SortSpan
-                    sIndexR.Write(numRight, j);
-                    // Increment counter when: !(pivot < end[j]), i.e., pivot >= end[j], meaning end[j] <= pivot
-                    numRight += s.Compare(pivotEnd, end - j) < 0 ? 0 : 1;
+                    // Store index only if element <= pivot
+                    if (s.Compare(pivotEnd, end - j) >= 0)
+                    {
+                        sIndexR.Write(numRight, j);
+                        numRight++;
+                    }
                 }
             }
 
@@ -402,20 +406,29 @@ public static class BlockQuickSort
 
             for (var j = 0; j < shiftL; j++)
             {
-                // Left: count elements >= pivot
-                sIndexL.Write(numLeft, j);
-                numLeft += s.Compare(begin + j, pivotEnd) < 0 ? 0 : 1;
+                // Left: store index only if element >= pivot
+                if (s.Compare(begin + j, pivotEnd) >= 0)
+                {
+                    sIndexL.Write(numLeft, j);
+                    numLeft++;
+                }
 
-                // Right: count elements <= pivot
-                sIndexR.Write(numRight, j);
-                numRight += s.Compare(pivotEnd, end - j) < 0 ? 0 : 1;
+                // Right: store index only if element <= pivot
+                if (s.Compare(pivotEnd, end - j) >= 0)
+                {
+                    sIndexR.Write(numRight, j);
+                    numRight++;
+                }
             }
 
             if (shiftL < shiftR)
             {
-                // Right: count if last element <= pivot
-                sIndexR.Write(numRight, shiftR - 1);
-                numRight += s.Compare(pivotEnd, end - shiftR + 1) < 0 ? 0 : 1;
+                // Right: store index only if last element <= pivot
+                if (s.Compare(pivotEnd, end - shiftR + 1) >= 0)
+                {
+                    sIndexR.Write(numRight, shiftR - 1);
+                    numRight++;
+                }
             }
         }
         else if (numRight != 0)
@@ -427,9 +440,12 @@ public static class BlockQuickSort
 
             for (var j = 0; j < shiftL; j++)
             {
-                // Left: count elements >= pivot
-                sIndexL.Write(numLeft, j);
-                numLeft += s.Compare(begin + j, pivotEnd) < 0 ? 0 : 1;
+                // Left: store index only if element >= pivot
+                if (s.Compare(begin + j, pivotEnd) >= 0)
+                {
+                    sIndexL.Write(numLeft, j);
+                    numLeft++;
+                }
             }
         }
         else
@@ -441,9 +457,12 @@ public static class BlockQuickSort
 
             for (var j = 0; j < shiftR; j++)
             {
-                // Right: count elements <= pivot
-                sIndexR.Write(numRight, j);
-                numRight += s.Compare(pivotEnd, end - j) < 0 ? 0 : 1;
+                // Right: store index only if element <= pivot
+                if (s.Compare(pivotEnd, end - j) >= 0)
+                {
+                    sIndexR.Write(numRight, j);
+                    numRight++;
+                }
             }
         }
 
