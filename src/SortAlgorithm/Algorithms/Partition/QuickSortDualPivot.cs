@@ -1,4 +1,5 @@
-﻿using SortAlgorithm.Contexts;
+﻿using System.Runtime.CompilerServices;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -242,20 +243,12 @@ public static class QuickSortDualPivot
             int e4 = e3 + seventh;
             int e5 = e4 + seventh;
 
-            // Sort these 5 elements using bubble sort (2 passes)
-            // This is the same approach as Java's DualPivotQuicksort
-            // Pass 1: bubble largest elements to the right
-            if (s.Compare(e2, e1) < 0) s.Swap(e2, e1);
-            if (s.Compare(e3, e2) < 0) s.Swap(e3, e2);
-            if (s.Compare(e4, e3) < 0) s.Swap(e4, e3);
-            if (s.Compare(e5, e4) < 0) s.Swap(e5, e4);
+            // Sort these 5 elements using insertion sort (4-10 comparisons)
+            // This guarantees e1 <= e2 <= e3 <= e4 <= e5, ensuring pivot1 <= pivot2
+            // Using the same proven approach as StdSort.Sort5
+            Sort5(s, e1, e2, e3, e4, e5);
 
-            // Pass 2: ensure complete ordering
-            if (s.Compare(e2, e1) < 0) s.Swap(e2, e1);
-            if (s.Compare(e3, e2) < 0) s.Swap(e3, e2);
-            if (s.Compare(e4, e3) < 0) s.Swap(e4, e3);
-
-            // Now: e1 <= e2 <= e3 <= e4 <= e5
+            // Now: e1 <= e2 <= e3 <= e4 <= e5 is GUARANTEED
             // Move pivots to the edges (will be swapped to final positions later)
             s.Swap(e2, left);
             s.Swap(e4, right);
@@ -378,5 +371,89 @@ public static class QuickSortDualPivot
 
         // Phase 5. Sort right part
         SortCore(s, great + 2, right);
+    }
+
+    /// <summary>
+    /// Sorts 3 elements. Stable, 2-3 compares, 0-2 swaps.
+    /// Guarantees x <= y <= z.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Sort3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x, int y, int z)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (s.Compare(y, x) < 0)
+        {
+            if (s.Compare(z, y) < 0)
+            {
+                s.Swap(x, z); // x < y && y < z
+                return;
+            }
+
+            s.Swap(x, y); // x > y && y <= z -> x < y && x <= z
+            if (s.Compare(z, y) < 0)  // if y > z
+                s.Swap(y, z); // x <= y && y < z
+        }
+        else if (s.Compare(z, y) < 0)
+        {
+            s.Swap(y, z); // x >= y && y > z -> x >= z && y <= z
+            if (s.Compare(y, x) < 0)  // if x > y
+                s.Swap(x, y); // x <= y && y <= z
+        }
+    }
+
+    /// <summary>
+    /// Sorts 4 elements using insertion sort. Stable, 3-6 compares, 0-5 swaps.
+    /// Guarantees x1 <= x2 <= x3 <= x4.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Sort4<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        Sort3(s, x1, x2, x3);
+        if (s.Compare(x4, x3) < 0)
+        {
+            s.Swap(x3, x4);
+            if (s.Compare(x3, x2) < 0)
+            {
+                s.Swap(x2, x3);
+                if (s.Compare(x2, x1) < 0)
+                {
+                    s.Swap(x1, x2);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sorts 5 elements using insertion sort. Stable, 4-10 compares, 0-9 swaps.
+    /// Guarantees x1 <= x2 <= x3 <= x4 <= x5.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Sort5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4, int x5)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        // Sort first 4 elements
+        Sort4(s, x1, x2, x3, x4);
+        
+        // Insert x5 into the sorted sequence
+        if (s.Compare(x5, x4) < 0)
+        {
+            s.Swap(x4, x5);
+            if (s.Compare(x4, x3) < 0)
+            {
+                s.Swap(x3, x4);
+                if (s.Compare(x3, x2) < 0)
+                {
+                    s.Swap(x2, x3);
+                    if (s.Compare(x2, x1) < 0)
+                    {
+                        s.Swap(x1, x2);
+                    }
+                }
+            }
+        }
     }
 }
