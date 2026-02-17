@@ -167,7 +167,7 @@ public static class QuickSortMedian3
     }
 
     /// <summary>
-    /// Sorts the subrange [first..last) using the provided sort context.
+    /// Sorts the subrange [left..right] (both inclusive) using the provided sort context.
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
     /// Uses tail recursion optimization to limit stack depth to O(log n) by recursing only on smaller partition.
     /// </summary>
@@ -176,7 +176,7 @@ public static class QuickSortMedian3
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="left">The inclusive start index of the range to sort.</param>
-    /// <param name="right">The exclusive end index of the range to sort.</param>
+    /// <param name="right">The inclusive end index of the range to sort.</param>
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -220,7 +220,10 @@ public static class QuickSortMedian3
                 else if (cmp > 0)
                 {
                     // Element > pivot: swap to right region
-                    s.Swap(i, gt);
+                    if (i != gt)
+                    {
+                        s.Swap(i, gt);
+                    }
                     gt--;
                     // Don't increment i - need to examine swapped element
                 }
@@ -232,18 +235,25 @@ public static class QuickSortMedian3
             }
 
             // Loop invariant at termination: i == gt + 1
-            // [left, lt) : < pivot
-            // [lt, i) : == pivot
-            // (gt, right) : > pivot (right holds the original pivot)
-            // Move pivot from right to its final position at i
-            var eqRight = i;
+            // [left, lt) : < pivot (confirmed)
+            // [lt, gt+1) = [lt, i) : == pivot (examined in loop)
+            // [gt+1, right-1] : > pivot (swapped to the right of gt)
+            // [right] : pivot's original position
+            // 
+            // Move pivot from [right] to position [i=gt+1]
+            var eqRight = i;  // gt + 1
             // Avoid self-swap when all elements are <= pivot (eqRight reaches right)
             if (eqRight != pivotPos)
             {
-                s.Swap(eqRight, pivotPos);
+                s.Swap(eqRight, pivotPos);  // Swap [gt+1] with [right]
             }
 
-            // After swap: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
+            // After swap:
+            // [left, lt) : < pivot
+            // [lt, gt] : == pivot
+            // [gt+1] : pivot (moved from right)
+            // [gt+2, right-1] : > pivot
+            // [right] : == pivot (element originally at gt+1, no need to sort)
             // Phase 3. Tail recursion optimization: recurse on smaller partition
             // Elements in [lt, eqRight] are equal to pivot and don't need further sorting
             

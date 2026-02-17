@@ -33,7 +33,7 @@ When implementing or reviewing sorting algorithms, refer to these detailed guide
 
 ### Running Tests
 
-See Testing Guidelines for details on writing and running tests. To run all tests:
+See [Testing Guidelines](agent_docs/testing_guidelines.md) for details on writing and running tests. To run all tests:
 
 ```shell
 dotnet test
@@ -60,10 +60,12 @@ dotnet build
 
 ### Run Some Script
 
-You can create a .cs file in `sandbox/DotnetFiles/` and run it directly. See Sandbox Code Guidelines for details.
+You can create a .cs file in `sandbox/DotnetFiles/` and run it directly. See [Sandbox Code Guidelines](agent_docs/sandbox_code_guidelines.md) for details and script sample.
+
+use `sandbox/DotnetFiles/Sample.cs` for template:
 
 ```shell
-dotnet run dotnet run sandbox/DotnetFiles/YourCsFile.cs
+dotnet run sandbox/DotnetFiles/YourCsFile.cs
 ```
 
 ## Progressive Disclosure
