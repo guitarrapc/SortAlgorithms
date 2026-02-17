@@ -264,6 +264,7 @@ public static class QuickSortDualPivot
         if (diffPivots)
         {
             // Partitioning with distinct pivots
+            // Following Yaroslavskiy 2009 paper structure exactly
             for (int k = less; k <= great; k++)
             {
                 if (s.Compare(k, left) < 0)
@@ -275,7 +276,8 @@ public static class QuickSortDualPivot
                 else if (s.Compare(k, right) > 0)
                 {
                     // Element > pivot2: scan from right to find position
-                    while (s.Compare(great, right) > 0 && k < great)
+                    // Check k < great first to avoid unnecessary comparisons (short-circuit evaluation)
+                    while (k < great && s.Compare(great, right) > 0)
                     {
                         great--;
                     }
