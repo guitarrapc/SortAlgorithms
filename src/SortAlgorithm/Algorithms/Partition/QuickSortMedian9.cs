@@ -240,14 +240,8 @@ public static class QuickSortMedian9
                 }
             }
 
-            // Loop invariant at termination: i == gt + 1
-            // [left, lt) : < pivot (확정)
-            // [lt, gt+1) = [lt, i) : == pivot (ループで検査済み)
-            // [gt+1, right-1] : > pivot (swap で gt より右に移動された요소들)
-            // [right] : pivot의 원래 위치
-            // 
             // Move pivot from [right] to position [i=gt+1]
-            var eqRight = i;  // gt + 1
+            var eqRight = i;
             // Avoid self-swap when all elements are <= pivot (eqRight reaches right)
             if (eqRight != pivotPos)
             {
@@ -256,10 +250,8 @@ public static class QuickSortMedian9
 
             // After swap:
             // [left, lt) : < pivot
-            // [lt, gt] : == pivot
-            // [gt+1] : pivot (moved from right)
-            // [gt+2, right-1] : > pivot
-            // [right] : == pivot (element originally at gt+1, no need to sort)
+            // [lt, eqRight] : == pivot (pivot moved to eqRight, so this range is all == pivot)
+            // [eqRight+1, right] : > pivot (element originally at eqRight moved to right, which was > pivot)
             // Phase 3. Tail recursion optimization: recurse on smaller partition
             // Elements in [lt, eqRight] are equal to pivot and don't need further sorting
             
