@@ -315,9 +315,13 @@ public static class StdSort
             }
 
             // Partition optimization: skip equal elements on left if not leftmost
-            // If first - 1 >= first (pivot from previous partition is >= current pivot),
-            // we know all elements [first, pivot] will be equal to pivot, so skip left partition.
-            // After this partition, the new pivot will be at (returned_first - 1), maintaining sentinel.
+            // From LLVM libc++:
+            // The elements to the left of the current range are already sorted.
+            // If the current range is not the leftmost part and the pivot is same as
+            // the highest element in the range to the left (at first - 1), then we know
+            // that all the elements in [first, pivot] *would be* equal to the pivot,
+            // assuming the equal elements are put on the left side when partitioned.
+            // This means we do not need to sort the left side of the partition.
             if (!leftmost && s.Compare(first - 1, first) >= 0)
             {
                 first = PartitionWithEqualsOnLeft(s, first, last);
