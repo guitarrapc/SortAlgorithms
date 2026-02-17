@@ -234,6 +234,10 @@ public static class QuickSortMedian3
             // After swap: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
             // Phase 3. Tail recursion optimization: recurse on smaller partition
             // Elements in [lt, eqRight] are equal to pivot and don't need further sorting
+            
+            // Calculate sizes of subranges to recurse on:
+            // Left subrange: [left, lt-1] has size (lt-1) - left + 1 = lt - left
+            // Right subrange: [eqRight+1, right] has size right - (eqRight+1) + 1 = right - eqRight
             var leftSize = lt - left;
             var rightSize = right - eqRight;
 
