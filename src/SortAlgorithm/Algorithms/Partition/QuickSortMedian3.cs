@@ -3,19 +3,19 @@
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// 配列から四分位位置の中央値を求めてピボットとし、このピボットを基準に配列を左右に分割する分割統治法のソートアルゴリズムです。
-/// Hoare partition schemeを使用し、四分位ベースのMedian-of-3法でピボットを選択することで様々なデータパターンに対して安定した性能を実現します。
+/// 配列の左端・中央・右端の3点から中央値を求めてピボットとし、このピボットを基準に配列を左右に分割する分割統治法のソートアルゴリズムです。
+/// Hoare partition schemeを使用し、Median-of-3法でピボットを選択することで様々なデータパターンに対して安定した性能を実現します。
 /// <br/>
-/// A divide-and-conquer sorting algorithm that selects the pivot as the median of quartile positions in the array and partitions the array into left and right subarrays based on that pivot.
-/// It uses the Hoare partition scheme and selects the pivot via a quartile-based median-of-three method to achieve stable performance across various data patterns.
+/// A divide-and-conquer sorting algorithm that selects the pivot as the median of three elements (left, middle, right) and partitions the array into left and right subarrays based on that pivot.
+/// It uses the Hoare partition scheme and selects the pivot via median-of-three method to achieve stable performance across various data patterns.
 /// </summary>
 /// <remarks>
-/// <para><strong>Theoretical Conditions for Correct QuickSort with Quartile-Based Median-of-3:</strong></para>
+/// <para><strong>Theoretical Conditions for Correct QuickSort with Median-of-3:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Quartile-Based Median-of-3 Pivot Selection:</strong> The pivot value is selected as the median of three sampled elements
-/// at quartile positions: array[q1], array[mid], and array[q3], where q1 = left + length/4, mid = left + length/2, q3 = left + 3*length/4.
-/// This selection method is computed using 2-3 comparisons and ensures better pivot quality than random selection or simple left/mid/right sampling.
-/// The quartile-based median-of-3 strategy provides robust performance across various data patterns including mountain-shaped, valley-shaped,
+/// <item><description><strong>Median-of-3 Pivot Selection:</strong> The pivot value is selected as the median of three sampled elements
+/// at positions: array[left], array[mid], and array[right], where mid = (left + right) / 2.
+/// This selection method is computed using 2-3 comparisons and ensures better pivot quality than random selection or always using a fixed position.
+/// The median-of-3 strategy provides robust performance across various data patterns including sorted, reverse-sorted,
 /// and partially sorted arrays, while maintaining the O(1/n³) probability of worst-case partitioning.</description></item>
 /// <item><description><strong>Hoare Partition Scheme:</strong> The array is partitioned into two regions using bidirectional scanning:
 /// <list type="bullet">
@@ -47,7 +47,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Progress property: After each partition, r &lt; l, so both subranges [left, r] and [l, right] are strictly smaller than [left, right]</description></item>
 /// <item><description>Minimum progress: Even when all elements equal the pivot, the Hoare partition scheme ensures at least one element is excluded from each subrange</description></item>
 /// <item><description>Base case reached: The recursion depth is bounded, and each recursive call eventually reaches the base case (right ≤ left)</description></item>
-/// <item><description>Expected recursion depth: O(log n) with quartile-based median-of-3 pivot selection</description></item>
+/// <item><description>Expected recursion depth: O(log n) with median-of-3 pivot selection</description></item>
 /// <item><description>Worst-case recursion depth: O(log n) with tail recursion optimization (always recurse on smaller partition)</description></item>
 /// <item><description>Tail recursion optimization: The implementation recursively processes only the smaller partition and loops on the larger one, guaranteeing O(log n) stack depth even in adversarial cases</description></item>
 /// </list>
@@ -65,14 +65,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Comparisons : ~1.386n log₂ n (average) - Hoare partition uses fewer comparisons than Lomuto partition</description></item>
 /// <item><description>Swaps       : ~0.33n log₂ n (average) - Hoare partition performs ~3× fewer swaps than Lomuto partition</description></item>
 /// </list>
-/// <para><strong>Quartile-Based Median-of-3 Pivot Selection Benefits:</strong></para>
+/// <para><strong>Median-of-3 Pivot Selection Benefits:</strong></para>
 /// <list type="bullet">
 /// <item><description>Worst-case probability reduction: From O(1/n) with random pivot to O(1/n³) with median-of-3</description></item>
 /// <item><description>Improved pivot quality: Median-of-3 tends to select pivots closer to the true median of the array</description></item>
 /// <item><description>Minimal overhead: Requires only 2-3 additional comparisons per partitioning step</description></item>
-/// <item><description>Robust data pattern handling: Efficiently handles sorted, reverse-sorted, mountain-shaped, and nearly-sorted arrays</description></item>
-/// <item><description>Better distribution: Quartile sampling (1/4, 1/2, 3/4) provides more representative samples than edge sampling (0, 1/2, 1)</description></item>
-/// <item><description>Cache efficiency: Samples elements from distributed positions, improving spatial locality</description></item>
+/// <item><description>Robust data pattern handling: Efficiently handles sorted, reverse-sorted, and nearly-sorted arrays</description></item>
+/// <item><description>Simple and widely adopted: The standard median-of-3 approach is well-understood and proven in practice</description></item>
 /// </list>
 /// <para><strong>Comparison with Other Sorting Algorithms:</strong></para>
 /// <list type="bullet">
@@ -181,14 +180,10 @@ public static class QuickSortMedian3
     {
         while (left < right)
         {
-            // Phase 1. Select pivot using median-of-3 strategy with improved sampling
-            // Use quartile positions (1/4, 1/2, 3/4) instead of (left, mid, right)
-            // This provides better pivot selection for mountain-shaped and similar patterns
-            var length = right - left + 1;
-            var q1 = left + length / 4;
-            var mid = left + length / 2;
-            var q3 = left + (length * 3) / 4;
-            var pivotIndex = MedianOf3Index(s, q1, mid, q3);
+            // Phase 1. Select pivot using standard median-of-3 strategy
+            // Sample left, mid, and right positions
+            var mid = left + (right - left) / 2;
+            var pivotIndex = MedianOf3Index(s, left, mid, right);
 
             // Move pivot to right position to enable index-based comparison
             // This avoids value copy and enables more efficient comparison
