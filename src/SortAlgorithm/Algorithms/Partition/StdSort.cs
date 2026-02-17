@@ -173,7 +173,7 @@ public static class StdSort
         // x > y
         if (s.Compare(z, y) < 0) // if y > z
         {
-            s.Swap(x, z); // x < y && y < z
+            s.Swap(x, z); // z < y < x -> swap x,z -> x < y < z
             return;
         }
 
@@ -367,7 +367,7 @@ public static class StdSort
     /// Insertion sort without bounds checking (unguarded).
     /// PRECONDITION: Assumes there is an element at position (first - 1) that is less than or equal
     /// to all elements in the range [first, last). This element acts as a sentinel.
-    /// 
+    ///
     /// This precondition is satisfied in IntroSort because:
     /// - This method is only called when leftmost=false
     /// - leftmost=false means we are sorting a right partition after a previous partition

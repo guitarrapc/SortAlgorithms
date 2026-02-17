@@ -354,7 +354,7 @@ public static class QuickSortDualPivot
         {
             if (s.Compare(z, y) < 0)
             {
-                s.Swap(x, z); // x < y && y < z
+                s.Swap(x, z); // z < y < x -> swap x,z -> x < y < z
                 return;
             }
 
