@@ -206,9 +206,16 @@ public static class QuickSortMedian9
             var pivotPos = right;
 
             // Phase 2. Three-way partition (Dijkstra's Dutch National Flag)
-            // Partitions into: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
-            var lt = left;      // Elements before lt are < pivot
-            var gt = right - 1; // Elements after gt are > pivot
+            // This implementation stores pivot at [right] during partitioning, so gt starts at right-1.
+            // 
+            // Loop invariant (while i <= gt):
+            //   [left, lt)       : < pivot
+            //   [lt, i)          : == pivot
+            //   [i, gt]          : unclassified
+            //   [gt+1, right-1]  : > pivot
+            //   [right]          : pivot (stored)
+            var lt = left;      // Boundary: elements before lt are < pivot
+            var gt = right - 1; // Boundary: elements after gt are > pivot
             var i = left;       // Current element being examined
 
             while (i <= gt)
@@ -244,26 +251,33 @@ public static class QuickSortMedian9
                 }
             }
 
-            // Move pivot from [right] to position [i=gt+1]
-            var eqRight = i;
-            // Avoid self-swap when all elements are <= pivot (eqRight reaches right)
-            if (eqRight != pivotPos)
+            // Loop termination: i == gt + 1
+            // At this point:
+            //   [left, lt)      : < pivot
+            //   [lt, i)         : == pivot
+            //   [i, right-1]    : > pivot
+            //   [right]         : pivot (stored)
+            // 
+            // Move pivot from [right] to its final position [i]
+            var pivotFinal = i;  // Final position of pivot (first element of > pivot region before swap)
+            // Avoid self-swap when all elements are <= pivot (pivotFinal reaches right)
+            if (pivotFinal != pivotPos)
             {
-                s.Swap(eqRight, pivotPos);  // Swap [gt+1] with [right]
+                s.Swap(pivotFinal, pivotPos);  // Swap pivot back to its final position
             }
 
             // After swap:
-            // [left, lt) : < pivot
-            // [lt, eqRight] : == pivot (pivot moved to eqRight, so this range is all == pivot)
-            // [eqRight+1, right] : > pivot (element originally at eqRight moved to right, which was > pivot)
+            //   [left, lt)         : < pivot
+            //   [lt, pivotFinal]   : == pivot (pivot now at pivotFinal)
+            //   [pivotFinal+1, right] : > pivot
             // Phase 3. Tail recursion optimization: recurse on smaller partition
-            // Elements in [lt, eqRight] are equal to pivot and don't need further sorting
+            // Elements in [lt, pivotFinal] are equal to pivot and don't need further sorting
             
             // Calculate sizes of subranges to recurse on:
-            // Left subrange: [left, lt-1] has size (lt-1) - left + 1 = lt - left
-            // Right subrange: [eqRight+1, right] has size right - (eqRight+1) + 1 = right - eqRight
+            // Left subrange: [left, lt-1] has size lt - left
+            // Right subrange: [pivotFinal+1, right] has size right - pivotFinal
             var leftSize = lt - left;
-            var rightSize = right - eqRight;
+            var rightSize = right - pivotFinal;
 
             if (leftSize < rightSize)
             {
@@ -273,14 +287,14 @@ public static class QuickSortMedian9
                     SortCore(s, left, lt - 1);
                 }
                 // Tail recursion: continue loop with right partition
-                left = eqRight + 1;
+                left = pivotFinal + 1;
             }
             else
             {
                 // Recurse on smaller right partition
-                if (eqRight < right - 1)
+                if (pivotFinal < right - 1)
                 {
-                    SortCore(s, eqRight + 1, right);
+                    SortCore(s, pivotFinal + 1, right);
                 }
                 // Tail recursion: continue loop with left partition
                 right = lt - 1;
