@@ -498,6 +498,9 @@ public static class StdSort
         }
 
         // Place pivot in correct position
+        // Note: Cannot use Swap here because pivot is already saved in local variable.
+        // pivotPos contains the value that should be at 'first' position after partition.
+        // This matches LLVM libc++ implementation: move(pivotPos to first), then move(pivot to pivotPos).
         var pivotPos = i - 1;
         if (first != pivotPos)
         {
@@ -545,6 +548,9 @@ public static class StdSort
         }
 
         // Place pivot in correct position
+        // Note: Cannot use Swap here because pivot is already saved in local variable.
+        // pivotPos contains the value that should be at 'first' position after partition.
+        // This matches LLVM libc++ implementation: move(pivotPos to first), then move(pivot to pivotPos).
         var pivotPos = i - 1;
         if (first != pivotPos)
         {
