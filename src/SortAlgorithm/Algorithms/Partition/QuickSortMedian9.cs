@@ -196,21 +196,29 @@ public static class QuickSortMedian9
     {
         if (left >= right) return;
 
-        // Phase 1. Select pivot using median-of-9 strategy
-        var pivot = MedianOf9Value(s, left, right);
+        // Phase 1. Select pivot using median-of-9 strategy (returns index)
+        var pivotIndex = MedianOf9Index(s, left, right);
+        
+        // Move pivot to right position to enable consistent index-based comparison
+        if (pivotIndex != right)
+        {
+            s.Swap(pivotIndex, right);
+        }
+        var pivotPos = right;
+        
         var l = left;
-        var r = right;
+        var r = right - 1; // Start r from right-1 since pivot is now at right
 
         while (l <= r)
         {
             // Move l forward while elements are less than pivot
-            while (l < right && s.Compare(l, pivot) < 0)
+            while (l < right && s.Compare(l, pivotPos) < 0)
             {
                 l++;
             }
 
             // Move r backward while elements are greater than pivot
-            while (r > left && s.Compare(r, pivot) > 0)
+            while (r >= left && s.Compare(r, pivotPos) > 0)
             {
                 r--;
             }
@@ -224,23 +232,30 @@ public static class QuickSortMedian9
             }
         }
 
-        // Phase 2. Recursively sort left and right partitions
-        if (left < r)
+        // Move pivot from right to its final position
+        if (l != pivotPos)
         {
-            SortCore(s, left, r);
+            s.Swap(l, pivotPos);
         }
-        if (l < right)
+
+        // Phase 2. Recursively sort left and right partitions
+        // Pivot is now at position l and is in its final sorted position
+        if (left < l - 1)
         {
-            SortCore(s, l, right);
+            SortCore(s, left, l - 1);
+        }
+        if (l + 1 < right)
+        {
+            SortCore(s, l + 1, right);
         }
     }
 
     /// <summary>
-    /// Returns the median value among three elements at specified indices.
-    /// This method performs exactly 2-3 comparisons to determine the median value.
+    /// Returns the median index among three elements at specified indices.
+    /// This method performs exactly 2-3 comparisons to determine the median index.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static T MedianOf3Value<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
+    private static int MedianOf3Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -252,12 +267,12 @@ public static class QuickSortMedian9
             var cmpMidHigh = s.Compare(midIdx, highIdx);
             if (cmpMidHigh > 0) // low > mid > high
             {
-                return s.Read(midIdx); // mid is median
+                return midIdx; // mid is median
             }
             else // low > mid, mid <= high
             {
                 var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? s.Read(highIdx) : s.Read(lowIdx);
+                return cmpLowHigh > 0 ? highIdx : lowIdx;
             }
         }
         else // low <= mid
@@ -266,22 +281,22 @@ public static class QuickSortMedian9
             if (cmpMidHigh > 0) // low <= mid, mid > high
             {
                 var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? s.Read(lowIdx) : s.Read(highIdx);
+                return cmpLowHigh > 0 ? lowIdx : highIdx;
             }
             else // low <= mid <= high
             {
-                return s.Read(midIdx); // mid is median
+                return midIdx; // mid is median
             }
         }
     }
 
     /// <summary>
-    /// Returns the median value among nine sampled elements from the array.
+    /// Returns the median index among nine sampled elements from the array.
     /// This method samples elements at evenly distributed positions and computes
     /// the median of medians to select a high-quality pivot.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static T MedianOf9Value<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int low, int high)
+    private static int MedianOf9Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int low, int high)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -300,33 +315,12 @@ public static class QuickSortMedian9
         var i8 = high - m8;
         var i9 = high;
 
-        // Compute median of three groups, then median of those medians
-        var median1 = MedianOf3Value(s, i1, i2, i3);
-        var median2 = MedianOf3Value(s, i4, i5, i6);
-        var median3 = MedianOf3Value(s, i7, i8, i9);
+        // Compute median index of three groups
+        var median1Idx = MedianOf3Index(s, i1, i2, i3);
+        var median2Idx = MedianOf3Index(s, i4, i5, i6);
+        var median3Idx = MedianOf3Index(s, i7, i8, i9);
 
-        // Return median of the three medians (using comparer for value comparison)
-        if (s.Comparer.Compare(median1, median2) > 0)
-        {
-            if (s.Comparer.Compare(median2, median3) > 0)
-            {
-                return median2; // median1 > median2 > median3
-            }
-            else
-            {
-                return s.Comparer.Compare(median1, median3) > 0 ? median3 : median1;
-            }
-        }
-        else // median1 <= median2
-        {
-            if (s.Comparer.Compare(median2, median3) > 0)
-            {
-                return s.Comparer.Compare(median1, median3) > 0 ? median1 : median3;
-            }
-            else
-            {
-                return median2; // median1 <= median2 <= median3
-            }
-        }
+        // Return median index of the three median indices
+        return MedianOf3Index(s, median1Idx, median2Idx, median3Idx);
     }
 }
