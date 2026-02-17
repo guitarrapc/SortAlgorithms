@@ -254,6 +254,11 @@ public static class QuickSortDualPivot
             s.Swap(e4, right);
         }
 
+        // Check if pivots are different (right after pivot selection)
+        // This is more efficient than checking after partitioning
+        // At this point, left and right hold pivot values with left <= right guaranteed
+        var diffPivots = s.Compare(left, right) != 0;
+
         // Phase 1. Partition array into three regions using dual pivots
         // Following Yaroslavskiy 2009 paper structure exactly
         var less = left + 1;
@@ -294,9 +299,6 @@ public static class QuickSortDualPivot
         // Swap pivots into their final positions
         s.Swap(left, less - 1);
         s.Swap(right, great + 1);
-
-        // Check if pivots are different (used for optimization in Phase 3 and 4)
-        var diffPivots = s.Compare(less - 1, great + 1) != 0;
 
         // Phase 2. Sort left part
         SortCore(s, left, less - 2);
