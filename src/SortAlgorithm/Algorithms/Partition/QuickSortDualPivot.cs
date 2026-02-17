@@ -307,7 +307,7 @@ public static class QuickSortDualPivot
         // Phase 2. Sort left part
         SortCore(s, left, pivot1 - 1);
 
-        // Phase 3. Equal elements optimization (Yaroslavskiy 2009)
+        // Phase 3. Equal elements optimization (not included in paper, extended implementation)
         // When center region is large and pivots are different,
         // segregate elements equal to pivots before sorting center
         int centerLen = great - less + 1;
@@ -322,14 +322,26 @@ public static class QuickSortDualPivot
                 }
                 else if (s.Compare(k, pivot2) == 0) // equals pivot2
                 {
-                    s.Swap(k, great);
-                    great--;
-
-                    // Re-check swapped element
-                    if (s.Compare(k, pivot1) == 0)
+                    // Advance great past all pivot2-equal elements (like Phase 1 pattern)
+                    // This ensures the swapped element is not equal to pivot2
+                    while (k <= great && s.Compare(great, pivot2) == 0)
                     {
-                        s.Swap(k, less);
-                        less++;
+                        great--;
+                    }
+
+                    // Only swap if k and great haven't crossed
+                    if (k <= great)
+                    {
+                        s.Swap(k, great);
+                        great--;
+
+                        // Re-check swapped element (only need to check pivot1 now)
+                        // Since we advanced great past all pivot2-equals, k is guaranteed != pivot2
+                        if (s.Compare(k, pivot1) == 0)
+                        {
+                            s.Swap(k, less);
+                            less++;
+                        }
                     }
                 }
             }
