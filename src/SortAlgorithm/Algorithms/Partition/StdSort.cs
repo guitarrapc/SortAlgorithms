@@ -467,6 +467,7 @@ public static class StdSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var begin = first;  // Save original position for bounds checking
         var pivot = s.Read(first);
 
         // Find first element >= pivot
@@ -480,9 +481,23 @@ public static class StdSort
         var j = last - 1;
         if (i < j)
         {
-            while (j > first && s.Compare(j, pivot) >= 0)
+            // Optimization from LLVM libc++: if first only advanced by 1, we know last won't reach begin
+            // because median-of-3 ensures begin is <= pivot, so unguarded scan is safe.
+            if (begin == i - 1)
             {
-                j--;
+                // Unguarded: first only advanced once, median-of-3 guarantees safety
+                while (i < j && s.Compare(j, pivot) >= 0)
+                {
+                    j--;
+                }
+            }
+            else
+            {
+                // Guarded: normal case with bounds check
+                while (j > begin && s.Compare(j, pivot) >= 0)
+                {
+                    j--;
+                }
             }
         }
 
@@ -493,6 +508,8 @@ public static class StdSort
         {
             s.Swap(i, j);
 
+            // After swap, find next elements to swap
+            // These are always guarded by the median-of-3 pivot selection
             do { i++; } while (s.Compare(i, pivot) < 0);
             do { j--; } while (s.Compare(j, pivot) >= 0);
         }
