@@ -235,6 +235,11 @@ public static class StdSort
     /// <summary>
     /// Main Introsort algorithm combining quicksort, heapsort, and insertion sort.
     /// </summary>
+    /// <param name="leftmost">
+    /// True if sorting the leftmost partition of the original range, false otherwise.
+    /// When false, the element at (first - 1) is guaranteed to be a pivot from a previous
+    /// partition, serving as a sentinel for unguarded insertion sort.
+    /// </param>
     private static void IntroSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int depth, bool leftmost)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -271,10 +276,14 @@ public static class StdSort
             {
                 if (leftmost)
                 {
+                    // First partition: use guarded insertion sort (with bounds checking)
                     InsertionSort.SortCore(s, first, last);
                 }
                 else
                 {
+                    // Right partition after a previous partition:
+                    // (first - 1) contains the pivot, which is <= all elements in [first, last)
+                    // This pivot serves as a sentinel, so we can use unguarded insertion sort
                     InsertionSortUnguarded(s, first, last);
                 }
                 return;
@@ -306,6 +315,9 @@ public static class StdSort
             }
 
             // Partition optimization: skip equal elements on left if not leftmost
+            // If first - 1 >= first (pivot from previous partition is >= current pivot),
+            // we know all elements [first, pivot] will be equal to pivot, so skip left partition.
+            // After this partition, the new pivot will be at (returned_first - 1), maintaining sentinel.
             if (!leftmost && s.Compare(first - 1, first) >= 0)
             {
                 first = PartitionWithEqualsOnLeft(s, first, last);
@@ -325,11 +337,14 @@ public static class StdSort
                     return;
                 if (leftSorted)
                 {
+                    // Left partition is sorted, continue with right partition
+                    // pivotPos will be at (first - 1), serving as sentinel
                     first = pivotPos + 1;
                     continue;
                 }
                 if (rightSorted)
                 {
+                    // Right partition is sorted, continue with left partition
                     last = pivotPos;
                     continue;
                 }
@@ -337,6 +352,8 @@ public static class StdSort
 
             // Recursively sort left partition, loop on right (tail recursion elimination)
             IntroSort(s, first, pivotPos, depth, leftmost);
+            // After partitioning, pivot is at pivotPos. When we continue with the right partition,
+            // pivotPos will be at (first - 1), serving as a sentinel for unguarded insertion sort.
             leftmost = false;
             first = pivotPos + 1;
         }
@@ -344,7 +361,15 @@ public static class StdSort
 
     /// <summary>
     /// Insertion sort without bounds checking (unguarded).
-    /// Assumes there is an element at position (first - 1) smaller than all elements in range.
+    /// PRECONDITION: Assumes there is an element at position (first - 1) that is less than or equal
+    /// to all elements in the range [first, last). This element acts as a sentinel.
+    /// 
+    /// This precondition is satisfied in IntroSort because:
+    /// - This method is only called when leftmost=false
+    /// - leftmost=false means we are sorting a right partition after a previous partition
+    /// - After partition, the pivot is placed at (first - 1)
+    /// - By partition invariant, all elements in [first, last) are >= pivot
+    /// - Therefore, pivot at (first - 1) serves as the sentinel
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void InsertionSortUnguarded<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
