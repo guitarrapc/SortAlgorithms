@@ -302,25 +302,30 @@ public static class QuickSortDualPivot
         else
         {
             // Partitioning with equal pivots (all elements either < or > pivot)
+            // Reuse comparison result to avoid redundant comparisons
             for (int k = less; k <= great; k++)
             {
-                if (s.Compare(k, left) == 0)
+                int cmp = s.Compare(k, left);
+                if (cmp == 0)
                     continue; // Element equals pivot, skip
 
-                if (s.Compare(k, left) < 0)
+                if (cmp < 0)
                 {
                     s.Swap(k, less);
                     less++;
                 }
-                else // element > pivot
+                else // cmp > 0
                 {
-                    while (s.Compare(great, right) > 0 && k < great)
+                    // Scan from right to find element <= pivot
+                    // Use 'left' for consistency (left == right when pivots are equal)
+                    while (k < great && s.Compare(great, left) > 0)
                     {
                         great--;
                     }
                     s.Swap(k, great);
                     great--;
 
+                    // Re-check swapped element (might be < pivot)
                     if (s.Compare(k, left) < 0)
                     {
                         s.Swap(k, less);
