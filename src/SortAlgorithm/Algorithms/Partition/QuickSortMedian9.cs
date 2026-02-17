@@ -79,33 +79,6 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Comparisons : ~1.39n log₂ n + 12n (average) - Additional ~12 comparisons per partition for median-of-9 selection</description></item>
 /// <item><description>Swaps       : ~0.33n log₂ n (average) - 3-way partition performs similar swaps to Hoare partition</description></item>
 /// </list>
-/// <para><strong>Median-of-9 Pivot Selection Benefits:</strong></para>
-/// <list type="bullet">
-/// <item><description>Worst-case probability reduction: From O(1/n³) with median-of-3 to &lt; O(1/n⁹) with median-of-9 (near-impossible worst case)</description></item>
-/// <item><description>Superior pivot quality: Median-of-9 selects pivots extremely close to the true median, even on adversarial inputs</description></item>
-/// <item><description>Resistance to killer sequences: Defeats "median-of-3 killer" sequences that exploit median-of-3's sampling pattern</description></item>
-/// <item><description>Mountain-shaped data: Excellent performance on mountain/valley patterns where median-of-3 may struggle</description></item>
-/// <item><description>Nearly-sorted data: Handles nearly-sorted arrays with scattered outliers more gracefully than median-of-3</description></item>
-/// <item><description>Predictable performance: More consistent runtime across diverse input distributions</description></item>
-/// </list>
-/// <para><strong>Trade-offs vs. Median-of-3:</strong></para>
-/// <list type="bullet">
-/// <item><description>Overhead: 11-12 comparisons per partition for large arrays (vs. 2-3 for median-of-3), ~4-5× more pivot selection overhead</description></item>
-/// <item><description>Adaptive threshold: Arrays &lt; 64 elements automatically fall back to median-of-3 to avoid sampling degeneration</description></item>
-/// <item><description>Random data: Slightly slower on truly random data due to extra comparisons (~5-10% overhead for large arrays)</description></item>
-/// <item><description>Small arrays: Falls back to median-of-3, so overhead is minimal and comparable to pure median-of-3 implementations</description></item>
-/// <item><description>Pathological inputs: Significantly faster on sorted, reverse-sorted, mountain-shaped, and adversarial patterns</description></item>
-/// <item><description>Use case: Best for applications requiring predictable worst-case behavior or processing untrusted/user-generated data</description></item>
-/// </list>
-/// <para><strong>Comparison with Other QuickSort Variants:</strong></para>
-/// <list type="bullet">
-/// <item><description>vs. Random Pivot: Median-of-9 provides superior consistency and eliminates worst-case vulnerability to adversarial inputs</description></item>
-/// <item><description>vs. Median-of-3: Better worst-case guarantees and performance on pathological inputs, slight overhead on random data</description></item>
-/// <item><description>vs. 2-way Partition QuickSort: 3-way partition dramatically outperforms on duplicate-heavy arrays (O(n) vs O(n²))</description></item>
-/// <item><description>vs. Median-of-Medians (Deterministic Selection): Simpler implementation with similar practical performance, though theoretically weaker O(n²) vs. O(n log n) guarantee</description></item>
-/// <item><description>vs. Introsort: Median-of-9 is a component of introsort strategies; introsort adds heap sort fallback for absolute worst-case guarantee</description></item>
-/// <item><description>vs. Dual-Pivot QuickSort: Different approach; dual-pivot typically faster on modern CPUs, median-of-9 more theoretically robust</description></item>
-/// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
 /// </remarks>
