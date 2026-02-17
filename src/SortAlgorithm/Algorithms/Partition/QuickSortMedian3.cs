@@ -188,53 +188,65 @@ public static class QuickSortMedian3
             var q1 = left + length / 4;
             var mid = left + length / 2;
             var q3 = left + (length * 3) / 4;
-            var pivot = MedianOf3Value(s, q1, mid, q3);
+            var pivotIndex = MedianOf3Index(s, q1, mid, q3);
 
-            // Phase 2. Partition array using Hoare partition scheme
+            // Move pivot to right position to enable index-based comparison
+            // This avoids value copy and enables more efficient comparison
+            s.Swap(pivotIndex, right);
+            var pivotPos = right;
+
+            // Phase 2. Partition array using modified Hoare partition with index-based comparison
+            // Partition into [left..j] <= pivot and [j+1..right-1] > pivot
             var l = left;
-            var r = right;
+            var r = right - 1;
 
-            while (l <= r)
+            while (true)
             {
                 // Move l forward while elements are less than pivot
-                while (l < right && s.Compare(l, pivot) < 0)
+                while (l <= r && s.Compare(l, pivotPos) < 0)
                 {
                     l++;
                 }
 
                 // Move r backward while elements are greater than pivot
-                while (r > left && s.Compare(r, pivot) > 0)
+                while (r >= left && s.Compare(r, pivotPos) > 0)
                 {
                     r--;
                 }
 
-                // If pointers haven't crossed, swap and advance both
-                if (l <= r)
+                // If pointers have crossed, partitioning is complete
+                if (l > r)
                 {
-                    s.Swap(l, r);
-                    l++;
-                    r--;
+                    break;
                 }
+
+                // Swap and advance both pointers
+                s.Swap(l, r);
+                l++;
+                r--;
             }
+
+            // Move pivot from right to its final position at l
+            // After this swap: [left..l-1] <= pivot, [l] = pivot, [l+1..right] >= pivot
+            s.Swap(l, pivotPos);
 
             // Phase 3. Tail recursion optimization: always process left first, then loop on right
             // This ensures consistent left-to-right ordering for visualization
-            // After partitioning: r is the last index of left partition, l is the first index of right partition
-            if (left < r)
+            if (left < l - 1)
             {
-                // Recurse on left partition
-                SortCore(s, left, r);
+                // Recurse on left partition [left..l-1]
+                SortCore(s, left, l - 1);
             }
-            // Tail recursion: continue loop with right partition
-            left = l;
+            // Tail recursion: continue loop with right partition [l+1..right]
+            left = l + 1;
         }
     }
 
     /// <summary>
-    /// Returns the median value among three elements at specified indices.
-    /// This method performs exactly 2-3 comparisons to determine the median value.
+    /// Returns the median index among three elements at specified indices.
+    /// This method performs exactly 2-3 comparisons to determine the median index.
     /// </summary>
-    private static T MedianOf3Value<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
+    private static int MedianOf3Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -246,12 +258,12 @@ public static class QuickSortMedian3
             var cmpMidHigh = s.Compare(midIdx, highIdx);
             if (cmpMidHigh > 0) // low > mid > high
             {
-                return s.Read(midIdx); // mid is median
+                return midIdx; // mid is median
             }
             else // low > mid, mid <= high
             {
                 var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? s.Read(highIdx) : s.Read(lowIdx);
+                return cmpLowHigh > 0 ? highIdx : lowIdx;
             }
         }
         else // low <= mid
@@ -260,11 +272,11 @@ public static class QuickSortMedian3
             if (cmpMidHigh > 0) // low <= mid, mid > high
             {
                 var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? s.Read(lowIdx) : s.Read(highIdx);
+                return cmpLowHigh > 0 ? lowIdx : highIdx;
             }
             else // low <= mid <= high
             {
-                return s.Read(midIdx); // mid is median
+                return midIdx; // mid is median
             }
         }
     }
