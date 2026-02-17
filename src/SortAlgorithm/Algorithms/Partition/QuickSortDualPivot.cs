@@ -107,7 +107,9 @@ public static class QuickSortDualPivot
 {
     // Threshold for switching to 5-sample pivot selection
     // Below this size, simple pivot selection (left, right) is used
-    // This value ensures sufficient spacing for 5-sample method (requires ~7 positions)
+    // With length=47, seventh≈6, giving 5 sample points at approximately:
+    // e1≈1/7, e2≈3/7, e3≈4/7(middle), e4≈5/7, e5≈6/7 of the array
+    // This spacing ensures reliable pivot selection quality
     private const int PivotThreshold = 47;
 
     // Threshold for switching to insertion sort (Yaroslavskiy 2009)
@@ -285,7 +287,7 @@ public static class QuickSortDualPivot
                 s.Swap(k, great);
                 great--;
 
-                // Re-check swapped element
+                // Re-check swapped element (original comparison result no longer valid after swap)
                 if (s.Compare(k, left) < 0)
                 {
                     s.Swap(k, less);
@@ -358,8 +360,8 @@ public static class QuickSortDualPivot
     }
 
     /// <summary>
-    /// Sorts 3 elements. Stable, 2-3 compares, 0-2 swaps.
-    /// Guarantees x <= y <= z.
+    /// Sorts 3 elements. 2-3 compares, 0-2 swaps.
+    /// Guarantees x <= y <= z. Not stable (uses swaps).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x, int y, int z)
@@ -387,8 +389,8 @@ public static class QuickSortDualPivot
     }
 
     /// <summary>
-    /// Sorts 4 elements using insertion sort. Stable, 3-6 compares, 0-5 swaps.
-    /// Guarantees x1 <= x2 <= x3 <= x4.
+    /// Sorts 4 elements using insertion sort. 3-6 compares, 0-5 swaps.
+    /// Guarantees x1 <= x2 <= x3 <= x4. Not stable (uses swaps).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort4<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4)
@@ -411,8 +413,8 @@ public static class QuickSortDualPivot
     }
 
     /// <summary>
-    /// Sorts 5 elements using insertion sort. Stable, 4-10 compares, 0-9 swaps.
-    /// Guarantees x1 <= x2 <= x3 <= x4 <= x5.
+    /// Sorts 5 elements using insertion sort. 4-10 compares, 0-9 swaps.
+    /// Guarantees x1 <= x2 <= x3 <= x4 <= x5. Not stable (uses swaps).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4, int x5)
