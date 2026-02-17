@@ -352,19 +352,16 @@ public static class QuickSortMedian9
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var m2 = (high - low) / 2;
-        var m4 = m2 / 2;
-        var m8 = m4 / 2;
-
-        // Sample 9 indices distributed across the range
+        // Sample 9 indices at evenly distributed positions (divide range into 8 equal steps)
+        var step = (high - low) / 8;
         var i1 = low;
-        var i2 = low + m8;
-        var i3 = low + m4;
-        var i4 = low + m2 - m8;
-        var i5 = low + m2;
-        var i6 = low + m2 + m8;
-        var i7 = high - m4;
-        var i8 = high - m8;
+        var i2 = low + step;
+        var i3 = low + step * 2;
+        var i4 = low + step * 3;
+        var i5 = low + step * 4;
+        var i6 = low + step * 5;
+        var i7 = low + step * 6;
+        var i8 = low + step * 7;
         var i9 = high;
 
         // Compute median index of three groups
