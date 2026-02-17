@@ -220,7 +220,10 @@ public static class QuickSortMedian3
                 else if (cmp > 0)
                 {
                     // Element > pivot: swap to right region
-                    s.Swap(i, gt);
+                    if (i != gt)
+                    {
+                        s.Swap(i, gt);
+                    }
                     gt--;
                     // Don't increment i - need to examine swapped element
                 }
