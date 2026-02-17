@@ -167,7 +167,7 @@ public static class QuickSortMedian3
     }
 
     /// <summary>
-    /// Sorts the subrange [first..last) using the provided sort context.
+    /// Sorts the subrange [left..right] (both inclusive) using the provided sort context.
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
     /// Uses tail recursion optimization to limit stack depth to O(log n) by recursing only on smaller partition.
     /// </summary>
@@ -176,7 +176,7 @@ public static class QuickSortMedian3
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="left">The inclusive start index of the range to sort.</param>
-    /// <param name="right">The exclusive end index of the range to sort.</param>
+    /// <param name="right">The inclusive end index of the range to sort.</param>
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
