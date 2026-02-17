@@ -300,8 +300,12 @@ public static class QuickSortDualPivot
         s.Swap(left, less - 1);
         s.Swap(right, great + 1);
 
+        // Store pivot positions (these indices remain fixed throughout subsequent phases)
+        int pivot1 = less - 1;
+        int pivot2 = great + 1;
+
         // Phase 2. Sort left part
-        SortCore(s, left, less - 2);
+        SortCore(s, left, pivot1 - 1);
 
         // Phase 3. Equal elements optimization (Yaroslavskiy 2009)
         // When center region is large and pivots are different,
@@ -311,18 +315,18 @@ public static class QuickSortDualPivot
         {
             for (int k = less; k <= great; k++)
             {
-                if (s.Compare(k, less - 1) == 0) // equals pivot1
+                if (s.Compare(k, pivot1) == 0) // equals pivot1
                 {
                     s.Swap(k, less);
                     less++;
                 }
-                else if (s.Compare(k, great + 1) == 0) // equals pivot2
+                else if (s.Compare(k, pivot2) == 0) // equals pivot2
                 {
                     s.Swap(k, great);
                     great--;
 
                     // Re-check swapped element
-                    if (s.Compare(k, less - 1) == 0)
+                    if (s.Compare(k, pivot1) == 0)
                     {
                         s.Swap(k, less);
                         less++;
@@ -338,7 +342,7 @@ public static class QuickSortDualPivot
         }
 
         // Phase 5. Sort right part
-        SortCore(s, great + 2, right);
+        SortCore(s, pivot2 + 1, right);
     }
 
     /// <summary>
