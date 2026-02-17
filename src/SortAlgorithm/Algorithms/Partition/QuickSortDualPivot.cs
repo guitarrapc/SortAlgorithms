@@ -100,6 +100,7 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
+/// <para>Paper: https://arxiv.org/abs/1310.7409 Average Case Analysis of Java 7's Dual Pivot Quicksort / Sebastian Wild, Markus E. Nebel</para>
 /// </remarks>
 public static class QuickSortDualPivot
 {
@@ -339,7 +340,8 @@ public static class QuickSortDualPivot
         // Phase 3. Equal elements optimization (Yaroslavskiy 2009)
         // When center region is large and pivots are different,
         // segregate elements equal to pivots before sorting center
-        if (great - less > length - DIST_SIZE && diffPivots)
+        int centerLen = great - less + 1;
+        if (centerLen > length - DIST_SIZE && diffPivots)
         {
             for (int k = less; k <= great; k++)
             {
