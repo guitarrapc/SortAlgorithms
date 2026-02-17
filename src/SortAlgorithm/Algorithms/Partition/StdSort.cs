@@ -315,9 +315,13 @@ public static class StdSort
             }
 
             // Partition optimization: skip equal elements on left if not leftmost
-            // If first - 1 >= first (pivot from previous partition is >= current pivot),
-            // we know all elements [first, pivot] will be equal to pivot, so skip left partition.
-            // After this partition, the new pivot will be at (returned_first - 1), maintaining sentinel.
+            // From LLVM libc++:
+            // The elements to the left of the current range are already sorted.
+            // If the current range is not the leftmost part and the pivot is same as
+            // the highest element in the range to the left (at first - 1), then we know
+            // that all the elements in [first, pivot] *would be* equal to the pivot,
+            // assuming the equal elements are put on the left side when partitioned.
+            // This means we do not need to sort the left side of the partition.
             if (!leftmost && s.Compare(first - 1, first) >= 0)
             {
                 first = PartitionWithEqualsOnLeft(s, first, last);
@@ -467,6 +471,7 @@ public static class StdSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var begin = first;  // Save original position for bounds checking
         var pivot = s.Read(first);
 
         // Find first element >= pivot
@@ -480,9 +485,23 @@ public static class StdSort
         var j = last - 1;
         if (i < j)
         {
-            while (j > first && s.Compare(j, pivot) >= 0)
+            // Optimization from LLVM libc++: if first only advanced by 1, we know last won't reach begin
+            // because median-of-3 ensures begin is <= pivot, so unguarded scan is safe.
+            if (begin == i - 1)
             {
-                j--;
+                // Unguarded: first only advanced once, median-of-3 guarantees safety
+                while (i < j && s.Compare(j, pivot) >= 0)
+                {
+                    j--;
+                }
+            }
+            else
+            {
+                // Guarded: normal case with bounds check
+                while (j > begin && s.Compare(j, pivot) >= 0)
+                {
+                    j--;
+                }
             }
         }
 
@@ -493,6 +512,8 @@ public static class StdSort
         {
             s.Swap(i, j);
 
+            // After swap, find next elements to swap
+            // These are always guarded by the median-of-3 pivot selection
             do { i++; } while (s.Compare(i, pivot) < 0);
             do { j--; } while (s.Compare(j, pivot) >= 0);
         }
@@ -519,20 +540,34 @@ public static class StdSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var begin = first;  // Save original position for bounds checking
         var pivot = s.Read(first);
 
         // Find first element > pivot
         var i = first;
-        do
+        // Optimization from LLVM libc++: check if pivot < last element to determine if guarded scan needed
+        if (s.Compare(pivot, last - 1) < 0)
         {
-            i++;
-        } while (i < last && s.Compare(pivot, i) >= 0);
+            // Guarded: pivot < last element, so elements > pivot exist
+            do
+            {
+                i++;
+            } while (s.Compare(pivot, i) >= 0);
+        }
+        else
+        {
+            // Unguarded: pivot >= last element, no need for bounds check
+            while (++i < last && s.Compare(pivot, i) >= 0)
+            {
+            }
+        }
 
         // Find last element <= pivot
         var j = last - 1;
         if (i < j)
         {
-            while (j > first && s.Compare(pivot, j) < 0)
+            // Always guarded because median-of-3 ensures begin <= pivot
+            while (j > begin && s.Compare(pivot, j) < 0)
             {
                 j--;
             }
@@ -543,6 +578,8 @@ public static class StdSort
         {
             s.Swap(i, j);
 
+            // After swap, find next elements to swap
+            // These are always guarded by the median-of-3 pivot selection
             do { i++; } while (s.Compare(pivot, i) >= 0);
             do { j--; } while (s.Compare(pivot, j) < 0);
         }
