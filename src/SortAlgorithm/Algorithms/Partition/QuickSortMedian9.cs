@@ -60,9 +60,10 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Progress property: After each 3-way partition, both subranges [left, lt-1] and [eqRight+1, right] are strictly smaller than [left, right]</description></item>
 /// <item><description>Minimum progress: Even when all elements equal the pivot, the entire array is classified as the equal region and recursion terminates immediately</description></item>
-/// <item><description>Base case reached: The recursion depth is bounded, and each recursive call eventually reaches the base case (right ≤ left)</description></item>
+/// <item><description>Base case reached: The loop condition (left &lt; right) ensures termination when the range contains ≤ 1 element</description></item>
 /// <item><description>Expected recursion depth: O(log n) with median-of-9 pivot selection (even better than median-of-3)</description></item>
-/// <item><description>Worst-case recursion depth: O(n) when partitioning is maximally unbalanced (probability &lt; 1/n⁹, astronomically rare)</description></item>
+/// <item><description>Worst-case recursion depth: <strong>O(log n) guaranteed</strong> with tail recursion optimization (always recurse on smaller partition)</description></item>
+/// <item><description>Tail recursion optimization: The implementation recursively processes only the smaller partition and loops on the larger one, guaranteeing O(log n) stack depth even in adversarial cases</description></item>
 /// </list>
 /// The 3-way partition scheme guarantees progress even on arrays with many duplicate elements.</description></item>
 /// </list>
@@ -191,6 +192,7 @@ public static class QuickSortMedian9
     /// <summary>
     /// Sorts the subrange [left..right] (both inclusive) using the provided sort context.
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
+    /// Uses tail recursion optimization to limit stack depth to O(log n) by recursing only on smaller partition.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
@@ -202,91 +204,111 @@ public static class QuickSortMedian9
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (left >= right) return;
-
-        // Phase 1. Select pivot using median-of-9 or median-of-3 strategy
-        // For small ranges (< 64 elements), median-of-9 sampling degrades due to m8 becoming 0,
-        // causing duplicate index sampling and wasted comparisons. Fall back to median-of-3.
-        int pivotIndex;
-        var rangeSize = right - left + 1;
-        
-        if (rangeSize < 64)
+        while (left < right)
         {
-            // Small range: use median-of-3 to avoid sampling degeneration
-            var mid = left + (right - left) / 2;
-            pivotIndex = MedianOf3Index(s, left, mid, right);
-        }
-        else
-        {
-            // Large range: use full median-of-9 for superior pivot quality
-            pivotIndex = MedianOf9Index(s, left, right);
-        }
-        
-        // Move pivot to right position to enable consistent index-based comparison
-        // Avoid self-swap when pivot is already at right
-        if (pivotIndex != right)
-        {
-            s.Swap(pivotIndex, right);
-        }
-        var pivotPos = right;
-
-        // Phase 2. Three-way partition (Dijkstra's Dutch National Flag)
-        // Partitions into: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
-        var lt = left;      // Elements before lt are < pivot
-        var gt = right - 1; // Elements after gt are > pivot
-        var i = left;       // Current element being examined
-
-        while (i <= gt)
-        {
-            var cmp = s.Compare(i, pivotPos);
-
-            if (cmp < 0)
+            // Phase 1. Select pivot using median-of-9 or median-of-3 strategy
+            // For small ranges (< 64 elements), median-of-9 sampling degrades due to m8 becoming 0,
+            // causing duplicate index sampling and wasted comparisons. Fall back to median-of-3.
+            int pivotIndex;
+            var rangeSize = right - left + 1;
+            
+            if (rangeSize < 64)
             {
-                // Element < pivot: swap to left region
-                // Avoid self-swap when lt == i (common at loop start and with sorted data)
-                if (lt != i)
-                {
-                    s.Swap(lt, i);
-                }
-                lt++;
-                i++;
-            }
-            else if (cmp > 0)
-            {
-                // Element > pivot: swap to right region
-                s.Swap(i, gt);
-                gt--;
-                // Don't increment i - need to examine swapped element
+                // Small range: use median-of-3 to avoid sampling degeneration
+                var mid = left + (right - left) / 2;
+                pivotIndex = MedianOf3Index(s, left, mid, right);
             }
             else
             {
-                // Element == pivot: keep in middle region
-                i++;
+                // Large range: use full median-of-9 for superior pivot quality
+                pivotIndex = MedianOf9Index(s, left, right);
             }
-        }
+            
+            // Move pivot to right position to enable consistent index-based comparison
+            // Avoid self-swap when pivot is already at right
+            if (pivotIndex != right)
+            {
+                s.Swap(pivotIndex, right);
+            }
+            var pivotPos = right;
 
-        // Loop invariant at termination: i == gt + 1
-        // [left, lt) : < pivot
-        // [lt, i) : == pivot
-        // (gt, right) : > pivot (right holds the original pivot)
-        // Move pivot from right to its final position at i
-        var eqRight = i;
-        // Avoid self-swap when all elements are <= pivot (eqRight reaches right)
-        if (eqRight != pivotPos)
-        {
-            s.Swap(eqRight, pivotPos);
-        }
+            // Phase 2. Three-way partition (Dijkstra's Dutch National Flag)
+            // Partitions into: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
+            var lt = left;      // Elements before lt are < pivot
+            var gt = right - 1; // Elements after gt are > pivot
+            var i = left;       // Current element being examined
 
-        // After swap: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
-        // Phase 3. Recursively sort left and right partitions
-        // Elements in [lt, eqRight] are equal to pivot and don't need further sorting
-        if (left < lt - 1)
-        {
-            SortCore(s, left, lt - 1);
-        }
-        if (eqRight < right - 1)
-        {
-            SortCore(s, eqRight + 1, right);
+            while (i <= gt)
+            {
+                var cmp = s.Compare(i, pivotPos);
+
+                if (cmp < 0)
+                {
+                    // Element < pivot: swap to left region
+                    // Avoid self-swap when lt == i (common at loop start and with sorted data)
+                    if (lt != i)
+                    {
+                        s.Swap(lt, i);
+                    }
+                    lt++;
+                    i++;
+                }
+                else if (cmp > 0)
+                {
+                    // Element > pivot: swap to right region
+                    s.Swap(i, gt);
+                    gt--;
+                    // Don't increment i - need to examine swapped element
+                }
+                else
+                {
+                    // Element == pivot: keep in middle region
+                    i++;
+                }
+            }
+
+            // Loop invariant at termination: i == gt + 1
+            // [left, lt) : < pivot
+            // [lt, i) : == pivot
+            // (gt, right) : > pivot (right holds the original pivot)
+            // Move pivot from right to its final position at i
+            var eqRight = i;
+            // Avoid self-swap when all elements are <= pivot (eqRight reaches right)
+            if (eqRight != pivotPos)
+            {
+                s.Swap(eqRight, pivotPos);
+            }
+
+            // After swap: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
+            // Phase 3. Tail recursion optimization: recurse on smaller partition
+            // Elements in [lt, eqRight] are equal to pivot and don't need further sorting
+            
+            // Calculate sizes of subranges to recurse on:
+            // Left subrange: [left, lt-1] has size (lt-1) - left + 1 = lt - left
+            // Right subrange: [eqRight+1, right] has size right - (eqRight+1) + 1 = right - eqRight
+            var leftSize = lt - left;
+            var rightSize = right - eqRight;
+
+            if (leftSize < rightSize)
+            {
+                // Recurse on smaller left partition
+                if (left < lt - 1)
+                {
+                    SortCore(s, left, lt - 1);
+                }
+                // Tail recursion: continue loop with right partition
+                left = eqRight + 1;
+            }
+            else
+            {
+                // Recurse on smaller right partition
+                if (eqRight < right - 1)
+                {
+                    SortCore(s, eqRight + 1, right);
+                }
+                // Tail recursion: continue loop with left partition
+                right = lt - 1;
+            }
         }
     }
 
