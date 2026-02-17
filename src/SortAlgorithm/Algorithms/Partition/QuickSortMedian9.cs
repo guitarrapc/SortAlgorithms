@@ -24,53 +24,54 @@ namespace SortAlgorithm.Algorithms;
 /// This sophisticated sampling strategy dramatically reduces worst-case probability from O(1/n³) (median-of-3) to approximately O(1/n⁹),
 /// and provides excellent pivot quality for challenging input patterns such as sorted, reverse-sorted, mountain-shaped, and adversarially-crafted arrays.
 /// The median-of-medians approach guarantees that the pivot is close to the true median, ensuring balanced partitions even on pathological inputs (lines 48, 128-173).</description></item>
-/// <item><description><strong>Hoare Partition Scheme:</strong> The array is partitioned into two regions using bidirectional scanning, identical to median-of-3 variant:
+/// <item><description><strong>Three-Way Partition (Dijkstra's Dutch National Flag):</strong> The array is partitioned into three regions in a single pass:
 /// <list type="bullet">
-/// <item><description>Initialize pointers: l = left, r = right (line 49-50)</description></item>
-/// <item><description>Left scan: advance l rightward while array[l] &lt; pivot, with boundary check l &lt; right to prevent overflow (line 55-58)</description></item>
-/// <item><description>Right scan: advance r leftward while array[r] &gt; pivot, with boundary check r &gt; left to prevent underflow (line 61-64)</description></item>
-/// <item><description>Swap and advance: if l ≤ r, swap array[l] with array[r], then increment l and decrement r (line 67-72)</description></item>
-/// <item><description>Termination: loop exits when l &gt; r, ensuring proper partitioning (line 52)</description></item>
+/// <item><description>Initialize pointers: lt = left (boundary for &lt; pivot), gt = right - 1 (boundary for &gt; pivot), i = left (current element)</description></item>
+/// <item><description>Scan and classify: compare array[i] with pivot and classify into three regions</description></item>
+/// <item><description>If array[i] &lt; pivot: swap array[i] with array[lt], increment both lt and i</description></item>
+/// <item><description>If array[i] &gt; pivot: swap array[i] with array[gt], decrement gt (don't increment i to re-examine swapped element)</description></item>
+/// <item><description>If array[i] == pivot: increment i (keep element in middle region)</description></item>
+/// <item><description>Termination: loop exits when i &gt; gt, ensuring all elements are classified</description></item>
 /// </list>
-/// Boundary checks (l &lt; right and r &gt; left) prevent out-of-bounds access when all elements are smaller/larger than pivot.
-/// The condition l ≤ r (not l &lt; r) ensures elements equal to pivot are swapped, preventing infinite loops on duplicate-heavy arrays.</description></item>
-/// <item><description><strong>Partition Invariant:</strong> Upon completion of the partitioning phase (when l &gt; r):
+/// This 3-way partitioning dramatically improves performance on arrays with many duplicate elements, reducing time complexity from O(n²) to O(n) for such cases.</description></item>
+/// <item><description><strong>Partition Invariant:</strong> Upon completion of the partitioning phase (when i &gt; gt, i.e., i == gt + 1):
 /// <list type="bullet">
-/// <item><description>All elements in range [left, r] satisfy: element ≤ pivot</description></item>
-/// <item><description>All elements in range [l, right] satisfy: element ≥ pivot</description></item>
-/// <item><description>Partition boundaries satisfy: left - 1 ≤ r &lt; l ≤ right + 1</description></item>
-/// <item><description>The gap between r and l (r &lt; l) may contain elements equal to pivot that have been properly partitioned</description></item>
+/// <item><description>All elements in range [left, lt) satisfy: element &lt; pivot</description></item>
+/// <item><description>All elements in range [lt, i) satisfy: element == pivot (before moving pivot from right)</description></item>
+/// <item><description>All elements in range (gt, right) satisfy: element &gt; pivot (right holds the original pivot)</description></item>
+/// <item><description>After moving pivot to position i: [lt, i] becomes the == pivot region</description></item>
+/// <item><description>Partition boundaries satisfy: left ≤ lt ≤ i ≤ right</description></item>
 /// </list>
-/// This invariant guarantees that after partitioning, the array is divided into two well-defined regions for recursive sorting.</description></item>
-/// <item><description><strong>Recursive Subdivision:</strong> The algorithm recursively sorts two independent subranges (lines 76-83):
+/// This invariant guarantees that after partitioning, the array is divided into three well-defined regions for recursive sorting.</description></item>
+/// <item><description><strong>Recursive Subdivision:</strong> The algorithm recursively sorts two independent subranges, excluding the equal region:
 /// <list type="bullet">
-/// <item><description>Left subrange: [left, r] is sorted only if left &lt; r (contains 2+ elements)</description></item>
-/// <item><description>Right subrange: [l, right] is sorted only if l &lt; right (contains 2+ elements)</description></item>
+/// <item><description>Left subrange: [left, lt-1] contains all elements &lt; pivot and is sorted only if left &lt; lt-1</description></item>
+/// <item><description>Middle region: [lt, eqRight] contains all elements == pivot (including the moved pivot) and needs no further sorting</description></item>
+/// <item><description>Right subrange: [eqRight+1, right] contains all elements &gt; pivot and is sorted only if eqRight+1 &lt; right</description></item>
 /// </list>
-/// Base case: when right ≤ left, the range contains ≤ 1 element and is trivially sorted (line 45).
-/// The conditional checks (left &lt; r and l &lt; right) prevent unnecessary recursion on empty or single-element ranges,
-/// improving efficiency and preventing stack overflow on edge cases.</description></item>
+/// Base case: when right ≤ left, the range contains ≤ 1 element and is trivially sorted.
+/// The 3-way partition ensures that elements equal to pivot are excluded from further recursion, dramatically improving performance on arrays with many duplicates.</description></item>
 /// <item><description><strong>Termination Guarantee:</strong> The algorithm terminates for all inputs because:
 /// <list type="bullet">
-/// <item><description>Progress property: After each partition, r &lt; l, so both subranges [left, r] and [l, right] are strictly smaller than [left, right]</description></item>
-/// <item><description>Minimum progress: Even when all elements equal the pivot, at least one element is excluded from each recursive call (the swapped elements at l and r)</description></item>
+/// <item><description>Progress property: After each 3-way partition, both subranges [left, lt-1] and [eqRight+1, right] are strictly smaller than [left, right]</description></item>
+/// <item><description>Minimum progress: Even when all elements equal the pivot, the entire array is classified as the equal region and recursion terminates immediately</description></item>
 /// <item><description>Base case reached: The recursion depth is bounded, and each recursive call eventually reaches the base case (right ≤ left)</description></item>
 /// <item><description>Expected recursion depth: O(log n) with median-of-9 pivot selection (even better than median-of-3)</description></item>
 /// <item><description>Worst-case recursion depth: O(n) when partitioning is maximally unbalanced (probability &lt; 1/n⁹, astronomically rare)</description></item>
 /// </list>
-/// The Hoare partition scheme guarantees that partitioning makes progress even on arrays with many duplicate elements.</description></item>
+/// The 3-way partition scheme guarantees progress even on arrays with many duplicate elements.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
-/// <item><description>Partition   : Hoare partition scheme (bidirectional scan)</description></item>
+/// <item><description>Partition   : Three-way partition (Dijkstra's Dutch National Flag)</description></item>
 /// <item><description>Stable      : No (partitioning does not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack, O(1) for partitioning)</description></item>
-/// <item><description>Best case   : Θ(n log n) - Occurs when pivot consistently divides array into balanced partitions</description></item>
-/// <item><description>Average case: Θ(n log n) - Expected ~1.386n log₂ n comparisons with Hoare partition (same as median-of-3)</description></item>
+/// <item><description>Best case   : Θ(n) - Occurs when all elements are equal (entire array becomes the equal region)</description></item>
+/// <item><description>Average case: Θ(n log n) - Expected ~1.39n log₂ n comparisons with 3-way partition</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability &lt; 1/n⁹, virtually impossible)</description></item>
-/// <item><description>Comparisons : ~1.386n log₂ n + 12n (average) - Additional ~12 comparisons per partition for median-of-9 selection</description></item>
-/// <item><description>Swaps       : ~0.33n log₂ n (average) - Same as median-of-3 (Hoare partition efficiency)</description></item>
+/// <item><description>Comparisons : ~1.39n log₂ n + 12n (average) - Additional ~12 comparisons per partition for median-of-9 selection</description></item>
+/// <item><description>Swaps       : ~0.33n log₂ n (average) - 3-way partition performs similar swaps to Hoare partition</description></item>
 /// </list>
 /// <para><strong>Median-of-9 Pivot Selection Benefits:</strong></para>
 /// <list type="bullet">
@@ -93,6 +94,7 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>vs. Random Pivot: Median-of-9 provides superior consistency and eliminates worst-case vulnerability to adversarial inputs</description></item>
 /// <item><description>vs. Median-of-3: Better worst-case guarantees and performance on pathological inputs, slight overhead on random data</description></item>
+/// <item><description>vs. 2-way Partition QuickSort: 3-way partition dramatically outperforms on duplicate-heavy arrays (O(n) vs O(n²))</description></item>
 /// <item><description>vs. Median-of-Medians (Deterministic Selection): Simpler implementation with similar practical performance, though theoretically weaker O(n²) vs. O(n log n) guarantee</description></item>
 /// <item><description>vs. Introsort: Median-of-9 is a component of introsort strategies; introsort adds heap sort fallback for absolute worst-case guarantee</description></item>
 /// <item><description>vs. Dual-Pivot QuickSort: Different approach; dual-pivot typically faster on modern CPUs, median-of-9 more theoretically robust</description></item>
@@ -200,53 +202,70 @@ public static class QuickSortMedian9
         var pivotIndex = MedianOf9Index(s, left, right);
         
         // Move pivot to right position to enable consistent index-based comparison
+        // Avoid self-swap when pivot is already at right
         if (pivotIndex != right)
         {
             s.Swap(pivotIndex, right);
         }
         var pivotPos = right;
-        
-        var l = left;
-        var r = right - 1; // Start r from right-1 since pivot is now at right
 
-        while (l <= r)
+        // Phase 2. Three-way partition (Dijkstra's Dutch National Flag)
+        // Partitions into: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
+        var lt = left;      // Elements before lt are < pivot
+        var gt = right - 1; // Elements after gt are > pivot
+        var i = left;       // Current element being examined
+
+        while (i <= gt)
         {
-            // Move l forward while elements are less than pivot
-            while (l < right && s.Compare(l, pivotPos) < 0)
-            {
-                l++;
-            }
+            var cmp = s.Compare(i, pivotPos);
 
-            // Move r backward while elements are greater than pivot
-            while (r >= left && s.Compare(r, pivotPos) > 0)
+            if (cmp < 0)
             {
-                r--;
+                // Element < pivot: swap to left region
+                // Avoid self-swap when lt == i (common at loop start and with sorted data)
+                if (lt != i)
+                {
+                    s.Swap(lt, i);
+                }
+                lt++;
+                i++;
             }
-
-            // If pointers haven't crossed, swap and advance both
-            if (l <= r)
+            else if (cmp > 0)
             {
-                s.Swap(l, r);
-                l++;
-                r--;
+                // Element > pivot: swap to right region
+                s.Swap(i, gt);
+                gt--;
+                // Don't increment i - need to examine swapped element
+            }
+            else
+            {
+                // Element == pivot: keep in middle region
+                i++;
             }
         }
 
-        // Move pivot from right to its final position
-        if (l != pivotPos)
+        // Loop invariant at termination: i == gt + 1
+        // [left, lt) : < pivot
+        // [lt, i) : == pivot
+        // (gt, right) : > pivot (right holds the original pivot)
+        // Move pivot from right to its final position at i
+        var eqRight = i;
+        // Avoid self-swap when all elements are <= pivot (eqRight reaches right)
+        if (eqRight != pivotPos)
         {
-            s.Swap(l, pivotPos);
+            s.Swap(eqRight, pivotPos);
         }
 
-        // Phase 2. Recursively sort left and right partitions
-        // Pivot is now at position l and is in its final sorted position
-        if (left < l - 1)
+        // After swap: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
+        // Phase 3. Recursively sort left and right partitions
+        // Elements in [lt, eqRight] are equal to pivot and don't need further sorting
+        if (left < lt - 1)
         {
-            SortCore(s, left, l - 1);
+            SortCore(s, left, lt - 1);
         }
-        if (l + 1 < right)
+        if (eqRight < right - 1)
         {
-            SortCore(s, l + 1, right);
+            SortCore(s, eqRight + 1, right);
         }
     }
 
