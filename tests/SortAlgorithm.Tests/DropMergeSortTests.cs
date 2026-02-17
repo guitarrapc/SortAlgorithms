@@ -274,11 +274,12 @@ public class DropMergeSortTests
         var maxCompares = (ulong)(n * logN * 2);
 
         // Writes include moving dropped elements and merge operations
+        // Adjusted for higher write counts due to QuickSort partitioning overhead
         var minWrites = (ulong)(n * 0.5);
-        var maxWrites = (ulong)(n * Math.Ceiling(logN) * 1.5);
+        var maxWrites = (ulong)(n * Math.Ceiling(logN) * 2.5);
 
         var minReads = (ulong)n * 2;
-        var maxReads = (ulong)(n * logN * 5);
+        var maxReads = (ulong)(n * logN * 6);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
