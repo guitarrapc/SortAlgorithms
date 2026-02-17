@@ -189,7 +189,11 @@ public static class QuickSortMedian3
             var pivotIndex = MedianOf3Index(s, left, mid, right);
 
             // Move pivot to right position to enable index-based comparison
-            s.Swap(pivotIndex, right);
+            // Avoid self-swap when pivot is already at right
+            if (pivotIndex != right)
+            {
+                s.Swap(pivotIndex, right);
+            }
             var pivotPos = right;
 
             // Phase 2. Three-way partition (Dijkstra's Dutch National Flag, https://en.wikipedia.org/wiki/Dutch_national_flag_problem)
@@ -216,11 +220,7 @@ public static class QuickSortMedian3
                 else if (cmp > 0)
                 {
                     // Element > pivot: swap to right region
-                    // Avoid self-swap when i == gt
-                    if (i != gt)
-                    {
-                        s.Swap(i, gt);
-                    }
+                    s.Swap(i, gt);
                     gt--;
                     // Don't increment i - need to examine swapped element
                 }
@@ -237,7 +237,11 @@ public static class QuickSortMedian3
             // (gt, right) : > pivot (right holds the original pivot)
             // Move pivot from right to its final position at i
             var eqRight = i;
-            s.Swap(eqRight, pivotPos);
+            // Avoid self-swap when all elements are <= pivot (eqRight reaches right)
+            if (eqRight != pivotPos)
+            {
+                s.Swap(eqRight, pivotPos);
+            }
 
             // After swap: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
             // Phase 3. Tail recursion optimization: recurse on smaller partition
