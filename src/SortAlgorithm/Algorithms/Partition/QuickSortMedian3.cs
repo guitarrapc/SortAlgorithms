@@ -27,19 +27,20 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Termination: loop exits when i &gt; gt, ensuring all elements are classified</description></item>
 /// </list>
 /// This 3-way partitioning dramatically improves performance on arrays with many duplicate elements, reducing time complexity from O(n²) to O(n) for such cases.</description></item>
-/// <item><description><strong>Partition Invariant:</strong> Upon completion of the partitioning phase (when i &gt; gt):
+/// <item><description><strong>Partition Invariant:</strong> Upon completion of the partitioning phase (when i &gt; gt, i.e., i == gt + 1):
 /// <list type="bullet">
 /// <item><description>All elements in range [left, lt) satisfy: element &lt; pivot</description></item>
-/// <item><description>All elements in range [lt, gt] satisfy: element == pivot</description></item>
-/// <item><description>All elements in range (gt, right] satisfy: element &gt; pivot</description></item>
-/// <item><description>Partition boundaries satisfy: left ≤ lt ≤ gt ≤ right</description></item>
+/// <item><description>All elements in range [lt, i) satisfy: element == pivot (before moving pivot from right)</description></item>
+/// <item><description>All elements in range (gt, right) satisfy: element &gt; pivot (right holds the original pivot)</description></item>
+/// <item><description>After moving pivot to position i: [lt, i] becomes the == pivot region</description></item>
+/// <item><description>Partition boundaries satisfy: left ≤ lt ≤ i ≤ right</description></item>
 /// </list>
 /// This invariant guarantees that after partitioning, the array is divided into three well-defined regions for recursive sorting.</description></item>
 /// <item><description><strong>Recursive Subdivision:</strong> The algorithm recursively sorts two independent subranges, excluding the equal region:
 /// <list type="bullet">
 /// <item><description>Left subrange: [left, lt-1] contains all elements &lt; pivot and is sorted only if left &lt; lt-1</description></item>
-/// <item><description>Middle region: [lt, gt] contains all elements == pivot and needs no further sorting (already in final position)</description></item>
-/// <item><description>Right subrange: [gt+1, right] contains all elements &gt; pivot and is sorted only if gt+1 &lt; right</description></item>
+/// <item><description>Middle region: [lt, eqRight] contains all elements == pivot (including the moved pivot) and needs no further sorting</description></item>
+/// <item><description>Right subrange: [eqRight+1, right] contains all elements &gt; pivot and is sorted only if eqRight+1 &lt; right</description></item>
 /// </list>
 /// Base case: when right ≤ left, the range contains ≤ 1 element and is trivially sorted.
 /// The 3-way partition ensures that elements equal to pivot are excluded from further recursion, dramatically improving performance on arrays with many duplicates.</description></item>
@@ -192,7 +193,7 @@ public static class QuickSortMedian3
             var pivotPos = right;
 
             // Phase 2. Three-way partition (Dijkstra's Dutch National Flag, https://en.wikipedia.org/wiki/Dutch_national_flag_problem)
-            // Partitions into: [left, lt) < pivot, [lt, gt] == pivot, (gt, right] > pivot
+            // Partitions into: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
             var lt = left;      // Elements before lt are < pivot
             var gt = right - 1; // Elements after gt are > pivot
             var i = left;       // Current element being examined
@@ -222,15 +223,19 @@ public static class QuickSortMedian3
                 }
             }
 
-            // Move pivot from right to its final position
-            s.Swap(gt + 1, pivotPos);
-            gt++; // gt now points to the first element == pivot at the right boundary
+            // Loop invariant at termination: i == gt + 1
+            // [left, lt) : < pivot
+            // [lt, i) : == pivot
+            // (gt, right) : > pivot (right holds the original pivot)
+            // Move pivot from right to its final position at i
+            var eqRight = i;
+            s.Swap(eqRight, pivotPos);
 
+            // After swap: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
             // Phase 3. Tail recursion optimization: recurse on smaller partition
-            // After 3-way partition: [left, lt) < pivot, [lt, gt] == pivot, (gt, right] > pivot
-            // Elements in [lt, gt] are equal to pivot and don't need further sorting
+            // Elements in [lt, eqRight] are equal to pivot and don't need further sorting
             var leftSize = lt - left;
-            var rightSize = right - gt;
+            var rightSize = right - eqRight;
 
             if (leftSize < rightSize)
             {
@@ -240,14 +245,14 @@ public static class QuickSortMedian3
                     SortCore(s, left, lt - 1);
                 }
                 // Tail recursion: continue loop with right partition
-                left = gt + 1;
+                left = eqRight + 1;
             }
             else
             {
                 // Recurse on smaller right partition
-                if (gt < right - 1)
+                if (eqRight < right - 1)
                 {
-                    SortCore(s, gt + 1, right);
+                    SortCore(s, eqRight + 1, right);
                 }
                 // Tail recursion: continue loop with left partition
                 right = lt - 1;
