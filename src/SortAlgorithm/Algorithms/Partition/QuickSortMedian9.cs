@@ -5,9 +5,9 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// 配列から9個の要素をサンプリングして中央値の中央値を求め、それをピボットとする分割統治法のソートアルゴリズムです。
-/// Median-of-3よりも優れたピボット選択により、偏ったデータや最悪ケースに対してさらに堅牢な性能を実現します。
+/// Median-of-3よりも優れたピボット選択により、偏ったデータや最悪ケースに対してより堅牢な性能を実現します。
 /// <br/>
-/// A divide-and-conquer sorting algorithm using median-of-medians (median-of-9) pivot selection for superior robustness against adversarial inputs.
+/// A divide-and-conquer sorting algorithm using median-of-medians (median-of-9) pivot selection for improved robustness against adversarial inputs.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct QuickSort with Median-of-9 Pivot Selection:</strong></para>
@@ -26,9 +26,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Example: For 32 elements, m8=2 is still useful; for 16 elements, m8=1 causes overlap; for 8 elements, m8=0 causes severe duplication</description></item>
 /// <item><description>Threshold 64 ensures m8 ≥ 4, maintaining well-distributed sampling across all 9 positions</description></item>
 /// </list>
-/// This sophisticated sampling strategy dramatically reduces worst-case probability from O(1/n³) (median-of-3) to approximately O(1/n⁹) for large arrays,
-/// and provides excellent pivot quality for challenging input patterns such as sorted, reverse-sorted, mountain-shaped, and adversarially-crafted arrays.
-/// The median-of-medians approach guarantees that the pivot is close to the true median, ensuring balanced partitions even on pathological inputs.</description></item>
+/// This sampling strategy reduces worst-case probability from O(1/n³) (median-of-3) to approximately O(1/n⁹) for large arrays,
+/// and provides improved pivot quality for challenging input patterns such as sorted, reverse-sorted, mountain-shaped, and adversarially-crafted arrays.
+/// The median-of-medians approach increases the likelihood that the pivot is close to the true median, helping to produce more balanced partitions.</description></item>
 /// <item><description><strong>Three-Way Partition (Dijkstra's Dutch National Flag):</strong> The array is partitioned into three regions in a single pass:
 /// <list type="bullet">
 /// <item><description>Initialize pointers: lt = left (boundary for &lt; pivot), gt = right - 1 (boundary for &gt; pivot), i = left (current element)</description></item>
@@ -38,7 +38,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>If array[i] == pivot: increment i (keep element in middle region)</description></item>
 /// <item><description>Termination: loop exits when i &gt; gt, ensuring all elements are classified</description></item>
 /// </list>
-/// This 3-way partitioning dramatically improves performance on arrays with many duplicate elements, reducing time complexity from O(n²) to O(n) for such cases.</description></item>
+/// This 3-way partitioning improves performance on arrays with many duplicate elements, reducing time complexity from O(n²) to O(n) for such cases.</description></item>
 /// <item><description><strong>Partition Invariant:</strong> Upon completion of the partitioning phase (when i &gt; gt, i.e., i == gt + 1):
 /// <list type="bullet">
 /// <item><description>All elements in range [left, lt) satisfy: element &lt; pivot</description></item>
@@ -47,7 +47,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>After moving pivot to position i: [lt, i] becomes the == pivot region</description></item>
 /// <item><description>Partition boundaries satisfy: left ≤ lt ≤ i ≤ right</description></item>
 /// </list>
-/// This invariant guarantees that after partitioning, the array is divided into three well-defined regions for recursive sorting.</description></item>
+/// This invariant ensures that after partitioning, the array is divided into three well-defined regions for recursive sorting.</description></item>
 /// <item><description><strong>Recursive Subdivision:</strong> The algorithm recursively sorts two independent subranges, excluding the equal region:
 /// <list type="bullet">
 /// <item><description>Left subrange: [left, lt-1] contains all elements &lt; pivot and is sorted only if left &lt; lt-1</description></item>
@@ -55,17 +55,17 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Right subrange: [eqRight+1, right] contains all elements &gt; pivot and is sorted only if eqRight+1 &lt; right</description></item>
 /// </list>
 /// Base case: when right ≤ left, the range contains ≤ 1 element and is trivially sorted.
-/// The 3-way partition ensures that elements equal to pivot are excluded from further recursion, dramatically improving performance on arrays with many duplicates.</description></item>
+/// The 3-way partition ensures that elements equal to pivot are excluded from further recursion, improving performance on arrays with many duplicates.</description></item>
 /// <item><description><strong>Termination Guarantee:</strong> The algorithm terminates for all inputs because:
 /// <list type="bullet">
 /// <item><description>Progress property: After each 3-way partition, both subranges [left, lt-1] and [eqRight+1, right] are strictly smaller than [left, right]</description></item>
 /// <item><description>Minimum progress: Even when all elements equal the pivot, the entire array is classified as the equal region and recursion terminates immediately</description></item>
 /// <item><description>Base case reached: The loop condition (left &lt; right) ensures termination when the range contains ≤ 1 element</description></item>
-/// <item><description>Expected recursion depth: O(log n) with median-of-9 pivot selection (even better than median-of-3)</description></item>
-/// <item><description>Worst-case recursion depth: <strong>O(log n) guaranteed</strong> with tail recursion optimization (always recurse on smaller partition)</description></item>
-/// <item><description>Tail recursion optimization: The implementation recursively processes only the smaller partition and loops on the larger one, guaranteeing O(log n) stack depth even in adversarial cases</description></item>
+/// <item><description>Expected recursion depth: O(log n) with median-of-9 pivot selection (comparable to median-of-3)</description></item>
+/// <item><description>Worst-case recursion depth: <strong>O(log n)</strong> with tail recursion optimization (always recurse on smaller partition)</description></item>
+/// <item><description>Tail recursion optimization: The implementation recursively processes only the smaller partition and loops on the larger one, ensuring O(log n) stack depth even in adversarial cases</description></item>
 /// </list>
-/// The 3-way partition scheme guarantees progress even on arrays with many duplicate elements.</description></item>
+/// The 3-way partition scheme ensures progress even on arrays with many duplicate elements.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -75,7 +75,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack, O(1) for partitioning)</description></item>
 /// <item><description>Best case   : Θ(n) - Occurs when all elements are equal (entire array becomes the equal region)</description></item>
 /// <item><description>Average case: Θ(n log n) - Expected ~1.39n log₂ n comparisons with 3-way partition</description></item>
-/// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability &lt; 1/n⁹, virtually impossible)</description></item>
+/// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability &lt; 1/n⁹, extremely unlikely)</description></item>
 /// <item><description>Comparisons : ~1.39n log₂ n + 12n (average) - Additional ~12 comparisons per partition for median-of-9 selection</description></item>
 /// <item><description>Swaps       : ~0.33n log₂ n (average) - 3-way partition performs similar swaps to Hoare partition</description></item>
 /// </list>
