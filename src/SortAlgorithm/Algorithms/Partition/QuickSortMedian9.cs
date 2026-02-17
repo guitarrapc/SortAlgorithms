@@ -12,18 +12,23 @@ namespace SortAlgorithm.Algorithms;
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct QuickSort with Median-of-9 Pivot Selection:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Median-of-9 Pivot Selection (Median of Medians):</strong> The pivot value is selected using a two-level median computation:
+/// <item><description><strong>Median-of-9 Pivot Selection (Median of Medians) with Adaptive Fallback:</strong> The pivot value is selected using a two-level median computation for large arrays:
 /// <list type="bullet">
+/// <item><description><strong>For arrays &gt;= 64 elements:</strong> Use full median-of-9 sampling</description></item>
 /// <item><description>Sample 9 elements from evenly distributed positions across the array range [left, right]</description></item>
 /// <item><description>Positions: left, left+m/8, left+m/4, left+m/2-m/8, left+m/2, left+m/2+m/8, right-m/4, right-m/8, right (where m = right - left)</description></item>
 /// <item><description>Divide the 9 samples into 3 groups of 3 elements each</description></item>
 /// <item><description>Compute the median of each group using 2-3 comparisons (9 comparisons total for all groups)</description></item>
 /// <item><description>Compute the median of the three medians using 2-3 additional comparisons</description></item>
 /// <item><description>Total overhead: 11-12 comparisons per partition call</description></item>
+/// <item><description><strong>For arrays &lt; 64 elements:</strong> Fall back to median-of-3 to avoid sampling degeneration</description></item>
+/// <item><description>Rationale: When m/8 becomes 0 (small arrays), median-of-9 samples duplicate indices, wasting comparisons without improving pivot quality</description></item>
+/// <item><description>Example: For 32 elements, m8=2 is still useful; for 16 elements, m8=1 causes overlap; for 8 elements, m8=0 causes severe duplication</description></item>
+/// <item><description>Threshold 64 ensures m8 ≥ 4, maintaining well-distributed sampling across all 9 positions</description></item>
 /// </list>
-/// This sophisticated sampling strategy dramatically reduces worst-case probability from O(1/n³) (median-of-3) to approximately O(1/n⁹),
+/// This sophisticated sampling strategy dramatically reduces worst-case probability from O(1/n³) (median-of-3) to approximately O(1/n⁹) for large arrays,
 /// and provides excellent pivot quality for challenging input patterns such as sorted, reverse-sorted, mountain-shaped, and adversarially-crafted arrays.
-/// The median-of-medians approach guarantees that the pivot is close to the true median, ensuring balanced partitions even on pathological inputs (lines 48, 128-173).</description></item>
+/// The median-of-medians approach guarantees that the pivot is close to the true median, ensuring balanced partitions even on pathological inputs.</description></item>
 /// <item><description><strong>Three-Way Partition (Dijkstra's Dutch National Flag):</strong> The array is partitioned into three regions in a single pass:
 /// <list type="bullet">
 /// <item><description>Initialize pointers: lt = left (boundary for &lt; pivot), gt = right - 1 (boundary for &gt; pivot), i = left (current element)</description></item>
@@ -84,9 +89,10 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Trade-offs vs. Median-of-3:</strong></para>
 /// <list type="bullet">
-/// <item><description>Overhead: 11-12 comparisons per partition (vs. 2-3 for median-of-3), ~4-5× more pivot selection overhead</description></item>
-/// <item><description>Random data: Slightly slower on truly random data due to extra comparisons (~5-10% overhead)</description></item>
-/// <item><description>Small arrays: Overhead is proportionally larger for small subarrays (consider hybrid approach with insertion sort)</description></item>
+/// <item><description>Overhead: 11-12 comparisons per partition for large arrays (vs. 2-3 for median-of-3), ~4-5× more pivot selection overhead</description></item>
+/// <item><description>Adaptive threshold: Arrays &lt; 64 elements automatically fall back to median-of-3 to avoid sampling degeneration</description></item>
+/// <item><description>Random data: Slightly slower on truly random data due to extra comparisons (~5-10% overhead for large arrays)</description></item>
+/// <item><description>Small arrays: Falls back to median-of-3, so overhead is minimal and comparable to pure median-of-3 implementations</description></item>
 /// <item><description>Pathological inputs: Significantly faster on sorted, reverse-sorted, mountain-shaped, and adversarial patterns</description></item>
 /// <item><description>Use case: Best for applications requiring predictable worst-case behavior or processing untrusted/user-generated data</description></item>
 /// </list>
@@ -198,8 +204,23 @@ public static class QuickSortMedian9
     {
         if (left >= right) return;
 
-        // Phase 1. Select pivot using median-of-9 strategy (returns index)
-        var pivotIndex = MedianOf9Index(s, left, right);
+        // Phase 1. Select pivot using median-of-9 or median-of-3 strategy
+        // For small ranges (< 64 elements), median-of-9 sampling degrades due to m8 becoming 0,
+        // causing duplicate index sampling and wasted comparisons. Fall back to median-of-3.
+        int pivotIndex;
+        var rangeSize = right - left + 1;
+        
+        if (rangeSize < 64)
+        {
+            // Small range: use median-of-3 to avoid sampling degeneration
+            var mid = left + (right - left) / 2;
+            pivotIndex = MedianOf3Index(s, left, mid, right);
+        }
+        else
+        {
+            // Large range: use full median-of-9 for superior pivot quality
+            pivotIndex = MedianOf9Index(s, left, right);
+        }
         
         // Move pivot to right position to enable consistent index-based comparison
         // Avoid self-swap when pivot is already at right
