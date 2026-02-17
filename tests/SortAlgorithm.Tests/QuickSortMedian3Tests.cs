@@ -274,10 +274,10 @@ public class QuickSortMedian3Tests
         var sorted = Enumerable.Range(0, n).ToArray();
         QuickSortMedian3.Sort(sorted.AsSpan(), stats);
 
-        // QuickSort Median-of-3 with Hoare partition on sorted data:
+        // QuickSort Median-of-3 with 3-way partition on sorted data:
         // - Median-of-3 selects median of (left, mid, right) as pivot
         // - For sorted data, median of (first, middle, last) is the middle element
-        // - Hoare partition performs bidirectional scanning
+        // - 3-way partition (Dutch National Flag) classifies elements into <, ==, > regions
         //
         // Best case complexity analysis:
         // - Each partition divides array roughly in half
@@ -286,20 +286,20 @@ public class QuickSortMedian3Tests
         //
         // Comparisons:
         // - Median-of-3: 2-3 comparisons per partition call
-        // - Hoare partition: Each element compared with pivot once
+        // - 3-way partition: Each element compared with pivot once
         // - Total: approximately 2n log n comparisons
         //
         // Swaps:
-        // - For sorted data, Hoare partition still performs swaps when l <= r
-        // - Even when elements are in correct relative positions, swaps occur
-        // - Total: approximately 0.5n log n swaps
+        // - 3-way partition performs swaps for both < and > classifications
+        // - For sorted data, many swaps occur as elements are classified
+        // - Total: approximately n log n swaps (higher than Hoare due to 3-way classification)
 
         var minCompares = (ulong)(n); // At minimum, some comparisons occur
         var maxCompares = (ulong)(3 * n * Math.Log(n, 2)); // Upper bound
 
-        // For sorted data with Hoare partition, swaps still occur
+        // For sorted data with 3-way partition, more swaps occur than Hoare
         var minSwaps = 0UL;
-        var maxSwaps = (ulong)(n * Math.Log(n, 2)); // Upper bound
+        var maxSwaps = (ulong)(1.5 * n * Math.Log(n, 2)); // Upper bound (increased for 3-way partition)
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
