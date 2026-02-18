@@ -338,11 +338,31 @@ public static class LibrarySort
         }
 
         // LibrarySort principle: larger range = more gaps available
-        // Use local search around the insertion point (searchEnd) to find nearby gaps efficiently
-        // Search radius scales with range size, as larger ranges likely have more gaps
+        // Choose target based on insertion position to balance gap consumption and prevent clustering:
+        // - Front insertion: prefer left side (near searchStart)
+        // - Back insertion: prefer right side (near searchEnd)
+        // - Middle insertion: use midpoint to balance gap usage
         var rangeSize = searchEnd - searchStart;
         var searchRadius = Math.Min(rangeSize / 2, MaxGapSearchDistance); // Scale with range size, capped at max
-        var gapPos = FindGapNear(aux, searchEnd, searchStart, searchEnd, searchRadius);
+        
+        int gapTarget;
+        if (insertIdx == 0)
+        {
+            // Front insertion: search from left to avoid clustering on right
+            gapTarget = searchStart;
+        }
+        else if (insertIdx >= posCount)
+        {
+            // Back insertion: search from right
+            gapTarget = searchEnd - 1;
+        }
+        else
+        {
+            // Middle insertion: use midpoint to balance gap consumption
+            gapTarget = searchStart + rangeSize / 2;
+        }
+        
+        var gapPos = FindGapNear(aux, gapTarget, searchStart, searchEnd, searchRadius);
 
         if (gapPos != -1)
         {
