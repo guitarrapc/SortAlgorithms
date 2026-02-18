@@ -4,11 +4,10 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// 配列から、常に最大の要素をルートにもつ3分木ヒープ（ternary heap）を作成します（この時点で不安定）。
-/// その後、ルート要素をソート済み配列の末尾に移動し、ヒープの末端をルートに持ってきて再度ヒープ構造を維持します。これを繰り返すことで、ヒープの最大値が常にルートに保たれ、ソート済み配列に追加されることで自然とソートが行われます。
+/// その後、ルート（最大値）と末尾要素を読み取り、末尾要素をヒープに sift-down してからルート値を末尾に書き込みます。これを繰り返すことで、ヒープの最大値が常にルートに保たれ、ソート済み配列に追加されることで自然とソートが行われます。
 /// <br/>
 /// Builds a ternary heap (3-ary heap) from the array where the root always contains the maximum element (which is inherently unstable).
-/// Then, the root element is moved to the end of the sorted array, the last element is moved to the root, and the heap structure is re-established.
-/// Repeating this process ensures that the maximum value in the heap is always at the root, allowing elements to be naturally sorted as they are moved to the sorted array.
+/// Then, the root (maximum) and the last element are read; the last element is sifted down into the heap, and the maximum is written to the end. Repeating this process ensures that the maximum value in the heap is always at the root, allowing elements to be naturally sorted as they are moved to the sorted array.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Ternary Heapsort:</strong></para>
@@ -150,11 +149,11 @@ public static class TernaryHeapSort
         // Extract elements from heap
         for (var i = last - 1; i > first; i--)
         {
-            // Move current root to end
-            s.Swap(first, i);
-
-            // Re-heapify the reduced heap (standard sift-down)
-            Heapify(s, first, i - first, first);
+            // Save max (root) and the last element, then sift down the last element
+            var max = s.Read(first);
+            var lastVal = s.Read(i);
+            Heapify(s, first, i - first, first, lastVal);
+            s.Write(i, max);
         }
     }
 
@@ -214,6 +213,7 @@ public static class TernaryHeapSort
         s.Write(hole, rootValue);
     }
 
+
     /// <summary>
     /// Restores the ternary heap property for a subtree rooted at the specified index using iterative sift-down.
     /// Used during the extraction phase after removing the root element.
@@ -223,53 +223,48 @@ public static class TernaryHeapSort
     /// <param name="root">The index of the root node of the subtree to heapify.</param>
     /// <param name="size">The size of the heap (number of elements to consider).</param>
     /// <param name="offset">The starting index offset for the heap within the span.</param>
+    /// <param name="value">The value to sift down from the root position. Passed by the caller to avoid a redundant Read inside this method.</param>
     /// <remarks>
-    /// This method implements the standard sift-down operation to maintain the max-heap property for a ternary heap.
-    /// It iteratively compares the parent node with its three children (left, middle, right), swapping with the largest child if needed,
-    /// and continues down the tree until the heap property is satisfied or a leaf node is reached.
+    /// This method implements hole-based sift-down to maintain the max-heap property for a ternary heap.
+    /// It iteratively finds the largest among three children, moves it up to fill the hole, then writes the value at the correct position.
+    /// This eliminates swaps compared to the swap-based approach.
     /// <para>In a ternary heap, for parent index i (offset-adjusted): children are at 3*(i-offset)+1+offset, 3*(i-offset)+2+offset, 3*(i-offset)+3+offset</para>
     /// <para>Time Complexity: O(log₃ n) - Worst case traverses from root to leaf (height of the tree is log₃ n).</para>
     /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
     /// </remarks>
-    private static void Heapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset)
+    private static void Heapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset, T value)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var hole = root;
+
         while (true)
         {
-            var largest = root;
-            var child1 = 3 * (root - offset) + 1 + offset; // First child
-            var child2 = 3 * (root - offset) + 2 + offset; // Second child
-            var child3 = 3 * (root - offset) + 3 + offset; // Third child
+            var child1 = 3 * (hole - offset) + 1 + offset; // First child
+            var child2 = 3 * (hole - offset) + 2 + offset; // Second child
+            var child3 = 3 * (hole - offset) + 3 + offset; // Third child
 
-            // If first child is larger than root
-            if (child1 < offset + size && s.Compare(child1, largest) > 0)
-            {
-                largest = child1;
-            }
+            if (child1 >= offset + size) break;
 
-            // If second child is larger than largest so far
+            // Find largest among three children
+            var largest = child1;
             if (child2 < offset + size && s.Compare(child2, largest) > 0)
             {
                 largest = child2;
             }
-
-            // If third child is larger than largest so far
             if (child3 < offset + size && s.Compare(child3, largest) > 0)
             {
                 largest = child3;
             }
 
-            // If largest is not root, swap and heapify the affected sub-tree
-            if (largest != root)
-            {
-                s.Swap(root, largest);
-                root = largest;
-            }
-            else
-            {
-                break;
-            }
+            // If value is already >= largest child, heap property is satisfied
+            if (s.Compare(value, largest) >= 0) break;
+
+            // Move largest child up to fill the hole
+            s.Write(hole, s.Read(largest));
+            hole = largest;
         }
+
+        s.Write(hole, value);
     }
 }

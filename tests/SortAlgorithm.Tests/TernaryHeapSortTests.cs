@@ -241,7 +241,8 @@ public class TernaryHeapSortTests
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
         await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
         await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.SwapCount).IsNotEqualTo(0UL);
+        // Floyd-style extraction eliminates all swaps
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
     [Test]
@@ -255,16 +256,13 @@ public class TernaryHeapSortTests
         var sorted = Enumerable.Range(0, n).ToArray();
         TernaryHeapSort.Sort(sorted.AsSpan(), stats);
 
-        // Ternary Heap Sort characteristics:
-        // Build heap phase: O(n) comparisons with some swaps even for sorted data
+        // Ternary Heap Sort with Floyd-style extraction:
+        // Build heap phase: O(n) comparisons using Floyd's heap construction
         // Extract phase: (n-1) extractions, each requiring O(log₃ n) heapify
-        // Each heapify compares with 3 children instead of 2
+        // Floyd-style extraction: Read root + last, sift down last, write root to end
+        // No swaps needed in extraction phase
         //
-        // Empirical observations for sorted data:
-        // n=10:  Compare=42,  Swap=26
-        // n=20:  Compare=126, Swap=64
-        // n=50:  Compare=449, Swap=198
-        // n=100: Compare=1101, Swap=464
+        // Each heapify compares with 3 children instead of 2
         //
         // Pattern: approximately n * log₃(n) * 3 ≈ n * log₂(n) * 1.9 for compares
 
@@ -272,18 +270,18 @@ public class TernaryHeapSortTests
         var minCompares = (ulong)(n * logN * 1.0);
         var maxCompares = (ulong)(n * logN * 4.5 + n);
 
-        var minSwaps = (ulong)(n * logN * 0.5);
-        var maxSwaps = (ulong)(n * logN * 2.5);
+        // Floyd-style extraction eliminates all swaps
+        var expectedSwaps = 0UL;
 
-        // Each swap writes 2 elements
-        var minWrites = minSwaps * 2;
-        var maxWrites = maxSwaps * 2;
+        // Writes: FloydHeapify during build + hole-based heapify during extraction
+        var minWrites = (ulong)(n * logN * 1.0);
+        var maxWrites = (ulong)(n * logN * 4.0 + n * 2);
 
         // Each comparison reads 2 elements
         var minIndexReads = minCompares * 2;
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
+        await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
@@ -299,14 +297,10 @@ public class TernaryHeapSortTests
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         TernaryHeapSort.Sort(reversed.AsSpan(), stats);
 
-        // Ternary Heap Sort has O(n log n) time complexity regardless of input order
+        // Ternary Heap Sort with Floyd-style extraction has O(n log n) time complexity regardless of input order
         // Reversed data shows similar patterns to sorted data due to heap property
-        //
-        // Empirical observations for reversed data:
-        // n=10:  Compare=37,  Swap=19
-        // n=20:  Compare=110, Swap=46
-        // n=50:  Compare=393, Swap=159
-        // n=100: Compare=986, Swap=382
+        // Floyd-style extraction: Read root + last, sift down last, write root to end
+        // No swaps needed in extraction phase
         //
         // Pattern: approximately n * log₃(n) * 3 for compares
 
@@ -314,18 +308,18 @@ public class TernaryHeapSortTests
         var minCompares = (ulong)(n * logN * 1.0);
         var maxCompares = (ulong)(n * logN * 4.5 + n);
 
-        var minSwaps = (ulong)(n * logN * 0.4);
-        var maxSwaps = (ulong)(n * logN * 2.2);
+        // Floyd-style extraction eliminates all swaps
+        var expectedSwaps = 0UL;
 
-        // Each swap writes 2 elements
-        var minWrites = minSwaps * 2;
-        var maxWrites = maxSwaps * 2;
+        // Writes: FloydHeapify during build + hole-based heapify during extraction
+        var minWrites = (ulong)(n * logN * 1.0);
+        var maxWrites = (ulong)(n * logN * 4.0 + n * 2);
 
         // Each comparison reads 2 elements
         var minIndexReads = minCompares * 2;
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
+        await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
@@ -341,14 +335,10 @@ public class TernaryHeapSortTests
         var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
         TernaryHeapSort.Sort(random.AsSpan(), stats);
 
-        // Ternary Heap Sort has consistent O(n log n) time complexity for random data
+        // Ternary Heap Sort with Floyd-style extraction has consistent O(n log n) time complexity for random data
         // The values are similar to sorted/reversed cases
-        //
-        // Empirical observations for random data (averaged over 5 runs):
-        // n=10:  Compare=40,  Swap=22
-        // n=20:  Compare=117, Swap=57
-        // n=50:  Compare=415, Swap=180
-        // n=100: Compare=1015, Swap=422
+        // Floyd-style extraction: Read root + last, sift down last, write root to end
+        // No swaps needed in extraction phase
         //
         // Pattern: approximately n * log₃(n) * 3, with variation due to randomness
 
@@ -356,18 +346,18 @@ public class TernaryHeapSortTests
         var minCompares = (ulong)(n * logN * 1.0);
         var maxCompares = (ulong)(n * logN * 4.5 + n);
 
-        var minSwaps = (ulong)(n * logN * 0.5);
-        var maxSwaps = (ulong)(n * logN * 2.5);
+        // Floyd-style extraction eliminates all swaps
+        var expectedSwaps = 0UL;
 
-        // Each swap writes 2 elements
-        var minWrites = minSwaps * 2;
-        var maxWrites = maxSwaps * 2;
+        // Writes: FloydHeapify during build + hole-based heapify during extraction
+        var minWrites = (ulong)(n * logN * 1.0);
+        var maxWrites = (ulong)(n * logN * 4.0 + n * 2);
 
         // Each comparison reads 2 elements
         var minIndexReads = minCompares * 2;
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
+        await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
