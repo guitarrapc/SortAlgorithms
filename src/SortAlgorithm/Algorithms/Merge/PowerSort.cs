@@ -18,11 +18,12 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Key Innovations over TimSort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Power-based Merge Strategy:</strong> Instead of TimSort's invariant-based approach,
-/// PowerSort assigns each run a "power" value based on its position and length relative to the total array size.
-/// Runs are merged when their power values indicate it's optimal, leading to a more balanced merge tree.
-/// The power is calculated as: power = floor(log2(n / runLength)).</description></item>
-/// <item><description><strong>Simpler Merge Logic:</strong> PowerSort uses a simpler merge condition (power[i-1] ≤ power[i])
-/// compared to TimSort's two invariants. This simplicity leads to fewer edge cases and more predictable behavior.</description></item>
+/// PowerSort assigns each pair of adjacent runs a "node power" based on the first bit position where the
+/// normalized midpoints of the two runs diverge in binary. Runs are merged when their boundary powers indicate
+/// it's optimal, leading to a more balanced merge tree.</description></item>
+/// <item><description><strong>Simpler Merge Logic:</strong> PowerSort uses a simpler merge condition: merge when the
+/// previous boundary power exceeds the new boundary power (bp[i-1] &gt; p), maintaining non-decreasing boundary powers
+/// on the stack. This single condition replaces TimSort's two invariants, with fewer edge cases and more predictable behavior.</description></item>
 /// <item><description><strong>Provably Optimal Merge Costs:</strong> PowerSort has been proven to achieve optimal merge costs
 /// up to lower-order terms, matching the theoretical lower bound for comparison-based sorting.</description></item>
 /// </list>
@@ -30,12 +31,13 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="number">
 /// <item><description><strong>Run Detection:</strong> Same as TimSort - identify maximal monotonic sequences (runs).
 /// Ascending runs use ≤ comparison for stability, descending runs use &gt; and are reversed.</description></item>
-/// <item><description><strong>Run Extension:</strong> Short runs (&lt; MIN_MERGE) are extended using Binary Insertion Sort
-/// to ensure efficient merging, maintaining minimum run length of 32 elements.</description></item>
-/// <item><description><strong>Power Calculation:</strong> For each run spanning [beginA..endB) in an array of size n,
-/// compute power = floor(log2(n / (endB - beginA))). This determines merge priority.</description></item>
-/// <item><description><strong>Merge Condition:</strong> Merge adjacent runs when power[i-1] ≤ power[i].
-/// This ensures merges happen at the right time to minimize total merge cost.</description></item>
+/// <item><description><strong>Run Extension:</strong> Short runs (&lt; minRun) are extended using Binary Insertion Sort
+/// to ensure efficient merging, targeting minRun elements (adaptively computed as 16-32 for large arrays).</description></item>
+/// <item><description><strong>NodePower Calculation:</strong> For each pair of adjacent runs [s1..e1) and [s2..e2) in an array of size n,
+/// the node power is the first bit position where the normalized midpoints a=(s1+n1/2)/n and b=(s2+n2/2)/n diverge in binary.
+/// Computed via UInt128 fixed-point arithmetic with LeadingZeroCount for efficiency.</description></item>
+/// <item><description><strong>Merge Condition:</strong> Merge runs when the previous boundary power exceeds the new boundary power (bp[i-1] &gt; p).
+/// This maintains non-decreasing boundary powers on the stack, ensuring nearly-optimal total merge cost.</description></item>
 /// <item><description><strong>Stable Merging:</strong> Uses the same galloping merge as TimSort, preserving stability
 /// with ≤ comparison when choosing from the left run during merge operations.</description></item>
 /// </list>
@@ -61,9 +63,9 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
-/// <item><description>MIN_MERGE = 32: Minimum run length, same as TimSort</description></item>
+/// <item><description>MIN_MERGE = 32: Arrays smaller than this are sorted directly with BinaryInsertionSort. Also the basis for computing adaptive minRun (16-32), same as TimSort.</description></item>
 /// <item><description>MIN_GALLOP = 7: Threshold for galloping mode during merges</description></item>
-/// <item><description>Power calculation: Uses bit manipulation for efficient log2 computation</description></item>
+/// <item><description>NodePower calculation: Uses UInt128 fixed-point arithmetic and LeadingZeroCount to find the first bit where normalized run midpoints diverge.</description></item>
 /// <item><description>Merge operations: Reuses TimSort's galloping merge for efficiency</description></item>
 /// <item><description>ArrayPool: Uses ArrayPool&lt;T&gt;.Shared to minimize GC pressure</description></item>
 /// </list>
