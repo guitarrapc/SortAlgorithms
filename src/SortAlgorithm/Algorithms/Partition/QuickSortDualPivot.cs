@@ -394,8 +394,7 @@ public static class QuickSortDualPivot
     }
 
     /// <summary>
-    /// Sorts 3 elements. 2-3 compares, 0-2 swaps.
-    /// Guarantees x <= y <= z. Not stable (uses swaps).
+    /// Sorts 3 elements. Stable, 2-3 compares, 0-2 swaps.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x, int y, int z)
@@ -423,8 +422,7 @@ public static class QuickSortDualPivot
     }
 
     /// <summary>
-    /// Sorts 4 elements using insertion sort. 3-6 compares, 0-5 swaps.
-    /// Guarantees x1 <= x2 <= x3 <= x4. Not stable (uses swaps).
+    /// Sorts 4 elements. Stable, 3-6 compares, 0-5 swaps.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort4<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4)
@@ -447,8 +445,7 @@ public static class QuickSortDualPivot
     }
 
     /// <summary>
-    /// Sorts 5 elements using insertion sort. 4-10 compares, 0-9 swaps.
-    /// Guarantees x1 <= x2 <= x3 <= x4 <= x5. Not stable (uses swaps).
+    /// Sorts 5 elements. Stable, 4-10 compares, 0-9 swaps.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4, int x5)
