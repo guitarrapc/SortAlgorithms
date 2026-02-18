@@ -136,7 +136,8 @@ public static class BottomupMergeSort
 
         // Iterate through merge sizes: 1, 2, 4, 8, ..., until size >= n
         // Each pass doubles the size of sorted subarrays
-        for (var size = 1; size < n; size *= 2)
+        // Guard against overflow: size > 0 ensures we stop if size * 2 overflows to negative
+        for (var size = 1; size < n && size > 0; size *= 2)
         {
             // Merge adjacent pairs of subarrays of 'size'
             for (var left = 0; left < n - size; left += size * 2)
