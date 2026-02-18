@@ -189,21 +189,18 @@ public static class RotateMergeSort
             }
             else
             {
-                // s[start1] > s[start2] and [start1..mid] is sorted, so start1 is already the insertion point
-                var insertPos = start1;
-
-                // Galloping optimization: Find the end of consecutive elements in right partition
-                // that belong before insertPos using exponential search + binary search
-                var start2End = GallopingSearchEnd(s, insertPos, start2, right);
+                // s[start1] > s[start2] and [start1..mid] is sorted, so start1 is already the insertion point.
+                // Galloping: find how many consecutive right-partition elements are all less than s[start1]
+                var start2End = GallopingSearchEnd(s, start1, start2, right);
 
                 var blockSize = start2End - start2 + 1;
-                var rotateDistance = start2 - insertPos;
+                var rotateDistance = start2 - start1;
 
-                // Rotate the block [insertPos..start2End] to move all elements at once
-                Rotate(s, insertPos, start2End, rotateDistance);
+                // Rotate the block [start1..start2End] to move all elements at once
+                Rotate(s, start1, start2End, rotateDistance);
 
                 // Update pointers after moving the block
-                start1 = insertPos + blockSize;
+                start1 += blockSize;
                 mid += blockSize;
                 start2 = start2End + 1;
             }
@@ -212,15 +209,16 @@ public static class RotateMergeSort
 
     /// <summary>
     /// Finds the end position of consecutive elements from the right partition using galloping.
+    /// Scans right partition for elements all less than s[leftBoundary], the left boundary element.
     /// Uses exponential search followed by binary search for efficiency.
     /// This is similar to TimSort's galloping mode.
     /// </summary>
     /// <param name="s">The SortSpan wrapping the array</param>
-    /// <param name="insertPos">The position where elements should be inserted</param>
+    /// <param name="leftBoundary">The index of the left partition boundary element (start1) to compare against</param>
     /// <param name="start">The start position in the right partition</param>
     /// <param name="end">The end position in the right partition</param>
-    /// <returns>The last index where elements should still be inserted before insertPos</returns>
-    private static int GallopingSearchEnd<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int insertPos, int start, int end)
+    /// <returns>The last index in the right partition where s[i] &lt; s[leftBoundary]</returns>
+    private static int GallopingSearchEnd<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int leftBoundary, int start, int end)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -229,7 +227,7 @@ public static class RotateMergeSort
         var lastGood = start;
         var step = 1;
 
-        while (start + step <= end && s.Compare(insertPos, start + step) > 0)
+        while (start + step <= end && s.Compare(leftBoundary, start + step) > 0)
         {
             lastGood = start + step;
             step *= 2;  // Exponential growth
@@ -239,12 +237,12 @@ public static class RotateMergeSort
         var low = lastGood;
         var high = Math.Min(start + step, end);
 
-        // Binary search to find the last element that should be before insertPos
+        // Binary search to find the last element that is less than s[leftBoundary]
         while (low < high)
         {
             var mid = low + (high - low + 1) / 2;
 
-            if (s.Compare(insertPos, mid) > 0)
+            if (s.Compare(leftBoundary, mid) > 0)
             {
                 low = mid;
             }
