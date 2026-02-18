@@ -59,7 +59,7 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
 /// <item><description>Stable      : Yes (preserves relative order of equal elements)</description></item>
-/// <item><description>In-place    : No (O(n) auxiliary space per recursion level, O(log n) recursion stack)</description></item>
+/// <item><description>In-place    : No (O(n) total auxiliary space across all active recursion levels, O(log n) recursion stack)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Occurs when pivot consistently divides array into balanced partitions</description></item>
 /// <item><description>Average case: Θ(n log n) - Expected ~n log₂ n comparisons with median-of-3 pivot selection</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability ~1/n³ with median-of-3)</description></item>
@@ -188,7 +188,7 @@ public static class StableQuickSort
             var length = right - left + 1;
             var q1 = left + length / 4;
             var mid = left + length / 2;
-            var q3 = left + (length * 3) / 4;
+            var q3 = right - length / 4;   // overflow-safe: equivalent to left + length*3/4
             var pivotIndex = MedianOf3Index(s, q1, mid, q3);
 
             // Phase 2. Stable partition using ArrayPool buffer
@@ -229,13 +229,14 @@ public static class StableQuickSort
     /// - [left, lessEnd): elements less than pivot
     /// - [lessEnd, greaterStart): elements equal to pivot
     /// - [greaterStart, right + 1): elements greater than pivot
+    /// Uses O(n) temporary buffer per call; since recursive calls cover disjoint subranges,
+    /// the total auxiliary space across all active stack frames is O(n).
     /// </summary>
     private static (int lessEnd, int greaterStart) StablePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var length = right - left + 1;
-        // BufferId=1: TEMPバッファーとして可視化・統計に反映
         var tempBuffer = ArrayPool<T>.Shared.Rent(length);
         var tempSpan = new Span<T>(tempBuffer, 0, length);
         var tempSortSpan = new SortSpan<T, TComparer, TContext>(tempSpan, s.Context, s.Comparer, 1);
@@ -244,7 +245,6 @@ public static class StableQuickSort
         {
             var lessIdx = 0;
             var equalIdx = 0;
-            var greaterIdx = 0;
 
             // Phase 1: Count elements in each partition
             // Use index-based comparison to avoid copying large struct pivot values
@@ -260,17 +260,13 @@ public static class StableQuickSort
                 {
                     equalIdx++;
                 }
-                else
-                {
-                    greaterIdx++;
-                }
             }
 
             var lessEnd = lessIdx;
             var equalEnd = lessIdx + equalIdx;
             lessIdx = 0;
             equalIdx = lessEnd;
-            greaterIdx = equalEnd;
+            var greaterIdx = equalEnd;
 
             // Phase 2: Distribute elements to buffer maintaining order (SortSpan経由)
             // Short-circuit when i == pivotIndex: pivot always compares equal to itself
