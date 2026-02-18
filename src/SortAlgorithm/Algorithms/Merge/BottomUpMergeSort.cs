@@ -26,9 +26,10 @@ namespace SortAlgorithm.Algorithms;
 /// Pass 2: Merge pairs [0,3], [4,7], [8,11], ... (size 2 → 4)
 /// Pass k: Merge pairs of size 2^k into size 2^(k+1)
 /// This guarantees exactly ⌈log₂(n)⌉ passes regardless of input order.</description></item>
-/// <item><description><strong>Merge Step (Sorted Subarray Combination):</strong> Each merge combines two adjacent sorted subarrays [left..mid] and [mid+1..right].
-/// The merge requires O(n) auxiliary space to temporarily hold one subarray during combination.
-/// Elements are compared and written in ascending order, preserving stability by taking from left first when equal (using &lt;= comparison).</description></item>
+/// <item><description><strong>Merge Step (Ping-Pong Buffering):</strong> Each pass reads entirely from src and writes all n elements to dst, then swaps src/dst roles.
+/// This avoids the per-merge partial copy used in naive implementations: instead of copying only the left half before each merge,
+/// every element is written exactly once per pass in a regular, sequential pattern.
+/// If the final result lands in the auxiliary buffer, a single O(n) copy returns it to the original span.</description></item>
 /// <item><description><strong>Boundary Handling:</strong> For arrays whose length is not a power of 2, the final subarray in each pass may be smaller.
 /// The algorithm must correctly handle three cases:
 /// (a) Two complete subarrays of size s
@@ -50,7 +51,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n) - Guaranteed performance regardless of input</description></item>
 /// <item><description>Comparisons : O(n log n) - At most n⌈log₂(n)⌉ - 2^⌈log₂(n)⌉ + 1 comparisons</description></item>
 /// <item><description>Writes      : O(n log n) - Each pass writes all n elements, ⌈log₂(n)⌉ passes total</description></item>
-/// <item><description>Space       : O(n) - Auxiliary buffer of size n/2 for merging (uses ArrayPool for efficiency)</description></item>
+/// <item><description>Space       : O(n) - Full-size auxiliary buffer for ping-pong passes (uses ArrayPool for efficiency)</description></item>
 /// <item><description>Stack       : O(1) - No recursion, constant stack usage (unlike O(log n) for top-down)</description></item>
 /// </list>
 /// <para><strong>Advantages Over Top-Down Merge Sort:</strong></para>
@@ -123,8 +124,9 @@ public static class BottomupMergeSort
     }
 
     /// <summary>
-    /// Core bottom-up merge sort implementation.
-    /// Iteratively merges subarrays of size 1, 2, 4, 8, ... until the entire array is sorted.
+    /// Core bottom-up merge sort implementation using ping-pong buffering.
+    /// Each pass reads from src and writes all elements to dst, then swaps src/dst.
+    /// This eliminates the per-merge partial copy, making memory access more regular.
     /// </summary>
     /// <param name="s">The SortSpan wrapping the span to sort</param>
     /// <param name="b">The SortSpan wrapping the auxiliary buffer for merging</param>
@@ -133,75 +135,93 @@ public static class BottomupMergeSort
         where TContext : ISortContext
     {
         var n = s.Length;
+        var src = s;
+        var dst = b;
+        var srcIsOriginal = true;
 
         // Iterate through merge sizes: 1, 2, 4, 8, ..., until size >= n
-        // Each pass doubles the size of sorted subarrays
-        for (var size = 1; size < n; size *= 2)
+        // Each pass writes all elements from src to dst (ping-pong)
+        // Guard against overflow: size > 0 ensures we stop if size * 2 overflows to negative
+        for (var size = 1; size < n && size > 0; size *= 2)
         {
-            // Merge adjacent pairs of subarrays of 'size'
-            for (var left = 0; left < n - size; left += size * 2)
+            for (var left = 0; left < n; left += size * 2)
             {
-                // Calculate mid and right boundaries
-                var mid = left + size - 1;
-                var right = Math.Min(left + size * 2 - 1, n - 1);
+                var mid = left + size;                      // exclusive end of left half
+                var right = Math.Min(left + size * 2, n);  // exclusive end of right half
 
-                // Optimization: Skip merge if already sorted
-                if (s.Compare(mid, mid + 1) <= 0)
+                if (mid >= n)
+                {
+                    // Only left half exists: copy it to dst as-is
+                    src.CopyTo(left, dst, left, n - left);
+                    break;
+                }
+
+                // Optimization: Skip merge if already sorted (still copy to dst)
+                if (src.Compare(mid - 1, mid) <= 0)
+                {
+                    src.CopyTo(left, dst, left, right - left);
                     continue;
+                }
 
-                // Merge two adjacent sorted subarrays
-                Merge(s, b, left, mid, right);
+                // Merge src[left..mid) and src[mid..right) into dst[left..right)
+                MergePingPong(src, dst, left, mid, right);
             }
+
+            // Swap src and dst for next pass (ref struct cannot use tuple deconstruction)
+            var tmp = src;
+            src = dst;
+            dst = tmp;
+            srcIsOriginal = !srcIsOriginal;
+        }
+
+        // If final result ended up in b (not s), copy it back to s
+        if (!srcIsOriginal)
+        {
+            src.CopyTo(0, s, 0, n);
         }
     }
 
     /// <summary>
-    /// Merges two sorted subarrays [left..mid] and [mid+1..right] using buffer as auxiliary space.
+    /// Merges two sorted subarrays src[left..mid) and src[mid..right) into dst[left..right).
+    /// Reads entirely from src and writes entirely to dst (ping-pong style).
     /// </summary>
-    /// <param name="s">The SortSpan wrapping the main array</param>
-    /// <param name="b">The SortSpan wrapping the auxiliary buffer</param>
-    /// <param name="left">The inclusive start index of the left subarray</param>
-    /// <param name="mid">The inclusive end index of the left subarray</param>
-    /// <param name="right">The inclusive end index of the right subarray</param>
-    private static void Merge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b, int left, int mid, int right)
+    /// <param name="src">The SortSpan to read from</param>
+    /// <param name="dst">The SortSpan to write into</param>
+    /// <param name="left">The inclusive start index</param>
+    /// <param name="mid">The exclusive end of left half / inclusive start of right half</param>
+    /// <param name="right">The exclusive end of right half</param>
+    private static void MergePingPong<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> src, SortSpan<T, TComparer, TContext> dst, int left, int mid, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var leftLength = mid - left + 1;
+        var l = left;  // pointer into left half  src[left..mid)
+        var r = mid;   // pointer into right half src[mid..right)
+        var k = left;  // pointer into dst
 
-        // Copy left partition to buffer to avoid overwriting during merge
-        s.CopyTo(left, b, 0, leftLength);
-
-        var l = 0;           // Index in buffer (left partition copy, 0-based)
-        var r = mid + 1;     // Index in span (right partition starts after mid)
-        var k = left;        // Index in result (span, starts at left)
-
-        // Merge: compare elements from buffer (left) and right partition
-        while (l < leftLength && r <= right)
+        // Merge: compare elements from left and right halves, write to dst
+        while (l < mid && r < right)
         {
-            var leftValue = b.Read(l);
-            var rightValue = s.Read(r);
+            var leftValue = src.Read(l);
+            var rightValue = src.Read(r);
 
             // Stability: use <= to take from left when equal
-            if (s.Compare(leftValue, rightValue) <= 0)
+            if (src.Compare(leftValue, rightValue) <= 0)
             {
-                s.Write(k, leftValue);
+                dst.Write(k, leftValue);
                 l++;
             }
             else
             {
-                s.Write(k, rightValue);
+                dst.Write(k, rightValue);
                 r++;
             }
             k++;
         }
 
-        // Copy remaining elements from buffer (left partition) if any
-        if (l < leftLength)
-        {
-            b.CopyTo(l, s, k, leftLength - l);
-        }
-
-        // Right partition elements are already in place, no need to copy
+        // Copy remaining elements from whichever half is not exhausted
+        if (l < mid)
+            src.CopyTo(l, dst, k, mid - l);
+        else if (r < right)
+            src.CopyTo(r, dst, k, right - r);
     }
 }

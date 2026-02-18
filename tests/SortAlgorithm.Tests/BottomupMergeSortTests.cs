@@ -173,37 +173,35 @@ public class BottomupMergeSortTests
         var sorted = Enumerable.Range(0, n).ToArray();
         BottomupMergeSort.Sort(sorted.AsSpan(), stats);
 
-        // Bottom-Up Merge Sort with optimization for sorted data:
-        // Unlike top-down merge sort, bottom-up processes all merge levels explicitly.
-        // With the "skip merge if already sorted" optimization,
-        // sorted data only requires skip-check comparisons at each merge level.
+        // Bottom-Up Merge Sort (Ping-Pong) with optimization for sorted data:
+        // With ping-pong buffering, each pass writes all n elements to dst buffer (via CopyTo).
+        // Even when merges are skipped, the entire array is copied to maintain ping-pong invariant.
         //
-        // Bottom-up iterates through merge sizes: 1, 2, 4, 8, ...
-        // At each level, it checks if adjacent partitions are already sorted.
-        // For completely sorted data:
-        // - Pass 1 (size 1→2): n/2 checks
-        // - Pass 2 (size 2→4): n/4 checks
-        // - Pass k: n/2^k checks
+        // Comparisons for sorted data with optimization:
+        // - Pass 1 (size 1→2): n/2 skip checks
+        // - Pass 2 (size 2→4): n/4 skip checks
+        // - Pass k: n/2^k skip checks
         // Total: n/2 + n/4 + n/8 + ... ≈ n-1 comparisons
-        //
-        // Actual observations for sorted data with optimization:
-        // n=10:  9 comparisons    (n-1)
-        // n=20:  19 comparisons   (n-1)
-        // n=50:  49 comparisons   (n-1)
-        // n=100: 99 comparisons   (n-1)
         //
         // Pattern for sorted data: n-1 comparisons (skip checks only)
         var minCompares = (ulong)(n - 1);
         var maxCompares = (ulong)(n);
 
-        // Bottom-Up Merge Sort writes with optimization:
-        // For sorted data, merges are skipped, so writes = 0
-        var minWrites = 0UL;
-        var maxWrites = 0UL;
+        // Writes for sorted data (Ping-Pong):
+        // Each pass copies all n elements even when skipping merges.
+        // Total passes: ⌈log₂(n)⌉
+        // Total writes: n * ⌈log₂(n)⌉
+        // n=10:  30-40 (n * 3-4 passes)
+        // n=20:  80-100 (n * 4-5 passes)
+        // n=50:  280-300 (n * 5.6-6 passes)
+        // n=100: 600-700 (n * 6-7 passes)
+        var logN = Math.Ceiling(Math.Log2(n));
+        var minWrites = (ulong)(n * logN * 0.9);
+        var maxWrites = (ulong)(n * (logN + 1) * 1.1);
 
-        // Reads for sorted data: Only skip-check comparisons
-        // Each comparison reads 2 elements
-        var minReads = stats.CompareCount * 2;
+        // Reads for sorted data: Skip-check comparisons (2 reads per compare) + CopyTo reads
+        // CopyTo reads: n * ⌈log₂(n)⌉
+        var minReads = (ulong)(n * logN * 0.9);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
@@ -222,33 +220,26 @@ public class BottomupMergeSortTests
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         BottomupMergeSort.Sort(reversed.AsSpan(), stats);
 
-        // Bottom-Up Merge Sort comparisons for reversed data:
-        // Reversed data cannot skip merges, so all merge operations occur.
-        // Bottom-up performs exactly ⌈log₂(n)⌉ passes, merging all adjacent pairs.
+        // Bottom-Up Merge Sort (Ping-Pong) for reversed data:
+        // Reversed data requires all merges (no skipping).
+        // Each pass performs merges and writes all n elements to dst.
         //
-        // For reversed data, each merge compares most elements:
-        // - Each level k merges subarrays of size 2^k
-        // - Merging two subarrays of size m requires ~2m-1 comparisons in worst case
-        // - Total: approximately 0.5 * n * log₂(n) to 1.0 * n * log₂(n)
-        //
-        // Actual observations for reversed data:
-        // n=10:  24 comparisons   (~0.72 * n * log₂(n))
-        // n=20:  59 comparisons   (~0.68 * n * log₂(n))
-        // n=50:  182 comparisons  (~0.64 * n * log₂(n))
-        // n=100: 415 comparisons  (~0.62 * n * log₂(n))
-        //
-        // Pattern for reversed: approximately 0.6 * n * log₂(n) to 0.75 * n * log₂(n)
+        // Comparisons: ~0.5-0.75 * n * log₂(n) (unchanged from non-ping-pong)
         var logN = Math.Log2(n);
         var minCompares = (ulong)(n * logN * 0.5);
         var maxCompares = (ulong)(n * logN * 0.8);
 
-        // Writes for reversed data are higher than comparisons
-        // Actual: n=10→57, n=20→144, n=50→455, n=100→1060
-        // Pattern: approximately 1.5 * n * log₂(n) to 1.8 * n * log₂(n)
-        var minWrites = (ulong)(n * logN * 1.4);
-        var maxWrites = (ulong)(n * Math.Ceiling(logN) * 1.9);
+        // Writes for reversed data (Ping-Pong):
+        // Each pass writes all n elements (merge writes + remaining CopyTo).
+        // Total: n * ⌈log₂(n)⌉
+        // n=10:  30-40, n=20:  80-100, n=50:  280-300, n=100: 600-700
+        var ceilLogN = Math.Ceiling(logN);
+        var minWrites = (ulong)(n * ceilLogN * 0.9);
+        var maxWrites = (ulong)(n * (ceilLogN + 1) * 1.1);
 
-        var minReads = stats.CompareCount * 2;
+        // Reads: comparisons (2 per compare) + merge reads + CopyTo reads
+        // Total reads: approximately n * log₂(n) * 1.5-2.5
+        var minReads = (ulong)(n * logN * 1.0);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
@@ -267,29 +258,24 @@ public class BottomupMergeSortTests
         var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
         BottomupMergeSort.Sort(random.AsSpan(), stats);
 
-        // Bottom-Up Merge Sort with optimization for random data:
-        // Random data can have some sorted partitions, allowing skip optimization.
-        // However, bottom-up still processes all merge levels explicitly.
-        // Comparisons vary based on how many partitions are already sorted.
-        //
-        // Actual observations for random data with optimization:
-        // n=10:  ~27-35 comparisons  (~0.81-1.05 * n * log₂(n))
-        // n=20:  ~75-90 comparisons  (~0.87-1.04 * n * log₂(n))
-        // n=50:  ~260-280 comparisons (~0.91-0.98 * n * log₂(n))
-        // n=100: ~620-650 comparisons (~0.93-0.98 * n * log₂(n))
-        //
-        // Pattern for random: approximately 0.75 * n * log₂(n) to 1.1 * n * log₂(n)
-        // (wider range due to randomness and optimization)
+        // Bottom-Up Merge Sort (Ping-Pong) for random data:
+        // Random data has some skip opportunities but mostly requires merges.
+        // Comparisons: ~0.75-1.1 * n * log₂(n) (unchanged)
         var logN = Math.Log2(n);
         var minCompares = (ulong)(n * logN * 0.5);
         var maxCompares = (ulong)(n * logN * 1.15);
 
-        // Writes for random data: approximately 1.3 * n * log₂(n) to 1.6 * n * log₂(n)
-        // Actual: n=10→40, n=20→115, n=50→396, n=100→948
-        var minWrites = (ulong)(n * logN * 0.5);
-        var maxWrites = (ulong)(n * Math.Ceiling(logN) * 1.7);
+        // Writes for random data (Ping-Pong):
+        // Each pass writes all n elements.
+        // Total: n * ⌈log₂(n)⌉
+        // n=10:  30-40, n=20:  80-100, n=50:  280-300, n=100: 600-700
+        var ceilLogN = Math.Ceiling(logN);
+        var minWrites = (ulong)(n * ceilLogN * 0.9);
+        var maxWrites = (ulong)(n * (ceilLogN + 1) * 1.1);
 
-        var minReads = stats.CompareCount * 2;
+        // Reads: comparisons + merge reads + CopyTo reads
+        // Total: approximately n * log₂(n) * 1.5-2.5
+        var minReads = (ulong)(n * logN * 1.0);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
