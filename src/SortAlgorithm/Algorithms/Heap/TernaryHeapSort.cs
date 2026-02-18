@@ -14,23 +14,25 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="number">
 /// <item><description><strong>Heap Property Maintenance:</strong> For a max-heap, every parent node must be greater than or equal to its children.
 /// For array index i, children are at 3i+1, 3i+2, and 3i+3. This implementation correctly maintains this property through the iterative heapify operation.</description></item>
-/// <item><description><strong>Build Heap Phase:</strong> The initial heap construction starts from the last non-leaf node ((n-1)/3) and heapifies downward to index 0.
-/// This bottom-up approach runs in O(n) time.</description></item>
-/// <item><description><strong>Extract Max Phase:</strong> Repeatedly swap the root (maximum element) with the last element, reduce heap size, and re-heapify.
+/// <item><description><strong>Build Heap Phase:</strong> The initial heap construction starts from the last non-leaf node ((n-2)/3) and heapifies downward to index 0 using Floyd's algorithm.
+/// This bottom-up approach runs in O(n) time and reduces comparisons by ~25-30% compared to standard heapify.</description></item>
+/// <item><description><strong>Extract Max Phase:</strong> Repeatedly reads the root (maximum) and the last element, sifts the last element down via hole-based heapify, then writes the max to the end.
+/// No swap is needed; this reduces memory writes and eliminates all Swap operations from the extraction phase.
 /// This phase performs n-1 extractions, each requiring O(log₃ n) heapify operations, totaling O(n log n).</description></item>
-/// <item><description><strong>Heapify Operation:</strong> Uses an iterative (non-recursive) sift-down approach to restore heap property.
-/// Compares parent with all three children, swaps with the largest child if needed, and continues down the tree until heap property is satisfied.</description></item>
+/// <item><description><strong>Heapify Operation:</strong> Uses an iterative (non-recursive) hole-based sift-down approach to restore heap property.
+/// The replacement value (read from the last position) is passed in directly; it descends by moving the largest child up into the hole, then writes the value at its correct position.
+/// This avoids reading from the root inside the method and eliminates all Swap operations.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Heap / Selection</description></item>
-/// <item><description>Stable      : No (swapping elements by index breaks relative order)</description></item>
+/// <item><description>Stable      : No (heap operations do not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space)</description></item>
 /// <item><description>Best case   : Ω(n log n) - Even for sorted input, heap construction and extraction are required</description></item>
 /// <item><description>Average case: Θ(n log n) - Build heap O(n) + n-1 extractions with O(log₃ n) heapify each</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
 /// <item><description>Comparisons : ~3n log₃ n - Approximately 3 comparisons per heapify (three child checks)</description></item>
-/// <item><description>Swaps       : ~n log₃ n - One swap per level during heapify, averaged across all operations</description></item>
+/// <item><description>Swaps       : 0 - No swaps; extraction reads root+last, sifts last down, writes root to end</description></item>
 /// <item><description>Cache       : Slightly better than binary heap due to shallower tree, but still poor compared to sequential algorithms</description></item>
 /// </list>
 /// <para><strong>Ternary Heap vs Binary Heap:</strong></para>
@@ -42,6 +44,7 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
 /// <item><description>Uses Floyd's improved heap construction during build phase, reducing comparisons by ~25-30%</description></item>
+/// <item><description>Uses Floyd-style hole-based extraction that eliminates all swap operations, improving cache performance</description></item>
 /// <item><description>Uses iterative heapify (loop) instead of recursive for better performance and stack safety</description></item>
 /// <item><description>Builds max-heap for ascending sort (min-heap would produce descending order)</description></item>
 /// <item><description>Child indices: For parent i (offset-adjusted), children are at 3*(i-offset)+1+offset, 3*(i-offset)+2+offset, 3*(i-offset)+3+offset</description></item>
@@ -169,7 +172,7 @@ public static class TernaryHeapSort
     /// <param name="offset">The starting index offset for the heap within the span.</param>
     /// <remarks>
     /// Floyd's algorithm reduces the number of comparisons during heap construction by ~25-30%.
-    /// Phase 1: Percolate down to a leaf by always taking the largest of three children (no key comparison).
+    /// Phase 1: Percolate down to a leaf by always taking the largest of three children
     /// Phase 2: Sift up the original root value to its correct position.
     /// <para>Time Complexity: O(log₃ n) - Same asymptotic complexity but fewer comparisons in practice.</para>
     /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
