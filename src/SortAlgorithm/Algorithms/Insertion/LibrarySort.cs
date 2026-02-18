@@ -368,11 +368,12 @@ public static class LibrarySort
         targetPos = insertIdx < posCount ? positions[insertIdx] : auxEnd;
 
         // Find gap to the right for shifting
-        var shiftGap = FindGap(aux, targetPos, Math.Min(auxEnd + MaxGapSearchDistance, maxSize));
+        // Search up to maxSize to utilize gaps created by rebalancing
+        var shiftGap = FindGap(aux, targetPos, maxSize);
 
         if (shiftGap == -1)
         {
-            // No gap found - extend array
+            // No gap found in entire buffer - this should rarely happen after proper rebalancing
             if (auxEnd >= maxSize)
                 throw new InvalidOperationException("No gap and buffer full");
             shiftGap = auxEnd++;
@@ -495,6 +496,7 @@ public static class LibrarySort
         // Redistribute: pos[i] = floor(i * range / count)
         // This guarantees no collisions since range >= count
         posCount = 0;
+        var maxUsedPos = 0;
         for (var i = 0; i < count; i++)
         {
             var pos = (int)((long)i * range / count);
@@ -509,6 +511,7 @@ public static class LibrarySort
 
             aux.Write(pos, new LibraryElement<T>(tempBuffer[i]));
             positions[posCount++] = pos;
+            maxUsedPos = Math.Max(maxUsedPos, pos);
         }
 
         // Verify all elements were placed
@@ -518,7 +521,9 @@ public static class LibrarySort
                 $"Data loss detected in rebalance: expected {count} elements, but only placed {posCount}");
         }
 
-        return range;
+        // Return the maximum used position + 1
+        // This represents the true auxEnd after rebalancing
+        return maxUsedPos + 1;
     }
 
     /// <summary>
