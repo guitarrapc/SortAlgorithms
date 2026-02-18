@@ -21,7 +21,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>For arrays ≥47 elements:</strong> Use Java's proven 5-sample strategy:
 /// <list type="bullet">
 /// <item><description>Sample 5 elements at evenly distributed positions: left+length/7, left+2*length/7, middle, right-2*length/7, right-length/7</description></item>
-/// <item><description>Sort these 5 elements using 2-pass bubble sort (7-9 comparisons, same as Java's implementation)</description></item>
+/// <item><description>Sort these 5 elements using insertion sort (4-10 comparisons, same as Java's implementation)</description></item>
 /// <item><description>Choose the 2nd smallest and 4th smallest as pivot1 and pivot2</description></item>
 /// <item><description>This yields approximately 1/7, 3/7, 5/7 division ratios, close to the ideal 1/3, 2/3 for dual-pivot</description></item>
 /// </list>
@@ -36,17 +36,17 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Middle region: elements where p1 ≤ element ≤ p2 (indices [l+1, g-1])</description></item>
 /// <item><description>Right region: elements &gt; p2 (indices [g+1, right])</description></item>
 /// </list>
-/// The partitioning loop (lines 53-70) maintains these invariants:
+/// The partitioning loop maintains these invariants:
 /// - Elements in [left+1, l-1] are &lt; p1
 /// - Elements in [l, k-1] are in [p1, p2]
 /// - Elements in [g+1, right-1] are &gt; p2
 /// - Element at index k is currently being examined
 /// This is the standard dual-pivot partitioning method introduced by Yaroslavskiy.</description></item>
-/// <item><description><strong>Pivot Placement:</strong> After partitioning, pivots are moved to their final positions (lines 74-75):
+/// <item><description><strong>Pivot Placement:</strong> After partitioning, pivots are moved to their final positions:
 /// - p1 is swapped with the element at position l (boundary of left region)
 /// - p2 is swapped with the element at position g (boundary of right region)
 /// This ensures pivots are correctly positioned between their respective regions.</description></item>
-/// <item><description><strong>Recursive Division:</strong> The algorithm recursively sorts three independent regions (lines 78-83):
+/// <item><description><strong>Recursive Division:</strong> The algorithm recursively sorts three independent regions:
 /// - Left region: [left, l-1]
 /// - Middle region: [l+1, g-1] (only if p1 &lt; p2, i.e., pivots are distinct)
 /// - Right region: [g+1, right]
@@ -54,7 +54,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Termination:</strong> The algorithm terminates because:
 /// - Each recursive call operates on a strictly smaller subarray (at least 2 elements are pivots)
 /// - The base case (right ≤ left) is eventually reached for all subarrays
-/// - Maximum recursion depth: O(log₃ n) on average, O(n) in worst case</description></item>
+/// - Maximum recursion depth: O(log₃ n) on average, O(log n) worst case (tail recursion optimization: loop on largest partition, recurse on two smaller)</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -200,7 +200,7 @@ public static class QuickSortDualPivot
     }
 
     /// <summary>
-    /// Sorts the subrange [first..last) using the provided sort context.
+    /// Sorts the subrange [left..right] (both inclusive) using the provided sort context.
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
@@ -208,7 +208,7 @@ public static class QuickSortDualPivot
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="left">The inclusive start index of the range to sort.</param>
-    /// <param name="right">The exclusive end index of the range to sort.</param>
+    /// <param name="right">The inclusive end index of the range to sort.</param>
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -302,7 +302,25 @@ public static class QuickSortDualPivot
             else
             {
                 // Equal pivots (p1 == p2): single-comparison loop
-                // All comparisons use left only, avoiding redundant cross-index reads against right
+                // All comparisons use left only, avoiding redundant cross-index reads against right.
+                //
+                // Loop invariant at start of each iteration k:
+                //   [left+1, less-1] = all elements strictly < pivot
+                //   [less,   k-1  ] = all elements == pivot
+                //   [k,      great] = unexamined
+                //   [great+1,right-1] = all elements strictly > pivot
+                //   s[left] = pivot (never modified during this loop)
+                //
+                // This invariant is preserved in every case:
+                //   s[k] < pivot : swap(k, less) puts old s[less](==pivot) at k, less++ extends left region.
+                //   s[k] > pivot : inner while guarantees s[great] <= pivot before swap(k, great),
+                //                  so s[k] after swap is <= pivot; re-check moves any < pivot to left.
+                //                  s[k] > pivot after swap is structurally impossible.
+                //   s[k] == pivot: no action, stays in middle.
+                //
+                // After the loop: [less, great] is PROVABLY all == pivot.
+                // Sorting this region would be a no-op, so skipping it (midCount=0) is correct and
+                // avoids O(n²) regression on all-equal inputs.
                 for (int k = less; k <= great; k++)
                 {
                     if (s.Compare(k, left) < 0)
@@ -389,6 +407,9 @@ public static class QuickSortDualPivot
             // This bounds recursion depth to O(log n): given sizes l+c+r = length-2,
             // the looped region is the largest, so each recursed size ≤ (length-2)/2.
             int leftCount = pivot1 - left;
+            // When diffPivots == false, the equal-pivot partition loop invariant guarantees
+            // [less..great] is all == pivot, so sorting it is a no-op. Setting midCount=0
+            // skips the recursion and prevents O(n²) regression on all-equal inputs.
             int midCount = diffPivots ? innerRight - innerLeft + 1 : 0;
             int rightCount = right - pivot2;
 
@@ -418,7 +439,7 @@ public static class QuickSortDualPivot
     }
 
     /// <summary>
-    /// Sorts 3 elements. Stable, 2-3 compares, 0-2 swaps.
+    /// Sorts 3 elements. 2-3 compares, 0-2 swaps.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x, int y, int z)
@@ -446,7 +467,7 @@ public static class QuickSortDualPivot
     }
 
     /// <summary>
-    /// Sorts 4 elements. Stable, 3-6 compares, 0-5 swaps.
+    /// Sorts 4 elements. 3-6 compares, 0-5 swaps.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort4<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4)
@@ -469,7 +490,7 @@ public static class QuickSortDualPivot
     }
 
     /// <summary>
-    /// Sorts 5 elements. Stable, 4-10 compares, 0-9 swaps.
+    /// Sorts 5 elements. 4-10 compares, 0-9 swaps.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4, int x5)
