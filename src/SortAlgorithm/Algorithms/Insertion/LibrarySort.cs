@@ -219,7 +219,7 @@ public static class LibrarySort
         }
         finally
         {
-            ArrayPool<LibraryElement<T>>.Shared.Return(auxArray, RuntimeHelpers.IsReferenceOrContainsReferences<LibraryElement<T>>());
+            ArrayPool<LibraryElement<T>>.Shared.Return(auxArray);
             ArrayPool<int>.Shared.Return(positionsArray);
             ArrayPool<T>.Shared.Return(tempArray, RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
@@ -297,7 +297,7 @@ public static class LibrarySort
             }
             else
             {
-                left = mid + 1; // Stable
+                left = mid + 1; // Stable: insert after equal elements
             }
         }
 
@@ -321,8 +321,9 @@ public static class LibrarySort
         if (insertIdx >= posCount)
         {
             // Insert at end (after last element)
+            // Use maxSize instead of auxEnd to utilize all available space
             searchStart = posCount > 0 ? positions[posCount - 1] + 1 : 0;
-            searchEnd = auxEnd;
+            searchEnd = maxSize;
         }
         else if (insertIdx == 0)
         {
@@ -337,22 +338,47 @@ public static class LibrarySort
             searchEnd = positions[insertIdx];
         }
 
-        // Try to find a gap in the target range
-        // Optimization: if range is too large, it likely indicates gap depletion
-        // Skip exhaustive search and go directly to shift-based insertion
+        // LibrarySort principle: larger range = more gaps available
+        // Choose target based on insertion position to balance gap consumption and prevent clustering:
+        // - Front insertion: prefer left side (near searchStart)
+        // - Back insertion: prefer right side, but be careful with maxSize range
+        // - Middle insertion: use midpoint to balance gap usage
         var rangeSize = searchEnd - searchStart;
-        int gapPos;
-
-        if (rangeSize > MaxGapSearchDistance)
+        
+        int gapTarget;
+        if (insertIdx == 0)
         {
-            // Large range - likely gap depletion, skip exhaustive search
-            // This prevents O(n) scan in pathological cases (e.g., insertIdx = 0 or posCount)
-            gapPos = -1;
+            // Front insertion: search from left to avoid clustering on right
+            gapTarget = searchStart;
+        }
+        else if (insertIdx >= posCount)
+        {
+            // Back insertion: start from just after last element
+            // For back insertion with maxSize range, use auxEnd as reference point
+            gapTarget = posCount > 0 ? positions[posCount - 1] + 1 : 0;
         }
         else
         {
-            // Small range - worth searching for a gap
-            gapPos = FindGap(aux, searchStart, searchEnd);
+            // Middle insertion: use midpoint to balance gap consumption
+            gapTarget = searchStart + rangeSize / 2;
+        }
+        
+        // Two-stage search to leverage large ranges:
+        // Stage 1: Fast search with standard radius (O(1) expected for well-distributed gaps)
+        // For back insertion with large range, cap the search radius to avoid excessive scanning
+        // Protect against negative values when auxEnd < searchStart (can happen after rebalance with sparse tail)
+        var effectiveRangeSize = insertIdx >= posCount 
+            ? Math.Min(rangeSize, Math.Max(0, auxEnd - searchStart) + MaxGapSearchDistance) 
+            : rangeSize;
+        var searchRadius = Math.Min(effectiveRangeSize / 2, MaxGapSearchDistance);
+        var gapPos = FindGapNear(aux, gapTarget, searchStart, searchEnd, searchRadius);
+        
+        // Stage 2: If no gap found and range is large, expand search radius
+        // This exploits LibrarySort's strength: larger range = more gaps available
+        if (gapPos == -1 && effectiveRangeSize > MaxGapSearchDistance * 2)
+        {
+            var expandedRadius = Math.Min(effectiveRangeSize / 2, MaxGapSearchDistance * 2);
+            gapPos = FindGapNear(aux, gapTarget, searchStart, searchEnd, expandedRadius);
         }
 
         if (gapPos != -1)
@@ -364,15 +390,24 @@ public static class LibrarySort
         }
 
         // No gap in range - need to shift elements
-        // Target position is where we want to insert (at searchEnd, which is positions[insertIdx])
-        targetPos = insertIdx < posCount ? positions[insertIdx] : auxEnd;
+        // Target position is determined by insertion index
+        // For back insertion, use gapTarget (positions[posCount-1]+1) for consistency
+        if (insertIdx >= posCount)
+        {
+            targetPos = gapTarget; // Consistent with gap search target
+        }
+        else
+        {
+            targetPos = positions[insertIdx];
+        }
 
-        // Find gap to the right for shifting
-        var shiftGap = FindGap(aux, targetPos, Math.Min(auxEnd + MaxGapSearchDistance, maxSize));
+        // Find gap for shifting using local search from target position
+        // LibrarySort principle: gaps should be nearby after proper rebalancing
+        var shiftGap = FindGapNear(aux, targetPos, targetPos, maxSize, MaxGapSearchDistance);
 
         if (shiftGap == -1)
         {
-            // No gap found - extend array
+            // No gap found in entire buffer - this should rarely happen after proper rebalancing
             if (auxEnd >= maxSize)
                 throw new InvalidOperationException("No gap and buffer full");
             shiftGap = auxEnd++;
@@ -415,34 +450,44 @@ public static class LibrarySort
     }
 
     /// <summary>
-    /// Finds the first gap in the specified range.
-    /// Returns -1 if no gap found.
+    /// Finds a gap near the target position using local search (expanding left and right).
+    /// This approach aligns with LibrarySort's assumption that gaps are nearby,
+    /// and is effective for detecting clustering.
+    /// Returns -1 if no gap found within the search radius.
     /// </summary>
-    private static int FindGap<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, int start, int end)
+    private static int FindGapNear<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, int target, int start, int end, int maxRadius)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Safety: limit the scan distance to prevent pathological cases
-        var limit = Math.Min(end, start + MaxGapSearchDistance * 2);
+        // Check target position first
+        if (target >= start && target < end && !aux.Read(target).HasValue)
+            return target;
 
-        for (var i = start; i < limit; i++)
+        // Expand search radius alternating left and right
+        for (var radius = 1; radius <= maxRadius; radius++)
         {
-            if (!aux.Read(i).HasValue)
-            {
-                return i;
-            }
+            // Check right
+            var right = target + radius;
+            if (right >= start && right < end && !aux.Read(right).HasValue)
+                return right;
+
+            // Check left
+            var left = target - radius;
+            if (left >= start && left < end && !aux.Read(left).HasValue)
+                return left;
         }
+
         return -1;
     }
 
     /// <summary>
     /// Inserts a position into the sorted position buffer.
-    /// Uses fast memcpy (O(1) operation) instead of element-by-element copy.
+    /// Uses Span.CopyTo for efficient bulk memory copy instead of element-by-element iteration.
     /// Note: Statistics tracking is skipped for performance.
     /// </summary>
     private static void InsertPosition(Span<int> positions, ref int count, int idx, int pos)
     {
-        // Shift elements: use Span.CopyTo for O(1) memcpy performance
+        // Shift elements: use Span.CopyTo for efficient memory copy
         if (idx < count)
         {
             var source = positions.Slice(idx, count - idx);
@@ -455,6 +500,9 @@ public static class LibrarySort
 
     /// <summary>
     /// Rebalances with dynamic spacing to prevent data loss.
+    /// Clears the range [0, range) where range = min((1+ε)*count, auxSize),
+    /// then redistributes all elements with uniform gap distribution.
+    /// Returns the maximum used position + 1 for auxEnd tracking.
     /// </summary>
     private static int Rebalance<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, int auxSize,
         Span<int> positions, ref int posCount, Span<T> tempBuffer)
@@ -485,7 +533,7 @@ public static class LibrarySort
 
         var range = Math.Min(rangeNeeded, auxSize);
 
-        // Clear
+        // Clear the range [0, range) to prepare for redistribution
         var gap = new LibraryElement<T>();
         for (var i = 0; i < range; i++)
         {
@@ -495,6 +543,7 @@ public static class LibrarySort
         // Redistribute: pos[i] = floor(i * range / count)
         // This guarantees no collisions since range >= count
         posCount = 0;
+        var maxUsedPos = 0;
         for (var i = 0; i < count; i++)
         {
             var pos = (int)((long)i * range / count);
@@ -509,6 +558,7 @@ public static class LibrarySort
 
             aux.Write(pos, new LibraryElement<T>(tempBuffer[i]));
             positions[posCount++] = pos;
+            maxUsedPos = Math.Max(maxUsedPos, pos);
         }
 
         // Verify all elements were placed
@@ -518,7 +568,9 @@ public static class LibrarySort
                 $"Data loss detected in rebalance: expected {count} elements, but only placed {posCount}");
         }
 
-        return range;
+        // Return the maximum used position + 1
+        // This represents the true auxEnd after rebalancing
+        return maxUsedPos + 1;
     }
 
     /// <summary>
