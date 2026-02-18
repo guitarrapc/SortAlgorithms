@@ -342,38 +342,42 @@ public static class QuickSortDualPivot
 
             // Phase 3. Equal elements optimization (not included in paper, extended implementation)
             // When center region is large and pivots are different,
-            // segregate elements equal to pivots before sorting center
+            // segregate elements equal to pivots before sorting center.
+            // innerLeft/innerRight start equal to the Phase 1 center boundaries [less, great],
+            // then narrow inward as equal-to-pivot elements are moved to the edges of the center.
+            int innerLeft = less;
+            int innerRight = great;
             int centerLen = great - less + 1;
             if (centerLen > length - DIST_SIZE && diffPivots)
             {
-                for (int k = less; k <= great; k++)
+                for (int k = innerLeft; k <= innerRight; k++)
                 {
                     if (s.Compare(k, pivot1) == 0) // equals pivot1
                     {
-                        s.Swap(k, less);
-                        less++;
+                        s.Swap(k, innerLeft);
+                        innerLeft++;
                     }
                     else if (s.Compare(k, pivot2) == 0) // equals pivot2
                     {
-                        // Advance great past all pivot2-equal elements (like Phase 1 pattern)
+                        // Advance innerRight past all pivot2-equal elements
                         // This ensures the swapped element is not equal to pivot2
-                        while (k <= great && s.Compare(great, pivot2) == 0)
+                        while (k <= innerRight && s.Compare(innerRight, pivot2) == 0)
                         {
-                            great--;
+                            innerRight--;
                         }
 
-                        // Only swap if k and great haven't crossed
-                        if (k <= great)
+                        // Only swap if k and innerRight haven't crossed
+                        if (k <= innerRight)
                         {
-                            s.Swap(k, great);
-                            great--;
+                            s.Swap(k, innerRight);
+                            innerRight--;
 
                             // Re-check swapped element (only need to check pivot1 now)
-                            // Since we advanced great past all pivot2-equals, k is guaranteed != pivot2
+                            // Since we advanced innerRight past all pivot2-equals, k is guaranteed != pivot2
                             if (s.Compare(k, pivot1) == 0)
                             {
-                                s.Swap(k, less);
-                                less++;
+                                s.Swap(k, innerLeft);
+                                innerLeft++;
                             }
                         }
                     }
@@ -385,13 +389,13 @@ public static class QuickSortDualPivot
             // This bounds recursion depth to O(log n): given sizes l+c+r = length-2,
             // the looped region is the largest, so each recursed size ≤ (length-2)/2.
             int leftCount = pivot1 - left;
-            int midCount = diffPivots ? great - less + 1 : 0;
+            int midCount = diffPivots ? innerRight - innerLeft + 1 : 0;
             int rightCount = right - pivot2;
 
             if (leftCount >= midCount && leftCount >= rightCount)
             {
                 // Left is largest: loop left, recurse on center and right
-                if (diffPivots) SortCore(s, less, great);
+                if (diffPivots) SortCore(s, innerLeft, innerRight);
                 SortCore(s, pivot2 + 1, right);
                 right = pivot1 - 1;
             }
@@ -399,7 +403,7 @@ public static class QuickSortDualPivot
             {
                 // Right is largest: loop right, recurse on left and center
                 SortCore(s, left, pivot1 - 1);
-                if (diffPivots) SortCore(s, less, great);
+                if (diffPivots) SortCore(s, innerLeft, innerRight);
                 left = pivot2 + 1;
             }
             else
@@ -407,8 +411,8 @@ public static class QuickSortDualPivot
                 // Center is largest: loop center, recurse on left and right
                 SortCore(s, left, pivot1 - 1);
                 SortCore(s, pivot2 + 1, right);
-                left = less;
-                right = great;
+                left = innerLeft;
+                right = innerRight;
             }
         }
     }
