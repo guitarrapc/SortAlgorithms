@@ -115,7 +115,7 @@ public static class ShellSortKnuth1973
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}\"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
