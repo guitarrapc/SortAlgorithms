@@ -254,14 +254,31 @@ public static class ShiftSort
                 // Copy second partition to buffer using CopyTo for efficiency
                 s.CopyTo(second, tmp2ndSpan, 0, bufferSize);
 
-                // Merge from right to left, shifting elements from first partition rightward
+                // Merge from right to left (backward merge)
+                // Layout: [first .. second-1][second .. third-1]
+                //         |<--- Left run --->||<-- Right run -->|
+                // Right run is buffered as tmp2nd[0..bufferSize-1]
+                // Write position: left + secondCounter (decreases from third-1 to first)
+                //
+                // Stability condition:
+                //   When Compare(left_elem, right_elem) == 0:
+                //     - Use '>' (not '>=') to force else branch
+                //     - else branch writes right_elem first (to higher position)
+                //     - left_elem is written later (to lower position)
+                //     => left_elem appears before right_elem in final output ✓
+                //
+                // Proof:
+                //   Let left_elem = s[left], right_elem = tmp2nd[secondCounter-1]
+                //   Case A: left_elem > right_elem  => write left_elem to writePos, left--
+                //   Case B: left_elem == right_elem => write right_elem to writePos, secondCounter--
+                //           Next iteration writes left_elem to writePos-1
+                //           => left_elem (originally at lower index) is placed before right_elem ✓
+                //   Case C: left_elem < right_elem  => write right_elem to writePos, secondCounter--
                 var secondCounter = bufferSize;
                 var left = second - 1;
                 while (secondCounter > 0)
                 {
-                    // Stability: > ensures elements from left partition occupy lower positions than right.
-                    // In backward merge, equal right elements are placed at higher positions first,
-                    // leaving left (earlier in original) at lower positions (appearing first in output).
+                    // Stability: use '>' (not '>=') to ensure left < right in final output when equal
                     if (left >= first && s.Compare(left, tmp2ndSpan.Read(secondCounter - 1)) > 0)
                     {
                         s.Write(left + secondCounter, s.Read(left));
@@ -291,23 +308,45 @@ public static class ShiftSort
                 // Copy first partition to buffer using CopyTo for efficiency
                 s.CopyTo(first, tmp1stSpan, 0, bufferSize);
 
-                // Merge from left to right, shifting elements from second partition leftward
+                // Merge from left to right (forward merge)
+                // Layout: [first .. second-1][second .. third-1]
+                //         |<--- Left run --->||<-- Right run -->|
+                // Left run is buffered as tmp1st[0..bufferSize-1]
+                // Write position: starts at 'first', increments by 1 each iteration
+                //
+                // Stability condition:
+                //   When Compare(right_elem, left_elem) == 0:
+                //     - Use '<' (not '<=') to force else branch
+                //     - else branch writes left_elem (from buffer)
+                //     - left_elem (originally at lower index) is written before right_elem
+                //     => left_elem appears before right_elem in final output ✓
+                //
+                // Proof:
+                //   Let left_elem = tmp1st[firstCounter], right_elem = s[right]
+                //   Write position = first + (firstCounter + (right - second))
+                //                  = first + (total_elements_written)
+                //   Case A: right_elem < left_elem  => write right_elem to writePos, right++
+                //   Case B: right_elem == left_elem => write left_elem to writePos, firstCounter++
+                //           Next iteration writes right_elem to writePos+1
+                //           => left_elem (originally at lower index) is placed before right_elem ✓
+                //   Case C: right_elem > left_elem  => write left_elem to writePos, firstCounter++
                 var firstCounter = 0;
-                var tmpLength = bufferSize;
                 var right = second;
+                var writePos = first;
                 while (firstCounter < bufferSize)
                 {
+                    // Stability: use '<' (not '<=') to ensure left < right in final output when equal
                     if (right < third && s.Compare(right, tmp1stSpan.Read(firstCounter)) < 0)
                     {
-                        s.Write(right - tmpLength, s.Read(right));
+                        s.Write(writePos, s.Read(right));
                         right++;
                     }
                     else
                     {
-                        s.Write(right - tmpLength, tmp1stSpan.Read(firstCounter));
+                        s.Write(writePos, tmp1stSpan.Read(firstCounter));
                         firstCounter++;
-                        tmpLength--;
                     }
+                    writePos++;
                 }
             }
             finally
