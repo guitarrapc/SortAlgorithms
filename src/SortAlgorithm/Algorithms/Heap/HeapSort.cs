@@ -18,7 +18,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Build Heap Phase:</strong> The initial heap construction starts from the last non-leaf node (n/2 - 1) and heapifies downward to index 0.
 /// This implementation uses Floyd's improved heap construction algorithm, which reduces comparisons by ~25% compared to standard bottom-up heapify.
 /// This bottom-up approach runs in O(n) time, which is more efficient than the naive O(n log n) top-down construction.</description></item>
-/// <item><description><strong>Extract Max Phase:</strong> Repeatedly swap the root (maximum element) with the last element, reduce heap size, and re-heapify.
+/// <item><description><strong>Extract Max Phase:</strong> Repeatedly reads the root (maximum) and the last element, sifts the last element down via Heapify, then writes the max to the end.
+/// No swap is needed; this reduces memory writes and eliminates all Swap operations from the extraction phase.
 /// This phase performs n-1 extractions, each requiring O(log n) heapify operations, totaling O(n log n).</description></item>
 /// <item><description><strong>Floyd's Heapify Optimization:</strong> During heap construction, uses Floyd's two-phase algorithm:
 /// Phase 1 percolates down to a leaf by selecting larger children without comparing keys.
@@ -36,7 +37,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n) - Build heap O(n) + n-1 extractions with O(log n) heapify each</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
 /// <item><description>Comparisons : ~2n log n - Approximately 2 comparisons per heapify (left and right child checks)</description></item>
-/// <item><description>Swaps       : n-1 - One root-to-end swap per extraction step; sift-down uses hole-based writes instead of swaps</description></item>
+/// <item><description>Swaps       : 0 - No swaps; extraction reads root+last, sifts last down, writes root to end</description></item>
 /// <item><description>Cache       : Poor locality - Heap structure causes frequent cache misses due to non-sequential access</description></item>
 /// </list>
 /// <para><strong>Why "Heap / Selection" Family?:</strong></para>
@@ -161,11 +162,11 @@ public static class HeapSort
         // Extract elements from heap
         for (var i = last - 1; i > first; i--)
         {
-            // Move current root to end
-            s.Swap(first, i);
-
-            // Re-heapify the reduced heap (standard sift-down)
-            Heapify(s, first, i - first, first);
+            // Save max (root) and the last element, then sift down the last element
+            var max = s.Read(first);
+            var lastVal = s.Read(i);
+            Heapify(s, first, i - first, first, lastVal);
+            s.Write(i, max);
         }
     }
 
@@ -238,11 +239,10 @@ public static class HeapSort
     /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Heapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset)
+    private static void Heapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset, T value)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var value = s.Read(root);
         var hole = root;
 
         while (true)
