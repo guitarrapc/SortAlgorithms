@@ -116,24 +116,38 @@ public static class ShiftSort
         if (span.Length <= 1) return;
 
         var indicesLength = (span.Length / 2) + 2;
+        var workBufferLength = (span.Length + 1) / 2;
 
         // Use stackalloc for small arrays, ArrayPool for larger ones
+        // Note: workBuffer cannot use stackalloc as T may be a managed type
         if (span.Length <= StackallocThreshold)
         {
             Span<int> zeroIndices = stackalloc int[indicesLength];
-            SortCore(span, comparer, context, zeroIndices);
+            var workBufferArray = ArrayPool<T>.Shared.Rent(workBufferLength);
+            try
+            {
+                var workBuffer = workBufferArray.AsSpan(0, workBufferLength);
+                SortCore(span, comparer, context, zeroIndices, workBuffer);
+            }
+            finally
+            {
+                ArrayPool<T>.Shared.Return(workBufferArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            }
         }
         else
         {
             var indicesBuffer = ArrayPool<int>.Shared.Rent(indicesLength);
+            var workBufferArray = ArrayPool<T>.Shared.Rent(workBufferLength);
             try
             {
                 var zeroIndices = indicesBuffer.AsSpan(0, indicesLength);
-                SortCore(span, comparer, context, zeroIndices);
+                var workBuffer = workBufferArray.AsSpan(0, workBufferLength);
+                SortCore(span, comparer, context, zeroIndices, workBuffer);
             }
             finally
             {
                 ArrayPool<int>.Shared.Return(indicesBuffer);
+                ArrayPool<T>.Shared.Return(workBufferArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             }
         }
     }
@@ -141,7 +155,7 @@ public static class ShiftSort
     /// <summary>
     /// Core sorting logic - detects runs and merges them.
     /// </summary>
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context, Span<int> zeroIndices)
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context, Span<int> zeroIndices, Span<T> workBuffer)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -180,7 +194,7 @@ public static class ShiftSort
         zeroIndices[endTracker] = s.Length;
 
         // Phase 2: Adaptive Merge - Recursively merge detected runs
-        Split(s, zeroIndices, 0, endTracker);
+        Split(s, zeroIndices, 0, endTracker, workBuffer);
     }
 
     /// <summary>
@@ -206,14 +220,14 @@ public static class ShiftSort
     /// and zeroIndices[hi] is the exclusive end of the region being sorted.
     /// Each adjacent pair (zeroIndices[k], zeroIndices[k+1]) represents one sorted run.
     /// </summary>
-    private static void Split<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> zeroIndices, int lo, int hi)
+    private static void Split<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> zeroIndices, int lo, int hi, Span<T> workBuffer)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Base case: 2 runs - merge them directly
         if ((hi - lo) == 2)
         {
-            Merge(s, zeroIndices[lo], zeroIndices[lo + 1], zeroIndices[hi]);
+            Merge(s, zeroIndices[lo], zeroIndices[lo + 1], zeroIndices[hi], workBuffer);
             return;
         }
         else if ((hi - lo) < 2)
@@ -226,19 +240,20 @@ public static class ShiftSort
         var mid = lo + (hi - lo) / 2;
 
         // Recursively sort left half: [zeroIndices[lo], zeroIndices[mid])
-        Split(s, zeroIndices, lo, mid);
+        Split(s, zeroIndices, lo, mid, workBuffer);
         // Recursively sort right half: [zeroIndices[mid], zeroIndices[hi])
-        Split(s, zeroIndices, mid, hi);
+        Split(s, zeroIndices, mid, hi, workBuffer);
 
         // Merge the two sorted halves into [zeroIndices[lo], zeroIndices[hi])
-        Merge(s, zeroIndices[lo], zeroIndices[mid], zeroIndices[hi]);
+        Merge(s, zeroIndices[lo], zeroIndices[mid], zeroIndices[hi], workBuffer);
     }
 
     /// <summary>
     /// Merges two adjacent sorted runs using adaptive direction based on partition sizes.
     /// The smaller partition is buffered to minimize memory allocation and write operations.
+    /// Uses the provided workBuffer (pre-allocated in SortCore) instead of ArrayPool for zero-allocation merging.
     /// </summary>
-    private static void Merge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int second, int third)
+    private static void Merge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int second, int third, Span<T> workBuffer)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -246,112 +261,96 @@ public static class ShiftSort
         {
             // Second partition is smaller - buffer it and merge backward
             var bufferSize = third - second;
-            var tmp2nd = ArrayPool<T>.Shared.Rent(bufferSize);
-            try
+            var tmp2ndSpan = new SortSpan<T, TComparer, TContext>(workBuffer[..bufferSize], s.Context, s.Comparer, BUFFER_TEMP_SECOND);
+
+            // Copy second partition to buffer using CopyTo for efficiency
+            s.CopyTo(second, tmp2ndSpan, 0, bufferSize);
+
+            // Merge from right to left (backward merge)
+            // Layout: [first .. second-1][second .. third-1]
+            //         |<--- Left run --->||<-- Right run -->|
+            // Right run is buffered as tmp2nd[0..bufferSize-1]
+            // Write position: left + secondCounter (decreases from third-1 to first)
+            //
+            // Stability condition:
+            //   When Compare(left_elem, right_elem) == 0:
+            //     - Use '>' (not '>=') to force else branch
+            //     - else branch writes right_elem first (to higher position)
+            //     - left_elem is written later (to lower position)
+            //     => left_elem appears before right_elem in final output ✓
+            //
+            // Proof:
+            //   Let left_elem = s[left], right_elem = tmp2nd[secondCounter-1]
+            //   Case A: left_elem > right_elem  => write left_elem to writePos, left--
+            //   Case B: left_elem == right_elem => write right_elem to writePos, secondCounter--
+            //           Next iteration writes left_elem to writePos-1
+            //           => left_elem (originally at lower index) is placed before right_elem ✓
+            //   Case C: left_elem < right_elem  => write right_elem to writePos, secondCounter--
+            var secondCounter = bufferSize;
+            var left = second - 1;
+            while (secondCounter > 0)
             {
-                var tmp2ndSpan = new SortSpan<T, TComparer, TContext>(tmp2nd.AsSpan(0, bufferSize), s.Context, s.Comparer, BUFFER_TEMP_SECOND);
-
-                // Copy second partition to buffer using CopyTo for efficiency
-                s.CopyTo(second, tmp2ndSpan, 0, bufferSize);
-
-                // Merge from right to left (backward merge)
-                // Layout: [first .. second-1][second .. third-1]
-                //         |<--- Left run --->||<-- Right run -->|
-                // Right run is buffered as tmp2nd[0..bufferSize-1]
-                // Write position: left + secondCounter (decreases from third-1 to first)
-                //
-                // Stability condition:
-                //   When Compare(left_elem, right_elem) == 0:
-                //     - Use '>' (not '>=') to force else branch
-                //     - else branch writes right_elem first (to higher position)
-                //     - left_elem is written later (to lower position)
-                //     => left_elem appears before right_elem in final output ✓
-                //
-                // Proof:
-                //   Let left_elem = s[left], right_elem = tmp2nd[secondCounter-1]
-                //   Case A: left_elem > right_elem  => write left_elem to writePos, left--
-                //   Case B: left_elem == right_elem => write right_elem to writePos, secondCounter--
-                //           Next iteration writes left_elem to writePos-1
-                //           => left_elem (originally at lower index) is placed before right_elem ✓
-                //   Case C: left_elem < right_elem  => write right_elem to writePos, secondCounter--
-                var secondCounter = bufferSize;
-                var left = second - 1;
-                while (secondCounter > 0)
+                // Stability: use '>' (not '>=') to ensure left < right in final output when equal
+                if (left >= first && s.Compare(left, tmp2ndSpan.Read(secondCounter - 1)) > 0)
                 {
-                    // Stability: use '>' (not '>=') to ensure left < right in final output when equal
-                    if (left >= first && s.Compare(left, tmp2ndSpan.Read(secondCounter - 1)) > 0)
-                    {
-                        s.Write(left + secondCounter, s.Read(left));
-                        left--;
-                    }
-                    else
-                    {
-                        s.Write(left + secondCounter, tmp2ndSpan.Read(secondCounter - 1));
-                        secondCounter--;
-                    }
+                    s.Write(left + secondCounter, s.Read(left));
+                    left--;
                 }
-            }
-            finally
-            {
-                ArrayPool<T>.Shared.Return(tmp2nd, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+                else
+                {
+                    s.Write(left + secondCounter, tmp2ndSpan.Read(secondCounter - 1));
+                    secondCounter--;
+                }
             }
         }
         else
         {
             // First partition is smaller - buffer it and merge forward
             var bufferSize = second - first;
-            var tmp1st = ArrayPool<T>.Shared.Rent(bufferSize);
-            try
+            var tmp1stSpan = new SortSpan<T, TComparer, TContext>(workBuffer[..bufferSize], s.Context, s.Comparer, BUFFER_TEMP_FIRST);
+
+            // Copy first partition to buffer using CopyTo for efficiency
+            s.CopyTo(first, tmp1stSpan, 0, bufferSize);
+
+            // Merge from left to right (forward merge)
+            // Layout: [first .. second-1][second .. third-1]
+            //         |<--- Left run --->||<-- Right run -->|
+            // Left run is buffered as tmp1st[0..bufferSize-1]
+            // Write position: starts at 'first', increments by 1 each iteration
+            //
+            // Stability condition:
+            //   When Compare(right_elem, left_elem) == 0:
+            //     - Use '<' (not '<=') to force else branch
+            //     - else branch writes left_elem (from buffer)
+            //     - left_elem (originally at lower index) is written before right_elem
+            //     => left_elem appears before right_elem in final output ✓
+            //
+            // Proof:
+            //   Let left_elem = tmp1st[firstCounter], right_elem = s[right]
+            //   Write position = first + (firstCounter + (right - second))
+            //                  = first + (total_elements_written)
+            //   Case A: right_elem < left_elem  => write right_elem to writePos, right++
+            //   Case B: right_elem == left_elem => write left_elem to writePos, firstCounter++
+            //           Next iteration writes right_elem to writePos+1
+            //           => left_elem (originally at lower index) is placed before right_elem ✓
+            //   Case C: right_elem > left_elem  => write left_elem to writePos, firstCounter++
+            var firstCounter = 0;
+            var right = second;
+            var writePos = first;
+            while (firstCounter < bufferSize)
             {
-                var tmp1stSpan = new SortSpan<T, TComparer, TContext>(tmp1st.AsSpan(0, bufferSize), s.Context, s.Comparer, BUFFER_TEMP_FIRST);
-
-                // Copy first partition to buffer using CopyTo for efficiency
-                s.CopyTo(first, tmp1stSpan, 0, bufferSize);
-
-                // Merge from left to right (forward merge)
-                // Layout: [first .. second-1][second .. third-1]
-                //         |<--- Left run --->||<-- Right run -->|
-                // Left run is buffered as tmp1st[0..bufferSize-1]
-                // Write position: starts at 'first', increments by 1 each iteration
-                //
-                // Stability condition:
-                //   When Compare(right_elem, left_elem) == 0:
-                //     - Use '<' (not '<=') to force else branch
-                //     - else branch writes left_elem (from buffer)
-                //     - left_elem (originally at lower index) is written before right_elem
-                //     => left_elem appears before right_elem in final output ✓
-                //
-                // Proof:
-                //   Let left_elem = tmp1st[firstCounter], right_elem = s[right]
-                //   Write position = first + (firstCounter + (right - second))
-                //                  = first + (total_elements_written)
-                //   Case A: right_elem < left_elem  => write right_elem to writePos, right++
-                //   Case B: right_elem == left_elem => write left_elem to writePos, firstCounter++
-                //           Next iteration writes right_elem to writePos+1
-                //           => left_elem (originally at lower index) is placed before right_elem ✓
-                //   Case C: right_elem > left_elem  => write left_elem to writePos, firstCounter++
-                var firstCounter = 0;
-                var right = second;
-                var writePos = first;
-                while (firstCounter < bufferSize)
+                // Stability: use '<' (not '<=') to ensure left < right in final output when equal
+                if (right < third && s.Compare(right, tmp1stSpan.Read(firstCounter)) < 0)
                 {
-                    // Stability: use '<' (not '<=') to ensure left < right in final output when equal
-                    if (right < third && s.Compare(right, tmp1stSpan.Read(firstCounter)) < 0)
-                    {
-                        s.Write(writePos, s.Read(right));
-                        right++;
-                    }
-                    else
-                    {
-                        s.Write(writePos, tmp1stSpan.Read(firstCounter));
-                        firstCounter++;
-                    }
-                    writePos++;
+                    s.Write(writePos, s.Read(right));
+                    right++;
                 }
-            }
-            finally
-            {
-                ArrayPool<T>.Shared.Return(tmp1st, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+                else
+                {
+                    s.Write(writePos, tmp1stSpan.Read(firstCounter));
+                    firstCounter++;
+                }
+                writePos++;
             }
         }
     }
