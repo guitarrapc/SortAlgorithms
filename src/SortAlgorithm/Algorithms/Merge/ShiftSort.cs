@@ -186,41 +186,45 @@ public static class ShiftSort
         // Add end marker (start of array) to complete the run boundary list
         zeroIndices[endTracker] = 0;
 
+        // Reverse to produce ascending boundary sequence: [0, b₁, …, bₖ, n]
+        zeroIndices[..(endTracker + 1)].Reverse();
+
         // Phase 2: Adaptive Merge - Recursively merge detected runs
         Split(s, zeroIndices, 0, endTracker);
     }
 
     /// <summary>
-    /// Recursively divides the run index list and merges runs bottom-up.
+    /// Recursively divides the boundary range [lo, hi] and merges sorted runs bottom-up.
+    /// zeroIndices is an ascending boundary sequence where zeroIndices[lo] is the inclusive start
+    /// and zeroIndices[hi] is the exclusive end of the region being sorted.
+    /// Each adjacent pair (zeroIndices[k], zeroIndices[k+1]) represents one sorted run.
     /// </summary>
-    private static void Split<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> zeroIndices, int i, int j)
+    private static void Split<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> zeroIndices, int lo, int hi)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Base case: 2 runs - merge them directly
-        if ((j - i) == 2)
+        if ((hi - lo) == 2)
         {
-            Merge(s, zeroIndices[j], zeroIndices[j - 1], zeroIndices[i]);
+            Merge(s, zeroIndices[lo], zeroIndices[lo + 1], zeroIndices[hi]);
             return;
         }
-        else if ((j - i) < 2)
+        else if ((hi - lo) < 2)
         {
             // Base case: 0 or 1 run - already sorted
             return;
         }
 
-        // Recursive case: divide run list in half
-        var j2 = i + (j - i) / 2;
-        var i2 = j2 + 1;
+        // Recursive case: split at midpoint boundary
+        var mid = lo + (hi - lo) / 2;
 
-        // Recursively sort first half of runs
-        Split(s, zeroIndices, i, j2);
-        // Recursively sort second half of runs
-        Split(s, zeroIndices, i2, j);
+        // Recursively sort left half: [zeroIndices[lo], zeroIndices[mid])
+        Split(s, zeroIndices, lo, mid);
+        // Recursively sort right half: [zeroIndices[mid], zeroIndices[hi])
+        Split(s, zeroIndices, mid, hi);
 
-        // Merge the two halves
-        Merge(s, zeroIndices[i2], zeroIndices[j2], zeroIndices[i]);
-        Merge(s, zeroIndices[j], zeroIndices[i2], zeroIndices[i]);
+        // Merge the two sorted halves into [zeroIndices[lo], zeroIndices[hi])
+        Merge(s, zeroIndices[lo], zeroIndices[mid], zeroIndices[hi]);
     }
 
     /// <summary>
