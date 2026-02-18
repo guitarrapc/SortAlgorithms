@@ -195,7 +195,7 @@ public static class BottomupHeapSort
     /// <summary>
     /// Restores the heap property using true bottom-up sift-down for deletion phase.
     /// This method implements the characteristic bottom-up deletion:
-    /// 1. Save the last element (which will replace the root)
+    /// 1. Save the element at root (which is the former last element after swap in SortCore)
     /// 2. Create a "hole" at root and descend to a leaf by selecting larger children (no key comparison)
     /// 3. Place the saved element at the leaf position
     /// 4. Sift up the element to its correct position
@@ -220,7 +220,7 @@ public static class BottomupHeapSort
     {
         if (size <= 1) return;
 
-        // Save the element that needs to be reinserted (originally at the last position, now at root)
+        // Save the element at root after swap (which is the former last element that needs to be reinserted)
         var value = s.Read(root);
         var hole = root;
 
