@@ -5,68 +5,70 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// 配列内の既存の部分的なソート済み領域（runs）を検出し、それらを効率的にマージすることで、
-/// 従来のMerge Sortと比較してSwap操作を劇的に削減した安定なソートアルゴリズムです。
+/// 配列内の自然に発生するソート済み領域（runs）を検出し、それらを効率的にマージすることで、
+/// 従来のMerge Sortと比較して書き込み操作を削減した安定な適応的ソートアルゴリズムです。
 /// 特にデータが部分的にソート済みの場合、O(n)に近い性能を発揮します。
 /// <br/>
-/// Detects naturally occurring sorted runs within the array and efficiently merges them,
-/// drastically reducing swap operations compared to traditional merge sort while maintaining stability.
+/// Detects naturally occurring sorted runs (both ascending and descending) within the array 
+/// and efficiently merges them using shift-based operations instead of traditional swaps,
+/// reducing write operations compared to traditional merge sort while maintaining stability.
 /// Achieves near O(n) performance when data is partially sorted.
 /// </summary>
 /// <remarks>
-/// <para><strong>Theoretical Conditions for Correct ShiftSort:</strong></para>
+/// <para><strong>Algorithm Overview:</strong></para>
+/// <para>
+/// This implementation extends the original ShiftSort concept (https://github.com/JamesQuintero/ShiftSort) with
+/// a complete natural merge sort approach. Unlike the reference implementation which only performs limited optimizations
+/// during a right-to-left scan, this version implements full ascending and descending run detection similar to TimSort and PowerSort,
+/// providing better adaptivity to existing order in real-world data.
+/// </para>
+/// <para><strong>Core Algorithm Steps:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Run Detection Phase (Natural Sorted Subsequence Identification):</strong> The algorithm scans the array from left to right,
-/// extending each run as far as possible in one direction. A non-descending run grows while arr[i+1] &gt;= arr[i];
+/// extending each run as far as possible. A non-descending run grows while arr[i+1] &gt;= arr[i];
 /// a strictly descending run grows while arr[i+1] &lt; arr[i] and is then reversed in-place to produce an ascending run.
-/// This approach captures the longest possible natural runs (both ascending and descending) and has O(n) time complexity
-/// with at most n/2 swaps (one pass of in-place reversal).</description></item>
+/// This approach captures the longest possible natural runs (both ascending and descending) and has O(n) time complexity.
+/// Run reversal uses at most n/2 swaps in the worst case (when the entire array is strictly descending).</description></item>
 /// <item><description><strong>Run Boundary Registration:</strong> Detected run boundaries are stored in an ascending index array (zeroIndices) as [0, b₁, b₂, …, bₖ, n].
-/// Each adjacent pair (zeroIndices[m], zeroIndices[m+1]) defines one sorted run. The maximum number of runs is ceil(n/2),
+/// Each adjacent pair (zeroIndices[m], zeroIndices[m+1]) defines one sorted run. The maximum number of runs is ⌈n/2⌉,
 /// so the array needs at most n/2 + 2 entries. For small arrays (≤256 elements) the index array is allocated on the stack
 /// using stackalloc; for larger arrays ArrayPool&lt;int&gt;.Shared is used to avoid stack overflow.</description></item>
 /// <item><description><strong>Adaptive Merge Strategy (Binary Merge Tree):</strong> The detected runs are merged using a divide-and-conquer approach.
 /// The Split method recursively divides the run list into two halves until reaching the base case (2 or fewer runs),
-/// then merges them bottom-up. This guarantees O(log k) merge levels where k is the number of runs (k ≤ n/2).</description></item>
+/// then merges them bottom-up. This guarantees O(log k) merge levels where k is the number of runs (k ≤ ⌈n/2⌉).</description></item>
 /// <item><description><strong>Size-Adaptive Merge Direction:</strong> Unlike traditional merge sort, ShiftSort chooses which partition to buffer
 /// based on size comparison (second - first &gt; third - second). The smaller partition is copied to temporary storage,
 /// minimizing memory allocation and write operations. This optimization reduces practical memory usage by up to 50%.</description></item>
-/// <item><description><strong>Backward Merge for Stability:</strong> When the second partition is smaller, merging proceeds backward from right to left.
-/// When the first partition is smaller, merging proceeds forward from left to right. Both directions preserve stability by
-/// using &gt;= comparison (taking from left when equal) during the merge operation.</description></item>
-/// <item><description><strong>Shift-Based Element Movement:</strong> Elements are "shifted" (moved) rather than "swapped" during merge.
-/// This reduces the operation count from 3 assignments per swap to 1 assignment per shift, significantly lowering write overhead.</description></item>
+/// <item><description><strong>Stability-Preserving Merge:</strong> When the second partition is smaller, merging proceeds backward from right to left
+/// using '&gt;' comparison (not '&gt;=') to ensure left elements are written to lower positions when equal.
+/// When the first partition is smaller, merging proceeds forward from left to right using '&lt;' comparison (not '&lt;=')
+/// to ensure left elements are written first when equal. Both directions preserve stability by prioritizing left-side elements.</description></item>
+/// <item><description><strong>Shift-Based Element Movement:</strong> During merge operations, elements are "shifted" (single assignment) rather than "swapped" (three assignments).
+/// This reduces write operations compared to traditional merge sort, particularly benefiting scenarios with expensive write operations
+/// or cache-sensitive workloads.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Merge (Adaptive Natural Merge Sort variant)</description></item>
-/// <item><description>Stable      : Yes (stability preserved via &gt;= comparison during merge)</description></item>
+/// <item><description>Family      : Merge (Adaptive Natural Merge Sort with shift-based optimization)</description></item>
+/// <item><description>Stable      : Yes (stability preserved via '&lt;'/'&gt;' comparison priority during merge)</description></item>
 /// <item><description>In-place    : No (requires O(n/2) auxiliary space for merge buffers)</description></item>
 /// <item><description>Best case   : O(n) - Already sorted data requires only one O(n) scan with no merges</description></item>
-/// <item><description>Average case: O(n log k) where k = number of runs - Typically k &lt;&lt; n for real-world data</description></item>
-/// <item><description>Worst case  : O(n log n) - Completely reversed or random data produces maximum runs (k ≈ n/2)</description></item>
+/// <item><description>Average case: O(n log k) where k = number of runs - Typically k &lt;&lt; n for real-world data with existing order</description></item>
+/// <item><description>Worst case  : O(n log n) - Completely random or alternating data produces maximum runs (k ≈ ⌈n/2⌉)</description></item>
 /// <item><description>Comparisons : O(n log k) - Run detection: O(n), merging: O(n log k)</description></item>
 /// <item><description>Swaps       : O(n/2) worst case - only during run detection phase for in-place reversal of descending runs</description></item>
-/// <item><description>Writes      : O(n log k) - Shift operations during merge (significantly fewer than traditional merge sort)</description></item>
-/// <item><description>Space       : O(n/2) - Maximum temporary buffer size for largest partition during merge</description></item>
+/// <item><description>Writes      : O(n log k) - Shift-based merge operations (fewer than swap-based approaches)</description></item>
+/// <item><description>Space       : O(n/2) - Maximum temporary buffer size for largest partition during merge, reused across operations</description></item>
 /// </list>
-/// <para><strong>Advantages of ShiftSort:</strong></para>
+/// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
-/// <item><description>Adaptive performance - Exploits existing order in data, achieving near O(n) on partially sorted data</description></item>
-/// <item><description>Minimal swaps - Only swaps during run detection (O(n)), not during merge operations</description></item>
-/// <item><description>Reduced memory writes - Shift-based merging reduces write operations compared to traditional merge sort</description></item>
-/// <item><description>Stable - Preserves relative order of equal elements</description></item>
-/// <item><description>Predictable worst case - Still O(n log n) even on random data</description></item>
-/// </list>
-/// <para><strong>Use Cases:</strong></para>
-/// <list type="bullet">
-/// <item><description>Sorting data with inherent partial order (e.g., time-series data, log files)</description></item>
-/// <item><description>When swap operations are expensive (e.g., large objects)</description></item>
-/// <item><description>Stable sorting with better practical performance than traditional merge sort</description></item>
-/// <item><description>Scenarios where data is frequently appended and re-sorted</description></item>
+/// <item><description>This implementation extends the original ShiftSort concept with full natural merge sort capabilities</description></item>
+/// <item><description>Uses ArrayPool&lt;T&gt; for zero-allocation operation on repeated sorts</description></item>
+/// <item><description>Stack-allocates index arrays for small inputs (≤256 elements) to avoid heap pressure</description></item>
+/// <item><description>Integrates with SortSpan pattern for comprehensive statistics tracking and visualization</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
-/// <para>Original implementation: https://github.com/JamesQuintero/ShiftSort</para>
+/// <para>Original concept: https://github.com/JamesQuintero/ShiftSort</para>
 /// </remarks>
 public static class ShiftSort
 {
