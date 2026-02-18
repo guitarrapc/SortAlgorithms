@@ -16,14 +16,15 @@ namespace SortAlgorithm.Algorithms;
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct ShiftSort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Run Detection Phase (Natural Sorted Subsequence Identification):</strong> The algorithm scans the array from right to left,
-/// identifying positions where the sorted order breaks (arr[i] &lt; arr[i-1]). These boundary positions divide the array into naturally sorted runs.
-/// When three consecutive elements form a descending sequence (arr[i-2] &gt; arr[i-1] &gt; arr[i]), the first and third elements are swapped
-/// to maximize run length. This phase has O(n) time complexity with minimal swaps.</description></item>
-/// <item><description><strong>Run Boundary Registration:</strong> Detected run boundaries are stored in an index array (zeroIndices).
-/// The maximum number of runs is n/2 + 2. For small arrays (≤256 elements), the index array is allocated on the stack using stackalloc.
-/// For larger arrays, ArrayPool&lt;int&gt;.Shared is used to avoid stack overflow while maintaining O(1) amortized allocation cost.
-/// The indices array is structured as [end_of_array, boundary₁, boundary₂, ..., boundaryₖ].</description></item>
+/// <item><description><strong>Run Detection Phase (Natural Sorted Subsequence Identification):</strong> The algorithm scans the array from left to right,
+/// extending each run as far as possible in one direction. A non-descending run grows while arr[i+1] &gt;= arr[i];
+/// a strictly descending run grows while arr[i+1] &lt; arr[i] and is then reversed in-place to produce an ascending run.
+/// This approach captures the longest possible natural runs (both ascending and descending) and has O(n) time complexity
+/// with at most n/2 swaps (one pass of in-place reversal).</description></item>
+/// <item><description><strong>Run Boundary Registration:</strong> Detected run boundaries are stored in an ascending index array (zeroIndices) as [0, b₁, b₂, …, bₖ, n].
+/// Each adjacent pair (zeroIndices[m], zeroIndices[m+1]) defines one sorted run. The maximum number of runs is ceil(n/2),
+/// so the array needs at most n/2 + 2 entries. For small arrays (≤256 elements) the index array is allocated on the stack
+/// using stackalloc; for larger arrays ArrayPool&lt;int&gt;.Shared is used to avoid stack overflow.</description></item>
 /// <item><description><strong>Adaptive Merge Strategy (Binary Merge Tree):</strong> The detected runs are merged using a divide-and-conquer approach.
 /// The Split method recursively divides the run list into two halves until reaching the base case (2 or fewer runs),
 /// then merges them bottom-up. This guarantees O(log k) merge levels where k is the number of runs (k ≤ n/2).</description></item>
@@ -45,7 +46,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n log k) where k = number of runs - Typically k &lt;&lt; n for real-world data</description></item>
 /// <item><description>Worst case  : O(n log n) - Completely reversed or random data produces maximum runs (k ≈ n/2)</description></item>
 /// <item><description>Comparisons : O(n log k) - Run detection: O(n), merging: O(n log k)</description></item>
-/// <item><description>Swaps       : O(n) - Only during run detection phase (at most n/3 swaps)</description></item>
+/// <item><description>Swaps       : O(n/2) worst case - only during run detection phase for in-place reversal of descending runs</description></item>
 /// <item><description>Writes      : O(n log k) - Shift operations during merge (significantly fewer than traditional merge sort)</description></item>
 /// <item><description>Space       : O(n/2) - Maximum temporary buffer size for largest partition during merge</description></item>
 /// </list>
@@ -146,51 +147,57 @@ public static class ShiftSort
     {
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // Phase 1: Run Detection - Identify natural sorted sequences and their boundaries
-        zeroIndices[0] = s.Length;
+        // Phase 1: Natural Run Detection - scan left to right
+        // Extends each run as far as possible: non-descending runs grow as-is,
+        // strictly descending runs are reversed in-place to produce ascending runs.
+        // Builds the ascending boundary sequence directly: [0, b₁, …, bₖ, n]
+        var endTracker = 0;
+        zeroIndices[endTracker++] = 0;
 
-        var endTracker = 1;
-
-        // Scan from right to left, detecting descending pairs and optimizing 3-element inversions
-        for (var x = s.Length - 1; x >= 1; x--)
+        var i = 0;
+        while (i < s.Length - 1)
         {
-            if (s.Compare(x, x - 1) < 0) // Found a run boundary
+            var runStart = i;
+            if (s.Compare(i + 1, i) < 0) // strictly descending run: extend then reverse
             {
-                if (x > 1 && s.Compare(x - 1, x - 2) < 0) // Three consecutive descending elements
-                {
-                    // Optimize: swap first and third to extend run length
-                    s.Swap(x, x - 2);
-
-                    // Check if swap created a new boundary
-                    if (x != s.Length - 1)
-                    {
-                        if (s.Compare(x + 1, x) < 0)
-                        {
-                            zeroIndices[endTracker] = x + 1;
-                            endTracker++;
-                        }
-                    }
-                }
-                else
-                {
-                    // Regular boundary detected
-                    zeroIndices[endTracker] = x;
-                    endTracker++;
-                }
-
-                // Skip next element as it's already processed
-                x--;
+                i++; // consume the outer comparison's pair
+                while (i < s.Length - 1 && s.Compare(i + 1, i) < 0)
+                    i++;
+                ReverseRun(s, runStart, i);
             }
+            else // non-descending run: extend
+            {
+                i++; // consume the outer comparison's pair
+                while (i < s.Length - 1 && s.Compare(i + 1, i) >= 0)
+                    i++;
+            }
+
+            i++;
+            if (i < s.Length)
+                zeroIndices[endTracker++] = i;
         }
 
-        // Add end marker (start of array) to complete the run boundary list
-        zeroIndices[endTracker] = 0;
-
-        // Reverse to produce ascending boundary sequence: [0, b₁, …, bₖ, n]
-        zeroIndices[..(endTracker + 1)].Reverse();
+        zeroIndices[endTracker] = s.Length;
 
         // Phase 2: Adaptive Merge - Recursively merge detected runs
         Split(s, zeroIndices, 0, endTracker);
+    }
+
+    /// <summary>
+    /// Reverses the run between indices <paramref name="lo"/> and <paramref name="hi"/> (inclusive) in-place.
+    /// Used to convert a strictly descending run into ascending order during run detection.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ReverseRun<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lo, int hi)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        while (lo < hi)
+        {
+            s.Swap(lo, hi);
+            lo++;
+            hi--;
+        }
     }
 
     /// <summary>
@@ -252,8 +259,10 @@ public static class ShiftSort
                 var left = second - 1;
                 while (secondCounter > 0)
                 {
-                    // Stability: >= ensures elements from left partition come first when equal
-                    if (left >= first && s.Compare(left, tmp2ndSpan.Read(secondCounter - 1)) >= 0)
+                    // Stability: > ensures elements from left partition occupy lower positions than right.
+                    // In backward merge, equal right elements are placed at higher positions first,
+                    // leaving left (earlier in original) at lower positions (appearing first in output).
+                    if (left >= first && s.Compare(left, tmp2ndSpan.Read(secondCounter - 1)) > 0)
                     {
                         s.Write(left + secondCounter, s.Read(left));
                         left--;
