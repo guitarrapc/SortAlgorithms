@@ -5,10 +5,10 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// 配列から、常に最大の要素をルートにもつヒープ（二分ヒープ）を作成します（この時点で不安定）。
-/// その後、ルート要素をソート済み配列の末尾に移動し、ヒープの末端をルートに持ってきて再度ヒープ構造を維持します。これを繰り返すことで、ヒープの最大値が常にルートに保たれ、ソート済み配列に追加されることで自然とソートが行われます。
+/// その後、ルート（最大値）と末尾要素を読み取り、末尾要素をヒープに sift-down してからルート値を末尾に書き込みます。これを繰り返すことで、ヒープの最大値が常にルートに保たれ、ソート済み配列に追加されることで自然とソートが行われます。
 /// <br/>
 /// Builds a heap (binary heap) from the array where the root always contains the maximum element (which is inherently unstable).
-/// Then, the root element is moved to the end of the sorted array, the last element is moved to the root, and the heap structure is re-established. Repeating this process ensures that the maximum value in the heap is always at the root, allowing elements to be naturally sorted as they are moved to the sorted array.
+/// Then, the root (maximum) and the last element are read; the last element is sifted down into the heap, and the maximum is written to the end. Repeating this process ensures that the maximum value in the heap is always at the root, allowing elements to be naturally sorted as they are moved to the sorted array.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Heapsort:</strong></para>
@@ -25,13 +25,13 @@ namespace SortAlgorithm.Algorithms;
 /// Phase 1 percolates down to a leaf by selecting larger children without comparing keys.
 /// Phase 2 sifts the original value up to its correct position. This reduces the average number of comparisons.</description></item>
 /// <item><description><strong>Standard Heapify:</strong> During extraction phase, uses hole-based iterative sift-down.
-/// Saves the root value, descends by moving the larger child up into the hole, then writes the saved value at its correct position.
-/// This reduces memory writes compared to swap-based sift-down.</description></item>
+/// The replacement value (read from the last position) is passed in directly; it descends by moving the larger child up into the hole, then writes the value at its correct position.
+/// This avoids reading from the root inside the method and eliminates all Swap operations.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Heap / Selection</description></item>
-/// <item><description>Stable      : No (swapping elements by index breaks relative order)</description></item>
+/// <item><description>Stable      : No (heap operations do not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space)</description></item>
 /// <item><description>Best case   : Ω(n log n) - Even for sorted input, heap construction and extraction are required</description></item>
 /// <item><description>Average case: Θ(n log n) - Build heap O(n) + n-1 extractions with O(log n) heapify each</description></item>
@@ -229,6 +229,7 @@ public static class HeapSort
     /// <param name="root">The index of the root node of the subtree to heapify.</param>
     /// <param name="size">The size of the heap (number of elements to consider).</param>
     /// <param name="offset">The starting index offset for the heap within the span.</param>
+    /// <param name="value">The value to sift down from the root position. Passed by the caller to avoid a redundant Read inside this method.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Heapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset, T value)
         where TComparer : IComparer<T>
