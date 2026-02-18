@@ -262,12 +262,12 @@ public class InsertionSortTests
         var expectedCompares = (ulong)(n - 1);
         var expectedWrites = 0UL;
 
-        // Each comparison reads 2 elements (j and tmp)
-        var minIndexReads = expectedCompares * 2;
+        // Optimized implementation: For each position, Read(i) for tmp + Read(j) once for comparison = 2 reads
+        var expectedIndexReads = (ulong)(2 * (n - 1));
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedIndexReads);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
@@ -297,12 +297,13 @@ public class InsertionSortTests
         var expectedCompares = (ulong)(n * (n - 1) / 2);
         var expectedWrites = (ulong)((n - 1) * (n + 2) / 2);
 
-        // Each comparison reads 2 elements
-        var minIndexReads = expectedCompares * 2;
+        // Optimized implementation: Read(j) once per loop iteration, then use the value for both comparison and write
+        // Total reads = n(n-1)/2 (for comparisons) + (n-1) (for tmp reads) = (n-1)(n+2)/2
+        var expectedIndexReads = (ulong)((n - 1) * (n + 2) / 2);
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedIndexReads);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL); // Insertion sort uses shifts, not swaps
     }
 

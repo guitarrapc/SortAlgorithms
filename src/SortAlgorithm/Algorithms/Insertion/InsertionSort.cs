@@ -153,10 +153,18 @@ public static class InsertionSort
             // Shift elements larger than tmp to the right
             // Use strict inequality (>) to maintain stability
             var j = i - 1;
-            while (j >= first && s.Compare(j, tmp) > 0)
+            while (j >= first)
             {
-                s.Write(j + 1, s.Read(j));
-                j--;
+                var a = s.Read(j);
+                if (s.Compare(a, tmp) > 0)
+                {
+                    s.Write(j + 1, a);
+                    j--;
+                }
+                else
+                {
+                    break;
+                }
             }
 
             // Insert tmp into the correct position only if elements were shifted
@@ -199,10 +207,18 @@ public static class InsertionSort
 
             // No boundary check (j >= first) needed because of the sentinel at (first - 1)
             // The element at (first - 1) is guaranteed to be <= tmp, so the loop will stop
-            while (s.Compare(j, tmp) > 0)
+            while (true)
             {
-                s.Write(j + 1, s.Read(j));
-                j--;
+                var a = s.Read(j);
+                if (s.Compare(a, tmp) > 0)
+                {
+                    s.Write(j + 1, a);
+                    j--;
+                }
+                else
+                {
+                    break;
+                }
             }
 
             if (j != i - 1)
@@ -293,10 +309,18 @@ public static class InsertionSort
                         return false; // Too many insertions, give up
                     }
 
-                    while (j >= first && s.Compare(j, tmp) > 0)
+                    while (j >= first)
                     {
-                        s.Write(j + 1, s.Read(j));
-                        j--;
+                        var a = s.Read(j);
+                        if (s.Compare(a, tmp) > 0)
+                        {
+                            s.Write(j + 1, a);
+                            j--;
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
 
                     s.Write(j + 1, tmp);
@@ -319,10 +343,18 @@ public static class InsertionSort
                         return false; // Too many insertions, give up
                     }
 
-                    while (s.Compare(j, tmp) > 0)
+                    while (true)
                     {
-                        s.Write(j + 1, s.Read(j));
-                        j--;
+                        var a = s.Read(j);
+                        if (s.Compare(a, tmp) > 0)
+                        {
+                            s.Write(j + 1, a);
+                            j--;
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
 
                     s.Write(j + 1, tmp);
