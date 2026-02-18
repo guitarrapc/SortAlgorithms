@@ -154,10 +154,8 @@ public static class HeapSort
         var n = last - first;
 
         // Build heap
-        for (var i = first + n / 2 - 1; i >= first; i--)
-        {
+        for (var i = first + n / 2; i-- > first;)
             FloydHeapify(s, i, n, first);
-        }
 
         // Extract elements from heap
         for (var i = last - 1; i > first; i--)
@@ -182,7 +180,7 @@ public static class HeapSort
     /// <param name="size">The size of the heap (number of elements to consider).</param>
     /// <param name="offset">The starting index offset for the heap within the span.</param>
     /// <remarks>
-    /// Floyd's algorithm reduces the number of comparisons during heap construction by ~25%.
+    /// Floyd's algorithm reduces the number of comparisons during heap construction by ~25%. However may increase read/writes slightly due to the two-phase approach.
     /// Phase 1: Percolate down to a leaf by always taking the larger child (no key comparison).
     /// Phase 2: Sift up the original root value to its correct position.
     /// <para>Time Complexity: O(log n) - Same asymptotic complexity but fewer comparisons in practice.</para>
@@ -231,13 +229,6 @@ public static class HeapSort
     /// <param name="root">The index of the root node of the subtree to heapify.</param>
     /// <param name="size">The size of the heap (number of elements to consider).</param>
     /// <param name="offset">The starting index offset for the heap within the span.</param>
-    /// <remarks>
-    /// This method implements the sift-down operation to maintain the max-heap property using the hole-based approach.
-    /// It saves the root value, descends by moving the larger child up into the hole at each level,
-    /// then writes the saved value at its final position. This avoids triple-write swaps.
-    /// <para>Time Complexity: O(log n) - Worst case traverses from root to leaf (height of the tree).</para>
-    /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
-    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Heapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset, T value)
         where TComparer : IComparer<T>
