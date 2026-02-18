@@ -31,10 +31,10 @@ namespace SortAlgorithm.Algorithms;
 /// The left subarray [left..mid] and right subarray [mid+1..right] are sorted before merging.</description></item>
 /// <item><description><strong>In-Place Merge Step:</strong> Two sorted subarrays must be merged without using additional memory.
 /// This is achieved using array rotation, which rearranges elements by shifting blocks of the array.</description></item>
-/// <item><description><strong>Rotation Algorithm (GCD-Cycle / Juggling):</strong> Array rotation is implemented using GCD-based cycle detection.
-/// To rotate array A of length n by k positions: Find GCD(n, k) cycles, and for each cycle, move elements using assignments.
-/// This achieves O(n) time rotation with O(1) space using only writes (no swaps needed).
-/// The algorithm divides rotation into GCD(n,k) independent cycles, rotating elements within each cycle.</description></item>
+/// <item><description><strong>Rotation Algorithm (3-Reversal with fast paths):</strong> Array rotation uses fast paths for k==1 and k==n-1
+/// (shift a single element with sequential reads/writes, no swaps) and three-reversal for the general case:
+/// Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).
+/// All three phases are linear scans, enabling hardware prefetching and eliminating GCD/modulo overhead.</description></item>
 /// <item><description><strong>Merge via Rotation:</strong> During merge, find the position where the first element of the right partition
 /// should be inserted in the left partition (using binary search). Rotate elements to place it correctly, then recursively
 /// merge the remaining elements. This maintains sorted order while being in-place.</description></item>
@@ -50,8 +50,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n log² n) - Binary search (log n) + rotation (n) per merge level (log n levels)</description></item>
 /// <item><description>Worst case  : O(n log² n) - Rotation adds O(n) factor to each merge operation</description></item>
 /// <item><description>Comparisons : Best O(n), Average/Worst O(n log² n) - Galloping reduces comparisons for consecutive blocks</description></item>
-/// <item><description>Writes      : Best O(n), Average/Worst O(n² log n) - GCD-cycle rotation uses assignments only (no swaps)</description></item>
-/// <item><description>Swaps       : 0 - GCD-cycle rotation uses only write operations, no swaps needed</description></item>
+/// <item><description>Writes      : Best O(n), Average/Worst O(n log² n) - k==1/k==n-1 fast paths use sequential writes; 3-reversal uses cache-friendly swaps</description></item>
+/// <item><description>Swaps       : 0 for k==1/k==n-1 fast paths; O(n/2) per rotation in general case (3-reversal)</description></item>
 /// <item><description>Space       : O(log n) - Only recursion stack space, no auxiliary buffer needed</description></item>
 /// </list>
 /// <para><strong>Advantages of Rotate Merge Sort:</strong></para>
@@ -60,13 +60,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Stable - Preserves relative order of equal elements</description></item>
 /// <item><description>Hybrid optimization - Insertion sort improves performance for small subarrays</description></item>
 /// <item><description>Galloping search - Efficiently finds consecutive blocks (TimSort-style)</description></item>
-/// <item><description>GCD-cycle rotation - Efficient assignment-based rotation without swaps</description></item>
+/// <item><description>3-reversal rotation - cache-friendly linear scans, no GCD or modulo overhead</description></item>
+/// <item><description>k==1 / k==n-1 fast paths - zero-swap sequential shift for the most common single-element merge case</description></item>
 /// </list>
 /// <para><strong>Disadvantages:</strong></para>
 /// <list type="bullet">
 /// <item><description>Slower than buffer-based merge sort - Additional log n factor from binary search and rotation overhead</description></item>
 /// <item><description>More writes than standard merge sort - Rotation requires multiple element movements</description></item>
-/// <item><description>Complexity - Multiple optimizations (insertion sort, galloping, GCD-cycle) increase code complexity</description></item>
+/// <item><description>Complexity - Multiple optimizations (insertion sort, galloping, 3-reversal fast paths) increase code complexity</description></item>
 /// </list>
 /// <para><strong>Use Cases:</strong></para>
 /// <list type="bullet">
@@ -256,9 +257,10 @@ public static class RotateMergeSort
     }
 
     /// <summary>
-    /// Rotates a subarray by k positions to the left using the GCD-cycle (Juggling) algorithm.
-    /// This algorithm divides the rotation into GCD(n, k) independent cycles and moves elements
-    /// within each cycle using assignments only (no swaps needed).
+    /// Rotates a subarray left by k positions.
+    /// Fast paths for k==1 and k==n-1 shift a single element sequentially (no swaps, linear access).
+    /// General case uses 3-reversal: Reverse[left..left+k-1], Reverse[left+k..right], Reverse[left..right].
+    /// All paths are linear scans, enabling hardware prefetching without GCD or modulo overhead.
     /// </summary>
     /// <param name="s">The SortSpan wrapping the array</param>
     /// <param name="left">The start index of the subarray to rotate</param>
@@ -274,54 +276,46 @@ public static class RotateMergeSort
         k = k % n;
         if (k == 0) return;
 
-        // GCD-cycle rotation (Juggling algorithm)
-        // Divide rotation into gcd(n, k) independent cycles
-        var cycles = GCD(n, k);
-
-        for (var cycle = 0; cycle < cycles; cycle++)
+        // Fast path: k==1 - shift single element to right end (sequential read/write, no swap)
+        if (k == 1)
         {
-            // Save the first element of this cycle
-            var startIdx = left + cycle;
-            var temp = s.Read(startIdx);
-            var currentIdx = startIdx;
-
-            // Move elements in this cycle
-            while (true)
-            {
-                var nextIdx = currentIdx + k;
-                if (nextIdx > right)
-                    nextIdx = left + (nextIdx - right - 1);
-
-                // If we've completed the cycle, break
-                if (nextIdx == startIdx)
-                    break;
-
-                // Move element from nextIdx to currentIdx
-                s.Write(currentIdx, s.Read(nextIdx));
-                currentIdx = nextIdx;
-            }
-
-            // Place the saved element in its final position
-            s.Write(currentIdx, temp);
+            var tmp = s.Read(left);
+            for (var i = left; i < right; i++)
+                s.Write(i, s.Read(i + 1));
+            s.Write(right, tmp);
+            return;
         }
+
+        // Fast path: k==n-1 - shift single element to left end (symmetric of k==1)
+        if (k == n - 1)
+        {
+            var tmp = s.Read(right);
+            for (var i = right; i > left; i--)
+                s.Write(i, s.Read(i - 1));
+            s.Write(left, tmp);
+            return;
+        }
+
+        // General case: 3-reversal rotation (linear scans, cache-friendly, no GCD overhead)
+        Reverse(s, left, left + k - 1);
+        Reverse(s, left + k, right);
+        Reverse(s, left, right);
     }
 
     /// <summary>
-    /// Calculates the greatest common divisor (GCD) of two numbers using Euclid's algorithm.
+    /// Reverses a subarray in-place using swaps.
     /// </summary>
-    /// <param name="a">First number</param>
-    /// <param name="b">Second number</param>
-    /// <returns>GCD of a and b</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GCD(int a, int b)
+    private static void Reverse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        while (b != 0)
+        while (left < right)
         {
-            var temp = b;
-            b = a % b;
-            a = temp;
+            s.Swap(left, right);
+            left++;
+            right--;
         }
-        return a;
     }
 }
 
