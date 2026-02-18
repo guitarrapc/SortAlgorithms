@@ -266,36 +266,70 @@ public static class QuickSortDualPivot
         var less = left + 1;
         var great = right - 1;
 
-        // Partitioning loop (works for both equal and different pivots)
-        // When p = q (equal pivots), elements equal to pivot naturally stay in middle
-        for (int k = less; k <= great; k++)
+        if (diffPivots)
         {
-            if (s.Compare(k, left) < 0)
+            // Different pivots (p1 < p2): dual-comparison loop
+            // Each element is compared against both pivot1 (left) and pivot2 (right)
+            for (int k = less; k <= great; k++)
             {
-                // Element < pivot1: move to left region
-                s.Swap(k, less);
-                less++;
-            }
-            else if (s.Compare(k, right) > 0)
-            {
-                // Element > pivot2: scan from right to find position
-                // Check k < great first to avoid unnecessary comparisons (short-circuit evaluation)
-                while (k < great && s.Compare(great, right) > 0)
-                {
-                    great--;
-                }
-                s.Swap(k, great);
-                great--;
-
-                // Re-check swapped element (original comparison result no longer valid after swap)
                 if (s.Compare(k, left) < 0)
                 {
+                    // Element < pivot1: move to left region
                     s.Swap(k, less);
                     less++;
                 }
+                else if (s.Compare(k, right) > 0)
+                {
+                    // Element > pivot2: scan from right to find position
+                    // Check k < great first to avoid unnecessary comparisons (short-circuit evaluation)
+                    while (k < great && s.Compare(great, right) > 0)
+                    {
+                        great--;
+                    }
+                    s.Swap(k, great);
+                    great--;
+
+                    // Re-check swapped element (original comparison result no longer valid after swap)
+                    if (s.Compare(k, left) < 0)
+                    {
+                        s.Swap(k, less);
+                        less++;
+                    }
+                }
+                // else: pivot1 <= element <= pivot2, stays in middle
             }
-            // else: pivot1 <= element <= pivot2, stays in middle
-            // When pivots are equal (pivot1 = pivot2), this means element = pivot
+        }
+        else
+        {
+            // Equal pivots (p1 == p2): single-comparison loop
+            // All comparisons use left only, avoiding redundant cross-index reads against right
+            for (int k = less; k <= great; k++)
+            {
+                if (s.Compare(k, left) < 0)
+                {
+                    // Element < pivot: move to left region
+                    s.Swap(k, less);
+                    less++;
+                }
+                else if (s.Compare(k, left) > 0)
+                {
+                    // Element > pivot: scan from right to find position
+                    while (k < great && s.Compare(great, left) > 0)
+                    {
+                        great--;
+                    }
+                    s.Swap(k, great);
+                    great--;
+
+                    // Re-check swapped element
+                    if (s.Compare(k, left) < 0)
+                    {
+                        s.Swap(k, less);
+                        less++;
+                    }
+                }
+                // else: element == pivot, stays in middle
+            }
         }
 
         // Swap pivots into their final positions
