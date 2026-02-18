@@ -1,4 +1,4 @@
-using System.Buffers;
+﻿using System.Buffers;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -337,23 +337,12 @@ public static class LibrarySort
             searchEnd = positions[insertIdx];
         }
 
-        // Try to find a gap in the target range
-        // Optimization: if range is too large, it likely indicates gap depletion
-        // Skip exhaustive search and go directly to shift-based insertion
+        // LibrarySort principle: larger range = more gaps available
+        // Use local search around the insertion point (searchEnd) to find nearby gaps efficiently
+        // Search radius scales with range size, as larger ranges likely have more gaps
         var rangeSize = searchEnd - searchStart;
-        int gapPos;
-
-        if (rangeSize > MaxGapSearchDistance)
-        {
-            // Large range - likely gap depletion, skip exhaustive search
-            // This prevents O(n) scan in pathological cases (e.g., insertIdx = 0 or posCount)
-            gapPos = -1;
-        }
-        else
-        {
-            // Small range - worth searching for a gap
-            gapPos = FindGap(aux, searchStart, searchEnd);
-        }
+        var searchRadius = Math.Min(rangeSize / 2, MaxGapSearchDistance); // Scale with range size, capped at max
+        var gapPos = FindGapNear(aux, searchEnd, searchStart, searchEnd, searchRadius);
 
         if (gapPos != -1)
         {
@@ -367,9 +356,9 @@ public static class LibrarySort
         // Target position is where we want to insert (at searchEnd, which is positions[insertIdx])
         targetPos = insertIdx < posCount ? positions[insertIdx] : auxEnd;
 
-        // Find gap to the right for shifting
-        // Search up to maxSize to utilize gaps created by rebalancing
-        var shiftGap = FindGap(aux, targetPos, maxSize);
+        // Find gap for shifting using local search from target position
+        // LibrarySort principle: gaps should be nearby after proper rebalancing
+        var shiftGap = FindGapNear(aux, targetPos, targetPos, maxSize, MaxGapSearchDistance);
 
         if (shiftGap == -1)
         {
@@ -416,23 +405,33 @@ public static class LibrarySort
     }
 
     /// <summary>
-    /// Finds the first gap in the specified range.
-    /// Returns -1 if no gap found.
+    /// Finds a gap near the target position using local search (expanding left and right).
+    /// This approach aligns with LibrarySort's assumption that gaps are nearby,
+    /// and is effective for detecting clustering.
+    /// Returns -1 if no gap found within the search radius.
     /// </summary>
-    private static int FindGap<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, int start, int end)
+    private static int FindGapNear<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, int target, int start, int end, int maxRadius)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Safety: limit the scan distance to prevent pathological cases
-        var limit = Math.Min(end, start + MaxGapSearchDistance * 2);
+        // Check target position first
+        if (target >= start && target < end && !aux.Read(target).HasValue)
+            return target;
 
-        for (var i = start; i < limit; i++)
+        // Expand search radius alternating left and right
+        for (var radius = 1; radius <= maxRadius; radius++)
         {
-            if (!aux.Read(i).HasValue)
-            {
-                return i;
-            }
+            // Check right
+            var right = target + radius;
+            if (right >= start && right < end && !aux.Read(right).HasValue)
+                return right;
+
+            // Check left
+            var left = target - radius;
+            if (left >= start && left < end && !aux.Read(left).HasValue)
+                return left;
         }
+
         return -1;
     }
 
