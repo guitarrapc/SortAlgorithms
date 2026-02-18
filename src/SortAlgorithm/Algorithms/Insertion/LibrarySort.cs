@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -219,7 +219,7 @@ public static class LibrarySort
         }
         finally
         {
-            ArrayPool<LibraryElement<T>>.Shared.Return(auxArray, RuntimeHelpers.IsReferenceOrContainsReferences<LibraryElement<T>>());
+            ArrayPool<LibraryElement<T>>.Shared.Return(auxArray);
             ArrayPool<int>.Shared.Return(positionsArray);
             ArrayPool<T>.Shared.Return(tempArray, RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
