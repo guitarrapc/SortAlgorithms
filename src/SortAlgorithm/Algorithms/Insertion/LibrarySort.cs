@@ -321,8 +321,10 @@ public static class LibrarySort
         if (insertIdx >= posCount)
         {
             // Insert at end (after last element)
+            // Use maxSize instead of auxEnd to utilize all gaps created by rebalancing
+            // Rebalance clears the entire auxSize range, so gaps exist beyond auxEnd
             searchStart = posCount > 0 ? positions[posCount - 1] + 1 : 0;
-            searchEnd = auxEnd;
+            searchEnd = maxSize;
         }
         else if (insertIdx == 0)
         {
@@ -340,7 +342,7 @@ public static class LibrarySort
         // LibrarySort principle: larger range = more gaps available
         // Choose target based on insertion position to balance gap consumption and prevent clustering:
         // - Front insertion: prefer left side (near searchStart)
-        // - Back insertion: prefer right side (near searchEnd)
+        // - Back insertion: prefer right side, but be careful with maxSize range
         // - Middle insertion: use midpoint to balance gap usage
         var rangeSize = searchEnd - searchStart;
         
@@ -352,8 +354,9 @@ public static class LibrarySort
         }
         else if (insertIdx >= posCount)
         {
-            // Back insertion: search from right
-            gapTarget = searchEnd - 1;
+            // Back insertion: start from just after last element
+            // For back insertion with maxSize range, use auxEnd as reference point
+            gapTarget = posCount > 0 ? positions[posCount - 1] + 1 : 0;
         }
         else
         {
@@ -363,14 +366,16 @@ public static class LibrarySort
         
         // Two-stage search to leverage large ranges:
         // Stage 1: Fast search with standard radius (O(1) expected for well-distributed gaps)
-        var searchRadius = Math.Min(rangeSize / 2, MaxGapSearchDistance);
+        // For back insertion with large range, cap the search radius to avoid excessive scanning
+        var effectiveRangeSize = insertIdx >= posCount ? Math.Min(rangeSize, auxEnd - searchStart + MaxGapSearchDistance) : rangeSize;
+        var searchRadius = Math.Min(effectiveRangeSize / 2, MaxGapSearchDistance);
         var gapPos = FindGapNear(aux, gapTarget, searchStart, searchEnd, searchRadius);
         
         // Stage 2: If no gap found and range is large, expand search radius
         // This exploits LibrarySort's strength: larger range = more gaps available
-        if (gapPos == -1 && rangeSize > MaxGapSearchDistance * 2)
+        if (gapPos == -1 && effectiveRangeSize > MaxGapSearchDistance * 2)
         {
-            var expandedRadius = Math.Min(rangeSize / 2, MaxGapSearchDistance * 2);
+            var expandedRadius = Math.Min(effectiveRangeSize / 2, MaxGapSearchDistance * 2);
             gapPos = FindGapNear(aux, gapTarget, searchStart, searchEnd, expandedRadius);
         }
 
