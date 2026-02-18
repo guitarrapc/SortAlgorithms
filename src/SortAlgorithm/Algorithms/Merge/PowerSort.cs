@@ -241,7 +241,11 @@ public static class PowerSort
                 var topLen = runLen[runCount - 1];
                 var p = ComputeNodePower(topBase - first, topBase + topLen - first, nextStart - first, nextEnd - first, n);
 
-                // Merge while the previous boundary has higher power than current boundary
+                // Merge while the previous boundary has higher power than current boundary.
+                // Per the PowerSort paper (Algorithm alg:powersort): p is computed once before
+                // the loop and stays constant throughout. Each merge extends the current run
+                // leftward (e1 is unchanged), so the boundary at e1..s2 and its power p remain
+                // the same regardless of how many merges occur.
                 // bp[bpCount-1] is the boundary between runs[runCount-2] and runs[runCount-1]
                 // p is the boundary between runs[runCount-1] and nextRun
                 // If bp[bpCount-1] > p, merge runs[runCount-2] and runs[runCount-1]
@@ -269,14 +273,7 @@ public static class PowerSort
 
                     // Verify invariant after merge
                     Debug.Assert(bpCount == runCount - 1, $"Invariant violated after merge: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
-
-                    // Recalculate p: boundary between new top (merged result) and nextRun
-                    if (runCount > 0)
-                    {
-                        topBase = runBase[runCount - 1];
-                        topLen = runLen[runCount - 1];
-                        p = ComputeNodePower(topBase - first, topBase + topLen - first, nextStart - first, nextEnd - first, n);
-                    }
+                    // p is NOT recalculated here (matches the paper's algorithm)
                 }
 
                 // Push the next run onto the stack
