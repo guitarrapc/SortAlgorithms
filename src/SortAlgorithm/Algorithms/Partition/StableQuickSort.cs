@@ -248,9 +248,10 @@ public static class StableQuickSort
 
             // Phase 1: Count elements in each partition
             // Use index-based comparison to avoid copying large struct pivot values
+            // Short-circuit when i == pivotIndex: pivot always compares equal to itself
             for (var i = left; i <= right; i++)
             {
-                var cmp = s.Compare(i, pivotIndex);
+                var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
                 if (cmp < 0)
                 {
                     lessIdx++;
@@ -272,11 +273,12 @@ public static class StableQuickSort
             greaterIdx = equalEnd;
 
             // Phase 2: Distribute elements to buffer maintaining order (SortSpan経由)
+            // Short-circuit when i == pivotIndex: pivot always compares equal to itself
             for (var i = left; i <= right; i++)
             {
                 var element = s.Read(i);
                 // Compare once per element to minimize comparison overhead
-                var cmp = s.Compare(i, pivotIndex);
+                var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
                 if (cmp < 0)
                 {
                     tempSortSpan.Write(lessIdx++, element);

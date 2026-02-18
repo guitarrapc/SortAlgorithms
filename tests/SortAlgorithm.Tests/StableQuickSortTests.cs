@@ -412,30 +412,31 @@ public class StableQuickSortTests
         //   - s.Compare(midIdx, highIdx): comparison between indices
         //   - mid == high, so else branch
         //   - Returns midIdx (no value read required)
-        //   Total: 2 compares (no extra reads for pivot value)
+        //   Total: 2 compares, 4 reads
         //
         // StablePartition Phase 1 (count):
         //   - for loop: n iterations
-        //   - s.Compare(i, pivotIndex): n comparisons (index-based)
-        //   Total: n compares
+        //   - i == pivotIndex short-circuits: (n-1) comparisons (skips 1 Compare call)
+        //   Total: n-1 compares, 2(n-1) reads
         //
         // StablePartition Phase 2 (distribute to temp):
         //   - for loop: n iterations
         //   - s.Read(i): n reads (store to element)
-        //   - s.Compare(i, pivotIndex): n comparisons (index-based, 1x per element)
+        //   - i == pivotIndex short-circuits: (n-1) comparisons (skips 1 Compare call)
         //   - tempSortSpan.Write(equalIdx++, element): n writes to temp buffer
-        //   Total: n reads, n compares, n writes to temp
+        //   Total: n reads (element) + 2(n-1) reads (compare) = 3n-2 reads, n-1 compares, n writes to temp
         //
         // StablePartition Phase 3 (copy back):
         //   - tempSortSpan.CopyTo(...): n reads from temp, n writes to main
         //   Total: n reads from temp, n writes to main
         //
         // Grand Total:
-        //   - Compares: 2 (median) + n (phase1) + n (phase2) = 2 + 2n
+        //   - Compares: 2 (median) + (n-1) (phase1) + (n-1) (phase2) = 2n
+        //   - IndexReads: 4 (median) + 2(n-1) (phase1) + (3n-2) (phase2) + n (phase3) = 6n
         //   - Swaps: 0
 
-        // Comparisons: 2 (median-of-3) + 2n (partition phases 1+2)
-        var expectedCompares = (ulong)(2 * n) + 2;
+        // Comparisons: 2 (median-of-3) + 2(n-1) (partition phases 1+2) = 2n
+        var expectedCompares = (ulong)(2 * n);
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
 
         // StableQuickSort doesn't use Swap
@@ -444,14 +445,8 @@ public class StableQuickSortTests
         // Verify the array is still correct (all values unchanged)
         foreach(var item in sameValues) await Assert.That(item).IsEqualTo(42);
 
-        // Note: Index-based pivot avoids reading pivot value, reducing read count
-        // IndexReads breakdown:
-        // - MedianOf3Index: 2 compares × 2 reads/compare = 4 reads
-        // - Phase1 (count): n iterations × 2 reads/compare = 2n reads
-        // - Phase2 (distribute): n reads (element) + n compares × 2 reads/compare = 3n reads
-        // - Phase3 (CopyTo): n reads from temp buffer
-        // Total IndexReads = 4 + 2n + 3n + n = 4 + 6n
-        var expectedIndexReads = (ulong)(4 + 6 * n);
+        // IndexReads: 4 (median) + 2(n-1) (phase1) + (3n-2) (phase2) + n (phase3) = 6n
+        var expectedIndexReads = (ulong)(6 * n);
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedIndexReads);
 
         // IndexWrites: n (phase2 to temp) + n (phase3 to main) = 2n
