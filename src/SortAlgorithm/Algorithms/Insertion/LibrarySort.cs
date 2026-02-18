@@ -322,7 +322,6 @@ public static class LibrarySort
         {
             // Insert at end (after last element)
             // Use maxSize instead of auxEnd to utilize all available space
-            // After rebalancing, gaps exist beyond auxEnd up to maxSize (initialized at start)
             searchStart = posCount > 0 ? positions[posCount - 1] + 1 : 0;
             searchEnd = maxSize;
         }
@@ -392,7 +391,15 @@ public static class LibrarySort
 
         // No gap in range - need to shift elements
         // Target position is determined by insertion index
-        targetPos = insertIdx < posCount ? positions[insertIdx] : auxEnd;
+        // For back insertion, use gapTarget (positions[posCount-1]+1) for consistency
+        if (insertIdx >= posCount)
+        {
+            targetPos = gapTarget; // Consistent with gap search target
+        }
+        else
+        {
+            targetPos = positions[insertIdx];
+        }
 
         // Find gap for shifting using local search from target position
         // LibrarySort principle: gaps should be nearby after proper rebalancing
