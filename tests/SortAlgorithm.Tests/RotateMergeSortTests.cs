@@ -240,18 +240,18 @@ public class RotateMergeSortTests
         //
         // Actual observations for reversed data with galloping + insertion sort:
         // n=10:  45 comparisons    (insertion sort, ~4.5n)
-        // n=20:  100 comparisons   (~1.2 * n * log₂(n))
-        // n=50:  325 comparisons   (~1.2 * n * log₂(n))
-        // n=100: 668 comparisons   (~1.0 * n * log₂(n))
+        // n=20:  ~78-86 comparisons
+        // n=50:  ~253-282 comparisons
+        // n=100: ~643 comparisons  (~0.97 * n * log₂(n), reduced by BinarySearch removal)
         //
         // Pattern: Galloping improves efficiency, especially for larger sizes
         // n≤16: ~4.0n to ~5.5n (insertion sort)
-        // n>16: ~1.0 * n * log₂(n) to ~2.0 * n * log₂(n) (galloping reduces comparisons)
+        // n>16: ~0.9 * n * log₂(n) to ~2.0 * n * log₂(n) (galloping reduces comparisons)
         var logN = Math.Log2(n);
-        var minCompares = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 1.0);
+        var minCompares = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 0.9);
         var maxCompares = n <= 16 ? (ulong)(n * 5.5) : (ulong)(n * logN * 2.0);
 
-        // Writes are reduced due to insertion sort and GCD-cycle rotation
+        // Writes are reduced due to insertion sort and 3-reversal rotation
         // n=10:  54 writes
         // n=20:  128 writes
         // n=50:  434 writes
@@ -259,10 +259,12 @@ public class RotateMergeSortTests
         var minWrites = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 1.0);
         var maxWrites = n <= 16 ? (ulong)(n * 6.0) : (ulong)(n * logN * 20.0);
 
-        // Swaps: GCD-cycle rotation uses assignments only (no swaps)
-        // All rotation implementations should have 0 swaps
+        // Swaps: 3-reversal rotation uses swaps in the general case
+        // k==1 / k==n-1 fast paths use sequential writes (no swaps)
+        // n≤16: insertion sort handles everything - 0 swaps (InsertionSort uses Write, not Swap)
+        // n>16: 3-reversal generates O(n log n) swaps total
         var minSwaps = 0UL;
-        var maxSwaps = 0UL;
+        var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
 
         var minReads = stats.CompareCount * 2;
 
@@ -304,9 +306,12 @@ public class RotateMergeSortTests
         var minWrites = n <= 16 ? (ulong)(n * 1.5 * 0.6) : (ulong)(n * logN * 0.5);
         var maxWrites = n <= 16 ? (ulong)(n * 4.0 * 1.2) : (ulong)(n * logN * 15.0);
 
-        // Swaps: GCD-cycle rotation uses assignments only (no swaps)
+        // Swaps: 3-reversal rotation uses swaps in the general case
+        // k==1 / k==n-1 fast paths use sequential writes (no swaps)
+        // n≤16: insertion sort handles everything - 0 swaps (InsertionSort uses Write, not Swap)
+        // n>16: 3-reversal generates swaps; observed n=100 random ~589 swaps
         var minSwaps = 0UL;
-        var maxSwaps = 0UL;
+        var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
 
         var minReads = stats.CompareCount * 2;
 
