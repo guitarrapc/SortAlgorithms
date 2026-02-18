@@ -297,7 +297,7 @@ public static class LibrarySort
             }
             else
             {
-                left = mid + 1; // Stable
+                left = mid + 1; // Stable: insert after equal elements
             }
         }
 
@@ -321,8 +321,8 @@ public static class LibrarySort
         if (insertIdx >= posCount)
         {
             // Insert at end (after last element)
-            // Use maxSize instead of auxEnd to utilize all gaps created by rebalancing
-            // Rebalance clears the entire auxSize range, so gaps exist beyond auxEnd
+            // Use maxSize instead of auxEnd to utilize all available space
+            // After rebalancing, gaps exist beyond auxEnd up to maxSize (initialized at start)
             searchStart = posCount > 0 ? positions[posCount - 1] + 1 : 0;
             searchEnd = maxSize;
         }
@@ -388,7 +388,7 @@ public static class LibrarySort
         }
 
         // No gap in range - need to shift elements
-        // Target position is where we want to insert (at searchEnd, which is positions[insertIdx])
+        // Target position is determined by insertion index
         targetPos = insertIdx < posCount ? positions[insertIdx] : auxEnd;
 
         // Find gap for shifting using local search from target position
@@ -472,12 +472,12 @@ public static class LibrarySort
 
     /// <summary>
     /// Inserts a position into the sorted position buffer.
-    /// Uses fast memcpy (O(1) operation) instead of element-by-element copy.
+    /// Uses Span.CopyTo for efficient bulk memory copy instead of element-by-element iteration.
     /// Note: Statistics tracking is skipped for performance.
     /// </summary>
     private static void InsertPosition(Span<int> positions, ref int count, int idx, int pos)
     {
-        // Shift elements: use Span.CopyTo for O(1) memcpy performance
+        // Shift elements: use Span.CopyTo for efficient memory copy
         if (idx < count)
         {
             var source = positions.Slice(idx, count - idx);
@@ -490,6 +490,9 @@ public static class LibrarySort
 
     /// <summary>
     /// Rebalances with dynamic spacing to prevent data loss.
+    /// Clears the range [0, range) where range = min((1+ε)*count, auxSize),
+    /// then redistributes all elements with uniform gap distribution.
+    /// Returns the maximum used position + 1 for auxEnd tracking.
     /// </summary>
     private static int Rebalance<T, TComparer, TContext>(SortSpan<LibraryElement<T>, LibraryElementComparer<T, TComparer>, TContext> aux, int auxSize,
         Span<int> positions, ref int posCount, Span<T> tempBuffer)
@@ -520,7 +523,7 @@ public static class LibrarySort
 
         var range = Math.Min(rangeNeeded, auxSize);
 
-        // Clear
+        // Clear the range [0, range) to prepare for redistribution
         var gap = new LibraryElement<T>();
         for (var i = 0; i < range; i++)
         {
