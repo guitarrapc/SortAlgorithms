@@ -309,12 +309,12 @@ public static class BottomupHeapSort
         }
 
         // Phase 2: Sift up the original root value to its correct position
-        var parent = offset + (hole - offset - 1) / 2;
-        while (hole > root && s.Compare(rootValue, parent) > 0)
+        while (hole > root)
         {
+            var parent = offset + (hole - offset - 1) / 2;
+            if (s.Compare(rootValue, parent) <= 0) break;
             s.Write(hole, s.Read(parent));
             hole = parent;
-            parent = offset + (hole - offset - 1) / 2;
         }
         s.Write(hole, rootValue);
     }
