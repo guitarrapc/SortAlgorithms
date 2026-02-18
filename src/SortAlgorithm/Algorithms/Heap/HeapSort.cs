@@ -1,4 +1,5 @@
 ﻿using SortAlgorithm.Contexts;
+using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -22,8 +23,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Floyd's Heapify Optimization:</strong> During heap construction, uses Floyd's two-phase algorithm:
 /// Phase 1 percolates down to a leaf by selecting larger children without comparing keys.
 /// Phase 2 sifts the original value up to its correct position. This reduces the average number of comparisons.</description></item>
-/// <item><description><strong>Standard Heapify:</strong> During extraction phase, uses standard iterative sift-down approach.
-/// Compares parent with both children, swaps with the larger child if needed, and continues down the tree until heap property is satisfied.</description></item>
+/// <item><description><strong>Standard Heapify:</strong> During extraction phase, uses hole-based iterative sift-down.
+/// Saves the root value, descends by moving the larger child up into the hole, then writes the saved value at its correct position.
+/// This reduces memory writes compared to swap-based sift-down.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -34,7 +36,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n) - Build heap O(n) + n-1 extractions with O(log n) heapify each</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
 /// <item><description>Comparisons : ~2n log n - Approximately 2 comparisons per heapify (left and right child checks)</description></item>
-/// <item><description>Swaps       : ~n log n - One swap per level during heapify, averaged across all operations</description></item>
+/// <item><description>Swaps       : n-1 - One root-to-end swap per extraction step; sift-down uses hole-based writes instead of swaps</description></item>
 /// <item><description>Cache       : Poor locality - Heap structure causes frequent cache misses due to non-sequential access</description></item>
 /// </list>
 /// <para><strong>Why "Heap / Selection" Family?:</strong></para>
@@ -143,6 +145,7 @@ public static class HeapSort
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The inclusive start index of the range to sort.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -152,9 +155,7 @@ public static class HeapSort
         // Build heap
         for (var i = first + n / 2 - 1; i >= first; i--)
         {
-            // Can replace with standard Heapify(s, i, n, first) for traditional approach
             FloydHeapify(s, i, n, first);
-            // Heapify(s, i, n, first);
         }
 
         // Extract elements from heap
@@ -186,6 +187,7 @@ public static class HeapSort
     /// <para>Time Complexity: O(log n) - Same asymptotic complexity but fewer comparisons in practice.</para>
     /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void FloydHeapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -229,44 +231,38 @@ public static class HeapSort
     /// <param name="size">The size of the heap (number of elements to consider).</param>
     /// <param name="offset">The starting index offset for the heap within the span.</param>
     /// <remarks>
-    /// This method implements the sift-down operation to maintain the max-heap property.
-    /// It iteratively compares the parent node with its left and right children, swapping with the larger child if needed,
-    /// and continues down the tree until the heap property is satisfied or a leaf node is reached.
+    /// This method implements the sift-down operation to maintain the max-heap property using the hole-based approach.
+    /// It saves the root value, descends by moving the larger child up into the hole at each level,
+    /// then writes the saved value at its final position. This avoids triple-write swaps.
     /// <para>Time Complexity: O(log n) - Worst case traverses from root to leaf (height of the tree).</para>
     /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Heapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var value = s.Read(root);
+        var hole = root;
+
         while (true)
         {
-            var largest = root;
-            var left = 2 * (root - offset) + 1 + offset;
-            var right = 2 * (root - offset) + 2 + offset;
+            var left = 2 * (hole - offset) + 1 + offset;
+            var right = left + 1;
 
-            // If left child is larger than root
-            if (left < offset + size && s.Compare(left, largest) > 0)
-            {
-                largest = left;
-            }
+            if (left >= offset + size) break;
 
-            // If right child is larger than largest so far
-            if (right < offset + size && s.Compare(right, largest) > 0)
-            {
-                largest = right;
-            }
+            // Find larger child
+            var largest = (right < offset + size && s.Compare(right, left) > 0) ? right : left;
 
-            // If largest is not root, swap and heapify the affected sub-tree
-            if (largest != root)
-            {
-                s.Swap(root, largest);
-                root = largest;
-            }
-            else
-            {
-                break;
-            }
+            // If value is already >= largest child, heap property is satisfied
+            if (s.Compare(value, largest) >= 0) break;
+
+            // Move larger child up to fill the hole
+            s.Write(hole, s.Read(largest));
+            hole = largest;
         }
+
+        s.Write(hole, value);
     }
 }

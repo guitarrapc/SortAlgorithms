@@ -179,33 +179,31 @@ public class HeapSortTests
         HeapSort.Sort(sorted.AsSpan(), stats);
 
         // Heap Sort characteristics:
-        // Build heap phase: O(n) comparisons with some swaps even for sorted data
+        // Build heap phase: O(n) comparisons with some writes even for sorted data
         // Extract phase: (n-1) extractions, each requiring O(log n) heapify
         //
         // Empirical observations for sorted data:
-        // n=10:  Compare=41,  Swap=30
-        // n=20:  Compare=121, Swap=80
-        // n=50:  Compare=405, Swap=238
-        // n=100: Compare=1031, Swap=581
+        // n=10:  Compare=41,  Swap=9
+        // n=20:  Compare=121, Swap=19
+        // n=50:  Compare=405, Swap=49
+        // n=100: Compare=1031, Swap=99
         //
-        // Pattern: approximately n * log2(n) for both compares and swaps
+        // SwapCount: exactly n-1 (one root-to-end swap per extraction step)
+        // IndexWriteCount: ~n*log(n) from hole-based sift-down writes + 2*(n-1) from swaps
 
         var logN = Math.Log(n + 1, 2);
         var minCompares = (ulong)(n * logN * 0.5);
         var maxCompares = (ulong)(n * logN * 2.5 + n);
 
-        var minSwaps = (ulong)(n * logN * 0.4);
-        var maxSwaps = (ulong)(n * logN * 1.5);
-
-        // Each swap writes 2 elements
-        var minWrites = minSwaps * 2;
-        var maxWrites = maxSwaps * 2;
+        // Hole-based Heapify no longer uses Swap internally; only the extract loop swaps
+        var minWrites = (ulong)(n * logN * 0.4);
+        var maxWrites = (ulong)(n * logN * 2.5 + n);
 
         // Each comparison reads 2 elements
         var minIndexReads = minCompares * 2;
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
+        await Assert.That(stats.SwapCount).IsEqualTo((ulong)(n - 1));
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
@@ -225,29 +223,27 @@ public class HeapSortTests
         // Reversed data shows similar patterns to sorted data due to heap property
         //
         // Empirical observations for reversed data:
-        // n=10:  Compare=38,  Swap=27
-        // n=20:  Compare=115, Swap=74
-        // n=50:  Compare=401, Swap=234
-        // n=100: Compare=1023, Swap=573
+        // n=10:  Compare=38,  Swap=9
+        // n=20:  Compare=115, Swap=19
+        // n=50:  Compare=401, Swap=49
+        // n=100: Compare=1023, Swap=99
         //
-        // Pattern: approximately n * log2(n) for both compares and swaps
+        // SwapCount: exactly n-1 (one root-to-end swap per extraction step)
+        // IndexWriteCount: ~n*log(n) from hole-based sift-down writes + 2*(n-1) from swaps
 
         var logN = Math.Log(n + 1, 2);
         var minCompares = (ulong)(n * logN * 0.5);
         var maxCompares = (ulong)(n * logN * 2.5 + n);
 
-        var minSwaps = (ulong)(n * logN * 0.4);
-        var maxSwaps = (ulong)(n * logN * 1.5);
-
-        // Each swap writes 2 elements
-        var minWrites = minSwaps * 2;
-        var maxWrites = maxSwaps * 2;
+        // Hole-based Heapify no longer uses Swap internally; only the extract loop swaps
+        var minWrites = (ulong)(n * logN * 0.4);
+        var maxWrites = (ulong)(n * logN * 2.5 + n);
 
         // Each comparison reads 2 elements
         var minIndexReads = minCompares * 2;
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
+        await Assert.That(stats.SwapCount).IsEqualTo((ulong)(n - 1));
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
@@ -267,29 +263,27 @@ public class HeapSortTests
         // The values are similar to sorted/reversed cases
         //
         // Empirical observations for random data (example):
-        // n=10:  Compare=38,  Swap=27
-        // n=20:  Compare=113, Swap=72
-        // n=50:  Compare=405, Swap=238
-        // n=100: Compare=1031, Swap=581
+        // n=10:  Compare=38,  Swap=9
+        // n=20:  Compare=113, Swap=19
+        // n=50:  Compare=405, Swap=49
+        // n=100: Compare=1031, Swap=99
         //
-        // Pattern: approximately n * log2(n), with variation due to randomness
+        // SwapCount: exactly n-1 (one root-to-end swap per extraction step)
+        // IndexWriteCount: ~n*log(n) from hole-based sift-down writes + 2*(n-1) from swaps
 
         var logN = Math.Log(n + 1, 2);
         var minCompares = (ulong)(n * logN * 0.5);
         var maxCompares = (ulong)(n * logN * 2.5 + n);
 
-        var minSwaps = (ulong)(n * logN * 0.4);
-        var maxSwaps = (ulong)(n * logN * 1.5);
-
-        // Each swap writes 2 elements
-        var minWrites = minSwaps * 2;
-        var maxWrites = maxSwaps * 2;
+        // Hole-based Heapify no longer uses Swap internally; only the extract loop swaps
+        var minWrites = (ulong)(n * logN * 0.4);
+        var maxWrites = (ulong)(n * logN * 2.5 + n);
 
         // Each comparison reads 2 elements
         var minIndexReads = minCompares * 2;
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
+        await Assert.That(stats.SwapCount).IsEqualTo((ulong)(n - 1));
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
