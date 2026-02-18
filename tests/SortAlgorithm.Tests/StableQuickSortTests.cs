@@ -4,7 +4,7 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class StableQuickSortTest
+public class StableQuickSortTests
 {
     [Test]
     [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
