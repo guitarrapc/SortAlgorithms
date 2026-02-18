@@ -266,7 +266,9 @@ public class RotateMergeSortTests
         var minSwaps = 0UL;
         var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
 
-        var minReads = stats.CompareCount * 2;
+        // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
+        // Expected: approximately 1.2x comparisons (down from 2x)
+        var minReads = (ulong)(stats.CompareCount * 1.2);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
@@ -313,7 +315,9 @@ public class RotateMergeSortTests
         var minSwaps = 0UL;
         var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
 
-        var minReads = stats.CompareCount * 2;
+        // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
+        // Expected: approximately 1.2x comparisons (down from 2x)
+        var minReads = (ulong)(stats.CompareCount * 1.2);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);

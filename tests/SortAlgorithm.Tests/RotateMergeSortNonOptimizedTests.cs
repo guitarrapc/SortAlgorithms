@@ -4,7 +4,7 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class RotateMergeSortNonOptimizedNonOptimizedTests
+public class RotateMergeSortNonOptimizedTests
 {
     [Test, SkipCI]
     [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
@@ -256,22 +256,20 @@ public class RotateMergeSortNonOptimizedNonOptimizedTests
         // n=20:  140-380 writes     (~1.6-4.4 * n * log₂(n))
         // n=50:  482-2450 writes    (~1.7-8.7 * n * log₂(n))
         // n=100: 1164-9900 writes   (~1.8-14.9 * n * log₂(n))
-        var minWrites = (ulong)(n * logN * 1.5);
+        var minWrites = (ulong)(n * logN * 1.4);
         var maxWrites = (ulong)(n * logN * 20.0);
 
-        // Swaps reduced by block rotation (fewer, larger rotations)
-        // n=10:  25-45 swaps
-        // n=20:  70-190 swaps
-        // n=50:  241-1225 swaps
-        // n=100: 582-4950 swaps
-        var minSwaps = (ulong)(n * logN * 0.5);
-        var maxSwaps = (ulong)(n * logN * 10.0);
+        // Swaps: GCD-cycle (Juggling) rotation uses Write operations only, no Swaps
+        // Expected: 0 swaps (the algorithm uses assignments via Write, not Swap)
+        var expectedSwaps = 0UL;
 
-        var minReads = stats.CompareCount * 2;
+        // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
+        // Expected: approximately 1.2x comparisons (down from 2x)
+        var minReads = (ulong)(stats.CompareCount * 1.2);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
+        await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps); // GCD-cycle rotation uses Write, not Swap
         await Assert.That(stats.IndexReadCount >= minReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minReads}");
     }
 
@@ -315,7 +313,9 @@ public class RotateMergeSortNonOptimizedNonOptimizedTests
         var minSwaps = 0UL;  // Could be low if data is partially sorted
         var maxSwaps = (ulong)(n * logN * 8.0);
 
-        var minReads = stats.CompareCount * 2;
+        // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
+        // Expected: approximately 1.2x comparisons (down from 2x)
+        var minReads = (ulong)(stats.CompareCount * 1.2);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);

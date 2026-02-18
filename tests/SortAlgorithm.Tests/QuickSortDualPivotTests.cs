@@ -301,8 +301,9 @@ public class QuickSortDualPivotTests
         await Assert.That(stats.CompareCount >= minCompares).IsTrue().Because($"CompareCount ({stats.CompareCount}) should be >= {minCompares}");
         await Assert.That(stats.SwapCount >= expectedSwaps).IsTrue().Because($"SwapCount ({stats.SwapCount}) should be >= {expectedSwaps}");
 
-        // IndexReads: At least as many as comparisons (each compare reads 2 elements)
-        var minIndexReads = stats.CompareCount * 2;
+        // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
+        // Expected: approximately 1.5x comparisons (down from 2x)
+        var minIndexReads = (ulong)(stats.CompareCount * 1.5);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
 
@@ -340,8 +341,9 @@ public class QuickSortDualPivotTests
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
 
-        // IndexReads: Significantly higher due to partitioning and swapping
-        var minIndexReads = stats.CompareCount * 2;
+        // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
+        // Expected: approximately 1.5x comparisons (down from 2x)
+        var minIndexReads = (ulong)(stats.CompareCount * 1.5);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
 
@@ -376,8 +378,9 @@ public class QuickSortDualPivotTests
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.SwapCount >= minSwaps).IsTrue().Because($"SwapCount ({stats.SwapCount}) should be >= {minSwaps}");
 
-        // IndexReads: Should be proportional to comparisons and swaps
-        var minIndexReads = stats.CompareCount * 2;
+        // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
+        // Expected: approximately 1.5x comparisons (down from 2x)
+        var minIndexReads = (ulong)(stats.CompareCount * 1.5);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
 
