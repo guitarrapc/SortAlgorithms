@@ -189,10 +189,11 @@ public static class StableQuickSort
             var q1 = left + length / 4;
             var mid = left + length / 2;
             var q3 = left + (length * 3) / 4;
-            var pivot = MedianOf3Value(s, q1, mid, q3);
+            var pivotIndex = MedianOf3Index(s, q1, mid, q3);
 
             // Phase 2. Stable partition using ArrayPool buffer
-            var (lessEnd, greaterStart) = StablePartition(s, left, right, pivot);
+            // Use index-based comparison to avoid copying large struct pivot values
+            var (lessEnd, greaterStart) = StablePartition(s, left, right, pivotIndex);
 
             // Phase 3. Recursively sort partitions with tail recursion optimization
             // Recurse on smaller partition, loop on larger to ensure O(log n) stack depth
@@ -223,13 +224,13 @@ public static class StableQuickSort
     }
 
     /// <summary>
-    /// Performs stable partitioning of the range [left..right] around the pivot value.
+    /// Performs stable partitioning of the range [left..right] around the pivot element at pivotIndex.
     /// Returns (lessEnd, greaterStart) where:
     /// - [left, lessEnd): elements less than pivot
     /// - [lessEnd, greaterStart): elements equal to pivot
     /// - [greaterStart, right + 1): elements greater than pivot
     /// </summary>
-    private static (int lessEnd, int greaterStart) StablePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, T pivot)
+    private static (int lessEnd, int greaterStart) StablePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -246,9 +247,10 @@ public static class StableQuickSort
             var greaterIdx = 0;
 
             // Phase 1: Count elements in each partition
+            // Use index-based comparison to avoid copying large struct pivot values
             for (var i = left; i <= right; i++)
             {
-                var cmp = s.Compare(i, pivot);
+                var cmp = s.Compare(i, pivotIndex);
                 if (cmp < 0)
                 {
                     lessIdx++;
@@ -274,7 +276,7 @@ public static class StableQuickSort
             {
                 var element = s.Read(i);
                 // Compare once per element to minimize comparison overhead
-                var cmp = s.Compare(i, pivot);
+                var cmp = s.Compare(i, pivotIndex);
                 if (cmp < 0)
                 {
                     tempSortSpan.Write(lessIdx++, element);
@@ -301,11 +303,12 @@ public static class StableQuickSort
     }
 
     /// <summary>
-    /// Returns the median value among three elements at specified indices.
-    /// This method performs exactly 2-3 comparisons to determine the median value.
+    /// Returns the median index among three elements at specified indices.
+    /// This method performs exactly 2-3 comparisons to determine the median index.
+    /// Returns index instead of value to avoid copying large struct pivot values.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static T MedianOf3Value<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
+    private static int MedianOf3Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -317,12 +320,12 @@ public static class StableQuickSort
             var cmpMidHigh = s.Compare(midIdx, highIdx);
             if (cmpMidHigh > 0) // low > mid > high
             {
-                return s.Read(midIdx); // mid is median
+                return midIdx; // mid is median
             }
             else // low > mid, mid <= high
             {
                 var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? s.Read(highIdx) : s.Read(lowIdx);
+                return cmpLowHigh > 0 ? highIdx : lowIdx;
             }
         }
         else // low <= mid
@@ -331,11 +334,11 @@ public static class StableQuickSort
             if (cmpMidHigh > 0) // low <= mid, mid > high
             {
                 var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? s.Read(lowIdx) : s.Read(highIdx);
+                return cmpLowHigh > 0 ? lowIdx : highIdx;
             }
             else // low <= mid <= high
             {
-                return s.Read(midIdx); // mid is median
+                return midIdx; // mid is median
             }
         }
     }
