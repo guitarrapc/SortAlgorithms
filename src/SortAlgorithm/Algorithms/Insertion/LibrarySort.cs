@@ -367,7 +367,10 @@ public static class LibrarySort
         // Two-stage search to leverage large ranges:
         // Stage 1: Fast search with standard radius (O(1) expected for well-distributed gaps)
         // For back insertion with large range, cap the search radius to avoid excessive scanning
-        var effectiveRangeSize = insertIdx >= posCount ? Math.Min(rangeSize, auxEnd - searchStart + MaxGapSearchDistance) : rangeSize;
+        // Protect against negative values when auxEnd < searchStart (can happen after rebalance with sparse tail)
+        var effectiveRangeSize = insertIdx >= posCount 
+            ? Math.Min(rangeSize, Math.Max(0, auxEnd - searchStart) + MaxGapSearchDistance) 
+            : rangeSize;
         var searchRadius = Math.Min(effectiveRangeSize / 2, MaxGapSearchDistance);
         var gapPos = FindGapNear(aux, gapTarget, searchStart, searchEnd, searchRadius);
         
