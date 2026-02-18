@@ -83,7 +83,6 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
-/// <para>Paper: https://arxiv.org/abs/1604.06697</para>
 /// </remarks>
 public static class StableQuickSort
 {
@@ -168,7 +167,7 @@ public static class StableQuickSort
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
-    /// Uses tail recursion optimization to limit stack depth to O(log n).
+    /// Uses tail recursion optimization to limit stack depth to O(log n) by recursing on the smaller partition.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
@@ -196,15 +195,30 @@ public static class StableQuickSort
             var (lessEnd, greaterStart) = StablePartition(s, left, right, pivot);
 
             // Phase 3. Recursively sort partitions with tail recursion optimization
-            // Always sort left partition first (recursively), then loop on right partition
-            // This ensures consistent left-to-right ordering for visualization
-            if (lessEnd - left > 1)
+            // Recurse on smaller partition, loop on larger to ensure O(log n) stack depth
+            var leftLen = lessEnd - left;
+            var rightLen = right + 1 - greaterStart;
+
+            if (leftLen < rightLen)
             {
-                // Recurse on left partition
-                SortCore(s, left, lessEnd - 1, context);
+                // Left is smaller: recurse on left, loop on right
+                if (leftLen > 1)
+                {
+                    SortCore(s, left, lessEnd - 1, context);
+                }
+                // Tail recursion: continue loop with right partition
+                left = greaterStart;
             }
-            // Tail recursion: continue loop with right partition
-            left = greaterStart;
+            else
+            {
+                // Right is smaller or equal: recurse on right, loop on left
+                if (rightLen > 1)
+                {
+                    SortCore(s, greaterStart, right, context);
+                }
+                // Tail recursion: continue loop with left partition
+                right = lessEnd - 1;
+            }
         }
     }
 
