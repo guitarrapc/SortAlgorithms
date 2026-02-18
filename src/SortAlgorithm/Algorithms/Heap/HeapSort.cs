@@ -258,3 +258,215 @@ public static class HeapSort
         s.Write(hole, value);
     }
 }
+
+
+
+
+
+/// <summary>
+/// 配列から、常に最大の要素をルートにもつヒープ（二分ヒープ）を作成します（この時点で不安定）。
+/// その後、ルート要素を末尾要素と交換し、ヒープサイズを縮小してヒープ構造を再維持します。これを繰り返すことで、ヒープの最大値が常にルートに保たれ、ソート済み配列に追加されることで自然とソートが行われます。
+/// 最適化なしのテキストブック実装であり、<see cref="HeapSort"/> の参照基準として機能します。
+/// <br/>
+/// Builds a heap (binary heap) from the array where the root always contains the maximum element (which is inherently unstable).
+/// Then, swaps the root (maximum) with the last element, reduces the heap size, and re-establishes the heap property. Repeating this process produces a sorted array.
+/// This is the textbook non-optimized implementation that serves as a reference baseline for <see cref="HeapSort"/>.
+/// </summary>
+/// <remarks>
+/// <para><strong>Theoretical Conditions for Correct Heapsort:</strong></para>
+/// <list type="number">
+/// <item><description><strong>Heap Property Maintenance:</strong> For a max-heap, every parent node must be greater than or equal to its children.
+/// For array index i, left child is at 2i+1 and right child is at 2i+2. This implementation correctly maintains this property through the iterative swap-based sift-down.</description></item>
+/// <item><description><strong>Build Heap Phase:</strong> The initial heap construction starts from the last non-leaf node (n/2 - 1) and heapifies downward to index 0.
+/// Uses the standard top-down sift-down at each node: compare root with both children, swap with the larger child if needed, and repeat until the heap property is satisfied.
+/// This bottom-up traversal runs in O(n) time, which is more efficient than the naive O(n log n) top-down construction.</description></item>
+/// <item><description><strong>Extract Max Phase:</strong> Repeatedly swaps the root (maximum element) with the last element, reduces the heap size by one, and re-heapifies from the new root.
+/// This phase performs n-1 extractions, each requiring O(log n) heapify operations, totaling O(n log n).</description></item>
+/// <item><description><strong>Standard Heapify:</strong> Uses the textbook swap-based iterative sift-down.
+/// Compares the root with its left and right children, identifies the largest, swaps root with that child if needed, and continues downward until the heap property is satisfied or a leaf is reached.
+/// Each level requires 2 comparisons (left vs. current largest, right vs. current largest), giving approximately 2 log n comparisons per call.</description></item>
+/// </list>
+/// <para><strong>Performance Characteristics:</strong></para>
+/// <list type="bullet">
+/// <item><description>Family      : Heap / Selection</description></item>
+/// <item><description>Stable      : No (heap operations do not preserve relative order of equal elements)</description></item>
+/// <item><description>In-place    : Yes (O(1) auxiliary space)</description></item>
+/// <item><description>Best case   : Ω(n log n) - Even for sorted input, heap construction and extraction are required</description></item>
+/// <item><description>Average case: Θ(n log n) - Build heap O(n) + n-1 extractions with O(log n) heapify each</description></item>
+/// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
+/// <item><description>Comparisons : ~2n log n - 2 comparisons per level during sift-down (left child check + right child check)</description></item>
+/// <item><description>Swaps       : ~n log n - One swap per level during sift-down, plus n-1 root-to-end swaps in extraction</description></item>
+/// <item><description>Cache       : Poor locality - Heap structure causes frequent cache misses due to non-sequential access</description></item>
+/// </list>
+/// <para><strong>Difference from <see cref="HeapSort"/>:</strong></para>
+/// <list type="bullet">
+/// <item><description>Build phase: Uses standard swap-based sift-down instead of Floyd's two-phase algorithm (more comparisons)</description></item>
+/// <item><description>Extract phase: Uses Swap(root, last) + sift-down instead of Read+Heapify(value)+Write (more memory writes)</description></item>
+/// <item><description>No <c>[MethodImpl(AggressiveInlining)]</c> applied (intentionally unoptimized for reference clarity)</description></item>
+/// <item><description>Uses <c>i >= first</c> loop form in build phase (less safe under type changes than the <c>i-- &gt; first</c> idiom)</description></item>
+/// </list>
+/// <para><strong>Implementation Notes:</strong></para>
+/// <list type="bullet">
+/// <item><description>This is the textbook algorithm without any micro-optimizations</description></item>
+/// <item><description>Useful as a correctness baseline and educational reference for HeapSort variants</description></item>
+/// <item><description>Uses iterative heapify (loop) instead of recursive for stack safety</description></item>
+/// <item><description>Builds max-heap for ascending sort (min-heap would produce descending order)</description></item>
+/// <item><description>Comparison-based algorithm: requires O(n log n) comparisons in all cases</description></item>
+/// </list>
+/// <para><strong>Reference:</strong></para>
+/// <para>Wiki: https://en.wikipedia.org/wiki/Heapsort</para>
+/// </remarks>
+public static class HeapSortNonOptimized
+{
+    private const int BUFFER_MAIN = 0;       // Main input array
+
+    /// <summary>
+    /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <param name="span">The span of elements to sort in place.</param>
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of the comparer</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => Sort(span, 0, span.Length, comparer, context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, int first, int last, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, first, last, new ComparableComparer<T>(), context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(first);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(first, last);
+
+        if (last - first <= 1) return;
+
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        SortCore(s, first, last);
+    }
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided sort context.
+    /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="s">The SortSpan wrapping the span to sort.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n = last - first;
+
+        // Build heap
+        for (var i = first + n / 2 - 1; i >= first; i--)
+        {
+            Heapify(s, i, n, first);
+        }
+
+        // Extract elements from heap
+        for (var i = last - 1; i > first; i--)
+        {
+            // Move current root to end
+            s.Swap(first, i);
+
+            // Re-heapify the reduced heap (standard sift-down)
+            Heapify(s, first, i - first, first);
+        }
+    }
+
+    /// <summary>
+    /// Restores the heap property for a subtree rooted at the specified index using iterative sift-down.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <param name="s">The SortSpan containing the elements and context for tracking operations.</param>
+    /// <param name="root">The index of the root node of the subtree to heapify.</param>
+    /// <param name="size">The size of the heap (number of elements to consider).</param>
+    /// <param name="offset">The starting index offset for the heap within the span.</param>
+    /// <remarks>
+    /// This method implements the sift-down operation to maintain the max-heap property.
+    /// It iteratively compares the parent node with its left and right children, swapping with the larger child if needed,
+    /// and continues down the tree until the heap property is satisfied or a leaf node is reached.
+    /// <para>Time Complexity: O(log n) - Worst case traverses from root to leaf (height of the tree).</para>
+    /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
+    /// </remarks>
+    private static void Heapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        while (true)
+        {
+            var largest = root;
+            var left = 2 * (root - offset) + 1 + offset;
+            var right = 2 * (root - offset) + 2 + offset;
+
+            // If left child is larger than root
+            if (left < offset + size && s.Compare(left, largest) > 0)
+            {
+                largest = left;
+            }
+
+            // If right child is larger than largest so far
+            if (right < offset + size && s.Compare(right, largest) > 0)
+            {
+                largest = right;
+            }
+
+            // If largest is not root, swap and heapify the affected sub-tree
+            if (largest != root)
+            {
+                s.Swap(root, largest);
+                root = largest;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+}
