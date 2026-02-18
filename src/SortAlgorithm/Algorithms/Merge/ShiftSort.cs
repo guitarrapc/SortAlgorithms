@@ -165,6 +165,9 @@ public static class ShiftSort
         // Extends each run as far as possible: non-descending runs grow as-is,
         // strictly descending runs are reversed in-place to produce ascending runs.
         // Builds the ascending boundary sequence directly: [0, b₁, …, bₖ, n]
+        //
+        // Invariant: zeroIndices always forms [0, boundary₁, ..., boundaryₘ, n]
+        //            where each adjacent pair defines one sorted run.
         var endTracker = 0;
         zeroIndices[endTracker++] = 0;
 
@@ -191,7 +194,15 @@ public static class ShiftSort
                 zeroIndices[endTracker++] = i;
         }
 
-        zeroIndices[endTracker] = s.Length;
+        // Ensure the final boundary is n (avoid duplicate if loop already added it)
+        if (zeroIndices[endTracker - 1] != s.Length)
+        {
+            zeroIndices[endTracker] = s.Length;
+        }
+        else
+        {
+            endTracker--;  // Last boundary is already n, adjust endTracker for Split
+        }
 
         // Phase 2: Adaptive Merge - Recursively merge detected runs
         Split(s, zeroIndices, 0, endTracker, workBuffer);
