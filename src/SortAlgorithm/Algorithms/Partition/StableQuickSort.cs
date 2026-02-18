@@ -59,7 +59,7 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
 /// <item><description>Stable      : Yes (preserves relative order of equal elements)</description></item>
-/// <item><description>In-place    : No (O(n) auxiliary space per recursion level, O(log n) recursion stack)</description></item>
+/// <item><description>In-place    : No (O(n) total auxiliary space across all active recursion levels, O(log n) recursion stack)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Occurs when pivot consistently divides array into balanced partitions</description></item>
 /// <item><description>Average case: Θ(n log n) - Expected ~n log₂ n comparisons with median-of-3 pivot selection</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability ~1/n³ with median-of-3)</description></item>
@@ -83,7 +83,6 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
-/// <para>Paper: https://arxiv.org/abs/1604.06697</para>
 /// </remarks>
 public static class StableQuickSort
 {
@@ -168,7 +167,7 @@ public static class StableQuickSort
     /// <summary>
     /// Sorts the subrange [first..last) using the provided sort context.
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
-    /// Uses tail recursion optimization to limit stack depth to O(log n).
+    /// Uses tail recursion optimization to limit stack depth to O(log n) by recursing on the smaller partition.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
@@ -189,38 +188,55 @@ public static class StableQuickSort
             var length = right - left + 1;
             var q1 = left + length / 4;
             var mid = left + length / 2;
-            var q3 = left + (length * 3) / 4;
-            var pivot = MedianOf3Value(s, q1, mid, q3);
+            var q3 = right - length / 4;   // overflow-safe: equivalent to left + length*3/4
+            var pivotIndex = MedianOf3Index(s, q1, mid, q3);
 
             // Phase 2. Stable partition using ArrayPool buffer
-            var (lessEnd, greaterStart) = StablePartition(s, left, right, pivot);
+            // Use index-based comparison to avoid copying large struct pivot values
+            var (lessEnd, greaterStart) = StablePartition(s, left, right, pivotIndex);
 
             // Phase 3. Recursively sort partitions with tail recursion optimization
-            // Always sort left partition first (recursively), then loop on right partition
-            // This ensures consistent left-to-right ordering for visualization
-            if (lessEnd - left > 1)
+            // Recurse on smaller partition, loop on larger to ensure O(log n) stack depth
+            var leftLen = lessEnd - left;
+            var rightLen = right + 1 - greaterStart;
+
+            if (leftLen < rightLen)
             {
-                // Recurse on left partition
-                SortCore(s, left, lessEnd - 1, context);
+                // Left is smaller: recurse on left, loop on right
+                if (leftLen > 1)
+                {
+                    SortCore(s, left, lessEnd - 1, context);
+                }
+                // Tail recursion: continue loop with right partition
+                left = greaterStart;
             }
-            // Tail recursion: continue loop with right partition
-            left = greaterStart;
+            else
+            {
+                // Right is smaller or equal: recurse on right, loop on left
+                if (rightLen > 1)
+                {
+                    SortCore(s, greaterStart, right, context);
+                }
+                // Tail recursion: continue loop with left partition
+                right = lessEnd - 1;
+            }
         }
     }
 
     /// <summary>
-    /// Performs stable partitioning of the range [left..right] around the pivot value.
+    /// Performs stable partitioning of the range [left..right] around the pivot element at pivotIndex.
     /// Returns (lessEnd, greaterStart) where:
     /// - [left, lessEnd): elements less than pivot
     /// - [lessEnd, greaterStart): elements equal to pivot
     /// - [greaterStart, right + 1): elements greater than pivot
+    /// Uses O(n) temporary buffer per call; since recursive calls cover disjoint subranges,
+    /// the total auxiliary space across all active stack frames is O(n).
     /// </summary>
-    private static (int lessEnd, int greaterStart) StablePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, T pivot)
+    private static (int lessEnd, int greaterStart) StablePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var length = right - left + 1;
-        // BufferId=1: TEMPバッファーとして可視化・統計に反映
         var tempBuffer = ArrayPool<T>.Shared.Rent(length);
         var tempSpan = new Span<T>(tempBuffer, 0, length);
         var tempSortSpan = new SortSpan<T, TComparer, TContext>(tempSpan, s.Context, s.Comparer, 1);
@@ -229,12 +245,13 @@ public static class StableQuickSort
         {
             var lessIdx = 0;
             var equalIdx = 0;
-            var greaterIdx = 0;
 
             // Phase 1: Count elements in each partition
+            // Use index-based comparison to avoid copying large struct pivot values
+            // Short-circuit when i == pivotIndex: pivot always compares equal to itself
             for (var i = left; i <= right; i++)
             {
-                var cmp = s.Compare(i, pivot);
+                var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
                 if (cmp < 0)
                 {
                     lessIdx++;
@@ -243,28 +260,26 @@ public static class StableQuickSort
                 {
                     equalIdx++;
                 }
-                else
-                {
-                    greaterIdx++;
-                }
             }
 
             var lessEnd = lessIdx;
             var equalEnd = lessIdx + equalIdx;
             lessIdx = 0;
             equalIdx = lessEnd;
-            greaterIdx = equalEnd;
+            var greaterIdx = equalEnd;
 
             // Phase 2: Distribute elements to buffer maintaining order (SortSpan経由)
+            // Short-circuit when i == pivotIndex: pivot always compares equal to itself
             for (var i = left; i <= right; i++)
             {
                 var element = s.Read(i);
-                // Use SortSpan for comparison tracking
-                if (s.Compare(i, pivot) < 0)
+                // Compare once per element to minimize comparison overhead
+                var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
+                if (cmp < 0)
                 {
                     tempSortSpan.Write(lessIdx++, element);
                 }
-                else if (s.Compare(i, pivot) == 0)
+                else if (cmp == 0)
                 {
                     tempSortSpan.Write(equalIdx++, element);
                 }
@@ -286,11 +301,12 @@ public static class StableQuickSort
     }
 
     /// <summary>
-    /// Returns the median value among three elements at specified indices.
-    /// This method performs exactly 2-3 comparisons to determine the median value.
+    /// Returns the median index among three elements at specified indices.
+    /// This method performs exactly 2-3 comparisons to determine the median index.
+    /// Returns index instead of value to avoid copying large struct pivot values.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static T MedianOf3Value<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
+    private static int MedianOf3Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -302,12 +318,12 @@ public static class StableQuickSort
             var cmpMidHigh = s.Compare(midIdx, highIdx);
             if (cmpMidHigh > 0) // low > mid > high
             {
-                return s.Read(midIdx); // mid is median
+                return midIdx; // mid is median
             }
             else // low > mid, mid <= high
             {
                 var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? s.Read(highIdx) : s.Read(lowIdx);
+                return cmpLowHigh > 0 ? highIdx : lowIdx;
             }
         }
         else // low <= mid
@@ -316,11 +332,11 @@ public static class StableQuickSort
             if (cmpMidHigh > 0) // low <= mid, mid > high
             {
                 var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? s.Read(lowIdx) : s.Read(highIdx);
+                return cmpLowHigh > 0 ? lowIdx : highIdx;
             }
             else // low <= mid <= high
             {
-                return s.Read(midIdx); // mid is median
+                return midIdx; // mid is median
             }
         }
     }
