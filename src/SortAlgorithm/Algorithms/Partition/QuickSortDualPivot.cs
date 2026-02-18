@@ -213,184 +213,204 @@ public static class QuickSortDualPivot
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (right <= left) return;
-
-        int length = right - left + 1;
-
-        // For tiny arrays, use insertion sort (Yaroslavskiy 2009 optimization)
-        if (length < TINY_SIZE)
+        while (right > left)
         {
-            InsertionSort.SortCore(s, left, right + 1);
-            return;
-        }
+            int length = right - left + 1;
 
-        // For small arrays, use simple pivot selection (left and right)
-        if (length < PivotThreshold)
-        {
-            // Simple pivot selection: use left and right as pivots
-            if (s.Compare(left, right) > 0)
+            // For tiny arrays, use insertion sort (Yaroslavskiy 2009 optimization)
+            if (length < TINY_SIZE)
             {
-                s.Swap(left, right);
+                InsertionSort.SortCore(s, left, right + 1);
+                return;
             }
-        }
-        else
-        {
-            // Phase 0. Choose pivots using 5-sample method (Java's DualPivotQuicksort)
-            int seventh = (length >> 3) + (length >> 6) + 1; // ≈ length/7
 
-            // Sample 5 evenly distributed elements
-            int e3 = (left + right) >> 1; // middle
-            int e2 = e3 - seventh;
-            int e1 = e2 - seventh;
-            int e4 = e3 + seventh;
-            int e5 = e4 + seventh;
-
-            // Sort these 5 elements using insertion sort (4-10 comparisons)
-            // This guarantees e1 <= e2 <= e3 <= e4 <= e5, ensuring pivot1 <= pivot2
-            // Using the same proven approach as StdSort.Sort5
-            Sort5(s, e1, e2, e3, e4, e5);
-
-            // Now: e1 <= e2 <= e3 <= e4 <= e5 is GUARANTEED
-            // Move pivots to the edges (will be swapped to final positions later)
-            s.Swap(e2, left);
-            s.Swap(e4, right);
-        }
-
-        // Check if pivots are different (right after pivot selection)
-        // This is more efficient than checking after partitioning
-        // At this point, left and right hold pivot values with left <= right guaranteed
-        var diffPivots = s.Compare(left, right) != 0;
-
-        // Phase 1. Partition array into three regions using dual pivots
-        // Following Yaroslavskiy 2009 paper structure exactly
-        var less = left + 1;
-        var great = right - 1;
-
-        if (diffPivots)
-        {
-            // Different pivots (p1 < p2): dual-comparison loop
-            // Each element is compared against both pivot1 (left) and pivot2 (right)
-            for (int k = less; k <= great; k++)
+            // For small arrays, use simple pivot selection (left and right)
+            if (length < PivotThreshold)
             {
-                if (s.Compare(k, left) < 0)
+                // Simple pivot selection: use left and right as pivots
+                if (s.Compare(left, right) > 0)
                 {
-                    // Element < pivot1: move to left region
-                    s.Swap(k, less);
-                    less++;
+                    s.Swap(left, right);
                 }
-                else if (s.Compare(k, right) > 0)
-                {
-                    // Element > pivot2: scan from right to find position
-                    // Check k < great first to avoid unnecessary comparisons (short-circuit evaluation)
-                    while (k < great && s.Compare(great, right) > 0)
-                    {
-                        great--;
-                    }
-                    s.Swap(k, great);
-                    great--;
+            }
+            else
+            {
+                // Phase 0. Choose pivots using 5-sample method (Java's DualPivotQuicksort)
+                int seventh = (length >> 3) + (length >> 6) + 1; // ≈ length/7
 
-                    // Re-check swapped element (original comparison result no longer valid after swap)
+                // Sample 5 evenly distributed elements
+                int e3 = (left + right) >> 1; // middle
+                int e2 = e3 - seventh;
+                int e1 = e2 - seventh;
+                int e4 = e3 + seventh;
+                int e5 = e4 + seventh;
+
+                // Sort these 5 elements using insertion sort (4-10 comparisons)
+                // This guarantees e1 <= e2 <= e3 <= e4 <= e5, ensuring pivot1 <= pivot2
+                // Using the same proven approach as StdSort.Sort5
+                Sort5(s, e1, e2, e3, e4, e5);
+
+                // Now: e1 <= e2 <= e3 <= e4 <= e5 is GUARANTEED
+                // Move pivots to the edges (will be swapped to final positions later)
+                s.Swap(e2, left);
+                s.Swap(e4, right);
+            }
+
+            // Check if pivots are different (right after pivot selection)
+            // This is more efficient than checking after partitioning
+            // At this point, left and right hold pivot values with left <= right guaranteed
+            var diffPivots = s.Compare(left, right) != 0;
+
+            // Phase 1. Partition array into three regions using dual pivots
+            // Following Yaroslavskiy 2009 paper structure exactly
+            var less = left + 1;
+            var great = right - 1;
+
+            if (diffPivots)
+            {
+                // Different pivots (p1 < p2): dual-comparison loop
+                // Each element is compared against both pivot1 (left) and pivot2 (right)
+                for (int k = less; k <= great; k++)
+                {
                     if (s.Compare(k, left) < 0)
                     {
+                        // Element < pivot1: move to left region
                         s.Swap(k, less);
                         less++;
                     }
-                }
-                // else: pivot1 <= element <= pivot2, stays in middle
-            }
-        }
-        else
-        {
-            // Equal pivots (p1 == p2): single-comparison loop
-            // All comparisons use left only, avoiding redundant cross-index reads against right
-            for (int k = less; k <= great; k++)
-            {
-                if (s.Compare(k, left) < 0)
-                {
-                    // Element < pivot: move to left region
-                    s.Swap(k, less);
-                    less++;
-                }
-                else if (s.Compare(k, left) > 0)
-                {
-                    // Element > pivot: scan from right to find position
-                    while (k < great && s.Compare(great, left) > 0)
+                    else if (s.Compare(k, right) > 0)
                     {
-                        great--;
-                    }
-                    s.Swap(k, great);
-                    great--;
-
-                    // Re-check swapped element
-                    if (s.Compare(k, left) < 0)
-                    {
-                        s.Swap(k, less);
-                        less++;
-                    }
-                }
-                // else: element == pivot, stays in middle
-            }
-        }
-
-        // Swap pivots into their final positions
-        s.Swap(left, less - 1);
-        s.Swap(right, great + 1);
-
-        // Store pivot positions (these indices remain fixed throughout subsequent phases)
-        int pivot1 = less - 1;
-        int pivot2 = great + 1;
-
-        // Phase 2. Sort left part
-        SortCore(s, left, pivot1 - 1);
-
-        // Phase 3. Equal elements optimization (not included in paper, extended implementation)
-        // When center region is large and pivots are different,
-        // segregate elements equal to pivots before sorting center
-        int centerLen = great - less + 1;
-        if (centerLen > length - DIST_SIZE && diffPivots)
-        {
-            for (int k = less; k <= great; k++)
-            {
-                if (s.Compare(k, pivot1) == 0) // equals pivot1
-                {
-                    s.Swap(k, less);
-                    less++;
-                }
-                else if (s.Compare(k, pivot2) == 0) // equals pivot2
-                {
-                    // Advance great past all pivot2-equal elements (like Phase 1 pattern)
-                    // This ensures the swapped element is not equal to pivot2
-                    while (k <= great && s.Compare(great, pivot2) == 0)
-                    {
-                        great--;
-                    }
-
-                    // Only swap if k and great haven't crossed
-                    if (k <= great)
-                    {
+                        // Element > pivot2: scan from right to find position
+                        // Check k < great first to avoid unnecessary comparisons (short-circuit evaluation)
+                        while (k < great && s.Compare(great, right) > 0)
+                        {
+                            great--;
+                        }
                         s.Swap(k, great);
                         great--;
 
-                        // Re-check swapped element (only need to check pivot1 now)
-                        // Since we advanced great past all pivot2-equals, k is guaranteed != pivot2
-                        if (s.Compare(k, pivot1) == 0)
+                        // Re-check swapped element (original comparison result no longer valid after swap)
+                        if (s.Compare(k, left) < 0)
                         {
                             s.Swap(k, less);
                             less++;
                         }
                     }
+                    // else: pivot1 <= element <= pivot2, stays in middle
                 }
             }
-        }
+            else
+            {
+                // Equal pivots (p1 == p2): single-comparison loop
+                // All comparisons use left only, avoiding redundant cross-index reads against right
+                for (int k = less; k <= great; k++)
+                {
+                    if (s.Compare(k, left) < 0)
+                    {
+                        // Element < pivot: move to left region
+                        s.Swap(k, less);
+                        less++;
+                    }
+                    else if (s.Compare(k, left) > 0)
+                    {
+                        // Element > pivot: scan from right to find position
+                        while (k < great && s.Compare(great, left) > 0)
+                        {
+                            great--;
+                        }
+                        s.Swap(k, great);
+                        great--;
 
-        // Phase 4. Sort center part (only if pivots are different)
-        if (diffPivots)
-        {
-            SortCore(s, less, great);
-        }
+                        // Re-check swapped element
+                        if (s.Compare(k, left) < 0)
+                        {
+                            s.Swap(k, less);
+                            less++;
+                        }
+                    }
+                    // else: element == pivot, stays in middle
+                }
+            }
 
-        // Phase 5. Sort right part
-        SortCore(s, pivot2 + 1, right);
+            // Swap pivots into their final positions
+            s.Swap(left, less - 1);
+            s.Swap(right, great + 1);
+
+            // Store pivot positions (these indices remain fixed throughout subsequent phases)
+            int pivot1 = less - 1;
+            int pivot2 = great + 1;
+
+            // Phase 3. Equal elements optimization (not included in paper, extended implementation)
+            // When center region is large and pivots are different,
+            // segregate elements equal to pivots before sorting center
+            int centerLen = great - less + 1;
+            if (centerLen > length - DIST_SIZE && diffPivots)
+            {
+                for (int k = less; k <= great; k++)
+                {
+                    if (s.Compare(k, pivot1) == 0) // equals pivot1
+                    {
+                        s.Swap(k, less);
+                        less++;
+                    }
+                    else if (s.Compare(k, pivot2) == 0) // equals pivot2
+                    {
+                        // Advance great past all pivot2-equal elements (like Phase 1 pattern)
+                        // This ensures the swapped element is not equal to pivot2
+                        while (k <= great && s.Compare(great, pivot2) == 0)
+                        {
+                            great--;
+                        }
+
+                        // Only swap if k and great haven't crossed
+                        if (k <= great)
+                        {
+                            s.Swap(k, great);
+                            great--;
+
+                            // Re-check swapped element (only need to check pivot1 now)
+                            // Since we advanced great past all pivot2-equals, k is guaranteed != pivot2
+                            if (s.Compare(k, pivot1) == 0)
+                            {
+                                s.Swap(k, less);
+                                less++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Phases 2, 4, 5: tail recursion optimization
+            // Recurse on the two smallest regions; loop (continue) on the largest.
+            // This bounds recursion depth to O(log n): given sizes l+c+r = length-2,
+            // the looped region is the largest, so each recursed size ≤ (length-2)/2.
+            int leftCount = pivot1 - left;
+            int midCount = diffPivots ? great - less + 1 : 0;
+            int rightCount = right - pivot2;
+
+            if (leftCount >= midCount && leftCount >= rightCount)
+            {
+                // Left is largest: loop left, recurse on center and right
+                if (diffPivots) SortCore(s, less, great);
+                SortCore(s, pivot2 + 1, right);
+                right = pivot1 - 1;
+            }
+            else if (rightCount >= leftCount && rightCount >= midCount)
+            {
+                // Right is largest: loop right, recurse on left and center
+                SortCore(s, left, pivot1 - 1);
+                if (diffPivots) SortCore(s, less, great);
+                left = pivot2 + 1;
+            }
+            else
+            {
+                // Center is largest: loop center, recurse on left and right
+                SortCore(s, left, pivot1 - 1);
+                SortCore(s, pivot2 + 1, right);
+                left = less;
+                right = great;
+            }
+        }
     }
 
     /// <summary>
@@ -454,7 +474,7 @@ public static class QuickSortDualPivot
     {
         // Sort first 4 elements
         Sort4(s, x1, x2, x3, x4);
-        
+
         // Insert x5 into the sorted sequence
         if (s.Compare(x5, x4) < 0)
         {
