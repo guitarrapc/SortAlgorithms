@@ -164,7 +164,7 @@ public static class RotateMergeSort
 
     /// <summary>
     /// Merges two sorted subarrays [left..mid] and [mid+1..right] in-place using rotation.
-    /// Uses binary search to find insertion points and rotation to rearrange elements.
+    /// When s[start1] &gt; s[start2], start1 is already the insertion point (no binary search needed).
     /// Optimization: Uses galloping (exponential search + binary search) to efficiently find
     /// long runs of consecutive elements from the right partition.
     /// </summary>
@@ -189,9 +189,8 @@ public static class RotateMergeSort
             }
             else
             {
-                // Use binary search to find the position where start2 element should be inserted in [start1..mid]
-                var value = s.Read(start2);
-                var insertPos = BinarySearch(s, start1, mid, value);
+                // s[start1] > s[start2] and [start1..mid] is sorted, so start1 is already the insertion point
+                var insertPos = start1;
 
                 // Galloping optimization: Find the end of consecutive elements in right partition
                 // that belong before insertPos using exponential search + binary search
@@ -325,38 +324,6 @@ public static class RotateMergeSort
             a = temp;
         }
         return a;
-    }
-
-    /// <summary>
-    /// Performs binary search to find the insertion position for a value in a sorted range.
-    /// Uses &lt;= comparison to maintain stability (insert after equal elements).
-    /// </summary>
-    /// <param name="s">The SortSpan wrapping the array</param>
-    /// <param name="left">The start index of the search range</param>
-    /// <param name="right">The end index of the search range</param>
-    /// <param name="value">The value to search for</param>
-    /// <returns>The index where the value should be inserted</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int BinarySearch<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, T value)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        while (left <= right)
-        {
-            var mid = left + (right - left) / 2;
-            var cmp = s.Compare(s.Read(mid), value);
-
-            if (cmp <= 0)
-            {
-                left = mid + 1;
-            }
-            else
-            {
-                right = mid - 1;
-            }
-        }
-
-        return left;
     }
 }
 
