@@ -244,7 +244,7 @@ public static class PigeonholeSortInteger
     private const int BUFFER_TEMP = 1;       // Temporary buffer for elements
 
     /// <summary>
-    /// Sorts the elements in the specified span using Pigeonhole Sort.
+    /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
@@ -253,7 +253,7 @@ public static class PigeonholeSortInteger
         => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span using American Flag Sort with sort context.
+    /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>

@@ -247,7 +247,7 @@ public static class BucketSortInteger
     private const int BUFFER_TEMP = 1;       // Temporary buffer
 
     /// <summary>
-    /// Sorts the elements in the specified span
+    /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
@@ -256,12 +256,12 @@ public static class BucketSortInteger
         => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span
+    /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
