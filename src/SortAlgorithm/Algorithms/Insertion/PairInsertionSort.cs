@@ -205,9 +205,10 @@ public static class PairInsertionSort
     }
 
     /// <summary>
-    /// Unguarded pair insertion sort: assumes that there is an element at position (first - 1)
+    /// Semi-unguarded pair insertion sort: assumes that there is an element at position (first - 1)
     /// that is less than or equal to all elements in the range [first, last).
-    /// This allows both elements of each pair to be inserted without boundary checks.
+    /// This allows the smaller element (a) to be inserted without boundary checks,
+    /// while the larger element (b) uses the inserted 'a' as a guaranteed sentinel.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use. Must implement <see cref="IComparer{T}"/>.</typeparam>
@@ -217,10 +218,15 @@ public static class PairInsertionSort
     /// <remarks>
     /// PRECONDITION: first > 0 and s[first-1] <= s[i] for all i in [first, last)
     /// This precondition is guaranteed by partitioning schemes in algorithms like IntroSort.
-    /// Violating this precondition will cause out-of-bounds access.
-    ///
-    /// Performance improvement: Removes ALL boundary checks from both pair element insertions,
-    /// providing maximum performance benefit for non-leftmost partitions.
+    /// 
+    /// Optimization strategy:
+    /// - Element 'a' (smaller): unguarded insertion using s[first-1] as sentinel
+    /// - Element 'b' (larger): guarded insertion (j >= first check) using inserted 'a' as sentinel
+    /// 
+    /// This hybrid approach provides:
+    /// - Safety: Prevents memory corruption if precondition is violated
+    /// - Performance: Still eliminates boundary check for 'a' insertion (half of insertions)
+    /// - Correctness: 'b' insertion correctly uses 'a' as sentinel without accessing [first-1]
     /// </remarks>
     internal static void UnguardedSortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
