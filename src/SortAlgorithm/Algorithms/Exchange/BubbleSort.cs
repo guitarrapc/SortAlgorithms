@@ -118,7 +118,7 @@ public static class BubbleSortNonOptimized
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        for (var i = 0; i < s.Length; i++)
+        for (var i = 0; i < s.Length - 1; i++)
         {
             for (var j = s.Length - 1; j > i; j--)
             {
