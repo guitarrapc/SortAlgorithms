@@ -79,7 +79,7 @@ public static class RadixLSD10Sort
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span.
@@ -96,47 +96,36 @@ public static class RadixLSD10Sort
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
-        => Sort(span, new ComparableComparer<T>(), context);
-
-    /// <summary>
-    /// Sorts the elements in the specified span using the provided comparer and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
-    /// </summary>
-    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
         // Rent buffers from ArrayPool
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
-        var bucketCountsArray = ArrayPool<int>.Shared.Rent(RadixBase);
 
         try
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
-            var bucketCounts = bucketCountsArray.AsSpan(0, RadixBase);
 
-            SortCore<T, TComparer, TContext>(span, tempBuffer, bucketCounts, comparer, context);
+            // Use stackalloc for small fixed-size bucket counts (10 ints = 40 bytes)
+            Span<int> bucketCounts = stackalloc int[RadixBase];
+
+            var comparer = new ComparableComparer<T>();
+            var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
+            var temp = new SortSpan<T, ComparableComparer<T>, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
+            SortCore<T, ComparableComparer<T>, TContext>(s, temp, bucketCounts);
         }
         finally
         {
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            ArrayPool<int>.Shared.Return(bucketCountsArray);
         }
     }
 
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<int> bucketCounts, TComparer comparer, TContext context)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> bucketCounts)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
-
         // Determine bit size for sign-bit flipping
         var bitSize = GetBitSize<T>();
 
@@ -152,35 +141,69 @@ public static class RadixLSD10Sort
             if (key > maxKey) maxKey = key;
         }
 
-        // Calculate required number of decimal digits
-        // For the range [minKey, maxKey], we need enough digits to represent maxKey
-        var digitCount = GetDigitCountFromUlong(maxKey);
+        // Early exit: if all elements are the same (range == 0), no sorting needed
+        if (minKey == maxKey) return;
+
+        // Pre-computed powers of 10 for O(1) divisor lookup
+        // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
+        // This eliminates O(digit) loop in divisor calculation for each recursive call
+        ReadOnlySpan<ulong> pow10 = [
+            1UL,                      // 10^0
+            10UL,                     // 10^1
+            100UL,                    // 10^2
+            1_000UL,                  // 10^3
+            10_000UL,                 // 10^4
+            100_000UL,                // 10^5
+            1_000_000UL,              // 10^6
+            10_000_000UL,             // 10^7
+            100_000_000UL,            // 10^8
+            1_000_000_000UL,          // 10^9
+            10_000_000_000UL,         // 10^10
+            100_000_000_000UL,        // 10^11
+            1_000_000_000_000UL,      // 10^12
+            10_000_000_000_000UL,     // 10^13
+            100_000_000_000_000UL,    // 10^14
+            1_000_000_000_000_000UL,  // 10^15
+            10_000_000_000_000_000UL, // 10^16
+            100_000_000_000_000_000UL,// 10^17
+            1_000_000_000_000_000_000UL,  // 10^18
+            10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
+        ];
+
+        // Calculate required number of decimal digits based on the range
+        // For a narrow range (e.g., 9,000,000,000 to 9,000,000,100), we only need digits to represent the range (100 → 3 digits)
+        // instead of maxKey (9,000,000,100 → 10 digits), dramatically reducing passes
+        var range = maxKey - minKey;
+        var digitCount = GetDigitCountFromUlong(range, pow10);
 
         // Start LSD radix sort from the least significant digit
-        LSDSort(s, temp, digitCount, bitSize, bucketCounts);
+        LSDSort(s, temp, digitCount, bitSize, minKey, bucketCounts, pow10);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, int digitCount, int bitSize, Span<int> bucketCounts)
+    private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, int digitCount, int bitSize, ulong minKey, Span<int> bucketCounts, ReadOnlySpan<ulong> pow10)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         Span<int> bucketStarts = stackalloc int[RadixBase];
-        var divisor = 1UL;
 
         // Perform LSD radix sort on unsigned keys
         for (int d = 0; d < digitCount; d++)
         {
+            var divisor = pow10[d];
+
             // Clear bucket counts
             bucketCounts.Clear();
 
             // Count occurrences of each decimal digit
+            // Use (key - minKey) to normalize the range, extracting only the necessary digits
             for (var i = 0; i < source.Length; i++)
             {
                 var value = source.Read(i);
                 var key = GetUnsignedKey(value, bitSize);
-                var digit = (int)((key / divisor) % 10);
+                var normalizedKey = key - minKey;
+                var digit = (int)((normalizedKey / divisor) % 10);
                 bucketCounts[digit]++;
             }
 
@@ -196,15 +219,14 @@ public static class RadixLSD10Sort
             {
                 var value = source.Read(i);
                 var key = GetUnsignedKey(value, bitSize);
-                var digit = (int)((key / divisor) % 10);
+                var normalizedKey = key - minKey;
+                var digit = (int)((normalizedKey / divisor) % 10);
                 var pos = bucketStarts[digit]++;
                 temp.Write(pos, value);
             }
 
             // Copy back from temp buffer
             temp.CopyTo(0, source, 0, source.Length);
-
-            divisor *= 10;
         }
     }
 
@@ -238,6 +260,8 @@ public static class RadixLSD10Sort
             return 32;
         else if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
             return 64;
+        else if (typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
+            return IntPtr.Size * 8; // 32-bit or 64-bit depending on platform
         else if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
             throw new NotSupportedException($"Type {typeof(T).Name} with 128-bit size is not supported. Maximum supported bit size is 64.");
         else
@@ -285,15 +309,19 @@ public static class RadixLSD10Sort
         else if (bitSize <= 32)
         {
             var uintValue = uint.CreateTruncating(value);
-            if (typeof(T) == typeof(int))
-                return uintValue ^ 0x8000_0000; // Flip sign bit for signed int
+            // Signed types (int, nint on 32-bit) need sign-bit flip
+            if (typeof(T) == typeof(int) || (typeof(T) == typeof(nint) && IntPtr.Size == 4))
+                return uintValue ^ 0x8000_0000;
+            // Unsigned types (uint, nuint on 32-bit): no flip needed
             return uintValue;
         }
         else // 64-bit
         {
             var ulongValue = ulong.CreateTruncating(value);
-            if (typeof(T) == typeof(long))
-                return ulongValue ^ 0x8000_0000_0000_0000; // Flip sign bit for signed long
+            // Signed types (long, nint on 64-bit) need sign-bit flip
+            if (typeof(T) == typeof(long) || (typeof(T) == typeof(nint) && IntPtr.Size == 8))
+                return ulongValue ^ 0x8000_0000_0000_0000;
+            // Unsigned types (ulong, nuint on 64-bit): no flip needed
             return ulongValue;
         }
     }
@@ -302,16 +330,15 @@ public static class RadixLSD10Sort
     /// Get the number of decimal digits needed to represent a ulong value
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetDigitCountFromUlong(ulong value)
+    private static int GetDigitCountFromUlong(ulong value, ReadOnlySpan<ulong> pow10)
     {
         if (value == 0) return 1;
 
-        var count = 0;
-        while (value > 0)
-        {
-            value /= 10;
-            count++;
-        }
-        return count;
+        // value < 10^1 -> 1 digit, value < 10^2 -> 2 digits, ..., value < 10^d -> d digits
+        // Pow10 is 10^0...10^19
+        for (int d = 1; d < pow10.Length; d++)
+            if (value < pow10[d]) return d;
+
+        return 20; // max for ulong (10^20 > 2^64)
     }
 }

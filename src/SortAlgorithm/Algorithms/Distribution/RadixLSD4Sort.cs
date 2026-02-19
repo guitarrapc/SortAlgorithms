@@ -333,43 +333,21 @@ public static class RadixLSD4Sort
         }
         else if (bitSize <= 32)
         {
-            // int, uint, or nint/nuint on 32-bit platform
-            if (typeof(T) == typeof(int))
-            {
-                var intValue = int.CreateTruncating(value);
-                return (uint)intValue ^ 0x8000_0000;
-            }
-            else if (typeof(T) == typeof(nint))
-            {
-                // nint is signed, needs sign-bit flip
-                var nintValue = nint.CreateTruncating(value);
-                return (uint)nintValue ^ 0x8000_0000;
-            }
-            else
-            {
-                // uint or nuint (unsigned, no flip needed)
-                return uint.CreateTruncating(value);
-            }
+            var uintValue = uint.CreateTruncating(value);
+            // Signed types (int, nint on 32-bit) need sign-bit flip
+            if (typeof(T) == typeof(int) || (typeof(T) == typeof(nint) && IntPtr.Size == 4))
+                return uintValue ^ 0x8000_0000;
+            // Unsigned types (uint, nuint on 32-bit): no flip needed
+            return uintValue;
         }
         else if (bitSize <= 64)
         {
-            // long, ulong, or nint/nuint on 64-bit platform
-            if (typeof(T) == typeof(long))
-            {
-                var longValue = long.CreateTruncating(value);
-                return (ulong)longValue ^ 0x8000_0000_0000_0000;
-            }
-            else if (typeof(T) == typeof(nint))
-            {
-                // nint is signed, needs sign-bit flip (64-bit platform)
-                var nintValue = nint.CreateTruncating(value);
-                return (ulong)nintValue ^ 0x8000_0000_0000_0000;
-            }
-            else
-            {
-                // ulong or nuint (unsigned, no flip needed)
-                return ulong.CreateTruncating(value);
-            }
+            var ulongValue = ulong.CreateTruncating(value);
+            // Signed types (long, nint on 64-bit) need sign-bit flip
+            if (typeof(T) == typeof(long) || (typeof(T) == typeof(nint) && IntPtr.Size == 8))
+                return ulongValue ^ 0x8000_0000_0000_0000;
+            // Unsigned types (ulong, nuint on 64-bit): no flip needed
+            return ulongValue;
         }
         else
         {

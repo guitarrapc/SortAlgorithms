@@ -101,6 +101,8 @@ public class RadixLSD10SortTests
     [Arguments(typeof(uint))]
     [Arguments(typeof(long))]
     [Arguments(typeof(ulong))]
+    [Arguments(typeof(nint))]
+    [Arguments(typeof(nuint))]
     public async Task SortDifferentIntegerTypes(Type type)
     {
         var stats = new StatisticsContext();
@@ -153,6 +155,18 @@ public class RadixLSD10SortTests
             RadixLSD10Sort.Sort(array.AsSpan(), stats);
             await Assert.That(IsSorted(array)).IsTrue();
         }
+        else if (type == typeof(nint))
+        {
+            var array = new nint[] { -5, 2, -8, 1, 9 };
+            RadixLSD10Sort.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
+        else if (type == typeof(nuint))
+        {
+            var array = new nuint[] { 5, 2, 8, 1, 9 };
+            RadixLSD10Sort.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
     }
 
     private static bool IsSorted<T>(T[] array) where T : IComparable<T>
@@ -192,7 +206,7 @@ public class RadixLSD10SortTests
         var sorted = Enumerable.Range(0, n).ToArray();
         RadixLSD10Sort.Sort(sorted.AsSpan(), stats);
 
-        // LSD Radix Sort with sign-bit flipping (unified processing):
+        // LSD Radix Sort with range-based optimization:
         // 1. Find min/max keys: n reads
         // 2. For each digit d (from 0 to digitCount-1):
         //    - Count phase: n reads
@@ -200,17 +214,21 @@ public class RadixLSD10SortTests
         //    - Copy back phase (using CopyTo): n reads (from temp buffer) + n writes (to main buffer)
         //
         // For n elements with values [0, n-1]:
-        // - max unsigned key = 0x8000_0000 + (n-1) for non-negative values
-        // - digitCount = number of decimal digits needed to represent max key
+        // - min unsigned key = 0x8000_0000 + 0 (for non-negative 0)
+        // - max unsigned key = 0x8000_0000 + (n-1) (for non-negative n-1)
+        // - range = maxKey - minKey = (n-1)
+        // - digitCount = number of decimal digits needed to represent range
         //
-        // For example, n=100 → max value = 99 → max key = 0x80000063
-        // - 0x80000063 = 2,147,483,747 in decimal → 10 decimal digits
+        // For example, n=100 → range = 99 → 3 digits (not 10!)
         //
         // Total reads = n (find min/max) + digitCount × 3n (count + distribute + CopyTo read)
         // Total writes = digitCount × 2n (distribute write + CopyTo write)
+        var minValue = (uint)0;
         var maxValue = (uint)(n - 1);
+        var minKey = minValue ^ 0x8000_0000; // Sign-bit flip for non-negative
         var maxKey = maxValue ^ 0x8000_0000; // Sign-bit flip for non-negative
-        var digitCount = GetDigitCountFromUlong(maxKey);
+        var range = maxKey - minKey; // range = n - 1
+        var digitCount = GetDigitCountFromUlong(range);
 
         var expectedReads = (ulong)(n + digitCount * 3 * n); // Find min/max + (count + distribute + CopyTo) per digit
         var expectedWrites = (ulong)(digitCount * 2 * n); // (distribute + CopyTo) writes per digit
@@ -232,11 +250,15 @@ public class RadixLSD10SortTests
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         RadixLSD10Sort.Sort(reversed.AsSpan(), stats);
 
-        // LSD Radix Sort with sign-bit flipping:
+        // LSD Radix Sort with range-based optimization:
         // Same as sorted - performance is data-independent O(d × n)
+        // Range is still [0, n-1], so digitCount is based on range = n - 1
+        var minValue = (uint)0;
         var maxValue = (uint)(n - 1);
+        var minKey = minValue ^ 0x8000_0000; // Sign-bit flip for non-negative
         var maxKey = maxValue ^ 0x8000_0000; // Sign-bit flip for non-negative
-        var digitCount = GetDigitCountFromUlong(maxKey);
+        var range = maxKey - minKey; // range = n - 1
+        var digitCount = GetDigitCountFromUlong(range);
 
         var expectedReads = (ulong)(n + digitCount * 3 * n); // Find min/max + (count + distribute + CopyTo)
         var expectedWrites = (ulong)(digitCount * 2 * n); // (distribute + CopyTo) writes
@@ -258,11 +280,15 @@ public class RadixLSD10SortTests
         var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
         RadixLSD10Sort.Sort(random.AsSpan(), stats);
 
-        // LSD Radix Sort with sign-bit flipping:
+        // LSD Radix Sort with range-based optimization:
         // Same complexity as sorted/reversed - O(d × n)
+        // Range is [0, n-1], so digitCount is based on range = n - 1
+        var minValue = (uint)0;
         var maxValue = (uint)(n - 1);
+        var minKey = minValue ^ 0x8000_0000; // Sign-bit flip for non-negative
         var maxKey = maxValue ^ 0x8000_0000; // Sign-bit flip for non-negative
-        var digitCount = GetDigitCountFromUlong(maxKey);
+        var range = maxKey - minKey; // range = n - 1
+        var digitCount = GetDigitCountFromUlong(range);
 
         var expectedReads = (ulong)(n + digitCount * 3 * n); // Find min/max + (count + distribute + CopyTo)
         var expectedWrites = (ulong)(digitCount * 2 * n); // (distribute + CopyTo) writes
@@ -285,7 +311,7 @@ public class RadixLSD10SortTests
         var mixed = Enumerable.Range(-n / 2, n).ToArray();
         RadixLSD10Sort.Sort(mixed.AsSpan(), stats);
 
-        // With sign-bit flipping, negative and positive numbers are processed uniformly:
+        // With range-based optimization and sign-bit flipping:
         // 1. Find min/max keys: n reads
         // 2. For each digit d (from 0 to digitCount-1):
         //    - Count phase: n reads
@@ -295,12 +321,14 @@ public class RadixLSD10SortTests
         // For input [-n/2, ..., -1, 0, 1, ..., n/2-1]:
         // - Min value: -n/2 → min key = 0x80000000 - n/2
         // - Max value: n/2-1 → max key = 0x80000000 + (n/2-1)
-        // - Max key determines digit count
+        // - Range = maxKey - minKey = (n/2-1) - (-n/2) = n - 1
+        // - digitCount is based on range, not maxKey
         var minValue = -n / 2;
         var maxValue = n / 2 - 1;
         var minKey = (uint)minValue ^ 0x8000_0000; // Sign-bit flip
         var maxKey = (uint)maxValue ^ 0x8000_0000; // Sign-bit flip
-        var digitCount = GetDigitCountFromUlong(maxKey);
+        var range = maxKey - minKey; // range = n - 1
+        var digitCount = GetDigitCountFromUlong(range);
 
         var expectedReads = (ulong)(n + digitCount * 3 * n); // Find min/max + (count + distribute + CopyTo) per digit
         var expectedWrites = (ulong)(digitCount * 2 * n); // (distribute + CopyTo) writes per digit

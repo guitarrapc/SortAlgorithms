@@ -83,32 +83,6 @@ public static class RadixMSD10Sort
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary buffer for digit redistribution
 
-    // Pre-computed powers of 10 for O(1) divisor lookup
-    // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
-    // This eliminates O(digit) loop in divisor calculation for each recursive call
-    private static ReadOnlySpan<ulong> Pow10 => [
-        1UL,                      // 10^0
-        10UL,                     // 10^1
-        100UL,                    // 10^2
-        1_000UL,                  // 10^3
-        10_000UL,                 // 10^4
-        100_000UL,                // 10^5
-        1_000_000UL,              // 10^6
-        10_000_000UL,             // 10^7
-        100_000_000UL,            // 10^8
-        1_000_000_000UL,          // 10^9
-        10_000_000_000UL,         // 10^10
-        100_000_000_000UL,        // 10^11
-        1_000_000_000_000UL,      // 10^12
-        10_000_000_000_000UL,     // 10^13
-        100_000_000_000_000UL,    // 10^14
-        1_000_000_000_000_000UL,  // 10^15
-        10_000_000_000_000_000UL, // 10^16
-        100_000_000_000_000_000UL,// 10^17
-        1_000_000_000_000_000_000UL,  // 10^18
-        10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
-    ];
-
     /// <summary>
     /// Sorts the elements in the specified span.
     /// Uses NullContext for zero-overhead fast path.
@@ -168,12 +142,38 @@ public static class RadixMSD10Sort
         // This eliminates empty high-order digit passes, which is crucial for MSD performance.
         var digitCount = ComputeMaxDigit(s, 0, s.Length, bitSize);
 
+        // Pre-computed powers of 10 for O(1) divisor lookup
+        // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
+        // This eliminates O(digit) loop in divisor calculation for each recursive call
+        ReadOnlySpan<ulong> pow10 = [
+            1UL,                      // 10^0
+            10UL,                     // 10^1
+            100UL,                    // 10^2
+            1_000UL,                  // 10^3
+            10_000UL,                 // 10^4
+            100_000UL,                // 10^5
+            1_000_000UL,              // 10^6
+            10_000_000UL,             // 10^7
+            100_000_000UL,            // 10^8
+            1_000_000_000UL,          // 10^9
+            10_000_000_000UL,         // 10^10
+            100_000_000_000UL,        // 10^11
+            1_000_000_000_000UL,      // 10^12
+            10_000_000_000_000UL,     // 10^13
+            100_000_000_000_000UL,    // 10^14
+            1_000_000_000_000_000UL,  // 10^15
+            10_000_000_000_000_000UL, // 10^16
+            100_000_000_000_000_000UL,// 10^17
+            1_000_000_000_000_000_000UL,  // 10^18
+            10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
+        ];
+
         // Start MSD radix sort from the most significant digit
-        MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize);
+        MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize, pow10);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void MSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int start, int length, int digit, int bitSize)
+    private static void MSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int start, int length, int digit, int bitSize, ReadOnlySpan<ulong> pow10)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -193,7 +193,7 @@ public static class RadixMSD10Sort
 
         // Get divisor for current digit position from pre-computed table: O(1) lookup
         // Previously: O(digit) loop with divisor *= 10
-        var divisor = Pow10[digit];
+        var divisor = pow10[digit];
 
         // Separate counts and offsets for clarity
         // counts[d] = number of elements with digit value d
@@ -240,7 +240,7 @@ public static class RadixMSD10Sort
         {
             if (counts[i] > 1)
             {
-                MSDSort(s, temp, start + offsets[i], counts[i], digit - 1, bitSize);
+                MSDSort(s, temp, start + offsets[i], counts[i], digit - 1, bitSize, pow10);
             }
         }
     }
