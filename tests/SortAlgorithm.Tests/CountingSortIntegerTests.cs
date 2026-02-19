@@ -42,6 +42,17 @@ public class CountingSortIntegerTests
     }
 
     [Test]
+    [Arguments(2, 10_000)]    // range=10,001 > MaxRangeFactor*n=64,  but < MaxCountArraySize
+    [Arguments(100, 5_000)]   // range=5,001  > MaxRangeFactor*n=3200, but < MaxCountArraySize
+    public async Task RelativeRangeLimitTest(int n, int maxValue)
+    {
+        // range is well within the absolute cap but too large relative to n: O(range) would dominate O(n)
+        var array = new int[n];
+        array[n - 1] = maxValue;
+        Assert.Throws<ArgumentException>(() => CountingSortInteger.Sort(array.AsSpan()));
+    }
+
+    [Test]
     public async Task NegativeValuesTest()
     {
         var stats = new StatisticsContext();

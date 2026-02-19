@@ -222,13 +222,14 @@ public static class CountingSort
 /// <item><description>Swaps       : 0</description></item>
 /// <item><description>Time        : O(n + k) where k is the range of values</description></item>
 /// <item><description>Memory      : O(n + k)</description></item>
-/// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は{MaxCountArraySize}です。</description></item>
+/// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は{MaxCountArraySize}、かつ range/n ≤ {MaxRangeFactor} の制約があります。</description></item>
 /// </list>
 /// </remarks>
 public static class CountingSortInteger
 {
     private const int MaxCountArraySize = 10_000_000; // Maximum allowed count array size
-    private const int StackAllocThreshold = 1024; // Use stackalloc for count arrays smaller than this
+    private const int MaxRangeFactor = 32;            // Maximum allowed range/n ratio; range > MaxRangeFactor*n means O(range) dominates O(n)
+    private const int StackAllocThreshold = 1024;     // Use stackalloc for count arrays smaller than this
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -293,6 +294,8 @@ public static class CountingSortInteger
             ulong range = umax - umin + 1;
             if (range == 0 || range > (ulong)MaxCountArraySize)
                 throw new ArgumentException($"Value range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider another comparison-based sort.");
+            if (range > (ulong)s.Length * MaxRangeFactor)
+                throw new ArgumentException($"Value range ({range}) is too large relative to array size ({s.Length}): range/n={range}/{(ulong)s.Length} exceeds limit of {MaxRangeFactor}. Consider another comparison-based sort.");
 
             var size = (int)range;
 
