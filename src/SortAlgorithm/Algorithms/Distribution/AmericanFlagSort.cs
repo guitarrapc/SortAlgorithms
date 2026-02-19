@@ -156,37 +156,39 @@ public static class AmericanFlagSort
 
         var shift = digit * RadixBits;
 
-        // Allocate bucket arrays on stack (RadixSize=16, so only 68 bytes total)
-        Span<int> bucketOffsets = stackalloc int[RadixSize + 1];
+        // Allocate bucket arrays on stack (RadixSize=16, so only small stack usage)
+        Span<int> bucketCounts = stackalloc int[RadixSize + 1];
         Span<int> bucketStarts = stackalloc int[RadixSize];
+        Span<int> bucketNext = stackalloc int[RadixSize];  // Current write position for each bucket
 
         // Phase 1: Count occurrences of each digit value
-        bucketOffsets.Clear();
+        bucketCounts.Clear();
 
         for (var i = 0; i < length; i++)
         {
             var value = s.Read(start + i);
             var key = GetUnsignedKey(value, bitSize);
             var digitValue = (int)((key >> shift) & 0xF);  // Extract 4-bit digit
-            bucketOffsets[digitValue + 1]++;
+            bucketCounts[digitValue + 1]++;
         }
 
-        // Phase 2: Calculate bucket offsets (prefix sum) and save bucket start positions
+        // Phase 2: Calculate bucket offsets (prefix sum)
         for (var i = 1; i <= RadixSize; i++)
         {
-            bucketOffsets[i] += bucketOffsets[i - 1];
+            bucketCounts[i] += bucketCounts[i - 1];
         }
         
-        // Copy bucket starts from bucketOffsets[0..RadixSize-1]
-        // bucketOffsets[i] is the start position of bucket i
+        // Copy bucket starts from bucketCounts[0..RadixSize-1]
+        // bucketCounts[i] is the start position of bucket i
         for (var i = 0; i < RadixSize; i++)
         {
-            bucketStarts[i] = bucketOffsets[i];
+            bucketStarts[i] = bucketCounts[i];
+            bucketNext[i] = bucketCounts[i];  // Initialize next write position
         }
 
         // Phase 3: In-place permutation
         // Rearrange elements into their correct buckets using cyclic permutation
-        PermuteInPlace(s, start, length, shift, bitSize, bucketOffsets, bucketStarts);
+        PermuteInPlace(s, start, length, shift, bitSize, bucketStarts, bucketNext);
 
         // Phase 4: Recursively sort each bucket for the next digit
         for (var i = 0; i < RadixSize; i++)
@@ -206,15 +208,18 @@ public static class AmericanFlagSort
     /// Permutes elements in-place into their correct buckets.
     /// Uses a technique similar to cyclic permutation to avoid using auxiliary buffer.
     /// </summary>
+    /// <remarks>
+    /// Array roles:
+    /// - <paramref name="bucketStarts"/>: Immutable start positions for each bucket (never modified)
+    /// - <paramref name="bucketNext"/>: Mutable current write position for each bucket (incremented as elements are placed)
+    /// This separation ensures correct boundary detection and avoids array role confusion.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PermuteInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int length, int shift, int bitSize, Span<int> bucketOffsets, Span<int> bucketStarts)
+    private static void PermuteInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int length, int shift, int bitSize, Span<int> bucketStarts, Span<int> bucketNext)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Reset bucket offsets to their starting positions
-        bucketStarts.CopyTo(bucketOffsets);
-
         // In-place permutation using bucket positions
         // Process each bucket sequentially
         for (var bucket = 0; bucket < RadixSize; bucket++)
@@ -224,9 +229,9 @@ public static class AmericanFlagSort
             var bucketEnd = (bucket == RadixSize - 1) ? length : bucketStarts[bucket + 1];
 
             // Move elements to their correct positions within and across buckets
-            while (bucketOffsets[bucket] < bucketEnd)
+            while (bucketNext[bucket] < bucketEnd)
             {
-                var currentPos = start + bucketOffsets[bucket];
+                var currentPos = start + bucketNext[bucket];
                 var currentValue = s.Read(currentPos);
                 var currentKey = GetUnsignedKey(currentValue, bitSize);
                 var currentDigit = (int)((currentKey >> shift) & 0xF);
@@ -234,14 +239,14 @@ public static class AmericanFlagSort
                 // If element is already in correct bucket, advance
                 if (currentDigit == bucket)
                 {
-                    bucketOffsets[bucket]++;
+                    bucketNext[bucket]++;
                     continue;
                 }
 
                 // Swap current element to its correct bucket
-                var targetPos = start + bucketOffsets[currentDigit];
+                var targetPos = start + bucketNext[currentDigit];
                 s.Swap(currentPos, targetPos);
-                bucketOffsets[currentDigit]++;
+                bucketNext[currentDigit]++;
             }
         }
     }
