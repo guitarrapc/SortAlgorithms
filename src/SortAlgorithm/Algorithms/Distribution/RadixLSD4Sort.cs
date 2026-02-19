@@ -30,8 +30,9 @@ namespace SortAlgorithm.Algorithms;
 /// The distribution must preserve the relative order of elements with the same digit value (stable). This is achieved by processing elements in forward order and appending to buckets.</description></item>
 /// <item><description><strong>LSD Processing Order:</strong> Digits must be processed from least significant (d=0) to most significant (d=digitCount-1).
 /// This bottom-up approach ensures that after processing digit d, all digits 0 through d are correctly sorted, with stability maintained by previous passes.</description></item>
-/// <item><description><strong>Digit Count Determination:</strong> The number of passes (digitCount) must cover all significant bits of the type.
-/// digitCount = ⌈bitSize / 2⌉ where bitSize is the bit width of type T (8, 16, 32, or 64 bits).</description></item>
+/// <item><description><strong>Digit Count Determination with Early Termination:</strong> The number of passes (digitCount) is determined by the actual range of values, not the full bit width.
+/// digitCount = ⌈requiredBits / 2⌉ where requiredBits is calculated from (max XOR min) to find differing bits.
+/// This optimization skips unnecessary high-order digit passes when the value range is small.</description></item>
 /// <item><description><strong>Bucket Collection Order:</strong> After distributing elements for a digit, buckets must be collected in ascending order (bucket 0, 1, 2, 3).
 /// Due to sign-bit flipping, negative values naturally sort before positive values.</description></item>
 /// </list>
@@ -39,15 +40,15 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Family      : Distribution (Radix Sort, LSD variant)</description></item>
 /// <item><description>Stable      : Yes (maintains relative order of elements with equal keys)</description></item>
-/// <item><description>In-place    : No (O(n) auxiliary space for temporary buffer)</description></item>
-/// <item><description>Best case   : Θ(d × n) - d = ⌈bitSize/2⌉ is constant for fixed-width integers</description></item>
-/// <item><description>Average case: Θ(d × n) - Linear in input size, independent of value distribution</description></item>
-/// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order</description></item>
+/// <item><description>In-place    : No (O(n) auxiliary space for temporary buffer and key arrays)</description></item>
+/// <item><description>Best case   : Θ(n) - When all elements are identical (early termination on range == 0)</description></item>
+/// <item><description>Average case: Θ(d × n) - Linear in input size, where d depends on actual value range</description></item>
+/// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order, d = ⌈bitSize/2⌉ for full range</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort, uses bitwise operations only)</description></item>
-/// <item><description>Digit Passes: d = ⌈bitSize/2⌉ (4 for byte, 8 for short, 16 for int, 32 for long)</description></item>
-/// <item><description>Reads       : d × n (one read per element per digit pass)</description></item>
-/// <item><description>Writes      : d × n (one write per element per digit pass)</description></item>
-/// <item><description>Memory      : O(n) for temporary buffer</description></item>
+/// <item><description>Digit Passes: d = ⌈requiredBits/2⌉ (early termination based on actual value range, not full bit width)</description></item>
+/// <item><description>Reads       : n + d × n (initial key building + one read per distribute pass) + optional final copy</description></item>
+/// <item><description>Writes      : d × n (one write per distribute pass to temp) + optional final copy</description></item>
+/// <item><description>Memory      : O(n) for temporary buffer + O(n) for key arrays (2 × ulong[])</description></item>
 /// </list>
 /// <para><strong>Radix-4 Characteristics:</strong></para>
 /// <list type="bullet">

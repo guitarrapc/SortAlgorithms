@@ -216,8 +216,9 @@ public class RadixLSD4SortTests
         // - Reads: n (distribute only)
         // - Writes: n (distribute to dst)
         //
-        // Final copy (if odd number of passes):
-        // - If digitCount is odd, final result is in temp, copy back once: n reads + n writes
+        // Final copy (if data not in original):
+        // - After all passes, if final result is in temp buffer, copy back once: n reads + n writes
+        // - Determined by explicit dataInOriginal flag, not parity check
         //
         // Total:
         // - Initial scan: n reads (build keys + min/max)
