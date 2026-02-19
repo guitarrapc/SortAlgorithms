@@ -20,21 +20,24 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Power-of-Two Requirement:</strong> The input length must be a power of 2 (n = 2^m for some integer m ≥ 0).
 /// This ensures the divide-and-conquer structure maintains balanced splits at each stage.
 /// If n is not a power of 2, this implementation throws ArgumentException. Use BitonicSortFill for arbitrary sizes.</description></item>
-/// <item><description><strong>Iterative Bitonic Construction:</strong> This implementation uses an iterative approach instead of recursion.
-/// It builds bitonic sequences of increasing sizes (2, 4, 8, ..., n) in stages. For each stage, sequences are sorted in alternating
-/// ascending/descending order to create the bitonic property. The first half increases (a₁ ≤ a₂ ≤ ... ≤ aₖ) and the second half decreases
-/// (bₖ ≥ ... ≥ b₂ ≥ b₁), creating the pattern: increasing then decreasing.
+/// <item><description><strong>Iterative Bitonic Construction:</strong> This implementation uses an XOR-based iterative approach that directly represents
+/// the bitonic sorting network structure. The algorithm uses 0-based local indices (0 to n-1) for the network logic, then maps them to actual array indices.
+/// For each network level k (2, 4, 8, ..., n), it performs comparison stages at distances j (k/2, k/4, ..., 1).
+/// Comparison pairs are determined by XOR operation in local index space: element i is compared with element i^j.
+/// The sort direction for each element is determined by (i &amp; k) in local index space:
+/// if (i &amp; k) == 0, sort ascending (first half of bitonic sequence); otherwise sort descending (second half).
+/// This 0-based local index approach ensures the implementation matches the theoretical bitonic network definition exactly.
 /// For the recursive approach, see BitonicSortNonOptimized.</description></item>
-/// <item><description><strong>Bitonic Merge Correctness:</strong> Given a bitonic sequence of length n = 2k, compare and conditionally swap elements
-/// at distance k apart (i.e., compare element[i] with element[i+k] for i ∈ [0, k)). This operation, called a bitonic split,
-/// partitions the sequence into two bitonic subsequences of length k each, where all elements in the first half are ≤ all elements
-/// in the second half. Iteratively applying bitonic merge stages to each half produces a fully sorted sequence.
-/// <para><strong>Proof sketch:</strong> Let S = [a₁,...,aₖ, b₁,...,bₖ] be bitonic. After comparing and swapping (aᵢ, bᵢ) for all i:
+/// <item><description><strong>Bitonic Merge Correctness:</strong> Given a bitonic sequence of length n = 2k, the XOR-based network compares and conditionally swaps
+/// elements at XOR distance j (i.e., compare element[i] with element[i^j]). This operation partitions the sequence into two bitonic subsequences,
+/// where all elements in the first half are ≤ all elements in the second half. The iterative XOR-based stages automatically apply this to all subsequences,
+/// producing a fully sorted sequence.
+/// <para><strong>Proof sketch:</strong> Let S = [a₁,...,aₖ, b₁,...,bₖ] be bitonic. After comparing and swapping pairs determined by XOR:
 /// <list type="bullet">
-/// <item>If S is increasing then decreasing: aᵢ ≤ aᵢ₊₁ ≤ ... ≤ aₖ and bₖ ≥ ... ≥ b₂ ≥ b₁.
+/// <item>The XOR operation ensures symmetric comparison pairs across the bitonic sequence midpoint.
 /// After swap: min(aᵢ, bᵢ) goes to first half, max(aᵢ, bᵢ) to second half.
 /// All elements in first half ≤ all elements in second half.
-/// Both halves remain bitonic.</item>
+/// Both halves remain bitonic, allowing recursive application of the same network structure.</item>
 /// </list></para></description></item>
 /// <item><description><strong>Comparison Network Property:</strong> Bitonic sort is a comparison network, meaning the sequence of comparisons
 /// is data-independent (oblivious). The same comparisons are performed regardless of input values, making it ideal for parallel hardware
@@ -59,10 +62,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Strictly requires power-of-2 input length. Throws ArgumentException otherwise.</description></item>
 /// <item><description>True in-place sorting with zero heap allocation (all work done on input span).</description></item>
 /// <item><description>Sequential implementation: Does not exploit parallelism (comparisons are executed sequentially).</description></item>
-/// <item><description>Uses iterative implementation to eliminate recursion overhead (O(log² n) recursion depth avoided).</description></item>
+/// <item><description>Uses iterative XOR-based implementation with 0-based local indices to eliminate recursion overhead and directly represent the sorting network structure.</description></item>
 /// <item><description>Uses aggressive inlining for performance-critical helper methods (CompareAndSwapAscending, CompareAndSwapDescending, IsPowerOfTwo, etc.).</description></item>
 /// <item><description>Branch elimination optimization: Separate CompareAndSwapAscending/Descending methods avoid conditional branching in inner loops, improving JIT optimization and branch prediction.</description></item>
-/// <item><description>Network structure clearly visible in iterative code: outer loop (sequence size), middle loop (sequence start), inner loops (merge stages and comparisons).</description></item>
+/// <item><description>XOR-based pairing (i ^ j) in local index space ensures correct bitonic network structure: outer loop (level k), middle loop (stage j), inner loop (local index i).</description></item>
+/// <item><description>Direction determination via bitwise AND ((i &amp; k) == 0 for ascending) in local index space eliminates per-block direction calculations and matches theoretical definition exactly.</description></item>
+/// <item><description>Local-to-global index mapping (low + i, low + i^j) ensures correct behavior when sorting subarrays.</description></item>
 /// <item><description>For unoptimized recursive version, see BitonicSortNonOptimized.</description></item>
 /// </list>
 /// <para><strong>Use Cases:</strong></para>
@@ -126,65 +131,47 @@ public static class BitonicSort
     }
 
     /// <summary>
-    /// Iteratively builds and merges bitonic sequences (non-recursive version).
-    /// This eliminates recursion overhead and provides better performance for large inputs.
+    /// Iteratively builds and merges bitonic sequences using the XOR-based network structure.
+    /// This is the correct bitonic sorting network implementation that guarantees bitonic properties.
+    /// Uses 0-based local indices for network structure, then maps to actual array indices.
     /// </summary>
-    /// <param name="span">The span to sort.</param>
+    /// <param name="s">The span to sort.</param>
     /// <param name="low">The starting index of the sequence.</param>
     /// <param name="count">The length of the sequence.</param>
-    private static void SortCoreIterative<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int low, int count)
+    private static void SortCoreIterative<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int low, int count)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Outer loop: build bitonic sequences of increasing size (2, 4, 8, ..., count)
-        for (int size = 2; size <= count; size *= 2)
+        // Outer loop: bitonic sequence size k (2, 4, 8, ..., count)
+        // This determines which "level" of the bitonic network we're building
+        for (int k = 2; k <= count; k *= 2)
         {
-            // Middle loop: process each bitonic sequence of current size
-            for (int start = low; start < low + count; start += size)
+            // Middle loop: comparison distance j (k/2, k/4, ..., 1)
+            // This determines the "stage" within each level
+            for (int j = k / 2; j > 0; j /= 2)
             {
-                // Determine merge direction based on position
-                // Creates alternating ascending/descending sequences to form bitonic property
-                bool ascending = ((start - low) / size) % 2 == 0;
-                
-                // Merge this bitonic sequence iteratively
-                BitonicMergeIterative(span, start, size, ascending);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Iteratively merges a bitonic sequence into a sorted sequence (non-recursive version).
-    /// Uses the standard bitonic sorting network structure with clear stages.
-    /// </summary>
-    /// <param name="span">The span containing the bitonic sequence.</param>
-    /// <param name="low">The starting index of the bitonic sequence.</param>
-    /// <param name="count">The length of the bitonic sequence.</param>
-    /// <param name="ascending">True to merge in ascending order, false for descending.</param>
-    private static void BitonicMergeIterative<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int low, int count, bool ascending)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Iterate through merge stages: count/2, count/4, ..., 1
-        for (int step = count / 2; step > 0; step /= 2)
-        {
-            // Within each stage, perform comparisons at 'step' distance
-            // Process all comparison pairs for this stage
-            for (int group = 0; group < count / (step * 2); group++)
-            {
-                int groupStart = low + group * (step * 2);
-                
-                if (ascending)
+                // Inner loop: use 0-based local index for network structure
+                for (int i = 0; i < count; i++)
                 {
-                    for (int i = 0; i < step; i++)
+                    // XOR-based pairing in local index space
+                    int ixj = i ^ j;
+                    
+                    // Only process if partner is within range and avoids duplicate comparisons
+                    if (ixj > i && ixj < count)
                     {
-                        CompareAndSwapAscending(span, groupStart + i, groupStart + i + step);
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < step; i++)
-                    {
-                        CompareAndSwapDescending(span, groupStart + i, groupStart + i + step);
+                        // Direction is determined by (i & k) in local index space:
+                        // - (i & k) == 0: ascending order (first half of bitonic sequence)
+                        // - (i & k) != 0: descending order (second half of bitonic sequence)
+                        bool ascending = (i & k) == 0;
+                        
+                        // Map local indices to actual array indices
+                        int a = low + i;
+                        int b = low + ixj;
+                        
+                        if (ascending)
+                            CompareAndSwapAscending(s, a, b);
+                        else
+                            CompareAndSwapDescending(s, a, b);
                     }
                 }
             }
@@ -194,36 +181,36 @@ public static class BitonicSort
     /// <summary>
     /// Compares two elements and swaps them if they are in the wrong order for ascending order.
     /// </summary>
-    /// <param name="span">The span containing the elements.</param>
+    /// <param name="s">The span containing the elements.</param>
     /// <param name="i">The index of the first element.</param>
     /// <param name="j">The index of the second element.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CompareAndSwapAscending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int i, int j)
+    private static void CompareAndSwapAscending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i, int j)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Swap if i > j (wrong order for ascending)
-        if (span.Compare(i, j) > 0)
+        if (s.Compare(i, j) > 0)
         {
-            span.Swap(i, j);
+            s.Swap(i, j);
         }
     }
 
     /// <summary>
     /// Compares two elements and swaps them if they are in the wrong order for descending order.
     /// </summary>
-    /// <param name="span">The span containing the elements.</param>
+    /// <param name="s">The span containing the elements.</param>
     /// <param name="i">The index of the first element.</param>
     /// <param name="j">The index of the second element.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CompareAndSwapDescending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int i, int j)
+    private static void CompareAndSwapDescending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i, int j)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Swap if i < j (wrong order for descending)
-        if (span.Compare(i, j) < 0)
+        if (s.Compare(i, j) < 0)
         {
-            span.Swap(i, j);
+            s.Swap(i, j);
         }
     }
 
@@ -384,11 +371,11 @@ public static class BitonicSortNonOptimized
     /// <summary>
     /// Merges a bitonic sequence into a sorted sequence.
     /// </summary>
-    /// <param name="span">The span containing the bitonic sequence.</param>
+    /// <param name="s">The span containing the bitonic sequence.</param>
     /// <param name="low">The starting index of the bitonic sequence.</param>
     /// <param name="count">The length of the bitonic sequence.</param>
     /// <param name="ascending">True to merge in ascending order, false for descending.</param>
-    private static void BitonicMerge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int low, int count, bool ascending)
+    private static void BitonicMerge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int low, int count, bool ascending)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -401,56 +388,56 @@ public static class BitonicSortNonOptimized
             {
                 for (int i = low; i < low + k; i++)
                 {
-                    CompareAndSwapAscending(span, i, i + k);
+                    CompareAndSwapAscending(s, i, i + k);
                 }
             }
             else
             {
                 for (int i = low; i < low + k; i++)
                 {
-                    CompareAndSwapDescending(span, i, i + k);
+                    CompareAndSwapDescending(s, i, i + k);
                 }
             }
 
             // Recursively merge both halves
-            BitonicMerge(span, low, k, ascending);
-            BitonicMerge(span, low + k, k, ascending);
+            BitonicMerge(s, low, k, ascending);
+            BitonicMerge(s, low + k, k, ascending);
         }
     }
 
     /// <summary>
     /// Compares two elements and swaps them if they are in the wrong order for ascending order.
     /// </summary>
-    /// <param name="span">The span containing the elements.</param>
+    /// <param name="s">The span containing the elements.</param>
     /// <param name="i">The index of the first element.</param>
     /// <param name="j">The index of the second element.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CompareAndSwapAscending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int i, int j)
+    private static void CompareAndSwapAscending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i, int j)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Swap if i > j (wrong order for ascending)
-        if (span.Compare(i, j) > 0)
+        if (s.Compare(i, j) > 0)
         {
-            span.Swap(i, j);
+            s.Swap(i, j);
         }
     }
 
     /// <summary>
     /// Compares two elements and swaps them if they are in the wrong order for descending order.
     /// </summary>
-    /// <param name="span">The span containing the elements.</param>
+    /// <param name="s">The span containing the elements.</param>
     /// <param name="i">The index of the first element.</param>
     /// <param name="j">The index of the second element.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CompareAndSwapDescending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int i, int j)
+    private static void CompareAndSwapDescending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i, int j)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Swap if i < j (wrong order for descending)
-        if (span.Compare(i, j) < 0)
+        if (s.Compare(i, j) < 0)
         {
-            span.Swap(i, j);
+            s.Swap(i, j);
         }
     }
 
