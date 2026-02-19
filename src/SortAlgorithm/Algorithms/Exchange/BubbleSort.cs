@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -37,6 +37,44 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 /// <typeparam name="T"></typeparam>
 public static class BubbleSort
+
+/// <summary>
+/// 非最適化BubbleSort。
+/// 配列の末尾から、隣接する要素を比較して交換を繰り返すことでソートを行います。各パスで最小値が配列の先頭に「浮かび上がる（bubble up）」ように移動します。
+/// シンプルで理解しやすいですが、実用的には非効率なソートアルゴリズムです。
+/// <br/>
+/// Non optimized BubbleSort.
+/// Sorts by repeatedly comparing and swapping adjacent elements from the end of the array. Each pass causes the smallest value to "bubble up" to the front of the array.
+/// Simple and easy to understand, but inefficient for practical use.
+/// </summary>
+/// <remarks>
+/// <para><strong>Theoretical Conditions for Correct Bubble Sort:</strong></para>
+/// <list type="number">
+/// <item><description><strong>Adjacent Element Comparison:</strong> Only adjacent elements (at positions j and j-1) are compared.
+/// This ensures the sorting is achieved purely through local exchanges.</description></item>
+/// <item><description><strong>Conditional Swap:</strong> Elements are swapped only when they are out of order (s.Compare(j, j-1) &lt; 0).
+/// This preserves the relative order of equal elements, making the algorithm stable.</description></item>
+/// <item><description><strong>Bounded Iteration:</strong> The outer loop runs n-1 times, and each iteration settles at least one element into its final position.
+/// After i iterations, the first i elements are guaranteed to be in their final sorted positions.</description></item>
+/// <item><description><strong>Complete Coverage:</strong> Each pass examines all unsorted elements from the end to position i+1.
+/// This guarantees that all inversions are eventually corrected.</description></item>
+/// </list>
+/// <para><strong>Performance Characteristics:</strong></para>
+/// <list type="bullet">
+/// <item><description>Family      : Exchange</description></item>
+/// <item><description>Stable      : Yes (equal elements are never swapped due to strict comparison)</description></item>
+/// <item><description>In-place    : Yes (O(1) auxiliary space)</description></item>
+/// <item><description>Best case   : O(n²) - Without early termination optimization, all comparisons are performed even for sorted input</description></item>
+/// <item><description>Average case: O(n²) - Expected n(n-1)/4 swaps for random input</description></item>
+/// <item><description>Worst case  : O(n²) - Reverse-sorted input requires n(n-1)/2 swaps</description></item>
+/// <item><description>Comparisons : Exactly n(n-1)/2 comparisons in all cases</description></item>
+/// <item><description>Swaps       : Best 0, Average n(n-1)/4, Worst n(n-1)/2</description></item>
+/// </list>
+/// <para><strong>Reference:</strong></para>
+/// <para>Wiki: https://en.wikipedia.org/wiki/Bubble_sort</para>
+/// </remarks>
+/// <typeparam name="T"></typeparam>
+public static class BubbleSortNonOptimized
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
