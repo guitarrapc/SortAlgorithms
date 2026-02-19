@@ -49,7 +49,7 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class BucketSort
 {
-    private const int MaxBucketCount = 1000; // Maximum number of buckets
+    private const int MaxBucketCount = 256; // Maximum number of buckets
     private const int MinBucketCount = 2;    // Minimum number of buckets
 
     // Buffer identifiers for visualization
@@ -62,7 +62,7 @@ public static class BucketSort
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-        => Sort(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
+        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
@@ -70,13 +70,23 @@ public static class BucketSort
     public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
         where T : IComparable<T>
         where TContext : ISortContext
-        => Sort(span, keySelector, new ComparableComparer<T>(), context);
+        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
     public static void Sort<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => SortCore(span, new FuncKeySelector<T>(keySelector), comparer, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using a struct key selector, comparer, and sort context.
+    /// This is the full-control version that enables maximum JIT optimization.
+    /// </summary>
+    /// <typeparam name="TKeySelector">A <see langword="readonly"/> <see langword="struct"/> implementing <see cref="IKeySelector{T}"/>.</typeparam>
+    private static void SortCore<T, TKeySelector, TComparer, TContext>(Span<T> span, TKeySelector keySelector, TComparer comparer, TContext context)
+        where TKeySelector : struct, IKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -93,51 +103,44 @@ public static class BucketSort
             var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
 
-            SortCore(s, tempSpan, keys, keySelector);
+            // Find min/max and cache keys in single pass
+            var min = int.MaxValue;
+            var max = int.MinValue;
+
+            for (var i = 0; i < s.Length; i++)
+            {
+                var key = keySelector.GetKey(s.Read(i));
+                keys[i] = key;
+                if (key < min) min = key;
+                if (key > max) max = key;
+            }
+
+            // If all keys are the same, no need to sort
+            if (min == max) return;
+
+            // Determine bucket count based on input size and range
+            long range = (long)max - (long)min + 1;
+
+            // Calculate optimal bucket count (sqrt(n) is a common heuristic)
+            var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(s.Length)));
+
+            // Adjust bucket count if range is smaller
+            if (range < bucketCount)
+            {
+                bucketCount = (int)range;
+            }
+
+            // Calculate bucket size (range divided by bucket count)
+            var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
+
+            // Perform bucket distribution and sorting
+            BucketDistribute(s, tempSpan, keys, bucketCount, bucketSize, min);
         }
         finally
         {
             ArrayPool<int>.Shared.Return(keysArray);
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
-    }
-
-    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> keys, Func<T, int> keySelector)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Find min/max and cache keys in single pass
-        var min = int.MaxValue;
-        var max = int.MinValue;
-
-        for (var i = 0; i < s.Length; i++)
-        {
-            var key = keySelector(s.Read(i));
-            keys[i] = key;
-            if (key < min) min = key;
-            if (key > max) max = key;
-        }
-
-        // If all keys are the same, no need to sort
-        if (min == max) return;
-
-        // Determine bucket count based on input size and range
-        long range = (long)max - (long)min + 1;
-
-        // Calculate optimal bucket count (sqrt(n) is a common heuristic)
-        var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(s.Length)));
-
-        // Adjust bucket count if range is smaller
-        if (range < bucketCount)
-        {
-            bucketCount = (int)range;
-        }
-
-        // Calculate bucket size (range divided by bucket count)
-        var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
-
-        // Perform bucket distribution and sorting
-        BucketDistribute(s, temp, keys, bucketCount, bucketSize, min);
     }
 
     private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> keys, int bucketCount, long bucketSize, int min)
