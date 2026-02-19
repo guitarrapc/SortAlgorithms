@@ -98,12 +98,15 @@ public static class SmoothSort
     {
         if (span.Length <= 1) return;
 
+
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         int q = 1, r = 0, p = 1, b = 1, c = 1;
-        int r1 = 0, b1 = 0, c1 = 0;
 
         // Build heap fase
+        // Temporary variables for Shift operations within the build phase
+        int r1 = 0, b1 = 0, c1 = 0;
+        
         while (q < span.Length)
         {
             r1 = r;
@@ -130,7 +133,7 @@ public static class SmoothSort
                 }
                 else
                 {
-                    Trinkle(s, ref p, ref b1, ref b, ref c1, ref c, ref r1);
+                    Trinkle(s, p, b, c, r);
                 }
 
                 Down(ref b, ref c);
@@ -151,46 +154,61 @@ public static class SmoothSort
         }
 
         // Sort fase
-        r1 = r;
-        //Debug.WriteLine($"[SmoothSort - Sort] Start q={q}, r={r}, p={p}, b={b}, c={c}, r1={r1}");
-        Trinkle(s, ref p, ref b1, ref b, ref c1, ref c, ref r1);
+        //Debug.WriteLine($"[SmoothSort - Sort] Start q={q}, r={r}, p={p}, b={b}, c={c}");
+        Trinkle(s, p, b, c, r);
 
         while (q > 1)
         {
-            //Debug.WriteLine($"[SmoothSort - Sort] Loop q={q}, r={r}, p={p}, b={b}, c={c}, r1={r1}");
-            --q;
+            //Debug.WriteLine($"[SmoothSort - Sort] Loop q={q}, r={r}, p={p}, b={b}, c={c}");
+            --q; // Move to previous element (this element is now sorted and fixed)
+            
             if (b == 1)
             {
-                --r;
-                --p;
+                // Single-element heap: just move to the previous heap
+                --r; // r: heap root index moves left
+                --p; // Remove this heap from bitstring
 
-                // shift while p is power of 2
+                // Merge consecutive size-1 heaps by finding the next set bit in p
                 while ((p & 1) == 0)
                 {
                     p >>= 1;
-                    Up(ref b, ref c);
+                    Up(ref b, ref c); // Move to larger Leonardo numbers
                 }
             }
             else
             {
                 if (b >= 3)
                 {
-                    --p;
+                    // Split Leonardo heap L(k) into two child heaps: L(k-2) (right) and L(k-1) (left)
+                    // Current root r becomes fixed (sorted), now process its two child heap roots
+                    // Before: b = L(k), c = L(k-1)
+                    --p; // Remove L(k) heap from bitstring (marks current root as sorted)
+                    
+                    // Move r to right child heap root: r - L(k) + L(k-1)
+                    // This gives the root position of the L(k-2) heap (right subtree)
                     r = r - b + c;
 
                     if (p > 0)
                     {
-                        SemiTrinkle(s, ref p, ref b1, ref b, ref c1, ref c, ref r1, ref r);
+                        // Process right child heap L(k-2) and its left neighbors
+                        // Note: --p was already applied, so p represents heaps to the left of original L(k)
+                        SemiTrinkle(s, p, b, c, r);
                     }
 
-                    Down(ref b, ref c);
-                    p = (p << 1) + 1;
+                    Down(ref b, ref c); // Now b = L(k-1), c = L(k-2)
+                    p = (p << 1) + 1;   // Mark L(k-1) heap as present in bitstring
 
-                    // update r and re-SemiTrinkle
+                    // Move r to left child heap root: r + L(k-2)
+                    // By Leonardo identity: L(k) = L(k-1) + L(k-2) + 1
+                    // So: (r_original - L(k) + L(k-1)) + L(k-2) = r_original - 1
+                    // which gives the root position of the L(k-1) heap (left subtree)
                     r = r + c;
-                    SemiTrinkle(s, ref p, ref b1, ref b, ref c1, ref c, ref r1, ref r);
-                    Down(ref b, ref c);
-                    p = (p << 1) + 1;
+                    
+                    // Process left child heap L(k-1) and its left neighbors
+                    SemiTrinkle(s, p, b, c, r);
+                    
+                    Down(ref b, ref c); // Now b = L(k-2), c = L(k-3)
+                    p = (p << 1) + 1;   // Mark L(k-2) heap as present in bitstring
 
                     Debug.Assert(p != 0, "p should not be zero");
                 }
@@ -212,12 +230,17 @@ public static class SmoothSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        Debug.Assert(r1 >= 0 && r1 < s.Length, $"Shift: r1={r1} out of bounds [0, {s.Length})");
+
         var r0 = r1;
         var t = s.Read(r0);
 
         while (b1 >= 3)
         {
             var r2 = r1 - b1 + c1;
+            Debug.Assert(r2 >= 0 && r2 < s.Length, $"Shift: r2={r2} out of bounds [0, {s.Length})");
+            Debug.Assert(r1 > 0, $"Shift: r1={r1} must be > 0 for (r1 - 1) comparison");
+
             if (s.Compare(r1 - 1, r2) > 0)
             {
                 r2 = r1 - 1;
@@ -245,33 +268,42 @@ public static class SmoothSort
     /// <summary>
     /// Construct or adjust the partial heap (reconstruct the main heap)
     /// </summary>
-    /// <param name="s"></param>
-    /// <param name="p"></param>
-    /// <param name="b1"></param>
-    /// <param name="b"></param>
-    /// <param name="c1"></param>
-    /// <param name="c"></param>
-    /// <param name="r1"></param>
+    /// <param name="s">SortSpan to operate on</param>
+    /// <param name="p">Heap configuration bitstring</param>
+    /// <param name="b">Current Leonardo number L(k)</param>
+    /// <param name="c">Previous Leonardo number L(k-1)</param>
+    /// <param name="r">Root position of the heap</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Trinkle<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ref int p, ref int b1, ref int b, ref int c1, ref int c, ref int r1)
+    private static void Trinkle<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int p, int b, int c, int r)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        int p1 = p, r0 = r1;
-        b1 = b;
-        c1 = c;
+        Debug.Assert(r >= 0 && r < s.Length, $"Trinkle: r={r} out of bounds [0, {s.Length})");
+
+        int p1 = p, r1 = r, r0 = r;
+        int b1 = b, c1 = c;
 
         var t = s.Read(r0);
 
         while (p1 > 0)
         {
+            // Find the next set bit in p1 and adjust b1, c1 to the corresponding Leonardo numbers
             while ((p1 & 1) == 0)
             {
                 p1 >>= 1;
                 Up(ref b1, ref c1);
             }
 
+            // Calculate position of the left neighbor heap's root
+            // r3 may be negative when near the array start, but that's safe because
+            // the algorithm ensures p1 == 1 in such cases (checked by assert below)
             var r3 = r1 - b1;
+
+            // Safety check: If r3 < 0 and we would actually use it (p1 > 1), this indicates
+            // a heap structure inconsistency where p claims a heap exists to the left,
+            // but there's insufficient space in the array for a Leonardo heap of size b1.
+            // When p1 == 1, short-circuit evaluation prevents s.Compare(r3, t) from being called.
+            Debug.Assert(r3 >= 0 || p1 == 1, $"Trinkle: Invalid heap structure - r3={r3} (r1={r1}, b1={b1}) with p1={p1:X}. This means p's bitstring claims a heap exists to the left, but array bounds prevent it.");
 
             if ((p1 == 1) || s.Compare(r3, t) <= 0)
             {
@@ -292,6 +324,9 @@ public static class SmoothSort
                     if (b1 >= 3)
                     {
                         var r2 = r1 - b1 + c1;
+                        Debug.Assert(r2 >= 0 && r2 < s.Length, $"Trinkle: r2={r2} out of bounds [0, {s.Length})");
+                        Debug.Assert(r1 > 0, $"Trinkle: r1={r1} must be > 0 for (r1 - 1) comparison");
+
                         if (s.Compare(r1 - 1, r2) > 0)
                         {
                             r2 = r1 - 1;
@@ -330,24 +365,25 @@ public static class SmoothSort
     /// <summary>
     /// Trinkle part of the heap
     /// </summary>
-    /// <param name="s"></param>
-    /// <param name="p"></param>
-    /// <param name="b1"></param>
-    /// <param name="b"></param>
-    /// <param name="c1"></param>
-    /// <param name="c"></param>
-    /// <param name="r1"></param>
-    /// <param name="r"></param>
+    /// <param name="s">SortSpan to operate on</param>
+    /// <param name="p">Heap configuration bitstring</param>
+    /// <param name="b">Current Leonardo number L(k)</param>
+    /// <param name="c">Previous Leonardo number L(k-1)</param>
+    /// <param name="r">Root position of the heap</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SemiTrinkle<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ref int p, ref int b1, ref int b, ref int c1, ref int c, ref int r1, ref int r)
+    private static void SemiTrinkle<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int p, int b, int c, int r)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        r1 = r - c;
+        Debug.Assert(r >= 0 && r < s.Length, $"SemiTrinkle: r={r} out of bounds [0, {s.Length})");
+
+        int r1 = r - c;
+        Debug.Assert(r1 >= 0 && r1 < s.Length, $"SemiTrinkle: r1={r1} (r - c) out of bounds [0, {s.Length})");
+
         if (s.Compare(r1, r) > 0)
         {
             s.Swap(r, r1);
-            Trinkle(s, ref p, ref b1, ref b, ref c1, ref c, ref r1);
+            Trinkle(s, p, b, c, r1);
         }
     }
 
