@@ -109,9 +109,8 @@ public static class RadixLSD10Sort
             // Use stackalloc for small fixed-size bucket counts (10 ints = 40 bytes)
             Span<int> bucketCounts = stackalloc int[RadixBase];
 
-            var comparer = new ComparableComparer<T>();
-            var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
-            var temp = new SortSpan<T, ComparableComparer<T>, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
+            var s = new SortSpan<T, NullComparer<T>, TContext>(span, context, default, BUFFER_MAIN);
+            var temp = new SortSpan<T, NullComparer<T>, TContext>(tempBuffer, context, default, BUFFER_TEMP);
 
             // Determine bit size for sign-bit flipping
             var bitSize = GetBitSize<T>();
@@ -136,25 +135,25 @@ public static class RadixLSD10Sort
             // This eliminates O(digit) loop in divisor calculation for each recursive call
             ReadOnlySpan<ulong> pow10 = [
                 1UL,                      // 10^0
-            10UL,                     // 10^1
-            100UL,                    // 10^2
-            1_000UL,                  // 10^3
-            10_000UL,                 // 10^4
-            100_000UL,                // 10^5
-            1_000_000UL,              // 10^6
-            10_000_000UL,             // 10^7
-            100_000_000UL,            // 10^8
-            1_000_000_000UL,          // 10^9
-            10_000_000_000UL,         // 10^10
-            100_000_000_000UL,        // 10^11
-            1_000_000_000_000UL,      // 10^12
-            10_000_000_000_000UL,     // 10^13
-            100_000_000_000_000UL,    // 10^14
-            1_000_000_000_000_000UL,  // 10^15
-            10_000_000_000_000_000UL, // 10^16
-            100_000_000_000_000_000UL,// 10^17
-            1_000_000_000_000_000_000UL,  // 10^18
-            10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
+                10UL,                     // 10^1
+                100UL,                    // 10^2
+                1_000UL,                  // 10^3
+                10_000UL,                 // 10^4
+                100_000UL,                // 10^5
+                1_000_000UL,              // 10^6
+                10_000_000UL,             // 10^7
+                100_000_000UL,            // 10^8
+                1_000_000_000UL,          // 10^9
+                10_000_000_000UL,         // 10^10
+                100_000_000_000UL,        // 10^11
+                1_000_000_000_000UL,      // 10^12
+                10_000_000_000_000UL,     // 10^13
+                100_000_000_000_000UL,    // 10^14
+                1_000_000_000_000_000UL,  // 10^15
+                10_000_000_000_000_000UL, // 10^16
+                100_000_000_000_000_000UL,// 10^17
+                1_000_000_000_000_000_000UL,  // 10^18
+                10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
             ];
 
             // Calculate required number of decimal digits based on the range
