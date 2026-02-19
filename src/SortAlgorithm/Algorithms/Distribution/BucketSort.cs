@@ -192,7 +192,7 @@ public static class BucketSort
             {
                 var start = bucketStarts[i];
                 var bucketSpan = new SortSpan<T, TComparer, TContext>(tempArray.Slice(start, count), s.Context, s.Comparer, BUFFER_BUCKET_BASE + i);
-                InsertionSortBucket(bucketSpan);
+                InsertionSort.SortCore(bucketSpan, 0, count);
             }
         }
 
@@ -200,28 +200,6 @@ public static class BucketSort
         temp.CopyTo(0, s, 0, s.Length);
     }
 
-    /// <summary>
-    /// Insertion sort for bucket contents (stable sort)
-    /// Uses SortSpan to track all operations for statistics and visualization
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void InsertionSortBucket<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        for (var i = 1; i < s.Length; i++)
-        {
-            var key = s.Read(i);
-            var j = i - 1;
-
-            while (j >= 0 && s.Compare(j, key) > 0)
-            {
-                s.Write(j + 1, s.Read(j));
-                j--;
-            }
-            s.Write(j + 1, key);
-        }
-    }
 }
 
 /// <summary>
