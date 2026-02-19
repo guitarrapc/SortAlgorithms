@@ -141,16 +141,21 @@ public static class RadixLSD10Sort
             if (key > maxKey) maxKey = key;
         }
 
-        // Calculate required number of decimal digits
-        // For the range [minKey, maxKey], we need enough digits to represent maxKey
-        var digitCount = GetDigitCountFromUlong(maxKey);
+        // Early exit: if all elements are the same (range == 0), no sorting needed
+        if (minKey == maxKey) return;
+
+        // Calculate required number of decimal digits based on the range
+        // For a narrow range (e.g., 9,000,000,000 to 9,000,000,100), we only need digits to represent the range (100 → 3 digits)
+        // instead of maxKey (9,000,000,100 → 10 digits), dramatically reducing passes
+        var range = maxKey - minKey;
+        var digitCount = GetDigitCountFromUlong(range);
 
         // Start LSD radix sort from the least significant digit
-        LSDSort(s, temp, digitCount, bitSize, bucketCounts);
+        LSDSort(s, temp, digitCount, bitSize, minKey, bucketCounts);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, int digitCount, int bitSize, Span<int> bucketCounts)
+    private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, int digitCount, int bitSize, ulong minKey, Span<int> bucketCounts)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -165,11 +170,13 @@ public static class RadixLSD10Sort
             bucketCounts.Clear();
 
             // Count occurrences of each decimal digit
+            // Use (key - minKey) to normalize the range, extracting only the necessary digits
             for (var i = 0; i < source.Length; i++)
             {
                 var value = source.Read(i);
                 var key = GetUnsignedKey(value, bitSize);
-                var digit = (int)((key / divisor) % 10);
+                var normalizedKey = key - minKey;
+                var digit = (int)((normalizedKey / divisor) % 10);
                 bucketCounts[digit]++;
             }
 
@@ -185,7 +192,8 @@ public static class RadixLSD10Sort
             {
                 var value = source.Read(i);
                 var key = GetUnsignedKey(value, bitSize);
-                var digit = (int)((key / divisor) % 10);
+                var normalizedKey = key - minKey;
+                var digit = (int)((normalizedKey / divisor) % 10);
                 var pos = bucketStarts[digit]++;
                 temp.Write(pos, value);
             }
