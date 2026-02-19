@@ -227,6 +227,8 @@ public static class RadixLSD10Sort
             return 32;
         else if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
             return 64;
+        else if (typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
+            return IntPtr.Size * 8; // 32-bit or 64-bit depending on platform
         else if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
             throw new NotSupportedException($"Type {typeof(T).Name} with 128-bit size is not supported. Maximum supported bit size is 64.");
         else
@@ -274,15 +276,15 @@ public static class RadixLSD10Sort
         else if (bitSize <= 32)
         {
             var uintValue = uint.CreateTruncating(value);
-            if (typeof(T) == typeof(int))
-                return uintValue ^ 0x8000_0000; // Flip sign bit for signed int
+            if (typeof(T) == typeof(int) || (typeof(T) == typeof(nint) && IntPtr.Size == 4))
+                return uintValue ^ 0x8000_0000; // Flip sign bit for signed int/nint(32-bit)
             return uintValue;
         }
         else // 64-bit
         {
             var ulongValue = ulong.CreateTruncating(value);
-            if (typeof(T) == typeof(long))
-                return ulongValue ^ 0x8000_0000_0000_0000; // Flip sign bit for signed long
+            if (typeof(T) == typeof(long) || (typeof(T) == typeof(nint) && IntPtr.Size == 8))
+                return ulongValue ^ 0x8000_0000_0000_0000; // Flip sign bit for signed long/nint(64-bit)
             return ulongValue;
         }
     }

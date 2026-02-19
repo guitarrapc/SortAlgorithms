@@ -101,6 +101,8 @@ public class RadixLSD10SortTests
     [Arguments(typeof(uint))]
     [Arguments(typeof(long))]
     [Arguments(typeof(ulong))]
+    [Arguments(typeof(nint))]
+    [Arguments(typeof(nuint))]
     public async Task SortDifferentIntegerTypes(Type type)
     {
         var stats = new StatisticsContext();
@@ -150,6 +152,18 @@ public class RadixLSD10SortTests
         else if (type == typeof(ulong))
         {
             var array = new ulong[] { 5, 2, 8, 1, 9 };
+            RadixLSD10Sort.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
+        else if (type == typeof(nint))
+        {
+            var array = new nint[] { -5, 2, -8, 1, 9 };
+            RadixLSD10Sort.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
+        else if (type == typeof(nuint))
+        {
+            var array = new nuint[] { 5, 2, 8, 1, 9 };
             RadixLSD10Sort.Sort(array.AsSpan(), stats);
             await Assert.That(IsSorted(array)).IsTrue();
         }
