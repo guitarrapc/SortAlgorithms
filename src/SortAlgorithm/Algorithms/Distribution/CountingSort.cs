@@ -258,7 +258,7 @@ public static class CountingSortInteger
     {
         if (span.Length <= 1) return;
 
-        GetBitSize<T>(); // validates supported type
+        EnsureSupportedType<T>();
 
         var comparer = new ComparableComparer<T>();
         var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
@@ -267,62 +267,55 @@ public static class CountingSortInteger
         try
         {
             var tempSpan = new SortSpan<T, ComparableComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
-            SortCore(s, tempSpan);
+            // Find min and max to determine range
+            var minValue = T.MaxValue;
+            var maxValue = T.MinValue;
+
+            for (var i = 0; i < s.Length; i++)
+            {
+                var value = s.Read(i);
+                if (s.Compare(value, minValue) < 0) minValue = value;
+                if (s.Compare(value, maxValue) > 0) maxValue = value;
+            }
+
+            // If all elements are the same, no need to sort
+            if (s.Compare(minValue, maxValue) == 0) return;
+
+            // Use ulong arithmetic for range calculation to correctly handle all supported types
+            // including ulong and nuint. ulong.CreateTruncating preserves 2's complement bit patterns
+            // for signed types, so wrapping ulong subtraction gives the correct element count for both
+            // signed and unsigned types.
+            var umin = ulong.CreateTruncating(minValue);
+            var umax = ulong.CreateTruncating(maxValue);
+
+            // range == 0 means overflow (actual range is 2^64), which implies an enormous value range
+            ulong range = umax - umin + 1;
+            if (range == 0 || range > (ulong)MaxCountArraySize)
+                throw new ArgumentException($"Value range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider another comparison-based sort.");
+
+            var size = (int)range;
+
+            // Use stackalloc for small count arrays, ArrayPool for larger ones
+            int[]? rentedCountArray = null;
+            Span<int> countArray = size <= StackAllocThreshold
+                ? stackalloc int[size]
+                : (rentedCountArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
+            countArray.Clear();
+            try
+            {
+                CountSort(s, tempSpan, countArray, umin);
+            }
+            finally
+            {
+                if (rentedCountArray is not null)
+                {
+                    ArrayPool<int>.Shared.Return(rentedCountArray);
+                }
+            }
         }
         finally
         {
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-        }
-    }
-
-    private static void SortCore<T, TContext>(SortSpan<T, ComparableComparer<T>, TContext> s, SortSpan<T, ComparableComparer<T>, TContext> tempSpan)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TContext : ISortContext
-    {
-        // Find min and max to determine range
-        var minValue = T.MaxValue;
-        var maxValue = T.MinValue;
-
-        for (var i = 0; i < s.Length; i++)
-        {
-            var value = s.Read(i);
-            if (s.Compare(value, minValue) < 0) minValue = value;
-            if (s.Compare(value, maxValue) > 0) maxValue = value;
-        }
-
-        // If all elements are the same, no need to sort
-        if (s.Compare(minValue, maxValue) == 0) return;
-
-        // Use ulong arithmetic for range calculation to correctly handle all supported types
-        // including ulong and nuint. ulong.CreateTruncating preserves 2's complement bit patterns
-        // for signed types, so wrapping ulong subtraction gives the correct element count for both
-        // signed and unsigned types.
-        var umin = ulong.CreateTruncating(minValue);
-        var umax = ulong.CreateTruncating(maxValue);
-
-        // range == 0 means overflow (actual range is 2^64), which implies an enormous value range
-        ulong range = umax - umin + 1;
-        if (range == 0 || range > (ulong)MaxCountArraySize)
-            throw new ArgumentException($"Value range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider another comparison-based sort.");
-
-        var size = (int)range;
-
-        // Use stackalloc for small count arrays, ArrayPool for larger ones
-        int[]? rentedCountArray = null;
-        Span<int> countArray = size <= StackAllocThreshold
-            ? stackalloc int[size]
-            : (rentedCountArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-        countArray.Clear();
-        try
-        {
-            CountSort(s, tempSpan, countArray, umin);
-        }
-        finally
-        {
-            if (rentedCountArray is not null)
-            {
-                ArrayPool<int>.Shared.Return(rentedCountArray);
-            }
         }
     }
 
@@ -360,34 +353,20 @@ public static class CountingSortInteger
     }
 
     /// <summary>
-    /// Get bit size of the type T and validate support.
-    /// Throws NotSupportedException for types larger than 64-bit.
+    /// Throws <see cref="NotSupportedException"/> if <typeparamref name="T"/> is not supported.
+    /// Supported types: sbyte, byte, short, ushort, int, uint, long, ulong, nint, nuint.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetBitSize<T>() where T : System.Numerics.IBinaryInteger<T>
+    private static void EnsureSupportedType<T>() where T : IBinaryInteger<T>
     {
-        if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte))
-            return 8;
-        else if (typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
-            return 16;
-        else if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
-            return 32;
-        else if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
-            return 64;
-        else if (typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
-            return IntPtr.Size * 8;
-        else if (typeof(T) == typeof(System.Int128) || typeof(T) == typeof(System.UInt128))
+        if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte) ||
+            typeof(T) == typeof(short) || typeof(T) == typeof(ushort) ||
+            typeof(T) == typeof(int) || typeof(T) == typeof(uint) ||
+            typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
+            typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
+            return;
+        if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
             throw new NotSupportedException($"Type {typeof(T).Name} with 128-bit size is not supported. Maximum supported bit size is 64.");
-        else
-            throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
-    }
-
-    /// <summary>
-    /// Convert IBinaryInteger value to long for range calculation.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static long ConvertToLong<T>(T value) where T : System.Numerics.IBinaryInteger<T>
-    {
-        return long.CreateTruncating(value);
+        throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
     }
 }
