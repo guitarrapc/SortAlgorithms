@@ -147,8 +147,12 @@ public static class RadixLSD256Sort
             // Calculate required number of passes based on the range
             // XOR to find differing bits, then count bits needed
             var range = maxKey ^ minKey;
-            var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
-            var digitCount = Math.Max(1, (requiredBits + RadixBits - 1) / RadixBits);
+
+            // Early return if all elements are equal (range == 0)
+            if (range == 0) return;
+
+            var requiredBits = 64 - System.Numerics.BitOperations.LeadingZeroCount(range);
+            var digitCount = (requiredBits + RadixBits - 1) / RadixBits;
 
             // Start LSD radix sort from the least significant digit
             LSDSort(s, temp, digitCount, bitSize, bucketOffsets);
