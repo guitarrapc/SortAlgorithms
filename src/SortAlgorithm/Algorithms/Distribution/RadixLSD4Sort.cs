@@ -97,12 +97,12 @@ public static class RadixLSD4Sort
         => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span.
+    /// Sorts the elements in the specified span using the specified context.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
     /// <exception cref="NotSupportedException">
     /// Thrown when <typeparamref name="T"/> is a 128-bit type (<see cref="Int128"/> or <see cref="UInt128"/>).
     /// This implementation only supports integer types up to 64-bit due to key storage and performance constraints.
@@ -126,23 +126,29 @@ public static class RadixLSD4Sort
 
         // Rent buffers from ArrayPool
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
+        var keysArray = ArrayPool<ulong>.Shared.Rent(span.Length);
+        var keysBufferArray = ArrayPool<ulong>.Shared.Rent(span.Length);
         var bucketOffsetsArray = ArrayPool<int>.Shared.Rent(RadixSize + 1);
 
         try
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
+            var keys = keysArray.AsSpan(0, span.Length);
+            var keysBuffer = keysBufferArray.AsSpan(0, span.Length);
             var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixSize + 1);
 
-            SortCore<T, TComparer, TContext>(span, tempBuffer, bucketOffsets, comparer, context);
+            SortCore<T, TComparer, TContext>(span, tempBuffer, keys, keysBuffer, bucketOffsets, comparer, context);
         }
         finally
         {
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            ArrayPool<ulong>.Shared.Return(keysArray);
+            ArrayPool<ulong>.Shared.Return(keysBufferArray);
             ArrayPool<int>.Shared.Return(bucketOffsetsArray);
         }
     }
 
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<ulong> keys, Span<ulong> keysBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -154,8 +160,7 @@ public static class RadixLSD4Sort
         // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
         var bitSize = GetBitSize<T>();
 
-        // Find min and max to determine actual required passes
-        // This optimization skips unnecessary high-order digit passes
+        // Build key array once and find min/max simultaneously
         var minKey = ulong.MaxValue;
         var maxKey = ulong.MinValue;
 
@@ -163,6 +168,7 @@ public static class RadixLSD4Sort
         {
             var value = s.Read(i);
             var key = GetUnsignedKey(value, bitSize);
+            keys[i] = key;
             if (key < minKey) minKey = key;
             if (key > maxKey) maxKey = key;
         }
@@ -173,16 +179,16 @@ public static class RadixLSD4Sort
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + RadixBits - 1) / RadixBits);
 
-        // Start LSD radix sort from the least significant digit
-        LSDSort(s, temp, digitCount, bitSize, bucketOffsets);
+        // Start LSD radix sort from the least significant digit with ping-pong key buffers
+        LSDSort(s, temp, keys, keysBuffer, digitCount, bucketOffsets);
     }
 
-    private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int digitCount, int bitSize, Span<int> bucketOffsets)
+    private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<ulong> keys, Span<ulong> keysBuffer, int digitCount, Span<int> bucketOffsets)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Perform LSD radix sort (only required passes)
+        // Perform LSD radix sort with ping-pong buffers for values and keys
         for (int d = 0; d < digitCount; d++)
         {
             var shift = d * RadixBits;
@@ -190,12 +196,10 @@ public static class RadixLSD4Sort
             // Clear bucket offsets
             bucketOffsets.Clear();
 
-            // Count occurrences of each digit
+            // Count occurrences of each digit (use keys array directly)
             for (var i = 0; i < s.Length; i++)
             {
-                var value = s.Read(i);
-                var key = GetUnsignedKey(value, bitSize);
-                var digit = (int)((key >> shift) & 0b11);  // Extract 2-bit digit
+                var digit = (int)((keys[i] >> shift) & 0b11);  // Extract 2-bit digit from cached key
                 bucketOffsets[digit + 1]++;
             }
 
@@ -205,18 +209,25 @@ public static class RadixLSD4Sort
                 bucketOffsets[i] += bucketOffsets[i - 1];
             }
 
-            // Distribute elements into temp buffer based on current digit
+            // Distribute elements and keys into temp buffers based on current digit
             for (var i = 0; i < s.Length; i++)
             {
                 var value = s.Read(i);
-                var key = GetUnsignedKey(value, bitSize);
-                var digit = (int)((key >> shift) & 0b11);  // Extract 2-bit digit
+                var key = keys[i];
+                var digit = (int)((key >> shift) & 0b11);  // Extract 2-bit digit from cached key
                 var destIndex = bucketOffsets[digit]++;
                 temp.Write(destIndex, value);
+                keysBuffer[destIndex] = key;  // Write key to buffer in parallel
             }
 
             // Copy back from temp to source using CopyTo for efficiency
             temp.CopyTo(0, s, 0, s.Length);
+            
+            // Swap keys and keysBuffer for next pass (ping-pong)
+            keysBuffer.CopyTo(keys);
+            var tempSpan = keys;
+            keys = keysBuffer;
+            keysBuffer = tempSpan;
         }
     }
 

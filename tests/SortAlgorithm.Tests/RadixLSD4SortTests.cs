@@ -207,24 +207,24 @@ public class RadixLSD4SortTests
         // - required bits = 7 (for value 99)
         // - required passes = ceil(7 / 2) = 4
         //
-        // Per pass d (d=0,1,2,3):
-        //   - Count phase: n reads
-        //   - Distribute phase: n reads + n writes (to temp)
+        // Per pass d (d=0,1,2,3) with ping-pong key optimization:
+        //   - Count phase: n reads (from keys array, not span)
+        //   - Distribute phase: n reads (from span) + n writes (to temp)
         //   - Copy back phase: n reads (from temp) + n writes (to main)
         //
         // Total per pass:
-        // - Reads: n (count) + n (distribute) + n (copy back) = 3n
+        // - Reads: n (distribute) + n (copy back) = 2n
         // - Writes: n (distribute to temp) + n (copy back to main) = 2n
         //
         // Total:
-        // - Initial scan: n reads
-        // - Radix passes: digitCount × (3n reads + 2n writes)
+        // - Initial scan: n reads (build keys + min/max)
+        // - Radix passes: digitCount × (2n reads + 2n writes)
         var maxValue = n - 1;
         var range = (ulong)maxValue; // min=0 after sign-bit flip, range = max - min
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 2 - 1) / 2); // ceil(requiredBits / 2)
 
-        var expectedReads = (ulong)(n + digitCount * 3 * n);  // Initial + (count + distribute + copy) × passes
+        var expectedReads = (ulong)(n + digitCount * 2 * n);  // Initial + (distribute + copy) × passes
         var expectedWrites = (ulong)(digitCount * 2 * n);     // (temp write + main write) × passes
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -251,7 +251,7 @@ public class RadixLSD4SortTests
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 1) / 2); // ceil(requiredBits / 2)
 
-        var expectedReads = (ulong)(n + digitCount * 3 * n);
+        var expectedReads = (ulong)(n + digitCount * 2 * n);
         var expectedWrites = (ulong)(digitCount * 2 * n);
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -278,7 +278,7 @@ public class RadixLSD4SortTests
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 2 - 1) / 2);
 
-        var expectedReads = (ulong)(n + digitCount * 3 * n);
+        var expectedReads = (ulong)(n + digitCount * 2 * n);
         var expectedWrites = (ulong)(digitCount * 2 * n);
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
