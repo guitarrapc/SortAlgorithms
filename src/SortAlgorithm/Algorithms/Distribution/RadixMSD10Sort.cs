@@ -20,6 +20,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Sign-Bit Flipping for Signed Integers:</strong> For signed types, the sign bit is flipped to convert signed values to unsigned keys.
 /// This ensures negative values are ordered correctly before positive values without separate processing.
 /// This technique avoids the MinValue overflow issue with Abs() and maintains stability.</description></item>
+/// <item><description><strong>Dynamic Starting Digit (MSD Optimization):</strong> Before sorting, performs a single O(n) pass to find the maximum key value
+/// and computes the actual required digit count. This eliminates empty high-order digit passes, which is critical for MSD performance
+/// when values are small relative to the type's capacity (e.g., values ≤ 999 in a 64-bit type need only 3 digits, not 20).</description></item>
 /// <item><description><strong>Digit Extraction Consistency:</strong> For a given position from most significant digit, extract the digit using (key / divisor) % 10
 /// where divisor = 10^(digitCount - 1 - d) for digit position d.</description></item>
 /// <item><description><strong>MSD Processing Order:</strong> Digits must be processed from most significant (d=digitCount-1) to least significant (d=0).
@@ -33,16 +36,17 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Distribution (Radix Sort, MSD variant)</description></item>
 /// <item><description>Stable      : Yes (maintains relative order of elements with equal keys)</description></item>
 /// <item><description>In-place    : No (O(n) auxiliary space for temporary buffer)</description></item>
-/// <item><description>Best case   : Θ(n) - When all elements fall into one bucket early</description></item>
-/// <item><description>Average case: Θ(d × n) - d = ⌈log₁₀(max)⌉ + 1 (number of decimal digits)</description></item>
-/// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order</description></item>
+/// <item><description>Best case   : Θ(n) - When all elements fall into one bucket early, or when the initial digit scan shows all values are equal</description></item>
+/// <item><description>Average case: Θ(n + d × n) - One O(n) pass for max digit computation + d passes where d = ⌈log₁₀(actualMax)⌉ (actual data digits, not type maximum)</description></item>
+/// <item><description>Worst case  : Θ(n + d × n) - Same complexity regardless of input order</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort, uses arithmetic operations only)</description></item>
-/// <item><description>Digit Passes: up to d = ⌈log₁₀(max)⌉ + 1, but can terminate early</description></item>
+/// <item><description>Digit Passes: 1 initial pass for max computation + up to d = ⌈log₁₀(actualMax)⌉, but can terminate early per bucket</description></item>
 /// <item><description>Memory      : O(n) for temporary buffer</description></item>
 /// </list>
 /// <para><strong>MSD vs LSD (Decimal):</strong></para>
 /// <list type="bullet">
 /// <item><description>MSD processes high-order digits first, enabling early termination when buckets are fully sorted</description></item>
+/// <item><description>MSD dynamically computes starting digit from data, avoiding unnecessary passes for small values in large types</description></item>
 /// <item><description>MSD is cache-friendlier for partially sorted data as it localizes accesses within buckets</description></item>
 /// <item><description>MSD requires recursive processing of buckets, adding overhead compared to LSD's iterative approach</description></item>
 /// <item><description>Both MSD and LSD can be implemented as stable sorts (this implementation maintains stability)</description></item>
@@ -78,6 +82,32 @@ public static class RadixMSD10Sort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary buffer for digit redistribution
+
+    // Pre-computed powers of 10 for O(1) divisor lookup
+    // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
+    // This eliminates O(digit) loop in divisor calculation for each recursive call
+    private static ReadOnlySpan<ulong> Pow10 => [
+        1UL,                      // 10^0
+        10UL,                     // 10^1
+        100UL,                    // 10^2
+        1_000UL,                  // 10^3
+        10_000UL,                 // 10^4
+        100_000UL,                // 10^5
+        1_000_000UL,              // 10^6
+        10_000_000UL,             // 10^7
+        100_000_000UL,            // 10^8
+        1_000_000_000UL,          // 10^9
+        10_000_000_000UL,         // 10^10
+        100_000_000_000UL,        // 10^11
+        1_000_000_000_000UL,      // 10^12
+        10_000_000_000_000UL,     // 10^13
+        100_000_000_000_000UL,    // 10^14
+        1_000_000_000_000_000UL,  // 10^15
+        10_000_000_000_000_000UL, // 10^16
+        100_000_000_000_000_000UL,// 10^17
+        1_000_000_000_000_000_000UL,  // 10^18
+        10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
+    ];
 
     /// <summary>
     /// Sorts the elements in the specified span.
@@ -121,26 +151,22 @@ public static class RadixMSD10Sort
     {
         if (span.Length <= 1) return;
 
-        // Rent buffers from ArrayPool
+        // Rent buffer from ArrayPool (only temp buffer needed now)
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
-        var bucketOffsetsArray = ArrayPool<int>.Shared.Rent(RadixBase + 1);
 
         try
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
-            var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixBase + 1);
-
-            SortCore<T, TComparer, TContext>(span, tempBuffer, bucketOffsets, comparer, context);
+            SortCore<T, TComparer, TContext>(span, tempBuffer, comparer, context);
         }
         finally
         {
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            ArrayPool<int>.Shared.Return(bucketOffsetsArray);
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, TComparer comparer, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -151,16 +177,18 @@ public static class RadixMSD10Sort
         // Determine the bit size for sign-bit flipping
         var bitSize = GetBitSize<T>();
 
-        // Calculate maximum number of decimal digits based on the type's bit size
-        // MSD doesn't need to scan for min/max - empty buckets are naturally skipped
-        var digitCount = GetMaxDigitCountFromBitSize(bitSize);
+        // Compute actual maximum digit count from the data (MSD optimization)
+        // This is the key optimization: instead of using the type's maximum possible digits,
+        // we scan the data once to find the actual maximum value and its digit count.
+        // This eliminates empty high-order digit passes, which is crucial for MSD performance.
+        var digitCount = ComputeMaxDigit(s, 0, s.Length, bitSize);
 
         // Start MSD radix sort from the most significant digit
-        MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize, bucketOffsets);
+        MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void MSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
+    private static void MSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int start, int length, int digit, int bitSize)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -178,60 +206,56 @@ public static class RadixMSD10Sort
             return;
         }
 
-        // Calculate divisor for current digit position
-        var divisor = 1UL;
-        for (var i = 0; i < digit; i++)
-        {
-            divisor *= 10;
-        }
+        // Get divisor for current digit position from pre-computed table: O(1) lookup
+        // Previously: O(digit) loop with divisor *= 10
+        var divisor = Pow10[digit];
 
-        // Clear bucket counts
-        bucketOffsets.Clear();
+        // Separate counts and offsets for clarity
+        // counts[d] = number of elements with digit value d
+        // offsets[d] = write position for next element with digit value d
+        Span<int> counts = stackalloc int[RadixBase];
+        Span<int> offsets = stackalloc int[RadixBase];
 
-        // Count occurrences of each digit in the current range
+        // Phase 1: Count occurrences of each digit value
         for (var i = 0; i < length; i++)
         {
             var value = s.Read(start + i);
             var key = GetUnsignedKey(value, bitSize);
             var digitValue = (int)((key / divisor) % 10);
-            bucketOffsets[digitValue + 1]++;
+            counts[digitValue]++;
         }
 
-        // Calculate prefix sum and save bucket start positions
-        Span<int> bucketStarts = stackalloc int[RadixBase];
-        bucketStarts[0] = 0;
-        for (var i = 1; i <= RadixBase; i++)
+        // Phase 2: Calculate bucket offsets (prefix sum)
+        // offsets[d] = starting position for bucket d
+        offsets[0] = 0;
+        for (var i = 1; i < RadixBase; i++)
         {
-            bucketOffsets[i] += bucketOffsets[i - 1];
-            if (i < RadixBase)
-            {
-                bucketStarts[i] = bucketOffsets[i];
-            }
+            offsets[i] = offsets[i - 1] + counts[i - 1];
         }
 
-        // Distribute elements into temp buffer based on current digit
+        // Phase 3: Distribute elements into temp buffer
+        // Use a copy of offsets as write positions (will be incremented)
+        Span<int> writePos = stackalloc int[RadixBase];
+        offsets.CopyTo(writePos);
+
         for (var i = 0; i < length; i++)
         {
             var value = s.Read(start + i);
             var key = GetUnsignedKey(value, bitSize);
             var digitValue = (int)((key / divisor) % 10);
-            var destIndex = bucketOffsets[digitValue]++;
+            var destIndex = writePos[digitValue]++;
             temp.Write(start + destIndex, value);
         }
 
         // Copy back from temp to source
         temp.CopyTo(start, s, start, length);
 
-        // Recursively sort each bucket for the next digit
+        // Phase 4: Recursively sort each bucket for the next digit
         for (var i = 0; i < RadixBase; i++)
         {
-            var bucketStart = bucketStarts[i];
-            var bucketEnd = (i == RadixBase - 1) ? length : bucketStarts[i + 1];
-            var bucketLength = bucketEnd - bucketStart;
-
-            if (bucketLength > 1)
+            if (counts[i] > 1)
             {
-                MSDSort(s, temp, start + bucketStart, bucketLength, digit - 1, bitSize, bucketOffsets);
+                MSDSort(s, temp, start + offsets[i], counts[i], digit - 1, bitSize);
             }
         }
     }
@@ -371,26 +395,53 @@ public static class RadixMSD10Sort
     }
 
     /// <summary>
-    /// Get the maximum number of decimal digits for a given bit size.
-    /// Returns the digit count needed to represent the maximum unsigned value for that bit size.
+    /// Compute the actual maximum digit count needed for the given data.
+    /// This performs a single pass through the data to find the maximum key value,
+    /// then calculates the number of digits required.
+    /// This optimization is crucial for MSD radix sort to avoid processing empty high-order digits.
     /// </summary>
     /// <remarks>
-    /// Examples:
-    /// - 8-bit: max 255 → 3 digits
-    /// - 16-bit: max 65,535 → 5 digits
-    /// - 32-bit: max 4,294,967,295 → 10 digits
-    /// - 64-bit: max 18,446,744,073,709,551,615 → 20 digits
+    /// MSD Optimization:
+    /// - Without this: Always starts from maximum possible digits (e.g., 20 for 64-bit), causing empty recursion
+    /// - With this: Starts from actual required digits (e.g., 3 for values &lt;= 999), avoiding unnecessary passes
+    /// 
+    /// Performance Impact:
+    /// - One O(n) pass upfront to scan maxKey
+    /// - Eliminates O(d × n) work for d unnecessary high-order digits
+    /// - Critical for data with small values in large integer types (e.g., byte values in long arrays)
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetMaxDigitCountFromBitSize(int bitSize)
+    private static int ComputeMaxDigit<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int length, int bitSize)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
-        return bitSize switch
+        if (length == 0) return 0;
+
+        // Find maximum key in the data
+        var maxKey = 0UL;
+        for (var i = 0; i < length; i++)
         {
-            8 => 3,   // byte/sbyte: max 255
-            16 => 5,  // short/ushort: max 65535
-            32 => 10, // int/uint: max 4294967295
-            64 => 20, // long/ulong: max 18446744073709551615
-            _ => throw new NotSupportedException($"Bit size {bitSize} is not supported")
-        };
+            var value = s.Read(start + i);
+            var key = GetUnsignedKey(value, bitSize);
+            if (key > maxKey)
+            {
+                maxKey = key;
+            }
+        }
+
+        // Calculate digit count from maxKey
+        // log₁₀(maxKey) + 1, but using iterative division to avoid floating point
+        if (maxKey == 0) return 1; // Special case: all zeros
+
+        var digitCount = 0;
+        var temp = maxKey;
+        while (temp > 0)
+        {
+            temp /= 10;
+            digitCount++;
+        }
+
+        return digitCount;
     }
 }
