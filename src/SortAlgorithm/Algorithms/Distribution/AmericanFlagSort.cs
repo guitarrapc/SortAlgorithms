@@ -7,12 +7,12 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// American Flag Sort - In-place MSD Radix Sortの実装。
-/// 値をビット列として扱い、2ビットずつ（4種類）の桁に分けて要素を分類し、in-placeで並び替えます。
+/// 値をビット列として扱い、4ビットずつ（16種類）の桁に分けて要素を分類し、in-placeで並び替えます。
 /// 最上位桁（Most Significant Digit）から最下位桁へ向かって処理することで、再帰的にソートを実現します。
 /// RadixMSDSortと異なり、補助バッファの使用を最小限に抑え、配列内で要素をスワップすることでin-placeソートを実現します。
 /// <br/>
 /// American Flag Sort - An in-place MSD Radix Sort implementation.
-/// Treats values as bit sequences, dividing them into 2-bit digits (4 buckets) and classifying elements in-place.
+/// Treats values as bit sequences, dividing them into 4-bit digits (16 buckets) and classifying elements in-place.
 /// Processing from the Most Significant Digit to the least significant ensures a recursive sort.
 /// Unlike RadixMSDSort, this implementation minimizes auxiliary buffer usage and achieves in-place sorting by swapping elements within the array.
 /// </summary>
@@ -23,8 +23,8 @@ namespace SortAlgorithm.Algorithms;
 /// - 32-bit: key = (uint)value ^ 0x8000_0000
 /// - 64-bit: key = (ulong)value ^ 0x8000_0000_0000_0000
 /// This ensures negative values are ordered correctly before positive values without separate processing.</description></item>
-/// <item><description><strong>Digit Extraction Correctness:</strong> For each digit position d (from digitCount-1 down to 0), extract the d-th 2-bit digit using bitwise operations:
-/// digit = (key >> (d × 2)) &amp; 0b11. This ensures each 2-bit segment of the integer is processed independently.</description></item>
+/// <item><description><strong>Digit Extraction Correctness:</strong> For each digit position d (from digitCount-1 down to 0), extract the d-th 4-bit digit using bitwise operations:
+/// digit = (key >> (d × 4)) &amp; 0xF. This ensures each 4-bit segment of the integer is processed independently.</description></item>
 /// <item><description><strong>In-Place Permutation:</strong> Elements are rearranged in-place using a two-pass approach:
 /// 1. Count phase: Count occurrences of each digit value
 /// 2. Permutation phase: Place each element in its correct bucket position using bucket offsets</description></item>
@@ -40,10 +40,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Stable      : No (in-place permutation does not preserve relative order)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space, excluding recursion stack)</description></item>
 /// <item><description>Best case   : Θ(n) - When all elements fall into one bucket early</description></item>
-/// <item><description>Average case: Θ(d × n) - d = ⌈bitSize/2⌉ is constant for fixed-width integers</description></item>
+/// <item><description>Average case: Θ(d × n) - d = ⌈bitSize/4⌉ is constant for fixed-width integers</description></item>
 /// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort, uses bitwise operations only)</description></item>
-/// <item><description>Digit Passes: up to d = ⌈bitSize/2⌉ (4 for byte, 8 for short, 16 for int, 32 for long), but can terminate early</description></item>
+/// <item><description>Digit Passes: up to d = ⌈bitSize/4⌉ (2 for byte, 4 for short, 8 for int, 16 for long), but can terminate early</description></item>
 /// <item><description>Memory      : O(1) auxiliary space (excluding recursion stack which is O(log n) expected, O(n) worst case)</description></item>
 /// </list>
 /// <para><strong>American Flag Sort vs MSD Radix Sort:</strong></para>
@@ -57,7 +57,7 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Algorithm Overview:</strong></para>
 /// <para>The algorithm consists of three phases per digit level:</para>
 /// <list type="number">
-/// <item><description><strong>Count Phase:</strong> Count occurrences of each digit value (0-3)</description></item>
+/// <item><description><strong>Count Phase:</strong> Count occurrences of each digit value (0-15)</description></item>
 /// <item><description><strong>Offset Calculation:</strong> Compute bucket offsets (cumulative sum)</description></item>
 /// <item><description><strong>Permutation Phase:</strong> Rearrange elements into their buckets in-place using cyclic permutations</description></item>
 /// <item><description><strong>Recursive Phase:</strong> Recursively sort each non-empty bucket for the next digit</description></item>
@@ -73,8 +73,8 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class AmericanFlagSort
 {
-    private const int RadixBits = 2;        // 2 bits per digit
-    private const int RadixSize = 4;        // 2^2 = 4 buckets
+    private const int RadixBits = 4;        // 4 bits per digit
+    private const int RadixSize = 16;       // 2^4 = 16 buckets
     private const int InsertionSortCutoff = 16; // Switch to insertion sort for small buckets
 
     // Buffer identifiers for visualization
@@ -146,7 +146,7 @@ public static class AmericanFlagSort
 
         var shift = digit * RadixBits;
 
-        // Allocate bucket arrays on stack (RadixSize=4, so only 20 bytes total)
+        // Allocate bucket arrays on stack (RadixSize=16, so only 68 bytes total)
         Span<int> bucketOffsets = stackalloc int[RadixSize + 1];
         Span<int> bucketStarts = stackalloc int[RadixSize];
 
@@ -157,7 +157,7 @@ public static class AmericanFlagSort
         {
             var value = s.Read(start + i);
             var key = GetUnsignedKey(value, bitSize);
-            var digitValue = (int)((key >> shift) & 0b11);  // Extract 2-bit digit
+            var digitValue = (int)((key >> shift) & 0xF);  // Extract 4-bit digit
             bucketOffsets[digitValue + 1]++;
         }
 
@@ -217,7 +217,7 @@ public static class AmericanFlagSort
                 var currentPos = start + bucketOffsets[bucket];
                 var currentValue = s.Read(currentPos);
                 var currentKey = GetUnsignedKey(currentValue, bitSize);
-                var currentDigit = (int)((currentKey >> shift) & 0b11);
+                var currentDigit = (int)((currentKey >> shift) & 0xF);
 
                 // If element is already in correct bucket, advance
                 if (currentDigit == bucket)
