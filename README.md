@@ -38,8 +38,19 @@ You can check various benchmark patterns at [GitHub Actions/Benchmark](https://g
 - [Binary Insertion Sort](./src/SortAlgorithm/Algorithms/Insertion/BinaryInsertionSort.cs)
 - [Gnome Sort](./src/SortAlgorithm/Algorithms/Insertion/GnomeSort.cs)
 - [Insertion Sort](./src/SortAlgorithm/Algorithms/Insertion/InsertionSort.cs)
+- [Library Sort](./src/SortAlgorithm/Algorithms/Insertion/LibrarySort.cs)
 - [Pair Insertion Sort](./src/SortAlgorithm/Algorithms/Insertion/PairInsertionSort.cs)
 - [Shell Sort](./src/SortAlgorithm/Algorithms/Insertion/ShellSort.cs)
+  - Knuth1973
+  - Sedgewick1986
+  - Tokuda1992
+  - Ciura2001
+  - Lee2021
+
+### Joke
+- [Bogo Sort](./src/SortAlgorithm/Algorithms/Joke/BogoSort.cs)
+- [Slow Sort](./src/SortAlgorithm/Algorithms/Joke/SlowSort.cs)
+- [Stooge Sort](./src/SortAlgorithm/Algorithms/Joke/StoogeSort.cs)
 
 ### Merge
 - [Bottom-Up Merge Sort](./src/SortAlgorithm/Algorithms/Merge/BottomupMergeSort.cs)
@@ -51,12 +62,11 @@ You can check various benchmark patterns at [GitHub Actions/Benchmark](https://g
 
 ### Network
 - [Bitonic Sort](./src/SortAlgorithm/Algorithms/Network/BitonicSort.cs)
-- [Bitonic Sort (Fill)](./src/SortAlgorithm/Algorithms/Network/BitonicSortFill.cs)
-- [Bitonic Sort (Parallel)](./src/SortAlgorithm/Algorithms/Network/BitonicSortParallel.cs)
 
 ### Partition
 - [Block Quick Sort](./src/SortAlgorithm/Algorithms/Partition/BlockQuickSort.cs)
 - [Intro Sort](./src/SortAlgorithm/Algorithms/Partition/IntroSort.cs)
+- [Intro Sort (.NET)](./src/SortAlgorithm/Algorithms/Partition/IntroSort.cs)
 - [Pattern-defeat Quick Sort](./src/SortAlgorithm/Algorithms/Partition/PDQSort.cs)
 - [Quick Sort](./src/SortAlgorithm/Algorithms/Partition/QuickSort.cs)
 - [Quick Sort (Dual Pivot)](./src/SortAlgorithm/Algorithms/Partition/QuickSortDualPivot.cs)
@@ -74,8 +84,3 @@ You can check various benchmark patterns at [GitHub Actions/Benchmark](https://g
 ### Tree
 - [Balanced Binary Tree Sort](./src/SortAlgorithm/Algorithms/Tree/BalancedBinaryTreeSort.cs)
 - [Binary Tree Sort](./src/SortAlgorithm/Algorithms/Tree/BinaryTreeSort.cs)
-
-### Joke
-- [Bogo Sort](./src/SortAlgorithm/Algorithms/Joke/BogoSort.cs)
-- [Slow Sort](./src/SortAlgorithm/Algorithms/Joke/SlowSort.cs)
-- [Stooge Sort](./src/SortAlgorithm/Algorithms/Joke/StoogeSort.cs)
