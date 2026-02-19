@@ -1,5 +1,4 @@
 ﻿using SortAlgorithm.Contexts;
-using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -174,6 +173,23 @@ public static class AmericanFlagSort
             bucketCounts[digitValue + 1]++;
         }
 
+        // Early termination optimization: Check for uniform digit values
+        // Count non-empty buckets BEFORE prefix sum (bucketCounts[i+1] holds count for bucket i)
+        var nonEmptyBuckets = 0;
+        for (var i = 0; i < RadixSize; i++)
+        {
+            if (bucketCounts[i + 1] > 0) nonEmptyBuckets++;
+        }
+
+        // If all elements have the same digit value (0 or 1 non-empty buckets),
+        // skip permutation and recursively process the next digit
+        if (nonEmptyBuckets <= 1)
+        {
+            if (digit > 0)
+                AmericanFlagSortRecursive(s, start, length, digit - 1, bitSize);
+            return;
+        }
+
         // Phase 2: Calculate bucket offsets (prefix sum)
         // After prefix sum: bucketCounts[d] = start of bucket d, bucketCounts[d+1] = end of bucket d
         // This gives us both boundaries for each bucket from a single array
@@ -231,7 +247,6 @@ public static class AmericanFlagSort
         for (var bucket = 0; bucket < RadixSize; bucket++)
         {
             // Get the range for this bucket
-            var bucketStart = bucketStarts[bucket];
             var bucketEnd = (bucket == RadixSize - 1) ? length : bucketStarts[bucket + 1];
 
             // Move elements to their correct positions within and across buckets
