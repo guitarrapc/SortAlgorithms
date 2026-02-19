@@ -96,6 +96,7 @@ public class AlgorithmRegistry
 
         // Network Sorts - O(log²n) - 推奨2048
         Add("Bitonic sort", "Network Sorts", "O(log²n)", MAX_SIZE, 2048, (arr, ctx) => BitonicSort.Sort(arr.AsSpan(), ctx));
+        Add("Bitonic sort (Recursive)", "Network Sorts", "O(log²n)", MAX_SIZE, 1024, (arr, ctx) => BitonicSortNonOptimized.Sort(arr.AsSpan(), ctx));
 
         // Tree Sorts - O(n log n) - 推奨1024
         Add("Unbalanced binary tree sort", "Tree Sorts", "O(n log n)", MAX_SIZE, 1024, (arr, ctx) => BinaryTreeSort.Sort(arr.AsSpan(), ctx));
