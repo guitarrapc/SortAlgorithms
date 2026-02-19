@@ -68,7 +68,10 @@ public static class PigeonholeSort
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector)
-        => SortCore(span, new FuncKeySelector<T>(keySelector), NullContext.Default);
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        SortCore(span, new FuncKeySelector<T>(keySelector), NullContext.Default);
+    }
 
     /// <summary>
     /// Sorts the elements in the specified span using the key selector and sort context.
@@ -79,7 +82,10 @@ public static class PigeonholeSort
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
         where TContext : ISortContext
-        => SortCore(span, new FuncKeySelector<T>(keySelector), context);
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        SortCore(span, new FuncKeySelector<T>(keySelector), context);
+    }
 
     private static void SortCore<T, TKeySelector, TContext>(Span<T> span, TKeySelector keySelector, TContext context)
         where TKeySelector : struct, IKeySelector<T>

@@ -62,7 +62,10 @@ public static class CountingSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-        => Sort(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        Sort(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
+    }
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -74,7 +77,10 @@ public static class CountingSort
     public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
         where T : IComparable<T>
         where TContext : ISortContext
-        => Sort(span, keySelector, new ComparableComparer<T>(), context);
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        Sort(span, keySelector, new ComparableComparer<T>(), context);
+    }
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.
@@ -90,6 +96,7 @@ public static class CountingSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        ArgumentNullException.ThrowIfNull(keySelector);
         if (span.Length <= 1) return;
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
@@ -103,60 +110,53 @@ public static class CountingSort
             var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
 
-            SortCore(span, keySelector, s, tempSpan, keys);
+            // Find min/max and cache keys in single pass
+            var min = int.MaxValue;
+            var max = int.MinValue;
+
+            for (var i = 0; i < span.Length; i++)
+            {
+                var key = keySelector(s.Read(i));
+                keys[i] = key;
+                if (key < min) min = key;
+                if (key > max) max = key;
+            }
+
+            // If all keys are the same, no need to sort
+            if (min == max) return;
+
+            // Check for overflow and validate range
+            long range = (long)max - (long)min + 1;
+            if (range > int.MaxValue)
+                throw new ArgumentException($"Key range is too large for CountingSort: {range}. Maximum supported range is {int.MaxValue}.");
+            if (range > MaxCountArraySize)
+                throw new ArgumentException($"Key range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider using  another comparison-based sort.");
+
+            var offset = -min; // Offset to normalize keys to 0-based index
+            var size = (int)range;
+
+            // Use stackalloc for small count arrays, ArrayPool for larger ones
+            int[]? rentedCountArray = null;
+            Span<int> countArray = size <= StackAllocThreshold
+                ? stackalloc int[size]
+                : (rentedCountArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
+            countArray.Clear();
+            try
+            {
+                CountSort(s, keys, tempSpan, countArray, offset);
+            }
+            finally
+            {
+                if (rentedCountArray is not null)
+                {
+                    ArrayPool<int>.Shared.Return(rentedCountArray);
+                }
+            }
         }
         finally
         {
             ArrayPool<int>.Shared.Return(keysArray);
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-        }
-    }
-
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<int> keys)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Find min/max and cache keys in single pass
-        var min = int.MaxValue;
-        var max = int.MinValue;
-
-        for (var i = 0; i < span.Length; i++)
-        {
-            var key = keySelector(s.Read(i));
-            keys[i] = key;
-            if (key < min) min = key;
-            if (key > max) max = key;
-        }
-
-        // If all keys are the same, no need to sort
-        if (min == max) return;
-
-        // Check for overflow and validate range
-        long range = (long)max - (long)min + 1;
-        if (range > int.MaxValue)
-            throw new ArgumentException($"Key range is too large for CountingSort: {range}. Maximum supported range is {int.MaxValue}.");
-        if (range > MaxCountArraySize)
-            throw new ArgumentException($"Key range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider using  another comparison-based sort.");
-
-        var offset = -min; // Offset to normalize keys to 0-based index
-        var size = (int)range;
-
-        // Use stackalloc for small count arrays, ArrayPool for larger ones
-        int[]? rentedCountArray = null;
-        Span<int> countArray = size <= StackAllocThreshold
-            ? stackalloc int[size]
-            : (rentedCountArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-        countArray.Clear();
-        try
-        {
-            CountSort(s, keys, tempSpan, countArray, offset);
-        }
-        finally
-        {
-            if (rentedCountArray is not null)
-            {
-                ArrayPool<int>.Shared.Return(rentedCountArray);
-            }
         }
     }
 

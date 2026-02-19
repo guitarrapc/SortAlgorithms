@@ -64,7 +64,10 @@ public static class BucketSort
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), NullContext.Default);
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), NullContext.Default);
+    }
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -76,7 +79,10 @@ public static class BucketSort
     public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
         where T : IComparable<T>
         where TContext : ISortContext
-        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), context);
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), context);
+    }
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.
@@ -91,7 +97,10 @@ public static class BucketSort
     public static void Sort<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
-        => SortCore(span, new FuncKeySelector<T>(keySelector), comparer, context);
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        SortCore(span, new FuncKeySelector<T>(keySelector), comparer, context);
+    }
 
     private static void SortCore<T, TKeySelector, TComparer, TContext>(Span<T> span, TKeySelector keySelector, TComparer comparer, TContext context)
         where TKeySelector : struct, IKeySelector<T>
