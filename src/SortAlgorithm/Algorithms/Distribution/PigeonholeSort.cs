@@ -62,49 +62,32 @@ public static class PigeonholeSort
     private const int BUFFER_TEMP = 1;       // Temporary buffer for elements
 
     /// <summary>
-    /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Sorts the elements in the specified span in ascending order using the key selector.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), NullContext.Default);
+    public static void Sort<T>(Span<T> span, Func<T, int> keySelector)
+        => SortCore(span, new FuncKeySelector<T>(keySelector), NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span using the provided sort context.
+    /// Sorts the elements in the specified span using the key selector and sort context.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
-        where T : IComparable<T>
         where TContext : ISortContext
-        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), context);
+        => SortCore(span, new FuncKeySelector<T>(keySelector), context);
 
-    /// <summary>
-    /// Sorts the elements in the specified span using the provided comparer and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the span.</typeparam>
-    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
-    /// <typeparam name="TContext">The type of sort context.</typeparam>
-    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
-    /// <param name="comparer">The comparer to use for element comparisons.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
-    public static void Sort<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, TComparer comparer, TContext context)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-        => SortCore(span, new FuncKeySelector<T>(keySelector), comparer, context);
-
-    private static void SortCore<T, TKeySelector, TComparer, TContext>(Span<T> span, TKeySelector keySelector, TComparer comparer, TContext context)
+    private static void SortCore<T, TKeySelector, TContext>(Span<T> span, TKeySelector keySelector, TContext context)
         where TKeySelector : struct, IKeySelector<T>
-        where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, NullComparer<T>, TContext>(span, context, default, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var keysArray = ArrayPool<int>.Shared.Rent(span.Length);
@@ -113,7 +96,7 @@ public static class PigeonholeSort
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, NullComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, default, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
             var next = nextArray.AsSpan(0, span.Length);
 
@@ -178,8 +161,7 @@ public static class PigeonholeSort
     /// Achieves O(n + k) complexity; no prefix-sum phase.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PigeonholeDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<int> keys, Span<int> holeHead, Span<int> holeTail, Span<int> next, int offset)
-        where TComparer : IComparer<T>
+    private static void PigeonholeDistribute<T, TContext>(SortSpan<T, NullComparer<T>, TContext> source, SortSpan<T, NullComparer<T>, TContext> temp, Span<int> keys, Span<int> holeHead, Span<int> holeTail, Span<int> next, int offset)
         where TContext : ISortContext
     {
         // Phase 1: Copy elements to temp and append each to the tail of its hole's linked list (O(n))
