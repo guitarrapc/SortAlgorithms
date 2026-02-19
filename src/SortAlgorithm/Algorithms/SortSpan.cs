@@ -229,6 +229,16 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     }
 
     /// <summary>
+    /// Returns a new SortSpan that wraps a slice of this span with a different buffer identifier.
+    /// </summary>
+    /// <param name="start">The starting index of the slice.</param>
+    /// <param name="length">The number of elements in the slice.</param>
+    /// <param name="bufferId">The buffer identifier for the new SortSpan.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public SortSpan<T, TComparer, TContext> Slice(int start, int length, int bufferId)
+        => new SortSpan<T, TComparer, TContext>(_span.Slice(start, length), _context, _comparer, bufferId);
+
+    /// <summary>
     /// Copies a range of elements from this span to a regular Span. (Equivalent to source.Slice(sourceIndex, length).CopyTo(destination.Slice(destinationIndex)).)
     /// </summary>
     /// <param name="sourceIndex">The starting index in the source span.</param>

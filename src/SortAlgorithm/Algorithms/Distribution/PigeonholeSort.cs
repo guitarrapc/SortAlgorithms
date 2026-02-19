@@ -66,7 +66,7 @@ public static class PigeonholeSort
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-        => Sort(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
+        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
@@ -74,13 +74,23 @@ public static class PigeonholeSort
     public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
         where T : IComparable<T>
         where TContext : ISortContext
-        => Sort(span, keySelector, new ComparableComparer<T>(), context);
+        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
     public static void Sort<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => SortCore(span, new FuncKeySelector<T>(keySelector), comparer, context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using a struct key selector, comparer, and sort context.
+    /// This is the full-control version that enables maximum JIT optimization.
+    /// </summary>
+    /// <typeparam name="TKeySelector">A <see langword="readonly"/> <see langword="struct"/> implementing <see cref="IKeySelector{T}"/>.</typeparam>
+    private static void SortCore<T, TKeySelector, TComparer, TContext>(Span<T> span, TKeySelector keySelector, TComparer comparer, TContext context)
+        where TKeySelector : struct, IKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -97,60 +107,53 @@ public static class PigeonholeSort
             var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
 
-            SortCore(span, keySelector, s, tempSpan, keys);
+            // Find min/max and cache keys in single pass
+            var min = int.MaxValue;
+            var max = int.MinValue;
+
+            for (var i = 0; i < s.Length; i++)
+            {
+                var key = keySelector.GetKey(s.Read(i));
+                keys[i] = key;
+                if (key < min) min = key;
+                if (key > max) max = key;
+            }
+
+            // If all keys are the same, no need to sort
+            if (min == max) return;
+
+            // Check for overflow and validate range
+            long range = (long)max - (long)min + 1;
+            if (range > int.MaxValue)
+                throw new ArgumentException($"Key range is too large for PigeonholeSort: {range}. Maximum supported range is {int.MaxValue}.");
+            if (range > MaxHoleArraySize)
+                throw new ArgumentException($"Key range ({range}) exceeds maximum hole array size ({MaxHoleArraySize}). Consider using QuickSort or another comparison-based sort.");
+
+            var offset = -min; // Offset to normalize keys to 0-based index
+            var size = (int)range;
+
+            // Use stackalloc for small hole arrays, ArrayPool for larger ones
+            int[]? rentedHoleArray = null;
+            Span<int> holes = size <= StackAllocThreshold
+                ? stackalloc int[size]
+                : (rentedHoleArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
+            holes.Clear();
+            try
+            {
+                PigeonholeDistribute(s, tempSpan, keys, holes, offset);
+            }
+            finally
+            {
+                if (rentedHoleArray is not null)
+                {
+                    ArrayPool<int>.Shared.Return(rentedHoleArray);
+                }
+            }
         }
         finally
         {
             ArrayPool<int>.Shared.Return(keysArray);
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-        }
-    }
-
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<int> keys)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Find min/max and cache keys in single pass
-        var min = int.MaxValue;
-        var max = int.MinValue;
-
-        for (var i = 0; i < span.Length; i++)
-        {
-            var key = keySelector(s.Read(i));
-            keys[i] = key;
-            if (key < min) min = key;
-            if (key > max) max = key;
-        }
-
-        // If all keys are the same, no need to sort
-        if (min == max) return;
-
-        // Check for overflow and validate range
-        long range = (long)max - (long)min + 1;
-        if (range > int.MaxValue)
-            throw new ArgumentException($"Key range is too large for PigeonholeSort: {range}. Maximum supported range is {int.MaxValue}.");
-        if (range > MaxHoleArraySize)
-            throw new ArgumentException($"Key range ({range}) exceeds maximum hole array size ({MaxHoleArraySize}). Consider using QuickSort or another comparison-based sort.");
-
-        var offset = -min; // Offset to normalize keys to 0-based index
-        var size = (int)range;
-
-        // Use stackalloc for small hole arrays, ArrayPool for larger ones
-        int[]? rentedHoleArray = null;
-        Span<int> holes = size <= StackAllocThreshold
-            ? stackalloc int[size]
-            : (rentedHoleArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-        holes.Clear();
-        try
-        {
-            PigeonholeDistribute(s, tempSpan, keys, holes, offset);
-        }
-        finally
-        {
-            if (rentedHoleArray is not null)
-            {
-                ArrayPool<int>.Shared.Return(rentedHoleArray);
-            }
         }
     }
 

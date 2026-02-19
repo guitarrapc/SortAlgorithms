@@ -6,13 +6,13 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
+/// キー選択関数を使用したバケットソートのジェネリック版。値が均等に分布している場合に最適に動作します。
 /// 値域を複数のバケットに分割し、各要素をキーに基づいてバケットに配置します。
 /// 各バケット内をソートした後、バケットを順番に連結すればソートが完了します。
-/// 値の分布が均等な場合に高速に動作する、汎用型対応のバケットソートアルゴリズムです。
 /// <br/>
+/// Bucket sort with key projection (int key selector), a generic bucket sort algorithm that performs optimally when values are uniformly distributed.
 /// Divides the value range into multiple buckets and distributes elements based on their keys.
 /// After sorting each bucket, concatenating them in order completes the sort.
-/// A generic bucket sort algorithm that performs optimally when values are uniformly distributed.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Bucket Sort (Generic, Range-based):</strong></para>
@@ -49,7 +49,7 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class BucketSort
 {
-    private const int MaxBucketCount = 1000; // Maximum number of buckets
+    private const int MaxBucketCount = 256;  // Maximum number of buckets
     private const int MinBucketCount = 2;    // Minimum number of buckets
 
     // Buffer identifiers for visualization
@@ -62,7 +62,7 @@ public static class BucketSort
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-        => Sort(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
+        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function and sort context.
@@ -70,13 +70,23 @@ public static class BucketSort
     public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
         where T : IComparable<T>
         where TContext : ISortContext
-        => Sort(span, keySelector, new ComparableComparer<T>(), context);
+        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
     public static void Sort<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => SortCore(span, new FuncKeySelector<T>(keySelector), comparer, context);
+
+    /// <summary>
+    /// Core implementation shared by all public overloads.
+    /// Allocates temporary buffers, computes min/max keys, determines bucket layout,
+    /// then delegates to <see cref="BucketDistribute"/>.
+    /// </summary>
+    private static void SortCore<T, TKeySelector, TComparer, TContext>(Span<T> span, TKeySelector keySelector, TComparer comparer, TContext context)
+        where TKeySelector : struct, IKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -93,7 +103,38 @@ public static class BucketSort
             var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
 
-            SortCore(span, keySelector, s, tempSpan, tempArray.AsSpan(0, span.Length), keys, context);
+            // Find min/max and cache keys in single pass
+            var min = int.MaxValue;
+            var max = int.MinValue;
+
+            for (var i = 0; i < s.Length; i++)
+            {
+                var key = keySelector.GetKey(s.Read(i));
+                keys[i] = key;
+                if (key < min) min = key;
+                if (key > max) max = key;
+            }
+
+            // If all keys are the same, no need to sort
+            if (min == max) return;
+
+            // Determine bucket count based on input size and range
+            long range = (long)max - (long)min + 1;
+
+            // Calculate optimal bucket count (sqrt(n) is a common heuristic)
+            var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(s.Length)));
+
+            // Adjust bucket count if range is smaller
+            if (range < bucketCount)
+            {
+                bucketCount = (int)range;
+            }
+
+            // Calculate bucket size (range divided by bucket count)
+            var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
+
+            // Perform bucket distribution and sorting
+            BucketDistribute(s, tempSpan, keys, bucketCount, bucketSize, min);
         }
         finally
         {
@@ -102,60 +143,21 @@ public static class BucketSort
         }
     }
 
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> keys, TContext context)
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> keys, int bucketCount, long bucketSize, int min)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Find min/max and cache keys in single pass
-        var min = int.MaxValue;
-        var max = int.MinValue;
-
-        for (var i = 0; i < span.Length; i++)
-        {
-            var key = keySelector(s.Read(i));
-            keys[i] = key;
-            if (key < min) min = key;
-            if (key > max) max = key;
-        }
-
-        // If all keys are the same, no need to sort
-        if (min == max) return;
-
-        // Determine bucket count based on input size and range
-        long range = (long)max - (long)min + 1;
-
-        // Calculate optimal bucket count (sqrt(n) is a common heuristic)
-        var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(span.Length)));
-
-        // Adjust bucket count if range is smaller
-        if (range < bucketCount)
-        {
-            bucketCount = (int)range;
-        }
-
-        // Calculate bucket size (range divided by bucket count)
-        var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
-
-        // Perform bucket distribution and sorting
-        BucketDistribute(s, tempSpan, tempArray, keys, bucketCount, bucketSize, min);
-    }
-
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> keys, int bucketCount, long bucketSize, int min)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Count elements per bucket and calculate bucket positions (stackalloc)
+        // Count elements per bucket and track write positions (stackalloc)
         Span<int> bucketCounts = stackalloc int[bucketCount];
-        Span<int> bucketStarts = stackalloc int[bucketCount];
         Span<int> bucketPositions = stackalloc int[bucketCount];
-        bucketCounts.Clear();
+        bucketCounts.Clear(); // bucketPositions is fully overwritten in the prefix sum loop below
 
         // First pass: convert keys to bucket indices and count
         // Reuse keys array to store bucket indices (eliminates division in second pass)
         for (var i = 0; i < s.Length; i++)
         {
             var key = keys[i];
-            var bucketIndex = (int)((key - min) / bucketSize);
+            var bucketIndex = (int)(((long)key - min) / bucketSize);
 
             // Handle edge case where key == max
             if (bucketIndex >= bucketCount)
@@ -171,7 +173,6 @@ public static class BucketSort
         var offset = 0;
         for (var i = 0; i < bucketCount; i++)
         {
-            bucketStarts[i] = offset;
             bucketPositions[i] = offset;
             offset += bucketCounts[i];
         }
@@ -185,14 +186,15 @@ public static class BucketSort
         }
 
         // Sort each bucket using Span slicing with SortSpan for tracking
+        // After distribution, bucketPositions[i] == start + count, so start = bucketPositions[i] - bucketCounts[i]
         for (var i = 0; i < bucketCount; i++)
         {
             var count = bucketCounts[i];
             if (count > 1)
             {
-                var start = bucketStarts[i];
-                var bucketSpan = new SortSpan<T, TComparer, TContext>(tempArray.Slice(start, count), s.Context, s.Comparer, BUFFER_BUCKET_BASE + i);
-                InsertionSortBucket(bucketSpan);
+                var start = bucketPositions[i] - count;
+                var bucketSpan = temp.Slice(start, count, BUFFER_BUCKET_BASE + i);
+                InsertionSort.SortCore(bucketSpan, 0, count);
             }
         }
 
@@ -200,28 +202,6 @@ public static class BucketSort
         temp.CopyTo(0, s, 0, s.Length);
     }
 
-    /// <summary>
-    /// Insertion sort for bucket contents (stable sort)
-    /// Uses SortSpan to track all operations for statistics and visualization
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void InsertionSortBucket<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        for (var i = 1; i < s.Length; i++)
-        {
-            var key = s.Read(i);
-            var j = i - 1;
-
-            while (j >= 0 && s.Compare(j, key) > 0)
-            {
-                s.Write(j + 1, s.Read(j));
-                j--;
-            }
-            s.Write(j + 1, key);
-        }
-    }
 }
 
 /// <summary>
@@ -272,7 +252,7 @@ public static class BucketSortInteger
     private const int BUFFER_TEMP = 1;       // Temporary buffer
 
     /// <summary>
-    /// Sorts the elements in the specified span using American Flag Sort.
+    /// Sorts the elements in the specified span
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
@@ -281,12 +261,12 @@ public static class BucketSortInteger
         => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span using American Flag Sort with sort context.
+    /// Sorts the elements in the specified span
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
@@ -303,8 +283,7 @@ public static class BucketSortInteger
     {
         if (span.Length <= 1) return;
 
-        // Check if type is supported (64-bit or less)
-        var bitSize = GetBitSize<T>();
+        EnsureSupportedType<T>();
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
@@ -317,7 +296,7 @@ public static class BucketSortInteger
             var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var indices = indicesArray.AsSpan(0, span.Length);
 
-            SortCore(span, s, tempSpan, tempArray.AsSpan(0, span.Length), indices, context);
+            SortCore(s, tempSpan, tempArray.AsSpan(0, span.Length), indices, context);
         }
         finally
         {
@@ -326,7 +305,7 @@ public static class BucketSortInteger
         }
     }
 
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> bucketIndices, TContext context)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> bucketIndices, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -335,7 +314,7 @@ public static class BucketSortInteger
         var minValue = s.Read(0);
         var maxValue = s.Read(0);
 
-        for (var i = 1; i < span.Length; i++)
+        for (var i = 1; i < s.Length; i++)
         {
             var value = s.Read(i);
             if (s.Compare(value, minValue) < 0) minValue = value;
@@ -349,26 +328,32 @@ public static class BucketSortInteger
         var min = ConvertToLong(minValue);
         var max = ConvertToLong(maxValue);
 
-        // Determine bucket count based on input size and range
-        long range = max - min + 1;
+        // Compute range in ulong to avoid signed overflow.
+        // (ulong)(max - min) reinterprets the unchecked signed subtraction as an unsigned distance,
+        // which is correct even when max - min overflows long
+        // (e.g. min = long.MinValue, max = long.MaxValue → true distance = 2^64 - 1).
+        // The +1 wraps to 0 only when the true range is exactly 2^64 (full long space); cap to ulong.MaxValue.
+        ulong range = (ulong)(max - min) + 1;
+        if (range == 0) range = ulong.MaxValue;
 
         // Calculate optimal bucket count (sqrt(n) is a common heuristic)
-        var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(span.Length)));
+        var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(s.Length)));
 
         // Adjust bucket count if range is smaller
-        if (range < bucketCount)
+        if (range < (ulong)bucketCount)
         {
             bucketCount = (int)range;
         }
 
-        // Calculate bucket size (range divided by bucket count)
-        var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
+        // Ceiling division without overflow: (range + bucketCount - 1) / bucketCount can overflow ulong
+        // for large ranges, so use: a / b + (a % b != 0 ? 1 : 0)
+        ulong bucketSize = Math.Max(1UL, range / (ulong)bucketCount + (range % (ulong)bucketCount != 0 ? 1UL : 0UL));
 
         // Perform bucket distribution and sorting
         BucketDistribute(s, tempSpan, tempArray, bucketIndices, bucketCount, bucketSize, min);
     }
 
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, long bucketSize, long min)
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, ulong bucketSize, long min)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -385,7 +370,9 @@ public static class BucketSortInteger
         {
             var value = source.Read(i);
             var valueLong = ConvertToLong(value);
-            var bucketIndex = (int)((valueLong - min) / bucketSize);
+            // (ulong)(valueLong - min): reinterprets the unchecked signed subtraction as an unsigned
+            // distance. Correct even when valueLong - min overflows long (e.g. full ulong range).
+            var bucketIndex = (int)((ulong)(valueLong - min) / bucketSize);
 
             // Handle edge case where value == max
             if (bucketIndex >= bucketCount)
@@ -411,7 +398,7 @@ public static class BucketSortInteger
         {
             var bucketIndex = bucketIndices[i]; // Reuse cached index (no division)
             var pos = bucketPositions[bucketIndex]++;
-            temp.Write(pos, source.Read(i));
+            tempSpan.Write(pos, source.Read(i));
         }
 
         // Sort each bucket using Span slicing
@@ -426,7 +413,7 @@ public static class BucketSortInteger
         }
 
         // Write sorted data back to original span using CopyTo for better performance
-        temp.CopyTo(0, source, 0, source.Length);
+        tempSpan.CopyTo(0, source, 0, source.Length);
     }
 
     /// <summary>
@@ -451,34 +438,40 @@ public static class BucketSortInteger
     }
 
     /// <summary>
-    /// Get bit size of the type T and validate support.
-    /// Throws NotSupportedException for types larger than 64-bit.
+    /// Throws <see cref="NotSupportedException"/> if <typeparamref name="T"/> is not supported.
+    /// Supported types: sbyte, byte, short, ushort, int, uint, long, ulong, nint, nuint.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetBitSize<T>() where T : IBinaryInteger<T>
+    private static void EnsureSupportedType<T>() where T : IBinaryInteger<T>
     {
-        if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte))
-            return 8;
-        else if (typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
-            return 16;
-        else if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
-            return 32;
-        else if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
-            return 64;
-        else if (typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
-            return IntPtr.Size * 8;
-        else if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
+        if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte) ||
+            typeof(T) == typeof(short) || typeof(T) == typeof(ushort) ||
+            typeof(T) == typeof(int) || typeof(T) == typeof(uint) ||
+            typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
+            typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
+            return;
+        if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
             throw new NotSupportedException($"Type {typeof(T).Name} with 128-bit size is not supported. Maximum supported bit size is 64.");
-        else
-            throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
+        throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
     }
 
     /// <summary>
-    /// Convert IBinaryInteger value to long for range calculation.
+    /// Converts an integer value to <see cref="long"/> while preserving sort order.
+    /// For <see cref="ulong"/> and 64-bit <see cref="nuint"/>, which cannot be safely
+    /// represented as <see cref="long"/> via a plain cast, the sign bit is flipped via XOR.
+    /// This maps [0, 2^64-1] → [long.MinValue, long.MaxValue] monotonically, so
+    /// <c>a &lt; b</c> as unsigned iff <c>ConvertToLong(a) &lt; ConvertToLong(b)</c> as signed.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long ConvertToLong<T>(T value) where T : IBinaryInteger<T>
     {
-        return long.CreateTruncating(value);
+        // ulong (and 64-bit nuint) values above long.MaxValue become negative under a plain cast,
+        // corrupting min/max detection and bucket index arithmetic.
+        // XOR-ing the sign bit remaps the unsigned range to the signed range in order-preserving fashion:
+        //   ulong 0            → long.MinValue  (smallest)
+        //   ulong.MaxValue     → long.MaxValue   (largest)
+        if (typeof(T) == typeof(ulong) || (typeof(T) == typeof(nuint) && IntPtr.Size == 8))
+            return (long)(ulong.CreateTruncating(value) ^ (1UL << 63));
+        return long.CreateChecked(value);
     }
 }

@@ -12,8 +12,11 @@ public class DistributionBenchmark
 
     private int[] _americanflagArray = default!;
     private int[] _bucketArray = default!;
+    private int[] _bucketIntegerArray = default!;
     private int[] _countingArray = default!;
+    private int[] _countingIntegerArray = default!;
     private int[] _pigeonholeArray = default!;
+    private int[] _pigeonholeIntegerArray = default!;
     private int[] _radixLSD4Sort = default!;
     private int[] _radixLSD256Sort = default!;
     private int[] _radixLSD10Sort = default!;
@@ -25,8 +28,11 @@ public class DistributionBenchmark
     {
         _americanflagArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _bucketArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _bucketIntegerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _countingArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _countingIntegerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _pigeonholeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pigeonholeIntegerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _radixLSD4Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
         _radixLSD256Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
         _radixLSD10Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
@@ -43,19 +49,37 @@ public class DistributionBenchmark
     [Benchmark]
     public void BucketSort()
     {
-        SortAlgorithm.Algorithms.BucketSortInteger.Sort(_bucketArray.AsSpan());
+        SortAlgorithm.Algorithms.BucketSort.Sort(_bucketArray.AsSpan(), x=> x);
+    }
+
+    [Benchmark]
+    public void BucketSortInteger()
+    {
+        SortAlgorithm.Algorithms.BucketSortInteger.Sort(_bucketIntegerArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void CountingSort()
+    {
+        SortAlgorithm.Algorithms.CountingSort.Sort(_countingArray.AsSpan(), x => x);
     }
 
     [Benchmark(Baseline = true)]
-    public void CountingSort()
+    public void CountingSortInteger()
     {
-        SortAlgorithm.Algorithms.CountingSortInteger.Sort(_countingArray.AsSpan());
+        SortAlgorithm.Algorithms.CountingSortInteger.Sort(_countingIntegerArray.AsSpan());
     }
 
     [Benchmark]
     public void PigeonSort()
     {
-        SortAlgorithm.Algorithms.PigeonholeSortInteger.Sort(_countingArray.AsSpan());
+        SortAlgorithm.Algorithms.PigeonholeSortInteger.Sort(_pigeonholeArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void PigeonSortInteger()
+    {
+        SortAlgorithm.Algorithms.PigeonholeSortInteger.Sort(_pigeonholeIntegerArray.AsSpan());
     }
 
     [Benchmark]
