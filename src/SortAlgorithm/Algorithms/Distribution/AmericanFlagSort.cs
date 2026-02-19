@@ -81,38 +81,30 @@ public static class AmericanFlagSort
     private const int BUFFER_MAIN = 0;       // Main input array
 
     /// <summary>
-    /// Sorts the elements in the specified span using American Flag Sort.
+    /// Sorts the elements in the specified span in ascending order.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span using American Flag Sort with sort context.
+    /// Sorts integer values in the specified span with sort context.
+    /// Always sorts in ascending numeric order (<see cref="IComparable{T}"/> natural order).
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TContext : ISortContext
-        => Sort(span, new ComparableComparer<T>(), context);
-
-    /// <summary>
-    /// Sorts integer values in the specified span with comparer and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
-    /// </summary>
-    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        // Use ComparableComparer for InsertionSort fallback
+        var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, new ComparableComparer<T>(), BUFFER_MAIN);
 
         // Determine the number of digits based on type size
         // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
