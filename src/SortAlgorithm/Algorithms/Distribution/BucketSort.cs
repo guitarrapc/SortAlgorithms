@@ -6,13 +6,13 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
+/// キー選択関数を使用したバケットソートのジェネリック版。値が均等に分布している場合に最適に動作します。
 /// 値域を複数のバケットに分割し、各要素をキーに基づいてバケットに配置します。
 /// 各バケット内をソートした後、バケットを順番に連結すればソートが完了します。
-/// 値の分布が均等な場合に高速に動作する、汎用型対応のバケットソートアルゴリズムです。
 /// <br/>
+/// Bucket sort with key projection (int key selector), a generic bucket sort algorithm that performs optimally when values are uniformly distributed.
 /// Divides the value range into multiple buckets and distributes elements based on their keys.
 /// After sorting each bucket, concatenating them in order completes the sort.
-/// A generic bucket sort algorithm that performs optimally when values are uniformly distributed.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Bucket Sort (Generic, Range-based):</strong></para>
@@ -81,10 +81,10 @@ public static class BucketSort
         => SortCore(span, new FuncKeySelector<T>(keySelector), comparer, context);
 
     /// <summary>
-    /// Sorts the elements in the specified span using a struct key selector, comparer, and sort context.
-    /// This is the full-control version that enables maximum JIT optimization.
+    /// Core implementation shared by all public overloads.
+    /// Allocates temporary buffers, computes min/max keys, determines bucket layout,
+    /// then delegates to <see cref="BucketDistribute"/>.
     /// </summary>
-    /// <typeparam name="TKeySelector">A <see langword="readonly"/> <see langword="struct"/> implementing <see cref="IKeySelector{T}"/>.</typeparam>
     private static void SortCore<T, TKeySelector, TComparer, TContext>(Span<T> span, TKeySelector keySelector, TComparer comparer, TContext context)
         where TKeySelector : struct, IKeySelector<T>
         where TComparer : IComparer<T>
@@ -150,7 +150,7 @@ public static class BucketSort
         // Count elements per bucket and track write positions (stackalloc)
         Span<int> bucketCounts = stackalloc int[bucketCount];
         Span<int> bucketPositions = stackalloc int[bucketCount];
-        bucketCounts.Clear();
+        bucketCounts.Clear(); // bucketPositions is fully overwritten in the prefix sum loop below
 
         // First pass: convert keys to bucket indices and count
         // Reuse keys array to store bucket indices (eliminates division in second pass)
