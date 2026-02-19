@@ -26,7 +26,7 @@ public class NetworkBenchmark
         SortAlgorithm.Algorithms.BitonicSort.Sort(_bionicArray.AsSpan());
     }
 
-    [Benchmark(Baseline = true)]
+    [Benchmark]
     public void BitonicRecursiveSort()
     {
         SortAlgorithm.Algorithms.BitonicSortNonOptimized.Sort(_bionicRecursiveArray.AsSpan());
