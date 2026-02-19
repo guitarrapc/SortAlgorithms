@@ -74,9 +74,10 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class WeakHeapSort
 {
+    private const int STACKALLOC_THRESHOLD = 1024;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    private const int STACKALLOC_THRESHOLD = 1024;
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -182,6 +183,10 @@ public static class WeakHeapSort
 
                 // Restore weak heap property for reduced heap [0..m-1]
                 // Descend the distinguished path from node 1 to a leaf
+                // Distinguished path: follow the "right" (distinguished) child at each node
+                // - r[x]=0: distinguished child is 2x (physically left)
+                // - r[x]=1: distinguished child is 2x+1 (physically right)
+                // Formula: 2*x + r[x] encodes this selection
                 var x = 1;
                 int y;
                 while ((y = 2 * x + (GetBit(r, x) ? 1 : 0)) < m)
@@ -190,6 +195,7 @@ public static class WeakHeapSort
                 }
 
                 // Ascend from leaf to root, merging root with each node on the path
+                // This restores the weak heap property by propagating the new root value down
                 while (x > 0)
                 {
                     Merge(s, offset, r, 0, x);
@@ -197,9 +203,8 @@ public static class WeakHeapSort
                 }
             }
 
-            // Final step: Sort the last two elements (at positions offset+0 and offset+1)
-            // Classic weak heap sort does an unconditional swap here; we use conditional to avoid redundant work
-            if (n > 1 && s.Compare(offset + 1, offset) < 0)
+            // Final step: Sort the last two elements (guaranteed n >= 2 here)
+            if (s.Compare(offset + 1, offset) < 0)
             {
                 s.Swap(offset, offset + 1);
             }
@@ -235,24 +240,32 @@ public static class WeakHeapSort
     /// The distinguished ancestor is the ancestor whose "right" spine contains j.
     /// Algorithm: Ascend while j's parity matches its parent's reverse bit.
     /// </summary>
+    /// <remarks>
+    /// Correctness invariant (Dutton 1993, Edelkamp-Wegener 2000):
+    /// - r[i]=0 means: left child is 2i, right child is 2i+1
+    /// - r[i]=1 means: left/right are swapped (left is 2i+1, right is 2i)
+    /// - j is on the "right spine" of parent iff: (j & 1) == r[parent]
+    /// - We ascend WHILE this condition holds, stop when it breaks
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int DistinguishedAncestor(int j, Span<ulong> r)
     {
-        // Climb the tree while (j & 1) == r[parent]
-        // parent = j >> 1
-        // Important: We check r[parent], not r[j]
-        while (j > 0)
+        // j > 0 is guaranteed by caller
+        while (true)
         {
             var parent = j >> 1;
+            if (parent == 0) return 0;
+
             var parentBit = GetBit(r, parent) ? 1 : 0;
 
-            // If j's parity differs from parent's reverse bit, parent is the distinguished ancestor
+            // Stop when condition breaks: (j & 1) != r[parent]
+            // This means j is NOT on the right spine anymore
             if ((j & 1) != parentBit)
                 return parent;
 
+            // Otherwise keep ascending: j is still on the right spine
             j = parent;
         }
-        return 0; // Reached root (should not happen for j > 0, but safe fallback)
     }
 
     /// <summary>
