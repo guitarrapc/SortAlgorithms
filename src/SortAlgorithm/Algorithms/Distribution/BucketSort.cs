@@ -93,7 +93,7 @@ public static class BucketSort
             var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
 
-            SortCore(span, keySelector, s, tempSpan, tempArray.AsSpan(0, span.Length), keys, context);
+            SortCore(s, tempSpan, keys, keySelector);
         }
         finally
         {
@@ -102,7 +102,7 @@ public static class BucketSort
         }
     }
 
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> keys, TContext context)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> keys, Func<T, int> keySelector)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -110,7 +110,7 @@ public static class BucketSort
         var min = int.MaxValue;
         var max = int.MinValue;
 
-        for (var i = 0; i < span.Length; i++)
+        for (var i = 0; i < s.Length; i++)
         {
             var key = keySelector(s.Read(i));
             keys[i] = key;
@@ -125,7 +125,7 @@ public static class BucketSort
         long range = (long)max - (long)min + 1;
 
         // Calculate optimal bucket count (sqrt(n) is a common heuristic)
-        var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(span.Length)));
+        var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(s.Length)));
 
         // Adjust bucket count if range is smaller
         if (range < bucketCount)
@@ -137,10 +137,10 @@ public static class BucketSort
         var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
 
         // Perform bucket distribution and sorting
-        BucketDistribute(s, tempSpan, tempArray, keys, bucketCount, bucketSize, min);
+        BucketDistribute(s, temp, keys, bucketCount, bucketSize, min);
     }
 
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> keys, int bucketCount, long bucketSize, int min)
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> keys, int bucketCount, long bucketSize, int min)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -191,7 +191,7 @@ public static class BucketSort
             if (count > 1)
             {
                 var start = bucketStarts[i];
-                var bucketSpan = new SortSpan<T, TComparer, TContext>(tempArray.Slice(start, count), s.Context, s.Comparer, BUFFER_BUCKET_BASE + i);
+                var bucketSpan = temp.Slice(start, count, BUFFER_BUCKET_BASE + i);
                 InsertionSort.SortCore(bucketSpan, 0, count);
             }
         }
