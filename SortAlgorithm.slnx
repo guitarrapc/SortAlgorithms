@@ -15,7 +15,6 @@
   </Folder>
   <Folder Name="/sandbox/">
     <Project Path="sandbox/AntiQuickSortDemo/AntiQuickSortDemo.csproj" />
-    <Project Path="sandbox/BitonicCompareTest/BitonicCompareTest.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/SortAlgorithm.Benchmark/SortAlgorithm.Benchmark.csproj" />
