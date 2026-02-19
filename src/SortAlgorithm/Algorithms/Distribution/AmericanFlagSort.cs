@@ -95,8 +95,7 @@ public static class AmericanFlagSort
         => Sort(span, NullContext.Default);
 
     /// <summary>
-    /// Sorts integer values in the specified span with sort context.
-    /// Always sorts in ascending numeric order (<see cref="IComparable{T}"/> natural order).
+    /// Sorts the elements in the specified span using the specified context.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
