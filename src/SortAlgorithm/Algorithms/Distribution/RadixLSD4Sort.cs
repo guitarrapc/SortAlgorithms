@@ -118,14 +118,15 @@ public static class RadixLSD4Sort
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
         var keysArray = ArrayPool<ulong>.Shared.Rent(span.Length);
         var keysBufferArray = ArrayPool<ulong>.Shared.Rent(span.Length);
-        var bucketOffsetsArray = ArrayPool<int>.Shared.Rent(RadixSize + 1);
 
         try
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
             var keys = keysArray.AsSpan(0, span.Length);
             var keysBuffer = keysBufferArray.AsSpan(0, span.Length);
-            var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixSize + 1);
+            
+            // Use stackalloc for small fixed-size bucket offsets (5 ints = 20 bytes)
+            Span<int> bucketOffsets = stackalloc int[RadixSize + 1];
 
             var comparer = new ComparableComparer<T>();
             SortCore<T, ComparableComparer<T>, TContext>(span, tempBuffer, keys, keysBuffer, bucketOffsets, comparer, context);
@@ -135,7 +136,6 @@ public static class RadixLSD4Sort
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             ArrayPool<ulong>.Shared.Return(keysArray);
             ArrayPool<ulong>.Shared.Return(keysBufferArray);
-            ArrayPool<int>.Shared.Return(bucketOffsetsArray);
         }
     }
 
