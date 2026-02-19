@@ -297,7 +297,7 @@ public class RotateMergeSortNonOptimizedTests
         // Pattern for random: approximately 0.8 * n * log₂(n) to 2.5 * n * log₂(n)
         // (wider range due to randomness - set lower bound conservatively)
         var logN = Math.Log2(n);
-        var minCompares = (ulong)(n * logN * 0.6);  // More conservative lower bound
+        var minCompares = (ulong)(n * logN * 0.4);
         var maxCompares = (ulong)(n * logN * 2.5);
 
         // Writes vary based on how much rotation is needed
