@@ -72,6 +72,32 @@ public static class RadixLSD10Sort
     private const int BUFFER_MAIN = 0;           // Main input array
     private const int BUFFER_TEMP = 1;           // Temporary buffer for digit redistribution
 
+    // Pre-computed powers of 10 for O(1) divisor lookup
+    // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
+    // This eliminates O(digit) loop in divisor calculation for each recursive call
+    private static ReadOnlySpan<ulong> Pow10 => [
+        1UL,                      // 10^0
+        10UL,                     // 10^1
+        100UL,                    // 10^2
+        1_000UL,                  // 10^3
+        10_000UL,                 // 10^4
+        100_000UL,                // 10^5
+        1_000_000UL,              // 10^6
+        10_000_000UL,             // 10^7
+        100_000_000UL,            // 10^8
+        1_000_000_000UL,          // 10^9
+        10_000_000_000UL,         // 10^10
+        100_000_000_000UL,        // 10^11
+        1_000_000_000_000UL,      // 10^12
+        10_000_000_000_000UL,     // 10^13
+        100_000_000_000_000UL,    // 10^14
+        1_000_000_000_000_000UL,  // 10^15
+        10_000_000_000_000_000UL, // 10^16
+        100_000_000_000_000_000UL,// 10^17
+        1_000_000_000_000_000_000UL,  // 10^18
+        10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
+    ];
+
     /// <summary>
     /// Sorts the elements in the specified span.
     /// Uses NullContext for zero-overhead fast path.
@@ -161,11 +187,12 @@ public static class RadixLSD10Sort
         where TContext : ISortContext
     {
         Span<int> bucketStarts = stackalloc int[RadixBase];
-        var divisor = 1UL;
 
         // Perform LSD radix sort on unsigned keys
         for (int d = 0; d < digitCount; d++)
         {
+            var divisor = Pow10[d];
+
             // Clear bucket counts
             bucketCounts.Clear();
 
@@ -305,12 +332,11 @@ public static class RadixLSD10Sort
     {
         if (value == 0) return 1;
 
-        var count = 0;
-        while (value > 0)
-        {
-            value /= 10;
-            count++;
-        }
-        return count;
+        // value < 10^1 -> 1 digit, value < 10^2 -> 2 digits, ..., value < 10^d -> d digits
+        // Pow10 is 10^0...10^19, so we can find the digit count in O(1) time without loops or logarithms
+        for (int d = 1; d < Pow10.Length; d++)
+            if (value < Pow10[d]) return d;
+
+        return 20; // max for ulong (10^20 > 2^64)
     }
 }
