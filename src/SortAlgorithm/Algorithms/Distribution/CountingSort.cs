@@ -116,11 +116,10 @@ public static class CountingSort
             // Check for overflow and validate range
             long range = (long)max - (long)min + 1;
             if (range > int.MaxValue)
-                throw new ArgumentException($"Key range is too large for CountingSort: {range}. Maximum supported range is {int.MaxValue}.");
+                throw new ArgumentException($"Key range is too large for CountingSort: {range}. Maximum supported range is {MaxCountArraySize}.");
             if (range > MaxCountArraySize)
                 throw new ArgumentException($"Key range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider using another comparison-based sort.");
 
-            var offset = -min; // Offset to normalize keys to 0-based index
             var size = (int)range;
 
             // Use stackalloc for small count arrays, ArrayPool for larger ones
@@ -131,7 +130,7 @@ public static class CountingSort
             countArray.Clear();
             try
             {
-                CountSort(s, keys, tempSpan, countArray, offset);
+                CountSort(s, keys, tempSpan, countArray, min);
             }
             finally
             {
@@ -152,14 +151,14 @@ public static class CountingSort
     /// Core counting sort implementation.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CountSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> keys, SortSpan<T, TComparer, TContext> tempSpan, Span<int> countArray, int offset)
+    private static void CountSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> keys, SortSpan<T, TComparer, TContext> tempSpan, Span<int> countArray, int min)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Count occurrences of each key
         for (var i = 0; i < s.Length; i++)
         {
-            countArray[keys[i] + offset]++;
+            countArray[keys[i] - min]++;
         }
 
         // Calculate cumulative counts (for stable sort)
@@ -172,7 +171,7 @@ public static class CountingSort
         for (var i = s.Length - 1; i >= 0; i--)
         {
             var key = keys[i];
-            var index = key + offset;
+            var index = key - min;
             var pos = countArray[index] - 1;
             tempSpan.Write(pos, s.Read(i));
             countArray[index]--;
