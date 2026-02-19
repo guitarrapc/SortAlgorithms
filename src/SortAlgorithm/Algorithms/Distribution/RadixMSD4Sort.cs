@@ -111,12 +111,10 @@ public static class RadixMSD4Sort
 
         // Rent buffers from ArrayPool
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
-        var bucketOffsetsArray = ArrayPool<int>.Shared.Rent(RadixSize + 1);
 
         try
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
-            var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixSize + 1);
 
             var comparer = new ComparableComparer<T>();
             var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
@@ -136,7 +134,6 @@ public static class RadixMSD4Sort
         finally
         {
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            ArrayPool<int>.Shared.Return(bucketOffsetsArray);
         }
     }
 
