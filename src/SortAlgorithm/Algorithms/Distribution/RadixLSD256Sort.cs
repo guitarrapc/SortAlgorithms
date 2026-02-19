@@ -181,9 +181,13 @@ public static class RadixLSD256Sort
             var shift = d * RadixBits;
 
             // Clear bucket offsets
+            // bucketOffsets[0..RadixSize] stores bucket boundaries:
+            // - Initially: bucketOffsets[digit+1] = count of elements with 'digit'
+            // - After prefix sum: bucketOffsets[digit] = start index for 'digit' bucket
+            // - During distribution: bucketOffsets[digit]++ tracks next write position
             bucketOffsets.Clear();
 
-            // Count occurrences of each digit
+            // Count occurrences of each digit (store count in digit+1 position)
             for (var i = 0; i < src.Length; i++)
             {
                 var value = src.Read(i);
@@ -193,6 +197,7 @@ public static class RadixLSD256Sort
             }
 
             // Calculate cumulative offsets (prefix sum)
+            // After this: bucketOffsets[digit] = start index for bucket 'digit'
             for (var i = 1; i <= RadixSize; i++)
             {
                 bucketOffsets[i] += bucketOffsets[i - 1];
