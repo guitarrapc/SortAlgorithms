@@ -172,14 +172,16 @@ public static class AmericanFlagSort
         }
 
         // Phase 2: Calculate bucket offsets (prefix sum) and save bucket start positions
-        bucketStarts[0] = 0;
         for (var i = 1; i <= RadixSize; i++)
         {
             bucketOffsets[i] += bucketOffsets[i - 1];
-            if (i < RadixSize)
-            {
-                bucketStarts[i] = bucketOffsets[i];
-            }
+        }
+        
+        // Copy bucket starts from bucketOffsets[0..RadixSize-1]
+        // bucketOffsets[i] is the start position of bucket i
+        for (var i = 0; i < RadixSize; i++)
+        {
+            bucketStarts[i] = bucketOffsets[i];
         }
 
         // Phase 3: In-place permutation
