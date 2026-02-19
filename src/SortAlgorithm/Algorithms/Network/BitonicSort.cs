@@ -56,7 +56,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Strictly requires power-of-2 input length. Throws ArgumentException otherwise.</description></item>
 /// <item><description>True in-place sorting with zero heap allocation (all work done on input span).</description></item>
 /// <item><description>Sequential implementation: Does not exploit parallelism (comparisons are executed sequentially).</description></item>
-/// <item><description>Uses aggressive inlining for performance-critical helper methods (CompareAndSwap, IsPowerOfTwo, etc.).</description></item>
+/// <item><description>Uses aggressive inlining for performance-critical helper methods (CompareAndSwapAscending, CompareAndSwapDescending, IsPowerOfTwo, etc.).</description></item>
+/// <item><description>Branch elimination optimization: Separate CompareAndSwapAscending/Descending methods avoid conditional branching in inner loops, improving JIT optimization and branch prediction.</description></item>
 /// </list>
 /// <para><strong>Use Cases:</strong></para>
 /// <list type="bullet">
@@ -158,10 +159,20 @@ public static class BitonicSort
         {
             int k = count / 2;
 
-            // Compare and swap elements at distance k apart
-            for (int i = low; i < low + k; i++)
+            // Compare and swap elements at distance k apart using specialized methods
+            if (ascending)
             {
-                CompareAndSwap(span, i, i + k, ascending);
+                for (int i = low; i < low + k; i++)
+                {
+                    CompareAndSwapAscending(span, i, i + k);
+                }
+            }
+            else
+            {
+                for (int i = low; i < low + k; i++)
+                {
+                    CompareAndSwapDescending(span, i, i + k);
+                }
             }
 
             // Recursively merge both halves
@@ -171,21 +182,36 @@ public static class BitonicSort
     }
 
     /// <summary>
-    /// Compares two elements and swaps them if they are in the wrong order.
+    /// Compares two elements and swaps them if they are in the wrong order for ascending order.
     /// </summary>
     /// <param name="span">The span containing the elements.</param>
     /// <param name="i">The index of the first element.</param>
     /// <param name="j">The index of the second element.</param>
-    /// <param name="ascending">True if elements should be in ascending order, false for descending.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CompareAndSwap<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int i, int j, bool ascending)
+    private static void CompareAndSwapAscending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int i, int j)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        int cmp = span.Compare(i, j);
+        // Swap if i > j (wrong order for ascending)
+        if (span.Compare(i, j) > 0)
+        {
+            span.Swap(i, j);
+        }
+    }
 
-        // If ascending and i > j, or if descending and i < j, then swap
-        if ((ascending && cmp > 0) || (!ascending && cmp < 0))
+    /// <summary>
+    /// Compares two elements and swaps them if they are in the wrong order for descending order.
+    /// </summary>
+    /// <param name="span">The span containing the elements.</param>
+    /// <param name="i">The index of the first element.</param>
+    /// <param name="j">The index of the second element.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void CompareAndSwapDescending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int i, int j)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        // Swap if i < j (wrong order for descending)
+        if (span.Compare(i, j) < 0)
         {
             span.Swap(i, j);
         }
