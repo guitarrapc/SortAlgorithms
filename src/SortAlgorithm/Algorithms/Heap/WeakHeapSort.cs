@@ -1,5 +1,6 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -71,12 +72,14 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Heapsort</para>
+/// <para>Paper: https://doi.org/10.1007/3-540-46541-3_21 S. Edelkamp & I. Wegener (2000): "On the Performance of WEAK-HEAPSORT", STACS 2000, pp. 254-266</para>
 /// </remarks>
 public static class WeakHeapSort
 {
+    private const int STACKALLOC_BITS_THRESHOLD = 1024;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    private const int STACKALLOC_THRESHOLD = 1024; // Use stackalloc for arrays <= 1024 elements (in bits: 128 bytes)
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -158,9 +161,9 @@ public static class WeakHeapSort
         try
         {
             // Allocate reverse bits: r[i] indicates whether node i's children are swapped
-            // r[0] is unused (root has no parent) but allocated for uniform indexing
+            // r[0] uses [0..n-1], but we allocate in ulongs for space efficiency
             // Use bit packing: each ulong stores 64 bits, reducing memory by 8x vs bool[]
-            Span<ulong> r = ulongCount <= STACKALLOC_THRESHOLD / 64
+            Span<ulong> r = ulongCount <= STACKALLOC_BITS_THRESHOLD / 64
                 ? stackalloc ulong[ulongCount]
                 : (rentedArray = ArrayPool<ulong>.Shared.Rent(ulongCount)).AsSpan(0, ulongCount);
             r.Clear(); // Initialize all reverse bits to false
@@ -181,25 +184,29 @@ public static class WeakHeapSort
                 s.Swap(offset, offset + m);
 
                 // Restore weak heap property for reduced heap [0..m-1]
-                // Descend the distinguished path from node 1 to a leaf
-                var x = 1;
-                int y;
-                while ((y = 2 * x + (GetBit(r, x) ? 1 : 0)) < m)
+                // Step 1: Descend the distinguished path from node 1 (root's right child) to a leaf
+                // Distinguished child definition (this implementation): 2*node + r[node]
+                //   - This formula encodes which child is "distinguished"
+                //   - r[node] bit determines the child selection as per weak heap definition
+                var node = 1;
+                while (true)
                 {
-                    x = y;
+                    var distinguishedChild = 2 * node + (GetBit(r, node) ? 1 : 0);
+                    if (distinguishedChild >= m) break;
+                    node = distinguishedChild;
                 }
 
-                // Ascend from leaf to root, merging root with each node on the path
-                while (x > 0)
+                // Step 2: Ascend from leaf to root, merging root with each node on the path
+                // This propagates the new root value down and restores the weak heap property
+                while (node > 0)
                 {
-                    Merge(s, offset, r, 0, x);
-                    x >>= 1;
+                    Merge(s, offset, r, 0, node);
+                    node >>= 1;
                 }
             }
 
-            // Final step: Sort the last two elements (at positions offset+0 and offset+1)
-            // Classic weak heap sort does an unconditional swap here; we use conditional to avoid redundant work
-            if (n > 1 && s.Compare(offset + 1, offset) < 0)
+            // Final step: Sort the last two elements (guaranteed n >= 2 here)
+            if (s.Compare(offset + 1, offset) < 0)
             {
                 s.Swap(offset, offset + 1);
             }
@@ -223,6 +230,7 @@ public static class WeakHeapSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        Debug.Assert(j > 0, "j must be > 0 in Merge (FlipBit requires j>0).");
         if (s.Compare(offset + j, offset + i) > 0)
         {
             s.Swap(offset + i, offset + j);
@@ -235,24 +243,33 @@ public static class WeakHeapSort
     /// The distinguished ancestor is the ancestor whose "right" spine contains j.
     /// Algorithm: Ascend while j's parity matches its parent's reverse bit.
     /// </summary>
+    /// <remarks>
+    /// Correctness invariant (Dutton 1993, Edelkamp-Wegener 2000):
+    /// This implementation defines the distinguished ancestor as follows:
+    /// - Start at parent = j >> 1
+    /// - j is on the "right spine" of parent iff: (j &amp; 1) == r[parent]
+    /// - Ascend WHILE this condition holds; return parent when it breaks
+    /// - r[i] encodes the swap state of children for node i in the weak heap structure
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int DistinguishedAncestor(int j, Span<ulong> r)
     {
-        // Climb the tree while (j & 1) == r[parent]
-        // parent = j >> 1
-        // Important: We check r[parent], not r[j]
-        while (j > 0)
+        // j > 0 is guaranteed by caller
+        while (true)
         {
             var parent = j >> 1;
+            if (parent == 0) return 0;
+
             var parentBit = GetBit(r, parent) ? 1 : 0;
 
-            // If j's parity differs from parent's reverse bit, parent is the distinguished ancestor
+            // Stop when condition breaks: (j & 1) != r[parent]
+            // This means j is NOT on the right spine anymore
             if ((j & 1) != parentBit)
                 return parent;
 
+            // Otherwise keep ascending: j is still on the right spine
             j = parent;
         }
-        return 0; // Reached root (should not happen for j > 0, but safe fallback)
     }
 
     /// <summary>

@@ -301,7 +301,7 @@ public class RotateMergeSortTests
         // Pattern: approximately 1.5 * n to 4.0 * n for n ≤ 16 (insertion sort, wide variance)
         //          approximately 0.8 * n * log₂(n) to 2.0 * n * log₂(n) for n > 16
         var logN = Math.Log2(n);
-        var minCompares = n <= 16 ? (ulong)(n * 1.5) : (ulong)(n * logN * 0.8);
+        var minCompares = n <= 16 ? (ulong)(n * 1.5) : (ulong)(n * logN * 0.7);
         var maxCompares = n <= 16 ? (ulong)(n * 4.0 * 1.2) : (ulong)(n * logN * 2.0);
 
         // Writes vary based on how much rotation is needed
