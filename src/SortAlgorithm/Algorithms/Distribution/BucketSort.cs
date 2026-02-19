@@ -49,7 +49,7 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class BucketSort
 {
-    private const int MaxBucketCount = 256; // Maximum number of buckets
+    private const int MaxBucketCount = 256;  // Maximum number of buckets
     private const int MinBucketCount = 2;    // Minimum number of buckets
 
     // Buffer identifiers for visualization
