@@ -182,24 +182,24 @@ public static class WeakHeapSort
                 s.Swap(offset, offset + m);
 
                 // Restore weak heap property for reduced heap [0..m-1]
-                // Descend the distinguished path from node 1 to a leaf
-                // Distinguished path: follow the "right" (distinguished) child at each node
-                // - r[x]=0: distinguished child is 2x (physically left)
-                // - r[x]=1: distinguished child is 2x+1 (physically right)
-                // Formula: 2*x + r[x] encodes this selection
-                var x = 1;
-                int y;
-                while ((y = 2 * x + (GetBit(r, x) ? 1 : 0)) < m)
+                // Step 1: Descend the distinguished path from node 1 (root's right child) to a leaf
+                // Distinguished child selection: 2*node + r[node]
+                //   - r[node]=0: distinguished child is at index 2*node (physically left)
+                //   - r[node]=1: distinguished child is at index 2*node+1 (physically right)
+                var node = 1;
+                while (true)
                 {
-                    x = y;
+                    var distinguishedChild = 2 * node + (GetBit(r, node) ? 1 : 0);
+                    if (distinguishedChild >= m) break;
+                    node = distinguishedChild;
                 }
 
-                // Ascend from leaf to root, merging root with each node on the path
-                // This restores the weak heap property by propagating the new root value down
-                while (x > 0)
+                // Step 2: Ascend from leaf to root, merging root with each node on the path
+                // This propagates the new root value down and restores the weak heap property
+                while (node > 0)
                 {
-                    Merge(s, offset, r, 0, x);
-                    x >>= 1;
+                    Merge(s, offset, r, 0, node);
+                    node >>= 1;
                 }
             }
 
