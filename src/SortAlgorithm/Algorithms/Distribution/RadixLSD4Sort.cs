@@ -132,7 +132,36 @@ public static class RadixLSD4Sort
             var comparer = new ComparableComparer<T>();
             var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
             var temp = new SortSpan<T, ComparableComparer<T>, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
-            SortCore<T, ComparableComparer<T>, TContext>(s, temp, keys, keysBuffer, bucketOffsets);
+
+            // Determine the number of digits based on type size
+            // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
+            var bitSize = GetBitSize<T>();
+
+            // Build key array once and find min/max simultaneously
+            var minKey = ulong.MaxValue;
+            var maxKey = ulong.MinValue;
+
+            for (var i = 0; i < s.Length; i++)
+            {
+                var value = s.Read(i);
+                var key = GetUnsignedKey(value, bitSize);
+                keys[i] = key;
+                if (key < minKey) minKey = key;
+                if (key > maxKey) maxKey = key;
+            }
+
+            // Calculate required number of passes based on the range
+            // XOR to find differing bits, then count bits needed
+            var range = maxKey ^ minKey;
+
+            // Early exit: if all elements are the same (range == 0), no sorting needed
+            if (range == 0) return;
+
+            var requiredBits = 64 - System.Numerics.BitOperations.LeadingZeroCount(range);
+            var digitCount = (requiredBits + RadixBits - 1) / RadixBits;
+
+            // Start LSD radix sort from the least significant digit with ping-pong key buffers
+            LSDSort(s, temp, keys, keysBuffer, digitCount, bucketOffsets);
         }
         finally
         {
@@ -140,42 +169,6 @@ public static class RadixLSD4Sort
             ArrayPool<ulong>.Shared.Return(keysArray);
             ArrayPool<ulong>.Shared.Return(keysBufferArray);
         }
-    }
-
-    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<ulong> keys, Span<ulong> keysBuffer, Span<int> bucketOffsets)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Determine the number of digits based on type size
-        // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
-        var bitSize = GetBitSize<T>();
-
-        // Build key array once and find min/max simultaneously
-        var minKey = ulong.MaxValue;
-        var maxKey = ulong.MinValue;
-
-        for (var i = 0; i < s.Length; i++)
-        {
-            var value = s.Read(i);
-            var key = GetUnsignedKey(value, bitSize);
-            keys[i] = key;
-            if (key < minKey) minKey = key;
-            if (key > maxKey) maxKey = key;
-        }
-
-        // Calculate required number of passes based on the range
-        // XOR to find differing bits, then count bits needed
-        var range = maxKey ^ minKey;
-        
-        // Early exit: if all elements are the same (range == 0), no sorting needed
-        if (range == 0) return;
-        
-        var requiredBits = 64 - System.Numerics.BitOperations.LeadingZeroCount(range);
-        var digitCount = (requiredBits + RadixBits - 1) / RadixBits;
-
-        // Start LSD radix sort from the least significant digit with ping-pong key buffers
-        LSDSort(s, temp, keys, keysBuffer, digitCount, bucketOffsets);
     }
 
     private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<ulong> keys, Span<ulong> keysBuffer, int digitCount, Span<int> bucketOffsets)

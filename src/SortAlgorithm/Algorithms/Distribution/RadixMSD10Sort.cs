@@ -116,37 +116,25 @@ public static class RadixMSD10Sort
         try
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
-            SortCore<T, ComparableComparer<T>, TContext>(span, tempBuffer, new ComparableComparer<T>(), context);
-        }
-        finally
-        {
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-        }
-    }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
+            var comparer = new ComparableComparer<T>();
+            var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
+            var temp = new SortSpan<T, ComparableComparer<T>, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
 
-        // Determine the bit size for sign-bit flipping
-        var bitSize = GetBitSize<T>();
+            // Determine the bit size for sign-bit flipping
+            var bitSize = GetBitSize<T>();
 
-        // Compute actual maximum digit count from the data (MSD optimization)
-        // This is the key optimization: instead of using the type's maximum possible digits,
-        // we scan the data once to find the actual maximum value and its digit count.
-        // This eliminates empty high-order digit passes, which is crucial for MSD performance.
-        var digitCount = ComputeMaxDigit(s, 0, s.Length, bitSize);
+            // Compute actual maximum digit count from the data (MSD optimization)
+            // This is the key optimization: instead of using the type's maximum possible digits,
+            // we scan the data once to find the actual maximum value and its digit count.
+            // This eliminates empty high-order digit passes, which is crucial for MSD performance.
+            var digitCount = ComputeMaxDigit(s, 0, s.Length, bitSize);
 
-        // Pre-computed powers of 10 for O(1) divisor lookup
-        // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
-        // This eliminates O(digit) loop in divisor calculation for each recursive call
-        ReadOnlySpan<ulong> pow10 = [
-            1UL,                      // 10^0
+            // Pre-computed powers of 10 for O(1) divisor lookup
+            // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
+            // This eliminates O(digit) loop in divisor calculation for each recursive call
+            ReadOnlySpan<ulong> pow10 = [
+                1UL,                      // 10^0
             10UL,                     // 10^1
             100UL,                    // 10^2
             1_000UL,                  // 10^3
@@ -166,10 +154,15 @@ public static class RadixMSD10Sort
             100_000_000_000_000_000UL,// 10^17
             1_000_000_000_000_000_000UL,  // 10^18
             10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
-        ];
+            ];
 
-        // Start MSD radix sort from the most significant digit
-        MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize, pow10);
+            // Start MSD radix sort from the most significant digit
+            MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize, pow10);
+        }
+        finally
+        {
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

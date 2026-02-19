@@ -112,43 +112,30 @@ public static class RadixLSD10Sort
             var comparer = new ComparableComparer<T>();
             var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
             var temp = new SortSpan<T, ComparableComparer<T>, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
-            SortCore<T, ComparableComparer<T>, TContext>(s, temp, bucketCounts);
-        }
-        finally
-        {
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-        }
-    }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> bucketCounts)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Determine bit size for sign-bit flipping
-        var bitSize = GetBitSize<T>();
+            // Determine bit size for sign-bit flipping
+            var bitSize = GetBitSize<T>();
 
-        // Find min and max unsigned keys to determine required digit count
-        var minKey = ulong.MaxValue;
-        var maxKey = ulong.MinValue;
+            // Find min and max unsigned keys to determine required digit count
+            var minKey = ulong.MaxValue;
+            var maxKey = ulong.MinValue;
 
-        for (var i = 0; i < s.Length; i++)
-        {
-            var value = s.Read(i);
-            var key = GetUnsignedKey(value, bitSize);
-            if (key < minKey) minKey = key;
-            if (key > maxKey) maxKey = key;
-        }
+            for (var i = 0; i < s.Length; i++)
+            {
+                var value = s.Read(i);
+                var key = GetUnsignedKey(value, bitSize);
+                if (key < minKey) minKey = key;
+                if (key > maxKey) maxKey = key;
+            }
 
-        // Early exit: if all elements are the same (range == 0), no sorting needed
-        if (minKey == maxKey) return;
+            // Early exit: if all elements are the same (range == 0), no sorting needed
+            if (minKey == maxKey) return;
 
-        // Pre-computed powers of 10 for O(1) divisor lookup
-        // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
-        // This eliminates O(digit) loop in divisor calculation for each recursive call
-        ReadOnlySpan<ulong> pow10 = [
-            1UL,                      // 10^0
+            // Pre-computed powers of 10 for O(1) divisor lookup
+            // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
+            // This eliminates O(digit) loop in divisor calculation for each recursive call
+            ReadOnlySpan<ulong> pow10 = [
+                1UL,                      // 10^0
             10UL,                     // 10^1
             100UL,                    // 10^2
             1_000UL,                  // 10^3
@@ -168,16 +155,21 @@ public static class RadixLSD10Sort
             100_000_000_000_000_000UL,// 10^17
             1_000_000_000_000_000_000UL,  // 10^18
             10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
-        ];
+            ];
 
-        // Calculate required number of decimal digits based on the range
-        // For a narrow range (e.g., 9,000,000,000 to 9,000,000,100), we only need digits to represent the range (100 → 3 digits)
-        // instead of maxKey (9,000,000,100 → 10 digits), dramatically reducing passes
-        var range = maxKey - minKey;
-        var digitCount = GetDigitCountFromUlong(range, pow10);
+            // Calculate required number of decimal digits based on the range
+            // For a narrow range (e.g., 9,000,000,000 to 9,000,000,100), we only need digits to represent the range (100 → 3 digits)
+            // instead of maxKey (9,000,000,100 → 10 digits), dramatically reducing passes
+            var range = maxKey - minKey;
+            var digitCount = GetDigitCountFromUlong(range, pow10);
 
-        // Start LSD radix sort from the least significant digit
-        LSDSort(s, temp, digitCount, bitSize, minKey, bucketCounts, pow10);
+            // Start LSD radix sort from the least significant digit
+            LSDSort(s, temp, digitCount, bitSize, minKey, bucketCounts, pow10);
+        }
+        finally
+        {
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
