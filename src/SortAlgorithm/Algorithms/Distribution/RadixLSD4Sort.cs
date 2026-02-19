@@ -30,8 +30,9 @@ namespace SortAlgorithm.Algorithms;
 /// The distribution must preserve the relative order of elements with the same digit value (stable). This is achieved by processing elements in forward order and appending to buckets.</description></item>
 /// <item><description><strong>LSD Processing Order:</strong> Digits must be processed from least significant (d=0) to most significant (d=digitCount-1).
 /// This bottom-up approach ensures that after processing digit d, all digits 0 through d are correctly sorted, with stability maintained by previous passes.</description></item>
-/// <item><description><strong>Digit Count Determination:</strong> The number of passes (digitCount) must cover all significant bits of the type.
-/// digitCount = ⌈bitSize / 2⌉ where bitSize is the bit width of type T (8, 16, 32, or 64 bits).</description></item>
+/// <item><description><strong>Digit Count Determination with Early Termination:</strong> The number of passes (digitCount) is determined by the actual range of values, not the full bit width.
+/// digitCount = ⌈requiredBits / 2⌉ where requiredBits is calculated from (max XOR min) to find differing bits.
+/// This optimization skips unnecessary high-order digit passes when the value range is small.</description></item>
 /// <item><description><strong>Bucket Collection Order:</strong> After distributing elements for a digit, buckets must be collected in ascending order (bucket 0, 1, 2, 3).
 /// Due to sign-bit flipping, negative values naturally sort before positive values.</description></item>
 /// </list>
@@ -39,15 +40,15 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Family      : Distribution (Radix Sort, LSD variant)</description></item>
 /// <item><description>Stable      : Yes (maintains relative order of elements with equal keys)</description></item>
-/// <item><description>In-place    : No (O(n) auxiliary space for temporary buffer)</description></item>
-/// <item><description>Best case   : Θ(d × n) - d = ⌈bitSize/2⌉ is constant for fixed-width integers</description></item>
-/// <item><description>Average case: Θ(d × n) - Linear in input size, independent of value distribution</description></item>
-/// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order</description></item>
+/// <item><description>In-place    : No (O(n) auxiliary space for temporary buffer and key arrays)</description></item>
+/// <item><description>Best case   : Θ(n) - When all elements are identical (early termination on range == 0)</description></item>
+/// <item><description>Average case: Θ(d × n) - Linear in input size, where d depends on actual value range</description></item>
+/// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order, d = ⌈bitSize/2⌉ for full range</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort, uses bitwise operations only)</description></item>
-/// <item><description>Digit Passes: d = ⌈bitSize/2⌉ (4 for byte, 8 for short, 16 for int, 32 for long)</description></item>
-/// <item><description>Reads       : d × n (one read per element per digit pass)</description></item>
-/// <item><description>Writes      : d × n (one write per element per digit pass)</description></item>
-/// <item><description>Memory      : O(n) for temporary buffer</description></item>
+/// <item><description>Digit Passes: d = ⌈requiredBits/2⌉ (early termination based on actual value range, not full bit width)</description></item>
+/// <item><description>Reads       : n + d × n (initial key building + one read per distribute pass) + optional final copy</description></item>
+/// <item><description>Writes      : d × n (one write per distribute pass to temp) + optional final copy</description></item>
+/// <item><description>Memory      : O(n) for temporary buffer + O(n) for key arrays (2 × ulong[])</description></item>
 /// </list>
 /// <para><strong>Radix-4 Characteristics:</strong></para>
 /// <list type="bullet">
@@ -94,7 +95,7 @@ public static class RadixLSD4Sort
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span.
@@ -111,38 +112,35 @@ public static class RadixLSD4Sort
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
-        => Sort(span, new ComparableComparer<T>(), context);
-
-    /// <summary>
-    /// Sorts integer values in the specified span with comparer and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
-    /// </summary>
-    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
         // Rent buffers from ArrayPool
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
-        var bucketOffsetsArray = ArrayPool<int>.Shared.Rent(RadixSize + 1);
+        var keysArray = ArrayPool<ulong>.Shared.Rent(span.Length);
+        var keysBufferArray = ArrayPool<ulong>.Shared.Rent(span.Length);
 
         try
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
-            var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixSize + 1);
+            var keys = keysArray.AsSpan(0, span.Length);
+            var keysBuffer = keysBufferArray.AsSpan(0, span.Length);
+            
+            // Use stackalloc for small fixed-size bucket offsets (5 ints = 20 bytes)
+            Span<int> bucketOffsets = stackalloc int[RadixSize + 1];
 
-            SortCore<T, TComparer, TContext>(span, tempBuffer, bucketOffsets, comparer, context);
+            var comparer = new ComparableComparer<T>();
+            SortCore<T, ComparableComparer<T>, TContext>(span, tempBuffer, keys, keysBuffer, bucketOffsets, comparer, context);
         }
         finally
         {
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            ArrayPool<int>.Shared.Return(bucketOffsetsArray);
+            ArrayPool<ulong>.Shared.Return(keysArray);
+            ArrayPool<ulong>.Shared.Return(keysBufferArray);
         }
     }
 
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<ulong> keys, Span<ulong> keysBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -154,8 +152,7 @@ public static class RadixLSD4Sort
         // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
         var bitSize = GetBitSize<T>();
 
-        // Find min and max to determine actual required passes
-        // This optimization skips unnecessary high-order digit passes
+        // Build key array once and find min/max simultaneously
         var minKey = ulong.MaxValue;
         var maxKey = ulong.MinValue;
 
@@ -163,6 +160,7 @@ public static class RadixLSD4Sort
         {
             var value = s.Read(i);
             var key = GetUnsignedKey(value, bitSize);
+            keys[i] = key;
             if (key < minKey) minKey = key;
             if (key > maxKey) maxKey = key;
         }
@@ -170,19 +168,31 @@ public static class RadixLSD4Sort
         // Calculate required number of passes based on the range
         // XOR to find differing bits, then count bits needed
         var range = maxKey ^ minKey;
-        var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
-        var digitCount = Math.Max(1, (requiredBits + RadixBits - 1) / RadixBits);
+        
+        // Early exit: if all elements are the same (range == 0), no sorting needed
+        if (range == 0) return;
+        
+        var requiredBits = 64 - System.Numerics.BitOperations.LeadingZeroCount(range);
+        var digitCount = (requiredBits + RadixBits - 1) / RadixBits;
 
-        // Start LSD radix sort from the least significant digit
-        LSDSort(s, temp, digitCount, bitSize, bucketOffsets);
+        // Start LSD radix sort from the least significant digit with ping-pong key buffers
+        LSDSort(s, temp, keys, keysBuffer, digitCount, bucketOffsets);
     }
 
-    private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int digitCount, int bitSize, Span<int> bucketOffsets)
+    private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<ulong> keys, Span<ulong> keysBuffer, int digitCount, Span<int> bucketOffsets)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Perform LSD radix sort (only required passes)
+        var src = s;
+        var dst = temp;
+        var srcKeys = keys;
+        var dstKeys = keysBuffer;
+        
+        // Track whether data is currently in the original span (true) or temp buffer (false)
+        bool dataInOriginal = true;
+
+        // Perform LSD radix sort with ping-pong buffers for values and keys
         for (int d = 0; d < digitCount; d++)
         {
             var shift = d * RadixBits;
@@ -190,12 +200,10 @@ public static class RadixLSD4Sort
             // Clear bucket offsets
             bucketOffsets.Clear();
 
-            // Count occurrences of each digit
-            for (var i = 0; i < s.Length; i++)
+            // Count occurrences of each digit (use keys array directly)
+            for (var i = 0; i < src.Length; i++)
             {
-                var value = s.Read(i);
-                var key = GetUnsignedKey(value, bitSize);
-                var digit = (int)((key >> shift) & 0b11);  // Extract 2-bit digit
+                var digit = (int)((srcKeys[i] >> shift) & 0b11);  // Extract 2-bit digit from cached key
                 bucketOffsets[digit + 1]++;
             }
 
@@ -205,18 +213,34 @@ public static class RadixLSD4Sort
                 bucketOffsets[i] += bucketOffsets[i - 1];
             }
 
-            // Distribute elements into temp buffer based on current digit
-            for (var i = 0; i < s.Length; i++)
+            // Distribute elements and keys from src to dst based on current digit
+            for (var i = 0; i < src.Length; i++)
             {
-                var value = s.Read(i);
-                var key = GetUnsignedKey(value, bitSize);
-                var digit = (int)((key >> shift) & 0b11);  // Extract 2-bit digit
+                var value = src.Read(i);
+                var key = srcKeys[i];
+                var digit = (int)((key >> shift) & 0b11);  // Extract 2-bit digit from cached key
                 var destIndex = bucketOffsets[digit]++;
-                temp.Write(destIndex, value);
+                dst.Write(destIndex, value);
+                dstKeys[destIndex] = key;  // Write key to dst in parallel
             }
 
-            // Copy back from temp to source using CopyTo for efficiency
-            temp.CopyTo(0, s, 0, s.Length);
+            // Swap src/dst and srcKeys/dstKeys for next pass (ping-pong)
+            var tempSortSpan = src;
+            src = dst;
+            dst = tempSortSpan;
+
+            var tempKeys = srcKeys;
+            srcKeys = dstKeys;
+            dstKeys = tempKeys;
+            
+            // Toggle data location flag
+            dataInOriginal = !dataInOriginal;
+        }
+
+        // If final result is not in the original span, copy back once
+        if (!dataInOriginal)
+        {
+            src.CopyTo(0, s, 0, s.Length);
         }
     }
 
