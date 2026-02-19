@@ -1,5 +1,6 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Buffers;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -250,6 +251,15 @@ public static class AmericanFlagSort
 
                 // Swap current element to its correct bucket
                 var targetPos = start + bucketNext[currentDigit];
+
+#if DEBUG
+                // targetPos must stay within currentDigit bucket range
+                // startOf(currentDigit) = bucketStarts[currentDigit]
+                // endOf(currentDigit)   = (currentDigit == RadixSize - 1) ? length : bucketStarts[currentDigit + 1]
+                var end = (currentDigit == RadixSize - 1) ? length : bucketStarts[currentDigit + 1];
+                Debug.Assert(bucketNext[currentDigit] < end);
+#endif
+
                 s.Swap(currentPos, targetPos);
                 bucketNext[currentDigit]++;
             }
