@@ -317,7 +317,7 @@ public static class BucketSortInteger
             var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var indices = indicesArray.AsSpan(0, span.Length);
 
-            SortCore(span, s, tempSpan, tempArray.AsSpan(0, span.Length), indices, context);
+            SortCore(s, tempSpan, tempArray.AsSpan(0, span.Length), indices, context);
         }
         finally
         {
@@ -326,7 +326,7 @@ public static class BucketSortInteger
         }
     }
 
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> bucketIndices, TContext context)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> bucketIndices, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -335,7 +335,7 @@ public static class BucketSortInteger
         var minValue = s.Read(0);
         var maxValue = s.Read(0);
 
-        for (var i = 1; i < span.Length; i++)
+        for (var i = 1; i < s.Length; i++)
         {
             var value = s.Read(i);
             if (s.Compare(value, minValue) < 0) minValue = value;
@@ -353,7 +353,7 @@ public static class BucketSortInteger
         long range = max - min + 1;
 
         // Calculate optimal bucket count (sqrt(n) is a common heuristic)
-        var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(span.Length)));
+        var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(s.Length)));
 
         // Adjust bucket count if range is smaller
         if (range < bucketCount)
@@ -368,7 +368,7 @@ public static class BucketSortInteger
         BucketDistribute(s, tempSpan, tempArray, bucketIndices, bucketCount, bucketSize, min);
     }
 
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, long bucketSize, long min)
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, long bucketSize, long min)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -411,7 +411,7 @@ public static class BucketSortInteger
         {
             var bucketIndex = bucketIndices[i]; // Reuse cached index (no division)
             var pos = bucketPositions[bucketIndex]++;
-            temp.Write(pos, source.Read(i));
+            tempSpan.Write(pos, source.Read(i));
         }
 
         // Sort each bucket using Span slicing
@@ -426,7 +426,7 @@ public static class BucketSortInteger
         }
 
         // Write sorted data back to original span using CopyTo for better performance
-        temp.CopyTo(0, source, 0, source.Length);
+        tempSpan.CopyTo(0, source, 0, source.Length);
     }
 
     /// <summary>
