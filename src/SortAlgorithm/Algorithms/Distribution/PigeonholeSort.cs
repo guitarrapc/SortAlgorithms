@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -301,7 +301,7 @@ public static class PigeonholeSortInteger
             // Create SortSpan for temp buffer to track operations
             var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
 
-            SortCore(span, s, tempSpan);
+            SortCore(s, tempSpan);
         }
         finally
         {
@@ -309,7 +309,7 @@ public static class PigeonholeSortInteger
         }
     }
 
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -328,24 +328,24 @@ public static class PigeonholeSortInteger
         // If all elements are the same, no need to sort
         if (s.Compare(minValue, maxValue) == 0) return;
 
-        // Convert to long for range calculation
-        var min = ConvertToLong(minValue);
-        var max = ConvertToLong(maxValue);
+        // Use ulong arithmetic for range calculation to correctly handle all supported types
+        // including ulong and nuint. ulong.CreateTruncating preserves 2's complement bit patterns
+        // for signed types, so wrapping ulong subtraction gives the correct element count for both
+        // signed and unsigned types.
+        var umin = ulong.CreateTruncating(minValue);
+        var umax = ulong.CreateTruncating(maxValue);
 
-        // Check for overflow and validate range
-        long range = max - min + 1;
-        if (range > int.MaxValue)
-            throw new ArgumentException($"Value range is too large for PigeonholeSort: {range}. Maximum supported range is {int.MaxValue}.");
-        if (range > MaxHoleArraySize)
+        // range == 0 means overflow (actual range is 2^64), which implies an enormous key space
+        ulong range = umax - umin + 1;
+        if (range == 0 || range > (ulong)MaxHoleArraySize)
             throw new ArgumentException($"Value range ({range}) exceeds maximum hole array size ({MaxHoleArraySize}). Consider using QuickSort or another comparison-based sort.");
 
-        var offset = -min; // Offset to normalize values to 0-based index
         var size = (int)range;
 
-        var nextArray = ArrayPool<int>.Shared.Rent(span.Length);
+        var nextArray = ArrayPool<int>.Shared.Rent(s.Length);
         try
         {
-            var next = nextArray.AsSpan(0, span.Length);
+            var next = nextArray.AsSpan(0, s.Length);
 
             // Each hole is a FIFO linked list: holeHead[h] = first element index, holeTail[h] = last element index (-1 = empty)
             int[]? rentedHoleHeadArray = null;
@@ -360,7 +360,7 @@ public static class PigeonholeSortInteger
             holeTail.Fill(-1);
             try
             {
-                PigeonholeDistribute(s, tempSpan, holeHead, holeTail, next, offset);
+                PigeonholeDistribute(s, tempSpan, holeHead, holeTail, next, umin);
             }
             finally
             {
@@ -377,7 +377,7 @@ public static class PigeonholeSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PigeonholeDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<int> holeHead, Span<int> holeTail, Span<int> next, long offset)
+    private static void PigeonholeDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<int> holeHead, Span<int> holeTail, Span<int> next, ulong umin)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -387,7 +387,7 @@ public static class PigeonholeSortInteger
         {
             var value = source.Read(i);
             temp.Write(i, value);
-            var h = (int)(ConvertToLong(value) + offset);
+            var h = (int)(ulong.CreateTruncating(value) - umin);
             if (holeHead[h] == -1)
                 holeHead[h] = i;
             else
@@ -427,12 +427,4 @@ public static class PigeonholeSortInteger
         throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
     }
 
-    /// <summary>
-    /// Convert IBinaryInteger value to long for range calculation.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static long ConvertToLong<T>(T value) where T : IBinaryInteger<T>
-    {
-        return long.CreateTruncating(value);
-    }
 }
