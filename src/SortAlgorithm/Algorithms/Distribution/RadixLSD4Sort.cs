@@ -130,7 +130,9 @@ public static class RadixLSD4Sort
             Span<int> bucketOffsets = stackalloc int[RadixSize + 1];
 
             var comparer = new ComparableComparer<T>();
-            SortCore<T, ComparableComparer<T>, TContext>(span, tempBuffer, keys, keysBuffer, bucketOffsets, comparer, context);
+            var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
+            var temp = new SortSpan<T, ComparableComparer<T>, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
+            SortCore<T, ComparableComparer<T>, TContext>(s, temp, keys, keysBuffer, bucketOffsets);
         }
         finally
         {
@@ -140,14 +142,11 @@ public static class RadixLSD4Sort
         }
     }
 
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<ulong> keys, Span<ulong> keysBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<ulong> keys, Span<ulong> keysBuffer, Span<int> bucketOffsets)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
-
         // Determine the number of digits based on type size
         // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
         var bitSize = GetBitSize<T>();
