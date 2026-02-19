@@ -46,16 +46,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Digit Passes: up to d = ⌈bitSize/4⌉ (2 for byte, 4 for short, 8 for int, 16 for long), but can terminate early</description></item>
 /// <item><description>Memory      : O(1) auxiliary space (excluding recursion stack which is O(log n) expected, O(n) worst case)</description></item>
 /// </list>
-/// <para><strong>American Flag Sort vs MSD Radix Sort:</strong></para>
-/// <list type="bullet">
-/// <item><description>American Flag Sort is in-place, while MSD Radix Sort requires O(n) auxiliary buffer</description></item>
-/// <item><description>American Flag Sort is not stable, while MSD Radix Sort can be implemented as stable</description></item>
-/// <item><description>American Flag Sort has better cache locality due to in-place permutation</description></item>
-/// <item><description>American Flag Sort has similar time complexity but better space complexity</description></item>
-/// <item><description>American Flag Sort requires more swap operations, which may be slower for large element types</description></item>
-/// </list>
 /// <para><strong>Algorithm Overview:</strong></para>
-/// <para>The algorithm consists of three phases per digit level:</para>
+/// <para>The algorithm consists of four phases per digit level:</para>
 /// <list type="number">
 /// <item><description><strong>Count Phase:</strong> Count occurrences of each digit value (0-15)</description></item>
 /// <item><description><strong>Offset Calculation:</strong> Compute bucket offsets (cumulative sum)</description></item>
@@ -173,7 +165,8 @@ public static class AmericanFlagSort
         }
 
         // Early termination optimization: Check for uniform digit values
-        // Count non-empty buckets BEFORE prefix sum (bucketCounts[i+1] holds count for bucket i)
+        // Count non-empty buckets BEFORE prefix sum transformation
+        // At this point, bucketCounts[i+1] holds the raw count for bucket i (off-by-one indexing)
         var nonEmptyBuckets = 0;
         for (var i = 0; i < RadixSize; i++)
         {
@@ -188,7 +181,7 @@ public static class AmericanFlagSort
             if (digit > 0)
                 AmericanFlagSortRecursive(s, start, length, digit - 1, bitSize);
 
-            // No need to process further if digit == 0, as all elements are identical in the least significant digit
+            // If digit == 0, there are no lower digits left to process, so we're done.
             return;
         }
 
@@ -202,7 +195,7 @@ public static class AmericanFlagSort
         
         // Phase 2.5: Initialize next write positions
         // bucketNext[i] tracks the current write position for bucket i
-        // Initialize to bucket start positions (bucketCounts[i])
+        // Copy bucket start positions from bucketCounts[i] (after prefix sum, bucketCounts[i] = start of bucket i)
         for (var i = 0; i < RadixSize; i++)
         {
             bucketNext[i] = bucketCounts[i];
