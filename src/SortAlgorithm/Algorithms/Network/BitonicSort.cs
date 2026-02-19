@@ -4,11 +4,13 @@ using SortAlgorithm.Contexts;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// バイトニックソート（2のべき乗専用版） - バイトニック列を構築し、再帰的にマージして整列列に変換するソーティングネットワークアルゴリズムです。
+/// バイトニックソート（2のべき乗専用版・最適化版） - バイトニック列を構築し、イテレーティブにマージして整列列に変換するソーティングネットワークアルゴリズムです。
 /// 入力サイズは2のべき乗（2^n）でなければなりません。任意のサイズに対応する場合は BitonicSortFill を使用してください。
+/// 再帰版の実装は BitonicSortNonOptimized を参照してください。
 /// <br/>
-/// Bitonic Sort (Power-of-2 Only) - A sorting network algorithm that builds a bitonic sequence and recursively merges it into a sorted sequence.
+/// Bitonic Sort (Power-of-2 Only, Optimized) - A sorting network algorithm that builds a bitonic sequence and iteratively merges it into a sorted sequence.
 /// Input length must be a power of 2 (2^n). For arbitrary sizes, use BitonicSortFill instead.
+/// For recursive implementation, see BitonicSortNonOptimized.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Bitonic Sort:</strong></para>
@@ -16,16 +18,17 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Bitonic Sequence Definition:</strong> A sequence is bitonic if it first monotonically increases then monotonically decreases,
 /// or can be circularly rotated to achieve this property. For example: [3,7,9,5,2,1] is bitonic.</description></item>
 /// <item><description><strong>Power-of-Two Requirement:</strong> The input length must be a power of 2 (n = 2^m for some integer m ≥ 0).
-/// This ensures the divide-and-conquer structure maintains balanced splits at each recursive level.
+/// This ensures the divide-and-conquer structure maintains balanced splits at each stage.
 /// If n is not a power of 2, this implementation throws ArgumentException. Use BitonicSortFill for arbitrary sizes.</description></item>
-/// <item><description><strong>Recursive Bitonic Construction:</strong> Divide the input into two halves. Recursively sort the first half in ascending order
-/// and the second half in descending order. The concatenation of these two sorted subsequences forms a bitonic sequence.
-/// This is because the first half increases (a₁ ≤ a₂ ≤ ... ≤ aₖ) and the second half decreases (bₖ ≥ ... ≥ b₂ ≥ b₁),
-/// creating the pattern: increasing then decreasing.</description></item>
+/// <item><description><strong>Iterative Bitonic Construction:</strong> This implementation uses an iterative approach instead of recursion.
+/// It builds bitonic sequences of increasing sizes (2, 4, 8, ..., n) in stages. For each stage, sequences are sorted in alternating
+/// ascending/descending order to create the bitonic property. The first half increases (a₁ ≤ a₂ ≤ ... ≤ aₖ) and the second half decreases
+/// (bₖ ≥ ... ≥ b₂ ≥ b₁), creating the pattern: increasing then decreasing.
+/// For the recursive approach, see BitonicSortNonOptimized.</description></item>
 /// <item><description><strong>Bitonic Merge Correctness:</strong> Given a bitonic sequence of length n = 2k, compare and conditionally swap elements
 /// at distance k apart (i.e., compare element[i] with element[i+k] for i ∈ [0, k)). This operation, called a bitonic split,
 /// partitions the sequence into two bitonic subsequences of length k each, where all elements in the first half are ≤ all elements
-/// in the second half. Recursively applying bitonic merge to each half produces a fully sorted sequence.
+/// in the second half. Iteratively applying bitonic merge stages to each half produces a fully sorted sequence.
 /// <para><strong>Proof sketch:</strong> Let S = [a₁,...,aₖ, b₁,...,bₖ] be bitonic. After comparing and swapping (aᵢ, bᵢ) for all i:
 /// <list type="bullet">
 /// <item>If S is increasing then decreasing: aᵢ ≤ aᵢ₊₁ ≤ ... ≤ aₖ and bₖ ≥ ... ≥ b₂ ≥ b₁.
@@ -36,8 +39,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Comparison Network Property:</strong> Bitonic sort is a comparison network, meaning the sequence of comparisons
 /// is data-independent (oblivious). The same comparisons are performed regardless of input values, making it ideal for parallel hardware
 /// implementations, SIMD optimizations, and worst-case guarantees.</description></item>
-/// <item><description><strong>Recursion Termination:</strong> Base case: sequences of length 1 are trivially sorted. Recursion depth is log₂ n,
-/// and at each level, O(n) comparisons are performed, yielding O(n log² n) total comparisons.</description></item>
+/// <item><description><strong>Iteration Termination:</strong> Base case: sequences of length 1 are trivially sorted. The iterative implementation
+/// processes stages up to log₂ n levels, and at each level, O(n) comparisons are performed, yielding O(n log² n) total comparisons.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -60,6 +63,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Uses aggressive inlining for performance-critical helper methods (CompareAndSwapAscending, CompareAndSwapDescending, IsPowerOfTwo, etc.).</description></item>
 /// <item><description>Branch elimination optimization: Separate CompareAndSwapAscending/Descending methods avoid conditional branching in inner loops, improving JIT optimization and branch prediction.</description></item>
 /// <item><description>Network structure clearly visible in iterative code: outer loop (sequence size), middle loop (sequence start), inner loops (merge stages and comparisons).</description></item>
+/// <item><description>For unoptimized recursive version, see BitonicSortNonOptimized.</description></item>
 /// </list>
 /// <para><strong>Use Cases:</strong></para>
 /// <list type="bullet">
