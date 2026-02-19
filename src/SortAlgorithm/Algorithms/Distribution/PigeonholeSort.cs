@@ -264,13 +264,13 @@ public static class PigeonholeSortInteger
 
         EnsureSupportedType<T>();
 
-        var comparer = new ComparableComparer<T>();
-        var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
+        var comparer = new NumberComparer<T>();
+        var s = new SortSpan<T, NumberComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
 
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
-            var tempSpan = new SortSpan<T, ComparableComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, NumberComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             SortCore(s, tempSpan);
         }
         finally
@@ -279,8 +279,8 @@ public static class PigeonholeSortInteger
         }
     }
 
-    private static void SortCore<T, TContext>(SortSpan<T, ComparableComparer<T>, TContext> s, SortSpan<T, ComparableComparer<T>, TContext> tempSpan)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
+    private static void SortCore<T, TContext>(SortSpan<T, NumberComparer<T>, TContext> s, SortSpan<T, NumberComparer<T>, TContext> tempSpan)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparisonOperators<T, T, bool>
         where TContext : ISortContext
     {
         // Find min and max to determine range
@@ -346,8 +346,8 @@ public static class PigeonholeSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void DistributeAndCollect<T, TContext>(SortSpan<T, ComparableComparer<T>, TContext> source, SortSpan<T, ComparableComparer<T>, TContext> temp, Span<int> holeHead, Span<int> holeTail, Span<int> next, ulong umin)
-        where T : IBinaryInteger<T>
+    private static void DistributeAndCollect<T, TContext>(SortSpan<T, NumberComparer<T>, TContext> source, SortSpan<T, NumberComparer<T>, TContext> temp, Span<int> holeHead, Span<int> holeTail, Span<int> next, ulong umin)
+        where T : IBinaryInteger<T>, IComparisonOperators<T, T, bool>
         where TContext : ISortContext
     {
         // Phase 1: Copy elements to temp and append each to the tail of its hole's linked list (O(n))

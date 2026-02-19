@@ -275,7 +275,7 @@ public static class BucketSortInteger
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, new NumberComparer<T>(), NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided sort context.
@@ -287,7 +287,7 @@ public static class BucketSortInteger
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
-        => Sort(span, new ComparableComparer<T>(), context);
+        => Sort(span, new NumberComparer<T>(), context);
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.
