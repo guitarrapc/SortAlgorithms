@@ -138,7 +138,7 @@ public static class PigeonholeSort
             holeTail.Fill(-1);
             try
             {
-                PigeonholeDistribute(s, tempSpan, keys, holeHead, holeTail, next, offset);
+                DistributeAndCollect(s, tempSpan, keys, holeHead, holeTail, next, offset);
             }
             finally
             {
@@ -161,7 +161,7 @@ public static class PigeonholeSort
     /// Achieves O(n + k) complexity; no prefix-sum phase.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PigeonholeDistribute<T, TContext>(SortSpan<T, NullComparer<T>, TContext> source, SortSpan<T, NullComparer<T>, TContext> temp, Span<int> keys, Span<int> holeHead, Span<int> holeTail, Span<int> next, int offset)
+    private static void DistributeAndCollect<T, TContext>(SortSpan<T, NullComparer<T>, TContext> source, SortSpan<T, NullComparer<T>, TContext> temp, Span<int> keys, Span<int> holeHead, Span<int> holeTail, Span<int> next, int offset)
         where TContext : ISortContext
     {
         // Phase 1: Copy elements to temp and append each to the tail of its hole's linked list (O(n))
@@ -323,7 +323,7 @@ public static class PigeonholeSortInteger
             holeTail.Fill(-1);
             try
             {
-                PigeonholeDistribute(s, tempSpan, holeHead, holeTail, next, umin);
+                DistributeAndCollect(s, tempSpan, holeHead, holeTail, next, umin);
             }
             finally
             {
@@ -340,7 +340,7 @@ public static class PigeonholeSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PigeonholeDistribute<T, TContext>(SortSpan<T, ComparableComparer<T>, TContext> source, SortSpan<T, ComparableComparer<T>, TContext> temp, Span<int> holeHead, Span<int> holeTail, Span<int> next, ulong umin)
+    private static void DistributeAndCollect<T, TContext>(SortSpan<T, ComparableComparer<T>, TContext> source, SortSpan<T, ComparableComparer<T>, TContext> temp, Span<int> holeHead, Span<int> holeTail, Span<int> next, ulong umin)
         where T : IBinaryInteger<T>
         where TContext : ISortContext
     {
