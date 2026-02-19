@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -162,6 +162,7 @@ public static class AmericanFlagSort
         Span<int> bucketNext = stackalloc int[RadixSize];  // Current write position for each bucket
 
         // Phase 1: Count occurrences of each digit value
+        // Store count for digit d in bucketCounts[d+1] (off-by-one trick for prefix sum)
         bucketCounts.Clear();
 
         for (var i = 0; i < length; i++)
@@ -173,13 +174,17 @@ public static class AmericanFlagSort
         }
 
         // Phase 2: Calculate bucket offsets (prefix sum)
+        // After prefix sum: bucketCounts[d] = start of bucket d, bucketCounts[d+1] = end of bucket d
+        // This gives us both boundaries for each bucket from a single array
         for (var i = 1; i <= RadixSize; i++)
         {
             bucketCounts[i] += bucketCounts[i - 1];
         }
         
-        // Copy bucket starts from bucketCounts[0..RadixSize-1]
-        // bucketCounts[i] is the start position of bucket i
+        // Phase 2.5: Copy bucket boundaries
+        // bucketCounts[i] = start of bucket i (also equals end of bucket i-1)
+        // bucketCounts[i+1] = end of bucket i (also equals start of bucket i+1)
+        // This relationship holds because bucketCounts has RadixSize+1 elements
         for (var i = 0; i < RadixSize; i++)
         {
             bucketStarts[i] = bucketCounts[i];
