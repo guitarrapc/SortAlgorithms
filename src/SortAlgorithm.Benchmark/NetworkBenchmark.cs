@@ -11,13 +11,13 @@ public class NetworkBenchmark
     public DataPattern Pattern { get; set; }
 
     private int[] _bionicArray = default!;
-    private int[] _bionicParallelArray = default!;
+    private int[] _bionicRecursiveArray = default!;
 
     [IterationSetup]
     public void Setup()
     {
         _bionicArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _bionicParallelArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _bionicRecursiveArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark(Baseline = true)]
@@ -26,9 +26,9 @@ public class NetworkBenchmark
         SortAlgorithm.Algorithms.BitonicSort.Sort(_bionicArray.AsSpan());
     }
 
-    [Benchmark]
-    public void BitonicSortParallelSort()
+    [Benchmark(Baseline = true)]
+    public void BitonicRecursiveSort()
     {
-        SortAlgorithm.Algorithms.BitonicSortParallel.Sort(_bionicArray);
+        SortAlgorithm.Algorithms.BitonicSortNonOptimized.Sort(_bionicRecursiveArray.AsSpan());
     }
 }
