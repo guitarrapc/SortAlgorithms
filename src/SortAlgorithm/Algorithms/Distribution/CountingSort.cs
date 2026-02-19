@@ -21,14 +21,14 @@ namespace SortAlgorithm.Algorithms;
 /// The key must be stable (same element always produces the same key).</description></item>
 /// <item><description><strong>Range Determination:</strong> The algorithm finds min and max keys to determine the range [min, max].
 /// A count array of size (max - min + 1) is allocated to track occurrences.</description></item>
-/// <item><description><strong>Offset Normalization:</strong> Keys are normalized using offset = -min, mapping keys to array indices [0, range-1].
-/// This allows handling negative keys correctly.</description></item>
-/// <item><description><strong>Counting Phase:</strong> For each element, its key is extracted and countArray[key + offset] is incremented.
+/// <item><description><strong>Index Normalization:</strong> Keys are normalized by subtracting min (<c>key - min</c>), mapping keys to array indices [0, range-1].
+/// This is safe even when min == int.MinValue, because the validated range guarantees the difference fits in an int.</description></item>
+/// <item><description><strong>Counting Phase:</strong> For each element, its key is extracted and <c>countArray[key - min]</c> is incremented.
 /// This records how many times each key appears.</description></item>
 /// <item><description><strong>Cumulative Sum:</strong> The count array is transformed into cumulative counts.
 /// countArray[i] becomes the number of elements with keys ≤ i, indicating the final position.</description></item>
 /// <item><description><strong>Placement Phase:</strong> Elements are placed in reverse order (for stability).
-/// For each element with key k, it is placed at position countArray[k + offset] - 1, then the count is decremented.</description></item>
+/// For each element with key k, it is placed at position <c>countArray[k - min] - 1</c>, then the count is decremented.</description></item>
 /// <item><description><strong>Stability:</strong> Processing elements in reverse order ensures that elements with equal keys maintain their original relative order.</description></item>
 /// <item><description><strong>Range Limitation:</strong> The key range must be reasonable (≤ {MaxCountArraySize}).
 /// Excessive ranges cause memory allocation failures.</description></item>
