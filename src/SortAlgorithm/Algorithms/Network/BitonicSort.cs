@@ -192,69 +192,6 @@ public static class BitonicSort
     }
 
     /// <summary>
-    /// Recursively builds and merges a bitonic sequence.
-    /// Note: This is the original recursive implementation. Consider using SortCoreIterative for better performance.
-    /// </summary>
-    /// <param name="s">The span to sort.</param>
-    /// <param name="low">The starting index of the sequence.</param>
-    /// <param name="count">The length of the sequence.</param>
-    /// <param name="ascending">True to sort this region in ascending order, false for descending.</param>
-    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int low, int count, bool ascending)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        if (count > 1)
-        {
-            int k = count / 2;
-
-            // Recursively sort first half in the same direction as this region
-            SortCore(s, low, k, ascending);
-            // Recursively sort second half in the opposite direction to create bitonic sequence
-            SortCore(s, low + k, k, !ascending);
-
-            // Merge the bitonic sequence in the desired order
-            BitonicMerge(s, low, count, ascending);
-        }
-    }
-
-    /// <summary>
-    /// Merges a bitonic sequence into a sorted sequence.
-    /// </summary>
-    /// <param name="span">The span containing the bitonic sequence.</param>
-    /// <param name="low">The starting index of the bitonic sequence.</param>
-    /// <param name="count">The length of the bitonic sequence.</param>
-    /// <param name="ascending">True to merge in ascending order, false for descending.</param>
-    private static void BitonicMerge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int low, int count, bool ascending)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        if (count > 1)
-        {
-            int k = count / 2;
-
-            // Compare and swap elements at distance k apart using specialized methods
-            if (ascending)
-            {
-                for (int i = low; i < low + k; i++)
-                {
-                    CompareAndSwapAscending(span, i, i + k);
-                }
-            }
-            else
-            {
-                for (int i = low; i < low + k; i++)
-                {
-                    CompareAndSwapDescending(span, i, i + k);
-                }
-            }
-
-            // Recursively merge both halves
-            BitonicMerge(span, low, k, ascending);
-            BitonicMerge(span, low + k, k, ascending);
-        }
-    }
-
-    /// <summary>
     /// Compares two elements and swaps them if they are in the wrong order for ascending order.
     /// </summary>
     /// <param name="span">The span containing the elements.</param>
