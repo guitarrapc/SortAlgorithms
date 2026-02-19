@@ -71,6 +71,7 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Heapsort</para>
+/// <para>Paper: https://doi.org/10.1007/3-540-46541-3_21 S. Edelkamp & I. Wegener (2000): "On the Performance of WEAK-HEAPSORT", STACS 2000, pp. 254-266</para>
 /// </remarks>
 public static class WeakHeapSort
 {
@@ -183,9 +184,9 @@ public static class WeakHeapSort
 
                 // Restore weak heap property for reduced heap [0..m-1]
                 // Step 1: Descend the distinguished path from node 1 (root's right child) to a leaf
-                // Distinguished child selection: 2*node + r[node]
-                //   - r[node]=0: distinguished child is at index 2*node (physically left)
-                //   - r[node]=1: distinguished child is at index 2*node+1 (physically right)
+                // Distinguished child definition (this implementation): 2*node + r[node]
+                //   - This formula encodes which child is "distinguished" (not in the left subtree)
+                //   - r[node] bit determines the child selection as per weak heap definition
                 var node = 1;
                 while (true)
                 {
@@ -242,10 +243,11 @@ public static class WeakHeapSort
     /// </summary>
     /// <remarks>
     /// Correctness invariant (Dutton 1993, Edelkamp-Wegener 2000):
-    /// - r[i]=0 means: left child is 2i, right child is 2i+1
-    /// - r[i]=1 means: left/right are swapped (left is 2i+1, right is 2i)
-    /// - j is on the "right spine" of parent iff: (j & 1) == r[parent]
-    /// - We ascend WHILE this condition holds, stop when it breaks
+    /// This implementation defines the distinguished ancestor as follows:
+    /// - Start at parent = j >> 1
+    /// - j is on the "right spine" of parent iff: (j &amp; 1) == r[parent]
+    /// - Ascend WHILE this condition holds; return parent when it breaks
+    /// - r[i] encodes the swap state of children for node i in the weak heap structure
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int DistinguishedAncestor(int j, Span<ulong> r)
