@@ -101,12 +101,13 @@ public static class RadixLSD10Sort
 
         // Rent buffers from ArrayPool
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
-        var bucketCountsArray = ArrayPool<int>.Shared.Rent(RadixBase);
 
         try
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
-            var bucketCounts = bucketCountsArray.AsSpan(0, RadixBase);
+            
+            // Use stackalloc for small fixed-size bucket counts (10 ints = 40 bytes)
+            Span<int> bucketCounts = stackalloc int[RadixBase];
 
             var comparer = new ComparableComparer<T>();
             var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
@@ -116,7 +117,6 @@ public static class RadixLSD10Sort
         finally
         {
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            ArrayPool<int>.Shared.Return(bucketCountsArray);
         }
     }
 
