@@ -154,7 +154,7 @@ public static class BucketSort
         for (var i = 0; i < s.Length; i++)
         {
             var key = keys[i];
-            var bucketIndex = (int)((key - min) / bucketSize);
+            var bucketIndex = (int)(((long)key - min) / bucketSize);
 
             // Handle edge case where key == max
             if (bucketIndex >= bucketCount)
