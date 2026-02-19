@@ -82,17 +82,16 @@ public static class RadixMSD4Sort
     private const int BUFFER_TEMP = 1;       // Temporary buffer for digit redistribution
 
     /// <summary>
-    /// Sorts the elements in the specified span in ascending order.
+    /// Sorts the elements in the specified span.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, NullContext.Default);
+        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
 
     /// <summary>
-    /// Sorts integer values in the specified span with sort context.
-    /// Always sorts in ascending numeric order (<see cref="IComparable{T}"/> natural order).
+    /// Sorts the elements in the specified span using the specified context.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
@@ -106,19 +105,28 @@ public static class RadixMSD4Sort
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
+        => Sort(span, new ComparableComparer<T>(), context);
+
+    /// <summary>
+    /// Sorts integer values in the specified span with comparer and sort context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        // Rent buffers from ArrayPool
+        // Rent temporary buffer from ArrayPool for element redistribution
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
 
         try
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
 
-            var comparer = new ComparableComparer<T>();
-            var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
-            var temp = new SortSpan<T, ComparableComparer<T>, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
+            var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+            var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
 
             // Determine the number of digits based on type size
             // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
