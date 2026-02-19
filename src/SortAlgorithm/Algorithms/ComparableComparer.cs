@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -59,4 +60,26 @@ internal readonly struct NullComparer<T> : IComparer<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Compare(T? x, T? y) =>
         throw new NotSupportedException("NullComparer should never be called by distribution sort algorithms.");
+}
+
+/// <summary>
+/// A high-performance struct comparer for numeric types that uses comparison operators directly.
+/// Designed for integer distribution sort algorithms (e.g., <see cref="CountingSortInteger"/>)
+/// where numeric ordering must be guaranteed regardless of any custom <see cref="IComparable{T}"/> implementation.
+/// </summary>
+/// <typeparam name="T">The type of elements to compare. Must support comparison operators via <see cref="IComparisonOperators{TSelf,TOther,TResult}"/>.</typeparam>
+/// <remarks>
+/// Unlike <see cref="ComparableComparer{T}"/> which delegates to <c>IComparable&lt;T&gt;.CompareTo</c>,
+/// this comparer uses the <c>&lt;</c> and <c>&gt;</c> operators directly. This is both faster and semantically
+/// correct for distribution sorts that depend on the numeric order of the type, not a custom sort order.
+/// </remarks>
+internal readonly struct NumberComparer<T> : IComparer<T> where T : IComparisonOperators<T, T, bool>
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int Compare(T? x, T? y)
+    {
+        if (x! < y!) return -1;
+        if (x! > y!) return 1;
+        return 0;
+    }
 }

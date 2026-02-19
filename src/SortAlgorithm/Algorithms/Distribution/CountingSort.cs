@@ -260,13 +260,13 @@ public static class CountingSortInteger
 
         EnsureSupportedType<T>();
 
-        var comparer = new ComparableComparer<T>();
-        var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
+        var comparer = new NumberComparer<T>();
+        var s = new SortSpan<T, NumberComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
 
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
-            var tempSpan = new SortSpan<T, ComparableComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, NumberComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             // Find min and max to determine range
             var minValue = T.MaxValue;
             var maxValue = T.MinValue;
@@ -320,8 +320,8 @@ public static class CountingSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CountSort<T, TContext>(SortSpan<T, ComparableComparer<T>, TContext> s, SortSpan<T, ComparableComparer<T>, TContext> tempSpan, Span<int> countArray, ulong umin)
-        where T : IBinaryInteger<T>
+    private static void CountSort<T, TContext>(SortSpan<T, NumberComparer<T>, TContext> s, SortSpan<T, NumberComparer<T>, TContext> tempSpan, Span<int> countArray, ulong umin)
+        where T : IBinaryInteger<T>, IComparisonOperators<T, T, bool>
         where TContext : ISortContext
     {
         // Count occurrences
