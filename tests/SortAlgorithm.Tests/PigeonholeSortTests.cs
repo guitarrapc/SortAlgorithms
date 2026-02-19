@@ -151,11 +151,10 @@ public class PigeonholeSortTests
         var sorted = Enumerable.Range(0, n).ToArray();
         PigeonholeSort.Sort(sorted.AsSpan(), x => x, stats);
 
-        // Pigeonhole Sort with internal buffer tracking (via SortSpan):
+        // Pigeonhole Sort with linked-list holes (via SortSpan):
         // 1. Find min/max and cache keys: n reads (main buffer)
-        // 2. Copy to temp and count: n reads (main) + n writes (temp)
-        // 3. Calculate positions: 0 reads/writes (transform holes array in-place)
-        // 4. Place elements: n reads (temp) + n writes (main)
+        // 2. Copy to temp, build linked-list holes: n reads (main) + n writes (temp)
+        // 3. Collect from holes in order: n reads (temp) + n writes (main)
         //
         // Total reads: n + n + n = 3n
         // Total writes: n + n = 2n
@@ -180,7 +179,7 @@ public class PigeonholeSortTests
         PigeonholeSort.Sort(reversed.AsSpan(), x => x, stats);
 
         // Pigeonhole Sort complexity is O(n + k) regardless of input order
-        // Same operation counts for reversed as for sorted (with internal buffer tracking)
+        // Same operation counts for reversed as for sorted (with linked-list hole tracking)
         var expectedReads = (ulong)(3 * n);
         var expectedWrites = (ulong)(2 * n);
 
@@ -202,7 +201,7 @@ public class PigeonholeSortTests
         PigeonholeSort.Sort(random.AsSpan(), x => x, stats);
 
         // Pigeonhole Sort has same complexity regardless of input distribution
-        // With internal buffer tracking: 3n reads, 2n writes
+        // With linked-list holes: 3n reads, 2n writes
         var expectedReads = (ulong)(3 * n);
         var expectedWrites = (ulong)(2 * n);
 

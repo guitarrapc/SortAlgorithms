@@ -56,28 +56,47 @@ public static class CountingSort
     private const int BUFFER_TEMP = 1;       // Temporary buffer for sorted elements
 
     /// <summary>
-    /// Sorts the elements in the specified span using a key selector function.
+    /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <param name="span">The span of elements to sort in place.</param>
     public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-        => Sort(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        Sort(span, keySelector, new ComparableComparer<T>(), NullContext.Default);
+    }
 
     /// <summary>
-    /// Sorts the elements in the specified span using a key selector function and sort context.
+    /// Sorts the elements in the specified span using the provided sort context.
     /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
         where T : IComparable<T>
         where TContext : ISortContext
-        => Sort(span, keySelector, new ComparableComparer<T>(), context);
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        Sort(span, keySelector, new ComparableComparer<T>(), context);
+    }
 
     /// <summary>
-    /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
     /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
     public static void Sort<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        ArgumentNullException.ThrowIfNull(keySelector);
         if (span.Length <= 1) return;
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
@@ -91,60 +110,53 @@ public static class CountingSort
             var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
 
-            SortCore(span, keySelector, s, tempSpan, keys);
+            // Find min/max and cache keys in single pass
+            var min = int.MaxValue;
+            var max = int.MinValue;
+
+            for (var i = 0; i < span.Length; i++)
+            {
+                var key = keySelector(s.Read(i));
+                keys[i] = key;
+                if (key < min) min = key;
+                if (key > max) max = key;
+            }
+
+            // If all keys are the same, no need to sort
+            if (min == max) return;
+
+            // Check for overflow and validate range
+            long range = (long)max - (long)min + 1;
+            if (range > int.MaxValue)
+                throw new ArgumentException($"Key range is too large for CountingSort: {range}. Maximum supported range is {int.MaxValue}.");
+            if (range > MaxCountArraySize)
+                throw new ArgumentException($"Key range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider using  another comparison-based sort.");
+
+            var offset = -min; // Offset to normalize keys to 0-based index
+            var size = (int)range;
+
+            // Use stackalloc for small count arrays, ArrayPool for larger ones
+            int[]? rentedCountArray = null;
+            Span<int> countArray = size <= StackAllocThreshold
+                ? stackalloc int[size]
+                : (rentedCountArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
+            countArray.Clear();
+            try
+            {
+                CountSort(s, keys, tempSpan, countArray, offset);
+            }
+            finally
+            {
+                if (rentedCountArray is not null)
+                {
+                    ArrayPool<int>.Shared.Return(rentedCountArray);
+                }
+            }
         }
         finally
         {
             ArrayPool<int>.Shared.Return(keysArray);
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-        }
-    }
-
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<int> keys)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Find min/max and cache keys in single pass
-        var min = int.MaxValue;
-        var max = int.MinValue;
-
-        for (var i = 0; i < span.Length; i++)
-        {
-            var key = keySelector(s.Read(i));
-            keys[i] = key;
-            if (key < min) min = key;
-            if (key > max) max = key;
-        }
-
-        // If all keys are the same, no need to sort
-        if (min == max) return;
-
-        // Check for overflow and validate range
-        long range = (long)max - (long)min + 1;
-        if (range > int.MaxValue)
-            throw new ArgumentException($"Key range is too large for CountingSort: {range}. Maximum supported range is {int.MaxValue}.");
-        if (range > MaxCountArraySize)
-            throw new ArgumentException($"Key range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider using QuickSort or another comparison-based sort.");
-
-        var offset = -min; // Offset to normalize keys to 0-based index
-        var size = (int)range;
-
-        // Use stackalloc for small count arrays, ArrayPool for larger ones
-        int[]? rentedCountArray = null;
-        Span<int> countArray = size <= StackAllocThreshold
-            ? stackalloc int[size]
-            : (rentedCountArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-        countArray.Clear();
-        try
-        {
-            CountSort(s, keys, tempSpan, countArray, offset);
-        }
-        finally
-        {
-            if (rentedCountArray is not null)
-            {
-                ArrayPool<int>.Shared.Return(rentedCountArray);
-            }
         }
     }
 
@@ -199,15 +211,14 @@ public static class CountingSort
 /// <item><description><strong>Not Supported:</strong> Int128, UInt128, BigInteger (>64-bit types)</description></item>
 /// </list>
 /// <para><strong>Why Int128/UInt128 are not supported:</strong></para>
-/// <para>This implementation uses long for range calculation. Supporting 128-bit types would require significantly more complex
-/// logic and is not practical for counting sort (the count array would be enormous). If you need to sort Int128/UInt128,
-/// consider using a comparison-based sort like QuickSort or IntroSort.</para>
+/// <para>The value range for 128-bit types can reach 2^128, making the count array impractically large.
+/// If you need to sort Int128/UInt128, consider using a comparison-based sort.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Distribution</description></item>
 /// <item><description>Stable      : Yes</description></item>
 /// <item><description>In-place    : No (O(n + k) where k = range of values)</description></item>
-/// <item><description>Comparisons : 0 (No comparison operations)</description></item>
+/// <item><description>Comparisons : 2n+1 (n×2 for min/max scan, +1 for early-exit equality check)</description></item>
 /// <item><description>Swaps       : 0</description></item>
 /// <item><description>Time        : O(n + k) where k is the range of values</description></item>
 /// <item><description>Memory      : O(n + k)</description></item>
@@ -224,50 +235,39 @@ public static class CountingSortInteger
     private const int BUFFER_TEMP = 1;       // Temporary buffer for sorted elements
 
     /// <summary>
-    /// Sorts the elements in the specified span using American Flag Sort.
+    /// Sorts the elements in the specified span in ascending order.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span using American Flag Sort with sort context.
+    /// Sorts integer values in the specified span with sort context.
+    /// Always sorts in ascending numeric order (<see cref="IComparable{T}"/> natural order).
+    /// Arbitrary sort order via a comparer is not supported.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TContext : ISortContext
-        => Sort(span, new ComparableComparer<T>(), context);
-
-    /// <summary>
-    /// Sorts integer values in the specified span with comparer and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
-    /// </summary>
-    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        // Check if type is supported (64-bit or less)
-        var bitSize = GetBitSize<T>();
+        GetBitSize<T>(); // validates supported type
 
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        var comparer = new ComparableComparer<T>();
+        var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // Rent arrays from ArrayPool for temporary storage
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
-            // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
-
-            SortCore(span, s, tempSpan);
+            var tempSpan = new SortSpan<T, ComparableComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            SortCore(s, tempSpan);
         }
         finally
         {
@@ -275,13 +275,11 @@ public static class CountingSortInteger
         }
     }
 
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan)
+    private static void SortCore<T, TContext>(SortSpan<T, ComparableComparer<T>, TContext> s, SortSpan<T, ComparableComparer<T>, TContext> tempSpan)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Find min and max to determine range
-        // Convert to long for range calculation
         var minValue = T.MaxValue;
         var maxValue = T.MinValue;
 
@@ -295,18 +293,18 @@ public static class CountingSortInteger
         // If all elements are the same, no need to sort
         if (s.Compare(minValue, maxValue) == 0) return;
 
-        // Convert to long for range calculation
-        var min = ConvertToLong(minValue);
-        var max = ConvertToLong(maxValue);
+        // Use ulong arithmetic for range calculation to correctly handle all supported types
+        // including ulong and nuint. ulong.CreateTruncating preserves 2's complement bit patterns
+        // for signed types, so wrapping ulong subtraction gives the correct element count for both
+        // signed and unsigned types.
+        var umin = ulong.CreateTruncating(minValue);
+        var umax = ulong.CreateTruncating(maxValue);
 
-        // Check for overflow and validate range
-        long range = max - min + 1;
-        if (range > int.MaxValue)
-            throw new ArgumentException($"Value range is too large for CountingSort: {range}. Maximum supported range is {int.MaxValue}.");
-        if (range > MaxCountArraySize)
-            throw new ArgumentException($"Value range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider using QuickSort or another comparison-based sort.");
+        // range == 0 means overflow (actual range is 2^64), which implies an enormous value range
+        ulong range = umax - umin + 1;
+        if (range == 0 || range > (ulong)MaxCountArraySize)
+            throw new ArgumentException($"Value range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider another comparison-based sort.");
 
-        var offset = -min; // Offset to normalize values to 0-based index
         var size = (int)range;
 
         // Use stackalloc for small count arrays, ArrayPool for larger ones
@@ -317,7 +315,7 @@ public static class CountingSortInteger
         countArray.Clear();
         try
         {
-            CountSort(s, tempSpan, countArray, offset);
+            CountSort(s, tempSpan, countArray, umin);
         }
         finally
         {
@@ -329,16 +327,15 @@ public static class CountingSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CountSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<int> countArray, long offset)
+    private static void CountSort<T, TContext>(SortSpan<T, ComparableComparer<T>, TContext> s, SortSpan<T, ComparableComparer<T>, TContext> tempSpan, Span<int> countArray, ulong umin)
         where T : IBinaryInteger<T>
-        where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Count occurrences
         for (var i = 0; i < s.Length; i++)
         {
             var value = s.Read(i);
-            var index = (int)(ConvertToLong(value) + offset);
+            var index = (int)(ulong.CreateTruncating(value) - umin);
             countArray[index]++;
         }
 
@@ -352,7 +349,7 @@ public static class CountingSortInteger
         for (var i = s.Length - 1; i >= 0; i--)
         {
             var value = s.Read(i);
-            var index = (int)(ConvertToLong(value) + offset);
+            var index = (int)(ulong.CreateTruncating(value) - umin);
             var pos = countArray[index] - 1;
             tempSpan.Write(pos, value);
             countArray[index]--;

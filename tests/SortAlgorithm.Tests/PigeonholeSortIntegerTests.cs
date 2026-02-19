@@ -52,6 +52,28 @@ public class PigeonholeSortIntegerTests
     }
 
     [Test]
+    public async Task ULongLargeValuesTest()
+    {
+        // ulong values near ulong.MaxValue were broken by ConvertToLong (CreateTruncating -> negative long)
+        var stats = new StatisticsContext();
+        var array = new ulong[] { ulong.MaxValue, ulong.MaxValue - 2, ulong.MaxValue - 1, ulong.MaxValue - 4 };
+        PigeonholeSortInteger.Sort(array.AsSpan(), stats);
+
+        await Assert.That(array).IsEquivalentTo(new ulong[] { ulong.MaxValue - 4, ulong.MaxValue - 2, ulong.MaxValue - 1, ulong.MaxValue }, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task UIntLargeValuesTest()
+    {
+        // uint values in the upper half of the range (> int.MaxValue) were broken by ConvertToLong
+        var stats = new StatisticsContext();
+        var array = new uint[] { uint.MaxValue, uint.MaxValue - 2, uint.MaxValue - 1, uint.MaxValue - 4 };
+        PigeonholeSortInteger.Sort(array.AsSpan(), stats);
+
+        await Assert.That(array).IsEquivalentTo(new uint[] { uint.MaxValue - 4, uint.MaxValue - 2, uint.MaxValue - 1, uint.MaxValue }, CollectionOrdering.Matching);
+    }
+
+    [Test]
     public async Task EmptyArrayTest()
     {
         var stats = new StatisticsContext();

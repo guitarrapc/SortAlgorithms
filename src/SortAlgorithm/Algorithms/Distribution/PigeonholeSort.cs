@@ -19,19 +19,19 @@ namespace SortAlgorithm.Algorithms;
 /// The key must be stable (same element always produces the same key).</description></item>
 /// <item><description><strong>Range Determination:</strong> The algorithm finds min and max keys to determine the range [min, max].
 /// A hole array of size (max - min + 1) is allocated. Each index corresponds to one unique key value.</description></item>
-/// <item><description><strong>Offset Normalization:</strong> Keys are normalized using offset = -min, mapping keys to array indices [0, range-1].
-/// This allows handling negative keys correctly: holes[key + offset] maps key to its hole.</description></item>
-/// <item><description><strong>Distribution Phase:</strong> Each element is placed into its corresponding hole based on its key.
-/// For element e with key k, increment holes[k + offset] to count occurrences.</description></item>
+/// <item><description><strong>Base Key Normalization:</strong> Keys are normalized by subtracting baseKey (= min), mapping keys to array indices [0, range-1].
+/// This allows handling negative keys correctly: holes[key - baseKey] maps key to its hole.</description></item>
+/// <item><description><strong>Distribution Phase:</strong> Each element is placed into its corresponding hole using a linked-list (FIFO queue).
+/// For element at index i with key k, append i to the tail of hole[k - baseKey].
+/// Each hole stores head/tail indices into the temp array; a next[] array chains elements within each hole.</description></item>
 /// <item><description><strong>Collection Phase:</strong> Iterate through holes array in ascending order.
-/// For each hole i with count c > 0, write the key (i - offset) back to the original array c times.
+/// For each hole i, traverse its linked list (head → next → … → -1) and write elements back to the source array.
 /// This reconstructs the sorted sequence in O(n + k) time.</description></item>
 /// <item><description><strong>Correctness Guarantee:</strong> Since holes are traversed in index order (0 to range-1),
-/// and each index i corresponds to key (i - offset), elements are written back in ascending key order.
+/// and each index i corresponds to key (i + baseKey), elements are written back in ascending key order.
 /// The algorithm correctly sorts as long as the key selector function produces consistent integer keys.</description></item>
-/// <item><description><strong>Stability:</strong> This implementation IS stable because elements with equal keys
-/// are written back in their original relative order. By iterating forward through the temp array and incrementing hole positions,
-/// elements with the same key are placed in the order they appeared in the input.</description></item>
+/// <item><description><strong>Stability:</strong> This implementation IS stable because each hole is a FIFO queue.
+/// Elements with the same key are appended in input order and collected in that same order.</description></item>
 /// <item><description><strong>Range Limitation:</strong> The key range must be reasonable (≤ {MaxHoleArraySize}).
 /// Excessive ranges cause memory allocation failures or out-of-memory errors.</description></item>
 /// </list>
@@ -46,7 +46,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Comparisons : 0 - No comparison operations between keys (distribution sort)</description></item>
 /// <item><description>IndexReads  : 3n - n reads for key extraction, n reads for copying to temp, n reads for writing back</description></item>
 /// <item><description>IndexWrites : 2n - n writes to temp, n writes back to original array</description></item>
-/// <item><description>Memory      : O(n + k) - Temporary arrays for elements, keys, and hole counts</description></item>
+/// <item><description>Memory      : O(n + k) - Temporary arrays for elements, keys, next[] links, and hole head/tail indices</description></item>
 /// <item><description>Note        : キーの範囲が大きいとメモリ使用量が膨大になります。最大範囲は{MaxHoleArraySize}です。</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
@@ -55,57 +55,56 @@ namespace SortAlgorithm.Algorithms;
 public static class PigeonholeSort
 {
     private const int MaxHoleArraySize = 10_000_000; // Maximum allowed hole array size
-    private const int StackAllocThreshold = 1024; // Use stackalloc for hole arrays smaller than this
+    private const int StackAllocThreshold = 1024; // Use stackalloc for each holeHead/holeTail array when range is smaller than this
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary buffer for elements
 
     /// <summary>
-    /// Sorts the elements in the specified span using a key selector function.
+    /// Sorts the elements in the specified span in ascending order using the key selector.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
-        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), NullContext.Default);
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <param name="span">The span of elements to sort in place.</param>
+    public static void Sort<T>(Span<T> span, Func<T, int> keySelector)
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        SortCore(span, new FuncKeySelector<T>(keySelector), NullContext.Default);
+    }
 
     /// <summary>
-    /// Sorts the elements in the specified span using a key selector function and sort context.
+    /// Sorts the elements in the specified span using the key selector and sort context.
     /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
-        where T : IComparable<T>
         where TContext : ISortContext
-        => SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), context);
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        SortCore(span, new FuncKeySelector<T>(keySelector), context);
+    }
 
-    /// <summary>
-    /// Sorts the elements in the specified span using a key selector function, comparer, and sort context.
-    /// </summary>
-    public static void Sort<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, TComparer comparer, TContext context)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-        => SortCore(span, new FuncKeySelector<T>(keySelector), comparer, context);
-
-    /// <summary>
-    /// Sorts the elements in the specified span using a struct key selector, comparer, and sort context.
-    /// This is the full-control version that enables maximum JIT optimization.
-    /// </summary>
-    /// <typeparam name="TKeySelector">A <see langword="readonly"/> <see langword="struct"/> implementing <see cref="IKeySelector{T}"/>.</typeparam>
-    private static void SortCore<T, TKeySelector, TComparer, TContext>(Span<T> span, TKeySelector keySelector, TComparer comparer, TContext context)
+    private static void SortCore<T, TKeySelector, TContext>(Span<T> span, TKeySelector keySelector, TContext context)
         where TKeySelector : struct, IKeySelector<T>
-        where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        var s = new SortSpan<T, NullComparer<T>, TContext>(span, context, default, BUFFER_MAIN);
 
         // Rent arrays from ArrayPool for temporary storage
         var keysArray = ArrayPool<int>.Shared.Rent(span.Length);
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
+        var nextArray = ArrayPool<int>.Shared.Rent(span.Length);
         try
         {
             // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, NullComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, default, BUFFER_TEMP);
             var keys = keysArray.AsSpan(0, span.Length);
+            var next = nextArray.AsSpan(0, span.Length);
 
             // Find min/max and cache keys in single pass
             var min = int.MaxValue;
@@ -127,71 +126,73 @@ public static class PigeonholeSort
             if (range > int.MaxValue)
                 throw new ArgumentException($"Key range is too large for PigeonholeSort: {range}. Maximum supported range is {int.MaxValue}.");
             if (range > MaxHoleArraySize)
-                throw new ArgumentException($"Key range ({range}) exceeds maximum hole array size ({MaxHoleArraySize}). Consider using QuickSort or another comparison-based sort.");
+                throw new ArgumentException($"Key range ({range}) exceeds maximum hole array size ({MaxHoleArraySize}). Consider using another comparison-based sort.");
 
-            var offset = -min; // Offset to normalize keys to 0-based index
+            var baseKey = (long)min; // long avoids -int.MinValue overflow; subtraction is safe after range validation
             var size = (int)range;
 
-            // Use stackalloc for small hole arrays, ArrayPool for larger ones
-            int[]? rentedHoleArray = null;
-            Span<int> holes = size <= StackAllocThreshold
+            // Each hole is a FIFO linked list: holeHead[h] = first element index, holeTail[h] = last element index (-1 = empty)
+            int[]? rentedHoleHeadArray = null;
+            int[]? rentedHoleTailArray = null;
+            Span<int> holeHead = size <= StackAllocThreshold
                 ? stackalloc int[size]
-                : (rentedHoleArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-            holes.Clear();
+                : (rentedHoleHeadArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
+            Span<int> holeTail = size <= StackAllocThreshold
+                ? stackalloc int[size]
+                : (rentedHoleTailArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
+            holeHead.Fill(-1);
+            holeTail.Fill(-1);
             try
             {
-                PigeonholeDistribute(s, tempSpan, keys, holes, offset);
+                DistributeAndCollect(s, tempSpan, keys, holeHead, holeTail, next, baseKey);
             }
             finally
             {
-                if (rentedHoleArray is not null)
-                {
-                    ArrayPool<int>.Shared.Return(rentedHoleArray);
-                }
+                if (rentedHoleHeadArray is not null)
+                    ArrayPool<int>.Shared.Return(rentedHoleHeadArray);
+                if (rentedHoleTailArray is not null)
+                    ArrayPool<int>.Shared.Return(rentedHoleTailArray);
             }
         }
         finally
         {
             ArrayPool<int>.Shared.Return(keysArray);
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            ArrayPool<int>.Shared.Return(nextArray);
         }
     }
 
     /// <summary>
-    /// Pigeonhole distribution implementation.
-    /// Achieves O(n + k) complexity by processing elements in a single pass.
+    /// Distributes elements into linked-list holes (phase 1), then collects them back in hole index order (phase 2).
+    /// Achieves O(n + k) complexity; no prefix-sum phase.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PigeonholeDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<int> keys, Span<int> holes, int offset)
-        where TComparer : IComparer<T>
+    private static void DistributeAndCollect<T, TContext>(SortSpan<T, NullComparer<T>, TContext> source, SortSpan<T, NullComparer<T>, TContext> temp, Span<int> keys, Span<int> holeHead, Span<int> holeTail, Span<int> next, long baseKey)
         where TContext : ISortContext
     {
-        // Phase 1: Copy elements to temp array and count occurrences (O(n))
+        // Phase 1: Copy elements to temp and append each to the tail of its hole's linked list (O(n))
         for (var i = 0; i < source.Length; i++)
         {
             temp.Write(i, source.Read(i));
-            holes[keys[i] + offset]++;
+            var h = (int)(keys[i] - baseKey); // long subtraction: safe after range ≤ MaxHoleArraySize validation
+            if (holeHead[h] == -1)
+                holeHead[h] = i;
+            else
+                next[holeTail[h]] = i;
+            holeTail[h] = i;
+            next[i] = -1;
         }
 
-        // Phase 2: Calculate starting positions for each key (O(k))
-        // Transform counts into cumulative positions
-        // After this, holes[i] indicates where the next element with key (i - offset) should be placed
-        var position = 0;
-        for (var i = 0; i < holes.Length; i++)
+        // Phase 2: Collect elements from holes in ascending key order (O(n + k))
+        var pos = 0;
+        for (var h = 0; h < holeHead.Length; h++)
         {
-            var count = holes[i];
-            holes[i] = position;
-            position += count;
-        }
-
-        // Phase 3: Place elements in sorted order (O(n))
-        // Iterate through temp array and place each element at its correct position
-        for (var i = 0; i < source.Length; i++)
-        {
-            var holeIndex = keys[i] + offset;
-            var targetPos = holes[holeIndex];
-            source.Write(targetPos, temp.Read(i));
-            holes[holeIndex]++; // Move to next position for this key
+            var j = holeHead[h];
+            while (j != -1)
+            {
+                source.Write(pos++, temp.Read(j));
+                j = next[j];
+            }
         }
     }
 }
@@ -212,15 +213,14 @@ public static class PigeonholeSort
 /// <item><description><strong>Not Supported:</strong> Int128, UInt128, BigInteger (>64-bit types)</description></item>
 /// </list>
 /// <para><strong>Why Int128/UInt128 are not supported:</strong></para>
-/// <para>This implementation uses long for range calculation. Supporting 128-bit types would require significantly more complex
-/// logic and is not practical for pigeonhole sort (the hole array would be enormous). If you need to sort Int128/UInt128,
-/// consider using a comparison-based sort like QuickSort or IntroSort.</para>
+/// <para>The value range for 128-bit types can reach 2^128, making the hole array impractically large.
+/// If you need to sort Int128/UInt128, consider using a comparison-based sort.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Distribution</description></item>
 /// <item><description>Stable      : Yes (preserves relative order of elements with equal values)</description></item>
 /// <item><description>In-place    : No (O(n + k) where k = range of values)</description></item>
-/// <item><description>Comparisons : 0 (No comparison operations)</description></item>
+/// <item><description>Comparisons : 2n+1 (n×2 for min/max scan, +1 for early-exit equality check)</description></item>
 /// <item><description>Swaps       : 0</description></item>
 /// <item><description>Time        : O(n + k) where k is the range of values</description></item>
 /// <item><description>Memory      : O(n + k)</description></item>
@@ -232,57 +232,46 @@ public static class PigeonholeSort
 public static class PigeonholeSortInteger
 {
     private const int MaxHoleArraySize = 10_000_000; // Maximum allowed hole array size
-    private const int StackAllocThreshold = 1024; // Use stackalloc for hole arrays smaller than this
+    private const int StackAllocThreshold = 1024; // Use stackalloc for each holeHead/holeTail array when range is smaller than this
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary buffer for elements
 
     /// <summary>
-    /// Sorts the elements in the specified span using American Flag Sort.
+    /// Sorts the elements in the specified span in ascending order.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span using American Flag Sort with sort context.
+    /// Sorts integer values in the specified span with sort context.
+    /// Always sorts in ascending numeric order (<see cref="IComparable{T}"/> natural order).
+    /// Arbitrary sort order via a comparer is not supported.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TContext : ISortContext
-        => Sort(span, new ComparableComparer<T>(), context);
-
-    /// <summary>
-    /// Sorts integer values in the specified span with comparer and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
-    /// </summary>
-    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
-        // Check if type is supported (64-bit or less)
-        var bitSize = GetBitSize<T>();
+        EnsureSupportedType<T>();
 
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        var comparer = new ComparableComparer<T>();
+        var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // Rent arrays from ArrayPool for temporary storage
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
-            // Create SortSpan for temp buffer to track operations
-            var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
-
-            SortCore(span, s, tempSpan);
+            var tempSpan = new SortSpan<T, ComparableComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            SortCore(s, tempSpan);
         }
         finally
         {
@@ -290,9 +279,8 @@ public static class PigeonholeSortInteger
         }
     }
 
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan)
+    private static void SortCore<T, TContext>(SortSpan<T, ComparableComparer<T>, TContext> s, SortSpan<T, ComparableComparer<T>, TContext> tempSpan)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Find min and max to determine range
@@ -309,105 +297,102 @@ public static class PigeonholeSortInteger
         // If all elements are the same, no need to sort
         if (s.Compare(minValue, maxValue) == 0) return;
 
-        // Convert to long for range calculation
-        var min = ConvertToLong(minValue);
-        var max = ConvertToLong(maxValue);
+        // Use ulong arithmetic for range calculation to correctly handle all supported types
+        // including ulong and nuint. ulong.CreateTruncating preserves 2's complement bit patterns
+        // for signed types, so wrapping ulong subtraction gives the correct element count for both
+        // signed and unsigned types.
+        var umin = ulong.CreateTruncating(minValue);
+        var umax = ulong.CreateTruncating(maxValue);
 
-        // Check for overflow and validate range
-        long range = max - min + 1;
-        if (range > int.MaxValue)
-            throw new ArgumentException($"Value range is too large for PigeonholeSort: {range}. Maximum supported range is {int.MaxValue}.");
-        if (range > MaxHoleArraySize)
-            throw new ArgumentException($"Value range ({range}) exceeds maximum hole array size ({MaxHoleArraySize}). Consider using QuickSort or another comparison-based sort.");
+        // range == 0 means overflow (actual range is 2^64), which implies an enormous value range
+        ulong range = umax - umin + 1;
+        if (range == 0 || range > (ulong)MaxHoleArraySize)
+            throw new ArgumentException($"Value range ({range}) exceeds maximum hole array size ({MaxHoleArraySize}). Consider using another comparison-based sort.");
 
-        var offset = -min; // Offset to normalize values to 0-based index
         var size = (int)range;
 
-        // Use stackalloc for small hole arrays, ArrayPool for larger ones
-        int[]? rentedHoleArray = null;
-        Span<int> holes = size <= StackAllocThreshold
-            ? stackalloc int[size]
-            : (rentedHoleArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-        holes.Clear();
+        var nextArray = ArrayPool<int>.Shared.Rent(s.Length);
         try
         {
-            PigeonholeDistribute(s, tempSpan, holes, offset);
+            var next = nextArray.AsSpan(0, s.Length);
+
+            // Each hole is a FIFO linked list: holeHead[h] = first element index, holeTail[h] = last element index (-1 = empty)
+            int[]? rentedHoleHeadArray = null;
+            int[]? rentedHoleTailArray = null;
+            Span<int> holeHead = size <= StackAllocThreshold
+                ? stackalloc int[size]
+                : (rentedHoleHeadArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
+            Span<int> holeTail = size <= StackAllocThreshold
+                ? stackalloc int[size]
+                : (rentedHoleTailArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
+            holeHead.Fill(-1);
+            holeTail.Fill(-1);
+            try
+            {
+                DistributeAndCollect(s, tempSpan, holeHead, holeTail, next, umin);
+            }
+            finally
+            {
+                if (rentedHoleHeadArray is not null)
+                    ArrayPool<int>.Shared.Return(rentedHoleHeadArray);
+                if (rentedHoleTailArray is not null)
+                    ArrayPool<int>.Shared.Return(rentedHoleTailArray);
+            }
         }
         finally
         {
-            if (rentedHoleArray is not null)
-            {
-                ArrayPool<int>.Shared.Return(rentedHoleArray);
-            }
+            ArrayPool<int>.Shared.Return(nextArray);
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PigeonholeDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, Span<int> holes, long offset)
+    private static void DistributeAndCollect<T, TContext>(SortSpan<T, ComparableComparer<T>, TContext> source, SortSpan<T, ComparableComparer<T>, TContext> temp, Span<int> holeHead, Span<int> holeTail, Span<int> next, ulong umin)
         where T : IBinaryInteger<T>
-        where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Phase 1: Copy elements to temp array and count occurrences (O(n))
+        // Phase 1: Copy elements to temp and append each to the tail of its hole's linked list (O(n))
         for (var i = 0; i < source.Length; i++)
         {
             var value = source.Read(i);
             temp.Write(i, value);
-            var index = (int)(ConvertToLong(value) + offset);
-            holes[index]++;
+            var h = (int)(ulong.CreateTruncating(value) - umin);
+            if (holeHead[h] == -1)
+                holeHead[h] = i;
+            else
+                next[holeTail[h]] = i;
+            holeTail[h] = i;
+            next[i] = -1;
         }
 
-        // Phase 2: Calculate starting positions for each value (O(k))
-        // Transform counts into cumulative positions
-        var position = 0;
-        for (var i = 0; i < holes.Length; i++)
+        // Phase 2: Collect elements from holes in ascending value order (O(n + k))
+        var pos = 0;
+        for (var h = 0; h < holeHead.Length; h++)
         {
-            var count = holes[i];
-            holes[i] = position;
-            position += count;
-        }
-
-        // Phase 3: Place elements in sorted order (O(n))
-        // Stability is preserved by iterating forward and incrementing hole positions
-        for (var i = 0; i < source.Length; i++)
-        {
-            var value = temp.Read(i);
-            var index = (int)(ConvertToLong(value) + offset);
-            var targetPos = holes[index];
-            source.Write(targetPos, value);
-            holes[index]++; // Move to next position for this value
+            var j = holeHead[h];
+            while (j != -1)
+            {
+                source.Write(pos++, temp.Read(j));
+                j = next[j];
+            }
         }
     }
 
     /// <summary>
-    /// Get bit size of the type T and validate support.
-    /// Throws NotSupportedException for types larger than 64-bit.
+    /// Throws <see cref="NotSupportedException"/> if <typeparamref name="T"/> is not supported.
+    /// Supported types: sbyte, byte, short, ushort, int, uint, long, ulong, nint, nuint.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetBitSize<T>() where T : IBinaryInteger<T>
+    private static void EnsureSupportedType<T>() where T : IBinaryInteger<T>
     {
-        if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte))
-            return 8;
-        else if (typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
-            return 16;
-        else if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
-            return 32;
-        else if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
-            return 64;
-        else if (typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
-            return IntPtr.Size * 8;
-        else if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
+        if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte) ||
+            typeof(T) == typeof(short) || typeof(T) == typeof(ushort) ||
+            typeof(T) == typeof(int) || typeof(T) == typeof(uint) ||
+            typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
+            typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
+            return;
+        if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
             throw new NotSupportedException($"Type {typeof(T).Name} with 128-bit size is not supported. Maximum supported bit size is 64.");
-        else
-            throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
+        throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
     }
 
-    /// <summary>
-    /// Convert IBinaryInteger value to long for range calculation.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static long ConvertToLong<T>(T value) where T : IBinaryInteger<T>
-    {
-        return long.CreateTruncating(value);
-    }
 }

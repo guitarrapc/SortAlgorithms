@@ -48,3 +48,15 @@ internal readonly struct ComparableComparer<T> : IComparer<T> where T : ICompara
         return x.CompareTo(y!);
     }
 }
+
+/// <summary>
+/// A no-op comparer for distribution sort algorithms that never compare elements.
+/// Calling <see cref="Compare"/> is a programming error and throws <see cref="NotSupportedException"/>.
+/// </summary>
+/// <typeparam name="T">The element type. No constraint required.</typeparam>
+internal readonly struct NullComparer<T> : IComparer<T>
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int Compare(T? x, T? y) =>
+        throw new NotSupportedException("NullComparer should never be called by distribution sort algorithms.");
+}
