@@ -79,7 +79,7 @@ public static class RadixLSD10Sort
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span.
@@ -96,16 +96,6 @@ public static class RadixLSD10Sort
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
-        => Sort(span, new ComparableComparer<T>(), context);
-
-    /// <summary>
-    /// Sorts the elements in the specified span using the provided comparer and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
-    /// </summary>
-    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
@@ -118,7 +108,10 @@ public static class RadixLSD10Sort
             var tempBuffer = tempArray.AsSpan(0, span.Length);
             var bucketCounts = bucketCountsArray.AsSpan(0, RadixBase);
 
-            SortCore<T, TComparer, TContext>(span, tempBuffer, bucketCounts, comparer, context);
+            var comparer = new ComparableComparer<T>();
+            var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
+            var temp = new SortSpan<T, ComparableComparer<T>, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
+            SortCore<T, ComparableComparer<T>, TContext>(s, temp, bucketCounts);
         }
         finally
         {
@@ -127,16 +120,12 @@ public static class RadixLSD10Sort
         }
     }
 
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<int> bucketCounts, TComparer comparer, TContext context)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> bucketCounts)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
-
         // Determine bit size for sign-bit flipping
         var bitSize = GetBitSize<T>();
 
