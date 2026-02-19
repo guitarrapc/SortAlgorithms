@@ -286,7 +286,7 @@ public static class BucketSortInteger
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
@@ -303,8 +303,7 @@ public static class BucketSortInteger
     {
         if (span.Length <= 1) return;
 
-        // Check if type is supported (64-bit or less)
-        var bitSize = GetBitSize<T>();
+        EnsureSupportedType<T>();
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
@@ -349,26 +348,32 @@ public static class BucketSortInteger
         var min = ConvertToLong(minValue);
         var max = ConvertToLong(maxValue);
 
-        // Determine bucket count based on input size and range
-        long range = max - min + 1;
+        // Compute range in ulong to avoid signed overflow.
+        // (ulong)(max - min) reinterprets the unchecked signed subtraction as an unsigned distance,
+        // which is correct even when max - min overflows long
+        // (e.g. min = long.MinValue, max = long.MaxValue → true distance = 2^64 - 1).
+        // The +1 wraps to 0 only when the true range is exactly 2^64 (full long space); cap to ulong.MaxValue.
+        ulong range = (ulong)(max - min) + 1;
+        if (range == 0) range = ulong.MaxValue;
 
         // Calculate optimal bucket count (sqrt(n) is a common heuristic)
         var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(s.Length)));
 
         // Adjust bucket count if range is smaller
-        if (range < bucketCount)
+        if (range < (ulong)bucketCount)
         {
             bucketCount = (int)range;
         }
 
-        // Calculate bucket size (range divided by bucket count)
-        var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
+        // Ceiling division without overflow: (range + bucketCount - 1) / bucketCount can overflow ulong
+        // for large ranges, so use: a / b + (a % b != 0 ? 1 : 0)
+        ulong bucketSize = Math.Max(1UL, range / (ulong)bucketCount + (range % (ulong)bucketCount != 0 ? 1UL : 0UL));
 
         // Perform bucket distribution and sorting
         BucketDistribute(s, tempSpan, tempArray, bucketIndices, bucketCount, bucketSize, min);
     }
 
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, long bucketSize, long min)
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, ulong bucketSize, long min)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -385,7 +390,9 @@ public static class BucketSortInteger
         {
             var value = source.Read(i);
             var valueLong = ConvertToLong(value);
-            var bucketIndex = (int)((valueLong - min) / bucketSize);
+            // (ulong)(valueLong - min): reinterprets the unchecked signed subtraction as an unsigned
+            // distance. Correct even when valueLong - min overflows long (e.g. full ulong range).
+            var bucketIndex = (int)((ulong)(valueLong - min) / bucketSize);
 
             // Handle edge case where value == max
             if (bucketIndex >= bucketCount)
@@ -451,34 +458,40 @@ public static class BucketSortInteger
     }
 
     /// <summary>
-    /// Get bit size of the type T and validate support.
-    /// Throws NotSupportedException for types larger than 64-bit.
+    /// Throws <see cref="NotSupportedException"/> if <typeparamref name="T"/> is not supported.
+    /// Supported types: sbyte, byte, short, ushort, int, uint, long, ulong, nint, nuint.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetBitSize<T>() where T : IBinaryInteger<T>
+    private static void EnsureSupportedType<T>() where T : IBinaryInteger<T>
     {
-        if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte))
-            return 8;
-        else if (typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
-            return 16;
-        else if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
-            return 32;
-        else if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
-            return 64;
-        else if (typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
-            return IntPtr.Size * 8;
-        else if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
+        if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte) ||
+            typeof(T) == typeof(short) || typeof(T) == typeof(ushort) ||
+            typeof(T) == typeof(int) || typeof(T) == typeof(uint) ||
+            typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
+            typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
+            return;
+        if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
             throw new NotSupportedException($"Type {typeof(T).Name} with 128-bit size is not supported. Maximum supported bit size is 64.");
-        else
-            throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
+        throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
     }
 
     /// <summary>
-    /// Convert IBinaryInteger value to long for range calculation.
+    /// Converts an integer value to <see cref="long"/> while preserving sort order.
+    /// For <see cref="ulong"/> and 64-bit <see cref="nuint"/>, which cannot be safely
+    /// represented as <see cref="long"/> via a plain cast, the sign bit is flipped via XOR.
+    /// This maps [0, 2^64-1] → [long.MinValue, long.MaxValue] monotonically, so
+    /// <c>a &lt; b</c> as unsigned iff <c>ConvertToLong(a) &lt; ConvertToLong(b)</c> as signed.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long ConvertToLong<T>(T value) where T : IBinaryInteger<T>
     {
-        return long.CreateTruncating(value);
+        // ulong (and 64-bit nuint) values above long.MaxValue become negative under a plain cast,
+        // corrupting min/max detection and bucket index arithmetic.
+        // XOR-ing the sign bit remaps the unsigned range to the signed range in order-preserving fashion:
+        //   ulong 0            → long.MinValue  (smallest)
+        //   ulong.MaxValue     → long.MaxValue   (largest)
+        if (typeof(T) == typeof(ulong) || (typeof(T) == typeof(nuint) && IntPtr.Size == 8))
+            return (long)(ulong.CreateTruncating(value) ^ (1UL << 63));
+        return long.CreateChecked(value);
     }
 }
