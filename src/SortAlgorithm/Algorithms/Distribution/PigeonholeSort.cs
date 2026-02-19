@@ -128,7 +128,7 @@ public static class PigeonholeSort
             if (range > MaxHoleArraySize)
                 throw new ArgumentException($"Key range ({range}) exceeds maximum hole array size ({MaxHoleArraySize}). Consider using another comparison-based sort.");
 
-            var offset = -min; // Offset to normalize keys to 0-based index
+            var baseKey = (long)min; // long avoids -int.MinValue overflow; subtraction is safe after range validation
             var size = (int)range;
 
             // Each hole is a FIFO linked list: holeHead[h] = first element index, holeTail[h] = last element index (-1 = empty)
@@ -144,7 +144,7 @@ public static class PigeonholeSort
             holeTail.Fill(-1);
             try
             {
-                DistributeAndCollect(s, tempSpan, keys, holeHead, holeTail, next, offset);
+                DistributeAndCollect(s, tempSpan, keys, holeHead, holeTail, next, baseKey);
             }
             finally
             {
@@ -167,14 +167,14 @@ public static class PigeonholeSort
     /// Achieves O(n + k) complexity; no prefix-sum phase.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void DistributeAndCollect<T, TContext>(SortSpan<T, NullComparer<T>, TContext> source, SortSpan<T, NullComparer<T>, TContext> temp, Span<int> keys, Span<int> holeHead, Span<int> holeTail, Span<int> next, int offset)
+    private static void DistributeAndCollect<T, TContext>(SortSpan<T, NullComparer<T>, TContext> source, SortSpan<T, NullComparer<T>, TContext> temp, Span<int> keys, Span<int> holeHead, Span<int> holeTail, Span<int> next, long baseKey)
         where TContext : ISortContext
     {
         // Phase 1: Copy elements to temp and append each to the tail of its hole's linked list (O(n))
         for (var i = 0; i < source.Length; i++)
         {
             temp.Write(i, source.Read(i));
-            var h = keys[i] + offset;
+            var h = (int)(keys[i] - baseKey); // long subtraction: safe after range ≤ MaxHoleArraySize validation
             if (holeHead[h] == -1)
                 holeHead[h] = i;
             else
