@@ -76,7 +76,7 @@ public static class WeakHeapSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    private const int STACKALLOC_THRESHOLD = 1024; // Use stackalloc for arrays <= 1024 elements (in bits: 128 bytes)
+    private const int STACKALLOC_THRESHOLD = 1024;
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -158,7 +158,7 @@ public static class WeakHeapSort
         try
         {
             // Allocate reverse bits: r[i] indicates whether node i's children are swapped
-            // r[0] is unused (root has no parent) but allocated for uniform indexing
+            // r[0] uses [0..n-1], but we allocate in ulongs for space efficiency
             // Use bit packing: each ulong stores 64 bits, reducing memory by 8x vs bool[]
             Span<ulong> r = ulongCount <= STACKALLOC_THRESHOLD / 64
                 ? stackalloc ulong[ulongCount]
