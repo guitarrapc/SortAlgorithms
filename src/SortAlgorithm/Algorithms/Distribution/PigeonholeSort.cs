@@ -19,16 +19,16 @@ namespace SortAlgorithm.Algorithms;
 /// The key must be stable (same element always produces the same key).</description></item>
 /// <item><description><strong>Range Determination:</strong> The algorithm finds min and max keys to determine the range [min, max].
 /// A hole array of size (max - min + 1) is allocated. Each index corresponds to one unique key value.</description></item>
-/// <item><description><strong>Offset Normalization:</strong> Keys are normalized using offset = -min, mapping keys to array indices [0, range-1].
-/// This allows handling negative keys correctly: holes[key + offset] maps key to its hole.</description></item>
+/// <item><description><strong>Base Key Normalization:</strong> Keys are normalized by subtracting baseKey (= min), mapping keys to array indices [0, range-1].
+/// This allows handling negative keys correctly: holes[key - baseKey] maps key to its hole.</description></item>
 /// <item><description><strong>Distribution Phase:</strong> Each element is placed into its corresponding hole using a linked-list (FIFO queue).
-/// For element at index i with key k, append i to the tail of hole[k + offset].
+/// For element at index i with key k, append i to the tail of hole[k - baseKey].
 /// Each hole stores head/tail indices into the temp array; a next[] array chains elements within each hole.</description></item>
 /// <item><description><strong>Collection Phase:</strong> Iterate through holes array in ascending order.
 /// For each hole i, traverse its linked list (head → next → … → -1) and write elements back to the source array.
 /// This reconstructs the sorted sequence in O(n + k) time.</description></item>
 /// <item><description><strong>Correctness Guarantee:</strong> Since holes are traversed in index order (0 to range-1),
-/// and each index i corresponds to key (i - offset), elements are written back in ascending key order.
+/// and each index i corresponds to key (i + baseKey), elements are written back in ascending key order.
 /// The algorithm correctly sorts as long as the key selector function produces consistent integer keys.</description></item>
 /// <item><description><strong>Stability:</strong> This implementation IS stable because each hole is a FIFO queue.
 /// Elements with the same key are appended in input order and collected in that same order.</description></item>
@@ -163,7 +163,7 @@ public static class PigeonholeSort
     }
 
     /// <summary>
-    /// Pigeonhole distribution implementation using linked-list holes.
+    /// Distributes elements into linked-list holes (phase 1), then collects them back in hole index order (phase 2).
     /// Achieves O(n + k) complexity; no prefix-sum phase.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
