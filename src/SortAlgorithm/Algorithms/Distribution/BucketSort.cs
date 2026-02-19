@@ -80,11 +80,6 @@ public static class BucketSort
         where TContext : ISortContext
         => SortCore(span, new FuncKeySelector<T>(keySelector), comparer, context);
 
-    /// <summary>
-    /// Core implementation shared by all public overloads.
-    /// Allocates temporary buffers, computes min/max keys, determines bucket layout,
-    /// then delegates to <see cref="BucketDistribute"/>.
-    /// </summary>
     private static void SortCore<T, TKeySelector, TComparer, TContext>(Span<T> span, TKeySelector keySelector, TComparer comparer, TContext context)
         where TKeySelector : struct, IKeySelector<T>
         where TComparer : IComparer<T>
