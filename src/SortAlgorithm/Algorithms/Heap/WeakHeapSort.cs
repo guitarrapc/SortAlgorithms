@@ -1,5 +1,6 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -75,7 +76,7 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class WeakHeapSort
 {
-    private const int STACKALLOC_THRESHOLD = 1024;
+    private const int STACKALLOC_BITS_THRESHOLD = 1024;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -162,7 +163,7 @@ public static class WeakHeapSort
             // Allocate reverse bits: r[i] indicates whether node i's children are swapped
             // r[0] uses [0..n-1], but we allocate in ulongs for space efficiency
             // Use bit packing: each ulong stores 64 bits, reducing memory by 8x vs bool[]
-            Span<ulong> r = ulongCount <= STACKALLOC_THRESHOLD / 64
+            Span<ulong> r = ulongCount <= STACKALLOC_BITS_THRESHOLD / 64
                 ? stackalloc ulong[ulongCount]
                 : (rentedArray = ArrayPool<ulong>.Shared.Rent(ulongCount)).AsSpan(0, ulongCount);
             r.Clear(); // Initialize all reverse bits to false
@@ -185,7 +186,7 @@ public static class WeakHeapSort
                 // Restore weak heap property for reduced heap [0..m-1]
                 // Step 1: Descend the distinguished path from node 1 (root's right child) to a leaf
                 // Distinguished child definition (this implementation): 2*node + r[node]
-                //   - This formula encodes which child is "distinguished" (not in the left subtree)
+                //   - This formula encodes which child is "distinguished"
                 //   - r[node] bit determines the child selection as per weak heap definition
                 var node = 1;
                 while (true)
@@ -229,6 +230,7 @@ public static class WeakHeapSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        Debug.Assert(j > 0, "j must be > 0 in Merge (FlipBit requires j>0).");
         if (s.Compare(offset + j, offset + i) > 0)
         {
             s.Swap(offset + i, offset + j);
