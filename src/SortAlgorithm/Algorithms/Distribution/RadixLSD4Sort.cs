@@ -180,9 +180,6 @@ public static class RadixLSD4Sort
         var dst = temp;
         var srcKeys = keys;
         var dstKeys = keysBuffer;
-        
-        // Track whether data is currently in the original span (true) or temp buffer (false)
-        bool dataInOriginal = true;
 
         // Perform LSD radix sort with ping-pong buffers for values and keys
         for (int d = 0; d < digitCount; d++)
@@ -224,13 +221,11 @@ public static class RadixLSD4Sort
             var tempKeys = srcKeys;
             srcKeys = dstKeys;
             dstKeys = tempKeys;
-            
-            // Toggle data location flag
-            dataInOriginal = !dataInOriginal;
         }
 
-        // If final result is not in the original span, copy back once
-        if (!dataInOriginal)
+        // After digitCount swaps, if digitCount is odd, final data is in src (which points to temp buffer after odd swaps)
+        // Pass 0: s→temp, swap (src=temp), Pass 1: temp→s, swap (src=s), ...
+        if ((digitCount & 1) == 1)
         {
             src.CopyTo(0, s, 0, s.Length);
         }

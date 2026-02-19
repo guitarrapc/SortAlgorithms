@@ -30,8 +30,9 @@ namespace SortAlgorithm.Algorithms;
 /// The distribution must preserve the relative order of elements with the same digit value (stable). This is achieved by processing elements in forward order and appending to buckets.</description></item>
 /// <item><description><strong>LSD Processing Order:</strong> Digits must be processed from least significant (d=0) to most significant (d=digitCount-1).
 /// This bottom-up approach ensures that after processing digit d, all digits 0 through d are correctly sorted, with stability maintained by previous passes.</description></item>
-/// <item><description><strong>Digit Count Determination:</strong> The number of passes (digitCount) must cover all significant bits of the type.
-/// digitCount = ⌈bitSize / 8⌉ where bitSize is the bit width of type T (8, 16, 32, or 64 bits).</description></item>
+/// <item><description><strong>Digit Count Determination with Early Termination:</strong> The number of passes (digitCount) is determined by the actual range of values, not the full bit width.
+/// digitCount = ⌈requiredBits / 8⌉ where requiredBits is calculated from (max XOR min) to find differing bits.
+/// This optimization skips unnecessary high-order digit passes when the value range is small. When all elements are equal (range == 0), sorting is skipped entirely.</description></item>
 /// <item><description><strong>Bucket Collection Order:</strong> After distributing elements for a digit, buckets must be collected in ascending order (bucket 0, 1, 2, ..., 255).
 /// Due to sign-bit flipping, negative values naturally sort before positive values.</description></item>
 /// </list>
@@ -123,6 +124,7 @@ public static class RadixLSD256Sort
             var tempBuffer = tempArray.AsSpan(0, span.Length);
             var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixSize + 1);
 
+            // Use NullComparer since radix sort doesn't use comparisons
             var s = new SortSpan<T, NullComparer<T>, TContext>(span, context, default, BUFFER_MAIN);
             var temp = new SortSpan<T, NullComparer<T>, TContext>(tempBuffer, context, default, BUFFER_TEMP);
 
@@ -170,9 +172,6 @@ public static class RadixLSD256Sort
     {
         var src = s;
         var dst = temp;
-        
-        // Track whether data is currently in the original span (true) or temp buffer (false)
-        bool dataInOriginal = true;
 
         // Perform LSD radix sort with ping-pong buffers
         for (int d = 0; d < digitCount; d++)
@@ -216,13 +215,11 @@ public static class RadixLSD256Sort
             var tempSortSpan = src;
             src = dst;
             dst = tempSortSpan;
-            
-            // Toggle data location flag
-            dataInOriginal = !dataInOriginal;
         }
 
-        // If final result is not in the original span, copy back once
-        if (!dataInOriginal)
+        // After digitCount swaps, if digitCount is odd, final data is in src (which points to temp buffer after odd swaps)
+        // Pass 0: s→temp, swap (src=temp), Pass 1: temp→s, swap (src=s), ...
+        if ((digitCount & 1) == 1)
         {
             src.CopyTo(0, s, 0, s.Length);
         }
