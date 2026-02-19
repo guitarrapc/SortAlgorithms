@@ -54,6 +54,19 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Supported:</strong> byte, sbyte, short, ushort, int, uint, long, ulong, nint, nuint (up to 64-bit)</description></item>
 /// <item><description><strong>Not Supported:</strong> Int128, UInt128, BigInteger (&gt;64-bit types)</description></item>
 /// </list>
+/// <para><strong>Why 128-bit Types Are Not Supported:</strong></para>
+/// <list type="bullet">
+/// <item><description><strong>Key Storage Limitation:</strong> This implementation uses <c>ulong</c> (64-bit) to store radix keys.
+/// Supporting 128-bit would require <c>UInt128</c> keys, significantly increasing memory usage and complexity.</description></item>
+/// <item><description><strong>Stack Allocation Constraints:</strong> Larger keys increase stack pressure for bucket arrays,
+/// potentially causing stack overflow in deep recursion scenarios.</description></item>
+/// <item><description><strong>Performance Trade-offs:</strong> 128-bit operations are significantly slower than 64-bit on most architectures,
+/// negating the performance benefits of radix sort.</description></item>
+/// <item><description><strong>Practical Rarity:</strong> Sorting 128-bit integers is uncommon in typical applications.
+/// For such cases, comparison-based sorts (e.g., QuickSort, MergeSort) remain practical alternatives.</description></item>
+/// <item><description><strong>Implementation Complexity:</strong> Adding 128-bit support would require substantial code duplication
+/// and conditional logic, reducing maintainability without significant real-world benefit.</description></item>
+/// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Radix_sort#Most_significant_digit</para>
 /// </remarks>
@@ -81,7 +94,12 @@ public static class RadixMSD10Sort
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.     
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.
+    /// <exception cref="NotSupportedException">
+    /// Thrown when <typeparamref name="T"/> is a 128-bit type (<see cref="Int128"/> or <see cref="UInt128"/>).
+    /// This implementation only supports integer types up to 64-bit due to key storage and performance constraints.
+    /// See class-level remarks for detailed explanation of this limitation.
+    /// </exception>
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
@@ -220,8 +238,23 @@ public static class RadixMSD10Sort
 
     /// <summary>
     /// Get bit size of the type T.
-    /// Throws NotSupportedException for types larger than 64-bit.
     /// </summary>
+    /// <typeparam name="T">The binary integer type to check. Must be a standard .NET integer type.</typeparam>
+    /// <returns>The bit size of the type (8, 16, 32, or 64).</returns>
+    /// <exception cref="NotSupportedException">
+    /// Thrown when <typeparamref name="T"/> is a 128-bit type (<see cref="Int128"/> or <see cref="UInt128"/>),
+    /// or any other non-standard integer type.
+    /// <para>
+    /// <strong>Rationale for 128-bit exclusion:</strong>
+    /// This implementation uses <c>ulong</c> (64-bit) for radix key storage in <see cref="GetUnsignedKey{T}"/>.
+    /// Supporting 128-bit types would require <c>UInt128</c> keys, doubling memory usage for bucket operations
+    /// and degrading performance due to slower 128-bit arithmetic on most architectures.
+    /// Additionally, 128-bit integer sorting is rare in practice; comparison-based sorts suffice for such cases.
+    /// </para>
+    /// </exception>
+    /// <remarks>
+    /// Supported types: byte, sbyte, short, ushort, int, uint, long, ulong, nint, nuint (up to 64-bit).
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int GetBitSize<T>() where T : IBinaryInteger<T>
     {
