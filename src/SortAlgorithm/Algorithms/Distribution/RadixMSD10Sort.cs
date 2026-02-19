@@ -86,8 +86,7 @@ public static class RadixMSD10Sort
     // Pre-computed powers of 10 for O(1) divisor lookup
     // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
     // This eliminates O(digit) loop in divisor calculation for each recursive call
-    private static ReadOnlySpan<ulong> Pow10 => new ulong[]
-    {
+    private static ReadOnlySpan<ulong> Pow10 => [
         1UL,                      // 10^0
         10UL,                     // 10^1
         100UL,                    // 10^2
@@ -108,7 +107,7 @@ public static class RadixMSD10Sort
         100_000_000_000_000_000UL,// 10^17
         1_000_000_000_000_000_000UL,  // 10^18
         10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
-    };
+    ];
 
     /// <summary>
     /// Sorts the elements in the specified span.
