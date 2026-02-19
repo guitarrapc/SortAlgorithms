@@ -58,7 +58,7 @@ public class DistributionBenchmark
         SortAlgorithm.Algorithms.BucketSortInteger.Sort(_bucketIntegerArray.AsSpan());
     }
 
-    [Benchmark(Baseline = true)]
+    [Benchmark]
     public void CountingSort()
     {
         SortAlgorithm.Algorithms.CountingSort.Sort(_countingArray.AsSpan(), x => x);
