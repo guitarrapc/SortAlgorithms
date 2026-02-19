@@ -124,7 +124,7 @@ public static class BitonicSort
     /// <param name="span">The span to sort.</param>
     /// <param name="low">The starting index of the sequence.</param>
     /// <param name="count">The length of the sequence.</param>
-    /// <param name="ascending">True to sort in ascending order, false for descending.</param>
+    /// <param name="ascending">True to sort this region in ascending order, false for descending.</param>
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int low, int count, bool ascending)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -133,10 +133,10 @@ public static class BitonicSort
         {
             int k = count / 2;
 
-            // Recursively sort first half in ascending order
-            SortCore(span, low, k, ascending: true);
-            // Recursively sort second half in descending order to create bitonic sequence
-            SortCore(span, low + k, k, ascending: false);
+            // Recursively sort first half in the same direction as this region
+            SortCore(span, low, k, ascending);
+            // Recursively sort second half in the opposite direction to create bitonic sequence
+            SortCore(span, low + k, k, !ascending);
 
             // Merge the bitonic sequence in the desired order
             BitonicMerge(span, low, count, ascending);
