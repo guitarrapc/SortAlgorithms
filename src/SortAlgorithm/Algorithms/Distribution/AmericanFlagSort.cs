@@ -112,26 +112,6 @@ public static class AmericanFlagSort
     {
         if (span.Length <= 1) return;
 
-        // Rent bucket offsets array from ArrayPool
-        var bucketOffsetsArray = ArrayPool<int>.Shared.Rent(RadixSize + 1);
-
-        try
-        {
-            var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixSize + 1);
-            SortCore(span, bucketOffsets, comparer, context);
-        }
-        finally
-        {
-            ArrayPool<int>.Shared.Return(bucketOffsetsArray);
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<int> bucketOffsets, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Determine the number of digits based on type size
@@ -142,11 +122,11 @@ public static class AmericanFlagSort
         var digitCount = (bitSize + RadixBits - 1) / RadixBits;
 
         // Start American Flag Sort from the most significant digit
-        AmericanFlagSortRecursive(s, 0, s.Length, digitCount - 1, bitSize, bucketOffsets);
+        AmericanFlagSortRecursive(s, 0, s.Length, digitCount - 1, bitSize);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void AmericanFlagSortRecursive<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
+    private static void AmericanFlagSortRecursive<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int length, int digit, int bitSize)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -166,6 +146,10 @@ public static class AmericanFlagSort
 
         var shift = digit * RadixBits;
 
+        // Allocate bucket arrays on stack (RadixSize=4, so only 20 bytes total)
+        Span<int> bucketOffsets = stackalloc int[RadixSize + 1];
+        Span<int> bucketStarts = stackalloc int[RadixSize];
+
         // Phase 1: Count occurrences of each digit value
         bucketOffsets.Clear();
 
@@ -178,7 +162,6 @@ public static class AmericanFlagSort
         }
 
         // Phase 2: Calculate bucket offsets (prefix sum) and save bucket start positions
-        Span<int> bucketStarts = stackalloc int[RadixSize];
         bucketStarts[0] = 0;
         for (var i = 1; i <= RadixSize; i++)
         {
@@ -202,7 +185,7 @@ public static class AmericanFlagSort
 
             if (bucketLength > 1)
             {
-                AmericanFlagSortRecursive(s, start + bucketStart, bucketLength, digit - 1, bitSize, bucketOffsets);
+                AmericanFlagSortRecursive(s, start + bucketStart, bucketLength, digit - 1, bitSize);
             }
         }
     }
