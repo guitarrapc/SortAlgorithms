@@ -218,7 +218,7 @@ public static class CountingSort
 /// <item><description>Family      : Distribution</description></item>
 /// <item><description>Stable      : Yes</description></item>
 /// <item><description>In-place    : No (O(n + k) where k = range of values)</description></item>
-/// <item><description>Comparisons : 2n+1 (n×2 for min/max scan, +1 for early-exit equality check)</description></item>
+/// <item><description>Comparisons : 0 (min/max scan uses direct numeric operators, not tracked as sort comparisons)</description></item>
 /// <item><description>Swaps       : 0</description></item>
 /// <item><description>Time        : O(n + k) where k is the range of values</description></item>
 /// <item><description>Memory      : O(n + k)</description></item>
@@ -260,26 +260,27 @@ public static class CountingSortInteger
 
         EnsureSupportedType<T>();
 
-        var comparer = new NumberComparer<T>();
-        var s = new SortSpan<T, NumberComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
+        var comparer = new NullComparer<T>();
+        var s = new SortSpan<T, NullComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
 
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
-            var tempSpan = new SortSpan<T, NumberComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            var tempSpan = new SortSpan<T, NullComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             // Find min and max to determine range
             var minValue = T.MaxValue;
             var maxValue = T.MinValue;
 
+            // comparing with Min/Max should not track as statistic
             for (var i = 0; i < s.Length; i++)
             {
                 var value = s.Read(i);
-                if (s.Compare(value, minValue) < 0) minValue = value;
-                if (s.Compare(value, maxValue) > 0) maxValue = value;
+                if (value < minValue) minValue = value;
+                if (value > maxValue) maxValue = value;
             }
 
             // If all elements are the same, no need to sort
-            if (s.Compare(minValue, maxValue) == 0) return;
+            if (minValue == maxValue) return;
 
             // Use ulong arithmetic for range calculation to correctly handle all supported types
             // including ulong and nuint. ulong.CreateTruncating preserves 2's complement bit patterns
@@ -320,8 +321,8 @@ public static class CountingSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CountSort<T, TContext>(SortSpan<T, NumberComparer<T>, TContext> s, SortSpan<T, NumberComparer<T>, TContext> tempSpan, Span<int> countArray, ulong umin)
-        where T : IBinaryInteger<T>, IComparisonOperators<T, T, bool>
+    private static void CountSort<T, TContext>(SortSpan<T, NullComparer<T>, TContext> s, SortSpan<T, NullComparer<T>, TContext> tempSpan, Span<int> countArray, ulong umin)
+        where T : IBinaryInteger<T>
         where TContext : ISortContext
     {
         // Count occurrences
