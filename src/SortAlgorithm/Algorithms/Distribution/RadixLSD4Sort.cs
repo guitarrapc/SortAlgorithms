@@ -230,8 +230,9 @@ public static class RadixLSD4Sort
             dstKeys = tempKeys;
         }
 
-        // If odd number of passes, final result is in temp buffer, copy back once
-        if (digitCount % 2 == 1)
+        // If final result is not in the original span, copy back once
+        // (Use reference identity instead of parity check for robustness)
+        if (src.BufferId != s.BufferId)
         {
             src.CopyTo(0, s, 0, s.Length);
         }
