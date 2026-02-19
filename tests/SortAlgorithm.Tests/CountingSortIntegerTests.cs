@@ -42,6 +42,17 @@ public class CountingSortIntegerTests
     }
 
     [Test]
+    [Arguments(2, 10_000)]    // range=10,001 > MaxRangeFactor*n=64,  but < MaxCountArraySize
+    [Arguments(100, 5_000)]   // range=5,001  > MaxRangeFactor*n=3200, but < MaxCountArraySize
+    public async Task RelativeRangeLimitTest(int n, int maxValue)
+    {
+        // range is well within the absolute cap but too large relative to n: O(range) would dominate O(n)
+        var array = new int[n];
+        array[n - 1] = maxValue;
+        Assert.Throws<ArgumentException>(() => CountingSortInteger.Sort(array.AsSpan()));
+    }
+
+    [Test]
     public async Task NegativeValuesTest()
     {
         var stats = new StatisticsContext();
@@ -219,7 +230,7 @@ public class CountingSortIntegerTests
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
         CountingSortInteger.Sort(array.AsSpan(), stats);
-        var expectCompare = (ulong)inputSample.Samples.Length * 2 + 1;
+        var expectCompare = 0UL;
 
         await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
@@ -240,14 +251,14 @@ public class CountingSortIntegerTests
         CountingSortInteger.Sort(sorted.AsSpan(), stats);
 
         // CountingSortInteger with temp buffer tracking:
-        // 1. Find min/max: n reads (s.Read)
+        // 1. Find min/max: n reads (s.Read), using direct operators (not tracked as comparisons)
         // 2. Count occurrences: n reads (s.Read)
         // 3. Build result in reverse: n reads (s.Read) + n writes (tempSpan.Write)
         // 4. Write back: n reads (tempSpan.Read) + n writes (s.Write)
-        //  Total: 4n reads, 2n writes
+        //  Total: 4n reads, 2n writes, 0 comparisons
         var expectedReads = (ulong)(4 * n);
         var expectedWrites = (ulong)(2 * n);
-        var expectedCompare = (ulong)(2 * n) + 1;
+        var expectedCompare = 0UL;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompare);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
@@ -267,10 +278,10 @@ public class CountingSortIntegerTests
         CountingSortInteger.Sort(reversed.AsSpan(), stats);
 
         // CountingSortInteger complexity is O(n + k) regardless of input order
-        // With temp buffer tracking: 4n reads, 2n writes
+        // With temp buffer tracking: 4n reads, 2n writes, 0 comparisons
         var expectedReads = (ulong)(4 * n);
         var expectedWrites = (ulong)(2 * n);
-        var expectedcompare = (ulong)(2 * n) + 1;
+        var expectedcompare = 0UL;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedcompare);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
@@ -290,10 +301,10 @@ public class CountingSortIntegerTests
         CountingSortInteger.Sort(random.AsSpan(), stats);
 
         // CountingSortInteger has same complexity regardless of input distribution
-        // 4n reads due to temp buffer tracking, 2n writes
+        // 4n reads due to temp buffer tracking, 2n writes, 0 comparisons
         var expectedReads = (ulong)(4 * n);
         var expectedWrites = (ulong)(2 * n);
-        var expectedCompare = (ulong)n * 2 + 1;
+        var expectedCompare = 0UL;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompare);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
@@ -310,10 +321,10 @@ public class CountingSortIntegerTests
         CountingSortInteger.Sort(allSame.AsSpan(), stats);
 
         // When all values are the same (min == max), early return after min/max scan
-        // Only n reads for finding min/max, then early return (no writes)
+        // Only n reads for finding min/max (direct operators, not tracked), then early return (no writes)
         var expectedReads = (ulong)n;
         var expectedWrites = 0UL;
-        var expectedCompare = (ulong)n * 2 + 1;
+        var expectedCompare = 0UL;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompare);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
