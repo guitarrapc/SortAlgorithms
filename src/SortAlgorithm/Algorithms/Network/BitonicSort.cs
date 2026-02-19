@@ -144,34 +144,42 @@ public static class BitonicSort
     {
         // Outer loop: bitonic sequence size k (2, 4, 8, ..., count)
         // This determines which "level" of the bitonic network we're building
-        for (int k = 2; k <= count; k *= 2)
+        for (int k = 2; k <= count; k <<= 1) // Level
         {
             // Middle loop: comparison distance j (k/2, k/4, ..., 1)
             // This determines the "stage" within each level
-            for (int j = k / 2; j > 0; j /= 2)
+            for (int j = k >> 1; j > 0; j >>= 1) // Stage
             {
                 // Inner loop: use 0-based local index for network structure
-                for (int i = 0; i < count; i++)
+                for (int i = 0; i < count; i++) // Local index
                 {
                     // XOR-based pairing in local index space
-                    int ixj = i ^ j;
-                    
-                    // Only process if partner is within range and avoids duplicate comparisons
-                    if (ixj > i && ixj < count)
+                    int ixj = i ^ j; // XOR Pairing
+
+                    // Only process if partner avoids duplicate comparisons
+                    // Note: ixj < count check is unnecessary because:
+                    // - count is a power of 2, so i and j fit within log2(count) bits
+                    // - XOR operation only flips bits, so ixj also fits within log2(count) bits
+                    // - Therefore ixj < count is guaranteed for 0-based local indices
+                    if (ixj > i) // avoid duplicate
                     {
                         // Direction is determined by (i & k) in local index space:
                         // - (i & k) == 0: ascending order (first half of bitonic sequence)
                         // - (i & k) != 0: descending order (second half of bitonic sequence)
-                        bool ascending = (i & k) == 0;
-                        
+                        bool ascending = (i & k) == 0; // direction
+
                         // Map local indices to actual array indices
                         int a = low + i;
                         int b = low + ixj;
-                        
+
                         if (ascending)
+                        {
                             CompareAndSwapAscending(s, a, b);
+                        }
                         else
+                        {
                             CompareAndSwapDescending(s, a, b);
+                        }
                     }
                 }
             }
