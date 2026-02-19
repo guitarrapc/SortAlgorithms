@@ -4,7 +4,7 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class BubbleSortTests
+public class BubbleSortNonOptimizedTests
 {
     [Test]
     [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
@@ -26,7 +26,7 @@ public class BubbleSortTests
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
-        BubbleSort.Sort(array.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(array.AsSpan(), stats);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
@@ -42,7 +42,7 @@ public class BubbleSortTests
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
-        BubbleSort.Sort(array.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(array.AsSpan(), stats);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
@@ -58,7 +58,7 @@ public class BubbleSortTests
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
-        BubbleSort.Sort(array.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(array.AsSpan(), stats);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
@@ -74,7 +74,7 @@ public class BubbleSortTests
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
-        BubbleSort.Sort(array.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(array.AsSpan(), stats);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
@@ -90,7 +90,7 @@ public class BubbleSortTests
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
 
-        BubbleSort.Sort(array.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(array.AsSpan(), stats);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
@@ -104,7 +104,7 @@ public class BubbleSortTests
         // Test stability: equal elements should maintain relative order
         var stats = new StatisticsContext();
 
-        BubbleSort.Sort(items.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(items.AsSpan(), stats);
 
         // Verify sorting correctness - values should be in ascending order
         await Assert.That(items.Select(x => x.Value).ToArray()).IsEquivalentTo(MockStabilityData.Sorted, CollectionOrdering.Matching);
@@ -131,7 +131,7 @@ public class BubbleSortTests
         // Test stability with more complex scenario - multiple equal values
         var stats = new StatisticsContext();
 
-        BubbleSort.Sort(items.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(items.AsSpan(), stats);
 
         // Expected: [2:B, 2:D, 2:F, 5:A, 5:C, 5:G, 8:E]
         // Keys are sorted, and elements with the same key maintain original order
@@ -151,7 +151,7 @@ public class BubbleSortTests
         // They should remain in original order
         var stats = new StatisticsContext();
 
-        BubbleSort.Sort(items.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(items.AsSpan(), stats);
 
         // All values are 1
         foreach (var item in items) await Assert.That(item.Value).IsEqualTo(1);
@@ -170,7 +170,7 @@ public class BubbleSortTests
 
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
-        BubbleSort.Sort(array.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(array.AsSpan(), stats);
 
         await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
@@ -188,15 +188,15 @@ public class BubbleSortTests
     {
         var stats = new StatisticsContext();
         var sorted = Enumerable.Range(0, n).ToArray();
-        BubbleSort.Sort(sorted.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(sorted.AsSpan(), stats);
 
-        // Optimized Bubble Sort with early termination and last swap position tracking
-        // For sorted data, only one pass is needed with n-1 comparisons
-        var expectedCompares = (ulong)(n - 1);
+        // Bubble Sort always performs n(n-1)/2 comparisons regardless of input order
+        // For sorted data, no swaps are needed since all elements are already in order
+        var expectedCompares = (ulong)(n * (n - 1) / 2);
         var expectedSwaps = 0UL;
         var expectedWrites = 0UL; // No swaps = no writes
 
-        // Each comparison reads 2 elements (positions j and j+1)
+        // Each comparison reads 2 elements (positions j and j-1)
         // Total reads = 2 * number of comparisons
         var expectedReads = expectedCompares * 2;
 
@@ -215,21 +215,25 @@ public class BubbleSortTests
     {
         var stats = new StatisticsContext();
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
-        BubbleSort.Sort(reversed.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(reversed.AsSpan(), stats);
 
-        // Optimized Bubble Sort with last swap position tracking
-        // For reversed array, still performs O(n²) comparisons but may reduce slightly
-        // Swaps: n(n-1)/2 (every comparison results in a swap in first passes)
-        var maxCompares = (ulong)(n * (n - 1) / 2);
+        // Bubble Sort worst case: reversed array
+        // Comparisons: n(n-1)/2 (all adjacent pairs are compared)
+        // Swaps: n(n-1)/2 (every comparison results in a swap)
+        var expectedCompares = (ulong)(n * (n - 1) / 2);
         var expectedSwaps = (ulong)(n * (n - 1) / 2);
 
         // Each swap writes 2 elements (swap reads and writes both positions)
         var expectedWrites = expectedSwaps * 2;
 
-        // Optimized version may do fewer comparisons, so check it's at most the theoretical maximum
-        await Assert.That(stats.CompareCount).IsLessThanOrEqualTo(maxCompares);
+        // Each comparison reads 2 elements + each swap reads 2 elements
+        // Total reads = 2 * comparisons + 2 * swaps = 4 * n(n-1)/2
+        var expectedReads = expectedCompares * 2 + expectedSwaps * 2;
+
+        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
     }
 
     [Test]
@@ -241,18 +245,25 @@ public class BubbleSortTests
     {
         var stats = new StatisticsContext();
         var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
-        BubbleSort.Sort(random.AsSpan(), stats);
+        BubbleSortNonOptimized.Sort(random.AsSpan(), stats);
 
-        // Optimized Bubble Sort with early termination and last swap position tracking
-        // For random data, comparison count is reduced compared to naive implementation
-        // - Maximum: n(n-1)/2 comparisons
-        // - Actual: depends on data distribution and swap positions
-        var maxCompares = (ulong)(n * (n - 1) / 2);
+        // Bubble Sort always performs n(n-1)/2 comparisons regardless of input
+        // For random data, swap count varies based on the number of inversions
+        // - Best case: 0 swaps (already sorted by chance)
+        // - Average case: n(n-1)/4 swaps (approximately half of comparisons result in swaps)
+        // - Worst case: n(n-1)/2 swaps (reversed)
+        var expectedCompares = (ulong)(n * (n - 1) / 2);
         var minSwaps = 0UL;
         var maxSwaps = (ulong)(n * (n - 1) / 2);
 
-        await Assert.That(stats.CompareCount).IsLessThanOrEqualTo(maxCompares);
+        // Each comparison reads 2 elements
+        var minReads = expectedCompares * 2;
+        // Maximum reads occur when all comparisons result in swaps
+        var maxReads = expectedCompares * 2 + maxSwaps * 2;
+
+        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
+        await Assert.That(stats.IndexReadCount).IsBetween(minReads, maxReads);
 
         // Writes = 2 * swaps (each swap writes 2 elements)
         var expectedMinWrites = minSwaps * 2;
