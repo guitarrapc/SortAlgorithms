@@ -78,9 +78,9 @@ public static class CocktailShakerSort
         var min = 0;
         var max = s.Length - 1;
 
-        while (min != max)
+        while (min < max)
         {
-            // 順方向スキャン
+            // order scan
             var lastSwapIndex = min;
             for (var i = min; i < max; i++)
             {
@@ -92,20 +92,20 @@ public static class CocktailShakerSort
             }
 
             max = lastSwapIndex;
-            if (min == max) break;
+            if (min >= max) break;
 
-            // 逆方向スキャン
+            // reverse order scan
             lastSwapIndex = max;
             for (var i = max; i > min; i--)
             {
-                if (s.Compare(i, i - 1) < 0)
+                if (s.Compare(i - 1, i) > 0)
                 {
-                    s.Swap(i, i - 1);
+                    s.Swap(i - 1, i);
                     lastSwapIndex = i;
                 }
             }
             min = lastSwapIndex;
-            if (min == max) break;
+            if (min >= max) break;
         }
     }
 }
@@ -186,7 +186,7 @@ public static class CocktailShakerSortNonOptimized
         {
             var swapped = false;
 
-            // Bubble Sort (To Min)
+            // Bubble Sort (To Max)
             for (int j = i; j < s.Length - i - 1; j++)
             {
                 if (s.Compare(j, j + 1) > 0)
@@ -196,7 +196,7 @@ public static class CocktailShakerSortNonOptimized
                 }
             }
 
-            // Bubble Sort (To Max)
+            // Bubble Sort (To Min)
             for (int j = s.Length - 2 - i; j > i; j--)
             {
                 if (s.Compare(j, j - 1) < 0)
