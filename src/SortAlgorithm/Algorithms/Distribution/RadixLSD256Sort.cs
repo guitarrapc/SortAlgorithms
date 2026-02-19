@@ -94,7 +94,7 @@ public static class RadixLSD256Sort
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span.
@@ -111,16 +111,6 @@ public static class RadixLSD256Sort
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
-        => Sort(span, new ComparableComparer<T>(), context);
-
-    /// <summary>
-    /// Sorts integer values in the specified span with comparer and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
-    /// </summary>
-    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
@@ -133,48 +123,41 @@ public static class RadixLSD256Sort
             var tempBuffer = tempArray.AsSpan(0, span.Length);
             var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixSize + 1);
 
-            SortCore<T, TComparer, TContext>(span, tempBuffer, bucketOffsets, comparer, context);
+            var comparer = new ComparableComparer<T>();
+            var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
+            var temp = new SortSpan<T, ComparableComparer<T>, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
+
+            // Determine the number of digits based on type size
+            // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
+            var bitSize = GetBitSize<T>();
+
+            // Find min and max to determine actual required passes
+            // This optimization skips unnecessary high-order digit passes
+            var minKey = ulong.MaxValue;
+            var maxKey = ulong.MinValue;
+
+            for (var i = 0; i < s.Length; i++)
+            {
+                var value = s.Read(i);
+                var key = GetUnsignedKey(value, bitSize);
+                if (key < minKey) minKey = key;
+                if (key > maxKey) maxKey = key;
+            }
+
+            // Calculate required number of passes based on the range
+            // XOR to find differing bits, then count bits needed
+            var range = maxKey ^ minKey;
+            var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
+            var digitCount = Math.Max(1, (requiredBits + RadixBits - 1) / RadixBits);
+
+            // Start LSD radix sort from the least significant digit
+            LSDSort(s, temp, digitCount, bitSize, bucketOffsets);
         }
         finally
         {
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             ArrayPool<int>.Shared.Return(bucketOffsetsArray);
         }
-    }
-
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
-
-        // Determine the number of digits based on type size
-        // GetBitSize throws NotSupportedException for unsupported types (>64-bit)
-        var bitSize = GetBitSize<T>();
-
-        // Find min and max to determine actual required passes
-        // This optimization skips unnecessary high-order digit passes
-        var minKey = ulong.MaxValue;
-        var maxKey = ulong.MinValue;
-
-        for (var i = 0; i < s.Length; i++)
-        {
-            var value = s.Read(i);
-            var key = GetUnsignedKey(value, bitSize);
-            if (key < minKey) minKey = key;
-            if (key > maxKey) maxKey = key;
-        }
-
-        // Calculate required number of passes based on the range
-        // XOR to find differing bits, then count bits needed
-        var range = maxKey ^ minKey;
-        var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
-        var digitCount = Math.Max(1, (requiredBits + RadixBits - 1) / RadixBits);
-
-        // Start LSD radix sort from the least significant digit
-        LSDSort(s, temp, digitCount, bitSize, bucketOffsets);
     }
 
     private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int digitCount, int bitSize, Span<int> bucketOffsets)
