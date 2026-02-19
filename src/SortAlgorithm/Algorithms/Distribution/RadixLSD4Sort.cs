@@ -94,15 +94,15 @@ public static class RadixLSD4Sort
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, NullContext.Default);
 
     /// <summary>
-    /// Sorts the elements in the specified span using the specified context.
+    /// Sorts the elements in the specified span.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.
     /// <exception cref="NotSupportedException">
     /// Thrown when <typeparamref name="T"/> is a 128-bit type (<see cref="Int128"/> or <see cref="UInt128"/>).
     /// This implementation only supports integer types up to 64-bit due to key storage and performance constraints.
@@ -110,16 +110,6 @@ public static class RadixLSD4Sort
     /// </exception>
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TContext : ISortContext
-        => Sort(span, new ComparableComparer<T>(), context);
-
-    /// <summary>
-    /// Sorts integer values in the specified span with comparer and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
-    /// </summary>
-    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         if (span.Length <= 1) return;
@@ -137,7 +127,8 @@ public static class RadixLSD4Sort
             var keysBuffer = keysBufferArray.AsSpan(0, span.Length);
             var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixSize + 1);
 
-            SortCore<T, TComparer, TContext>(span, tempBuffer, keys, keysBuffer, bucketOffsets, comparer, context);
+            var comparer = new ComparableComparer<T>();
+            SortCore<T, ComparableComparer<T>, TContext>(span, tempBuffer, keys, keysBuffer, bucketOffsets, comparer, context);
         }
         finally
         {

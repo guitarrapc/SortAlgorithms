@@ -116,7 +116,7 @@ public static class RadixMSD10Sort
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
     public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
-        => Sort(span, new ComparableComparer<T>(), NullContext.Default);
+        => Sort(span, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span.
@@ -133,21 +133,6 @@ public static class RadixMSD10Sort
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
-        => Sort(span, new ComparableComparer<T>(), context);
-
-    /// <summary>
-    /// Sorts integer values in the specified span with comparer and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
-    /// </summary>
-
-    /// <summary>
-    /// Sorts the elements in the specified span using the provided comparer and sort context.
-    /// This is the full-control version with explicit TContext type parameter.
-    /// </summary>
-    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
@@ -157,7 +142,7 @@ public static class RadixMSD10Sort
         try
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
-            SortCore<T, TComparer, TContext>(span, tempBuffer, comparer, context);
+            SortCore<T, ComparableComparer<T>, TContext>(span, tempBuffer, new ComparableComparer<T>(), context);
         }
         finally
         {
