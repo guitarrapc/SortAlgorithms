@@ -136,7 +136,7 @@ public static class CountingSort
         if (range > int.MaxValue)
             throw new ArgumentException($"Key range is too large for CountingSort: {range}. Maximum supported range is {int.MaxValue}.");
         if (range > MaxCountArraySize)
-            throw new ArgumentException($"Key range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider using QuickSort or another comparison-based sort.");
+            throw new ArgumentException($"Key range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider using  another comparison-based sort.");
 
         var offset = -min; // Offset to normalize keys to 0-based index
         var size = (int)range;
@@ -211,15 +211,14 @@ public static class CountingSort
 /// <item><description><strong>Not Supported:</strong> Int128, UInt128, BigInteger (>64-bit types)</description></item>
 /// </list>
 /// <para><strong>Why Int128/UInt128 are not supported:</strong></para>
-/// <para>This implementation uses long for range calculation. Supporting 128-bit types would require significantly more complex
-/// logic and is not practical for counting sort (the count array would be enormous). If you need to sort Int128/UInt128,
-/// consider using a comparison-based sort like QuickSort or IntroSort.</para>
+/// <para>The value range for 128-bit types can reach 2^128, making the count array impractically large.
+/// If you need to sort Int128/UInt128, consider using a comparison-based sort.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Distribution</description></item>
 /// <item><description>Stable      : Yes</description></item>
 /// <item><description>In-place    : No (O(n + k) where k = range of values)</description></item>
-/// <item><description>Comparisons : 0 (No comparison operations)</description></item>
+/// <item><description>Comparisons : 2n+1 (n×2 for min/max scan, +1 for early-exit equality check)</description></item>
 /// <item><description>Swaps       : 0</description></item>
 /// <item><description>Time        : O(n + k) where k is the range of values</description></item>
 /// <item><description>Memory      : O(n + k)</description></item>
@@ -301,10 +300,10 @@ public static class CountingSortInteger
         var umin = ulong.CreateTruncating(minValue);
         var umax = ulong.CreateTruncating(maxValue);
 
-        // range == 0 means overflow (actual range is 2^64), which implies an enormous key space
+        // range == 0 means overflow (actual range is 2^64), which implies an enormous value range
         ulong range = umax - umin + 1;
         if (range == 0 || range > (ulong)MaxCountArraySize)
-            throw new ArgumentException($"Value range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider using QuickSort or another comparison-based sort.");
+            throw new ArgumentException($"Value range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider another comparison-based sort.");
 
         var size = (int)range;
 
