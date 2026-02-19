@@ -144,9 +144,8 @@ public static class BucketSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Count elements per bucket and calculate bucket positions (stackalloc)
+        // Count elements per bucket and track write positions (stackalloc)
         Span<int> bucketCounts = stackalloc int[bucketCount];
-        Span<int> bucketStarts = stackalloc int[bucketCount];
         Span<int> bucketPositions = stackalloc int[bucketCount];
         bucketCounts.Clear();
 
@@ -171,7 +170,6 @@ public static class BucketSort
         var offset = 0;
         for (var i = 0; i < bucketCount; i++)
         {
-            bucketStarts[i] = offset;
             bucketPositions[i] = offset;
             offset += bucketCounts[i];
         }
@@ -185,12 +183,13 @@ public static class BucketSort
         }
 
         // Sort each bucket using Span slicing with SortSpan for tracking
+        // After distribution, bucketPositions[i] == start + count, so start = bucketPositions[i] - bucketCounts[i]
         for (var i = 0; i < bucketCount; i++)
         {
             var count = bucketCounts[i];
             if (count > 1)
             {
-                var start = bucketStarts[i];
+                var start = bucketPositions[i] - count;
                 var bucketSpan = temp.Slice(start, count, BUFFER_BUCKET_BASE + i);
                 InsertionSort.SortCore(bucketSpan, 0, count);
             }
