@@ -309,15 +309,19 @@ public static class RadixLSD10Sort
         else if (bitSize <= 32)
         {
             var uintValue = uint.CreateTruncating(value);
+            // Signed types (int, nint on 32-bit) need sign-bit flip
             if (typeof(T) == typeof(int) || (typeof(T) == typeof(nint) && IntPtr.Size == 4))
-                return uintValue ^ 0x8000_0000; // Flip sign bit for signed int/nint(32-bit)
+                return uintValue ^ 0x8000_0000;
+            // Unsigned types (uint, nuint on 32-bit): no flip needed
             return uintValue;
         }
         else // 64-bit
         {
             var ulongValue = ulong.CreateTruncating(value);
+            // Signed types (long, nint on 64-bit) need sign-bit flip
             if (typeof(T) == typeof(long) || (typeof(T) == typeof(nint) && IntPtr.Size == 8))
-                return ulongValue ^ 0x8000_0000_0000_0000; // Flip sign bit for signed long/nint(64-bit)
+                return ulongValue ^ 0x8000_0000_0000_0000;
+            // Unsigned types (ulong, nuint on 64-bit): no flip needed
             return ulongValue;
         }
     }
