@@ -188,6 +188,11 @@ public static class RadixLSD4Sort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var src = s;
+        var dst = temp;
+        var srcKeys = keys;
+        var dstKeys = keysBuffer;
+
         // Perform LSD radix sort with ping-pong buffers for values and keys
         for (int d = 0; d < digitCount; d++)
         {
@@ -197,9 +202,9 @@ public static class RadixLSD4Sort
             bucketOffsets.Clear();
 
             // Count occurrences of each digit (use keys array directly)
-            for (var i = 0; i < s.Length; i++)
+            for (var i = 0; i < src.Length; i++)
             {
-                var digit = (int)((keys[i] >> shift) & 0b11);  // Extract 2-bit digit from cached key
+                var digit = (int)((srcKeys[i] >> shift) & 0b11);  // Extract 2-bit digit from cached key
                 bucketOffsets[digit + 1]++;
             }
 
@@ -209,25 +214,31 @@ public static class RadixLSD4Sort
                 bucketOffsets[i] += bucketOffsets[i - 1];
             }
 
-            // Distribute elements and keys into temp buffers based on current digit
-            for (var i = 0; i < s.Length; i++)
+            // Distribute elements and keys from src to dst based on current digit
+            for (var i = 0; i < src.Length; i++)
             {
-                var value = s.Read(i);
-                var key = keys[i];
+                var value = src.Read(i);
+                var key = srcKeys[i];
                 var digit = (int)((key >> shift) & 0b11);  // Extract 2-bit digit from cached key
                 var destIndex = bucketOffsets[digit]++;
-                temp.Write(destIndex, value);
-                keysBuffer[destIndex] = key;  // Write key to buffer in parallel
+                dst.Write(destIndex, value);
+                dstKeys[destIndex] = key;  // Write key to dst in parallel
             }
 
-            // Copy back from temp to source using CopyTo for efficiency
-            temp.CopyTo(0, s, 0, s.Length);
-            
-            // Swap keys and keysBuffer for next pass (ping-pong)
-            keysBuffer.CopyTo(keys);
-            var tempSpan = keys;
-            keys = keysBuffer;
-            keysBuffer = tempSpan;
+            // Swap src/dst and srcKeys/dstKeys for next pass (ping-pong)
+            var tempSortSpan = src;
+            src = dst;
+            dst = tempSortSpan;
+
+            var tempKeys = srcKeys;
+            srcKeys = dstKeys;
+            dstKeys = tempKeys;
+        }
+
+        // If odd number of passes, final result is in temp buffer, copy back once
+        if (digitCount % 2 == 1)
+        {
+            src.CopyTo(0, s, 0, s.Length);
         }
     }
 

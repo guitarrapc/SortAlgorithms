@@ -207,25 +207,29 @@ public class RadixLSD4SortTests
         // - required bits = 7 (for value 99)
         // - required passes = ceil(7 / 2) = 4
         //
-        // Per pass d (d=0,1,2,3) with ping-pong key optimization:
-        //   - Count phase: n reads (from keys array, not span)
-        //   - Distribute phase: n reads (from span) + n writes (to temp)
-        //   - Copy back phase: n reads (from temp) + n writes (to main)
+        // Per pass d (d=0,1,2,3) with ping-pong src/dst swap:
+        //   - Count phase: no reads from span (only from keys array)
+        //   - Distribute phase: n reads (from src span) + n writes (to dst)
+        //   - No copy back (src/dst swap instead)
         //
         // Total per pass:
-        // - Reads: n (distribute) + n (copy back) = 2n
-        // - Writes: n (distribute to temp) + n (copy back to main) = 2n
+        // - Reads: n (distribute only)
+        // - Writes: n (distribute to dst)
+        //
+        // Final copy (if odd number of passes):
+        // - If digitCount is odd, final result is in temp, copy back once: n reads + n writes
         //
         // Total:
         // - Initial scan: n reads (build keys + min/max)
-        // - Radix passes: digitCount × (2n reads + 2n writes)
+        // - Radix passes: digitCount × (n reads + n writes)
+        // - Final copy (if digitCount % 2 == 1): n reads + n writes
         var maxValue = n - 1;
         var range = (ulong)maxValue; // min=0 after sign-bit flip, range = max - min
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 2 - 1) / 2); // ceil(requiredBits / 2)
 
-        var expectedReads = (ulong)(n + digitCount * 2 * n);  // Initial + (distribute + copy) × passes
-        var expectedWrites = (ulong)(digitCount * 2 * n);     // (temp write + main write) × passes
+        var expectedReads = (ulong)(n + digitCount * n + (digitCount % 2 == 1 ? n : 0));   // Initial + distribute + final copy
+        var expectedWrites = (ulong)(digitCount * n + (digitCount % 2 == 1 ? n : 0));      // distribute + final copy
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
@@ -244,15 +248,15 @@ public class RadixLSD4SortTests
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         RadixLSD4Sort.Sort(reversed.AsSpan(), stats);
 
-        // LSD Radix Sort on reversed data with early termination:
+        // LSD Radix Sort on reversed data with src/dst swap:
         // Same as sorted - early termination based on actual range
         var maxValue = n - 1;
         var range = (ulong)maxValue;
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 1) / 2); // ceil(requiredBits / 2)
 
-        var expectedReads = (ulong)(n + digitCount * 2 * n);
-        var expectedWrites = (ulong)(digitCount * 2 * n);
+        var expectedReads = (ulong)(n + digitCount * n + (digitCount % 2 == 1 ? n : 0));
+        var expectedWrites = (ulong)(digitCount * n + (digitCount % 2 == 1 ? n : 0));
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
@@ -271,15 +275,15 @@ public class RadixLSD4SortTests
         var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
         RadixLSD4Sort.Sort(random.AsSpan(), stats);
 
-        // LSD Radix Sort on random data with early termination:
+        // LSD Radix Sort on random data with src/dst swap:
         // Same complexity - determined by actual range
         var maxValue = n - 1;
         var range = (ulong)maxValue;
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 2 - 1) / 2);
 
-        var expectedReads = (ulong)(n + digitCount * 2 * n);
-        var expectedWrites = (ulong)(digitCount * 2 * n);
+        var expectedReads = (ulong)(n + digitCount * n + (digitCount % 2 == 1 ? n : 0));
+        var expectedWrites = (ulong)(digitCount * n + (digitCount % 2 == 1 ? n : 0));
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
