@@ -157,9 +157,8 @@ public static class AmericanFlagSort
         var shift = digit * RadixBits;
 
         // Allocate bucket arrays on stack (RadixSize=16, so only small stack usage)
-        Span<int> bucketCounts = stackalloc int[RadixSize + 1];
-        Span<int> bucketStarts = stackalloc int[RadixSize];
-        Span<int> bucketNext = stackalloc int[RadixSize];  // Current write position for each bucket
+        Span<int> bucketCounts = stackalloc int[RadixSize + 1];  // Stores both start and end for each bucket
+        Span<int> bucketNext = stackalloc int[RadixSize];        // Current write position for each bucket
 
         // Phase 1: Count occurrences of each digit value
         // Store count for digit d in bucketCounts[d+1] (off-by-one trick for prefix sum)
@@ -178,7 +177,8 @@ public static class AmericanFlagSort
         var nonEmptyBuckets = 0;
         for (var i = 0; i < RadixSize; i++)
         {
-            if (bucketCounts[i + 1] > 0) nonEmptyBuckets++;
+            if (bucketCounts[i + 1] > 0 && ++nonEmptyBuckets > 1)
+                break;
         }
 
         // If all elements have the same digit value (0 or 1 non-empty buckets),
@@ -187,6 +187,8 @@ public static class AmericanFlagSort
         {
             if (digit > 0)
                 AmericanFlagSortRecursive(s, start, length, digit - 1, bitSize);
+
+            // No need to process further if digit == 0, as all elements are identical in the least significant digit
             return;
         }
 
@@ -198,25 +200,24 @@ public static class AmericanFlagSort
             bucketCounts[i] += bucketCounts[i - 1];
         }
         
-        // Phase 2.5: Copy bucket boundaries
-        // bucketCounts[i] = start of bucket i (also equals end of bucket i-1)
-        // bucketCounts[i+1] = end of bucket i (also equals start of bucket i+1)
-        // This relationship holds because bucketCounts has RadixSize+1 elements
+        // Phase 2.5: Initialize next write positions
+        // bucketNext[i] tracks the current write position for bucket i
+        // Initialize to bucket start positions (bucketCounts[i])
         for (var i = 0; i < RadixSize; i++)
         {
-            bucketStarts[i] = bucketCounts[i];
-            bucketNext[i] = bucketCounts[i];  // Initialize next write position
+            bucketNext[i] = bucketCounts[i];
         }
 
         // Phase 3: In-place permutation
         // Rearrange elements into their correct buckets using cyclic permutation
-        PermuteInPlace(s, start, length, shift, bitSize, bucketStarts, bucketNext);
+        PermuteInPlace(s, start, shift, bitSize, bucketCounts, bucketNext);
 
         // Phase 4: Recursively sort each bucket for the next digit
         for (var i = 0; i < RadixSize; i++)
         {
-            var bucketStart = bucketStarts[i];
-            var bucketEnd = (i == RadixSize - 1) ? length : bucketStarts[i + 1];
+            // bucketCounts provides direct access to boundaries
+            var bucketStart = bucketCounts[i];
+            var bucketEnd = bucketCounts[i + 1];  // No conditional needed!
             var bucketLength = bucketEnd - bucketStart;
 
             if (bucketLength > 1)
@@ -232,12 +233,12 @@ public static class AmericanFlagSort
     /// </summary>
     /// <remarks>
     /// Array roles:
-    /// - <paramref name="bucketStarts"/>: Immutable start positions for each bucket (never modified)
+    /// - <paramref name="bucketCounts"/>: Immutable boundary array where bucketCounts[i] = start of bucket i, bucketCounts[i+1] = end of bucket i
     /// - <paramref name="bucketNext"/>: Mutable current write position for each bucket (incremented as elements are placed)
     /// This separation ensures correct boundary detection and avoids array role confusion.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PermuteInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int length, int shift, int bitSize, Span<int> bucketStarts, Span<int> bucketNext)
+    private static void PermuteInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int shift, int bitSize, Span<int> bucketCounts, Span<int> bucketNext)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -246,8 +247,9 @@ public static class AmericanFlagSort
         // Process each bucket sequentially
         for (var bucket = 0; bucket < RadixSize; bucket++)
         {
-            // Get the range for this bucket
-            var bucketEnd = (bucket == RadixSize - 1) ? length : bucketStarts[bucket + 1];
+            // Get the range for this bucket directly from bucketCounts
+            // bucketCounts[bucket] = start, bucketCounts[bucket + 1] = end
+            var bucketEnd = bucketCounts[bucket + 1];
 
             // Move elements to their correct positions within and across buckets
             while (bucketNext[bucket] < bucketEnd)
@@ -269,10 +271,9 @@ public static class AmericanFlagSort
 
 #if DEBUG
                 // targetPos must stay within currentDigit bucket range
-                // startOf(currentDigit) = bucketStarts[currentDigit]
-                // endOf(currentDigit)   = (currentDigit == RadixSize - 1) ? length : bucketStarts[currentDigit + 1]
-                var end = (currentDigit == RadixSize - 1) ? length : bucketStarts[currentDigit + 1];
-                Debug.Assert(bucketNext[currentDigit] < end);
+                // bucketCounts[currentDigit] = start, bucketCounts[currentDigit + 1] = end
+                Debug.Assert(bucketNext[currentDigit] >= bucketCounts[currentDigit]);
+                Debug.Assert(bucketNext[currentDigit] < bucketCounts[currentDigit + 1]);
 #endif
 
                 s.Swap(currentPos, targetPos);
