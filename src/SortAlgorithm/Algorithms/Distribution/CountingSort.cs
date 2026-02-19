@@ -234,7 +234,6 @@ public static class CountingSortInteger
     /// <summary>
     /// Sorts integer values in the specified span with sort context.
     /// Always sorts in ascending numeric order (<see cref="IComparable{T}"/> natural order).
-    /// Arbitrary sort order via a comparer is not supported.
     /// </summary>
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
