@@ -40,13 +40,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Distribution (Radix Sort, LSD variant)</description></item>
 /// <item><description>Stable      : Yes (maintains relative order of elements with equal keys)</description></item>
 /// <item><description>In-place    : No (O(n) auxiliary space for temporary buffer)</description></item>
-/// <item><description>Best case   : Θ(d × n) - d = ⌈bitSize/8⌉ is constant for fixed-width integers</description></item>
-/// <item><description>Average case: Θ(d × n) - Linear in input size, independent of value distribution</description></item>
-/// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order</description></item>
+/// <item><description>Best case   : Θ(n) - When all elements are identical (early termination on range == 0)</description></item>
+/// <item><description>Average case: Θ(d × n) - Linear in input size, where d depends on actual value range</description></item>
+/// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order, d = ⌈bitSize/8⌉ for full range</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort, uses bitwise operations only)</description></item>
-/// <item><description>Digit Passes: d = ⌈bitSize/8⌉ (1 for byte, 2 for short, 4 for int, 8 for long)</description></item>
-/// <item><description>Reads       : d × n (one read per element per digit pass)</description></item>
-/// <item><description>Writes      : d × n (one write per element per digit pass)</description></item>
+/// <item><description>Digit Passes: d = ⌈requiredBits/8⌉ (early termination based on actual value range, not full bit width)</description></item>
+/// <item><description>Reads       : n (initial min/max scan) + d × n (one read per distribute pass) + optional final copy</description></item>
+/// <item><description>Writes      : d × n (one write per distribute pass to temp) + optional final copy</description></item>
 /// <item><description>Memory      : O(n) for temporary buffer</description></item>
 /// </list>
 /// <para><strong>Radix-256 Advantages:</strong></para>
@@ -169,7 +169,13 @@ public static class RadixLSD256Sort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Perform LSD radix sort (only required passes)
+        var src = s;
+        var dst = temp;
+        
+        // Track whether data is currently in the original span (true) or temp buffer (false)
+        bool dataInOriginal = true;
+
+        // Perform LSD radix sort with ping-pong buffers
         for (int d = 0; d < digitCount; d++)
         {
             var shift = d * RadixBits;
@@ -178,9 +184,9 @@ public static class RadixLSD256Sort
             bucketOffsets.Clear();
 
             // Count occurrences of each digit
-            for (var i = 0; i < s.Length; i++)
+            for (var i = 0; i < src.Length; i++)
             {
-                var value = s.Read(i);
+                var value = src.Read(i);
                 var key = GetUnsignedKey(value, bitSize);
                 var digit = (int)((key >> shift) & 0xFF);
                 bucketOffsets[digit + 1]++;
@@ -192,18 +198,29 @@ public static class RadixLSD256Sort
                 bucketOffsets[i] += bucketOffsets[i - 1];
             }
 
-            // Distribute elements into temp buffer based on current digit
-            for (var i = 0; i < s.Length; i++)
+            // Distribute elements from src to dst based on current digit
+            for (var i = 0; i < src.Length; i++)
             {
-                var value = s.Read(i);
+                var value = src.Read(i);
                 var key = GetUnsignedKey(value, bitSize);
                 var digit = (int)((key >> shift) & 0xFF);
                 var destIndex = bucketOffsets[digit]++;
-                temp.Write(destIndex, value);
+                dst.Write(destIndex, value);
             }
 
-            // Copy back from temp to source using CopyTo for efficiency
-            temp.CopyTo(0, s, 0, s.Length);
+            // Swap src/dst for next pass (ping-pong)
+            var tempSortSpan = src;
+            src = dst;
+            dst = tempSortSpan;
+            
+            // Toggle data location flag
+            dataInOriginal = !dataInOriginal;
+        }
+
+        // If final result is not in the original span, copy back once
+        if (!dataInOriginal)
+        {
+            src.CopyTo(0, s, 0, s.Length);
         }
     }
 
