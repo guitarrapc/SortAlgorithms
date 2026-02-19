@@ -121,11 +121,11 @@ public static class BitonicSort
     /// <summary>
     /// Recursively builds and merges a bitonic sequence.
     /// </summary>
-    /// <param name="span">The span to sort.</param>
+    /// <param name="s">The span to sort.</param>
     /// <param name="low">The starting index of the sequence.</param>
     /// <param name="count">The length of the sequence.</param>
     /// <param name="ascending">True to sort this region in ascending order, false for descending.</param>
-    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> span, int low, int count, bool ascending)
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int low, int count, bool ascending)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -134,12 +134,12 @@ public static class BitonicSort
             int k = count / 2;
 
             // Recursively sort first half in the same direction as this region
-            SortCore(span, low, k, ascending);
+            SortCore(s, low, k, ascending);
             // Recursively sort second half in the opposite direction to create bitonic sequence
-            SortCore(span, low + k, k, !ascending);
+            SortCore(s, low + k, k, !ascending);
 
             // Merge the bitonic sequence in the desired order
-            BitonicMerge(span, low, count, ascending);
+            BitonicMerge(s, low, count, ascending);
         }
     }
 
