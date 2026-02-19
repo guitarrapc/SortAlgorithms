@@ -3,25 +3,25 @@
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// スワップ済み最適化入りBubbleSort。
-/// 配列の末尾から、隣接する要素を比較して交換を繰り返すことでソートを行います。各パスで最小値が配列の先頭に「浮かび上がる（bubble up）」ように移動します。
-/// シンプルで理解しやすいですが、実用的には非効率なソートアルゴリズムです。
+/// 早期終了と最終スワップ位置記録による最適化入りBubbleSort。
+/// 配列の先頭から、隣接する要素を比較して交換を繰り返すことでソートを行います。各パスで 最大値が配列末尾に『浮かび上がる（bubble up）』ように移動します。
 /// <br/>
-/// Swapped optimized BubbleSort.
-/// Sorts by repeatedly comparing and swapping adjacent elements from the end of the array. Each pass causes the smallest value to "bubble up" to the front of the array.
-/// Simple and easy to understand, but inefficient for practical use.
+/// Optimized BubbleSort with early termination and last swap position tracking.
+/// Sorts by repeatedly comparing and swapping adjacent elements from the beginning of the array. Each pass moves the largest value to the end of the array.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Bubble Sort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Adjacent Element Comparison:</strong> Only adjacent elements (at positions j and j-1) are compared.
+/// <item><description><strong>Adjacent Element Comparison:</strong> Only adjacent elements (at positions j and j+1) are compared.
 /// This ensures the sorting is achieved purely through local exchanges.</description></item>
-/// <item><description><strong>Conditional Swap:</strong> Elements are swapped only when they are out of order (s.Compare(j, j-1) &lt; 0).
+/// <item><description><strong>Conditional Swap:</strong> Elements are swapped only when they are out of order (s.Compare(j+1, j) &lt; 0).
 /// This preserves the relative order of equal elements, making the algorithm stable.</description></item>
-/// <item><description><strong>Bounded Iteration:</strong> The outer loop runs n-1 times, and each iteration settles at least one element into its final position.
-/// After i iterations, the first i elements are guaranteed to be in their final sorted positions.</description></item>
-/// <item><description><strong>Complete Coverage:</strong> Each pass examines all unsorted elements from the end to position i+1.
-/// This guarantees that all inversions are eventually corrected.</description></item>
+/// <item><description><strong>Bounded Iteration:</strong> The outer loop continues while unsorted elements remain (n &gt; 0).
+/// Each iteration settles at least one element into its final position at the end of the array.</description></item>
+/// <item><description><strong>Complete Coverage:</strong> Each pass examines unsorted elements from position 0 to n.
+/// The range shrinks to the last swap position, guaranteeing that all inversions are eventually corrected.</description></item>
+/// <item><description><strong>Early Termination:</strong> If no swaps occur during a pass (lastSwapped == 0), the array is sorted and the algorithm terminates.
+/// This optimization provides O(n) best-case performance for already sorted input.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
