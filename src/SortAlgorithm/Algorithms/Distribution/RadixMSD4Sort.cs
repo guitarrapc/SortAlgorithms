@@ -139,7 +139,7 @@ public static class RadixMSD4Sort
             var digitCount = (bitSize + RadixBits - 1) / RadixBits;
 
             // Start MSD radix sort from the most significant digit
-            MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize, bucketOffsets);
+            MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize);
         }
         finally
         {
@@ -148,7 +148,7 @@ public static class RadixMSD4Sort
         }
     }
 
-    private static void MSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
+    private static void MSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int start, int length, int digit, int bitSize)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -168,8 +168,9 @@ public static class RadixMSD4Sort
 
         var shift = digit * RadixBits;
 
-        // Clear bucket counts
-        bucketOffsets.Clear();
+        // Allocate bucket counts on stack (RadixSize+1 = 5 elements = 20 bytes)
+        // Each recursive level gets its own bucketCounts, avoiding reuse corruption
+        Span<int> bucketCounts = stackalloc int[RadixSize + 1];
 
         // Count occurrences of each digit in the current range
         for (var i = 0; i < length; i++)
@@ -177,23 +178,27 @@ public static class RadixMSD4Sort
             var value = s.Read(start + i);
             var key = GetUnsignedKey(value, bitSize);
             var digitValue = (int)((key >> shift) & 0b11);  // Extract 2-bit digit
-            bucketOffsets[digitValue + 1]++;
+            bucketCounts[digitValue + 1]++;
         }
 
         // Calculate prefix sum and save bucket start positions in one pass
-        // RadixSize=4 is small enough for stackalloc (16 bytes), but we could use ArrayPool for consistency
+        // RadixSize=4 is small enough for stackalloc (16 bytes)
         Span<int> bucketStarts = stackalloc int[RadixSize];
         bucketStarts[0] = 0; // First bucket always starts at offset 0
         for (var i = 1; i <= RadixSize; i++)
         {
-            bucketOffsets[i] += bucketOffsets[i - 1];
+            bucketCounts[i] += bucketCounts[i - 1];
             if (i < RadixSize)
             {
-                bucketStarts[i] = bucketOffsets[i];
+                bucketStarts[i] = bucketCounts[i];
             }
         }
 
         // Distribute elements into temp buffer based on current digit
+        // Make a copy of bucketCounts for the scatter phase since we modify it
+        Span<int> bucketOffsets = stackalloc int[RadixSize + 1];
+        bucketCounts.CopyTo(bucketOffsets);
+        
         for (var i = 0; i < length; i++)
         {
             var value = s.Read(start + i);
@@ -215,7 +220,7 @@ public static class RadixMSD4Sort
 
             if (bucketLength > 1)
             {
-                MSDSort(s, temp, start + bucketStart, bucketLength, digit - 1, bitSize, bucketOffsets);
+                MSDSort(s, temp, start + bucketStart, bucketLength, digit - 1, bitSize);
             }
         }
     }
