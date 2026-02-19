@@ -152,26 +152,22 @@ public static class RadixMSD10Sort
     {
         if (span.Length <= 1) return;
 
-        // Rent buffers from ArrayPool
+        // Rent buffer from ArrayPool (only temp buffer needed now)
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
-        var bucketOffsetsArray = ArrayPool<int>.Shared.Rent(RadixBase + 1);
 
         try
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
-            var bucketOffsets = bucketOffsetsArray.AsSpan(0, RadixBase + 1);
-
-            SortCore<T, TComparer, TContext>(span, tempBuffer, bucketOffsets, comparer, context);
+            SortCore<T, TComparer, TContext>(span, tempBuffer, comparer, context);
         }
         finally
         {
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            ArrayPool<int>.Shared.Return(bucketOffsetsArray);
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, Span<int> bucketOffsets, TComparer comparer, TContext context)
+    private static void SortCore<T, TComparer, TContext>(Span<T> span, Span<T> tempBuffer, TComparer comparer, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -189,11 +185,11 @@ public static class RadixMSD10Sort
         var digitCount = ComputeMaxDigit(s, 0, s.Length, bitSize);
 
         // Start MSD radix sort from the most significant digit
-        MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize, bucketOffsets);
+        MSDSort(s, temp, 0, s.Length, digitCount - 1, bitSize);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void MSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int start, int length, int digit, int bitSize, Span<int> bucketOffsets)
+    private static void MSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int start, int length, int digit, int bitSize)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -215,53 +211,52 @@ public static class RadixMSD10Sort
         // Previously: O(digit) loop with divisor *= 10
         var divisor = Pow10[digit];
 
-        // Clear bucket counts
-        bucketOffsets.Clear();
+        // Separate counts and offsets for clarity
+        // counts[d] = number of elements with digit value d
+        // offsets[d] = write position for next element with digit value d
+        Span<int> counts = stackalloc int[RadixBase];
+        Span<int> offsets = stackalloc int[RadixBase];
 
-        // Count occurrences of each digit in the current range
+        // Phase 1: Count occurrences of each digit value
         for (var i = 0; i < length; i++)
         {
             var value = s.Read(start + i);
             var key = GetUnsignedKey(value, bitSize);
             var digitValue = (int)((key / divisor) % 10);
-            bucketOffsets[digitValue + 1]++;
+            counts[digitValue]++;
         }
 
-        // Calculate prefix sum and save bucket start positions
-        Span<int> bucketStarts = stackalloc int[RadixBase];
-        bucketStarts[0] = 0;
-        for (var i = 1; i <= RadixBase; i++)
+        // Phase 2: Calculate bucket offsets (prefix sum)
+        // offsets[d] = starting position for bucket d
+        offsets[0] = 0;
+        for (var i = 1; i < RadixBase; i++)
         {
-            bucketOffsets[i] += bucketOffsets[i - 1];
-            if (i < RadixBase)
-            {
-                bucketStarts[i] = bucketOffsets[i];
-            }
+            offsets[i] = offsets[i - 1] + counts[i - 1];
         }
 
-        // Distribute elements into temp buffer based on current digit
+        // Phase 3: Distribute elements into temp buffer
+        // Use a copy of offsets as write positions (will be incremented)
+        Span<int> writePos = stackalloc int[RadixBase];
+        offsets.CopyTo(writePos);
+
         for (var i = 0; i < length; i++)
         {
             var value = s.Read(start + i);
             var key = GetUnsignedKey(value, bitSize);
             var digitValue = (int)((key / divisor) % 10);
-            var destIndex = bucketOffsets[digitValue]++;
+            var destIndex = writePos[digitValue]++;
             temp.Write(start + destIndex, value);
         }
 
         // Copy back from temp to source
         temp.CopyTo(start, s, start, length);
 
-        // Recursively sort each bucket for the next digit
+        // Phase 4: Recursively sort each bucket for the next digit
         for (var i = 0; i < RadixBase; i++)
         {
-            var bucketStart = bucketStarts[i];
-            var bucketEnd = (i == RadixBase - 1) ? length : bucketStarts[i + 1];
-            var bucketLength = bucketEnd - bucketStart;
-
-            if (bucketLength > 1)
+            if (counts[i] > 1)
             {
-                MSDSort(s, temp, start + bucketStart, bucketLength, digit - 1, bitSize, bucketOffsets);
+                MSDSort(s, temp, start + offsets[i], counts[i], digit - 1, bitSize);
             }
         }
     }
