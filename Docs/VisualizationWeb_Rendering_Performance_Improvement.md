@@ -450,7 +450,7 @@ renderViaImageData: function(canvasId, params) {
 
 ---
 
-### Phase 6: WebGL レンダラー（効果: 最大 / 工数: 大）<- 後回し
+### Phase 6: WebGL レンダラー（効果: 最大 / 工数: 大）
 
 **概要：** Canvas 2D を WebGL に置き換え、GPU で直接描画する。
 
