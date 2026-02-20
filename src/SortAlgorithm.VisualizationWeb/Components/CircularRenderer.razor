@@ -3,6 +3,7 @@
 @using Microsoft.JSInterop
 @inject IJSRuntime JS
 @inject DebugSettings DebugSettings
+@inject RenderSettings RenderSettings
 @implements IAsyncDisposable
 
 <div class="circular-chart-container @(State?.PlaybackState == PlaybackState.Playing ? "playing" : "")"
@@ -34,9 +35,37 @@
 
     private string _canvasId = $"sortCircularCanvas_{Guid.NewGuid():N}";
     private bool _isInitialized = false;
+    private bool _isInitializing = false;
     private bool _previousHasData = false;
     private int _previousGridColumnCount = 0;
     private int _lastSortVersion = -1; // JS 側配列が初期化済みかを追跡する
+
+    protected override void OnInitialized()
+    {
+        RenderSettings.OnChanged += OnRenderSettingsChanged;
+    }
+
+    // レンダラー設定変更時: 旧 canvas を破棄し、新しい canvas ID で再初期化する
+    private void OnRenderSettingsChanged()
+    {
+        InvokeAsync(async () =>
+        {
+            var oldCanvasId = _canvasId;
+            var wasInitialized = _isInitialized;
+
+            // 先に状態をリセットしてから DOM を更新
+            _canvasId = $"sortCircularCanvas_{Guid.NewGuid():N}";
+            _isInitialized = false;
+            _lastSortVersion = -1;
+            StateHasChanged(); // 新しい canvas 要素を DOM に作成
+
+            // 古い canvas の破棄は DOM 更新後に実行
+            if (wasInitialized)
+            {
+                try { await JS.InvokeVoidAsync("circularCanvasRenderer.dispose", oldCanvasId); } catch { }
+            }
+        });
+    }
 
     protected override bool ShouldRender()
     {
@@ -65,16 +94,28 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // 初期化済みの場合は OnParametersSetAsync でデータ転送済みのためスキップ
-        if (_isInitialized) return;
+        // 初期化済み、または初期化中の場合はスキップ（二重初期化防止）
+        if (_isInitialized || _isInitializing) return;
+        _isInitializing = true;
+        var targetCanvasId = _canvasId; // await 中に _canvasId が変わる場合に備えてキャプチャ
 
-        // canvas 要素が DOM に現れたタイミングで初期化を試みる
-        var success = await JS.InvokeAsync<bool>("circularCanvasRenderer.initialize", _canvasId);
-        if (success)
+        try
         {
-            _isInitialized = true;
-            _previousGridColumnCount = GridColumnCount;
-            await RenderCanvas();
+            // canvas 要素が DOM に現れたタイミングで初期化を試みる
+            var success = await JS.InvokeAsync<bool>("circularCanvasRenderer.initialize", targetCanvasId, RenderSettings.UseWebGL);
+            if (success && _canvasId == targetCanvasId)
+            {
+                _isInitialized = true;
+                _previousGridColumnCount = GridColumnCount;
+                await RenderCanvas();
+            }
+        }
+        finally
+        {
+            _isInitializing = false;
+            // 設定変更で canvas が切り替わった場合、新しい canvas の初期化を促す
+            if (!_isInitialized)
+                StateHasChanged();
         }
     }
 
@@ -138,6 +179,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        RenderSettings.OnChanged -= OnRenderSettingsChanged;
         DebugSettings.Log($"[CircularRenderer] DisposeAsync called for canvas: {_canvasId}");
 
         if (_isInitialized)

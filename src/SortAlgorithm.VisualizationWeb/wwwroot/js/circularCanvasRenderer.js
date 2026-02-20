@@ -32,12 +32,19 @@ window.circularCanvasRenderer = {
     /**
      * Canvasを初期化
      * @param {string} canvasId - Canvas要素のID
+     * @param {boolean} useWebGL - WebGL レンダラーを使用するか（false で Canvas 2D Worker）
      */
-    initialize: function(canvasId) {
+    initialize: function(canvasId, useWebGL = true) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) {
             window.debugHelper.error('Circular Canvas element not found:', canvasId);
             return false;
+        }
+
+        // 既に初期化済みの場合はスキップ（二重初期化防止）
+        if (this.workers.has(canvasId) || this.instances.has(canvasId)) {
+            window.debugHelper.warn('Circular Canvas already initialized:', canvasId);
+            return true;
         }
 
         const dpr  = window.devicePixelRatio || 1;
@@ -49,9 +56,10 @@ window.circularCanvasRenderer = {
             canvas.width  = rect.width  * dpr;
             canvas.height = rect.height * dpr;
 
-            const offscreen = canvas.transferControlToOffscreen();
-            const workerUrl = new URL('js/circularRenderWorker.js', document.baseURI).href;
-            const worker    = new Worker(workerUrl);
+            const workerFile = useWebGL ? 'js/circularWebglWorker.js' : 'js/circularRenderWorker.js';
+            const offscreen  = canvas.transferControlToOffscreen();
+            const workerUrl  = new URL(workerFile, document.baseURI).href;
+            const worker     = new Worker(workerUrl);
             worker.postMessage({ type: 'init', canvas: offscreen, dpr }, [offscreen]);
 
             this.workers.set(canvasId, { worker, lastWidth: canvas.width, lastHeight: canvas.height });
@@ -61,7 +69,7 @@ window.circularCanvasRenderer = {
             this._ensureResizeObserver();
             this.resizeObserver.observe(canvas);
 
-            window.debugHelper.log('Circular Canvas initialized (Worker):', canvasId, rect.width, 'x', rect.height, 'DPR:', dpr);
+            window.debugHelper.log('Circular Canvas initialized (Worker):', canvasId, rect.width, 'x', rect.height, 'DPR:', dpr, 'WebGL:', useWebGL);
             return true;
         }
 
