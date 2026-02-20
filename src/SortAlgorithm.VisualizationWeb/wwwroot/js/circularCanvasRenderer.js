@@ -12,6 +12,9 @@ window.circularCanvasRenderer = {
 
     // JS 側配列コピー（Phase 3c）
     arrays: new Map(), // canvasId → { main: Int32Array, buffers: Map<bufferId, Int32Array> }
+
+    // キャッシュされた Canvas サイズ（getBoundingClientRect をフレーム毎に呼ばないため）
+    cachedSizes: new Map(), // canvasId → { width: number, height: number }
     
     // 色定義（操作に基づく）
     colors: {
@@ -48,6 +51,7 @@ window.circularCanvasRenderer = {
         
         // インスタンスを保存
         this.instances.set(canvasId, { canvas, ctx });
+        this.cachedSizes.set(canvasId, { width: rect.width, height: rect.height });
         
         // ResizeObserverを初期化（まだ存在しない場合）
         if (!this.resizeObserver) {
@@ -70,6 +74,7 @@ window.circularCanvasRenderer = {
                             canvas.width = newWidth;
                             canvas.height = newHeight;
                             ctx.scale(dpr, dpr);
+                            this.cachedSizes.set(canvasId, { width: rect.width, height: rect.height });
                             
                             window.debugHelper.log('Circular Canvas auto-resized:', canvasId, rect.width, 'x', rect.height);
                             
@@ -248,9 +253,10 @@ window.circularCanvasRenderer = {
         if (!entry || !entry.main) return;
         const array = entry.main;
         
-        const rect = canvas.getBoundingClientRect();
-        const width = rect.width;
-        const height = rect.height;
+        const size = this.cachedSizes.get(canvasId);
+        if (!size) return;
+        const width = size.width;
+        const height = size.height;
         const arrayLength = array.length;
         
         // バッファー配列の数を取得
@@ -447,6 +453,7 @@ window.circularCanvasRenderer = {
             this.lastRenderParams.delete(canvasId);
             this.dirtyCanvases.delete(canvasId);
             this.arrays.delete(canvasId);
+            this.cachedSizes.delete(canvasId);
         } else {
             // rAFループを停止
             if (this.rafId) {
@@ -466,6 +473,7 @@ window.circularCanvasRenderer = {
             this.instances.clear();
             this.lastRenderParams.clear();
             this.arrays.clear();
+            this.cachedSizes.clear();
         }
     }
 };
