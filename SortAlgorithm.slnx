@@ -17,6 +17,7 @@
     <File Path="Docs/VisualizationWeb_Implementation_Status.md" />
     <File Path="Docs/VisualizationWeb_PerformanceAccuracy.md" />
     <File Path="Docs/VisualizationWeb_Performance_Analysis.md" />
+    <File Path="Docs/VisualizationWeb_Rendering_Performance_Improvement.md" />
   </Folder>
   <Folder Name="/sandbox/">
     <Project Path="sandbox/AntiQuickSortDemo/AntiQuickSortDemo.csproj" />
