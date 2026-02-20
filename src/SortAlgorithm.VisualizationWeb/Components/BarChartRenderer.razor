@@ -1,46 +1,22 @@
 @using SortAlgorithm.VisualizationWeb.Models
 @using SortAlgorithm.VisualizationWeb.Services
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@inject DebugSettings DebugSettings
+@inject RenderSettings RenderSettings
+@implements IAsyncDisposable
 
-<div class="bar-chart-container @(State?.PlaybackState == PlaybackState.Playing ? "playing" : "")" 
-     @onclick="OnCanvasClick" 
+<div class="bar-chart-container @(State?.PlaybackState == PlaybackState.Playing ? "playing" : "")"
+     @onclick="OnCanvasClick"
      style="position: relative; width: 100%; height: 100%;">
-    
+
     @if (State != null && State.MainArray.Length > 0)
     {
-        var arrayLength = State.MainArray.Length;
-        var minBarWidth = 1.0; // 最小バー幅（px）
-        var baseWidth = 1200; // ベース幅
-        var baseHeight = 600; // ベース高さ（アスペクト比の基準）
-        var requiredWidth = Math.Max(baseWidth, (int)(arrayLength * minBarWidth));
-        var barWidth = (double)requiredWidth / arrayLength;
-        
-        // 最大値をキャッシュ（毎フレームMax()を呼ぶのは重い）
-        var maxValue = GetOrCacheMaxValue(State.MainArray);
-        
-        <svg width="100%" height="100%" viewBox="0 0 @requiredWidth @baseHeight" preserveAspectRatio="xMidYMax meet" style="display: block;">
-            <g shape-rendering="crispEdges">
-                @for (int i = 0; i < arrayLength; i++)
-                {
-                    var value = State.MainArray[i];
-                    var barHeight = (value / (double)maxValue) * (baseHeight - 20);
-                    var x = i * barWidth;
-                    var y = baseHeight - barHeight;
-                    var color = GetBarColor(i);
-                    
-                    <rect @key="i"
-                          x="@x" 
-                          y="@y" 
-                          width="@barWidth" 
-                          height="@barHeight"
-                          fill="@color"
-                          stroke="none" />
-                }
-            </g>
-        </svg>
+        <canvas @key="_canvasId" id="@_canvasId" style="width: 100%; height: 100%; display: block;"></canvas>
     }
     else
     {
-        <div style="text-align: center; color: #999;">
+        <div style="text-align: center; color: #999; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
             <p style="font-size: 2rem;">📊</p>
             <p>Click "Generate & Sort" to start visualization</p>
         </div>
@@ -50,47 +26,196 @@
 @code {
     [Parameter]
     public VisualizationState? State { get; set; }
-    
+
     [Parameter]
     public EventCallback OnClick { get; set; }
-    
-    // キャッシュ用フィールド
-    private int _cachedMaxValue;
-    private int _lastArrayHashCode;
-    
-    /// <summary>
-    /// 最大値をキャッシュして返す（配列の内容が変わった時だけ再計算）
-    /// </summary>
-    private int GetOrCacheMaxValue(int[] array)
+
+    [Parameter]
+    public int GridColumnCount { get; set; } = 1;
+
+    private string _canvasId = $"sortCanvas_{Guid.NewGuid():N}";
+    private bool _isInitialized = false;
+    private bool _isInitializing = false;
+    private bool _previousHasData = false;
+    private int _previousGridColumnCount = 0;
+    private int _lastSortVersion = -1; // JS 側配列が初期化済みかを追跡する
+
+    // デバッグ用：レンダリング頻度計測
+    private int _renderCount = 0;
+    private DateTime _lastFpsLog = DateTime.UtcNow;
+
+    protected override void OnInitialized()
     {
-        var currentHashCode = array.GetHashCode();
-        if (currentHashCode != _lastArrayHashCode || _cachedMaxValue == 0)
+        RenderSettings.OnChanged += OnRenderSettingsChanged;
+    }
+
+    // レンダラー設定変更時: 旧 canvas を破棄し、新しい canvas ID で再初期化する
+    private void OnRenderSettingsChanged()
+    {
+        InvokeAsync(async () =>
         {
-            _cachedMaxValue = array.Max();
-            _lastArrayHashCode = currentHashCode;
-        }
-        return _cachedMaxValue;
+            var oldCanvasId = _canvasId;
+            var wasInitialized = _isInitialized;
+
+            // 先に状態をリセットしてから DOM を更新
+            _canvasId = $"sortCanvas_{Guid.NewGuid():N}";
+            _isInitialized = false;
+            _lastSortVersion = -1;
+            StateHasChanged(); // 新しい canvas 要素を DOM に作成
+
+            // 古い canvas の破棄は DOM 更新後に実行
+            if (wasInitialized)
+            {
+                try { await JS.InvokeVoidAsync("barChartCanvasRenderer.dispose", oldCanvasId); } catch { }
+            }
+        });
     }
-    
-    private string GetBarColor(int index)
+
+    protected override bool ShouldRender()
     {
-        if (State == null) return "#3B82F6";
-        
-        // ソート完了時は緑色でハイライト
-        if (State.IsSortCompleted) return "#10B981"; // Green - Sorted
-        
-        if (State.SwapIndices.Contains(index)) return "#EF4444"; // Red - Swap
-        if (State.CompareIndices.Contains(index)) return "#A855F7"; // Purple - Compare
-        if (State.WriteIndices.Contains(index)) return "#F97316"; // Orange - Write
-        if (State.ReadIndices.Contains(index)) return "#FBBF24"; // Yellow - Read
-        
-        return "#3B82F6"; // Blue - Normal
+        // Canvas は JS 側で描画するため Blazor の DOM 差分は不要
+        // canvas 要素の表示/非表示が変わるとき、または未初期化のときのみ再レンダリング
+        var hasData = State?.MainArray.Length > 0;
+        var shouldRender = _previousHasData != hasData || !_isInitialized;
+        _previousHasData = hasData;
+        return shouldRender;
     }
-    
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // ShouldRender() より先に呼ばれるため、毎フレームの JS データ転送はここで行う
+        if (!_isInitialized) return;
+
+        // グリッド列数が変わった場合の記録（ResizeObserver が自動リサイズ＆再描画）
+        if (_previousGridColumnCount != GridColumnCount)
+        {
+            DebugSettings.Log($"[BarChartRenderer] Grid column count changed: {_previousGridColumnCount} -> {GridColumnCount} for canvas {_canvasId}");
+            _previousGridColumnCount = GridColumnCount;
+        }
+
+        // 描画
+        await RenderCanvas();
+
+        // 🔍 デバッグ：レンダリング頻度をログ出力
+        _renderCount++;
+        var now = DateTime.UtcNow;
+        var elapsed = (now - _lastFpsLog).TotalSeconds;
+        if (elapsed >= 1.0)
+        {
+            DebugSettings.Log($"[BarChartRenderer] {_canvasId.Substring(0, 12)}... Render FPS: {_renderCount / elapsed:F1}");
+            _renderCount = 0;
+            _lastFpsLog = now;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // 初期化済み、または初期化中の場合はスキップ（二重初期化防止）
+        if (_isInitialized || _isInitializing) return;
+        _isInitializing = true;
+        var targetCanvasId = _canvasId; // await 中に _canvasId が変わる場合に備えてキャプチャ
+
+        try
+        {
+            // canvas 要素が DOM に現れたタイミングで初期化を試みる
+            var success = await JS.InvokeAsync<bool>("barChartCanvasRenderer.initialize", targetCanvasId, RenderSettings.UseWebGL);
+            if (success && _canvasId == targetCanvasId)
+            {
+                _isInitialized = true;
+                _previousGridColumnCount = GridColumnCount;
+                await RenderCanvas();
+            }
+        }
+        finally
+        {
+            _isInitializing = false;
+            // 設定変更で canvas が切り替わった場合、新しい canvas の初期化を促す
+            if (!_isInitialized)
+                StateHasChanged();
+        }
+    }
+
+    private async Task RenderCanvas()
+    {
+        if (!_isInitialized || State == null || State.MainArray.Length == 0) return;
+
+        try
+        {
+            if (_lastSortVersion != State.SortVersion)
+            {
+                // 新しいソートがロードされた → JS 側配列を初期化（全量転送は1回のみ）
+                _lastSortVersion = State.SortVersion;
+                await JS.InvokeVoidAsync("barChartCanvasRenderer.setArray",
+                    _canvasId,
+                    State.MainArray,
+                    State.BufferArrays,
+                    State.CompareIndices,
+                    State.SwapIndices,
+                    State.ReadIndices,
+                    State.WriteIndices,
+                    State.IsSortCompleted,
+                    State.ShowCompletionHighlight);
+            }
+            else if (State.MainArrayDelta != null)
+            {
+                // 通常再生 → 差分のみ転送（高速パス: 数十バイト程度）
+                await JS.InvokeVoidAsync("barChartCanvasRenderer.applyFrame",
+                    _canvasId,
+                    State.MainArrayDelta,
+                    State.BufferArrayDeltas,
+                    State.CompareIndices,
+                    State.SwapIndices,
+                    State.ReadIndices,
+                    State.WriteIndices,
+                    State.IsSortCompleted,
+                    State.ShowCompletionHighlight);
+            }
+            else
+            {
+                // 全量更新フォールバック（シーク後・リセット後）
+                await JS.InvokeVoidAsync("barChartCanvasRenderer.updateData",
+                    _canvasId,
+                    State.MainArray,
+                    State.CompareIndices,
+                    State.SwapIndices,
+                    State.ReadIndices,
+                    State.WriteIndices,
+                    State.IsSortCompleted,
+                    State.BufferArrays,
+                    State.ShowCompletionHighlight);
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugSettings.Log($"BarChart Canvas render error: {ex.Message}");
+        }
+    }
+
     private async Task OnCanvasClick()
     {
         await OnClick.InvokeAsync();
     }
+
+    public async ValueTask DisposeAsync()
+    {
+        RenderSettings.OnChanged -= OnRenderSettingsChanged;
+        DebugSettings.Log($"[BarChartRenderer] DisposeAsync called for canvas: {_canvasId}");
+
+        if (_isInitialized)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("barChartCanvasRenderer.dispose", _canvasId);
+                DebugSettings.Log($"[BarChartRenderer] Successfully disposed canvas: {_canvasId}");
+            }
+            catch (Exception ex)
+            {
+                DebugSettings.Log($"[BarChartRenderer] ERROR disposing canvas {_canvasId}: {ex.Message}");
+            }
+        }
+        else
+        {
+            DebugSettings.Log($"[BarChartRenderer] Canvas {_canvasId} was not initialized, skipping dispose");
+        }
+    }
 }
-
-

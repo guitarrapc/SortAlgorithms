@@ -1,6 +1,6 @@
 // Canvas 2D レンダラー - 高速バーチャート描画（複数Canvas対応）
 
-window.canvasRenderer = {
+window.barChartCanvasRenderer = {
 instances: new Map(), // Canvas ID -> インスタンスのマップ
 resizeObserver: null, // ResizeObserver インスタンス
 lastRenderParams: new Map(), // Canvas ID -> 最後の描画パラメータ

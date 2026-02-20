@@ -19,7 +19,7 @@
     <div class="comparison-visualization">
         @if (VisualizationMode == VisualizationMode.BarChart)
         {
-            <CanvasChartRenderer 
+            <BarChartRenderer 
                 State="@Instance.State"
                 GridColumnCount="@GridColumnCount"
                 OnClick="@OnVisualizationClick" />

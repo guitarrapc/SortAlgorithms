@@ -198,7 +198,7 @@
                 @* 通常モード: 単一アルゴリズム表示 *@
                 @if (Playback.State.Mode == VisualizationMode.BarChart)
                 {
-                    <CanvasChartRenderer State="Playback.State"
+                    <BarChartRenderer State="Playback.State"
                                       OnClick="OnVisualizationClick" />
                 }
                 else if (Playback.State.Mode == VisualizationMode.Circular)
