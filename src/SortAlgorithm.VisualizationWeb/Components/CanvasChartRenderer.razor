@@ -84,7 +84,7 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
         
         try
         {
-            await JS.InvokeVoidAsync("canvasRenderer.render",
+            await JS.InvokeVoidAsync("canvasRenderer.updateData",
                 _canvasId,  // Canvas IDを最初の引数として渡す
                 State.MainArray,
                 State.CompareIndices.ToArray(),

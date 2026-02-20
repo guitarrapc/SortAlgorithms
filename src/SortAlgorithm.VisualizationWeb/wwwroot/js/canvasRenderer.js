@@ -8,6 +8,11 @@ lastRenderParams: new Map(), // Canvas ID -> 最後の描画パラメータ
 // デバッグ用：FPS計測
 renderCounts: new Map(),
 lastFpsLogs: new Map(),
+
+// rAFループ用
+dirtyCanvases: new Set(),  // 再描画が必要なCanvas
+isLoopRunning: false,      // rAFループが実行中かどうか
+rafId: null,               // requestAnimationFrame ID
     
 // 色定義
 colors: {
@@ -144,7 +149,15 @@ colors: {
      * @param {boolean} showCompletionHighlight - 完了ハイライトを表示するか
      */
     render: function(canvasId, array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight) {
-        // 描画パラメータを保存（ResizeObserver用）
+        // 後方互換用: updateData に委譲
+        this.updateData(canvasId, array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight);
+    },
+
+    /**
+     * データを更新して rAF ループで再描画をスケジュール
+     * C# から呼ばれる主要エントリポイント（render の代替）
+     */
+    updateData: function(canvasId, array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight) {
         const params = {
             array,
             compareIndices,
@@ -156,11 +169,41 @@ colors: {
             showCompletionHighlight: showCompletionHighlight !== undefined ? showCompletionHighlight : false
         };
         this.lastRenderParams.set(canvasId, params);
-        
-        // 実際の描画処理
-        this.renderInternal(canvasId, params);
+        this.dirtyCanvases.add(canvasId);
+
+        if (!this.isLoopRunning) {
+            this.startLoop();
+        }
     },
-    
+
+    /**
+     * rAF 駆動の描画ループを開始する
+     * dirty なCanvasのみ描画し、すべてが clean になったら停止する
+     */
+    startLoop: function() {
+        if (this.isLoopRunning) return;
+        this.isLoopRunning = true;
+
+        const self = this;
+        const tick = () => {
+            if (self.dirtyCanvases.size > 0) {
+                self.dirtyCanvases.forEach(canvasId => {
+                    if (self.instances.has(canvasId)) {
+                        const params = self.lastRenderParams.get(canvasId);
+                        if (params) self.renderInternal(canvasId, params);
+                    }
+                });
+                self.dirtyCanvases.clear();
+                self.rafId = requestAnimationFrame(tick);
+            } else {
+                self.isLoopRunning = false;
+                self.rafId = null;
+            }
+        };
+
+        this.rafId = requestAnimationFrame(tick);
+    },
+
     /**
      * 内部描画処理（実際のCanvas描画）
      * @param {string} canvasId - Canvas要素のID
@@ -363,11 +406,20 @@ colors: {
                 console.warn('Canvas instance not found for disposal:', canvasId);
             }
             
-            // FPS計測用のデータと描画パラメータも削除
+            // FPS計測用のデータ、描画パラメータ、dirty フラグも削除
             this.renderCounts.delete(canvasId);
             this.lastFpsLogs.delete(canvasId);
             this.lastRenderParams.delete(canvasId);
+            this.dirtyCanvases.delete(canvasId);
         } else {
+            // rAFループを停止
+            if (this.rafId) {
+                cancelAnimationFrame(this.rafId);
+                this.rafId = null;
+            }
+            this.isLoopRunning = false;
+            this.dirtyCanvases.clear();
+
             // ResizeObserverをリセット
             if (this.resizeObserver) {
                 this.resizeObserver.disconnect();

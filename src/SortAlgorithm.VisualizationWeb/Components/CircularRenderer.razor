@@ -69,7 +69,7 @@
         
         try
         {
-            await JS.InvokeVoidAsync("circularCanvasRenderer.render",
+            await JS.InvokeVoidAsync("circularCanvasRenderer.updateData",
                 _canvasId,  // Canvas IDを最初の引数として渡す
                 State.MainArray,
                 State.CompareIndices.ToArray(),
