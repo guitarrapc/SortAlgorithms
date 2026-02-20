@@ -25,16 +25,16 @@ public class VisualizationState
     public Dictionary<int, int[]> BufferArrays { get; set; } = new();
 
     /// <summary>比較操作中のインデックス</summary>
-    public HashSet<int> CompareIndices { get; set; } = [];
+    public List<int> CompareIndices { get; set; } = new(4);
 
     /// <summary>スワップ操作中のインデックス</summary>
-    public HashSet<int> SwapIndices { get; set; } = [];
+    public List<int> SwapIndices { get; set; } = new(4);
 
     /// <summary>読み込み操作中のインデックス</summary>
-    public HashSet<int> ReadIndices { get; set; } = [];
+    public List<int> ReadIndices { get; set; } = new(64);
 
     /// <summary>書き込み操作中のインデックス</summary>
-    public HashSet<int> WriteIndices { get; set; } = [];
+    public List<int> WriteIndices { get; set; } = new(64);
 
     /// <summary>現在の操作インデックス</summary>
     public int CurrentOperationIndex { get; set; }

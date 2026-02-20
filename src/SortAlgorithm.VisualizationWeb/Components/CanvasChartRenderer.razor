@@ -5,10 +5,10 @@
 @inject DebugSettings DebugSettings
 @implements IAsyncDisposable
 
-<div class="bar-chart-container @(State?.PlaybackState == PlaybackState.Playing ? "playing" : "")" 
-     @onclick="OnCanvasClick" 
+<div class="bar-chart-container @(State?.PlaybackState == PlaybackState.Playing ? "playing" : "")"
+     @onclick="OnCanvasClick"
      style="position: relative; width: 100%; height: 100%;">
-    
+
     @if (State != null && State.MainArray.Length > 0)
     {
         <canvas id="@_canvasId" style="width: 100%; height: 100%; display: block;"></canvas>
@@ -23,49 +23,50 @@
 </div>
 
 @code {
-[Parameter]
-public VisualizationState? State { get; set; }
-    
-[Parameter]
-public EventCallback OnClick { get; set; }
-    
-[Parameter]
-public int GridColumnCount { get; set; } = 1;
-    
-private string _canvasId = $"sortCanvas_{Guid.NewGuid():N}";
-private bool _isInitialized = false;
-private int _previousGridColumnCount = 0;
-private int _lastSortVersion = -1; // JS 側配列が初期化済みかを追跡する
-    
-// デバッグ用：レンダリング頻度計測
-private int _renderCount = 0;
-private DateTime _lastFpsLog = DateTime.UtcNow;
-    
-protected override async Task OnAfterRenderAsync(bool firstRender)
-{
-    if (firstRender)
+    [Parameter]
+    public VisualizationState? State { get; set; }
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+
+    [Parameter]
+    public int GridColumnCount { get; set; } = 1;
+
+    private string _canvasId = $"sortCanvas_{Guid.NewGuid():N}";
+    private bool _isInitialized = false;
+    private bool _previousHasData = false;
+    private int _previousGridColumnCount = 0;
+    private int _lastSortVersion = -1; // JS 側配列が初期化済みかを追跡する
+
+    // デバッグ用：レンダリング頻度計測
+    private int _renderCount = 0;
+    private DateTime _lastFpsLog = DateTime.UtcNow;
+
+    protected override bool ShouldRender()
     {
-        // Canvas初期化
-        var success = await JS.InvokeAsync<bool>("canvasRenderer.initialize", _canvasId);
-        if (success)
-        {
-            _isInitialized = true;
-            _previousGridColumnCount = GridColumnCount;
-            await RenderCanvas();
-        }
+        // Canvas は JS 側で描画するため Blazor の DOM 差分は不要
+        // canvas 要素の表示/非表示が変わるとき、または未初期化のときのみ再レンダリング
+        var hasData = State?.MainArray.Length > 0;
+        var shouldRender = _previousHasData != hasData || !_isInitialized;
+        _previousHasData = hasData;
+        return shouldRender;
     }
-    else if (_isInitialized)
+
+    protected override async Task OnParametersSetAsync()
     {
-        // グリッド列数が変わった場合の記録（ResizeObserverが自動リサイズ＆再描画）
+        // ShouldRender() より先に呼ばれるため、毎フレームの JS データ転送はここで行う
+        if (!_isInitialized) return;
+
+        // グリッド列数が変わった場合の記録（ResizeObserver が自動リサイズ＆再描画）
         if (_previousGridColumnCount != GridColumnCount)
         {
             DebugSettings.Log($"[CanvasRenderer] Grid column count changed: {_previousGridColumnCount} -> {GridColumnCount} for canvas {_canvasId}");
             _previousGridColumnCount = GridColumnCount;
         }
-            
+
         // 描画
         await RenderCanvas();
-            
+
         // 🔍 デバッグ：レンダリング頻度をログ出力
         _renderCount++;
         var now = DateTime.UtcNow;
@@ -77,12 +78,26 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
             _lastFpsLog = now;
         }
     }
-}
-    
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // 初期化済みの場合は OnParametersSetAsync でデータ転送済みのためスキップ
+        if (_isInitialized) return;
+
+        // canvas 要素が DOM に現れたタイミングで初期化を試みる
+        var success = await JS.InvokeAsync<bool>("canvasRenderer.initialize", _canvasId);
+        if (success)
+        {
+            _isInitialized = true;
+            _previousGridColumnCount = GridColumnCount;
+            await RenderCanvas();
+        }
+    }
+
     private async Task RenderCanvas()
     {
         if (!_isInitialized || State == null || State.MainArray.Length == 0) return;
-        
+
         try
         {
             if (_lastSortVersion != State.SortVersion)
@@ -134,16 +149,16 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
             DebugSettings.Log($"Canvas render error: {ex.Message}");
         }
     }
-    
+
     private async Task OnCanvasClick()
     {
         await OnClick.InvokeAsync();
     }
-    
+
     public async ValueTask DisposeAsync()
     {
         DebugSettings.Log($"[CanvasRenderer] DisposeAsync called for canvas: {_canvasId}");
-        
+
         if (_isInitialized)
         {
             try
