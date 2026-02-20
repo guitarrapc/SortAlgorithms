@@ -804,7 +804,7 @@ public bool OnAnimationFrame()
 
 
 
-### 12.2 CircularRenderer に Worker/OffscreenCanvas サポートがない
+### 12.2 CircularRenderer に Worker/OffscreenCanvas サポートがない ✅ 実装済み
 
 **問題：**
 
@@ -861,11 +861,11 @@ initialize: function(canvasId) {
 - Comparison Mode + Circular でもスムーズな再生
 - BarChart と同等のパフォーマンス特性を実現
 
-**優先度：🟡 中（Circular モード使用時に影響）**
+**優先度：🟡 中（Circular モード使用時に影響）→ ✅ 実装済み**
 
 ---
 
-### 12.3 毎フレームの `getBoundingClientRect()` によるレイアウトスラッシング
+### 12.3 毎フレームの `getBoundingClientRect()` によるレイアウトスラッシング ✅ 実装済み
 
 **問題：**
 
@@ -944,7 +944,7 @@ renderInternal: function(canvasId, params) {
 
 ---
 
-### 12.4 CircularRenderer の三角関数・HSL文字列生成が毎フレーム発生
+### 12.4 CircularRenderer の三角関数・HSL文字列生成が毎フレーム発生 ✅ 実装済み
 
 **問題：**
 
@@ -1320,8 +1320,8 @@ private void OnPlaybackStateChanged()
 
 | # | 改善 | 変更ファイル | 優先度 |
 |---|------|-------------|--------|
-| 12.1 | SpinWait 排除 | `PlaybackService.cs` | 🔴 高 |
-| 12.3 | getBoundingClientRect キャッシュ | `canvasRenderer.js`, `circularCanvasRenderer.js` | 🔴 高 |
+| 12.1 ✅ | SpinWait 排除 | `PlaybackService.cs` | 🔴 高 |
+| 12.3 ✅ | getBoundingClientRect キャッシュ | `barChartCanvasRenderer.js`, `circularCanvasRenderer.js` | 🔴 高 |
 | 12.6 | デッドコード削除 | `canvasRenderer.js` | 🟢 低 |
 | 12.7 | CSS contain 追加 | `app.css` | 🟡 中 |
 
@@ -1329,7 +1329,7 @@ private void OnPlaybackStateChanged()
 
 | # | 改善 | 変更ファイル | 優先度 |
 |---|------|-------------|--------|
-| 12.4 | Circular 三角関数 LUT + HSL キャッシュ | `circularCanvasRenderer.js` | 🟡 中 |
+| 12.4 ✅ | Circular 三角関数 LUT + HSL キャッシュ | `circularCanvasRenderer.js` | 🟡 中 |
 | 12.5 | FinalizeDeltas バッファ再利用 | `PlaybackService.cs`, `VisualizationState.cs` | 🟢 低〜中 |
 | 12.8 | DPR キャッピング | `canvasRenderer.js`, `circularCanvasRenderer.js`, Worker 各 js | 🟡 中 |
 | 12.9 | ComparisonStatsSummary ShouldRender | `ComparisonStatsSummary.razor` | 🟢 低 |
@@ -1338,7 +1338,7 @@ private void OnPlaybackStateChanged()
 
 | # | 改善 | 変更ファイル | 優先度 |
 |---|------|-------------|--------|
-| 12.2 | CircularRenderer Worker 対応 | 新規: `circularRenderWorker.js`, 変更: `circularCanvasRenderer.js`, `CircularRenderer.razor` | 🟡 中 |
+| 12.2 ✅ | CircularRenderer Worker 対応 | 新規: `circularRenderWorker.js`, `circularWebglWorker.js`, 変更: `circularCanvasRenderer.js`, `CircularRenderer.razor` | 🟡 中 |
 
 ---
 
