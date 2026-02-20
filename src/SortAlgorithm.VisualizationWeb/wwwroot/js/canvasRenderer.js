@@ -280,9 +280,12 @@ colors: {
         const barWidth = totalBarWidth * (1.0 - gapRatio);
         const gap = totalBarWidth * gapRatio;
         
-        // 最大値を取得
-        const maxValue = Math.max(...array);
-        
+        // 最大値を取得（スプレッド演算子は大配列でスタックオーバーフローのリスクがあるためループで計算）
+        let maxValue = 0;
+        for (let i = 0; i < arrayLength; i++) {
+            if (array[i] > maxValue) maxValue = array[i];
+        }
+
         // Set を使って高速な存在チェック
         const compareSet = new Set(compareIndices);
         const swapSet = new Set(swapIndices);
@@ -296,35 +299,59 @@ colors: {
             // 横スクロールが必要な場合は左寄せ
             ctx.scale(scale, 1.0);
         }
-        
-        // メイン配列のバーを描画（一括描画で高速化）
-        for (let i = 0; i < arrayLength; i++) {
-            const value = array[i];
-            const barHeight = (value / maxValue) * (sectionHeight - 20);
-            const x = i * totalBarWidth + (gap / 2);
-            const y = mainArrayY + (sectionHeight - barHeight);
-            
-            // 色を決定（優先度順）
-            let color;
-            if (showCompletionHighlight) {
-                // ソート完了ハイライト表示中はすべて緑色
-                color = this.colors.sorted;
-            } else if (swapSet.has(i)) {
-                color = this.colors.swap;
-            } else if (compareSet.has(i)) {
-                color = this.colors.compare;
-            } else if (writeSet.has(i)) {
-                color = this.colors.write;
-            } else if (readSet.has(i)) {
-                color = this.colors.read;
-            } else {
-                color = this.colors.normal;
+
+        // メイン配列のバーを描画（同色バッチ描画: fillStyle 切り替えを最小化）
+        const usableHeight = sectionHeight - 20;
+        if (showCompletionHighlight) {
+            // 完了ハイライト: 全バーを1色で一括描画
+            ctx.fillStyle = this.colors.sorted;
+            for (let i = 0; i < arrayLength; i++) {
+                const barHeight = (array[i] / maxValue) * usableHeight;
+                ctx.fillRect(
+                    i * totalBarWidth + (gap / 2),
+                    mainArrayY + (sectionHeight - barHeight),
+                    barWidth, barHeight
+                );
             }
-            
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, barWidth, barHeight);
+        } else {
+            // 通常描画: インデックスを色バケツに振り分けてから色ごとに一括描画
+            const swapBucket    = [];
+            const compareBucket = [];
+            const writeBucket   = [];
+            const readBucket    = [];
+            const normalBucket  = [];
+
+            for (let i = 0; i < arrayLength; i++) {
+                if      (swapSet.has(i))    swapBucket.push(i);
+                else if (compareSet.has(i)) compareBucket.push(i);
+                else if (writeSet.has(i))   writeBucket.push(i);
+                else if (readSet.has(i))    readBucket.push(i);
+                else                        normalBucket.push(i);
+            }
+
+            // 描画順: normal → compare → write → read → swap（ハイライトを前面に重ねる）
+            const buckets = [
+                [normalBucket,  this.colors.normal],
+                [compareBucket, this.colors.compare],
+                [writeBucket,   this.colors.write],
+                [readBucket,    this.colors.read],
+                [swapBucket,    this.colors.swap],
+            ];
+
+            for (const [indices, color] of buckets) {
+                if (indices.length === 0) continue;
+                ctx.fillStyle = color;
+                for (const i of indices) {
+                    const barHeight = (array[i] / maxValue) * usableHeight;
+                    ctx.fillRect(
+                        i * totalBarWidth + (gap / 2),
+                        mainArrayY + (sectionHeight - barHeight),
+                        barWidth, barHeight
+                    );
+                }
+            }
         }
-        
+
         ctx.restore();
         
         // バッファー配列を描画（ソート完了時は非表示）
@@ -338,9 +365,12 @@ colors: {
                 
                 if (!bufferArray || bufferArray.length === 0) continue;
                 
-                // バッファー配列の最大値
-                const bufferMaxValue = Math.max(...bufferArray);
+                // バッファー配列の最大値（ループで安全に）
+                let bufferMaxValue = 0;
                 const bufferLength = bufferArray.length;
+                for (let i = 0; i < bufferLength; i++) {
+                    if (bufferArray[i] > bufferMaxValue) bufferMaxValue = bufferArray[i];
+                }
                 
                 // バッファー配列用のバー幅計算（メイン配列と同じロジック）
                 const bufferRequiredWidth = Math.max(width, bufferLength * minBarWidth / (1.0 - gapRatio));
@@ -355,16 +385,16 @@ colors: {
                     ctx.scale(bufferScale, 1.0);
                 }
                 
-                // バッファー配列のバーを描画
+                // バッファー配列のバーを描画（単色なので fillStyle は1回）
+                const bufferUsableHeight = sectionHeight - 20;
+                ctx.fillStyle = '#06B6D4';
                 for (let i = 0; i < bufferLength; i++) {
-                    const value = bufferArray[i];
-                    const barHeight = (value / bufferMaxValue) * (sectionHeight - 20);
-                    const x = i * bufferTotalBarWidth + (bufferGap / 2);
-                    const y = bufferY + (sectionHeight - barHeight);
-                    
-                    // バッファー配列は薄いシアン色で表示
-                    ctx.fillStyle = '#06B6D4';
-                    ctx.fillRect(x, y, bufferBarWidth, barHeight);
+                    const barHeight = (bufferArray[i] / bufferMaxValue) * bufferUsableHeight;
+                    ctx.fillRect(
+                        i * bufferTotalBarWidth + (bufferGap / 2),
+                        bufferY + (sectionHeight - barHeight),
+                        bufferBarWidth, barHeight
+                    );
                 }
                 
                 ctx.restore();
