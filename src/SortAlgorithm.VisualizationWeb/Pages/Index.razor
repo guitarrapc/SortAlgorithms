@@ -127,22 +127,18 @@
                     </select>
                 </div>
 
-                @if (SelectedVisualizationMode == VisualizationMode.BarChart)
-                {
-                    <div class="stat-item">
-                        <span class="stat-label">
-                            Renderer
-                            <span style="font-size: 0.8em; color: #888;">
-                                (@(RenderSettings.UseWebGL ? "WebGL" : "Canvas 2D"))
-                            </span>
+                <div class="stat-item">
+                    <span class="stat-label">
+                        Renderer
+                        <span style="font-size: 0.8em; color: #888;">
+                            (@(RenderSettings.UseWebGL ? "WebGL" : "Canvas 2D"))
                         </span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" @bind="RenderSettings.UseWebGL" />
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                }
-
+                    </span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" @bind="RenderSettings.UseWebGL" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
 
                 <div class="stat-item">
                     <span class="stat-label">

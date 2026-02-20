@@ -61,7 +61,7 @@ colors: {
             canvas.height = rect.height * dpr;
 
             const offscreen  = canvas.transferControlToOffscreen();
-            const workerFile = useWebGL ? 'js/webglWorker.js' : 'js/renderWorker.js';
+            const workerFile = useWebGL ? 'js/barChartWebglWorker.js' : 'js/barChartRenderWorker.js';
             const workerUrl  = new URL(workerFile, document.baseURI).href;
             const worker     = new Worker(workerUrl);
             worker.postMessage({ type: 'init', canvas: offscreen, dpr }, [offscreen]);
