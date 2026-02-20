@@ -23,7 +23,7 @@ public record AlgorithmMetadata
     public required int RecommendedSize { get; init; }
     
     /// <summary>ソート実行デリゲート</summary>
-    public required Action<int[], ISortContext> SortAction { get; init; }
+    public required Action<Span<int>, ISortContext> SortAction { get; init; }
     
     /// <summary>説明</summary>
     public string Description { get; init; } = string.Empty;
