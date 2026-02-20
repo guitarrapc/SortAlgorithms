@@ -291,11 +291,60 @@ var estimatedCurrentTime = actualExecutionTime * progressRatio;
 推定実行時間 (6.855 ms)   : 15.234 ms × 45% = 6.855 ms（線形推定）
 ```
 
+## 3.5 比較モードでの表示
+
+比較モード（複数アルゴリズムを並べて表示するモード）でも、各アルゴリズムの実行時間を表示する。
+
+### 3.5.1 グリッドアイテム（ComparisonStatsSummary）
+
+各アルゴリズムのビジュアライゼーション下部のミニ統計に実行時間を表示：
+
+**再生中:**
+```
+┌──────────────────────────────────┐
+│ ⏱ 6.855 ms / 15.0 ms             │
+│ Compares: 1,234                  │
+│ Swaps:      567                  │
+│ Progress:    45%                 │
+└──────────────────────────────────┘
+```
+
+**停止中・完了時:**
+```
+┌──────────────────────────────────┐
+│ ⏱ 15.0 ms                        │
+│ Compares: 2,456                  │
+│ Swaps:    1,234                  │
+│ Progress:  100%                  │
+└──────────────────────────────────┘
+```
+
+- **再生中**: `FormatTime(EstimatedCurrentExecutionTime) / FormatTotalTime(ActualExecutionTime)`（線形増加）
+- **停止中・完了時**: `FormatTotalTime(ActualExecutionTime)`
+- 実行時間値はグリーン（`#10B981`）で強調表示
+
+### 3.5.2 比較統計テーブル（ComparisonStatsTable）
+
+右パネルの比較テーブルに **Exec Time 列**を追加：
+
+| Algorithm | Complexity | Compares | Swaps | Reads | Writes | Progress | **Exec Time** |
+|-----------|-----------|----------|-------|-------|--------|----------|---------------|
+| QuickSort | O(n log n) | 2,456 | 1,234 | 5,200 | 3,890 | 100% | **15.0 ms** |
+| MergeSort | O(n log n) | 3,584 | 0 | 8,192 | 8,192 | 100% | **22.3 ms** |
+| BubbleSort | O(n²) | 32,640 | 16,128 | 65,280 | 65,280 | 100% | **89.2 ms** |
+
+**列の仕様:**
+- **表示値**: `FormatTotalTime(ActualExecutionTime)`（末尾ゼロ省略）
+- **ソート**: Exec Time 列ヘッダークリックで昇順/降順ソート対応
+- **クリップボードコピー**: 📋 Copy ボタンの TSV 出力にも Exec Time を含める
+- **未計測時**: `-` を表示（ソート実行前など）
+
 ## 4. UI/UXデザイン
 
 ### 4.1 統計パネルレイアウト
 
 #### 4.1.1 推奨レイアウト（縦配置）
+
 
 **再生中の表示:**
 
@@ -711,9 +760,91 @@ public class SortExecutor
 }
 ```
 
+### 6.4 比較モードコンポーネント
+
+**ComparisonStatsSummary.razor** — グリッドアイテム下部のミニ統計：
+
+```razor
+@* ComparisonStatsSummary.razor *@
+
+<div class="comparison-stats-summary">
+    <div class="stat-mini">
+        <span class="label">⏱</span>
+        <span class="value stat-execution-time">@ExecutionTimeDisplay</span>
+    </div>
+    <div class="stat-mini">
+        <span class="label">Compares:</span>
+        <span class="value">@State.CompareCount.ToString("N0")</span>
+    </div>
+    <!-- ... -->
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public VisualizationState State { get; set; } = null!;
+
+    private bool IsPlaying => State.PlaybackState == PlaybackState.Playing;
+
+    private string ExecutionTimeDisplay
+    {
+        get
+        {
+            if (State.ActualExecutionTime == TimeSpan.Zero) return "-";
+            if (IsPlaying)
+                return $"{FormatTime(State.EstimatedCurrentExecutionTime)} / {FormatTotalTime(State.ActualExecutionTime)}";
+            return FormatTotalTime(State.ActualExecutionTime);
+        }
+    }
+
+    // FormatTime / FormatTotalTime / TrimTrailingZerosMinOne は StatisticsPanel と同一実装
+}
+```
+
+**ComparisonStatsTable.razor** — 右パネルの比較テーブル（Exec Time 列追加）：
+
+```razor
+@* ComparisonStatsTable.razor（抜粋） *@
+
+<thead>
+    <tr>
+        <!-- ... 既存列 ... -->
+        <th @onclick='() => SortBy("ExecTime")' class="sortable">
+            Exec Time @GetSortIcon("ExecTime")
+        </th>
+    </tr>
+</thead>
+<tbody>
+    @foreach (var item in GetSortedInstances())
+    {
+        <tr>
+            <!-- ... 既存列 ... -->
+            <td class="stat-value exec-time">@FormatTotalTime(item.State.ActualExecutionTime)</td>
+        </tr>
+    }
+</tbody>
+
+@code {
+    private IEnumerable<ComparisonInstance> GetSortedInstances() => _sortColumn switch
+    {
+        // ...
+        "ExecTime" => _sortAscending
+            ? Instances.OrderBy(x => x.State.ActualExecutionTime)
+            : Instances.OrderByDescending(x => x.State.ActualExecutionTime),
+        _ => Instances
+    };
+
+    private static string FormatTotalTime(TimeSpan time)
+    {
+        if (time == TimeSpan.Zero) return "-";
+        // FormatTotalTime の実装は StatisticsPanel と同一
+    }
+}
+```
+
 ## 7. テスト戦略
 
 ### 7.1 単体テスト
+
 
 #### 7.1.1 計測精度のテスト
 
@@ -800,7 +931,17 @@ public void ExecutionTime_ShouldVaryByAlgorithm()
 - 一時停止時、実行時間が現在の推定値で固定されることを確認
 - 再生完了時、`Total Execution` 表示に切り替わることを確認
 
-#### 7.3.3 ツールチップ確認
+#### 7.3.3 比較モードの確認
+
+- グリッドアイテム下部（ComparisonStatsSummary）に実行時間が表示されることを確認
+- **再生中**: `X.XXX ms / Y.Y ms` 形式で線形増加することを確認
+- **停止中・完了時**: `Y.Y ms` 形式（末尾ゼロ省略）で表示されることを確認
+- 比較テーブル（ComparisonStatsTable）に Exec Time 列が表示されることを確認
+- Exec Time 列ヘッダークリックで昇順/降順ソートが動作することを確認
+- 📋 Copy でクリップボードにコピーされる TSV に Exec Time が含まれることを確認
+- 未実行アルゴリズム（`ActualExecutionTime == TimeSpan.Zero`）は `-` が表示されることを確認
+
+#### 7.3.4 ツールチップ確認
 
 - ホバー時にツールチップが表示されることを確認
 - ツールチップの内容が正確であることを確認
