@@ -1,20 +1,23 @@
-﻿using SortAlgorithm.VisualizationWeb.Models;
+﻿using Microsoft.JSInterop;
+using SortAlgorithm.VisualizationWeb.Models;
 namespace SortAlgorithm.VisualizationWeb.Services;
 
 public class ComparisonModeService : IDisposable
 {
     private readonly SortExecutor _executor;
     private readonly DebugSettings _debug;
+    private readonly IJSRuntime _js;
     private readonly ComparisonState _state = new();
     private readonly List<PlaybackService> _playbackServices = new();
 
     public ComparisonState State => _state;
     public event Action? OnStateChanged;
 
-    public ComparisonModeService(SortExecutor executor, DebugSettings debug)
+    public ComparisonModeService(SortExecutor executor, DebugSettings debug, IJSRuntime js)
     {
         _executor = executor;
         _debug = debug;
+        _js = js;
     }
 
     public void Enable(int[] initialArray, int arraySize, ArrayPatternMetadata pattern)
@@ -65,7 +68,7 @@ public class ComparisonModeService : IDisposable
         try
         {
             var (operations, statistics, actualExecutionTime) = _executor.ExecuteAndRecord(_state.InitialArray, metadata);
-            var playback = new PlaybackService();
+            var playback = new PlaybackService(_js);
             playback.LoadOperations(_state.InitialArray, operations, statistics, actualExecutionTime);
             
             // PlaybackServiceのStateChangedイベントを購読

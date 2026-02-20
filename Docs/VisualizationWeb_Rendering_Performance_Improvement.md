@@ -694,87 +694,115 @@ Phase 1〜6 および C# 側改善がほぼすべて実装された。以下は�
 
 コードベース調査により、以下の追加改善ポイントを特定した。対象はPC・タブレット・スマートフォンのブラウザからアクセスされる Blazor WASM アプリケーションである。
 
-### 12.1 【重大】PlaybackService の SpinWait がメインスレッドをブロックする
+### 12.1 【重大】PlaybackService の SpinWait がメインスレッドをブロックする ✅ 実装済み
 
 **問題：**
 
 `PlaybackLoopAsync` 内の `SpinWait` は Blazor WASM のシングルスレッド環境で致命的な問題を起こす。
 
 ```csharp
-// PlaybackService.cs L280-303
-private async Task PlaybackLoopAsync(CancellationToken cancellationToken)
+// 修正前: SpinWait による CPU ビジーウェイト
+var spinWait = new SpinWait();
+while (sw.Elapsed.TotalMilliseconds < nextFrameTime && !cancellationToken.IsCancellationRequested)
 {
-    // ...
-    // 高精度待機: SpinWait
-    var spinWait = new SpinWait();
-    while (sw.Elapsed.TotalMilliseconds < nextFrameTime && !cancellationToken.IsCancellationRequested)
-    {
-        spinWait.SpinOnce(); // CPUビジーウェイト ← 問題
-    }
+    spinWait.SpinOnce(); // メインスレッドを完全ブロック ← 問題
 }
 ```
 
 **影響：**
-- Blazor WASM はデフォルトでシングルスレッド。`Task.Run()` は新しいスレッドを作らず、同じスレッド上のタスクスケジューラで実行される
+- Blazor WASM はシングルスレッド。`Task.Run()` は新しいスレッドを生成しない
 - `SpinWait.SpinOnce()` は CPU をビジーウェイトし、UI スレッドを完全にブロックする
-- `Task.Yield()` で一時的に解放されるが、SpinWait 区間は UI が凍結する
 - **モバイル端末では CPU 使用率が常時 100% に張り付き、バッテリー消費が激増、サーマルスロットリングを誘発**
 
-**改善案：**
+**実装した解決策：JS `requestAnimationFrame` ドリブンループ**
 
-```csharp
-private async Task PlaybackLoopAsync(CancellationToken cancellationToken)
-{
-    try
-    {
-        while (!cancellationToken.IsCancellationRequested
-               && State.CurrentOperationIndex < _operations.Count)
-        {
-            // 操作を処理
-            ClearHighlights();
+`Task.Delay` は ブラウザの `setTimeout` 経由のため最小 ~16ms 程度の解像度しかなく、  
+`SpeedMultiplier = 10` 時の 1.67ms 間隔を実現できず、アニメーションが規定速度で再生されないという問題があった。  
+そのため `Task.Delay` ではなく、ブラウザの vsync に同期した `requestAnimationFrame` をドライバーとして採用した。
 
-            int opsToProcess = Math.Min(OperationsPerFrame,
-                                        _operations.Count - State.CurrentOperationIndex);
-            for (int i = 0; i < opsToProcess
-                 && State.CurrentOperationIndex < _operations.Count; i++)
-            {
-                if (cancellationToken.IsCancellationRequested) break;
-                var operation = _operations[State.CurrentOperationIndex];
-                ApplyOperation(operation, applyToArray: true, updateStats: true);
-                State.CurrentOperationIndex++;
-            }
+```
+修正前: Task.Run (WASM = 同一スレッド)
+  SpinWait(1.67ms) → 操作処理 → SpinWait → ... → Task.Yield (16ms ごと)
+  問題: SpinWait がスレッドをブロック。Task.Yield 間隔に依存した不均一な再生速度。
 
-            // ハイライト更新
-            if (State.CurrentOperationIndex > 0
-                && State.CurrentOperationIndex < _operations.Count)
-            {
-                var lastOperation = _operations[State.CurrentOperationIndex - 1];
-                ApplyOperation(lastOperation, applyToArray: false, updateStats: false);
-            }
+修正後: requestAnimationFrame ドリブン
+  rAF(16.67ms) → invokeMethod('OnAnimationFrame') → 操作処理 → rAF(16.67ms) → ...
+  利点: vsync 同期・CPU ゼロアイドル・速度制御が正確
+```
 
-            // UI更新: SpinWait の代わりに Task.Delay で UI スレッドを解放
-            FinalizeDeltas();
-            StateChanged?.Invoke();
+**追加ファイル: `wwwroot/js/playbackHelper.js`**
 
-            // フレーム間隔を計算してスリープ（UI をブロックしない）
-            var frameInterval = Math.Max(1, (int)(1000.0 / (TARGET_FPS * SpeedMultiplier)));
-            await Task.Delay(frameInterval, cancellationToken);
-        }
-        // ... 完了処理 ...
-    }
-    catch (OperationCanceledException) { }
+全 `PlaybackService` インスタンスを一つの rAF ループで管理する中央スケジューラー。  
+Blazor WASM 専用の `dotNetRef.invokeMethod(...)` (同期呼び出し) で C# の `OnAnimationFrame()` を毎フレーム呼ぶ。
+
+```javascript
+// 単一 rAF ループで全インスタンスを処理（ComparisonMode 9 Canvas も 1 ループ）
+_startLoop: function() {
+    const tick = () => {
+        this._instances.forEach((dotNetRef, id) => {
+            const shouldContinue = dotNetRef.invokeMethod('OnAnimationFrame');
+            if (!shouldContinue) toStop.push(id);
+        });
+        if (this._instances.size > 0) this._rafId = requestAnimationFrame(tick);
+    };
+    this._rafId = requestAnimationFrame(tick);
 }
 ```
 
-**期待効果：**
-- UI スレッドのブロック解消（全フレームで描画が滑らかに）
-- モバイル端末の CPU 使用率: 100% → **必要最小限**
-- バッテリー消費の大幅削減
-- `Task.Delay` の精度は `SpinWait` より低いが、描画は JS 側 rAF が自律制御するため問題なし
+**C# 側: `[JSInvokable] bool OnAnimationFrame()`**
 
-**優先度：🔴 高（モバイル対応では必須）**
+`SpeedMultiplier` はフレーム蓄積量で速度を表現する:
+
+```csharp
+[JSInvokable]
+public bool OnAnimationFrame()
+{
+    // SpeedMultiplier に応じたフレーム蓄積
+    // < 1.0: 複数フレームを待ってから処理（スローモーション）
+    // > 1.0: 複数フレーム分の操作を一括処理（高速再生）
+    _frameAccumulator += SpeedMultiplier;
+    if (_frameAccumulator < 1.0) return true; // スキップ
+
+    var framesToProcess = (int)_frameAccumulator;
+    _frameAccumulator -= framesToProcess;
+    if (_frameAccumulator > 3.0) _frameAccumulator = 0.0; // タブ非アクティブ後の急進防止
+
+    // OperationsPerFrame × framesToProcess 個の操作を処理
+    var effectiveOps = Math.Min(OperationsPerFrame * framesToProcess, remaining);
+    // ... 操作処理 → FinalizeDeltas() → StateChanged?.Invoke() ...
+
+    return State.CurrentOperationIndex < _operations.Count;
+}
+```
+
+**SpeedMultiplier の意味論（rAF ベース）**
+
+| SpeedMultiplier | rAF フレームあたりの処理 | 有効操作数/秒 |
+|---|---|---|
+| 0.1x | 10フレームに1回 (`_frameAccumulator` = 0.1/frame) | `OperationsPerFrame × 6` |
+| 1x | 毎フレーム1回 | `OperationsPerFrame × 60` |
+| 10x | 毎フレーム10フレーム分 | `OperationsPerFrame × 600` |
+| 100x | 毎フレーム100フレーム分 | `OperationsPerFrame × 6000` |
+
+旧設計（SpinWait）の「フレーム間隔を短縮して速度向上」から、「1フレームあたりの処理量を増やして速度向上」へ意味論が変わったが、**有効操作数/秒は同等**で視覚的な違いはない。
+
+**期待効果：**
+- SpinWait 排除により UI スレッドのブロックがゼロに
+- rAF = vsync 同期のため描画タイミングが正確（Task.Delay の ~16ms 精度問題を解消）
+- モバイル端末の CPU 使用率: 常時100% → **フレーム処理時のみ**
+- Comparison Mode 9 Canvas でも 1 つの rAF ループで効率的に処理
+
+**優先度：🔴 高（モバイル対応では必須）→ ✅ 実装済み**
+
+**変更ファイル：**
+- 新規: `wwwroot/js/playbackHelper.js` — rAF 中央スケジューラー
+- 変更: `Services/PlaybackService.cs` — `[JSInvokable] OnAnimationFrame()` 追加、`PlaybackLoopAsync` 削除
+- 変更: `Services/ComparisonModeService.cs` — `IJSRuntime` を `PlaybackService` コンストラクタへ渡す
+- 変更: `wwwroot/index.html` — `playbackHelper.js` スクリプト追加
 
 ---
+
+
 
 ### 12.2 CircularRenderer に Worker/OffscreenCanvas サポートがない
 
