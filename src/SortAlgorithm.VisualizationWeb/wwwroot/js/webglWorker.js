@@ -25,6 +25,7 @@ let uBarWidth       = null;
 let uGap            = null;
 let uCanvasW        = null;
 let uCanvasH        = null;
+let uDpr            = null;
 let uSectionOriginY = null;
 let uSectionHeight  = null;
 
@@ -170,6 +171,7 @@ uniform float u_barWidth;
 uniform float u_gap;
 uniform float u_canvasW;
 uniform float u_canvasH;
+uniform float u_dpr;
 uniform float u_sectionOriginY;
 uniform float u_sectionHeight;
 
@@ -177,7 +179,16 @@ out vec3 v_rgb;
 
 void main() {
     float barIndex = float(gl_InstanceID);
-    float x   = barIndex * u_totalBarWidth + u_gap * 0.5 + a_quad.x * u_barWidth;
+
+    // バーの左右端 (CSS px) を物理ピクセル境界にスナップし、サブピクセルギャップを防止する。
+    // 左端: floor でスナップ、右端: ceil でスナップ（バーが必ず 1 物理ピクセル以上を覆う）。
+    float rawLeft  = barIndex * u_totalBarWidth + u_gap * 0.5;
+    float rawRight = rawLeft + u_barWidth;
+    float physLeft  = floor(rawLeft  * u_dpr) / u_dpr;
+    float physRight = ceil (rawRight * u_dpr) / u_dpr;
+    physRight = max(physRight, physLeft + 1.0 / u_dpr);
+
+    float x   = mix(physLeft, physRight, a_quad.x);
     float topY = u_sectionOriginY + u_sectionHeight - a_height;
     float y   = topY + a_quad.y * a_height;
     gl_Position = vec4(
@@ -218,6 +229,7 @@ void main() { outColor = vec4(v_rgb, 1.0); }`;
     uGap            = gl.getUniformLocation(program, 'u_gap');
     uCanvasW        = gl.getUniformLocation(program, 'u_canvasW');
     uCanvasH        = gl.getUniformLocation(program, 'u_canvasH');
+    uDpr            = gl.getUniformLocation(program, 'u_dpr');
     uSectionOriginY = gl.getUniformLocation(program, 'u_sectionOriginY');
     uSectionHeight  = gl.getUniformLocation(program, 'u_sectionHeight');
 
@@ -390,6 +402,7 @@ function drawWebGL() {
     gl.useProgram(program);
     gl.uniform1f(uCanvasW, cssW);
     gl.uniform1f(uCanvasH, cssH);
+    gl.uniform1f(uDpr,     dpr);
     gl.bindVertexArray(vao);
 
     // ── メイン配列 ──────────────────────────────────────
