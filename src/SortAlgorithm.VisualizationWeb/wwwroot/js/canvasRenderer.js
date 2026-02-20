@@ -50,7 +50,7 @@ colors: {
             canvas.height = rect.height * dpr;
 
             const offscreen  = canvas.transferControlToOffscreen();
-            const workerUrl  = new URL('js/renderWorker.js', document.baseURI).href;
+            const workerUrl  = new URL('js/webglWorker.js', document.baseURI).href;
             const worker     = new Worker(workerUrl);
             worker.postMessage({ type: 'init', canvas: offscreen, dpr }, [offscreen]);
 
