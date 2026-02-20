@@ -1,6 +1,6 @@
 // Canvas 2D レンダラー - 高速バーチャート描画（複数Canvas対応）
 
-window.canvasRenderer = {
+window.barChartCanvasRenderer = {
 instances: new Map(), // Canvas ID -> インスタンスのマップ
 resizeObserver: null, // ResizeObserver インスタンス
 lastRenderParams: new Map(), // Canvas ID -> 最後の描画パラメータ
@@ -19,6 +19,9 @@ arrays: new Map(), // canvasId → { main: Int32Array, buffers: Map<bufferId, In
 
 // Phase 4: OffscreenCanvas + Worker
 workers: new Map(), // canvasId → { worker: Worker, lastWidth: number, lastHeight: number }
+
+// キャッシュされた Canvas サイズ（getBoundingClientRect をフレーム毎に呼ばないため）
+cachedSizes: new Map(), // canvasId → { width: number, height: number }
     
 // 色定義
 colors: {
@@ -50,6 +53,7 @@ colors: {
 
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
+        this.cachedSizes.set(canvasId, { width: rect.width, height: rect.height });
 
         // Phase 4: OffscreenCanvas + Worker パス（Chrome 69+, Firefox 105+, Safari 16.4+）
         if (typeof canvas.transferControlToOffscreen === 'function') {
@@ -57,7 +61,7 @@ colors: {
             canvas.height = rect.height * dpr;
 
             const offscreen  = canvas.transferControlToOffscreen();
-            const workerFile = useWebGL ? 'js/webglWorker.js' : 'js/renderWorker.js';
+            const workerFile = useWebGL ? 'js/barChartWebglWorker.js' : 'js/barChartRenderWorker.js';
             const workerUrl  = new URL(workerFile, document.baseURI).href;
             const worker     = new Worker(workerUrl);
             worker.postMessage({ type: 'init', canvas: offscreen, dpr }, [offscreen]);
@@ -120,15 +124,16 @@ colors: {
                             workerInfo.worker.postMessage({ type: 'resize', newWidth, newHeight, dpr });
                             window.debugHelper.log('Worker canvas resize notified:', canvasId, rect.width, 'x', rect.height);
                         }
-                    } else {
-                        // Canvas 2D パス: 直接リサイズ
-                        const { ctx } = instance;
-                        if (canvas.width !== newWidth || canvas.height !== newHeight) {
-                            canvas.width  = newWidth;
-                            canvas.height = newHeight;
-                            ctx.scale(dpr, dpr);
+                } else {
+                    // Canvas 2D パス: 直接リサイズ
+                    const { ctx } = instance;
+                    if (canvas.width !== newWidth || canvas.height !== newHeight) {
+                        canvas.width  = newWidth;
+                        canvas.height = newHeight;
+                        ctx.scale(dpr, dpr);
+                        this.cachedSizes.set(canvasId, { width: rect.width, height: rect.height });
 
-                            window.debugHelper.log('Canvas auto-resized:', canvasId, rect.width, 'x', rect.height);
+                        window.debugHelper.log('Canvas auto-resized:', canvasId, rect.width, 'x', rect.height);
 
                             // リサイズ後、最後の描画パラメータで即座に再描画（黒画面を防ぐ）
                             const lastParams = this.lastRenderParams.get(canvasId);
@@ -420,9 +425,10 @@ colors: {
             this.lastFpsLogs.set(canvasId, now);
         }
         
-        const rect = canvas.getBoundingClientRect();
-        const width = rect.width;
-        const height = rect.height;
+        const size = this.cachedSizes.get(canvasId);
+        if (!size) return;
+        const width = size.width;
+        const height = size.height;
         const arrayLength = array.length;
         
         // バッファー配列の数を取得
@@ -627,6 +633,7 @@ colors: {
             this.lastRenderParams.delete(canvasId);
             this.dirtyCanvases.delete(canvasId);
             this.arrays.delete(canvasId);
+            this.cachedSizes.delete(canvasId);
         } else {
             // Phase 4: すべての Worker を終了
             this.workers.forEach(info => {
@@ -655,6 +662,7 @@ colors: {
             this.lastFpsLogs.clear();
             this.lastRenderParams.clear();
             this.arrays.clear();
+            this.cachedSizes.clear();
         }
     }
 };
