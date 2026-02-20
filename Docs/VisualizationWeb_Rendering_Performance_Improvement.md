@@ -394,7 +394,7 @@ worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
 
 ---
 
-### Phase 5: ImageData ピクセルバッファ直接書き込み（効果: 中 / 工数: 中）
+### Phase 5: ImageData ピクセルバッファ直接書き込み（効果: 中 / 工数: 中）<- 後回し
 
 **概要：** `fillRect()` の代わりに `ImageData` のピクセルバッファに直接書き込む。
 
@@ -450,7 +450,7 @@ renderViaImageData: function(canvasId, params) {
 
 ---
 
-### Phase 6: WebGL レンダラー（効果: 最大 / 工数: 大）
+### Phase 6: WebGL レンダラー（効果: 最大 / 工数: 大）<- 後回し
 
 **概要：** Canvas 2D を WebGL に置き換え、GPU で直接描画する。
 
