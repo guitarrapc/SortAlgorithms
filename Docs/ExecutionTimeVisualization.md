@@ -22,43 +22,87 @@
 
 **計測方法:**
 - `System.Diagnostics.Stopwatch` を使用した高精度計測
-- **2パス実行方式**: NullContext での実行で計測し、CompositeContext での実行で操作記録を行う
+- **ウォームアップ + 適応的反復計測 + CompositeContext** の3段階実行
 - 計測対象: `NullContext` のみを使ったソートの純粋な実行時間
 
-**なぜ NullContext で計測するか:**
-- `CompositeContext`（VisualizationContext + StatisticsContext）は毎操作ごとにラムダ呼び出しと `List<SortOperation>` へのアロケーションが発生し、計測値に大きなオーバーヘッドが乗る
-- `NullContext` はすべてのコールバックが `[AggressiveInlining]` なノーオペレーションのため、JIT によるデッドコード除去が効き、アルゴリズム本来の実行時間のみが計測できる
+**なぜ NullContext ＋ 適応的反復か:**
 
-**2パス実行フロー:**
+| 問題 | 原因 | 対策 |
+|------|------|------|
+| オーバーヘッド | `CompositeContext` は毎操作でラムダ呼び出し＋`List`アロケーションが発生 | `NullContext` で計測（全コールバックが `[AggressiveInlining]` のノーオペレーション） |
+| JIT コンパイル遅延 | 初回実行は JIT コンパイルが走るため実行時間が過大 | ウォームアップ1回（計測に含めない） |
+| タイマー解像度 | Blazor WASM では `Stopwatch` が `performance.now()` を使用し、ブラウザのセキュリティ制限（Spectre 対策）で解像度が **約1ms** に制限される。高速ソートほど1回の計測値がブレる | 合計計測時間が閾値（50ms）を超えるまで繰り返し、`elapsed / runs` で平均を算出 |
+| CopyTo ノイズ | ソート後の配列リセット（`sourceArray.CopyTo`）がストップウォッチ内に入り平均に混入 | `Stopwatch.GetTimestamp()` でソートのみを個別計測し、`wallClock` はループ終了判定のみに使用 |
+
+**実行フロー:**
 ```
-1回目: sourceArray → workArray → NullContext → Stopwatch計測 → ActualExecutionTime
-                                  ↓ 配列リセット
-2回目: sourceArray → workArray → CompositeContext → Operations + Statistics
+[フェーズ1] ウォームアップ（1回、JIT促進・計測に含めない）
+  sourceArray → measureSpan → SortAction(NullContext) → 破棄
+
+[フェーズ2] 適応的反復計測（wallClock の合計 ≥ 50ms になるまでループ）
+  wallClock     : CopyTo 込みの経過時間（ループ終了判定のみ）
+  sortOnlyTicks : Stopwatch.GetTimestamp() でソートのみを個別計測・累積
+  actualExecutionTime = TimeSpan.FromSeconds(sortOnlyTicks / Frequency / runs)
+
+[フェーズ3] CompositeContext で操作・統計を記録（1回）
+  sourceArray → workArray → SortAction(CompositeContext) → Operations + Statistics
 ```
 
-**計測タイミング:**
+**挙動の例:**
+
+| アルゴリズム（n=512） | 1回の実行時間 | ループ回数 | 計測オーバーヘッド |
+|---------------------|-------------|-----------|----------------|
+| RadixSort など超高速 | ~0.01 ms | ~5,000回 | ~50ms（安定） |
+| QuickSort など高速 | ~0.5 ms | ~100回 | ~50ms（安定） |
+| MergeSort など中速 | ~5 ms | ~10回 | ~50ms（安定） |
+| BubbleSort など低速 | ~100 ms | 1回 | ~100ms（即終了） |
+
+**実装コード:**
 ```csharp
-// 1回目: NullContextで実行し、オーバーヘッドのない実測時間を計測
-var stopwatch = Stopwatch.StartNew();
-algorithm.SortAction(workArray, NullContext.Default);
-stopwatch.Stop();
-var actualExecutionTime = stopwatch.Elapsed;
+private const double MeasurementTargetMs = 50.0;
 
-// ワーク配列を初期状態にリセット
-sourceArray.CopyTo(workArray);
+// 計測専用配列（ArrayPool で確保、Span<int> にスライスして SortAction へ渡す）
+var measureArray = ArrayPool<int>.Shared.Rent(sourceArray.Length);
+Span<int> measureSpan = measureArray.AsSpan(0, sourceArray.Length);
 
-// 2回目: CompositeContextで操作・統計を記録
-algorithm.SortAction(workArray, compositeContext);
+// フェーズ1: ウォームアップ（JIT最適化を促進、計測に含めない）
+sourceArray.CopyTo(measureSpan);
+algorithm.SortAction(measureSpan, NullContext.Default);
+
+// フェーズ2: 適応的反復計測
+// wallClock     → ループ終了判定用（CopyTo 込みの経過時間）
+// sortOnlyTicks → ソートのみの累積 tick（CopyTo を除外）
+sourceArray.CopyTo(measureSpan);
+var wallClock = Stopwatch.StartNew();
+long sortOnlyTicks = 0L;
+int runs = 0;
+do
+{
+    var before = Stopwatch.GetTimestamp();
+    algorithm.SortAction(measureSpan, NullContext.Default);
+    sortOnlyTicks += Stopwatch.GetTimestamp() - before; // ソートのみ計測
+    runs++;
+    if (wallClock.Elapsed.TotalMilliseconds < MeasurementTargetMs)
+        sourceArray.CopyTo(measureSpan); // 次のループ用にリセット（wallClock には含まれるが sortOnlyTicks には含まない）
+} while (wallClock.Elapsed.TotalMilliseconds < MeasurementTargetMs);
+wallClock.Stop();
+
+// ソートのみの平均実行時間（CopyTo のオーバーヘッドを除外）
+var actualExecutionTime = TimeSpan.FromSeconds((double)sortOnlyTicks / Stopwatch.Frequency / runs);
+
+// フェーズ3: CompositeContextで操作・統計を記録
+sourceArray.CopyTo(workArray.AsSpan(0, sourceArray.Length));
+algorithm.SortAction(workArray.AsSpan(0, sourceArray.Length), compositeContext); // .ToArray() 不要
 ```
 
-**精度:**
-- `Stopwatch` は高精度タイマーを使用（通常はナノ秒精度）
+**精度と設計上の判断:**
 - 表示は **ナノ秒（ns）/ マイクロ秒（μs）/ ミリ秒（ms）/ 秒（s）** を自動選択
-- 非常に高速なソート（< 1μs）でも正確に計測
-
-**トレードオフ:**
-- ソートが2回実行されるが、可視化用途（WebAssembly上）では許容範囲
-- `NullContext.Default` はインターフェース経由のためボックス化されるが、それでも CompositeContext より大幅に低オーバーヘッド
+- `measureArray` は `ArrayPool` で確保し `measureSpan = measureArray.AsSpan(0, n)` でスライス。ループ内で再利用しアロケーションを排除
+- `SortAction` が `Span<int>` を受け取るため `ArrayPool` の大きめ配列をスライスして安全に渡せる（`int[]` 時代に必要だった `.ToArray()` は不要）
+- `wallClock` と `sortOnlyTicks` を分離することで **`CopyTo` のオーバーヘッドを計測値から完全除外**
+- `Stopwatch.GetTimestamp()` はオーバーヘッドが最小の時刻取得方法であり、ループ内計測コストは無視できるレベル
+- `MeasurementTargetMs = 50` は 1ms 解像度で **2% 以内の誤差** を実現する最小値
+- 低速ソートは1回で閾値を超えるため UX への影響は最小限
 
 ### 2.2 データモデル
 
@@ -561,25 +605,45 @@ public class ExecutionCache
 ```csharp
 public class SortExecutor
 {
+    private const double MeasurementTargetMs = 50.0;
+
     public (List<SortOperation> Operations, StatisticsContext Statistics, TimeSpan ActualExecutionTime)
         ExecuteAndRecord(ReadOnlySpan<int> sourceArray, AlgorithmMetadata algorithm)
     {
         var operations = new List<SortOperation>();
         var workArray = ArrayPool<int>.Shared.Rent(sourceArray.Length);
+
+        // 計測専用配列（正確なサイズで確保し、ループ内で再利用してアロケーションを抑制）
+        var measureArray = new int[sourceArray.Length];
+
         try
         {
+            // フェーズ1: ウォームアップ（JIT最適化を促進、計測に含めない）
+            sourceArray.CopyTo(measureSpan);
+            algorithm.SortAction(measureSpan, NullContext.Default);
+
+            // フェーズ2: 適応的反復計測
+            // wallClock     → ループ終了判定用（CopyTo 込みの経過時間）
+            // sortOnlyTicks → ソートのみの累積 tick（CopyTo を除外）
+            sourceArray.CopyTo(measureSpan);
+            var wallClock = Stopwatch.StartNew();
+            long sortOnlyTicks = 0L;
+            int runs = 0;
+            do
+            {
+                var before = Stopwatch.GetTimestamp();
+                algorithm.SortAction(measureSpan, NullContext.Default);
+                sortOnlyTicks += Stopwatch.GetTimestamp() - before;
+                runs++;
+                if (wallClock.Elapsed.TotalMilliseconds < MeasurementTargetMs)
+                    sourceArray.CopyTo(measureSpan);
+            } while (wallClock.Elapsed.TotalMilliseconds < MeasurementTargetMs);
+            wallClock.Stop();
+
+            var actualExecutionTime = TimeSpan.FromSeconds((double)sortOnlyTicks / Stopwatch.Frequency / runs);
+
+            // フェーズ3: CompositeContextで操作・統計を記録
             sourceArray.CopyTo(workArray.AsSpan(0, sourceArray.Length));
-
-            // 1回目: NullContextで実行し、オーバーヘッドのない実測時間を計測
-            var stopwatch = Stopwatch.StartNew();
-            algorithm.SortAction(workArray.AsSpan(0, sourceArray.Length).ToArray(), NullContext.Default);
-            stopwatch.Stop();
-            var actualExecutionTime = stopwatch.Elapsed;
-
-            // ワーク配列を初期状態にリセット
-            sourceArray.CopyTo(workArray.AsSpan(0, sourceArray.Length));
-
-            // 2回目: CompositeContextで操作・統計を記録
             var statisticsContext = new StatisticsContext();
             var visualizationContext = new VisualizationContext(
                 onCompare: (i, j, result, bufferIdI, bufferIdJ) =>
@@ -587,13 +651,14 @@ public class SortExecutor
                 // ... 他のコールバック
             );
             var compositeContext = new CompositeContext(statisticsContext, visualizationContext);
-            algorithm.SortAction(workArray.AsSpan(0, sourceArray.Length).ToArray(), compositeContext);
+            algorithm.SortAction(workArray.AsSpan(0, sourceArray.Length), compositeContext);
 
             return (operations, statisticsContext, actualExecutionTime);
         }
         finally
         {
             ArrayPool<int>.Shared.Return(workArray, clearArray: true);
+            ArrayPool<int>.Shared.Return(measureArray, clearArray: true);
         }
     }
 }
