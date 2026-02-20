@@ -22,47 +22,85 @@
 
 **計測方法:**
 - `System.Diagnostics.Stopwatch` を使用した高精度計測
-- ソート実行の開始直前から終了直後までを計測
-- 計測対象: 純粋なソートロジックの実行時間（可視化処理は含まない）
+- **2パス実行方式**: NullContext での実行で計測し、CompositeContext での実行で操作記録を行う
+- 計測対象: `NullContext` のみを使ったソートの純粋な実行時間
+
+**なぜ NullContext で計測するか:**
+- `CompositeContext`（VisualizationContext + StatisticsContext）は毎操作ごとにラムダ呼び出しと `List<SortOperation>` へのアロケーションが発生し、計測値に大きなオーバーヘッドが乗る
+- `NullContext` はすべてのコールバックが `[AggressiveInlining]` なノーオペレーションのため、JIT によるデッドコード除去が効き、アルゴリズム本来の実行時間のみが計測できる
+
+**2パス実行フロー:**
+```
+1回目: sourceArray → workArray → NullContext → Stopwatch計測 → ActualExecutionTime
+                                  ↓ 配列リセット
+2回目: sourceArray → workArray → CompositeContext → Operations + Statistics
+```
 
 **計測タイミング:**
 ```csharp
+// 1回目: NullContextで実行し、オーバーヘッドのない実測時間を計測
 var stopwatch = Stopwatch.StartNew();
-sortAlgorithm.Sort(span);  // 操作記録を含むソート実行
+algorithm.SortAction(workArray, NullContext.Default);
 stopwatch.Stop();
-var executionTime = stopwatch.Elapsed;
+var actualExecutionTime = stopwatch.Elapsed;
+
+// ワーク配列を初期状態にリセット
+sourceArray.CopyTo(workArray);
+
+// 2回目: CompositeContextで操作・統計を記録
+algorithm.SortAction(workArray, compositeContext);
 ```
 
 **精度:**
 - `Stopwatch` は高精度タイマーを使用（通常はナノ秒精度）
-- 表示は **マイクロ秒（μs）またはミリ秒（ms）** 単位
-- 非常に高速なソート（< 100μs）でも正確に計測
+- 表示は **ナノ秒（ns）/ マイクロ秒（μs）/ ミリ秒（ms）/ 秒（s）** を自動選択
+- 非常に高速なソート（< 1μs）でも正確に計測
+
+**トレードオフ:**
+- ソートが2回実行されるが、可視化用途（WebAssembly上）では許容範囲
+- `NullContext.Default` はインターフェース経由のためボックス化されるが、それでも CompositeContext より大幅に低オーバーヘッド
 
 ### 2.2 データモデル
 
-`SortExecutionResult` を拡張して実行時間を保存：
+実行時間は `VisualizationState` に保持する：
 
 ```csharp
-public class SortExecutionResult
+public class VisualizationState
 {
-    /// <summary>ソート操作のリスト</summary>
-    public List<SortOperation> Operations { get; init; }
-    
-    /// <summary>実際のソート実行時間（実測値）</summary>
-    public TimeSpan ActualExecutionTime { get; init; }
-    
-    /// <summary>総操作数</summary>
-    public int TotalOperations { get; init; }
-    
-    /// <summary>配列サイズ</summary>
-    public int ArraySize { get; init; }
-    
-    /// <summary>アルゴリズム名</summary>
-    public string AlgorithmName { get; init; }
-    
-    /// <summary>操作数/ミリ秒（パフォーマンス指標）</summary>
-    public double OperationsPerMillisecond => TotalOperations / ActualExecutionTime.TotalMilliseconds;
+    /// <summary>ソートの実際の実行時間（NullContextで計測した実測値）</summary>
+    public TimeSpan ActualExecutionTime { get; set; }
+
+    /// <summary>
+    /// 再生進捗に応じた推定実行時間（線形補間）
+    /// 再生中は0からActualExecutionTimeへ線形増加、完了時は確定値を返す
+    /// </summary>
+    public TimeSpan EstimatedCurrentExecutionTime
+    {
+        get
+        {
+            if (TotalOperations == 0 || ActualExecutionTime == TimeSpan.Zero)
+                return ActualExecutionTime;
+            if (IsSortCompleted)
+                return ActualExecutionTime;
+            var progressRatio = (double)CurrentOperationIndex / TotalOperations;
+            return TimeSpan.FromTicks((long)(ActualExecutionTime.Ticks * progressRatio));
+        }
+    }
+
+    // ... 他のプロパティ（CurrentOperationIndex, TotalOperations, IsSortCompleted など）
 }
+```
+
+`SortExecutor.ExecuteAndRecord` の戻り値として `TimeSpan` を返し、`PlaybackService.LoadOperations` 経由で `VisualizationState.ActualExecutionTime` に設定する：
+
+```csharp
+// SortExecutor
+public (List<SortOperation> Operations, StatisticsContext Statistics, TimeSpan ActualExecutionTime)
+    ExecuteAndRecord(ReadOnlySpan<int> sourceArray, AlgorithmMetadata algorithm)
+
+// PlaybackService
+public void LoadOperations(ReadOnlySpan<int> initialArray, List<SortOperation> operations,
+    StatisticsContext statistics, TimeSpan actualExecutionTime)
 ```
 
 ## 3. 表示方式
@@ -112,10 +150,15 @@ public class SortExecutionResult
 
 #### 3.3.1 実行時間のフォーマット
 
+経過時間（再生中の推定値）とトータル時間で異なるフォーマット関数を使い分ける。
+
+**FormatTime（経過時間用）: 小数点固定桁・フル精度**
+
 ```csharp
-public static string FormatExecutionTime(TimeSpan time)
+// 再生中の推定値に使用。常にフル精度で表示。
+private static string FormatTime(TimeSpan time)
 {
-    if (time.TotalMicroseconds < 1)
+    if (time.TotalNanoseconds < 1000)
         return $"{time.TotalNanoseconds:F0} ns";
     else if (time.TotalMicroseconds < 1000)
         return $"{time.TotalMicroseconds:F1} μs";
@@ -126,11 +169,48 @@ public static string FormatExecutionTime(TimeSpan time)
 }
 ```
 
-**例:**
-- `0.000000045 s` → `45 ns`
-- `0.000234 s` → `234.0 μs`
-- `0.015234 s` → `15.234 ms`
-- `1.234567 s` → `1.235 s`
+**FormatTotalTime（トータル時間用）: 末尾ゼロを省略し小数点1桁以上を保持**
+
+```csharp
+// 固定値のトータル時間に使用。末尾ゼロを省略してすっきり表示。
+private static string FormatTotalTime(TimeSpan time)
+{
+    if (time.TotalNanoseconds < 1000)
+        return $"{time.TotalNanoseconds:F0} ns";
+    else if (time.TotalMicroseconds < 1000)
+        return $"{TrimTrailingZerosMinOne(time.TotalMicroseconds)} μs";
+    else if (time.TotalMilliseconds < 1000)
+        return $"{TrimTrailingZerosMinOne(time.TotalMilliseconds)} ms";
+    else
+        return $"{TrimTrailingZerosMinOne(time.TotalSeconds)} s";
+}
+
+// F3でフォーマット後に末尾ゼロをトリムし、小数点1桁を最低限保持
+private static string TrimTrailingZerosMinOne(double value)
+{
+    var s = value.ToString("F3").TrimEnd('0');
+    if (s.EndsWith('.'))
+        s += "0";  // "200." → "200.0"
+    return s;
+}
+```
+
+**トータル時間フォーマットの例:**
+
+| 実測値 | 表示 | 備考 |
+|--------|------|------|
+| `200.000 ms` | `200.0 ms` | 末尾ゼロ2桁省略 |
+| `200.100 ms` | `200.1 ms` | 末尾ゼロ1桁省略 |
+| `200.123 ms` | `200.123 ms` | 省略なし |
+| `15.230 ms` | `15.23 ms` | 末尾ゼロ1桁省略 |
+| `0.500 μs` | `0.5 μs` | 末尾ゼロ省略 |
+
+**再生中の表示例（FormatTime / FormatTotalTime の組み合わせ）:**
+
+| 状態 | 表示 |
+|------|------|
+| 再生中 45% | `100.223 ms / 200.0 ms` |
+| 停止中・完了 | `200.0 ms` |
 
 #### 3.3.2 パフォーマンス指標のフォーマット
 
@@ -432,41 +512,40 @@ public class ExecutionCache
 ```csharp
 public class SortExecutor
 {
-    public SortExecutionResult ExecuteSort(
-        ISortAlgorithm sortAlgorithm,
-        int[] array)
+    public (List<SortOperation> Operations, StatisticsContext Statistics, TimeSpan ActualExecutionTime)
+        ExecuteAndRecord(ReadOnlySpan<int> sourceArray, AlgorithmMetadata algorithm)
     {
         var operations = new List<SortOperation>();
-        var context = new VisualizationContext(
-            onCompare: (i, j, result, bufferIdI, bufferIdJ) =>
-            {
-                operations.Add(new SortOperation
-                {
-                    Type = OperationType.Compare,
-                    Index1 = i,
-                    Index2 = j,
-                    BufferId1 = bufferIdI,
-                    BufferId2 = bufferIdJ
-                });
-            },
-            // ... 他のコールバック
-        );
-        
-        var span = new SortSpan<int>(array, context);
-        
-        // 実行時間の計測
-        var stopwatch = Stopwatch.StartNew();
-        sortAlgorithm.Sort(span);
-        stopwatch.Stop();
-        
-        return new SortExecutionResult
+        var workArray = ArrayPool<int>.Shared.Rent(sourceArray.Length);
+        try
         {
-            Operations = operations,
-            ActualExecutionTime = stopwatch.Elapsed,
-            TotalOperations = operations.Count,
-            ArraySize = array.Length,
-            AlgorithmName = sortAlgorithm.GetType().Name
-        };
+            sourceArray.CopyTo(workArray.AsSpan(0, sourceArray.Length));
+
+            // 1回目: NullContextで実行し、オーバーヘッドのない実測時間を計測
+            var stopwatch = Stopwatch.StartNew();
+            algorithm.SortAction(workArray.AsSpan(0, sourceArray.Length).ToArray(), NullContext.Default);
+            stopwatch.Stop();
+            var actualExecutionTime = stopwatch.Elapsed;
+
+            // ワーク配列を初期状態にリセット
+            sourceArray.CopyTo(workArray.AsSpan(0, sourceArray.Length));
+
+            // 2回目: CompositeContextで操作・統計を記録
+            var statisticsContext = new StatisticsContext();
+            var visualizationContext = new VisualizationContext(
+                onCompare: (i, j, result, bufferIdI, bufferIdJ) =>
+                    operations.Add(new SortOperation { Type = OperationType.Compare, /* ... */ }),
+                // ... 他のコールバック
+            );
+            var compositeContext = new CompositeContext(statisticsContext, visualizationContext);
+            algorithm.SortAction(workArray.AsSpan(0, sourceArray.Length).ToArray(), compositeContext);
+
+            return (operations, statisticsContext, actualExecutionTime);
+        }
+        finally
+        {
+            ArrayPool<int>.Shared.Return(workArray, clearArray: true);
+        }
     }
 }
 ```
@@ -540,9 +619,10 @@ public class SortExecutor
         }
     }
     
-    private string FormatExecutionTime(TimeSpan time)
+    // 経過時間（再生中の推定値）: フル精度
+    private static string FormatTime(TimeSpan time)
     {
-        if (time.TotalMicroseconds < 1)
+        if (time.TotalNanoseconds < 1000)
             return $"{time.TotalNanoseconds:F0} ns";
         else if (time.TotalMicroseconds < 1000)
             return $"{time.TotalMicroseconds:F1} μs";
@@ -551,7 +631,28 @@ public class SortExecutor
         else
             return $"{time.TotalSeconds:F3} s";
     }
-    
+
+    // トータル時間: 末尾ゼロ省略・小数点1桁以上保持
+    private static string FormatTotalTime(TimeSpan time)
+    {
+        if (time.TotalNanoseconds < 1000)
+            return $"{time.TotalNanoseconds:F0} ns";
+        else if (time.TotalMicroseconds < 1000)
+            return $"{TrimTrailingZerosMinOne(time.TotalMicroseconds)} μs";
+        else if (time.TotalMilliseconds < 1000)
+            return $"{TrimTrailingZerosMinOne(time.TotalMilliseconds)} ms";
+        else
+            return $"{TrimTrailingZerosMinOne(time.TotalSeconds)} s";
+    }
+
+    private static string TrimTrailingZerosMinOne(double value)
+    {
+        var s = value.ToString("F3").TrimEnd('0');
+        if (s.EndsWith('.'))
+            s += "0";
+        return s;
+    }
+
     private string FormatPerformance(double opsPerMs)
     {
         if (opsPerMs < 1)
