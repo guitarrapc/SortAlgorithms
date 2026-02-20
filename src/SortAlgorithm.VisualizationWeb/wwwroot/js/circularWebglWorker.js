@@ -71,6 +71,69 @@ function valueToHSL(value, maxValue) {
     return `hsl(${(value / maxValue) * 360}, 70%, 60%)`;
 }
 
+// 三角関数ルックアップテーブル（メイン配列）
+let lutLength = 0;
+let cosLUT = null;
+let sinLUT = null;
+// 三角関数ルックアップテーブル（バッファー配列）
+let bufferLutLength = 0;
+let bufferCosLUT = null;
+let bufferSinLUT = null;
+// HSL カラールックアップテーブル（Canvas 2D フォールバック用）
+let colorLUTMax = -1;
+let colorLUT = null;
+// RGB float カラールックアップテーブル（WebGL 用）
+let rgbLUTMax = -1;
+let rgbLUT = null; // Float32Array: [r0,g0,b0, r1,g1,b1, ...]
+
+function buildTrigLUT(arrayLength) {
+    if (lutLength === arrayLength) return;
+    lutLength = arrayLength;
+    const angleStep = (2 * Math.PI) / arrayLength;
+    cosLUT = new Float64Array(arrayLength);
+    sinLUT = new Float64Array(arrayLength);
+    for (let i = 0; i < arrayLength; i++) {
+        const angle = i * angleStep - Math.PI / 2;
+        cosLUT[i] = Math.cos(angle);
+        sinLUT[i] = Math.sin(angle);
+    }
+}
+
+function buildBufferTrigLUT(length) {
+    if (bufferLutLength === length) return;
+    bufferLutLength = length;
+    const angleStep = (2 * Math.PI) / length;
+    bufferCosLUT = new Float64Array(length);
+    bufferSinLUT = new Float64Array(length);
+    for (let i = 0; i < length; i++) {
+        const angle = i * angleStep - Math.PI / 2;
+        bufferCosLUT[i] = Math.cos(angle);
+        bufferSinLUT[i] = Math.sin(angle);
+    }
+}
+
+function buildColorLUT(maxValue) {
+    if (colorLUTMax === maxValue) return;
+    colorLUTMax = maxValue;
+    colorLUT = new Array(maxValue + 1);
+    for (let v = 0; v <= maxValue; v++) {
+        const hue = (v / maxValue) * 360;
+        colorLUT[v] = `hsl(${hue}, 70%, 60%)`;
+    }
+}
+
+function buildRgbLUT(maxValue) {
+    if (rgbLUTMax === maxValue) return;
+    rgbLUTMax = maxValue;
+    rgbLUT = new Float32Array((maxValue + 1) * 3);
+    for (let v = 0; v <= maxValue; v++) {
+        const [r, g, b] = hslToRgb((v / maxValue) * 360, 70, 60);
+        rgbLUT[v * 3]     = r;
+        rgbLUT[v * 3 + 1] = g;
+        rgbLUT[v * 3 + 2] = b;
+    }
+}
+
 // 配列状態
 let arrays        = { main: null, buffers: new Map() };
 let renderParams  = null;
@@ -423,6 +486,9 @@ function drawWebGL() {
     for (let i = 0; i < arrayLength; i++) if (array[i] > maxValue) maxValue = array[i];
     if (maxValue === 0) maxValue = 1;
 
+    // RGB LUT を構築（最大値が変わったときのみ再構築）
+    buildRgbLUT(maxValue);
+
     const angleStep     = (2 * Math.PI) / arrayLength;
     // lineHalfWidth: Canvas 2D の lineWidth の半分に対応（1px → 0.5px 半幅）
     const lineHalfWidth = arrayLength <= 64 ? 1.5 : arrayLength <= 256 ? 1.0 : arrayLength <= 1024 ? 0.75 : 0.5;
@@ -459,16 +525,16 @@ function drawWebGL() {
             instanceData[base]     = mainMinRadius;
             instanceData[base + 1] = outer;
 
-            let rgb;
-            if      (swpSet.has(i)) rgb = RGB.swap;
-            else if (cmpSet.has(i)) rgb = RGB.compare;
-            else if (wrSet.has(i))  rgb = RGB.write;
-            else if (rdSet.has(i))  rgb = RGB.read;
-            else                    rgb = valueToRgb(array[i], maxValue);
+            let r, g, b;
+            if      (swpSet.has(i)) { [r, g, b] = RGB.swap; }
+            else if (cmpSet.has(i)) { [r, g, b] = RGB.compare; }
+            else if (wrSet.has(i))  { [r, g, b] = RGB.write; }
+            else if (rdSet.has(i))  { [r, g, b] = RGB.read; }
+            else { const vi = array[i] * 3; r = rgbLUT[vi]; g = rgbLUT[vi + 1]; b = rgbLUT[vi + 2]; }
 
-            instanceData[base + 2] = rgb[0];
-            instanceData[base + 3] = rgb[1];
-            instanceData[base + 4] = rgb[2];
+            instanceData[base + 2] = r;
+            instanceData[base + 3] = g;
+            instanceData[base + 4] = b;
         }
     }
 
@@ -564,7 +630,10 @@ function drawCanvas2D() {
     const readSet    = new Set(readIndices);
     const writeSet   = new Set(writeIndices);
 
-    const angleStep = (2 * Math.PI) / arrayLength;
+    // LUT を構築（配列サイズ・最大値が変わったときのみ再構築）
+    buildTrigLUT(arrayLength);
+    buildColorLUT(maxValue);
+
     const lineWidth = arrayLength <= 64 ? 3 : arrayLength <= 256 ? 2 : arrayLength <= 1024 ? 1.5 : 1;
 
     ctx.lineWidth = lineWidth;
@@ -572,10 +641,10 @@ function drawCanvas2D() {
         ctx.strokeStyle = colors.sorted;
         ctx.beginPath();
         for (let i = 0; i < arrayLength; i++) {
-            const angle  = i * angleStep - Math.PI / 2;
             const radius = mainMinRadius + (array[i] / maxValue) * (mainMaxRadius - mainMinRadius);
-            ctx.moveTo(centerX + Math.cos(angle) * mainMinRadius, centerY + Math.sin(angle) * mainMinRadius);
-            ctx.lineTo(centerX + Math.cos(angle) * radius,        centerY + Math.sin(angle) * radius);
+            const ci = cosLUT[i], si = sinLUT[i];
+            ctx.moveTo(centerX + ci * mainMinRadius, centerY + si * mainMinRadius);
+            ctx.lineTo(centerX + ci * radius,        centerY + si * radius);
         }
         ctx.stroke();
     } else {
@@ -594,12 +663,12 @@ function drawCanvas2D() {
         }
 
         for (const i of normalBucket) {
-            const angle  = i * angleStep - Math.PI / 2;
             const radius = mainMinRadius + (array[i] / maxValue) * (mainMaxRadius - mainMinRadius);
-            ctx.strokeStyle = valueToHSL(array[i], maxValue);
+            const ci = cosLUT[i], si = sinLUT[i];
+            ctx.strokeStyle = colorLUT[array[i]];
             ctx.beginPath();
-            ctx.moveTo(centerX + Math.cos(angle) * mainMinRadius, centerY + Math.sin(angle) * mainMinRadius);
-            ctx.lineTo(centerX + Math.cos(angle) * radius,        centerY + Math.sin(angle) * radius);
+            ctx.moveTo(centerX + ci * mainMinRadius, centerY + si * mainMinRadius);
+            ctx.lineTo(centerX + ci * radius,        centerY + si * radius);
             ctx.stroke();
         }
 
@@ -615,10 +684,10 @@ function drawCanvas2D() {
             ctx.strokeStyle = color;
             ctx.beginPath();
             for (const i of indices) {
-                const angle  = i * angleStep - Math.PI / 2;
                 const radius = mainMinRadius + (array[i] / maxValue) * (mainMaxRadius - mainMinRadius);
-                ctx.moveTo(centerX + Math.cos(angle) * mainMinRadius, centerY + Math.sin(angle) * mainMinRadius);
-                ctx.lineTo(centerX + Math.cos(angle) * radius,        centerY + Math.sin(angle) * radius);
+                const ci = cosLUT[i], si = sinLUT[i];
+                ctx.moveTo(centerX + ci * mainMinRadius, centerY + si * mainMinRadius);
+                ctx.lineTo(centerX + ci * radius,        centerY + si * radius);
             }
             ctx.stroke();
         }
@@ -642,17 +711,17 @@ function drawCanvas2D() {
                 if (bufferArray[i] > bufferMaxValue) bufferMaxValue = bufferArray[i];
             }
 
-            const bufferAngleStep = (2 * Math.PI) / bufferLength;
+            buildBufferTrigLUT(bufferLength);
             const bufferLineWidth = bufferLength <= 64 ? 3 : bufferLength <= 256 ? 2 : bufferLength <= 1024 ? 1.5 : 1;
 
             ctx.strokeStyle = '#06B6D4';
             ctx.lineWidth   = bufferLineWidth;
             ctx.beginPath();
             for (let i = 0; i < bufferLength; i++) {
-                const angle  = i * bufferAngleStep - Math.PI / 2;
                 const radius = bufferMinRadius + (bufferArray[i] / bufferMaxValue) * (bufferMaxRadius - bufferMinRadius);
-                ctx.moveTo(centerX + Math.cos(angle) * bufferMinRadius, centerY + Math.sin(angle) * bufferMinRadius);
-                ctx.lineTo(centerX + Math.cos(angle) * radius,          centerY + Math.sin(angle) * radius);
+                const ci = bufferCosLUT[i], si = bufferSinLUT[i];
+                ctx.moveTo(centerX + ci * bufferMinRadius, centerY + si * bufferMinRadius);
+                ctx.lineTo(centerX + ci * radius,          centerY + si * radius);
             }
             ctx.stroke();
 
