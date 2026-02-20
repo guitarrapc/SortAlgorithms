@@ -16,6 +16,9 @@ rafId: null,               // requestAnimationFrame ID
 
 // JS 側配列コピー（Phase 3c）
 arrays: new Map(), // canvasId → { main: Int32Array, buffers: Map<bufferId, Int32Array> }
+
+// Phase 4: OffscreenCanvas + Worker
+workers: new Map(), // canvasId → { worker: Worker, lastWidth: number, lastHeight: number }
     
 // 色定義
 colors: {
@@ -37,46 +40,88 @@ colors: {
             window.debugHelper.error('Canvas element not found:', canvasId);
             return false;
         }
-        
+
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+
+        // Phase 4: OffscreenCanvas + Worker パス（Chrome 69+, Firefox 105+, Safari 16.4+）
+        if (typeof canvas.transferControlToOffscreen === 'function') {
+            canvas.width  = rect.width  * dpr;
+            canvas.height = rect.height * dpr;
+
+            const offscreen  = canvas.transferControlToOffscreen();
+            const workerUrl  = new URL('js/renderWorker.js', document.baseURI).href;
+            const worker     = new Worker(workerUrl);
+            worker.postMessage({ type: 'init', canvas: offscreen, dpr }, [offscreen]);
+
+            this.workers.set(canvasId, { worker, lastWidth: canvas.width, lastHeight: canvas.height });
+            // ResizeObserver のために canvas 要素を instances に保存（ctx は null）
+            this.instances.set(canvasId, { canvas, ctx: null });
+
+            this._ensureResizeObserver();
+            this.resizeObserver.observe(canvas);
+
+            window.debugHelper.log('Canvas initialized (Worker):', canvasId, rect.width, 'x', rect.height, 'DPR:', dpr);
+            return true;
+        }
+
+        // フォールバック: Canvas 2D パス
         const ctx = canvas.getContext('2d', {
             alpha: false,           // 透明度不要（高速化）
             desynchronized: true    // 非同期描画（高速化）
         });
-        
-        // 高DPI対応
-        const dpr = window.devicePixelRatio || 1;
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width * dpr;
+
+        canvas.width  = rect.width  * dpr;
         canvas.height = rect.height * dpr;
         ctx.scale(dpr, dpr);
-        
+
         // インスタンスを保存
         this.instances.set(canvasId, { canvas, ctx });
-        
-        // ResizeObserverを初期化（まだ存在しない場合）
-        if (!this.resizeObserver) {
-            this.resizeObserver = new ResizeObserver(entries => {
-                for (const entry of entries) {
-                    const canvas = entry.target;
-                    const canvasId = canvas.id;
-                    const instance = this.instances.get(canvasId);
-                    
-                    if (instance) {
+
+        this._ensureResizeObserver();
+        this.resizeObserver.observe(canvas);
+
+        window.debugHelper.log('Canvas initialized (Canvas2D):', canvasId, rect.width, 'x', rect.height, 'DPR:', dpr);
+        return true;
+    },
+
+    /**
+     * ResizeObserver を一度だけ初期化する（内部ヘルパー）
+     * Worker パスと Canvas2D パスの両方から呼ばれる
+     */
+    _ensureResizeObserver: function() {
+        if (this.resizeObserver) return;
+        this.resizeObserver = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                const canvas   = entry.target;
+                const canvasId = canvas.id;
+                const instance = this.instances.get(canvasId);
+
+                if (instance) {
+                    const dpr       = window.devicePixelRatio || 1;
+                    const rect      = canvas.getBoundingClientRect();
+                    const newWidth  = rect.width  * dpr;
+                    const newHeight = rect.height * dpr;
+
+                    const workerInfo = this.workers.get(canvasId);
+                    if (workerInfo) {
+                        // Worker パス: OffscreenCanvas のリサイズを Worker に通知
+                        if (workerInfo.lastWidth !== newWidth || workerInfo.lastHeight !== newHeight) {
+                            workerInfo.lastWidth  = newWidth;
+                            workerInfo.lastHeight = newHeight;
+                            workerInfo.worker.postMessage({ type: 'resize', newWidth, newHeight, dpr });
+                            window.debugHelper.log('Worker canvas resize notified:', canvasId, rect.width, 'x', rect.height);
+                        }
+                    } else {
+                        // Canvas 2D パス: 直接リサイズ
                         const { ctx } = instance;
-                        const dpr = window.devicePixelRatio || 1;
-                        const rect = canvas.getBoundingClientRect();
-                        
-                        // サイズが実際に変わった場合のみリサイズ
-                        const newWidth = rect.width * dpr;
-                        const newHeight = rect.height * dpr;
-                        
                         if (canvas.width !== newWidth || canvas.height !== newHeight) {
-                            canvas.width = newWidth;
+                            canvas.width  = newWidth;
                             canvas.height = newHeight;
                             ctx.scale(dpr, dpr);
-                            
+
                             window.debugHelper.log('Canvas auto-resized:', canvasId, rect.width, 'x', rect.height);
-                            
+
                             // リサイズ後、最後の描画パラメータで即座に再描画（黒画面を防ぐ）
                             const lastParams = this.lastRenderParams.get(canvasId);
                             if (lastParams) {
@@ -87,14 +132,8 @@ colors: {
                         }
                     }
                 }
-            });
-        }
-        
-        // このCanvasを監視対象に追加
-        this.resizeObserver.observe(canvas);
-        
-        window.debugHelper.log('Canvas initialized:', canvasId, rect.width, 'x', rect.height, 'DPR:', dpr);
-        return true;
+            }
+        });
     },
     
     /**
@@ -105,34 +144,62 @@ colors: {
         // レイアウトの更新を待つためにrequestAnimationFrameを使用
         requestAnimationFrame(() => {
             if (canvasId) {
-                // 特定のCanvasをリサイズ
+                // Phase 4: Worker パス
+                const workerInfo = this.workers.get(canvasId);
+                if (workerInfo) {
+                    const canvas = document.getElementById(canvasId);
+                    if (canvas) {
+                        const dpr       = window.devicePixelRatio || 1;
+                        const rect      = canvas.getBoundingClientRect();
+                        const newWidth  = rect.width  * dpr;
+                        const newHeight = rect.height * dpr;
+                        if (workerInfo.lastWidth !== newWidth || workerInfo.lastHeight !== newHeight) {
+                            workerInfo.lastWidth  = newWidth;
+                            workerInfo.lastHeight = newHeight;
+                            workerInfo.worker.postMessage({ type: 'resize', newWidth, newHeight, dpr });
+                        }
+                    }
+                    return;
+                }
+                // Canvas 2D パス
                 const instance = this.instances.get(canvasId);
                 if (instance) {
                     const { canvas, ctx } = instance;
                     if (canvas) {
                         const dpr = window.devicePixelRatio || 1;
                         const rect = canvas.getBoundingClientRect();
-                        canvas.width = rect.width * dpr;
+                        canvas.width  = rect.width  * dpr;
                         canvas.height = rect.height * dpr;
                         ctx.scale(dpr, dpr);
-                        
                         console.log('Canvas resized:', canvasId, rect.width, 'x', rect.height);
                     }
                 } else {
                     console.warn('Canvas instance not found for resize:', canvasId);
                 }
             } else {
-                // すべてのCanvasをリサイズ
+                const dpr = window.devicePixelRatio || 1;
+                // Phase 4: すべての Worker Canvas をリサイズ
+                this.workers.forEach((workerInfo, id) => {
+                    const canvas = document.getElementById(id);
+                    if (!canvas) return;
+                    const rect      = canvas.getBoundingClientRect();
+                    const newWidth  = rect.width  * dpr;
+                    const newHeight = rect.height * dpr;
+                    if (workerInfo.lastWidth !== newWidth || workerInfo.lastHeight !== newHeight) {
+                        workerInfo.lastWidth  = newWidth;
+                        workerInfo.lastHeight = newHeight;
+                        workerInfo.worker.postMessage({ type: 'resize', newWidth, newHeight, dpr });
+                    }
+                });
+                // Canvas 2D パス: Worker 以外のすべての Canvas をリサイズ
                 this.instances.forEach((instance, id) => {
+                    if (this.workers.has(id)) return;
                     const { canvas, ctx } = instance;
                     if (!canvas) return;
-                    
-                    const dpr = window.devicePixelRatio || 1;
                     const rect = canvas.getBoundingClientRect();
-                    canvas.width = rect.width * dpr;
+                    canvas.width  = rect.width  * dpr;
                     canvas.height = rect.height * dpr;
                     ctx.scale(dpr, dpr);
-                    
                     console.log('Canvas resized:', id, rect.width, 'x', rect.height);
                 });
             }
@@ -161,6 +228,23 @@ colors: {
      * JS 側の配列コピーを初期化し、次フレームで再描画をスケジュールする。
      */
     setArray: function(canvasId, mainArray, bufferArrays, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight) {
+        // Phase 4: Worker パス
+        const workerInfo = this.workers.get(canvasId);
+        if (workerInfo) {
+            workerInfo.worker.postMessage({
+                type:                    'setArray',
+                mainArray,
+                bufferArrays,
+                compareIndices,
+                swapIndices,
+                readIndices,
+                writeIndices,
+                isSortCompleted:         isSortCompleted         || false,
+                showCompletionHighlight: showCompletionHighlight || false
+            });
+            return;
+        }
+        // Canvas 2D パス
         let entry = this.arrays.get(canvasId);
         if (!entry) {
             entry = { main: null, buffers: new Map() };
@@ -181,6 +265,23 @@ colors: {
      * 差分（flat [index, value, ...]）を JS 側配列に適用し、次フレームで再描画をスケジュールする。
      */
     applyFrame: function(canvasId, mainDelta, bufferDeltas, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight) {
+        // Phase 4: Worker パス
+        const workerInfo = this.workers.get(canvasId);
+        if (workerInfo) {
+            workerInfo.worker.postMessage({
+                type:                    'applyFrame',
+                mainDelta,
+                bufferDeltas,
+                compareIndices,
+                swapIndices,
+                readIndices,
+                writeIndices,
+                isSortCompleted:         isSortCompleted         || false,
+                showCompletionHighlight: showCompletionHighlight || false
+            });
+            return;
+        }
+        // Canvas 2D パス
         const entry = this.arrays.get(canvasId);
         if (!entry || !entry.main) return;
 
@@ -488,14 +589,22 @@ colors: {
      */
     dispose: function(canvasId) {
         if (canvasId) {
+            // Phase 4: Worker を終了
+            const workerInfo = this.workers.get(canvasId);
+            if (workerInfo) {
+                workerInfo.worker.postMessage({ type: 'dispose' });
+                workerInfo.worker.terminate();
+                this.workers.delete(canvasId);
+            }
+
             // Canvas要素を取得
             const canvas = document.getElementById(canvasId);
-            
+
             // ResizeObserverの監視を解除
             if (canvas && this.resizeObserver) {
                 this.resizeObserver.unobserve(canvas);
             }
-            
+
             // 特定のCanvasインスタンスを削除
             const deleted = this.instances.delete(canvasId);
             if (deleted) {
@@ -503,7 +612,7 @@ colors: {
             } else {
                 console.warn('Canvas instance not found for disposal:', canvasId);
             }
-            
+
             // FPS計測用のデータ、描画パラメータ、dirty フラグ、JS 側配列コピーも削除
             this.renderCounts.delete(canvasId);
             this.lastFpsLogs.delete(canvasId);
@@ -511,6 +620,13 @@ colors: {
             this.dirtyCanvases.delete(canvasId);
             this.arrays.delete(canvasId);
         } else {
+            // Phase 4: すべての Worker を終了
+            this.workers.forEach(info => {
+                info.worker.postMessage({ type: 'dispose' });
+                info.worker.terminate();
+            });
+            this.workers.clear();
+
             // rAFループを停止
             if (this.rafId) {
                 cancelAnimationFrame(this.rafId);
@@ -524,7 +640,7 @@ colors: {
                 this.resizeObserver.disconnect();
                 this.resizeObserver = null;
             }
-            
+
             // すべてのインスタンスをクリア
             this.instances.clear();
             this.renderCounts.clear();
