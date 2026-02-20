@@ -28,6 +28,18 @@ window.circularCanvasRenderer = {
         read: '#FBBF24',        // 黄
         sorted: '#10B981'       // 緑 - ソート完了
     },
+
+    // 三角関数ルックアップテーブル（メイン配列）
+    _lutLength: 0,
+    _cosLUT: null,
+    _sinLUT: null,
+    // 三角関数ルックアップテーブル（バッファー配列）
+    _bufferLutLength: 0,
+    _bufferCosLUT: null,
+    _bufferSinLUT: null,
+    // HSL カラールックアップテーブル
+    _colorLUTMax: -1,
+    _colorLUT: null,
     
     /**
      * Canvasを初期化
@@ -155,6 +167,54 @@ window.circularCanvasRenderer = {
     valueToHSL: function(value, maxValue) {
         const hue = (value / maxValue) * 360;
         return `hsl(${hue}, 70%, 60%)`;
+    },
+
+    /**
+     * メイン配列用三角関数 LUT を構築（配列長が変わったときのみ再構築）
+     * @param {number} arrayLength - 配列の長さ
+     */
+    _buildTrigLUT: function(arrayLength) {
+        if (this._lutLength === arrayLength) return;
+        this._lutLength = arrayLength;
+        const angleStep = (2 * Math.PI) / arrayLength;
+        this._cosLUT = new Float64Array(arrayLength);
+        this._sinLUT = new Float64Array(arrayLength);
+        for (let i = 0; i < arrayLength; i++) {
+            const angle = i * angleStep - Math.PI / 2;
+            this._cosLUT[i] = Math.cos(angle);
+            this._sinLUT[i] = Math.sin(angle);
+        }
+    },
+
+    /**
+     * バッファー配列用三角関数 LUT を構築（バッファー長が変わったときのみ再構築）
+     * @param {number} bufferLength - バッファー配列の長さ
+     */
+    _buildBufferTrigLUT: function(bufferLength) {
+        if (this._bufferLutLength === bufferLength) return;
+        this._bufferLutLength = bufferLength;
+        const angleStep = (2 * Math.PI) / bufferLength;
+        this._bufferCosLUT = new Float64Array(bufferLength);
+        this._bufferSinLUT = new Float64Array(bufferLength);
+        for (let i = 0; i < bufferLength; i++) {
+            const angle = i * angleStep - Math.PI / 2;
+            this._bufferCosLUT[i] = Math.cos(angle);
+            this._bufferSinLUT[i] = Math.sin(angle);
+        }
+    },
+
+    /**
+     * HSL カラー LUT を構築（最大値が変わったときのみ再構築）
+     * @param {number} maxValue - 配列の最大値
+     */
+    _buildColorLUT: function(maxValue) {
+        if (this._colorLUTMax === maxValue) return;
+        this._colorLUTMax = maxValue;
+        this._colorLUT = new Array(maxValue + 1);
+        for (let v = 0; v <= maxValue; v++) {
+            const hue = (v / maxValue) * 360;
+            this._colorLUT[v] = `hsl(${hue}, 70%, 60%)`;
+        }
     },
     
     /**
@@ -386,8 +446,12 @@ window.circularCanvasRenderer = {
         const readSet = new Set(readIndices);
         const writeSet = new Set(writeIndices);
         
-        // 各要素を円周上に配置
-        const angleStep = (2 * Math.PI) / arrayLength;
+        // LUT を構築（配列サイズ・最大値が変わったときのみ再構築）
+        this._buildTrigLUT(arrayLength);
+        this._buildColorLUT(maxValue);
+        const cosLUT = this._cosLUT;
+        const sinLUT = this._sinLUT;
+        const colorLUT = this._colorLUT;
 
         // 線の太さを配列サイズに応じて事前に1回計算
         const lineWidth = arrayLength <= 64 ? 3 : arrayLength <= 256 ? 2 : arrayLength <= 1024 ? 1.5 : 1;
@@ -399,10 +463,10 @@ window.circularCanvasRenderer = {
             ctx.strokeStyle = this.colors.sorted;
             ctx.beginPath();
             for (let i = 0; i < arrayLength; i++) {
-                const angle = i * angleStep - Math.PI / 2;
                 const radius = mainMinRadius + (array[i] / maxValue) * (mainMaxRadius - mainMinRadius);
-                ctx.moveTo(centerX + Math.cos(angle) * mainMinRadius, centerY + Math.sin(angle) * mainMinRadius);
-                ctx.lineTo(centerX + Math.cos(angle) * radius,        centerY + Math.sin(angle) * radius);
+                const ci = cosLUT[i], si = sinLUT[i];
+                ctx.moveTo(centerX + ci * mainMinRadius, centerY + si * mainMinRadius);
+                ctx.lineTo(centerX + ci * radius,        centerY + si * radius);
             }
             ctx.stroke();
         } else {
@@ -423,12 +487,12 @@ window.circularCanvasRenderer = {
 
             // 1. 通常色（HSLグラデーション）を描画 - 各要素で strokeStyle が異なるため個別描画
             for (const i of normalBucket) {
-                const angle = i * angleStep - Math.PI / 2;
                 const radius = mainMinRadius + (array[i] / maxValue) * (mainMaxRadius - mainMinRadius);
-                ctx.strokeStyle = this.valueToHSL(array[i], maxValue);
+                const ci = cosLUT[i], si = sinLUT[i];
+                ctx.strokeStyle = colorLUT[array[i]];
                 ctx.beginPath();
-                ctx.moveTo(centerX + Math.cos(angle) * mainMinRadius, centerY + Math.sin(angle) * mainMinRadius);
-                ctx.lineTo(centerX + Math.cos(angle) * radius,        centerY + Math.sin(angle) * radius);
+                ctx.moveTo(centerX + ci * mainMinRadius, centerY + si * mainMinRadius);
+                ctx.lineTo(centerX + ci * radius,        centerY + si * radius);
                 ctx.stroke();
             }
 
@@ -445,10 +509,10 @@ window.circularCanvasRenderer = {
                 ctx.strokeStyle = color;
                 ctx.beginPath();
                 for (const i of indices) {
-                    const angle = i * angleStep - Math.PI / 2;
                     const radius = mainMinRadius + (array[i] / maxValue) * (mainMaxRadius - mainMinRadius);
-                    ctx.moveTo(centerX + Math.cos(angle) * mainMinRadius, centerY + Math.sin(angle) * mainMinRadius);
-                    ctx.lineTo(centerX + Math.cos(angle) * radius,        centerY + Math.sin(angle) * radius);
+                    const ci = cosLUT[i], si = sinLUT[i];
+                    ctx.moveTo(centerX + ci * mainMinRadius, centerY + si * mainMinRadius);
+                    ctx.lineTo(centerX + ci * radius,        centerY + si * radius);
                 }
                 ctx.stroke();
             }
@@ -475,18 +539,20 @@ window.circularCanvasRenderer = {
                 for (let i = 0; i < bufferLength; i++) {
                     if (bufferArray[i] > bufferMaxValue) bufferMaxValue = bufferArray[i];
                 }
-                const bufferAngleStep = (2 * Math.PI) / bufferLength;
+                this._buildBufferTrigLUT(bufferLength);
+                const bufCosLUT = this._bufferCosLUT;
+                const bufSinLUT = this._bufferSinLUT;
                 const bufferLineWidth = bufferLength <= 64 ? 3 : bufferLength <= 256 ? 2 : bufferLength <= 1024 ? 1.5 : 1;
-                
+
                 // バッファー配列の線を描画（単色なので1パス・1回の stroke で一括）
                 ctx.strokeStyle = '#06B6D4';
                 ctx.lineWidth = bufferLineWidth;
                 ctx.beginPath();
                 for (let i = 0; i < bufferLength; i++) {
-                    const angle = i * bufferAngleStep - Math.PI / 2;
                     const radius = bufferMinRadius + (bufferArray[i] / bufferMaxValue) * (bufferMaxRadius - bufferMinRadius);
-                    ctx.moveTo(centerX + Math.cos(angle) * bufferMinRadius, centerY + Math.sin(angle) * bufferMinRadius);
-                    ctx.lineTo(centerX + Math.cos(angle) * radius,          centerY + Math.sin(angle) * radius);
+                    const ci = bufCosLUT[i], si = bufSinLUT[i];
+                    ctx.moveTo(centerX + ci * bufferMinRadius, centerY + si * bufferMinRadius);
+                    ctx.lineTo(centerX + ci * radius,          centerY + si * radius);
                 }
                 ctx.stroke();
                 
