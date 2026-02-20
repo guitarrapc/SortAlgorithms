@@ -8,6 +8,14 @@ lastRenderParams: new Map(), // Canvas ID -> 最後の描画パラメータ
 // デバッグ用：FPS計測
 renderCounts: new Map(),
 lastFpsLogs: new Map(),
+
+// rAFループ用
+dirtyCanvases: new Set(),  // 再描画が必要なCanvas
+isLoopRunning: false,      // rAFループが実行中かどうか
+rafId: null,               // requestAnimationFrame ID
+
+// JS 側配列コピー（Phase 3c）
+arrays: new Map(), // canvasId → { main: Int32Array, buffers: Map<bufferId, Int32Array> }
     
 // 色定義
 colors: {
@@ -144,23 +152,121 @@ colors: {
      * @param {boolean} showCompletionHighlight - 完了ハイライトを表示するか
      */
     render: function(canvasId, array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight) {
-        // 描画パラメータを保存（ResizeObserver用）
-        const params = {
-            array,
+        // 後方互換用: updateData に委譲
+        this.updateData(canvasId, array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight);
+    },
+
+    /**
+     * 新しいソートがロードされたとき（SortVersion 変化時）に C# から呼ばれる。
+     * JS 側の配列コピーを初期化し、次フレームで再描画をスケジュールする。
+     */
+    setArray: function(canvasId, mainArray, bufferArrays, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight) {
+        let entry = this.arrays.get(canvasId);
+        if (!entry) {
+            entry = { main: null, buffers: new Map() };
+            this.arrays.set(canvasId, entry);
+        }
+        entry.main = new Int32Array(mainArray);
+        entry.buffers.clear();
+        if (bufferArrays) {
+            for (const [idStr, arr] of Object.entries(bufferArrays)) {
+                entry.buffers.set(parseInt(idStr), new Int32Array(arr));
+            }
+        }
+        this._scheduleRender(canvasId, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight);
+    },
+
+    /**
+     * 通常の再生フレームで C# から呼ばれる（高速パス）。
+     * 差分（flat [index, value, ...]）を JS 側配列に適用し、次フレームで再描画をスケジュールする。
+     */
+    applyFrame: function(canvasId, mainDelta, bufferDeltas, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight) {
+        const entry = this.arrays.get(canvasId);
+        if (!entry || !entry.main) return;
+
+        // メイン配列に差分を適用
+        if (mainDelta) {
+            for (let k = 0; k < mainDelta.length; k += 2) {
+                entry.main[mainDelta[k]] = mainDelta[k + 1];
+            }
+        }
+
+        // バッファー配列に差分を適用
+        if (bufferDeltas) {
+            for (const [idStr, delta] of Object.entries(bufferDeltas)) {
+                const bid = parseInt(idStr);
+                let buf = entry.buffers.get(bid);
+                if (!buf) {
+                    buf = new Int32Array(entry.main.length);
+                    entry.buffers.set(bid, buf);
+                }
+                for (let k = 0; k < delta.length; k += 2) {
+                    buf[delta[k]] = delta[k + 1];
+                }
+            }
+        }
+
+        // ソート完了時はバッファーを解放
+        if (isSortCompleted && entry.buffers.size > 0) {
+            entry.buffers.clear();
+        }
+
+        this._scheduleRender(canvasId, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight);
+    },
+
+    /**
+     * ハイライト情報を lastRenderParams に保存し、dirty マークを付けて rAF をスケジュールする。
+     */
+    _scheduleRender: function(canvasId, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight) {
+        this.lastRenderParams.set(canvasId, {
             compareIndices,
             swapIndices,
             readIndices,
             writeIndices,
             isSortCompleted: isSortCompleted || false,
-            bufferArrays: bufferArrays || {},
             showCompletionHighlight: showCompletionHighlight !== undefined ? showCompletionHighlight : false
-        };
-        this.lastRenderParams.set(canvasId, params);
-        
-        // 実際の描画処理
-        this.renderInternal(canvasId, params);
+        });
+        this.dirtyCanvases.add(canvasId);
+        if (!this.isLoopRunning) this.startLoop();
     },
-    
+
+    /**
+     * データを更新して rAF ループで再描画をスケジュール（シーク後・リセット後の全量更新フォールバック）
+     * C# から呼ばれる主要エントリポイント（render の代替）
+     */
+    updateData: function(canvasId, array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight) {
+        // 全量更新は setArray に委譲
+        this.setArray(canvasId, array, bufferArrays, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight);
+    },
+
+    /**
+     * rAF 駆動の描画ループを開始する
+     * dirty なCanvasのみ描画し、すべてが clean になったら停止する
+     */
+    startLoop: function() {
+        if (this.isLoopRunning) return;
+        this.isLoopRunning = true;
+
+        const self = this;
+        const tick = () => {
+            if (self.dirtyCanvases.size > 0) {
+                self.dirtyCanvases.forEach(canvasId => {
+                    if (self.instances.has(canvasId)) {
+                        const params = self.lastRenderParams.get(canvasId);
+                        if (params) self.renderInternal(canvasId, params);
+                    }
+                });
+                self.dirtyCanvases.clear();
+                self.rafId = requestAnimationFrame(tick);
+            } else {
+                self.isLoopRunning = false;
+                self.rafId = null;
+            }
+        };
+
+        this.rafId = requestAnimationFrame(tick);
+    },
+
     /**
      * 内部描画処理（実際のCanvas描画）
      * @param {string} canvasId - Canvas要素のID
@@ -179,8 +285,13 @@ colors: {
             return;
         }
         
-        // パラメータ展開
-        const { array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight } = params;
+        // パラメータ展開（ハイライト情報のみ；配列は arrays マップから取得）
+        const { compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight } = params;
+
+        // JS 側配列コピーを取得
+        const entry = this.arrays.get(canvasId);
+        if (!entry || !entry.main) return;
+        const array = entry.main;
         
         // 🔍 デバッグ：render() 呼び出し回数をカウント
         if (!this.renderCounts.has(canvasId)) {
@@ -206,7 +317,7 @@ colors: {
         const arrayLength = array.length;
         
         // バッファー配列の数を取得
-        const bufferCount = Object.keys(bufferArrays).length;
+        const bufferCount = entry.buffers.size;
         
         // 背景をクリア（黒）
         ctx.fillStyle = '#1A1A1A';
@@ -237,9 +348,12 @@ colors: {
         const barWidth = totalBarWidth * (1.0 - gapRatio);
         const gap = totalBarWidth * gapRatio;
         
-        // 最大値を取得
-        const maxValue = Math.max(...array);
-        
+        // 最大値を取得（スプレッド演算子は大配列でスタックオーバーフローのリスクがあるためループで計算）
+        let maxValue = 0;
+        for (let i = 0; i < arrayLength; i++) {
+            if (array[i] > maxValue) maxValue = array[i];
+        }
+
         // Set を使って高速な存在チェック
         const compareSet = new Set(compareIndices);
         const swapSet = new Set(swapIndices);
@@ -253,51 +367,78 @@ colors: {
             // 横スクロールが必要な場合は左寄せ
             ctx.scale(scale, 1.0);
         }
-        
-        // メイン配列のバーを描画（一括描画で高速化）
-        for (let i = 0; i < arrayLength; i++) {
-            const value = array[i];
-            const barHeight = (value / maxValue) * (sectionHeight - 20);
-            const x = i * totalBarWidth + (gap / 2);
-            const y = mainArrayY + (sectionHeight - barHeight);
-            
-            // 色を決定（優先度順）
-            let color;
-            if (showCompletionHighlight) {
-                // ソート完了ハイライト表示中はすべて緑色
-                color = this.colors.sorted;
-            } else if (swapSet.has(i)) {
-                color = this.colors.swap;
-            } else if (compareSet.has(i)) {
-                color = this.colors.compare;
-            } else if (writeSet.has(i)) {
-                color = this.colors.write;
-            } else if (readSet.has(i)) {
-                color = this.colors.read;
-            } else {
-                color = this.colors.normal;
+
+        // メイン配列のバーを描画（同色バッチ描画: fillStyle 切り替えを最小化）
+        const usableHeight = sectionHeight - 20;
+        if (showCompletionHighlight) {
+            // 完了ハイライト: 全バーを1色で一括描画
+            ctx.fillStyle = this.colors.sorted;
+            for (let i = 0; i < arrayLength; i++) {
+                const barHeight = (array[i] / maxValue) * usableHeight;
+                ctx.fillRect(
+                    i * totalBarWidth + (gap / 2),
+                    mainArrayY + (sectionHeight - barHeight),
+                    barWidth, barHeight
+                );
             }
-            
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, barWidth, barHeight);
+        } else {
+            // 通常描画: インデックスを色バケツに振り分けてから色ごとに一括描画
+            const swapBucket    = [];
+            const compareBucket = [];
+            const writeBucket   = [];
+            const readBucket    = [];
+            const normalBucket  = [];
+
+            for (let i = 0; i < arrayLength; i++) {
+                if      (swapSet.has(i))    swapBucket.push(i);
+                else if (compareSet.has(i)) compareBucket.push(i);
+                else if (writeSet.has(i))   writeBucket.push(i);
+                else if (readSet.has(i))    readBucket.push(i);
+                else                        normalBucket.push(i);
+            }
+
+            // 描画順: normal → compare → write → read → swap（ハイライトを前面に重ねる）
+            const buckets = [
+                [normalBucket,  this.colors.normal],
+                [compareBucket, this.colors.compare],
+                [writeBucket,   this.colors.write],
+                [readBucket,    this.colors.read],
+                [swapBucket,    this.colors.swap],
+            ];
+
+            for (const [indices, color] of buckets) {
+                if (indices.length === 0) continue;
+                ctx.fillStyle = color;
+                for (const i of indices) {
+                    const barHeight = (array[i] / maxValue) * usableHeight;
+                    ctx.fillRect(
+                        i * totalBarWidth + (gap / 2),
+                        mainArrayY + (sectionHeight - barHeight),
+                        barWidth, barHeight
+                    );
+                }
+            }
         }
-        
+
         ctx.restore();
         
         // バッファー配列を描画（ソート完了時は非表示）
         if (showBuffers) {
-            const bufferIds = Object.keys(bufferArrays).sort((a, b) => parseInt(a) - parseInt(b));
+            const sortedBufferIds = [...entry.buffers.keys()].sort((a, b) => a - b);
             
-            for (let bufferIndex = 0; bufferIndex < bufferIds.length; bufferIndex++) {
-                const bufferId = bufferIds[bufferIndex];
-                const bufferArray = bufferArrays[bufferId];
+            for (let bufferIndex = 0; bufferIndex < sortedBufferIds.length; bufferIndex++) {
+                const bufferId = sortedBufferIds[bufferIndex];
+                const bufferArray = entry.buffers.get(bufferId);
                 const bufferY = bufferIndex * sectionHeight;
                 
                 if (!bufferArray || bufferArray.length === 0) continue;
                 
-                // バッファー配列の最大値
-                const bufferMaxValue = Math.max(...bufferArray);
+                // バッファー配列の最大値（ループで安全に）
+                let bufferMaxValue = 0;
                 const bufferLength = bufferArray.length;
+                for (let i = 0; i < bufferLength; i++) {
+                    if (bufferArray[i] > bufferMaxValue) bufferMaxValue = bufferArray[i];
+                }
                 
                 // バッファー配列用のバー幅計算（メイン配列と同じロジック）
                 const bufferRequiredWidth = Math.max(width, bufferLength * minBarWidth / (1.0 - gapRatio));
@@ -312,16 +453,16 @@ colors: {
                     ctx.scale(bufferScale, 1.0);
                 }
                 
-                // バッファー配列のバーを描画
+                // バッファー配列のバーを描画（単色なので fillStyle は1回）
+                const bufferUsableHeight = sectionHeight - 20;
+                ctx.fillStyle = '#06B6D4';
                 for (let i = 0; i < bufferLength; i++) {
-                    const value = bufferArray[i];
-                    const barHeight = (value / bufferMaxValue) * (sectionHeight - 20);
-                    const x = i * bufferTotalBarWidth + (bufferGap / 2);
-                    const y = bufferY + (sectionHeight - barHeight);
-                    
-                    // バッファー配列は薄いシアン色で表示
-                    ctx.fillStyle = '#06B6D4';
-                    ctx.fillRect(x, y, bufferBarWidth, barHeight);
+                    const barHeight = (bufferArray[i] / bufferMaxValue) * bufferUsableHeight;
+                    ctx.fillRect(
+                        i * bufferTotalBarWidth + (bufferGap / 2),
+                        bufferY + (sectionHeight - barHeight),
+                        bufferBarWidth, barHeight
+                    );
                 }
                 
                 ctx.restore();
@@ -363,11 +504,21 @@ colors: {
                 console.warn('Canvas instance not found for disposal:', canvasId);
             }
             
-            // FPS計測用のデータと描画パラメータも削除
+            // FPS計測用のデータ、描画パラメータ、dirty フラグ、JS 側配列コピーも削除
             this.renderCounts.delete(canvasId);
             this.lastFpsLogs.delete(canvasId);
             this.lastRenderParams.delete(canvasId);
+            this.dirtyCanvases.delete(canvasId);
+            this.arrays.delete(canvasId);
         } else {
+            // rAFループを停止
+            if (this.rafId) {
+                cancelAnimationFrame(this.rafId);
+                this.rafId = null;
+            }
+            this.isLoopRunning = false;
+            this.dirtyCanvases.clear();
+
             // ResizeObserverをリセット
             if (this.resizeObserver) {
                 this.resizeObserver.disconnect();
@@ -379,6 +530,7 @@ colors: {
             this.renderCounts.clear();
             this.lastFpsLogs.clear();
             this.lastRenderParams.clear();
+            this.arrays.clear();
         }
     }
 };

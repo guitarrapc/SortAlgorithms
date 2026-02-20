@@ -4,6 +4,14 @@ window.circularCanvasRenderer = {
     instances: new Map(), // Canvas ID -> インスタンスのマップ
     resizeObserver: null, // ResizeObserver インスタンス
     lastRenderParams: new Map(), // Canvas ID -> 最後の描画パラメータ
+
+    // rAFループ用
+    dirtyCanvases: new Set(),  // 再描画が必要なCanvas
+    isLoopRunning: false,      // rAFループが実行中かどうか
+    rafId: null,               // requestAnimationFrame ID
+
+    // JS 側配列コピー（Phase 3c）
+    arrays: new Map(), // canvasId → { main: Int32Array, buffers: Map<bufferId, Int32Array> }
     
     // 色定義（操作に基づく）
     colors: {
@@ -109,23 +117,111 @@ window.circularCanvasRenderer = {
      * @param {boolean} showCompletionHighlight - 完了ハイライトを表示するか
      */
     render: function(canvasId, array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight) {
-        // 描画パラメータを保存（ResizeObserver用）
-        const params = {
-            array,
+        // 後方互換用: updateData に委譲
+        this.updateData(canvasId, array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight);
+    },
+
+    /**
+     * 新しいソートがロードされたとき（SortVersion 変化時）に C# から呼ばれる。
+     * JS 側の配列コピーを初期化し、次フレームで再描画をスケジュールする。
+     */
+    setArray: function(canvasId, mainArray, bufferArrays, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight) {
+        let entry = this.arrays.get(canvasId);
+        if (!entry) {
+            entry = { main: null, buffers: new Map() };
+            this.arrays.set(canvasId, entry);
+        }
+        entry.main = new Int32Array(mainArray);
+        entry.buffers.clear();
+        if (bufferArrays) {
+            for (const [idStr, arr] of Object.entries(bufferArrays)) {
+                entry.buffers.set(parseInt(idStr), new Int32Array(arr));
+            }
+        }
+        this._scheduleRender(canvasId, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight);
+    },
+
+    /**
+     * 通常の再生フレームで C# から呼ばれる（高速パス）。
+     * 差分を JS 側配列に適用し、次フレームで再描画をスケジュールする。
+     */
+    applyFrame: function(canvasId, mainDelta, bufferDeltas, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight) {
+        const entry = this.arrays.get(canvasId);
+        if (!entry || !entry.main) return;
+
+        if (mainDelta) {
+            for (let k = 0; k < mainDelta.length; k += 2) {
+                entry.main[mainDelta[k]] = mainDelta[k + 1];
+            }
+        }
+        if (bufferDeltas) {
+            for (const [idStr, delta] of Object.entries(bufferDeltas)) {
+                const bid = parseInt(idStr);
+                let buf = entry.buffers.get(bid);
+                if (!buf) {
+                    buf = new Int32Array(entry.main.length);
+                    entry.buffers.set(bid, buf);
+                }
+                for (let k = 0; k < delta.length; k += 2) {
+                    buf[delta[k]] = delta[k + 1];
+                }
+            }
+        }
+        if (isSortCompleted && entry.buffers.size > 0) {
+            entry.buffers.clear();
+        }
+        this._scheduleRender(canvasId, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight);
+    },
+
+    _scheduleRender: function(canvasId, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight) {
+        this.lastRenderParams.set(canvasId, {
             compareIndices,
             swapIndices,
             readIndices,
             writeIndices,
             isSortCompleted: isSortCompleted || false,
-            bufferArrays: bufferArrays || {},
             showCompletionHighlight: showCompletionHighlight !== undefined ? showCompletionHighlight : false
-        };
-        this.lastRenderParams.set(canvasId, params);
-        
-        // 実際の描画処理
-        this.renderInternal(canvasId, params);
+        });
+        this.dirtyCanvases.add(canvasId);
+        if (!this.isLoopRunning) this.startLoop();
     },
-    
+
+    /**
+     * データを更新して rAF ループで再描画をスケジュール（シーク後・リセット後の全量更新フォールバック）
+     * C# から呼ばれる主要エントリポイント（render の代替）
+     */
+    updateData: function(canvasId, array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight) {
+        this.setArray(canvasId, array, bufferArrays, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight);
+    },
+
+    /**
+     * rAF 駆動の描画ループを開始する
+     * dirty なCanvasのみ描画し、すべてが clean になったら停止する
+     */
+    startLoop: function() {
+        if (this.isLoopRunning) return;
+        this.isLoopRunning = true;
+
+        const self = this;
+        const tick = () => {
+            if (self.dirtyCanvases.size > 0) {
+                self.dirtyCanvases.forEach(canvasId => {
+                    if (self.instances.has(canvasId)) {
+                        const params = self.lastRenderParams.get(canvasId);
+                        if (params) self.renderInternal(canvasId, params);
+                    }
+                });
+                self.dirtyCanvases.clear();
+                self.rafId = requestAnimationFrame(tick);
+            } else {
+                self.isLoopRunning = false;
+                self.rafId = null;
+            }
+        };
+
+        this.rafId = requestAnimationFrame(tick);
+    },
+
     /**
      * 内部描画処理（実際のCanvas描画）
      * @param {string} canvasId - Canvas要素のID
@@ -144,8 +240,13 @@ window.circularCanvasRenderer = {
             return;
         }
         
-        // パラメータ展開
-        const { array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight } = params;
+        // パラメータ展開（ハイライト情報のみ；配列は arrays マップから取得）
+        const { compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight } = params;
+
+        // JS 側配列コピーを取得
+        const entry = this.arrays.get(canvasId);
+        if (!entry || !entry.main) return;
+        const array = entry.main;
         
         const rect = canvas.getBoundingClientRect();
         const width = rect.width;
@@ -153,7 +254,7 @@ window.circularCanvasRenderer = {
         const arrayLength = array.length;
         
         // バッファー配列の数を取得
-        const bufferCount = Object.keys(bufferArrays).length;
+        const bufferCount = entry.buffers.size;
         
         // 背景をクリア（黒）
         ctx.fillStyle = '#1A1A1A';
@@ -185,9 +286,12 @@ window.circularCanvasRenderer = {
             mainMaxRadius = maxRadius; // 最大半径まで使用
         }
         
-        // 最大値を取得
-        const maxValue = Math.max(...array);
-        
+        // 最大値を取得（スプレッド演算子は大配列でスタックオーバーフローのリスクがあるためループで計算）
+        let maxValue = 0;
+        for (let i = 0; i < arrayLength; i++) {
+            if (array[i] > maxValue) maxValue = array[i];
+        }
+
         // Set を使って高速な存在チェック
         const compareSet = new Set(compareIndices);
         const swapSet = new Set(swapIndices);
@@ -196,69 +300,79 @@ window.circularCanvasRenderer = {
         
         // 各要素を円周上に配置
         const angleStep = (2 * Math.PI) / arrayLength;
-        
-        // メイン配列の線を描画
-        for (let i = 0; i < arrayLength; i++) {
-            const value = array[i];
-            const angle = i * angleStep - Math.PI / 2; // -90度から開始（12時の位置）
-            
-            // 値に応じた半径（メイン配列のリング内）
-            const radius = mainMinRadius + (value / maxValue) * (mainMaxRadius - mainMinRadius);
-            
-            // 終点の座標
-            const endX = centerX + Math.cos(angle) * radius;
-            const endY = centerY + Math.sin(angle) * radius;
-            
-            // 開始点の座標（メイン配列リングの内側）
-            const startX = centerX + Math.cos(angle) * mainMinRadius;
-            const startY = centerY + Math.sin(angle) * mainMinRadius;
-            
-            // 色を決定（優先度順）
-            let color;
-            if (showCompletionHighlight) {
-                // ソート完了ハイライト表示中はすべて緑色
-                color = this.colors.sorted;
-            } else if (swapSet.has(i)) {
-                color = this.colors.swap;
-            } else if (compareSet.has(i)) {
-                color = this.colors.compare;
-            } else if (writeSet.has(i)) {
-                color = this.colors.write;
-            } else if (readSet.has(i)) {
-                color = this.colors.read;
-            } else {
-                // 通常時は値に基づくHSLグラデーション
-                color = this.valueToHSL(value, maxValue);
-            }
-            
-            // 線の太さを配列サイズに応じて調整
-            let lineWidth;
-            if (arrayLength <= 64) {
-                lineWidth = 3;
-            } else if (arrayLength <= 256) {
-                lineWidth = 2;
-            } else if (arrayLength <= 1024) {
-                lineWidth = 1.5;
-            } else {
-                lineWidth = 1;
-            }
-            
-            // 線を描画
-            ctx.strokeStyle = color;
-            ctx.lineWidth = lineWidth;
+
+        // 線の太さを配列サイズに応じて事前に1回計算
+        const lineWidth = arrayLength <= 64 ? 3 : arrayLength <= 256 ? 2 : arrayLength <= 1024 ? 1.5 : 1;
+
+        // メイン配列の線を描画（同色バッチ描画: strokeStyle 変更と stroke 呼び出しを最小化）
+        ctx.lineWidth = lineWidth;
+        if (showCompletionHighlight) {
+            // 完了ハイライト: 全線を1色・1パスで一括描画
+            ctx.strokeStyle = this.colors.sorted;
             ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            ctx.lineTo(endX, endY);
+            for (let i = 0; i < arrayLength; i++) {
+                const angle = i * angleStep - Math.PI / 2;
+                const radius = mainMinRadius + (array[i] / maxValue) * (mainMaxRadius - mainMinRadius);
+                ctx.moveTo(centerX + Math.cos(angle) * mainMinRadius, centerY + Math.sin(angle) * mainMinRadius);
+                ctx.lineTo(centerX + Math.cos(angle) * radius,        centerY + Math.sin(angle) * radius);
+            }
             ctx.stroke();
+        } else {
+            // インデックスを色バケツに振り分け
+            const swapBucket    = [];
+            const compareBucket = [];
+            const writeBucket   = [];
+            const readBucket    = [];
+            const normalBucket  = [];
+
+            for (let i = 0; i < arrayLength; i++) {
+                if      (swapSet.has(i))    swapBucket.push(i);
+                else if (compareSet.has(i)) compareBucket.push(i);
+                else if (writeSet.has(i))   writeBucket.push(i);
+                else if (readSet.has(i))    readBucket.push(i);
+                else                        normalBucket.push(i);
+            }
+
+            // 1. 通常色（HSLグラデーション）を描画 - 各要素で strokeStyle が異なるため個別描画
+            for (const i of normalBucket) {
+                const angle = i * angleStep - Math.PI / 2;
+                const radius = mainMinRadius + (array[i] / maxValue) * (mainMaxRadius - mainMinRadius);
+                ctx.strokeStyle = this.valueToHSL(array[i], maxValue);
+                ctx.beginPath();
+                ctx.moveTo(centerX + Math.cos(angle) * mainMinRadius, centerY + Math.sin(angle) * mainMinRadius);
+                ctx.lineTo(centerX + Math.cos(angle) * radius,        centerY + Math.sin(angle) * radius);
+                ctx.stroke();
+            }
+
+            // 2. ハイライト色をバッチ描画（1色につき1パス・1回の stroke）
+            const highlightBuckets = [
+                [compareBucket, this.colors.compare],
+                [writeBucket,   this.colors.write],
+                [readBucket,    this.colors.read],
+                [swapBucket,    this.colors.swap],
+            ];
+
+            for (const [indices, color] of highlightBuckets) {
+                if (indices.length === 0) continue;
+                ctx.strokeStyle = color;
+                ctx.beginPath();
+                for (const i of indices) {
+                    const angle = i * angleStep - Math.PI / 2;
+                    const radius = mainMinRadius + (array[i] / maxValue) * (mainMaxRadius - mainMinRadius);
+                    ctx.moveTo(centerX + Math.cos(angle) * mainMinRadius, centerY + Math.sin(angle) * mainMinRadius);
+                    ctx.lineTo(centerX + Math.cos(angle) * radius,        centerY + Math.sin(angle) * radius);
+                }
+                ctx.stroke();
+            }
         }
         
         // バッファー配列を同心円リングとして描画（ソート完了時は非表示）
         if (showBuffers) {
-            const bufferIds = Object.keys(bufferArrays).sort((a, b) => parseInt(a) - parseInt(b));
+            const sortedBufferIds = [...entry.buffers.keys()].sort((a, b) => a - b);
             
-            for (let bufferIndex = 0; bufferIndex < bufferIds.length; bufferIndex++) {
-                const bufferId = bufferIds[bufferIndex];
-                const bufferArray = bufferArrays[bufferId];
+            for (let bufferIndex = 0; bufferIndex < sortedBufferIds.length; bufferIndex++) {
+                const bufferId = sortedBufferIds[bufferIndex];
+                const bufferArray = entry.buffers.get(bufferId);
                 
                 if (!bufferArray || bufferArray.length === 0) continue;
                 
@@ -267,50 +381,26 @@ window.circularCanvasRenderer = {
                 const bufferMinRadius = minRadius + ringIndex * ringWidth;
                 const bufferMaxRadius = bufferMinRadius + ringWidth;
                 
-                // バッファー配列の最大値
-                const bufferMaxValue = Math.max(...bufferArray);
+                // バッファー配列の最大値（ループで安全に）
+                let bufferMaxValue = 0;
                 const bufferLength = bufferArray.length;
-                const bufferAngleStep = (2 * Math.PI) / bufferLength;
-                
-                // バッファー配列の線を描画
                 for (let i = 0; i < bufferLength; i++) {
-                    const value = bufferArray[i];
-                    const angle = i * bufferAngleStep - Math.PI / 2;
-                    
-                    // 値に応じた半径（バッファーリング内）
-                    const radius = bufferMinRadius + (value / bufferMaxValue) * (bufferMaxRadius - bufferMinRadius);
-                    
-                    // 終点の座標
-                    const endX = centerX + Math.cos(angle) * radius;
-                    const endY = centerY + Math.sin(angle) * radius;
-                    
-                    // 開始点の座標（バッファーリングの内側）
-                    const startX = centerX + Math.cos(angle) * bufferMinRadius;
-                    const startY = centerY + Math.sin(angle) * bufferMinRadius;
-                    
-                    // バッファー配列は薄いシアン色で表示
-                    const bufferColor = '#06B6D4';
-                    
-                    // 線の太さを配列サイズに応じて調整
-                    let lineWidth;
-                    if (bufferLength <= 64) {
-                        lineWidth = 3;
-                    } else if (bufferLength <= 256) {
-                        lineWidth = 2;
-                    } else if (bufferLength <= 1024) {
-                        lineWidth = 1.5;
-                    } else {
-                        lineWidth = 1;
-                    }
-                    
-                    // 線を描画
-                    ctx.strokeStyle = bufferColor;
-                    ctx.lineWidth = lineWidth;
-                    ctx.beginPath();
-                    ctx.moveTo(startX, startY);
-                    ctx.lineTo(endX, endY);
-                    ctx.stroke();
+                    if (bufferArray[i] > bufferMaxValue) bufferMaxValue = bufferArray[i];
                 }
+                const bufferAngleStep = (2 * Math.PI) / bufferLength;
+                const bufferLineWidth = bufferLength <= 64 ? 3 : bufferLength <= 256 ? 2 : bufferLength <= 1024 ? 1.5 : 1;
+                
+                // バッファー配列の線を描画（単色なので1パス・1回の stroke で一括）
+                ctx.strokeStyle = '#06B6D4';
+                ctx.lineWidth = bufferLineWidth;
+                ctx.beginPath();
+                for (let i = 0; i < bufferLength; i++) {
+                    const angle = i * bufferAngleStep - Math.PI / 2;
+                    const radius = bufferMinRadius + (bufferArray[i] / bufferMaxValue) * (bufferMaxRadius - bufferMinRadius);
+                    ctx.moveTo(centerX + Math.cos(angle) * bufferMinRadius, centerY + Math.sin(angle) * bufferMinRadius);
+                    ctx.lineTo(centerX + Math.cos(angle) * radius,          centerY + Math.sin(angle) * radius);
+                }
+                ctx.stroke();
                 
                 // バッファーIDラベルを表示（円の外側）
                 const labelAngle = -Math.PI / 2; // 12時の位置
@@ -353,9 +443,19 @@ window.circularCanvasRenderer = {
                 console.warn('Circular Canvas instance not found for disposal:', canvasId);
             }
             
-            // 描画パラメータも削除
+            // 描画パラメータと dirty フラグ、JS 側配列コピーも削除
             this.lastRenderParams.delete(canvasId);
+            this.dirtyCanvases.delete(canvasId);
+            this.arrays.delete(canvasId);
         } else {
+            // rAFループを停止
+            if (this.rafId) {
+                cancelAnimationFrame(this.rafId);
+                this.rafId = null;
+            }
+            this.isLoopRunning = false;
+            this.dirtyCanvases.clear();
+
             // ResizeObserverをリセット
             if (this.resizeObserver) {
                 this.resizeObserver.disconnect();
@@ -365,6 +465,7 @@ window.circularCanvasRenderer = {
             // すべてのインスタンスをクリア
             this.instances.clear();
             this.lastRenderParams.clear();
+            this.arrays.clear();
         }
     }
 };
