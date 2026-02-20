@@ -226,6 +226,27 @@ html, body {
     padding-bottom: 8px;
 }
 
+.stat-section {
+    margin-bottom: 8px;
+}
+
+.stat-section-title {
+    font-size: 0.8rem;
+    color: var(--text-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+    padding: 0 2px;
+}
+
+.stat-execution-time {
+    color: #10B981;
+}
+
+.stat-performance {
+    color: #3B82F6;
+}
+
 .stat-item {
     margin-bottom: 12px;
     padding: 10px;

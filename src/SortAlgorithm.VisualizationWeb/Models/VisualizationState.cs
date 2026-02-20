@@ -127,5 +127,25 @@ public class VisualizationState
 
     /// <summary>ソート完了ハイライトを表示するかどうか（2秒間のみ）</summary>
     public bool ShowCompletionHighlight { get; set; }
+
+    /// <summary>ソートの実際の実行時間（Stopwatchで計測した実測値）</summary>
+    public TimeSpan ActualExecutionTime { get; set; }
+
+    /// <summary>
+    /// 再生進捗に応じた推定実行時間（線形補間）
+    /// 再生中は0からActualExecutionTimeへ線形増加、完了時は確定値を返す
+    /// </summary>
+    public TimeSpan EstimatedCurrentExecutionTime
+    {
+        get
+        {
+            if (TotalOperations == 0 || ActualExecutionTime == TimeSpan.Zero)
+                return ActualExecutionTime;
+            if (IsSortCompleted)
+                return ActualExecutionTime;
+            var progressRatio = (double)CurrentOperationIndex / TotalOperations;
+            return TimeSpan.FromTicks((long)(ActualExecutionTime.Ticks * progressRatio));
+        }
+    }
 }
 

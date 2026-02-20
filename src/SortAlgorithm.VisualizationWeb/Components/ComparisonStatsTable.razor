@@ -46,6 +46,9 @@
                     <th @onclick='() => SortBy("Progress")' class="sortable">
                         Progress @GetSortIcon("Progress")
                     </th>
+                    <th @onclick='() => SortBy("ExecTime")' class="sortable">
+                        Exec Time @GetSortIcon("ExecTime")
+                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -71,6 +74,7 @@
                                 <span class="status-badge running">@progress%</span>
                             }
                         </td>
+                        <td class="stat-value exec-time">@FormatTotalTime(item.State.ActualExecutionTime)</td>
                     </tr>
                 }
             </tbody>
@@ -90,6 +94,27 @@
     
     private string _sortColumn = "Compares";
     private bool _sortAscending = true;
+
+    private static string FormatTotalTime(TimeSpan time)
+    {
+        if (time == TimeSpan.Zero) return "-";
+        if (time.TotalNanoseconds < 1000)
+            return $"{time.TotalNanoseconds:F0} ns";
+        else if (time.TotalMicroseconds < 1000)
+            return $"{TrimTrailingZerosMinOne(time.TotalMicroseconds)} μs";
+        else if (time.TotalMilliseconds < 1000)
+            return $"{TrimTrailingZerosMinOne(time.TotalMilliseconds)} ms";
+        else
+            return $"{TrimTrailingZerosMinOne(time.TotalSeconds)} s";
+    }
+
+    private static string TrimTrailingZerosMinOne(double value)
+    {
+        var s = value.ToString("F3").TrimEnd('0');
+        if (s.EndsWith('.'))
+            s += "0";
+        return s;
+    }
     
     private async Task TogglePanel()
     {
@@ -141,6 +166,9 @@
             "Progress" => _sortAscending
                 ? Instances.OrderBy(x => x.State.TotalOperations > 0 ? (x.State.CurrentOperationIndex / (double)x.State.TotalOperations) : 0)
                 : Instances.OrderByDescending(x => x.State.TotalOperations > 0 ? (x.State.CurrentOperationIndex / (double)x.State.TotalOperations) : 0),
+            "ExecTime" => _sortAscending
+                ? Instances.OrderBy(x => x.State.ActualExecutionTime)
+                : Instances.OrderByDescending(x => x.State.ActualExecutionTime),
             _ => Instances
         };
         
@@ -150,7 +178,7 @@
     private async Task CopyTableToClipboard()
     {
         // TSV形式でクリップボードにコピー
-        var header = "Algorithm\tComplexity\tCompares\tSwaps\tReads\tWrites\tProgress";
+        var header = "Algorithm\tComplexity\tCompares\tSwaps\tReads\tWrites\tProgress\tExec Time";
         var rows = Instances.Select(item =>
         {
             var progress = item.State.TotalOperations > 0
@@ -163,7 +191,8 @@
                    $"{item.State.SwapCount}\t" +
                    $"{item.State.IndexReadCount}\t" +
                    $"{item.State.IndexWriteCount}\t" +
-                   $"{(item.State.IsSortCompleted ? "100%" : $"{progress}%")}";
+                   $"{(item.State.IsSortCompleted ? "100%" : $"{progress}%")}\t" +
+                   $"{FormatTotalTime(item.State.ActualExecutionTime)}";
         });
         
         var tsv = header + "\n" + string.Join("\n", rows);
