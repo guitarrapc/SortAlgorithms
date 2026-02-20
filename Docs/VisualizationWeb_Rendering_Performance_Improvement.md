@@ -667,3 +667,667 @@ Phase 4 以降は、さらなるスケーラビリティ（65536+ 要素、8192 
 3. Phase 3c (JS 側配列保持) — 転送量の劇的削減
 4. Phase 5b (ShouldRender) — Blazor 差分コスト排除
 5. 計測してボトルネックが残る場合に Phase 4 以降を検討
+
+---
+
+## 11. 実装済み Phase の振り返りと残存課題
+
+Phase 1〜6 および C# 側改善がほぼすべて実装された。以下は実装状況の要約である。
+
+| Phase / 改善 | 状態 | 実装先 |
+|---|---|---|
+| Phase 1: JS 自律 rAF ループ | ✅ 実装済み | `canvasRenderer.js` `startLoop()`, `circularCanvasRenderer.js` `startLoop()` |
+| Phase 2: 同色バッチ描画 | ✅ 実装済み | `canvasRenderer.js` バケット分類, `circularCanvasRenderer.js` ハイライトバケット |
+| Phase 3b: 差分転送 (Delta Updates) | ✅ 実装済み | `PlaybackService.RecordDelta()`, `applyFrame()` |
+| Phase 3c: JS 側配列保持 | ✅ 実装済み | `setArray()` + `arrays` Map |
+| Phase 4: OffscreenCanvas + Worker | ✅ 実装済み | `renderWorker.js` (Canvas 2D), `webglWorker.js` (WebGL2) |
+| Phase 6: WebGL レンダラー | ✅ 実装済み | `webglWorker.js` インスタンス描画 |
+| 5a: HashSet → List 変更 | ✅ 実装済み | `VisualizationState.cs` `List<int>` |
+| 5b: ShouldRender() | ✅ 実装済み | `CanvasChartRenderer.razor`, `CircularRenderer.razor` |
+| Math.max スタックオーバーフロー修正 | ✅ 実装済み | ループ方式に変更済み |
+| ArrayPool 再利用 | ✅ 実装済み | `PlaybackService._pooledArray` |
+| SortVersion による全量/差分判定 | ✅ 実装済み | `CanvasChartRenderer.razor`, `CircularRenderer.razor` |
+
+---
+
+## 12. 追加改善提案（Phase 1〜6 実装後に発見）
+
+コードベース調査により、以下の追加改善ポイントを特定した。対象はPC・タブレット・スマートフォンのブラウザからアクセスされる Blazor WASM アプリケーションである。
+
+### 12.1 【重大】PlaybackService の SpinWait がメインスレッドをブロックする
+
+**問題：**
+
+`PlaybackLoopAsync` 内の `SpinWait` は Blazor WASM のシングルスレッド環境で致命的な問題を起こす。
+
+```csharp
+// PlaybackService.cs L280-303
+private async Task PlaybackLoopAsync(CancellationToken cancellationToken)
+{
+    // ...
+    // 高精度待機: SpinWait
+    var spinWait = new SpinWait();
+    while (sw.Elapsed.TotalMilliseconds < nextFrameTime && !cancellationToken.IsCancellationRequested)
+    {
+        spinWait.SpinOnce(); // CPUビジーウェイト ← 問題
+    }
+}
+```
+
+**影響：**
+- Blazor WASM はデフォルトでシングルスレッド。`Task.Run()` は新しいスレッドを作らず、同じスレッド上のタスクスケジューラで実行される
+- `SpinWait.SpinOnce()` は CPU をビジーウェイトし、UI スレッドを完全にブロックする
+- `Task.Yield()` で一時的に解放されるが、SpinWait 区間は UI が凍結する
+- **モバイル端末では CPU 使用率が常時 100% に張り付き、バッテリー消費が激増、サーマルスロットリングを誘発**
+
+**改善案：**
+
+```csharp
+private async Task PlaybackLoopAsync(CancellationToken cancellationToken)
+{
+    try
+    {
+        while (!cancellationToken.IsCancellationRequested
+               && State.CurrentOperationIndex < _operations.Count)
+        {
+            // 操作を処理
+            ClearHighlights();
+
+            int opsToProcess = Math.Min(OperationsPerFrame,
+                                        _operations.Count - State.CurrentOperationIndex);
+            for (int i = 0; i < opsToProcess
+                 && State.CurrentOperationIndex < _operations.Count; i++)
+            {
+                if (cancellationToken.IsCancellationRequested) break;
+                var operation = _operations[State.CurrentOperationIndex];
+                ApplyOperation(operation, applyToArray: true, updateStats: true);
+                State.CurrentOperationIndex++;
+            }
+
+            // ハイライト更新
+            if (State.CurrentOperationIndex > 0
+                && State.CurrentOperationIndex < _operations.Count)
+            {
+                var lastOperation = _operations[State.CurrentOperationIndex - 1];
+                ApplyOperation(lastOperation, applyToArray: false, updateStats: false);
+            }
+
+            // UI更新: SpinWait の代わりに Task.Delay で UI スレッドを解放
+            FinalizeDeltas();
+            StateChanged?.Invoke();
+
+            // フレーム間隔を計算してスリープ（UI をブロックしない）
+            var frameInterval = Math.Max(1, (int)(1000.0 / (TARGET_FPS * SpeedMultiplier)));
+            await Task.Delay(frameInterval, cancellationToken);
+        }
+        // ... 完了処理 ...
+    }
+    catch (OperationCanceledException) { }
+}
+```
+
+**期待効果：**
+- UI スレッドのブロック解消（全フレームで描画が滑らかに）
+- モバイル端末の CPU 使用率: 100% → **必要最小限**
+- バッテリー消費の大幅削減
+- `Task.Delay` の精度は `SpinWait` より低いが、描画は JS 側 rAF が自律制御するため問題なし
+
+**優先度：🔴 高（モバイル対応では必須）**
+
+---
+
+### 12.2 CircularRenderer に Worker/OffscreenCanvas サポートがない
+
+**問題：**
+
+`CanvasChartRenderer` は `canvasRenderer.js` 経由で `renderWorker.js` / `webglWorker.js`（Worker + OffscreenCanvas）に描画を委譲している。一方、`CircularRenderer` は `circularCanvasRenderer.js` でメインスレッド上の Canvas 2D のみで描画している。
+
+```
+CanvasChartRenderer (BarChart):
+  → canvasRenderer.js → Worker (renderWorker.js / webglWorker.js) ← メインスレッド解放 ✅
+
+CircularRenderer (Circular):
+  → circularCanvasRenderer.js → Canvas 2D (メインスレッド) ← ブロック ❌
+```
+
+**影響：**
+- Circular モード選択時、描画処理がメインスレッドで実行され UI を阻害
+- 特に Comparison Mode 4096 × 4 + Circular では顕著なカクつき
+- モバイルではメインスレッドが唯一の実行コンテキストであり、より深刻
+
+**改善案：**
+
+`circularCanvasRenderer.js` に Worker パスを追加する。BarChart の実装パターンに合わせ、`circularRenderWorker.js` を新設する。
+
+```javascript
+// circularCanvasRenderer.js: 初期化時に Worker パスを追加
+initialize: function(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return false;
+
+    if (typeof canvas.transferControlToOffscreen === 'function') {
+        // Worker パス
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+
+        const offscreen = canvas.transferControlToOffscreen();
+        const workerUrl = new URL('js/circularRenderWorker.js', document.baseURI).href;
+        const worker = new Worker(workerUrl);
+        worker.postMessage({ type: 'init', canvas: offscreen, dpr }, [offscreen]);
+
+        this.workers.set(canvasId, { worker, lastWidth: canvas.width, lastHeight: canvas.height });
+        this.instances.set(canvasId, { canvas, ctx: null });
+        // ... ResizeObserver 設定 ...
+        return true;
+    }
+
+    // フォールバック: 既存の Canvas 2D パス
+    // ...
+}
+```
+
+**期待効果：**
+- Circular モードの描画がメインスレッドから解放
+- Comparison Mode + Circular でもスムーズな再生
+- BarChart と同等のパフォーマンス特性を実現
+
+**優先度：🟡 中（Circular モード使用時に影響）**
+
+---
+
+### 12.3 毎フレームの `getBoundingClientRect()` によるレイアウトスラッシング
+
+**問題：**
+
+`canvasRenderer.js` と `circularCanvasRenderer.js` の `renderInternal()` で、毎フレーム `getBoundingClientRect()` を呼んでいる。
+
+```javascript
+// canvasRenderer.js L423
+renderInternal: function(canvasId, params) {
+    // ...
+    const rect = canvas.getBoundingClientRect(); // ← 毎フレーム呼ばれる
+    const width = rect.width;
+    const height = rect.height;
+    // ...
+}
+
+// circularCanvasRenderer.js L251
+renderInternal: function(canvasId, params) {
+    // ...
+    const rect = canvas.getBoundingClientRect(); // ← 同様
+    // ...
+}
+```
+
+**影響：**
+- `getBoundingClientRect()` はブラウザにレイアウトの再計算（リフロー）を強制する
+- 60 FPS × Canvas数 = 毎秒 60-540 回のレイアウト再計算
+- 特に DOM が複雑な Comparison Mode でコストが増大
+- モバイルでは CPU がデスクトップより非力であり影響が大きい
+
+**改善案：**
+
+Canvas サイズを `ResizeObserver` コールバック時にキャッシュし、`renderInternal` ではキャッシュを使う。
+
+```javascript
+// canvasRenderer.js
+
+// キャッシュ Map を追加
+cachedSizes: new Map(), // canvasId → { width, height }
+
+// ResizeObserver コールバック内でキャッシュ更新
+_ensureResizeObserver: function() {
+    this.resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+            const canvas = entry.target;
+            const canvasId = canvas.id;
+            const rect = canvas.getBoundingClientRect();
+            // サイズをキャッシュ
+            this.cachedSizes.set(canvasId, { width: rect.width, height: rect.height });
+            // ... 既存のリサイズ処理 ...
+        }
+    });
+},
+
+// renderInternal ではキャッシュを使用
+renderInternal: function(canvasId, params) {
+    const instance = this.instances.get(canvasId);
+    if (!instance) return;
+    const { canvas, ctx } = instance;
+    if (!canvas || !ctx) return;
+
+    // キャッシュされたサイズを使用（getBoundingClientRect 不要）
+    const size = this.cachedSizes.get(canvasId);
+    if (!size) return;
+    const width = size.width;
+    const height = size.height;
+    // ...
+}
+```
+
+**期待効果：**
+- `getBoundingClientRect()` 呼び出し: 毎フレーム → **リサイズ時のみ**
+- レイアウトスラッシング解消
+- 特に Comparison Mode 9 Canvas で 1フレームあたり最大 9回のレイアウト再計算を排除
+
+**優先度：🔴 高（全レンダリングパスに影響、修正コストも小さい）**
+
+---
+
+### 12.4 CircularRenderer の三角関数・HSL文字列生成が毎フレーム発生
+
+**問題：**
+
+`circularCanvasRenderer.js` の `renderInternal` では、全要素に対して毎フレーム以下の処理が走る。
+
+```javascript
+// 1. 三角関数: 要素あたり 2回の cos + 2回の sin（moveTo + lineTo）
+for (const i of normalBucket) {
+    const angle = i * angleStep - Math.PI / 2;
+    const radius = ...;
+    ctx.moveTo(centerX + Math.cos(angle) * mainMinRadius,  // cos 1回目
+               centerY + Math.sin(angle) * mainMinRadius);  // sin 1回目
+    ctx.lineTo(centerX + Math.cos(angle) * radius,          // cos 2回目
+               centerY + Math.sin(angle) * radius);          // sin 2回目
+}
+
+// 2. HSL 文字列生成: 通常色の要素ごとに新しい文字列を生成
+ctx.strokeStyle = this.valueToHSL(array[i], maxValue);
+// → `hsl(${hue}, 70%, 60%)` ← テンプレートリテラルで毎回新文字列
+```
+
+**影響：**
+- 16384 要素 × 4回の三角関数 = **65536 回の `Math.cos`/`Math.sin`**
+- 16384 要素分の HSL 文字列生成 = **16384 回の文字列アロケーション + GC 圧力**
+- ハイライトされている要素以外はほぼ全要素が normalBucket に入る
+
+**改善案：**
+
+#### a. 三角関数のルックアップテーブル化
+
+```javascript
+// 配列サイズが変わったときのみ LUT を再構築
+_buildTrigLUT: function(arrayLength) {
+    if (this._lutLength === arrayLength) return;
+    this._lutLength = arrayLength;
+    const angleStep = (2 * Math.PI) / arrayLength;
+    this._cosLUT = new Float64Array(arrayLength);
+    this._sinLUT = new Float64Array(arrayLength);
+    for (let i = 0; i < arrayLength; i++) {
+        const angle = i * angleStep - Math.PI / 2;
+        this._cosLUT[i] = Math.cos(angle);
+        this._sinLUT[i] = Math.sin(angle);
+    }
+},
+
+// renderInternal 内で LUT を使用
+renderInternal: function(canvasId, params) {
+    // ...
+    this._buildTrigLUT(arrayLength);
+    // ...
+    for (const i of normalBucket) {
+        const radius = ...;
+        const cos_i = this._cosLUT[i];
+        const sin_i = this._sinLUT[i];
+        ctx.moveTo(centerX + cos_i * mainMinRadius, centerY + sin_i * mainMinRadius);
+        ctx.lineTo(centerX + cos_i * radius,        centerY + sin_i * radius);
+    }
+}
+```
+
+#### b. HSL 文字列の事前キャッシュ
+
+```javascript
+// 配列の最大値が変わったときのみカラーテーブルを再構築
+_buildColorLUT: function(maxValue) {
+    if (this._colorLUTMax === maxValue) return;
+    this._colorLUTMax = maxValue;
+    this._colorLUT = new Array(maxValue + 1);
+    for (let v = 0; v <= maxValue; v++) {
+        const hue = (v / maxValue) * 360;
+        this._colorLUT[v] = `hsl(${hue}, 70%, 60%)`;
+    }
+},
+
+// renderInternal 内
+ctx.strokeStyle = this._colorLUT[array[i]]; // 文字列生成なし
+```
+
+**期待効果：**
+- 三角関数: 65536 回/フレーム → **LUT 構築時の1回のみ**（以降はメモリ参照）
+- HSL 文字列: 16384 アロケーション/フレーム → **0 アロケーション/フレーム**
+- Circular モードのフレーム時間が特にモバイルで大幅改善
+
+**優先度：🟡 中（Circular モード限定だが効果は大きい）**
+
+---
+
+### 12.5 `FinalizeDeltas()` の毎フレーム配列アロケーション
+
+**問題：**
+
+```csharp
+// PlaybackService.cs L640-661
+private void FinalizeDeltas()
+{
+    State.MainArrayDelta = _mainDelta.Count > 0 ? _mainDelta.ToArray() : [];
+    //                                              ^^^^^^^^^^^^^^^^
+    //                                              毎フレーム新しい int[] を生成
+
+    if (_bufferDeltas.Count > 0)
+    {
+        var result = new Dictionary<int, int[]>(_bufferDeltas.Count);
+        //          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        //          毎フレーム新しい Dictionary を生成
+        foreach (var (id, list) in _bufferDeltas)
+        {
+            if (list.Count > 0)
+                result[id] = list.ToArray(); // ← 毎フレーム新しい int[]
+        }
+    }
+}
+```
+
+**影響：**
+- 60 FPS × (1 int[] + 場合により Dictionary + バッファー数分の int[]) = 毎秒 60+ 回のアロケーション
+- Comparison Mode 4 ソート: 毎秒 240+ 回のアロケーション
+- WASM の GC は世代別 GC ではないため、頻繁なアロケーションが GC Pause を誘発しやすい
+
+**改善案：**
+
+再利用可能なバッファを使い、`ToArray()` を排除する。
+
+```csharp
+// 再利用バッファ
+private int[] _mainDeltaBuffer = new int[256];
+
+private void FinalizeDeltas()
+{
+    if (_mainDelta.Count > 0)
+    {
+        // バッファが足りなければ拡張（2倍戦略）
+        if (_mainDeltaBuffer.Length < _mainDelta.Count)
+            _mainDeltaBuffer = new int[_mainDelta.Count * 2];
+
+        // List の内部配列から直接コピー
+        CollectionsMarshal.AsSpan(_mainDelta).CopyTo(_mainDeltaBuffer);
+        State.MainArrayDelta = _mainDeltaBuffer;
+        State.MainArrayDeltaLength = _mainDelta.Count; // 有効長を別途保持
+    }
+    else
+    {
+        State.MainArrayDelta = [];
+        State.MainArrayDeltaLength = 0;
+    }
+
+    _mainDelta.Clear();
+    // ... バッファーデルタも同様 ...
+}
+```
+
+ただし JS Interop で `int[]` を渡す際は配列全体がシリアライズされるため、有効長の管理が必要。Delta が小さい場合（通常再生時は数十要素）はコピーの方がシンプルかもしれない。
+
+**代替案（よりシンプル）：** `_mainDelta` の `List<int>` をそのまま `CollectionsMarshal.AsSpan()` で JS に渡す方法を検討する（.NET 10 の `IJSRuntime` が `Span` / `Memory` を受け付けるか確認が必要）。
+
+**期待効果：**
+- 毎フレームの `int[]` アロケーション排除
+- GC Pause の頻度低減
+- 特に WASM 環境で GC が UI を止めるケースが減る
+
+**優先度：🟢 低〜中（通常再生時の delta は小さいため影響は限定的。大量操作/フレームで効果あり）**
+
+---
+
+### 12.6 デッドコード: `canvasRenderer.js` のウィンドウリサイズリスナー
+
+**問題：**
+
+```javascript
+// canvasRenderer.js L662-667
+window.addEventListener('resize', () => {
+    if (window.canvasRenderer.canvas) {  // ← .canvas プロパティは存在しない
+        window.canvasRenderer.resize();
+    }
+});
+```
+
+`window.canvasRenderer.canvas` は現在のコードに存在しないプロパティであり、`ResizeObserver` が正しくリサイズ処理を行っている。このリスナーは常に no-op だが、`resize` イベントは頻繁に発火するため、不要なオーバーヘッドとなる。
+
+**改善案：**
+
+削除する。
+
+```javascript
+// 削除: window.addEventListener('resize', ...) ブロック全体
+// ResizeObserver が全 Canvas のリサイズを自動処理済み
+```
+
+**優先度：🟢 低（動作に影響しないが、コードの清潔さ向上）**
+
+---
+
+### 12.7 CSS `contain` プロパティによるブラウザ合成最適化
+
+**問題：**
+
+Canvas コンテナに CSS `contain` プロパティが設定されていない。ブラウザはコンテナ内外のレイアウト依存関係を毎フレーム計算する必要がある。
+
+```css
+/* 現在: app.css */
+.bar-chart-container {
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    /* contain プロパティなし */
+}
+
+.comparison-grid-item {
+    display: flex;
+    flex-direction: column;
+    /* contain プロパティなし */
+}
+```
+
+**影響：**
+- Canvas 内の描画変更がコンテナ外のレイアウト再計算をトリガーする可能性
+- Comparison Mode 9 Canvas では合成レイヤーの計算コストが増大
+- モバイルの低性能 GPU でレイヤー合成が遅延
+
+**改善案：**
+
+```css
+.bar-chart-container,
+.circular-chart-container {
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    /* レイアウト・ペイント・サイズを隔離 */
+    contain: strict;
+}
+
+.comparison-grid-item {
+    display: flex;
+    flex-direction: column;
+    /* レイアウトとスタイルを隔離（サイズは grid が制御するため layout + paint） */
+    contain: layout paint;
+}
+
+canvas {
+    /* Canvas 要素自体にも will-change を設定し、独立した合成レイヤーを確保 */
+    will-change: contents;
+}
+```
+
+**期待効果：**
+- ブラウザがコンテナ単位でレイアウト・ペイントを隔離し、不要な再計算を排除
+- Canvas ごとに独立した合成レイヤーが確保され、部分的な再描画が効率化
+- Comparison Mode での合成レイヤー管理が明示的になる
+
+**優先度：🟡 中（CSS のみの変更で副作用リスクが低い）**
+
+---
+
+### 12.8 モバイル端末向け DPR キャッピング
+
+**問題：**
+
+現在、Canvas の物理ピクセルサイズは `window.devicePixelRatio` をそのまま使用している。
+
+```javascript
+// canvasRenderer.js L51
+const dpr = window.devicePixelRatio || 1;
+canvas.width = rect.width * dpr;
+canvas.height = rect.height * dpr;
+```
+
+**影響：**
+- 最新の iPhone (DPR 3.0): 390×844 CSS px → **1170×2532 物理 px** = 2,962,440 ピクセル
+- DPR 2.0 の場合: 780×1688 = 1,316,640 ピクセル（DPR 3.0 の **44%**）
+- Canvas 2D の `fillRect` / `stroke` は物理ピクセル数に比例してコストが増加
+- WebGL でもフラグメントシェーダの実行回数が物理ピクセル数に比例
+- バーチャートのバーが 1-2 CSS px 幅の場合、DPR 3.0 でも視覚的差異はほぼなし
+
+**改善案：**
+
+```javascript
+// DPR を最大 2.0 に制限する（ソート可視化では十分な品質）
+_getEffectiveDPR: function() {
+    const dpr = window.devicePixelRatio || 1;
+    return Math.min(dpr, 2.0); // 3x デバイスでも 2x に制限
+},
+
+initialize: function(canvasId, useWebGL = true) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return false;
+
+    const dpr = this._getEffectiveDPR();
+    // ...
+}
+```
+
+**期待効果：**
+- DPR 3.0 端末でのピクセル処理量: **56% 削減** (9x → 4x)
+- GPU メモリ使用量の削減
+- 視覚的品質への影響は軽微（バーチャートは低解像度で十分）
+
+**適用判断基準：**
+- DPR 2.0 以下: そのまま使用
+- DPR 2.5 以上: 2.0 にキャッピング
+- ユーザー設定で切り替え可能にしてもよい
+
+**優先度：🟡 中（モバイル特化の最適化。デスクトップには影響なし）**
+
+---
+
+### 12.9 ComparisonGridItem の不要な Blazor 再レンダリング伝播
+
+**問題：**
+
+```razor
+<!-- ComparisonGridItem.razor -->
+<div class="comparison-grid-item ...">
+    <div class="comparison-header">...</div>
+    <div class="comparison-visualization">
+        <CanvasChartRenderer State="@Instance.State" ... />
+    </div>
+    <ComparisonStatsSummary State="@Instance.State" />  <!-- ← 毎フレーム再レンダリング -->
+</div>
+```
+
+```csharp
+// ComparisonGridItem.razor
+private void OnPlaybackStateChanged()
+{
+    InvokeAsync(StateHasChanged);  // ← コンポーネント全体を再レンダリング
+}
+```
+
+`CanvasChartRenderer.ShouldRender()` は `false` を返して DOM 差分を回避するが、親の `ComparisonGridItem` および `ComparisonStatsSummary` は毎フレーム Blazor の差分検出が走る。`ComparisonStatsSummary` は統計値（CompareCount, SwapCount, Progress%）を表示しており、値が変わるたびに DOM 更新が必要だが、DOM diff 自体のコストが無視できない。
+
+**影響：**
+- Comparison Mode 4 ソート × 60 FPS = 毎秒 240 回の `ComparisonGridItem` + `ComparisonStatsSummary` の差分検出
+- 統計パネルの DOM ノード数 × 差分検出コスト
+
+**改善案：**
+
+```csharp
+// ComparisonStatsSummary.razor に ShouldRender を追加
+@code {
+    [Parameter, EditorRequired]
+    public VisualizationState State { get; set; } = null!;
+
+    private ulong _lastCompareCount;
+    private ulong _lastSwapCount;
+    private int _lastOperationIndex;
+
+    protected override bool ShouldRender()
+    {
+        // 統計値が実際に変化したときのみ再レンダリング
+        var changed = _lastCompareCount != State.CompareCount
+                   || _lastSwapCount != State.SwapCount
+                   || _lastOperationIndex != State.CurrentOperationIndex;
+
+        _lastCompareCount = State.CompareCount;
+        _lastSwapCount = State.SwapCount;
+        _lastOperationIndex = State.CurrentOperationIndex;
+
+        return changed;
+    }
+}
+```
+
+**期待効果：**
+- 統計値が変わらないフレーム（SpeedMultiplier が低い場合）での Blazor 差分検出を排除
+- Comparison Mode での Blazor 側 CPU 負荷低減
+
+**優先度：🟢 低（Blazor の差分検出は軽量だが、Comparison Mode 9 Canvas 時に効果的）**
+
+---
+
+## 13. 追加改善の実装ロードマップ
+
+### 即時対応（推定工数: 0.5〜1日）
+
+| # | 改善 | 変更ファイル | 優先度 |
+|---|------|-------------|--------|
+| 12.1 | SpinWait 排除 | `PlaybackService.cs` | 🔴 高 |
+| 12.3 | getBoundingClientRect キャッシュ | `canvasRenderer.js`, `circularCanvasRenderer.js` | 🔴 高 |
+| 12.6 | デッドコード削除 | `canvasRenderer.js` | 🟢 低 |
+| 12.7 | CSS contain 追加 | `app.css` | 🟡 中 |
+
+### 短期対応（推定工数: 1〜2日）
+
+| # | 改善 | 変更ファイル | 優先度 |
+|---|------|-------------|--------|
+| 12.4 | Circular 三角関数 LUT + HSL キャッシュ | `circularCanvasRenderer.js` | 🟡 中 |
+| 12.5 | FinalizeDeltas バッファ再利用 | `PlaybackService.cs`, `VisualizationState.cs` | 🟢 低〜中 |
+| 12.8 | DPR キャッピング | `canvasRenderer.js`, `circularCanvasRenderer.js`, Worker 各 js | 🟡 中 |
+| 12.9 | ComparisonStatsSummary ShouldRender | `ComparisonStatsSummary.razor` | 🟢 低 |
+
+### 中期対応（推定工数: 3〜5日）
+
+| # | 改善 | 変更ファイル | 優先度 |
+|---|------|-------------|--------|
+| 12.2 | CircularRenderer Worker 対応 | 新規: `circularRenderWorker.js`, 変更: `circularCanvasRenderer.js`, `CircularRenderer.razor` | 🟡 中 |
+
+---
+
+## 14. 追加改善の効果予測サマリ
+
+```
+                          PC (16384 Single)   Mobile (4096 Single)   Comparison 4096×4
+現在 (Phase 1-6 実装後):  60 FPS              45-55 FPS              50-55 FPS
+12.1 SpinWait 排除:       60 FPS              50-58 FPS (+5-3)       55-58 FPS (+5-3)
+12.3 gBCR キャッシュ:     60 FPS (+0)         55-60 FPS (+5-2)       58-60 FPS (+3-2)
+12.7 CSS contain:         60 FPS (+0)         56-60 FPS (+1)         58-60 FPS (+0-1)
+12.8 DPR キャップ:        影響なし            58-60 FPS (+2-0)       58-60 FPS (+0)
+12.4 Circular LUT:        60 FPS (Circular)   55-60 FPS (Circular)   改善あり
+全適用:                   60 FPS              58-60 FPS              58-60 FPS
+```
+
+**特にモバイル端末（タブレット・スマートフォン）での改善効果が大きい。**
+- SpinWait 排除によるバッテリー消費削減は FPS 数値に現れないが UX に直結
+- DPR キャッピングはスマートフォン（DPR 3.0）で最大の効果
+- CSS contain は DOM が複雑な Comparison Mode で効果的
