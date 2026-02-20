@@ -15,5 +15,6 @@ builder.Services.AddSingleton<AlgorithmRegistry>();
 builder.Services.AddSingleton<ArrayPatternRegistry>();
 builder.Services.AddSingleton<ComparisonModeService>();
 builder.Services.AddSingleton<DebugSettings>();
+builder.Services.AddSingleton<RenderSettings>();
 
 await builder.Build().RunAsync();
