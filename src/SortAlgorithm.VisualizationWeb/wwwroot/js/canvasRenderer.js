@@ -33,12 +33,19 @@ colors: {
     /**
      * Canvasを初期化
      * @param {string} canvasId - Canvas要素のID
+     * @param {boolean} useWebGL - WebGL レンダラーを使用するか（false で Canvas 2D Worker）
      */
-    initialize: function(canvasId) {
+    initialize: function(canvasId, useWebGL = true) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) {
             window.debugHelper.error('Canvas element not found:', canvasId);
             return false;
+        }
+
+        // 既に初期化済みの場合はスキップ（二重初期化防止）
+        if (this.workers.has(canvasId) || this.instances.has(canvasId)) {
+            window.debugHelper.warn('Canvas already initialized:', canvasId);
+            return true;
         }
 
         const dpr = window.devicePixelRatio || 1;
@@ -50,7 +57,8 @@ colors: {
             canvas.height = rect.height * dpr;
 
             const offscreen  = canvas.transferControlToOffscreen();
-            const workerUrl  = new URL('js/webglWorker.js', document.baseURI).href;
+            const workerFile = useWebGL ? 'js/webglWorker.js' : 'js/renderWorker.js';
+            const workerUrl  = new URL(workerFile, document.baseURI).href;
             const worker     = new Worker(workerUrl);
             worker.postMessage({ type: 'init', canvas: offscreen, dpr }, [offscreen]);
 
@@ -61,7 +69,7 @@ colors: {
             this._ensureResizeObserver();
             this.resizeObserver.observe(canvas);
 
-            window.debugHelper.log('Canvas initialized (Worker):', canvasId, rect.width, 'x', rect.height, 'DPR:', dpr);
+            window.debugHelper.log('Canvas initialized (Worker):', canvasId, rect.width, 'x', rect.height, 'DPR:', dpr, 'WebGL:', useWebGL);
             return true;
         }
 
