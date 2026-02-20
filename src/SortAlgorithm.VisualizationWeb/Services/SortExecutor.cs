@@ -24,7 +24,16 @@ public class SortExecutor
         {
             // ソース配列をワーク配列にコピー
             sourceArray.CopyTo(workArray.AsSpan(0, sourceArray.Length));
-            
+
+            // 1回目: NullContextで実行し、オーバーヘッドのない実測時間を計測
+            var stopwatch = Stopwatch.StartNew();
+            algorithm.SortAction(workArray.AsSpan(0, sourceArray.Length).ToArray(), NullContext.Default);
+            stopwatch.Stop();
+            var actualExecutionTime = stopwatch.Elapsed;
+
+            // ワーク配列を初期状態にリセット（2回目の実行用）
+            sourceArray.CopyTo(workArray.AsSpan(0, sourceArray.Length));
+
             // StatisticsContextを作成（正確な統計情報を記録）
             var statisticsContext = new StatisticsContext();
             
@@ -91,12 +100,10 @@ public class SortExecutor
             // CompositeContextを作成して両方のコンテキストを組み合わせる
             var compositeContext = new CompositeContext(statisticsContext, visualizationContext);
             
-            // デリゲートを直接呼び出し（リフレクション不要、AOT対応）
-            var stopwatch = Stopwatch.StartNew();
+            // 2回目: CompositeContextで操作・統計を記録（NullContextで計測した実行時間を使用）
             algorithm.SortAction(workArray.AsSpan(0, sourceArray.Length).ToArray(), compositeContext);
-            stopwatch.Stop();
             
-            return (operations, statisticsContext, stopwatch.Elapsed);
+            return (operations, statisticsContext, actualExecutionTime);
         }
         finally
         {
