@@ -64,7 +64,7 @@ public class PlaybackService : IDisposable
     /// <summary>
     /// ソート操作をロードする
     /// </summary>
-    public void LoadOperations(ReadOnlySpan<int> initialArray, List<SortOperation> operations, StatisticsContext statistics)
+    public void LoadOperations(ReadOnlySpan<int> initialArray, List<SortOperation> operations, StatisticsContext statistics, TimeSpan actualExecutionTime)
     {
         Stop();
         _operations = operations;
@@ -151,7 +151,8 @@ public class PlaybackService : IDisposable
             IsSortCompleted = false, // 明示的にfalseに設定
             ShowCompletionHighlight = false, // ハイライト表示もfalse
             Statistics = statistics, // StatisticsContextを設定（最終値として保持）
-            CumulativeStats = _cumulativeStats // 累積統計配列を設定
+            CumulativeStats = _cumulativeStats, // 累積統計配列を設定
+            ActualExecutionTime = actualExecutionTime // 実測実行時間を設定
         };
         
         StateChanged?.Invoke();

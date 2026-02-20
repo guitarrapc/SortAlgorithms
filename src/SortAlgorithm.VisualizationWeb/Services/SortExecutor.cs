@@ -1,6 +1,7 @@
 ﻿using SortAlgorithm.Contexts;
 using SortAlgorithm.VisualizationWeb.Models;
 using System.Buffers;
+using System.Diagnostics;
 
 namespace SortAlgorithm.VisualizationWeb.Services;
 
@@ -12,7 +13,7 @@ public class SortExecutor
     /// <summary>
     /// ソートを実行し、すべての操作を記録する
     /// </summary>
-    public (List<SortOperation> Operations, StatisticsContext Statistics) ExecuteAndRecord(ReadOnlySpan<int> sourceArray, AlgorithmMetadata algorithm)
+    public (List<SortOperation> Operations, StatisticsContext Statistics, TimeSpan ActualExecutionTime) ExecuteAndRecord(ReadOnlySpan<int> sourceArray, AlgorithmMetadata algorithm)
     {
         var operations = new List<SortOperation>();
         
@@ -91,9 +92,11 @@ public class SortExecutor
             var compositeContext = new CompositeContext(statisticsContext, visualizationContext);
             
             // デリゲートを直接呼び出し（リフレクション不要、AOT対応）
+            var stopwatch = Stopwatch.StartNew();
             algorithm.SortAction(workArray.AsSpan(0, sourceArray.Length).ToArray(), compositeContext);
+            stopwatch.Stop();
             
-            return (operations, statisticsContext);
+            return (operations, statisticsContext, stopwatch.Elapsed);
         }
         finally
         {
