@@ -35,6 +35,11 @@ public class PlaybackService : IDisposable
     // シークのスロットリング用
     private DateTime _lastSeekTime = DateTime.MinValue;
     private const int SEEK_THROTTLE_MS = 16; // 60 FPS
+
+    // デルタ追跡用（今フレームの配列変更）
+    private readonly List<int> _mainDelta = [];
+    private readonly Dictionary<int, List<int>> _bufferDeltas = new();
+    private bool _trackDeltas = true; // InstantMode では false にして追跡をスキップ
     
     /// <summary>現在の状態</summary>
     public VisualizationState State { get; private set; } = new();
@@ -140,6 +145,7 @@ public class PlaybackService : IDisposable
         
         // 現在のVisualizationModeを保持
         var currentMode = State.Mode;
+        var nextSortVersion = State.SortVersion + 1;
         
         State = new VisualizationState
         {
@@ -152,8 +158,11 @@ public class PlaybackService : IDisposable
             ShowCompletionHighlight = false, // ハイライト表示もfalse
             Statistics = statistics, // StatisticsContextを設定（最終値として保持）
             CumulativeStats = _cumulativeStats, // 累積統計配列を設定
-            ActualExecutionTime = actualExecutionTime // 実測実行時間を設定
+            ActualExecutionTime = actualExecutionTime, // 実測実行時間を設定
+            SortVersion = nextSortVersion, // 新しいソートをしたことを JS 側に知らせる
+            MainArrayDelta = null,         // 最初のレンダリングは全量更新
         };
+        DiscardPendingDeltas();
         
         StateChanged?.Invoke();
     }
@@ -191,6 +200,9 @@ public class PlaybackService : IDisposable
     /// </summary>
     private async void PlayInstant()
     {
+        // InstantMode は全操作を一気に処理するため、差分追跡をスキップして最終状態だけ送信する
+        _trackDeltas = false;
+        
         // UI更新を完全スキップして全操作を処理
         while (State.CurrentOperationIndex < _operations.Count)
         {
@@ -198,6 +210,9 @@ public class PlaybackService : IDisposable
             ApplyOperation(operation, applyToArray: true, updateStats: true);
             State.CurrentOperationIndex++;
         }
+        
+        _trackDeltas = true;
+        DiscardPendingDeltas(); // 全量更新を指示（MainArrayDelta = null）
         
         // 完了
         ClearHighlights(); // ソート完了時にハイライトをクリア
@@ -254,6 +269,7 @@ public class PlaybackService : IDisposable
         State.IsSortCompleted = false; // リセット時に完了フラグをクリア
         State.ShowCompletionHighlight = false; // ハイライト表示もクリア
         ClearHighlights();
+        DiscardPendingDeltas(); // リセット後は全量更新
         ResetStatistics();
         StateChanged?.Invoke();
     }
@@ -315,6 +331,7 @@ public class PlaybackService : IDisposable
                 if (renderElapsed >= RENDER_INTERVAL_MS)
                 {
                     lastRenderTime = now;
+                    FinalizeDeltas(); // 蔑積した差分を State に書き込んでから送信
                     StateChanged?.Invoke();
                     await Task.Yield(); // UIスレッドに処理を譲る
                 }
@@ -329,6 +346,7 @@ public class PlaybackService : IDisposable
                 State.ShowCompletionHighlight = true; // ハイライト表示を開始
                 State.PlaybackState = PlaybackState.Paused;
                 
+                FinalizeDeltas(); // 未送信の差分を送信してから完了状態を通知
                 // 緑色ハイライトを表示
                 StateChanged?.Invoke();
                 
@@ -417,6 +435,7 @@ public class PlaybackService : IDisposable
             ApplyOperation(_operations[targetIndex], applyToArray: false, updateStats: false);
         }
         
+        DiscardPendingDeltas(); // シーク後は差分ではなく全量更新
         StateChanged?.Invoke();
     }
     
@@ -463,6 +482,8 @@ public class PlaybackService : IDisposable
                 {
                     var arr = GetArray(operation.BufferId1).AsSpan();
                     (arr[operation.Index1], arr[operation.Index2]) = (arr[operation.Index2], arr[operation.Index1]);
+                    RecordDelta(operation.BufferId1, operation.Index1, arr[operation.Index1]);
+                    RecordDelta(operation.BufferId1, operation.Index2, arr[operation.Index2]);
                 }
                 break;
                 
@@ -478,6 +499,7 @@ public class PlaybackService : IDisposable
                     if (operation.Index1 >= 0 && operation.Index1 < arr.Length)
                     {
                         arr[operation.Index1] = operation.Value.Value;
+                        RecordDelta(operation.BufferId1, operation.Index1, operation.Value.Value);
                     }
                 }
                 break;
@@ -507,6 +529,7 @@ public class PlaybackService : IDisposable
                         for (int i = 0; i < operation.Values.Length && operation.Index2 + i < destSpan.Length; i++)
                         {
                             destSpan[operation.Index2 + i] = operation.Values[i];
+                            RecordDelta(operation.BufferId2, operation.Index2 + i, operation.Values[i]);
                         }
                     }
                     else
@@ -525,6 +548,11 @@ public class PlaybackService : IDisposable
                         {
                             sourceSpan.Slice(operation.Index1, operation.Length)
                                 .CopyTo(destSpan.Slice(operation.Index2, operation.Length));
+                            
+                            for (int i = 0; i < operation.Length; i++)
+                            {
+                                RecordDelta(operation.BufferId2, operation.Index2 + i, destSpan[operation.Index2 + i]);
+                            }
                         }
                     }
                 }
@@ -579,6 +607,68 @@ public class PlaybackService : IDisposable
         State.SwapIndices.Clear();
         State.ReadIndices.Clear();
         State.WriteIndices.Clear();
+    }
+
+    /// <summary>
+    /// 配列変更を差分リストに記録する（applyToArray=true のときのみ呼ぶ）
+    /// </summary>
+    private void RecordDelta(int bufferId, int index, int value)
+    {
+        if (!_trackDeltas) return;
+
+        if (bufferId == 0)
+        {
+            _mainDelta.Add(index);
+            _mainDelta.Add(value);
+        }
+        else
+        {
+            if (!_bufferDeltas.TryGetValue(bufferId, out var list))
+            {
+                list = [];
+                _bufferDeltas[bufferId] = list;
+            }
+            list.Add(index);
+            list.Add(value);
+        }
+    }
+
+    /// <summary>
+    /// 蓄積したデルタを State に書き込み、リストをクリアする。
+    /// StateChanged?.Invoke() の直前に呼ぶ。
+    /// </summary>
+    private void FinalizeDeltas()
+    {
+        State.MainArrayDelta = _mainDelta.Count > 0 ? _mainDelta.ToArray() : [];
+
+        if (_bufferDeltas.Count > 0)
+        {
+            var result = new Dictionary<int, int[]>(_bufferDeltas.Count);
+            foreach (var (id, list) in _bufferDeltas)
+            {
+                if (list.Count > 0)
+                    result[id] = list.ToArray();
+            }
+            State.BufferArrayDeltas = result.Count > 0 ? result : null;
+        }
+        else
+        {
+            State.BufferArrayDeltas = null;
+        }
+
+        _mainDelta.Clear();
+        _bufferDeltas.Clear();
+    }
+
+    /// <summary>
+    /// 未送信のデルタを破棄する（シーク・リセット時に全量更新するため）
+    /// </summary>
+    private void DiscardPendingDeltas()
+    {
+        _mainDelta.Clear();
+        _bufferDeltas.Clear();
+        State.MainArrayDelta = null;   // null = 全量更新フラグ
+        State.BufferArrayDeltas = null;
     }
     
     private void ResetStatistics()

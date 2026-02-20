@@ -132,6 +132,24 @@ public class VisualizationState
     public TimeSpan ActualExecutionTime { get; set; }
 
     /// <summary>
+    /// ソートバージョン。LoadOperations が呼ばれるたびにインクリメントされ、
+    /// JS 側が setArray（全量初期化）を呼ぶタイミングを判定するために使用する。
+    /// </summary>
+    public int SortVersion { get; set; }
+
+    /// <summary>
+    /// 今フレームのメイン配列差分（フラット [index1, value1, index2, value2, ...]）。
+    /// null の場合は MainArray を使った全量更新（シーク後・リセット後など）。
+    /// </summary>
+    internal int[]? MainArrayDelta { get; set; }
+
+    /// <summary>
+    /// 今フレームのバッファー配列差分（bufferId → フラット [index1, value1, ...]）。
+    /// null の場合はバッファー変更なし。
+    /// </summary>
+    internal Dictionary<int, int[]>? BufferArrayDeltas { get; set; }
+
+    /// <summary>
     /// 再生進捗に応じた推定実行時間（線形補間）
     /// 再生中は0からActualExecutionTimeへ線形増加、完了時は確定値を返す
     /// </summary>

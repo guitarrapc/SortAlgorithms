@@ -35,6 +35,7 @@ public int GridColumnCount { get; set; } = 1;
 private string _canvasId = $"sortCanvas_{Guid.NewGuid():N}";
 private bool _isInitialized = false;
 private int _previousGridColumnCount = 0;
+private int _lastSortVersion = -1; // JS 側配列が初期化済みかを追跡する
     
 // デバッグ用：レンダリング頻度計測
 private int _renderCount = 0;
@@ -80,20 +81,53 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
     
     private async Task RenderCanvas()
     {
-        if (!_isInitialized || State == null) return;
+        if (!_isInitialized || State == null || State.MainArray.Length == 0) return;
         
         try
         {
-            await JS.InvokeVoidAsync("canvasRenderer.updateData",
-                _canvasId,  // Canvas IDを最初の引数として渡す
-                State.MainArray,
-                State.CompareIndices.ToArray(),
-                State.SwapIndices.ToArray(),
-                State.ReadIndices.ToArray(),
-                State.WriteIndices.ToArray(),
-                State.IsSortCompleted,
-                State.BufferArrays,
-                State.ShowCompletionHighlight);
+            if (_lastSortVersion != State.SortVersion)
+            {
+                // 新しいソートがロードされた → JS 側配列を初期化（全量転送は1回のみ）
+                _lastSortVersion = State.SortVersion;
+                await JS.InvokeVoidAsync("canvasRenderer.setArray",
+                    _canvasId,
+                    State.MainArray,
+                    State.BufferArrays,
+                    State.CompareIndices,
+                    State.SwapIndices,
+                    State.ReadIndices,
+                    State.WriteIndices,
+                    State.IsSortCompleted,
+                    State.ShowCompletionHighlight);
+            }
+            else if (State.MainArrayDelta != null)
+            {
+                // 通常再生 → 差分のみ転送（高速パス: 数十バイト程度）
+                await JS.InvokeVoidAsync("canvasRenderer.applyFrame",
+                    _canvasId,
+                    State.MainArrayDelta,
+                    State.BufferArrayDeltas,
+                    State.CompareIndices,
+                    State.SwapIndices,
+                    State.ReadIndices,
+                    State.WriteIndices,
+                    State.IsSortCompleted,
+                    State.ShowCompletionHighlight);
+            }
+            else
+            {
+                // 全量更新フォールバック（シーク後・リセット後）
+                await JS.InvokeVoidAsync("canvasRenderer.updateData",
+                    _canvasId,
+                    State.MainArray,
+                    State.CompareIndices,
+                    State.SwapIndices,
+                    State.ReadIndices,
+                    State.WriteIndices,
+                    State.IsSortCompleted,
+                    State.BufferArrays,
+                    State.ShowCompletionHighlight);
+            }
         }
         catch (Exception ex)
         {

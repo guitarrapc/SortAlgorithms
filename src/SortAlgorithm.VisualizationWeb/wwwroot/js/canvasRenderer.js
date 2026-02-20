@@ -13,6 +13,9 @@ lastFpsLogs: new Map(),
 dirtyCanvases: new Set(),  // 再描画が必要なCanvas
 isLoopRunning: false,      // rAFループが実行中かどうか
 rafId: null,               // requestAnimationFrame ID
+
+// JS 側配列コピー（Phase 3c）
+arrays: new Map(), // canvasId → { main: Int32Array, buffers: Map<bufferId, Int32Array> }
     
 // 色定義
 colors: {
@@ -154,26 +157,86 @@ colors: {
     },
 
     /**
-     * データを更新して rAF ループで再描画をスケジュール
-     * C# から呼ばれる主要エントリポイント（render の代替）
+     * 新しいソートがロードされたとき（SortVersion 変化時）に C# から呼ばれる。
+     * JS 側の配列コピーを初期化し、次フレームで再描画をスケジュールする。
      */
-    updateData: function(canvasId, array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight) {
-        const params = {
-            array,
+    setArray: function(canvasId, mainArray, bufferArrays, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight) {
+        let entry = this.arrays.get(canvasId);
+        if (!entry) {
+            entry = { main: null, buffers: new Map() };
+            this.arrays.set(canvasId, entry);
+        }
+        entry.main = new Int32Array(mainArray);
+        entry.buffers.clear();
+        if (bufferArrays) {
+            for (const [idStr, arr] of Object.entries(bufferArrays)) {
+                entry.buffers.set(parseInt(idStr), new Int32Array(arr));
+            }
+        }
+        this._scheduleRender(canvasId, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight);
+    },
+
+    /**
+     * 通常の再生フレームで C# から呼ばれる（高速パス）。
+     * 差分（flat [index, value, ...]）を JS 側配列に適用し、次フレームで再描画をスケジュールする。
+     */
+    applyFrame: function(canvasId, mainDelta, bufferDeltas, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight) {
+        const entry = this.arrays.get(canvasId);
+        if (!entry || !entry.main) return;
+
+        // メイン配列に差分を適用
+        if (mainDelta) {
+            for (let k = 0; k < mainDelta.length; k += 2) {
+                entry.main[mainDelta[k]] = mainDelta[k + 1];
+            }
+        }
+
+        // バッファー配列に差分を適用
+        if (bufferDeltas) {
+            for (const [idStr, delta] of Object.entries(bufferDeltas)) {
+                const bid = parseInt(idStr);
+                let buf = entry.buffers.get(bid);
+                if (!buf) {
+                    buf = new Int32Array(entry.main.length);
+                    entry.buffers.set(bid, buf);
+                }
+                for (let k = 0; k < delta.length; k += 2) {
+                    buf[delta[k]] = delta[k + 1];
+                }
+            }
+        }
+
+        // ソート完了時はバッファーを解放
+        if (isSortCompleted && entry.buffers.size > 0) {
+            entry.buffers.clear();
+        }
+
+        this._scheduleRender(canvasId, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight);
+    },
+
+    /**
+     * ハイライト情報を lastRenderParams に保存し、dirty マークを付けて rAF をスケジュールする。
+     */
+    _scheduleRender: function(canvasId, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight) {
+        this.lastRenderParams.set(canvasId, {
             compareIndices,
             swapIndices,
             readIndices,
             writeIndices,
             isSortCompleted: isSortCompleted || false,
-            bufferArrays: bufferArrays || {},
             showCompletionHighlight: showCompletionHighlight !== undefined ? showCompletionHighlight : false
-        };
-        this.lastRenderParams.set(canvasId, params);
+        });
         this.dirtyCanvases.add(canvasId);
+        if (!this.isLoopRunning) this.startLoop();
+    },
 
-        if (!this.isLoopRunning) {
-            this.startLoop();
-        }
+    /**
+     * データを更新して rAF ループで再描画をスケジュール（シーク後・リセット後の全量更新フォールバック）
+     * C# から呼ばれる主要エントリポイント（render の代替）
+     */
+    updateData: function(canvasId, array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight) {
+        // 全量更新は setArray に委譲
+        this.setArray(canvasId, array, bufferArrays, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight);
     },
 
     /**
@@ -222,8 +285,13 @@ colors: {
             return;
         }
         
-        // パラメータ展開
-        const { array, compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, bufferArrays, showCompletionHighlight } = params;
+        // パラメータ展開（ハイライト情報のみ；配列は arrays マップから取得）
+        const { compareIndices, swapIndices, readIndices, writeIndices, isSortCompleted, showCompletionHighlight } = params;
+
+        // JS 側配列コピーを取得
+        const entry = this.arrays.get(canvasId);
+        if (!entry || !entry.main) return;
+        const array = entry.main;
         
         // 🔍 デバッグ：render() 呼び出し回数をカウント
         if (!this.renderCounts.has(canvasId)) {
@@ -249,7 +317,7 @@ colors: {
         const arrayLength = array.length;
         
         // バッファー配列の数を取得
-        const bufferCount = Object.keys(bufferArrays).length;
+        const bufferCount = entry.buffers.size;
         
         // 背景をクリア（黒）
         ctx.fillStyle = '#1A1A1A';
@@ -356,11 +424,11 @@ colors: {
         
         // バッファー配列を描画（ソート完了時は非表示）
         if (showBuffers) {
-            const bufferIds = Object.keys(bufferArrays).sort((a, b) => parseInt(a) - parseInt(b));
+            const sortedBufferIds = [...entry.buffers.keys()].sort((a, b) => a - b);
             
-            for (let bufferIndex = 0; bufferIndex < bufferIds.length; bufferIndex++) {
-                const bufferId = bufferIds[bufferIndex];
-                const bufferArray = bufferArrays[bufferId];
+            for (let bufferIndex = 0; bufferIndex < sortedBufferIds.length; bufferIndex++) {
+                const bufferId = sortedBufferIds[bufferIndex];
+                const bufferArray = entry.buffers.get(bufferId);
                 const bufferY = bufferIndex * sectionHeight;
                 
                 if (!bufferArray || bufferArray.length === 0) continue;
@@ -436,11 +504,12 @@ colors: {
                 console.warn('Canvas instance not found for disposal:', canvasId);
             }
             
-            // FPS計測用のデータ、描画パラメータ、dirty フラグも削除
+            // FPS計測用のデータ、描画パラメータ、dirty フラグ、JS 側配列コピーも削除
             this.renderCounts.delete(canvasId);
             this.lastFpsLogs.delete(canvasId);
             this.lastRenderParams.delete(canvasId);
             this.dirtyCanvases.delete(canvasId);
+            this.arrays.delete(canvasId);
         } else {
             // rAFループを停止
             if (this.rafId) {
@@ -461,6 +530,7 @@ colors: {
             this.renderCounts.clear();
             this.lastFpsLogs.clear();
             this.lastRenderParams.clear();
+            this.arrays.clear();
         }
     }
 };
