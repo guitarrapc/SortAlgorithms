@@ -5,15 +5,15 @@
   </Folder>
   <Folder Name="/docs/">
     <File Path="Docs/BlockQuickSort_DuplicateCheck.md" />
-    <File Path="Docs/ExecutionTimeVisualization.md" />
     <File Path="Docs/PDQSort_Go_Implementation_Guide.md" />
     <File Path="Docs/PDQSort_Implementation_Comparison.md" />
-    <File Path="Docs/Release_ButStatistics.md" />
     <File Path="Docs/SortArchitecture.md" />
+    <File Path="Docs/SortArchitecture_Release_ButStatistics.md" />
     <File Path="Docs/TODO.md" />
     <File Path="Docs/VisualizationWeb.md" />
     <File Path="Docs/VisualizationWeb_ComparisonMode_Implementation_Status.md" />
     <File Path="Docs/VisualizationWeb_ComparisonMode_Performance.md" />
+    <File Path="Docs/VisualizationWeb_ExecutionTimeVisualization.md" />
     <File Path="Docs/VisualizationWeb_Implementation_Status.md" />
     <File Path="Docs/VisualizationWeb_PerformanceAccuracy.md" />
     <File Path="Docs/VisualizationWeb_Performance_Analysis.md" />
