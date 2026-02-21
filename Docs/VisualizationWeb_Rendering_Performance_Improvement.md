@@ -1118,7 +1118,7 @@ JS 側が自律的に配列を管理するため C# 側の配列アロケーシ�
 ---
 
 
-### 12.6 デッドコード: `barChartCanvasRenderer.js` のウィンドウリサイズリスナー
+### 12.6 デッドコード: `barChartCanvasRenderer.js` のウィンドウリサイズリスナー ✅ 実装済み
 
 **問題：**
 
@@ -1337,7 +1337,7 @@ private void OnPlaybackStateChanged()
 |---|------|-------------|--------|
 | 12.1 ✅ | SpinWait 排除 | `PlaybackService.cs` | 🔴 高 |
 | 12.3 ✅ | getBoundingClientRect キャッシュ | `barChartCanvasRenderer.js`, `circularCanvasRenderer.js` | 🔴 高 |
-| 12.6 | デッドコード削除 | `barChartCanvasRenderer.js` | 🟢 低 |
+| 12.6 ✅ | デッドコード削除 | `barChartCanvasRenderer.js` | 🟢 低 |
 | 12.7 | CSS contain 追加 | `app.css` | 🟢 低 |
 
 ### 短期対応（推定工数: 1〜2日）
@@ -1345,7 +1345,7 @@ private void OnPlaybackStateChanged()
 | # | 改善 | 変更ファイル | 優先度 |
 |---|------|-------------|--------|
 | 12.4 ✅ | Circular 三角関数 LUT + HSL キャッシュ | `circularCanvasRenderer.js` | 🟡 中 |
-| 12.5 | FinalizeDeltas バッファ再利用 | `PlaybackService.cs`, `VisualizationState.cs` | 🟢 低〜中 |
+| 12.5 見送り | FinalizeDeltas バッファ再利用 | `PlaybackService.cs`, `VisualizationState.cs` | 🟢 低〜中 |
 | 12.8 | DPR キャッピング | `barChartCanvasRenderer.js`, `circularCanvasRenderer.js`, Worker 各 js | 🟡 中 |
 | 12.9 | ComparisonStatsSummary ShouldRender | `ComparisonStatsSummary.razor` | 🟢 低 |
 
