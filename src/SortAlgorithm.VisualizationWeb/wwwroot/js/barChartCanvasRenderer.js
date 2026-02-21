@@ -666,10 +666,3 @@ colors: {
         }
     }
 };
-
-// ウィンドウリサイズ時の処理
-window.addEventListener('resize', () => {
-    if (window.canvasRenderer.canvas) {
-        window.canvasRenderer.resize();
-    }
-});
