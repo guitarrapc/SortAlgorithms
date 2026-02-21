@@ -37,11 +37,22 @@
         <span class="toggle-slider"></span>
         <span class="toggle-label">🔊 Sound</span>
     </label>
-    @if (Playback.SoundEnabled && Playback.SpeedMultiplier > 50)
-    {
-        <span style="font-size: 0.8em; color: #f59e0b; margin-top: 2px; display: block;">⚠️ Muted (speed &gt; 50x)</span>
-    }
 </div>
+
+@if (Playback.SoundEnabled)
+{
+    <div class="stat-item stat-item-vertical">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span class="stat-label">Volume</span>
+            <span class="stat-value" style="font-size: 0.9rem;">@((int)(Playback.SoundVolume * 100))%</span>
+        </div>
+        <input type="range" min="0" max="1" step="0.05" @bind="Playback.SoundVolume" style="width: 100%;" />
+        @if (Playback.SpeedMultiplier > 50)
+        {
+            <span style="font-size: 0.8em; color: #f59e0b; margin-top: 4px; display: block;">⚠️ Muted (speed &gt; 50x)</span>
+        }
+    </div>
+}
 
 <div class="stat-item">
     <label class="toggle-switch">

@@ -48,8 +48,9 @@ window.soundEngine = {
      * 複数の周波数を同時に発音する。
      * @param {number[]} frequencies - 発音する周波数の配列（Hz）
      * @param {number} duration - 発音時間（ms）。0 の場合は何もしない。
+     * @param {number} volume - 音量（0.0〜1.0）
      */
-    playNotes: function (frequencies, duration) {
+    playNotes: function (frequencies, duration, volume) {
         if (duration <= 0 || !frequencies || frequencies.length === 0) return;
 
         // AudioContext が未初期化の場合は遅延初期化（フォールバック）
@@ -71,8 +72,9 @@ window.soundEngine = {
         const durationSec = duration / 1000;
         const attackSec = 0.005;  // 5ms アタック: ゼロからランプアップしてクリックノイズを除去
 
-        // 同時発音数に応じてゲインを按分（クリッピング防止）
-        const gainPerNote = 0.2 / Math.max(1, frequencies.length);
+        // 同時発音数に応じてゲインを按分し、volume を乗算
+        const vol = Math.max(0, Math.min(1, volume ?? 1));
+        const gainPerNote = (0.2 * vol) / Math.max(1, frequencies.length);
 
         for (let i = 0; i < frequencies.length; i++) {
             const freq = frequencies[i];

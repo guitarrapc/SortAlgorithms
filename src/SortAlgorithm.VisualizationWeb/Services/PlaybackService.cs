@@ -69,6 +69,9 @@ public class PlaybackService : IDisposable
     /// <summary>音を再生するか（デフォルト OFF）</summary>
     public bool SoundEnabled { get; set; } = false;
 
+    /// <summary>音量（0.0～1.0、デフォルト 0.5）</summary>
+    public double SoundVolume { get; set; } = 0.5;
+
     /// <summary>状態が変更されたときのイベント</summary>
     public event Action? StateChanged;
     
@@ -368,7 +371,7 @@ public class PlaybackService : IDisposable
         {
             var duration = GetSoundDuration(SpeedMultiplier);
             var sampled = SampleSoundFrequencies();
-            _ = _js.InvokeVoidAsync("soundEngine.playNotes", sampled, duration);
+            _ = _js.InvokeVoidAsync("soundEngine.playNotes", sampled, duration, SoundVolume);
         }
 
         // ハイライト更新（最後の操作）
