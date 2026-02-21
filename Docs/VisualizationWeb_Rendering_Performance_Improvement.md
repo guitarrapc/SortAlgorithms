@@ -59,7 +59,7 @@ Comparison Mode では上記パイプラインが **Canvasの数だけ並列に�
 
 ### 3.2 Canvas 2D の個別 fillRect() 呼び出し
 
-`canvasRenderer.js` の `renderInternal` は要素ごとに `fillRect()` を呼ぶ：
+`barChartCanvasRenderer.js` の `renderInternal` は要素ごとに `fillRect()` を呼ぶ：
 
 ```javascript
 for (let i = 0; i < arrayLength; i++) {
@@ -560,9 +560,9 @@ private async Task RenderCanvas()
 
 | 改善 | 変更ファイル | 期待効果 |
 |------|-------------|---------|
-| JS 自律 rAF ループ | `canvasRenderer.js`, `circularCanvasRenderer.js` | 描画タイミング最適化 |
-| 同色バッチ描画 | `canvasRenderer.js` | fillStyle 切り替え 16384→6回 |
-| `Math.max(...array)` 修正 | `canvasRenderer.js`, `circularCanvasRenderer.js` | スタックオーバーフロー防止 |
+| JS 自律 rAF ループ | `barChartCanvasRenderer.js`, `circularCanvasRenderer.js` | 描画タイミング最適化 |
+| 同色バッチ描画 | `barChartCanvasRenderer.js` | fillStyle 切り替え 16384→6回 |
+| `Math.max(...array)` 修正 | `barChartCanvasRenderer.js`, `circularCanvasRenderer.js` | スタックオーバーフロー防止 |
 | `ShouldRender()` 追加 | `CanvasChartRenderer.razor`, `CircularRenderer.razor` | Blazor 差分排除 |
 
 **期待される改善：**
@@ -573,7 +573,7 @@ private async Task RenderCanvas()
 
 | 改善 | 変更ファイル | 期待効果 |
 |------|-------------|---------|
-| JS 側配列保持 + 操作コマンド転送 | `canvasRenderer.js`, `CanvasChartRenderer.razor`, `PlaybackService.cs` | 転送量 99% 削減 |
+| JS 側配列保持 + 操作コマンド転送 | `barChartCanvasRenderer.js`, `CanvasChartRenderer.razor`, `PlaybackService.cs` | 転送量 99% 削減 |
 | HashSet.ToArray() 排除 | `CanvasChartRenderer.razor`, `CircularRenderer.razor` | GC 圧力削減 |
 | JS Interop 頻度制御 | `CanvasChartRenderer.razor` | 不要な Interop 排除 |
 
@@ -585,7 +585,7 @@ private async Task RenderCanvas()
 
 | 改善 | 変更ファイル | 期待効果 |
 |------|-------------|---------|
-| OffscreenCanvas + Worker | 新規: `renderWorker.js`, 変更: `canvasRenderer.js` | メインスレッド解放 |
+| OffscreenCanvas + Worker | 新規: `barChartRenderWorker.js`, 変更: `barChartCanvasRenderer.js` | メインスレッド解放 |
 | SharedArrayBuffer | CORS ヘッダー設定、Worker コード | ゼロコピーデータ共有 |
 
 **期待される改善：**
@@ -676,12 +676,12 @@ Phase 1〜6 および C# 側改善がほぼすべて実装された。以下は�
 
 | Phase / 改善 | 状態 | 実装先 |
 |---|---|---|
-| Phase 1: JS 自律 rAF ループ | ✅ 実装済み | `canvasRenderer.js` `startLoop()`, `circularCanvasRenderer.js` `startLoop()` |
-| Phase 2: 同色バッチ描画 | ✅ 実装済み | `canvasRenderer.js` バケット分類, `circularCanvasRenderer.js` ハイライトバケット |
+| Phase 1: JS 自律 rAF ループ | ✅ 実装済み | `barChartCanvasRenderer.js` `startLoop()`, `circularCanvasRenderer.js` `startLoop()` |
+| Phase 2: 同色バッチ描画 | ✅ 実装済み | `barChartCanvasRenderer.js` バケット分類, `circularCanvasRenderer.js` ハイライトバケット |
 | Phase 3b: 差分転送 (Delta Updates) | ✅ 実装済み | `PlaybackService.RecordDelta()`, `applyFrame()` |
 | Phase 3c: JS 側配列保持 | ✅ 実装済み | `setArray()` + `arrays` Map |
-| Phase 4: OffscreenCanvas + Worker | ✅ 実装済み | `renderWorker.js` (Canvas 2D), `webglWorker.js` (WebGL2) |
-| Phase 6: WebGL レンダラー | ✅ 実装済み | `webglWorker.js` インスタンス描画 |
+| Phase 4: OffscreenCanvas + Worker | ✅ 実装済み | `barChartRenderWorker.js` (Canvas 2D), `barChartWebglWorker.js` (WebGL2) |
+| Phase 6: WebGL レンダラー | ✅ 実装済み | `barChartWebglWorker.js` インスタンス描画 |
 | 5a: HashSet → List 変更 | ✅ 実装済み | `VisualizationState.cs` `List<int>` |
 | 5b: ShouldRender() | ✅ 実装済み | `CanvasChartRenderer.razor`, `CircularRenderer.razor` |
 | Math.max スタックオーバーフロー修正 | ✅ 実装済み | ループ方式に変更済み |
@@ -808,7 +808,7 @@ public bool OnAnimationFrame()
 
 **問題：**
 
-`CanvasChartRenderer` は `canvasRenderer.js` 経由で `renderWorker.js` / `webglWorker.js`（Worker + OffscreenCanvas）に描画を委譲している。一方、`CircularRenderer` は `circularCanvasRenderer.js` でメインスレッド上の Canvas 2D のみで描画している。
+`CanvasChartRenderer` は `barChartCanvasRenderer.js` 経由で `barChartRenderWorker.js` / `barChartWebglWorker.js`（Worker + OffscreenCanvas）に描画を委譲している。一方、`CircularRenderer` は `circularCanvasRenderer.js` でメインスレッド上の Canvas 2D のみで描画している。
 
 ```
 CanvasChartRenderer (BarChart):
@@ -869,7 +869,7 @@ initialize: function(canvasId) {
 
 **問題：**
 
-`canvasRenderer.js` と `circularCanvasRenderer.js` の `renderInternal()` で、毎フレーム `getBoundingClientRect()` を呼んでいる。
+`barChartCanvasRenderer.js` と `circularCanvasRenderer.js` の `renderInternal()` で、毎フレーム `getBoundingClientRect()` を呼んでいる。
 
 ```javascript
 // canvasRenderer.js L423
@@ -1108,7 +1108,7 @@ private void FinalizeDeltas()
 
 ---
 
-### 12.6 デッドコード: `canvasRenderer.js` のウィンドウリサイズリスナー
+### 12.6 デッドコード: `barChartCanvasRenderer.js` のウィンドウリサイズリスナー
 
 **問題：**
 
@@ -1322,7 +1322,7 @@ private void OnPlaybackStateChanged()
 |---|------|-------------|--------|
 | 12.1 ✅ | SpinWait 排除 | `PlaybackService.cs` | 🔴 高 |
 | 12.3 ✅ | getBoundingClientRect キャッシュ | `barChartCanvasRenderer.js`, `circularCanvasRenderer.js` | 🔴 高 |
-| 12.6 | デッドコード削除 | `canvasRenderer.js` | 🟢 低 |
+| 12.6 | デッドコード削除 | `barChartCanvasRenderer.js` | 🟢 低 |
 | 12.7 | CSS contain 追加 | `app.css` | 🟡 中 |
 
 ### 短期対応（推定工数: 1〜2日）
@@ -1331,7 +1331,7 @@ private void OnPlaybackStateChanged()
 |---|------|-------------|--------|
 | 12.4 ✅ | Circular 三角関数 LUT + HSL キャッシュ | `circularCanvasRenderer.js` | 🟡 中 |
 | 12.5 | FinalizeDeltas バッファ再利用 | `PlaybackService.cs`, `VisualizationState.cs` | 🟢 低〜中 |
-| 12.8 | DPR キャッピング | `canvasRenderer.js`, `circularCanvasRenderer.js`, Worker 各 js | 🟡 中 |
+| 12.8 | DPR キャッピング | `barChartCanvasRenderer.js`, `circularCanvasRenderer.js`, Worker 各 js | 🟡 中 |
 | 12.9 | ComparisonStatsSummary ShouldRender | `ComparisonStatsSummary.razor` | 🟢 低 |
 
 ### 中期対応（推定工数: 3〜5日）
