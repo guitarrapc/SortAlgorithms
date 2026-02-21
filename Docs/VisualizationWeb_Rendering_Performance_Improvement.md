@@ -1264,7 +1264,7 @@ initialize: function(canvasId, useWebGL = true) {
 
 ---
 
-### 12.9 ComparisonGridItem の不要な Blazor 再レンダリング伝播
+### 12.9 ComparisonGridItem の不要な Blazor 再レンダリング伝播　✅ 実装済み
 
 **問題：**
 
@@ -1347,7 +1347,7 @@ private void OnPlaybackStateChanged()
 | 12.4 ✅ | Circular 三角関数 LUT + HSL キャッシュ | `circularCanvasRenderer.js` | 🟡 中 |
 | 12.5 見送り | FinalizeDeltas バッファ再利用 | `PlaybackService.cs`, `VisualizationState.cs` | 🟢 低〜中 |
 | 12.8 | DPR キャッピング | `barChartCanvasRenderer.js`, `circularCanvasRenderer.js`, Worker 各 js | 🟡 中 |
-| 12.9 | ComparisonStatsSummary ShouldRender | `ComparisonStatsSummary.razor` | 🟢 低 |
+| 12.9　✅ | ComparisonStatsSummary ShouldRender | `ComparisonStatsSummary.razor` | 🟢 低 |
 
 ### 中期対応（推定工数: 3〜5日）
 
