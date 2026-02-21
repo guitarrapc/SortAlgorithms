@@ -20,10 +20,27 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public VisualizationState State { get; set; } = null!;
+[Parameter, EditorRequired]
+public VisualizationState State { get; set; } = null!;
 
-    private int GetProgressPercentage()
+private ulong _lastCompareCount;
+private ulong _lastSwapCount;
+private int _lastOperationIndex;
+
+protected override bool ShouldRender()
+{
+    var changed = _lastCompareCount != State.CompareCount
+               || _lastSwapCount != State.SwapCount
+               || _lastOperationIndex != State.CurrentOperationIndex;
+
+    _lastCompareCount = State.CompareCount;
+    _lastSwapCount = State.SwapCount;
+    _lastOperationIndex = State.CurrentOperationIndex;
+
+    return changed;
+}
+
+private int GetProgressPercentage()
     {
         if (State.TotalOperations == 0) return 0;
         return (int)((State.CurrentOperationIndex / (double)State.TotalOperations) * 100);
