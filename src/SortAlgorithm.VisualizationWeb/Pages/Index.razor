@@ -124,6 +124,7 @@
                     <select @bind="SelectedVisualizationMode" @bind:after="OnVisualizationModeChanged" style="width: 100%;">
                         <option value="@VisualizationMode.BarChart">📊 Bar Chart</option>
                         <option value="@VisualizationMode.Circular">⭕ Circular</option>
+                        <option value="@VisualizationMode.Spiral">🌀 Spiral</option>
                         <option value="@VisualizationMode.DotPlot">🔵 Dot Plot</option>
                     </select>
                 </div>
@@ -207,6 +208,11 @@
                     <CircularRenderer State="Playback.State"
                                    OnClick="OnVisualizationClick" />
                 }
+                else if (Playback.State.Mode == VisualizationMode.Spiral)
+                {
+                    <SpiralRenderer State="Playback.State"
+                                    OnClick="OnVisualizationClick" />
+                }
                 else if (Playback.State.Mode == VisualizationMode.DotPlot)
                 {
                     <DotPlotRenderer State="Playback.State"
@@ -216,7 +222,7 @@
             else
             {
                 <div style="text-align: center; color: #999;">
-                    <p style="font-size: 2rem;">@(Playback.State.Mode == VisualizationMode.Circular ? "⭕" : Playback.State.Mode == VisualizationMode.DotPlot ? "🔵" : "📊")</p>
+                <p style="font-size: 2rem;">@(Playback.State.Mode == VisualizationMode.Circular ? "⭕" : Playback.State.Mode == VisualizationMode.Spiral ? "🌀" : Playback.State.Mode == VisualizationMode.DotPlot ? "🔵" : "📊")</p>
                     <p>Click "Generate & Sort" to start visualization</p>
                 </div>
             }

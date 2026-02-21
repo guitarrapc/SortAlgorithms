@@ -31,6 +31,13 @@
                 GridColumnCount="@GridColumnCount"
                 OnClick="@OnVisualizationClick" />
         }
+        else if (VisualizationMode == VisualizationMode.Spiral)
+        {
+            <SpiralRenderer
+                State="@Instance.State"
+                GridColumnCount="@GridColumnCount"
+                OnClick="@OnVisualizationClick" />
+        }
         else if (VisualizationMode == VisualizationMode.DotPlot)
         {
             <DotPlotRenderer
