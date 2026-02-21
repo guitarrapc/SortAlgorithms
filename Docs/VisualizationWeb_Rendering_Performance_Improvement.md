@@ -1159,41 +1159,46 @@ Canvas コンテナに CSS `contain` プロパティが設定されていない�
 ```
 
 **影響：**
-- Canvas 内の描画変更がコンテナ外のレイアウト再計算をトリガーする可能性
-- Comparison Mode 9 Canvas では合成レイヤーの計算コストが増大
-- モバイルの低性能 GPU でレイヤー合成が遅延
+
+CSS `contain` が最適化するのは「メインスレッドのレイアウト・ペイント」だが、Phase 4 (OffscreenCanvas + WebGL Worker) が実装済みの現在は、Canvas への描画はすでにメインスレッド外で行われている。`fillRect()` / `drawArraysInstanced()` はブラウザの CSS レイアウトエンジンを一切触らないため、`contain` で守るべきメインスレッドのペイントコストはほぼない。
+
+残存する影響（限定的）：
+- Blazor `StateHasChanged` による統計 DOM 更新のリフローが `.comparison-grid-item` をまたいで伝播する
+- `.comparison-grid-item.completed` の `box-shadow` 変化時にレイヤー再計算が発生する
 
 **改善案：**
 
+効果が見込める `.comparison-grid-item` への `contain: layout paint` のみ適用する。
+
 ```css
-.bar-chart-container,
-.circular-chart-container {
-    width: 100%;
-    height: 100%;
-    cursor: pointer;
-    /* レイアウト・ペイント・サイズを隔離 */
-    contain: strict;
-}
-
 .comparison-grid-item {
-    display: flex;
-    flex-direction: column;
-    /* レイアウトとスタイルを隔離（サイズは grid が制御するため layout + paint） */
+    /* 統計 DOM 更新のリフローをアイテム内に隔離する */
+    /* （overflow: hidden が既に存在するため paint の追加効果は小さいが無害） */
     contain: layout paint;
-}
-
-canvas {
-    /* Canvas 要素自体にも will-change を設定し、独立した合成レイヤーを確保 */
-    will-change: contents;
 }
 ```
 
-**期待効果：**
-- ブラウザがコンテナ単位でレイアウト・ペイントを隔離し、不要な再計算を排除
-- Canvas ごとに独立した合成レイヤーが確保され、部分的な再描画が効率化
-- Comparison Mode での合成レイヤー管理が明示的になる
+⚠️ **`contain: strict` は `.bar-chart-container` / `.circular-chart-container` に適用しない**
 
-**優先度：🟡 中（CSS のみの変更で副作用リスクが低い）**
+`contain: strict` は `contain: size layout paint style` の短縮形であり、`contain: size` は「この要素のサイズが子要素に依存しない」ことをブラウザに宣言する。`width: 100%; height: 100%` で親 flex に従うコンテナに指定すると、子 canvas が親サイズを参照できなくなるリスクがある。
+
+```css
+/* ❌ 適用しない */
+.bar-chart-container {
+    contain: strict; /* contain: size が width/height: 100% の動作と競合する可能性 */
+}
+```
+
+⚠️ **`will-change: contents` は使用しない**
+
+`contents` は CSS `will-change` の有効な値として仕様で定義されているが、主要ブラウザでの動作が不安定・未サポートな実装が多い。WebGL Worker 使用時は Canvas がすでに独立したコンポジットレイヤーになるため不要。独立レイヤーを明示したい場合は `will-change: transform` が確実だが、GPU メモリ消費が増えるためソート可視化では費用対効果が低い。
+
+**期待効果：**
+- `.comparison-grid-item` 内の統計 DOM 更新時のリフロー範囲を隣のグリッドアイテムに波及させない
+- Worker 実装済みのため Canvas 描画への直接効果はない
+- Comparison Mode 9 Canvas 時に微小な効果（+0〜1 FPS 相当）
+
+**優先度：🟢 低（Worker 実装済みのため Canvas 描画への効果はなし。統計 DOM リフロー隔離のみ）**
 
 ---
 
@@ -1323,7 +1328,7 @@ private void OnPlaybackStateChanged()
 | 12.1 ✅ | SpinWait 排除 | `PlaybackService.cs` | 🔴 高 |
 | 12.3 ✅ | getBoundingClientRect キャッシュ | `barChartCanvasRenderer.js`, `circularCanvasRenderer.js` | 🔴 高 |
 | 12.6 | デッドコード削除 | `barChartCanvasRenderer.js` | 🟢 低 |
-| 12.7 | CSS contain 追加 | `app.css` | 🟡 中 |
+| 12.7 | CSS contain 追加 | `app.css` | 🟢 低 |
 
 ### 短期対応（推定工数: 1〜2日）
 
@@ -1349,7 +1354,7 @@ private void OnPlaybackStateChanged()
 現在 (Phase 1-6 実装後):  60 FPS              45-55 FPS              50-55 FPS
 12.1 SpinWait 排除:       60 FPS              50-58 FPS (+5-3)       55-58 FPS (+5-3)
 12.3 gBCR キャッシュ:     60 FPS (+0)         55-60 FPS (+5-2)       58-60 FPS (+3-2)
-12.7 CSS contain:         60 FPS (+0)         56-60 FPS (+1)         58-60 FPS (+0-1)
+12.7 CSS contain:         60 FPS (+0)         60 FPS (+0)            60 FPS (+0)         ← Worker実装済みのためCanvas描画への効果なし
 12.8 DPR キャップ:        影響なし            58-60 FPS (+2-0)       58-60 FPS (+0)
 12.4 Circular LUT:        60 FPS (Circular)   55-60 FPS (Circular)   改善あり
 全適用:                   60 FPS              58-60 FPS              58-60 FPS
@@ -1358,4 +1363,4 @@ private void OnPlaybackStateChanged()
 **特にモバイル端末（タブレット・スマートフォン）での改善効果が大きい。**
 - SpinWait 排除によるバッテリー消費削減は FPS 数値に現れないが UX に直結
 - DPR キャッピングはスマートフォン（DPR 3.0）で最大の効果
-- CSS contain は DOM が複雑な Comparison Mode で効果的
+- CSS contain は Phase 4 Worker 実装済みの現在は Canvas 描画に効果なし（統計 DOM リフロー隔離のみ）
