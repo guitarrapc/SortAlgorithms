@@ -1032,7 +1032,7 @@ ctx.strokeStyle = this._colorLUT[array[i]]; // 文字列生成なし
 
 ---
 
-### 12.5 `FinalizeDeltas()` の毎フレーム配列アロケーション
+### 12.5 `FinalizeDeltas()` の毎フレーム配列アロケーション <- 見送り
 
 **問題：**
 
@@ -1146,7 +1146,7 @@ window.addEventListener('resize', () => {
 
 ---
 
-### 12.7 CSS `contain` プロパティによるブラウザ合成最適化
+### 12.7 CSS `contain` プロパティによるブラウザ合成最適化 <- 見送り
 
 **問題：**
 
