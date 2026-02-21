@@ -675,7 +675,7 @@ public class PlaybackService : IDisposable
         }
 
         value = Math.Clamp(value, 0, _currentArraySize);
-        return 200f + (value / (float)_currentArraySize) * 1800f;
+        return 200f + (value / (float)_currentArraySize) * 1000f;
     }
 
     /// <summary>

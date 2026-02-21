@@ -21,16 +21,16 @@
 |------|------|
 | API | Web Audio API（`AudioContext` + `OscillatorNode`） |
 | 波形 | サイン波（`sine`） |
-| 周波数レンジ | 200 Hz〜2000 Hz |
-| 周波数マッピング | 配列内の相対値（最小値→200 Hz、最大値→2000 Hz）に線形マッピング |
+| 周波数レンジ | 200 Hz〜1200 Hz |
+| 周波数マッピング | 配列内の相対値（最小値→200 Hz、最大値→1200 Hz）に線形マッピング |
 | デフォルト状態 | **OFF** |
 | UI | トグルスイッチ（Auto Reset の隣に配置） |
 
 #### 周波数マッピング式
 
 ```
-frequency = 200 + (value / maxValue) * (2000 - 200)
-           = 200 + (value / maxValue) * 1800
+frequency = 200 + (value / maxValue) * (1200 - 200)
+           = 200 + (value / maxValue) * 1000
 ```
 
 > `maxValue` は配列サイズ（要素数）と等値。値の範囲は `1〜N`（`N` = 配列サイズ）。
