@@ -1037,7 +1037,7 @@ ctx.strokeStyle = this._colorLUT[array[i]]; // 文字列生成なし
 **問題：**
 
 ```csharp
-// PlaybackService.cs L640-661
+// PlaybackService.cs
 private void FinalizeDeltas()
 {
     State.MainArrayDelta = _mainDelta.Count > 0 ? _mainDelta.ToArray() : [];
@@ -1063,50 +1063,60 @@ private void FinalizeDeltas()
 - Comparison Mode 4 ソート: 毎秒 240+ 回のアロケーション
 - WASM の GC は世代別 GC ではないため、頻繁なアロケーションが GC Pause を誘発しやすい
 
-**改善案：**
+**なぜ素朴な再利用バッファは使えないか（検証済み）：**
 
-再利用可能なバッファを使い、`ToArray()` を排除する。
+`ArraySegment<int>` で再利用バッファを指すアプローチ、または共有 `Dictionary` の参照代入は
+**Blazor WASM の非同期レンダリングモデルと根本的に相性が悪く、描画崩壊を起こす**。
 
-```csharp
-// 再利用バッファ
-private int[] _mainDeltaBuffer = new int[256];
+`playbackHelper.js` の RAF ループ構造:
 
-private void FinalizeDeltas()
-{
-    if (_mainDelta.Count > 0)
-    {
-        // バッファが足りなければ拡張（2倍戦略）
-        if (_mainDeltaBuffer.Length < _mainDelta.Count)
-            _mainDeltaBuffer = new int[_mainDelta.Count * 2];
+```javascript
+const tick = () => {
+    // 1. invokeMethod('OnAnimationFrame') ← C# 同期呼び出し
+    //    FinalizeDeltas() → _buffer 書き込み → StateChanged → Blazor 描画キュー登録
+    // 2. requestAnimationFrame(tick)      ← 次フレームを末尾で登録
+};
+```
 
-        // List の内部配列から直接コピー
-        CollectionsMarshal.AsSpan(_mainDelta).CopyTo(_mainDeltaBuffer);
-        State.MainArrayDelta = _mainDeltaBuffer;
-        State.MainArrayDeltaLength = _mainDelta.Count; // 有効長を別途保持
-    }
-    else
-    {
-        State.MainArrayDelta = [];
-        State.MainArrayDeltaLength = 0;
-    }
+RAF tick N が `requestAnimationFrame(tick)` を**末尾で**登録するため、  
+Blazor の描画キューより PlaybackService の次 tick が**先に登録される**。  
+結果として次の RAF では PlaybackService tick N+1 が先に実行され:
 
-    _mainDelta.Clear();
-    // ... バッファーデルタも同様 ...
+| タイミング | 状態 |
+|---|---|
+| RAF tick N | `_buffer` に frame N データ書き込み、Blazor 描画キュー登録 |
+| RAF tick N+1（Blazor 描画より先） | `_buffer` を frame N+1 データで**上書き** |
+| Blazor 描画（遅延） | `ArraySegment(_buffer, ...)` は上書き済み → frame N+1 データを二重適用 |
+
+`State.BufferArrayDeltas = _reuseDict`（参照代入）でも同様で、  
+`_reuseDict.Clear()` が描画前に実行されて空のデータが送信される。
+
+**正しい修正のために必要な条件：**
+
+`FinalizeDeltas()` 単体の最適化では根本解決できない。
+JS 側でデータを保持し差分コマンドのみ転送する **Phase 3c** アーキテクチャへの移行が必要。
+
+```javascript
+// Phase 3c: JS 側に配列を保持 → 操作コマンドのみ送信
+applyFrame: function(canvasId, mainDelta, ...) {
+    // mainDelta はフレームごとの独立した配列として受け取る
+    // JS 側の arrays.main に差分適用
 }
 ```
 
-ただし JS Interop で `int[]` を渡す際は配列全体がシリアライズされるため、有効長の管理が必要。Delta が小さい場合（通常再生時は数十要素）はコピーの方がシンプルかもしれない。
+Phase 3c が実装されれば `FinalizeDeltas()` は「変更インデックスと値のペア」のみを構築すればよく、  
+JS 側が自律的に配列を管理するため C# 側の配列アロケーションは大幅に削減できる。
 
 **代替案（よりシンプル）：** `_mainDelta` の `List<int>` をそのまま `CollectionsMarshal.AsSpan()` で JS に渡す方法を検討する（.NET 10 の `IJSRuntime` が `Span` / `Memory` を受け付けるか確認が必要）。
 
-**期待効果：**
-- 毎フレームの `int[]` アロケーション排除
-- GC Pause の頻度低減
-- 特に WASM 環境で GC が UI を止めるケースが減る
+**現状：**
+- 元の `ToArray()` / `new Dictionary()` を維持（毎フレーム不変スナップショットを生成するため安全）
+- 再利用バッファ方式は検証の結果 **採用不可** と判断
 
-**優先度：🟢 低〜中（通常再生時の delta は小さいため影響は限定的。大量操作/フレームで効果あり）**
+**優先度：🟢 低〜中（Phase 3c と合わせて対応。単体では安全に実装できない）**
 
 ---
+
 
 ### 12.6 デッドコード: `barChartCanvasRenderer.js` のウィンドウリサイズリスナー
 
