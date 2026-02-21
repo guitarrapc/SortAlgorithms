@@ -49,6 +49,9 @@ window.soundEngine = {
         const now = ctx.currentTime;
         const durationSec = duration / 1000;
 
+        // 同時発音数に応じてゲインを按分（クリッピング防止）
+        const gainPerNote = 0.3 / Math.max(1, frequencies.length);
+
         for (let i = 0; i < frequencies.length; i++) {
             const freq = frequencies[i];
             if (freq <= 0) continue;
@@ -63,7 +66,7 @@ window.soundEngine = {
             oscillator.frequency.setValueAtTime(freq, now);
 
             // アタック即最大 → 終端に向けて線形フェードアウト（クリッピング防止）
-            gainNode.gain.setValueAtTime(0.3, now);
+            gainNode.gain.setValueAtTime(gainPerNote, now);
             gainNode.gain.linearRampToValueAtTime(0.0, now + durationSec);
 
             oscillator.start(now);

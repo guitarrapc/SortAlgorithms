@@ -679,24 +679,24 @@ public class PlaybackService : IDisposable
     }
 
     /// <summary>
-    /// 仕様 A4: OpsPerFrame の設定値に応じて発音するフレームの周波数をサンプリングする。
+    /// 仕様 A4: 実際に収集した Read/Write 数に応じて発音する周波数をサンプリングする。
+    /// OpsPerFrame=1 でも SpeedMultiplier が高い場合は effectiveOps が増えるため、
+    /// 設定値でなく実際の収集数で決定することで防乱を防ぐ。
     /// </summary>
     private float[] SampleSoundFrequencies()
     {
         var count = _soundFreqBuffer.Count;
         if (count == 0) return [];
 
-        if (OperationsPerFrame <= 3)
+        if (count <= 3)
         {
             // 全音再生
             return [.. _soundFreqBuffer];
         }
 
-        if (OperationsPerFrame <= 10)
+        if (count <= 10)
         {
             // 等間隔3点サンプリング（先頭・中間・末尾）
-            if (count == 1) return [_soundFreqBuffer[0]];
-            if (count == 2) return [_soundFreqBuffer[0], _soundFreqBuffer[count - 1]];
             return [_soundFreqBuffer[0], _soundFreqBuffer[count / 2], _soundFreqBuffer[count - 1]];
         }
 
