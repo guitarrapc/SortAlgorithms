@@ -1,5 +1,6 @@
 @using SortAlgorithm.VisualizationWeb.Models
 @using SortAlgorithm.VisualizationWeb.Services
+@inject Microsoft.JSInterop.IJSRuntime JS
 
 <div class="stat-item">
     <button class="primary" @onclick="OnGenerateAndSort" style="width: 100%;">🎲 Generate & Sort</button>
@@ -32,6 +33,18 @@
 
 <div class="stat-item">
     <label class="toggle-switch">
+        <input type="checkbox" @bind="Playback.SoundEnabled" @bind:after="HandleSoundToggleChanged" />
+        <span class="toggle-slider"></span>
+        <span class="toggle-label">🔊 Sound</span>
+    </label>
+    @if (Playback.SoundEnabled && Playback.SpeedMultiplier > 50)
+    {
+        <span style="font-size: 0.8em; color: #f59e0b; margin-top: 2px; display: block;">⚠️ Muted (speed &gt; 50x)</span>
+    }
+</div>
+
+<div class="stat-item">
+    <label class="toggle-switch">
         <input type="checkbox" @bind="Playback.InstantMode" />
         <span class="toggle-slider"></span>
         <span class="toggle-label">Instant Mode (No Animation)</span>
@@ -53,5 +66,13 @@
     private async Task HandleSpeedChanged()
     {
         await OnSpeedSettingsChanged.InvokeAsync();
+    }
+
+    private async Task HandleSoundToggleChanged()
+    {
+        if (Playback.SoundEnabled)
+        {
+            await Playback.InitSoundAsync();
+        }
     }
 }

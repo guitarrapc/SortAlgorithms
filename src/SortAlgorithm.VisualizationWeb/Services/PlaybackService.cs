@@ -47,6 +47,9 @@ public class PlaybackService : IDisposable
     private readonly List<int> _mainDelta = [];
     private readonly Dictionary<int, List<int>> _bufferDeltas = new();
     private bool _trackDeltas = true; // InstantMode では false にして追跡をスキップ
+
+    // 音: 今フレームの Read/Write 周波数バッファ（再利用してアロケーション抑制）
+    private readonly List<float> _soundFreqBuffer = new(capacity: 16);
     
     /// <summary>現在の状態</summary>
     public VisualizationState State { get; private set; } = new();
@@ -62,7 +65,10 @@ public class PlaybackService : IDisposable
     
     /// <summary>描画なし超高速モード</summary>
     public bool InstantMode { get; set; } = false;
-    
+
+    /// <summary>音を再生するか（デフォルト OFF）</summary>
+    public bool SoundEnabled { get; set; } = false;
+
     /// <summary>状態が変更されたときのイベント</summary>
     public event Action? StateChanged;
     
@@ -72,6 +78,14 @@ public class PlaybackService : IDisposable
         // 最大サイズの配列をArrayPoolからレンタル
         _pooledArray = ArrayPool<int>.Shared.Rent(MAX_ARRAY_SIZE);
         _currentArraySize = 0;
+    }
+
+    /// <summary>
+    /// AudioContext を初期化・再開する。Sound トグルを ON にした直後（ユーザー操作）に呼ぶ。
+    /// </summary>
+    public async ValueTask InitSoundAsync()
+    {
+        await _js.InvokeVoidAsync("soundEngine.initAudio");
     }
     
     /// <summary>
@@ -328,11 +342,33 @@ public class PlaybackService : IDisposable
 
         var effectiveOps = Math.Min(OperationsPerFrame * framesToProcess,
                                     _operations.Count - State.CurrentOperationIndex);
+
+        // 音: 発音対象フレームかどうか判定（SpeedMultiplier > 50 は自動無効）
+        var soundActive = SoundEnabled && SpeedMultiplier <= 50.0;
+        if (soundActive) _soundFreqBuffer.Clear();
+
         for (int i = 0; i < effectiveOps && State.CurrentOperationIndex < _operations.Count; i++)
         {
             var operation = _operations[State.CurrentOperationIndex];
+
+            // 音: ApplyOperation の前に周波数を収集（Read は配列変更前の値が正しい値）
+            if (soundActive &&
+                (operation.Type == OperationType.IndexRead || operation.Type == OperationType.IndexWrite))
+            {
+                var freq = GetFrequencyForOp(operation);
+                if (freq > 0f) _soundFreqBuffer.Add(freq);
+            }
+
             ApplyOperation(operation, applyToArray: true, updateStats: true);
             State.CurrentOperationIndex++;
+        }
+
+        // 音: サンプリングして発音（JS Interop 1回/フレーム）
+        if (soundActive && _soundFreqBuffer.Count > 0)
+        {
+            var duration = GetSoundDuration(SpeedMultiplier);
+            var sampled = SampleSoundFrequencies();
+            _ = _js.InvokeVoidAsync("soundEngine.playNotes", sampled, duration);
         }
 
         // ハイライト更新（最後の操作）
@@ -621,6 +657,66 @@ public class PlaybackService : IDisposable
     }
 
     /// <summary>
+    /// 操作から発音周波数を計算する（IndexRead: 配列の現在値、IndexWrite: 書き込む値）。
+    /// </summary>
+    private float GetFrequencyForOp(SortOperation op)
+    {
+        if (_currentArraySize <= 0) return -1f;
+
+        int value;
+        if (op.Type == OperationType.IndexWrite)
+        {
+            value = op.Value ?? 0;
+        }
+        else // IndexRead
+        {
+            var arr = GetArray(op.BufferId1);
+            value = (op.Index1 >= 0 && op.Index1 < arr.Length) ? arr[op.Index1] : 0;
+        }
+
+        value = Math.Clamp(value, 0, _currentArraySize);
+        return 200f + (value / (float)_currentArraySize) * 1800f;
+    }
+
+    /// <summary>
+    /// 仕様 A4: OpsPerFrame の設定値に応じて発音するフレームの周波数をサンプリングする。
+    /// </summary>
+    private float[] SampleSoundFrequencies()
+    {
+        var count = _soundFreqBuffer.Count;
+        if (count == 0) return [];
+
+        if (OperationsPerFrame <= 3)
+        {
+            // 全音再生
+            return [.. _soundFreqBuffer];
+        }
+
+        if (OperationsPerFrame <= 10)
+        {
+            // 等間隔3点サンプリング（先頭・中間・末尾）
+            if (count == 1) return [_soundFreqBuffer[0]];
+            if (count == 2) return [_soundFreqBuffer[0], _soundFreqBuffer[count - 1]];
+            return [_soundFreqBuffer[0], _soundFreqBuffer[count / 2], _soundFreqBuffer[count - 1]];
+        }
+
+        // 末尾1音のみ
+        return [_soundFreqBuffer[count - 1]];
+    }
+
+    /// <summary>
+    /// 仕様 B4: SpeedMultiplier に応じた発音持続時間（ms）を返す。50x 超は 0（無効）。
+    /// </summary>
+    private static int GetSoundDuration(double speedMultiplier) => speedMultiplier switch
+    {
+        > 50 => 0,
+        > 20 => 20,
+        > 5  => 40,
+        > 2  => 80,
+        _    => 150,
+    };
+
+    /// <summary>
     /// 配列変更を差分リストに記録する（applyToArray=true のときのみ呼ぶ）
     /// </summary>
     private void RecordDelta(int bufferId, int index, int value)
@@ -713,6 +809,9 @@ public class PlaybackService : IDisposable
     public void Dispose()
     {
         StopLoop();
+
+        // AudioContext を解放
+        _ = _js.InvokeVoidAsync("soundEngine.disposeAudio");
 
         // 完了ハイライトタイマーをキャンセル
         _completionHighlightCts?.Cancel();
