@@ -40,19 +40,21 @@ window.soundEngine = {
     },
 
     /**
-     * DynamicsCompressor をマスター出力として設定する。
-     * フレームをまたいで複数ノートが重なってもクリッピングを防ぐ。
+     * 安全リミッターをマスター出力として設定する。
+     * 適応ゲインにより通常動作では threshold に達しないためポンピングなし。
+     * 万が一クリッピングする場合の最後の安全網。
      */
     _setupOutput: function () {
         const ctx = this._audioContext;
-        const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.setValueAtTime(-18, ctx.currentTime);
-        compressor.knee.setValueAtTime(6, ctx.currentTime);
-        compressor.ratio.setValueAtTime(8, ctx.currentTime);
-        compressor.attack.setValueAtTime(0.003, ctx.currentTime);
-        compressor.release.setValueAtTime(0.05, ctx.currentTime);
-        compressor.connect(ctx.destination);
-        this._output = compressor;
+        const limiter = ctx.createDynamicsCompressor();
+        // threshold -1dBFS: 実際の信号は ∼-16dB なのでほぼ触れない → ポンピングなし
+        limiter.threshold.setValueAtTime(-1, ctx.currentTime);
+        limiter.knee.setValueAtTime(0, ctx.currentTime);        // ハードニー
+        limiter.ratio.setValueAtTime(20, ctx.currentTime);      // リミッター動作
+        limiter.attack.setValueAtTime(0.001, ctx.currentTime);  // 高速アタック
+        limiter.release.setValueAtTime(0.1, ctx.currentTime);   // リリース
+        limiter.connect(ctx.destination);
+        this._output = limiter;
     },
 
     /**
@@ -116,7 +118,11 @@ window.soundEngine = {
         const attackSec = 0.005;  // 5ms アタック: ゼロからランプアップしてクリックノイズを除去
 
         const vol = Math.max(0, Math.min(1, volume ?? 1));
-        const gainPerNote = (0.2 * vol) / Math.max(1, frequencies.length);
+        // オーバーラップ適応ゲイン:速度に関わらず総ゲイン ≈ 0.15 で一定化しポンピングを防止する。
+        // 同時発音数 expectedOverlap ≈ duration × 60fps。
+        // 総ゲイン = expectedOverlap × notes × gainPerNote = 0.15 × vol（リミッターの -1dBFS 閘より常に小）
+        const expectedOverlap = Math.max(1, durationSec * 60);
+        const gainPerNote = (0.15 * vol) / (expectedOverlap * Math.max(1, frequencies.length));
 
         for (let i = 0; i < frequencies.length; i++) {
             const freq = frequencies[i];
