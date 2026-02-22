@@ -24,11 +24,16 @@ const SPIRAL_MIN_RADIUS_RATIO = 0.08;
 const SPIRAL_MAX_RADIUS_RATIO = 0.46;
 
 // 螺旋座標 LUT（配列長・キャンバスサイズが変わったときのみ再構築）
+// posLUTX[i] = cos(theta_i), posLUTY[i] = sin(theta_i)（角度のみ、インデックスから決定）
+// 半径は描画時に要素の値から動的に計算する
 let posLUTLength = 0;
 let posLUTCanvasW = 0;
 let posLUTCanvasH = 0;
-let posLUTX = null; // Float32Array
-let posLUTY = null; // Float32Array
+let posLUTX = null; // Float32Array: cos(theta_i)
+let posLUTY = null; // Float32Array: sin(theta_i)
+let spiralCx = 0;
+let spiralCy = 0;
+let spiralMaxR = 0;
 
 // HSL カラールックアップテーブル
 let colorLUTMax = -1;
@@ -41,18 +46,16 @@ function buildPosLUT(n, width, height) {
   posLUTCanvasH = height;
   posLUTX = new Float32Array(n);
   posLUTY = new Float32Array(n);
-  const cx = width / 2;
-  const cy = height / 2;
+  spiralCx = width / 2;
+  spiralCy = height / 2;
   const minDim = Math.min(width, height);
-  const minR = minDim * SPIRAL_MIN_RADIUS_RATIO;
-  const maxR = minDim * SPIRAL_MAX_RADIUS_RATIO;
+  spiralMaxR = minDim * SPIRAL_MAX_RADIUS_RATIO;
   const twoPI = 2 * Math.PI;
   for (let i = 0; i < n; i++) {
     const t = n <= 1 ? 0 : i / (n - 1);
     const theta = t * SPIRAL_TURNS * twoPI - Math.PI / 2;
-    const r = minR + (maxR - minR) * t;
-    posLUTX[i] = cx + r * Math.cos(theta);
-    posLUTY[i] = cy + r * Math.sin(theta);
+    posLUTX[i] = Math.cos(theta);
+    posLUTY[i] = Math.sin(theta);
   }
 }
 
@@ -226,7 +229,10 @@ function draw() {
     // 完了ハイライト: 全ドットを1色で一括描画
     ctx.fillStyle = colors.sorted;
     for (let i = 0; i < arrayLength; i++) {
-      ctx.fillRect(posLUTX[i] - dotRadius, posLUTY[i] - dotRadius, dotSize, dotSize);
+      const r = (array[i] / maxValue) * spiralMaxR;
+      const x = spiralCx + r * posLUTX[i];
+      const y = spiralCy + r * posLUTY[i];
+      ctx.fillRect(x - dotRadius, y - dotRadius, dotSize, dotSize);
     }
   } else {
     // インデックスを色バケツに振り分けてから色ごとに一括描画
@@ -246,8 +252,11 @@ function draw() {
 
     // 通常色（HSLグラデーション）: 各要素で fillStyle が変わるため個別描画
     for (const i of normalBucket) {
+      const r = (array[i] / maxValue) * spiralMaxR;
+      const x = spiralCx + r * posLUTX[i];
+      const y = spiralCy + r * posLUTY[i];
       ctx.fillStyle = colorLUT[array[i]];
-      ctx.fillRect(posLUTX[i] - dotRadius, posLUTY[i] - dotRadius, dotSize, dotSize);
+      ctx.fillRect(x - dotRadius, y - dotRadius, dotSize, dotSize);
     }
 
     // ハイライト色をバッチ描画（1色につき1パス）
@@ -262,7 +271,10 @@ function draw() {
       if (indices.length === 0) continue;
       ctx.fillStyle = color;
       for (const i of indices) {
-        ctx.fillRect(posLUTX[i] - dotRadius, posLUTY[i] - dotRadius, dotSize, dotSize);
+        const r = (array[i] / maxValue) * spiralMaxR;
+        const x = spiralCx + r * posLUTX[i];
+        const y = spiralCy + r * posLUTY[i];
+        ctx.fillRect(x - dotRadius, y - dotRadius, dotSize, dotSize);
       }
     }
   }

@@ -95,11 +95,16 @@ const SPIRAL_MIN_RADIUS_RATIO = 0.08;
 const SPIRAL_MAX_RADIUS_RATIO = 0.46;
 
 // 螺旋座標 LUT（配列長・キャンバスサイズが変わったときのみ再構築）
+// posLUTX[i] = cos(theta_i), posLUTY[i] = sin(theta_i)（角度のみ、インデックスから決定）
+// 半径は描画時に要素の値から動的に計算する
 let posLUTLength = 0;
 let posLUTCanvasW = 0;
 let posLUTCanvasH = 0;
-let posLUTX = null; // Float32Array
-let posLUTY = null; // Float32Array
+let posLUTX = null; // Float32Array: cos(theta_i)
+let posLUTY = null; // Float32Array: sin(theta_i)
+let spiralCx = 0;
+let spiralCy = 0;
+let spiralMaxR = 0;
 
 function buildPosLUT(n, width, height) {
   if (posLUTLength === n && posLUTCanvasW === width && posLUTCanvasH === height) return;
@@ -108,18 +113,16 @@ function buildPosLUT(n, width, height) {
   posLUTCanvasH = height;
   posLUTX = new Float32Array(n);
   posLUTY = new Float32Array(n);
-  const cx = width / 2;
-  const cy = height / 2;
+  spiralCx = width / 2;
+  spiralCy = height / 2;
   const minDim = Math.min(width, height);
-  const minR = minDim * SPIRAL_MIN_RADIUS_RATIO;
-  const maxR = minDim * SPIRAL_MAX_RADIUS_RATIO;
+  spiralMaxR = minDim * SPIRAL_MAX_RADIUS_RATIO;
   const twoPI = 2 * Math.PI;
   for (let i = 0; i < n; i++) {
     const t = n <= 1 ? 0 : i / (n - 1);
     const theta = t * SPIRAL_TURNS * twoPI - Math.PI / 2;
-    const r = minR + (maxR - minR) * t;
-    posLUTX[i] = cx + r * Math.cos(theta);
-    posLUTY[i] = cy + r * Math.sin(theta);
+    posLUTX[i] = Math.cos(theta);
+    posLUTY[i] = Math.sin(theta);
   }
 }
 
@@ -411,8 +414,10 @@ function drawWebGL() {
 
   // メイン配列のドットを VBO に書き込み
   for (let i = 0; i < arrayLength; i++) {
-    const x = posLUTX[i];
-    const y = posLUTY[i];
+    const v = array[i];
+    const rr = (v / maxValue) * spiralMaxR;
+    const x = spiralCx + rr * posLUTX[i];
+    const y = spiralCy + rr * posLUTY[i];
     let r, g, b;
     if (showCompletionHighlight) {
       [r, g, b] = RGB.sorted;
@@ -425,7 +430,7 @@ function drawWebGL() {
     } else if (readSet.has(i)) {
       [r, g, b] = RGB.read;
     } else {
-      const vi = array[i] * 3;
+      const vi = v * 3;
       r = rgbLUT[vi]; g = rgbLUT[vi + 1]; b = rgbLUT[vi + 2];
     }
     pointData[ptr++] = x;
@@ -518,7 +523,10 @@ function drawCanvas2D() {
   if (showCompletionHighlight) {
     ctx.fillStyle = colors.sorted;
     for (let i = 0; i < arrayLength; i++) {
-      ctx.fillRect(posLUTX[i] - dotRadius, posLUTY[i] - dotRadius, dotSize, dotSize);
+      const rr = (array[i] / maxValue) * spiralMaxR;
+      const x = spiralCx + rr * posLUTX[i];
+      const y = spiralCy + rr * posLUTY[i];
+      ctx.fillRect(x - dotRadius, y - dotRadius, dotSize, dotSize);
     }
   } else {
     const swapBucket = [];
@@ -536,8 +544,11 @@ function drawCanvas2D() {
     }
 
     for (const i of normalBucket) {
+      const rr = (array[i] / maxValue) * spiralMaxR;
+      const x = spiralCx + rr * posLUTX[i];
+      const y = spiralCy + rr * posLUTY[i];
       ctx.fillStyle = colorLUT[array[i]];
-      ctx.fillRect(posLUTX[i] - dotRadius, posLUTY[i] - dotRadius, dotSize, dotSize);
+      ctx.fillRect(x - dotRadius, y - dotRadius, dotSize, dotSize);
     }
 
     const highlightBuckets = [
@@ -551,7 +562,10 @@ function drawCanvas2D() {
       if (indices.length === 0) continue;
       ctx.fillStyle = color;
       for (const i of indices) {
-        ctx.fillRect(posLUTX[i] - dotRadius, posLUTY[i] - dotRadius, dotSize, dotSize);
+        const rr = (array[i] / maxValue) * spiralMaxR;
+        const x = spiralCx + rr * posLUTX[i];
+        const y = spiralCy + rr * posLUTY[i];
+        ctx.fillRect(x - dotRadius, y - dotRadius, dotSize, dotSize);
       }
     }
   }

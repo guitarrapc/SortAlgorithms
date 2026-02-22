@@ -34,11 +34,16 @@ window.spiralCanvasRenderer = {
   _spiralMaxRadiusRatio: 0.46,
 
   // 螺旋座標 LUT（Canvas 2D fallback 用）
+  // _posLUTX[i] = cos(theta_i), _posLUTY[i] = sin(theta_i)（角度のみ、インデックスから決定）
+  // 半径は描画時に要素の値から動的に計算する
   _posLUTLength: 0,
   _posLUTCanvasW: 0,
   _posLUTCanvasH: 0,
-  _posLUTX: null, // Float32Array
-  _posLUTY: null, // Float32Array
+  _posLUTX: null, // Float32Array: cos(theta_i)
+  _posLUTY: null, // Float32Array: sin(theta_i)
+  _spiralCx: 0,
+  _spiralCy: 0,
+  _spiralMaxR: 0,
 
   // HSL カラールックアップテーブル（Canvas 2D fallback 用）
   _colorLUTMax: -1,
@@ -316,19 +321,17 @@ window.spiralCanvasRenderer = {
     this._posLUTCanvasH = height;
     this._posLUTX = new Float32Array(n);
     this._posLUTY = new Float32Array(n);
-    const cx = width / 2;
-    const cy = height / 2;
+    this._spiralCx = width / 2;
+    this._spiralCy = height / 2;
     const minDim = Math.min(width, height);
-    const minR = minDim * this._spiralMinRadiusRatio;
-    const maxR = minDim * this._spiralMaxRadiusRatio;
+    this._spiralMaxR = minDim * this._spiralMaxRadiusRatio;
     const twoPI = 2 * Math.PI;
     const turns = this._spiralTurns;
     for (let i = 0; i < n; i++) {
       const t = n <= 1 ? 0 : i / (n - 1);
       const theta = t * turns * twoPI - Math.PI / 2;
-      const r = minR + (maxR - minR) * t;
-      this._posLUTX[i] = cx + r * Math.cos(theta);
-      this._posLUTY[i] = cy + r * Math.sin(theta);
+      this._posLUTX[i] = Math.cos(theta);
+      this._posLUTY[i] = Math.sin(theta);
     }
   },
 
@@ -386,7 +389,10 @@ window.spiralCanvasRenderer = {
     if (showCompletionHighlight) {
       ctx.fillStyle = this.colors.sorted;
       for (let i = 0; i < arrayLength; i++) {
-        ctx.fillRect(this._posLUTX[i] - dotRadius, this._posLUTY[i] - dotRadius, dotSize, dotSize);
+        const r = (array[i] / maxValue) * this._spiralMaxR;
+        const x = this._spiralCx + r * this._posLUTX[i];
+        const y = this._spiralCy + r * this._posLUTY[i];
+        ctx.fillRect(x - dotRadius, y - dotRadius, dotSize, dotSize);
       }
     } else {
       const swapBucket = [];
@@ -405,8 +411,11 @@ window.spiralCanvasRenderer = {
 
       // 通常色（HSLグラデーション）: 各要素で fillStyle が変わるため個別描画
       for (const i of normalBucket) {
+        const r = (array[i] / maxValue) * this._spiralMaxR;
+        const x = this._spiralCx + r * this._posLUTX[i];
+        const y = this._spiralCy + r * this._posLUTY[i];
         ctx.fillStyle = colorLUT[array[i]];
-        ctx.fillRect(this._posLUTX[i] - dotRadius, this._posLUTY[i] - dotRadius, dotSize, dotSize);
+        ctx.fillRect(x - dotRadius, y - dotRadius, dotSize, dotSize);
       }
 
       // ハイライト色をバッチ描画
@@ -421,7 +430,10 @@ window.spiralCanvasRenderer = {
         if (indices.length === 0) continue;
         ctx.fillStyle = color;
         for (const i of indices) {
-          ctx.fillRect(this._posLUTX[i] - dotRadius, this._posLUTY[i] - dotRadius, dotSize, dotSize);
+          const r = (array[i] / maxValue) * this._spiralMaxR;
+          const x = this._spiralCx + r * this._posLUTX[i];
+          const y = this._spiralCy + r * this._posLUTY[i];
+          ctx.fillRect(x - dotRadius, y - dotRadius, dotSize, dotSize);
         }
       }
     }
