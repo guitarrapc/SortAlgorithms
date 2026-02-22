@@ -12,7 +12,7 @@ window.soundEngine = {
     _audioContext: null,
     _output: null,    // DynamicsCompressor → destination
     _voices: [],      // 固定ボイスプール: { osc, gain, freeAt }
-    _voiceCount: 16,  // 最大ポリフォニー数（10x 時の最大同時発音数 ≈ 9 をカバー）
+    _voiceCount: 32,  // 最大ポリフォニー数（240Hz 表示でも横取りなし: 3音 × ceil(40ms/4ms) = 30）
 
     /**
      * AudioContext を初期化・再開する。ユーザー操作（トグル押下など）後に呼ぶ。
@@ -123,17 +123,28 @@ window.soundEngine = {
             if (freq <= 0) continue;
 
             const voice = this._acquireVoice(now);
+            const stealing = voice.freeAt > now;
 
-            // 周波数を上書き
-            voice.osc.frequency.setValueAtTime(freq, now);
+            // 周波数を上書き（横取り時は 2ms 後から変化）
+            voice.osc.frequency.setValueAtTime(freq, stealing ? now + 0.002 : now);
 
-            // 既存スケジュールをキャンセルし、0 → ピーク（5ms）→ 0 のエンベロープを設定
+            // 既存スケジュールをキャンセルしてエンベロープを設定
             voice.gain.gain.cancelScheduledValues(now);
-            voice.gain.gain.setValueAtTime(0.0, now);
-            voice.gain.gain.linearRampToValueAtTime(gainPerNote, now + attackSec);
-            voice.gain.gain.linearRampToValueAtTime(0.0, now + durationSec);
-
-            voice.freeAt = now + durationSec;
+            if (stealing) {
+                // スムーズな横取り: 現在値から 2ms でフェードアウトして新音を開始
+                const currentGain = voice.gain.gain.value;
+                voice.gain.gain.setValueAtTime(currentGain, now);
+                voice.gain.gain.linearRampToValueAtTime(0.0, now + 0.002);
+                voice.gain.gain.linearRampToValueAtTime(gainPerNote, now + 0.002 + attackSec);
+                voice.gain.gain.linearRampToValueAtTime(0.0, now + 0.002 + durationSec);
+                voice.freeAt = now + 0.002 + durationSec;
+            } else {
+                // 通常割り当て: 0 → ピーク（5ms）→ 0
+                voice.gain.gain.setValueAtTime(0.0, now);
+                voice.gain.gain.linearRampToValueAtTime(gainPerNote, now + attackSec);
+                voice.gain.gain.linearRampToValueAtTime(0.0, now + durationSec);
+                voice.freeAt = now + durationSec;
+            }
         }
     },
 
