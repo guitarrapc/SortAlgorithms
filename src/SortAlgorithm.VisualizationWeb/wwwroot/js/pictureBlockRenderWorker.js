@@ -15,6 +15,14 @@ let isLoopRunning = false;
 // 画像ブロックデータ
 let imageBitmap = null;    // 元画像（ImageBitmap）
 let imageNumBlocks = 0;    // 総ブロック数（= 配列サイズ）
+let pendingImageRequestId = 0; // setImage リクエスト追跡（古い非同期結果を破棄するため）
+
+// ImageData 高速描画パス用キャッシュ
+// n × drawImage（Chrome NP 200ms+）→ putImageData 1回（~10ms）に削減する
+let preScaledPixels = null;   // Uint8ClampedArray: physW × physH に事前スケール済み画像
+let preScaledPhysW = 0;       // preScaledPixels を構築した物理キャンバス幅
+let preScaledPhysH = 0;       // preScaledPixels を構築した物理キャンバス高さ
+let outputImageData = null;   // 再利用可能な出力 ImageData（physW × physH）
 
 // ハイライト色（RGBA）
 const OVERLAY_COMPARE = 'rgba(168,85,247,0.5)';   // 紫
@@ -47,6 +55,124 @@ function calcGrid(n) {
   return { cols, rows };
 }
 
+/**
+ * imageBitmap をキャンバス全体にスケールしてピクセルをキャッシュする。
+ * ソート済み配列の状態でブロック i が (i%cols, floor(i/cols)) の位置に配置される。
+ * setImageBitmap / resize 時に呼び出す。
+ */
+function buildPreScaledPixels() {
+  preScaledPixels = null;
+  preScaledPhysW = 0;
+  preScaledPhysH = 0;
+  if (!imageBitmap || imageNumBlocks <= 0 || !offscreen) return;
+  const physW = offscreen.width;
+  const physH = offscreen.height;
+  if (physW <= 0 || physH <= 0) return;
+  try {
+    const tmp = new OffscreenCanvas(physW, physH);
+    const tmpCtx = tmp.getContext('2d', { alpha: false });
+    tmpCtx.imageSmoothingEnabled = true;
+    tmpCtx.drawImage(imageBitmap, 0, 0, physW, physH);
+    const imgData = tmpCtx.getImageData(0, 0, physW, physH);
+    preScaledPixels = imgData.data;
+    preScaledPhysW = physW;
+    preScaledPhysH = physH;
+  } catch (_) {
+    preScaledPixels = null;
+  }
+}
+
+/**
+ * ImageData を使った高速描画（ブロックモード）。n × drawImage を
+ * ブロック単位 set() コピー + putImageData × 1 回に置き換える。
+ * 戻り値: true = 描画成功、false = フォールバックが必要
+ */
+function drawFast() {
+  if (!preScaledPixels) return false;
+  const physW = offscreen.width;
+  const physH = offscreen.height;
+  if (preScaledPhysW !== physW || preScaledPhysH !== physH) {
+    buildPreScaledPixels();
+    if (!preScaledPixels) return false;
+  }
+  const array = arrays.main;
+  const n = array.length;
+  if (n === 0) return true;
+
+  if (!outputImageData || outputImageData.width !== physW || outputImageData.height !== physH) {
+    outputImageData = new ImageData(physW, physH);
+  }
+
+  const out = outputImageData.data;
+  new Uint32Array(out.buffer).fill(0xFF1A1A1A);
+
+  let minVal = array[0];
+  for (let i = 1; i < n; i++) { if (array[i] < minVal) minVal = array[i]; }
+
+  const { cols, rows } = calcGrid(n);
+  const blockPhysW = physW / cols;
+  const blockPhysH = physH / rows;
+
+  const preScaled32 = new Uint32Array(preScaledPixels.buffer);
+  const out32 = new Uint32Array(out.buffer);
+
+  for (let i = 0; i < n; i++) {
+    const blockIdx = array[i] - minVal;
+    if (blockIdx < 0 || blockIdx >= imageNumBlocks) continue;
+    const dstRow = Math.floor(i / cols);
+    const dstCol = i % cols;
+    const srcRow = Math.floor(blockIdx / cols);
+    const srcCol = blockIdx % cols;
+
+    const dstX = Math.round(dstCol * blockPhysW);
+    const dstY = Math.round(dstRow * blockPhysH);
+    const dstW = Math.max(1, Math.round((dstCol + 1) * blockPhysW) - dstX);
+    const dstH = Math.max(1, Math.round((dstRow + 1) * blockPhysH) - dstY);
+    const srcX = Math.round(srcCol * blockPhysW);
+    const srcY = Math.round(srcRow * blockPhysH);
+
+    for (let r = 0; r < dstH; r++) {
+      if (dstY + r >= physH || srcY + r >= physH) break;
+      const sBase = (srcY + r) * physW + srcX;
+      const dBase = (dstY + r) * physW + dstX;
+      out32.set(preScaled32.subarray(sBase, sBase + dstW), dBase);
+    }
+  }
+
+  ctx.putImageData(outputImageData, 0, 0);
+
+  const { compareIndices, swapIndices, readIndices, writeIndices, showCompletionHighlight } = renderParams;
+  const cssW = physW / dpr;
+  const cssH = physH / dpr;
+  if (showCompletionHighlight) {
+    ctx.fillStyle = COLOR_SORTED;
+    ctx.fillRect(0, 0, cssW, cssH);
+  } else {
+    const blockCssW = cssW / cols;
+    const blockCssH = cssH / rows;
+    const applyOverlay = function (indices, color) {
+      if (!indices || indices.length === 0) return;
+      ctx.fillStyle = color;
+      for (let k = 0; k < indices.length; k++) {
+        const idx = indices[k];
+        const dRow = Math.floor(idx / cols);
+        const dCol = idx % cols;
+        const dx = Math.round(dCol * blockCssW);
+        const dy = Math.round(dRow * blockCssH);
+        const dw = Math.max(1, Math.round((dCol + 1) * blockCssW) - dx);
+        const dh = Math.max(1, Math.round((dRow + 1) * blockCssH) - dy);
+        ctx.fillRect(dx, dy, dw, dh);
+      }
+    };
+    applyOverlay(swapIndices, OVERLAY_SWAP);
+    applyOverlay(compareIndices, OVERLAY_COMPARE);
+    applyOverlay(writeIndices, OVERLAY_WRITE);
+    applyOverlay(readIndices, OVERLAY_READ);
+  }
+
+  return true;
+}
+
 const _raf = typeof requestAnimationFrame !== 'undefined'
   ? (cb) => requestAnimationFrame(cb)
   : (cb) => setTimeout(cb, 1000 / 60);
@@ -72,9 +198,12 @@ function drawLoop() {
 }
 
 function draw() {
-  if (!offscreen || !ctx || !arrays.main) return;
+if (!offscreen || !ctx || !arrays.main) return;
 
-  const W = offscreen.width;
+// 画像モード: ImageData 高速パス（n × drawImage → putImageData 1回）
+if (imageBitmap && imageNumBlocks > 0 && drawFast()) return;
+
+const W = offscreen.width;
   const H = offscreen.height;
   const cssW = W / dpr;
   const cssH = H / dpr;
@@ -214,11 +343,22 @@ self.onmessage = function (e) {
         ? msg.imageBlob
         : (msg.imageBuffer ? new Blob([msg.imageBuffer], { type: msg.mimeType || 'image/png' }) : null);
       if (!blobOrBuffer) break;
+
+      const requestId = ++pendingImageRequestId;
+      if (imageBitmap) { imageBitmap.close(); }
+      imageBitmap = null;
+      imageNumBlocks = 0;
+      preScaledPixels = null;
+      if (arrays.main && renderParams) scheduleDraw();
+
       createImageBitmap(blobOrBuffer).then(function (bmp) {
+        if (requestId !== pendingImageRequestId) { bmp.close(); return; }
         imageBitmap = bmp;
         imageNumBlocks = msg.numBlocks;
+        buildPreScaledPixels();
         if (arrays.main && renderParams) scheduleDraw();
       }).catch(function () {
+        if (requestId !== pendingImageRequestId) return;
         imageBitmap = null;
         imageNumBlocks = 0;
         if (arrays.main && renderParams) scheduleDraw();
@@ -227,8 +367,21 @@ self.onmessage = function (e) {
     }
 
     case 'clearImage': {
+      if (imageBitmap) { imageBitmap.close(); }
       imageBitmap = null;
       imageNumBlocks = 0;
+      preScaledPixels = null;
+      preScaledPhysW = 0;
+      preScaledPhysH = 0;
+      if (arrays.main && renderParams) scheduleDraw();
+      break;
+    }
+
+    case 'setImageBitmap': {
+      if (imageBitmap) { imageBitmap.close(); }
+      imageBitmap = msg.bitmap;
+      imageNumBlocks = msg.numBlocks;
+      buildPreScaledPixels();
       if (arrays.main && renderParams) scheduleDraw();
       break;
     }
@@ -295,6 +448,7 @@ self.onmessage = function (e) {
         offscreen.height = msg.newHeight;
         dpr = msg.dpr || dpr;
         ctx.scale(dpr, dpr);
+        buildPreScaledPixels();
         if (renderParams && arrays.main) scheduleDraw();
       }
       break;
@@ -305,8 +459,14 @@ self.onmessage = function (e) {
       ctx = null;
       arrays = { main: null, buffers: new Map() };
       renderParams = null;
+      if (imageBitmap) { imageBitmap.close(); }
       imageBitmap = null;
       imageNumBlocks = 0;
+      pendingImageRequestId = 0;
+      preScaledPixels = null;
+      preScaledPhysW = 0;
+      preScaledPhysH = 0;
+      outputImageData = null;
       break;
     }
   }

@@ -15,6 +15,15 @@ let isLoopRunning = false;
 // 画像列データ
 let imageBitmap = null;    // 元画像（ImageBitmap）
 let imageNumCols = 0;      // 画像を分割した列数
+let pendingImageRequestId = 0; // setImage リクエスト追跡（古い非同期結果を破棄するため）
+
+// ImageData 高速描画パス用キャッシュ
+// n × drawImage（Chrome NP 200ms+）→ putImageData 1回（~10ms）に削減する
+let preScaledPixels = null;   // Uint8ClampedArray: キャンバス物理高さに事前スケールした列ピクセル
+let preScaledNumCols = 0;     // preScaledPixels の列数（= imageNumCols）
+let preScaledPhysH = 0;       // preScaledPixels を構築した物理キャンバス高さ
+let outputImageData = null;   // 再利用可能な出力 ImageData（physW × physH）
+let colMappingBuffer = null;  // 再利用可能な逆引きマップ（物理列 → 配列インデックス）
 
 // ハイライト色（RGBA）
 const OVERLAY_COMPARE = 'rgba(168,85,247,0.5)';   // 紫
@@ -35,6 +44,115 @@ function buildColorLUT(maxValue) {
     const hue = (v / maxValue) * 360;
     colorLUT[v] = `hsl(${hue}, 70%, 55%)`;
   }
+}
+
+// imageBitmap をキャンバス物理高さに事前スケールし、列ピクセルをキャッシュする。
+// setImageBitmap / resize 時に呼び出すことで draw() の高速パスが有効になる。
+function buildPreScaledPixels() {
+  preScaledPixels = null;
+  preScaledNumCols = 0;
+  preScaledPhysH = 0;
+  if (!imageBitmap || imageNumCols <= 0 || !offscreen) return;
+  const physH = offscreen.height;
+  if (physH <= 0) return;
+  try {
+    // imageBitmap を imageNumCols × physH の一時 OffscreenCanvas に描画して列データを抽出
+    // 各ソース列が 1px 幅になることで列ピクセルを効率的にキャッシュできる
+    const tmp = new OffscreenCanvas(imageNumCols, physH);
+    const tmpCtx = tmp.getContext('2d', { alpha: false });
+    tmpCtx.imageSmoothingEnabled = true;
+    tmpCtx.drawImage(imageBitmap, 0, 0, imageNumCols, physH);
+    const imgData = tmpCtx.getImageData(0, 0, imageNumCols, physH);
+    preScaledPixels = imgData.data; // Uint8ClampedArray: row0_col0..colN, row1_col0..colN, ...
+    preScaledNumCols = imageNumCols;
+    preScaledPhysH = physH;
+  } catch (_) {
+    preScaledPixels = null;
+  }
+}
+
+// ImageData を使った高速描画（列モード）。n × drawImage を
+// Uint32 gather × physW×physH + putImageData × 1 回に置き換える。
+// 戻り値: true = 描画成功、false = フォールバックが必要
+function drawFast() {
+  if (!preScaledPixels) return false;
+  const physW = offscreen.width;
+  const physH = offscreen.height;
+  if (preScaledPhysH !== physH) {
+    buildPreScaledPixels();
+    if (!preScaledPixels) return false;
+  }
+  const array = arrays.main;
+  const n = array.length;
+  if (n === 0) return true;
+
+  if (!outputImageData || outputImageData.width !== physW || outputImageData.height !== physH) {
+    outputImageData = new ImageData(physW, physH);
+    colMappingBuffer = new Int32Array(physW);
+  }
+
+  const out = outputImageData.data;
+  new Uint32Array(out.buffer).fill(0xFF1A1A1A);
+
+  let minVal = array[0];
+  for (let i = 1; i < n; i++) { if (array[i] < minVal) minVal = array[i]; }
+
+  const colW_phys = physW / n;
+
+  // 逆引きマップ構築: 各物理列に「最後に書き込む配列インデックス」を記録
+  const colMap = colMappingBuffer;
+  colMap.fill(-1);
+  for (let i = 0; i < n; i++) {
+    const dstX = Math.round(i * colW_phys);
+    const dstW = Math.max(1, Math.round((i + 1) * colW_phys) - dstX);
+    const end = Math.min(dstX + dstW, physW);
+    for (let c = dstX; c < end; c++) colMap[c] = i;
+  }
+
+  // Uint32 gather: 行ごとに列マップを使って各出力ピクセルのソース色を取得
+  // preScaled は [row][col] レイアウト（各行が imageNumCols 列のピクセルを持つ）
+  const preScaled32 = new Uint32Array(preScaledPixels.buffer);
+  const out32 = new Uint32Array(out.buffer);
+
+  for (let py = 0; py < physH; py++) {
+    const srcBase = py * preScaledNumCols; // この行の先頭インデックス（Uint32）
+    const dstBase = py * physW;
+    for (let px = 0; px < physW; px++) {
+      const i = colMap[px];
+      if (i < 0) continue;
+      const colIdx = array[i] - minVal;
+      if (colIdx < 0 || colIdx >= preScaledNumCols) continue;
+      out32[dstBase + px] = preScaled32[srcBase + colIdx];
+    }
+  }
+
+  ctx.putImageData(outputImageData, 0, 0);
+
+  const { compareIndices, swapIndices, readIndices, writeIndices, showCompletionHighlight } = renderParams;
+  const cssW = physW / dpr;
+  const cssH = physH / dpr;
+  if (showCompletionHighlight) {
+    ctx.fillStyle = COLOR_SORTED;
+    ctx.fillRect(0, 0, cssW, cssH);
+  } else {
+    const colW_css = cssW / n;
+    const applyOverlay = function (indices, color) {
+      if (!indices || indices.length === 0) return;
+      ctx.fillStyle = color;
+      for (let k = 0; k < indices.length; k++) {
+        const idx = indices[k];
+        const dx = Math.round(idx * colW_css);
+        const dw = Math.max(1, Math.round((idx + 1) * colW_css) - dx);
+        ctx.fillRect(dx, 0, dw, cssH);
+      }
+    };
+    applyOverlay(swapIndices, OVERLAY_SWAP);
+    applyOverlay(compareIndices, OVERLAY_COMPARE);
+    applyOverlay(writeIndices, OVERLAY_WRITE);
+    applyOverlay(readIndices, OVERLAY_READ);
+  }
+
+  return true;
 }
 
 const _raf = typeof requestAnimationFrame !== 'undefined'
@@ -62,9 +180,12 @@ function drawLoop() {
 }
 
 function draw() {
-  if (!offscreen || !ctx || !arrays.main) return;
+if (!offscreen || !ctx || !arrays.main) return;
 
-  const W = offscreen.width;
+// 画像モード: ImageData 高速パス（n × drawImage → putImageData 1回）
+if (imageBitmap && imageNumCols > 0 && drawFast()) return;
+
+const W = offscreen.width;
   const H = offscreen.height;
   const cssW = W / dpr;
   const cssH = H / dpr;
@@ -182,15 +303,48 @@ self.onmessage = function (e) {
         ? msg.imageBlob
         : (msg.imageBuffer ? new Blob([msg.imageBuffer], { type: msg.mimeType || 'image/png' }) : null);
       if (!blobOrBuffer) break;
+
+      // 古い bitmap を即座に無効化し、createImageBitmap 完了前に setArray が届いても
+      // draw() がバーモード fallback になるようにする（下半分ブラック防止）
+      const requestId = ++pendingImageRequestId;
+      if (imageBitmap) { imageBitmap.close(); }
+      imageBitmap = null;
+      imageNumCols = 0;
+      preScaledPixels = null;
+      if (arrays.main && renderParams) scheduleDraw();
+
       createImageBitmap(blobOrBuffer).then(function (bmp) {
+        if (requestId !== pendingImageRequestId) { bmp.close(); return; }
         imageBitmap = bmp;
         imageNumCols = msg.numCols;
+        buildPreScaledPixels();
         if (arrays.main && renderParams) scheduleDraw();
       }).catch(function () {
+        if (requestId !== pendingImageRequestId) return;
         imageBitmap = null;
         imageNumCols = 0;
         if (arrays.main && renderParams) scheduleDraw();
       });
+      break;
+    }
+
+    case 'clearImage': {
+      if (imageBitmap) { imageBitmap.close(); }
+      imageBitmap = null;
+      imageNumCols = 0;
+      preScaledPixels = null;
+      preScaledNumCols = 0;
+      preScaledPhysH = 0;
+      if (arrays.main && renderParams) scheduleDraw();
+      break;
+    }
+
+    case 'setImageBitmap': {
+      if (imageBitmap) { imageBitmap.close(); }
+      imageBitmap = msg.bitmap;
+      imageNumCols = msg.numCols;
+      buildPreScaledPixels();
+      if (arrays.main && renderParams) scheduleDraw();
       break;
     }
 
@@ -263,6 +417,7 @@ self.onmessage = function (e) {
         offscreen.height = msg.newHeight;
         dpr = msg.dpr || dpr;
         ctx.scale(dpr, dpr);
+        buildPreScaledPixels();
         if (renderParams && arrays.main) scheduleDraw();
       }
       break;
@@ -273,8 +428,15 @@ self.onmessage = function (e) {
       ctx = null;
       arrays = { main: null, buffers: new Map() };
       renderParams = null;
+      if (imageBitmap) { imageBitmap.close(); }
       imageBitmap = null;
       imageNumCols = 0;
+      pendingImageRequestId = 0;
+      preScaledPixels = null;
+      preScaledNumCols = 0;
+      preScaledPhysH = 0;
+      outputImageData = null;
+      colMappingBuffer = null;
       break;
     }
   }
