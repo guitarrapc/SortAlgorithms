@@ -23,6 +23,12 @@ window.pictureRowCanvasRenderer = {
   // 画像データ（Canvas 2D フォールバック用）
   _images: new Map(), // canvasId → { img: HTMLImageElement | null, numRows: number }
 
+  // 画像 Blob キャッシュ（同じ dataUrl の atob 処理を1回に削減）
+  // ComparisonMode で複数 Canvas が同じ画像を使う場合に有効
+  _imageBlobCache: new Map(),   // dataUrl → { blob, mimeType }
+  _imageBlobCacheKeys: [],      // FIFO キー管理（最大 5 件）
+  _maxBlobCacheSize: 5,
+
   // HSL カラー LUT（Canvas 2D fallback 用）
   _colorLUTMax: -1,
   _colorLUT: null,
@@ -128,6 +134,16 @@ window.pictureRowCanvasRenderer = {
    * @param {string} dataUrl - data:image/...;base64,... 形式
    * @param {number} numRows - 画像を分割する行数（= 配列サイズ）
    */
+  _cacheBlob: function (dataUrl, blob, mimeType) {
+    if (this._imageBlobCache.has(dataUrl)) return;
+    if (this._imageBlobCacheKeys.length >= this._maxBlobCacheSize) {
+      const oldKey = this._imageBlobCacheKeys.shift();
+      this._imageBlobCache.delete(oldKey);
+    }
+    this._imageBlobCache.set(dataUrl, { blob, mimeType });
+    this._imageBlobCacheKeys.push(dataUrl);
+  },
+
   setImage: async function (canvasId, dataUrl, numRows) {
     if (!dataUrl || numRows <= 0) return;
 
@@ -136,23 +152,23 @@ window.pictureRowCanvasRenderer = {
     const workerInfo = this.workers.get(canvasId);
     if (workerInfo) {
       try {
-        // data URL → ArrayBuffer（Worker へ転送するため）
-        const base64 = dataUrl.split(',')[1];
-        const mimeMatch = dataUrl.match(/data:([^;]+);/);
-        const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
-
-        const binaryString = atob(base64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        // Blob キャッシュを利用（同じ dataUrl なら atob は1回だけ実行）
+        let cached = this._imageBlobCache.get(dataUrl);
+        if (!cached) {
+          const base64 = dataUrl.split(',')[1];
+          const mimeMatch = dataUrl.match(/data:([^;]+);/);
+          const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+          const binaryString = atob(base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes.buffer], { type: mimeType });
+          this._cacheBlob(dataUrl, blob, mimeType);
+          cached = { blob, mimeType };
         }
-        const buffer = bytes.buffer;
-
-        // ArrayBuffer を Worker へ転送（零コピー）
-        workerInfo.worker.postMessage(
-          { type: 'setImage', imageBuffer: buffer, mimeType, numRows },
-          [buffer]
-        );
+        // Blob を Worker へ送信（構造化クローン - 内部データ共有）
+        workerInfo.worker.postMessage({ type: 'setImage', imageBlob: cached.blob, numRows });
       } catch (err) {
         window.debugHelper.error('PictureRow setImage error:', err);
       }
@@ -161,8 +177,24 @@ window.pictureRowCanvasRenderer = {
 
     // Canvas 2D フォールバック: HTMLImageElement を生成
     const self = this;
+    let cached = this._imageBlobCache.get(dataUrl);
+    if (!cached) {
+      const base64 = dataUrl.split(',')[1];
+      const mimeMatch = dataUrl.match(/data:([^;]+);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes.buffer], { type: mimeType });
+      this._cacheBlob(dataUrl, blob, mimeType);
+      cached = { blob, mimeType };
+    }
+    const blobUrl = URL.createObjectURL(cached.blob);
     const img = new Image();
     img.onload = function () {
+      URL.revokeObjectURL(blobUrl);
       self._images.set(canvasId, { img, numRows });
       const lastParams = self.lastRenderParams.get(canvasId);
       if (lastParams) {
@@ -170,7 +202,7 @@ window.pictureRowCanvasRenderer = {
         self.startLoop();
       }
     };
-    img.src = dataUrl;
+    img.src = blobUrl;
     this._images.set(canvasId, { img: null, numRows });
   },
 
@@ -329,6 +361,8 @@ window.pictureRowCanvasRenderer = {
     if (img && numRows > 0 && img.complete) {
       // 画像行モード
       const srcRowH = img.naturalHeight / numRows;
+      // サブピクセル描画を抑制
+      ctx.imageSmoothingEnabled = false;
       // 値を 0..numRows-1 に正規化（全パターン対応）
       let minVal = array[0];
       for (let i = 1; i < n; i++) { if (array[i] < minVal) minVal = array[i]; }
@@ -337,7 +371,9 @@ window.pictureRowCanvasRenderer = {
         for (let i = 0; i < n; i++) {
           const rowIdx = array[i] - minVal;
           if (rowIdx < 0 || rowIdx >= numRows) continue;
-          ctx.drawImage(img, 0, rowIdx * srcRowH, img.naturalWidth, srcRowH, 0, i * rowH, width, rowH);
+          const dstY = Math.round(i * rowH);
+          const dstH = Math.max(1, Math.round((i + 1) * rowH) - dstY);
+          ctx.drawImage(img, 0, rowIdx * srcRowH, img.naturalWidth, srcRowH, 0, dstY, width, dstH);
         }
         ctx.fillStyle = 'rgba(16,185,129,0.3)';
         ctx.fillRect(0, 0, width, height);
@@ -345,7 +381,9 @@ window.pictureRowCanvasRenderer = {
         for (let i = 0; i < n; i++) {
           const rowIdx = array[i] - minVal;
           if (rowIdx < 0 || rowIdx >= numRows) continue;
-          ctx.drawImage(img, 0, rowIdx * srcRowH, img.naturalWidth, srcRowH, 0, i * rowH, width, rowH);
+          const dstY = Math.round(i * rowH);
+          const dstH = Math.max(1, Math.round((i + 1) * rowH) - dstY);
+          ctx.drawImage(img, 0, rowIdx * srcRowH, img.naturalWidth, srcRowH, 0, dstY, width, dstH);
 
           let overlay = null;
           if (swapSet.has(i))         overlay = 'rgba(239,68,68,0.55)';
@@ -354,7 +392,7 @@ window.pictureRowCanvasRenderer = {
           else if (readSet.has(i))    overlay = 'rgba(251,191,36,0.35)';
           if (overlay) {
             ctx.fillStyle = overlay;
-            ctx.fillRect(0, i * rowH, width, rowH + 0.5);
+            ctx.fillRect(0, dstY, width, dstH);
           }
         }
       }

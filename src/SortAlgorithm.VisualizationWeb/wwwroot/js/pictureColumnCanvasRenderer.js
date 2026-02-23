@@ -16,6 +16,11 @@ window.pictureColumnCanvasRenderer = {
 
   _images: new Map(),  // canvasId → { img: HTMLImageElement | null, numCols: number }
 
+  // 画像 Blob キャッシュ（同じ dataUrl の atob 処理を1回に削減）
+  _imageBlobCache: new Map(),
+  _imageBlobCacheKeys: [],
+  _maxBlobCacheSize: 5,
+
   _colorLUTMax: -1,
   _colorLUT: null,
 
@@ -118,6 +123,16 @@ window.pictureColumnCanvasRenderer = {
    * @param {string} dataUrl - data:image/...;base64,... 形式
    * @param {number} numCols - 画像を分割する列数（= 配列サイズ）
    */
+  _cacheBlob: function (dataUrl, blob, mimeType) {
+    if (this._imageBlobCache.has(dataUrl)) return;
+    if (this._imageBlobCacheKeys.length >= this._maxBlobCacheSize) {
+      const oldKey = this._imageBlobCacheKeys.shift();
+      this._imageBlobCache.delete(oldKey);
+    }
+    this._imageBlobCache.set(dataUrl, { blob, mimeType });
+    this._imageBlobCacheKeys.push(dataUrl);
+  },
+
   setImage: async function (canvasId, dataUrl, numCols) {
     if (!dataUrl || numCols <= 0) return;
 
@@ -126,21 +141,21 @@ window.pictureColumnCanvasRenderer = {
     const workerInfo = this.workers.get(canvasId);
     if (workerInfo) {
       try {
-        const base64 = dataUrl.split(',')[1];
-        const mimeMatch = dataUrl.match(/data:([^;]+);/);
-        const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
-
-        const binaryString = atob(base64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        let cached = this._imageBlobCache.get(dataUrl);
+        if (!cached) {
+          const base64 = dataUrl.split(',')[1];
+          const mimeMatch = dataUrl.match(/data:([^;]+);/);
+          const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+          const binaryString = atob(base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes.buffer], { type: mimeType });
+          this._cacheBlob(dataUrl, blob, mimeType);
+          cached = { blob, mimeType };
         }
-        const buffer = bytes.buffer;
-
-        workerInfo.worker.postMessage(
-          { type: 'setImage', imageBuffer: buffer, mimeType, numCols },
-          [buffer]
-        );
+        workerInfo.worker.postMessage({ type: 'setImage', imageBlob: cached.blob, numCols });
       } catch (err) {
         window.debugHelper.error('PictureColumn setImage error:', err);
       }
@@ -148,8 +163,24 @@ window.pictureColumnCanvasRenderer = {
     }
 
     const self = this;
+    let cached = this._imageBlobCache.get(dataUrl);
+    if (!cached) {
+      const base64 = dataUrl.split(',')[1];
+      const mimeMatch = dataUrl.match(/data:([^;]+);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes.buffer], { type: mimeType });
+      this._cacheBlob(dataUrl, blob, mimeType);
+      cached = { blob, mimeType };
+    }
+    const blobUrl = URL.createObjectURL(cached.blob);
     const img = new Image();
     img.onload = function () {
+      URL.revokeObjectURL(blobUrl);
       self._images.set(canvasId, { img, numCols });
       const lastParams = self.lastRenderParams.get(canvasId);
       if (lastParams) {
@@ -157,7 +188,7 @@ window.pictureColumnCanvasRenderer = {
         self.startLoop();
       }
     };
-    img.src = dataUrl;
+    img.src = blobUrl;
     this._images.set(canvasId, { img: null, numCols });
   },
 

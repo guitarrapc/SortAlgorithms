@@ -15,6 +15,7 @@ let isLoopRunning = false;
 // 画像行データ
 let imageBitmap = null;    // 元画像（ImageBitmap）
 let imageNumRows = 0;      // 画像を分割した行数
+let pendingImageRequestId = 0; // setImage リクエスト追跡（古い非同期結果を破棄するため）
 
 // ハイライト色（RGBA）
 const OVERLAY_COMPARE = 'rgba(168,85,247,0.5)';   // 紫
@@ -92,6 +93,9 @@ function draw() {
     const imgH = imageBitmap.height;
     const srcRowH = imgH / imageNumRows;
 
+    // サブピクセル描画を抑制（アンチエイリアス無効で画質向上・高速化）
+    ctx.imageSmoothingEnabled = false;
+
     // 値を 0..imageNumRows-1 に正規化（全パターン対応）
     let minVal = array[0];
     for (let i = 1; i < n; i++) { if (array[i] < minVal) minVal = array[i]; }
@@ -101,8 +105,10 @@ function draw() {
         const rowIdx = array[i] - minVal;
         if (rowIdx < 0 || rowIdx >= imageNumRows) continue;
         const srcY = rowIdx * srcRowH;
-        const dstY = i * rowH;
-        ctx.drawImage(imageBitmap, 0, srcY, imgW, srcRowH, 0, dstY, cssW, rowH);
+        // Math.round で整数ピクセル境界に正規化（隙間/わしかまり防止）
+        const dstY = Math.round(i * rowH);
+        const dstH = Math.max(1, Math.round((i + 1) * rowH) - dstY);
+        ctx.drawImage(imageBitmap, 0, srcY, imgW, srcRowH, 0, dstY, cssW, dstH);
       }
       ctx.fillStyle = COLOR_SORTED;
       ctx.fillRect(0, 0, cssW, cssH);
@@ -111,10 +117,13 @@ function draw() {
         const rowIdx = array[i] - minVal;
         if (rowIdx < 0 || rowIdx >= imageNumRows) continue;
         const srcY = rowIdx * srcRowH;
-        const dstY = i * rowH;
+
+        // Math.round で整数ピクセル境界に正規化
+        const dstY = Math.round(i * rowH);
+        const dstH = Math.max(1, Math.round((i + 1) * rowH) - dstY);
 
         // 画像行を描画
-        ctx.drawImage(imageBitmap, 0, srcY, imgW, srcRowH, 0, dstY, cssW, rowH);
+        ctx.drawImage(imageBitmap, 0, srcY, imgW, srcRowH, 0, dstY, cssW, dstH);
 
         // ハイライトオーバーレイ
         let overlay = null;
@@ -125,7 +134,7 @@ function draw() {
 
         if (overlay) {
           ctx.fillStyle = overlay;
-          ctx.fillRect(0, dstY, cssW, rowH + 0.5); // +0.5 で隙間をつぶす
+          ctx.fillRect(0, dstY, cssW, dstH);
         }
       }
     }
@@ -173,13 +182,27 @@ self.onmessage = function (e) {
     }
 
     case 'setImage': {
-      // ArrayBuffer から ImageBitmap を生成（非同期）
-      const blob = new Blob([msg.imageBuffer], { type: msg.mimeType || 'image/png' });
-      createImageBitmap(blob).then(function (bmp) {
+      // Blob（優先）または ArrayBuffer（後方互換）から ImageBitmap を生成
+      const blobOrBuffer = msg.imageBlob
+        ? msg.imageBlob
+        : (msg.imageBuffer ? new Blob([msg.imageBuffer], { type: msg.mimeType || 'image/png' }) : null);
+      if (!blobOrBuffer) break;
+
+      // 古い bitmap を即座に無効化し、createImageBitmap 完了前に setArray が届いても
+      // draw() がバーモード fallback になるようにする（下半分ブラック防止）
+      const requestId = ++pendingImageRequestId;
+      imageBitmap = null;
+      imageNumRows = 0;
+      if (arrays.main && renderParams) scheduleDraw();
+
+      createImageBitmap(blobOrBuffer).then(function (bmp) {
+        // 後続の setImage が来ていた場合は古い結果を破棄
+        if (requestId !== pendingImageRequestId) return;
         imageBitmap = bmp;
         imageNumRows = msg.numRows;
         if (arrays.main && renderParams) scheduleDraw();
       }).catch(function (err) {
+        if (requestId !== pendingImageRequestId) return;
         // ImageBitmap 生成失敗時は画像なしモードで描画
         imageBitmap = null;
         imageNumRows = 0;
@@ -269,6 +292,7 @@ self.onmessage = function (e) {
       renderParams = null;
       imageBitmap = null;
       imageNumRows = 0;
+      pendingImageRequestId = 0;
       break;
     }
   }

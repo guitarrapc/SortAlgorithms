@@ -86,11 +86,15 @@ function draw() {
   const readSet    = new Set(readIndices);
   const writeSet   = new Set(writeIndices);
 
+
   if (imageBitmap && imageNumCols > 0) {
     // ── 画像列モード ──────────────────────────────────────────────────
     const imgW = imageBitmap.width;
     const imgH = imageBitmap.height;
     const srcColW = imgW / imageNumCols;
+
+    // サブピクセル描画を抑制
+    ctx.imageSmoothingEnabled = false;
 
     // 値を 0..imageNumCols-1 に正規化（全パターン対応）
     let minVal = array[0];
@@ -101,8 +105,9 @@ function draw() {
         const colIdx = array[i] - minVal;
         if (colIdx < 0 || colIdx >= imageNumCols) continue;
         const srcX = colIdx * srcColW;
-        const dstX = i * colW;
-        ctx.drawImage(imageBitmap, srcX, 0, srcColW, imgH, dstX, 0, colW, cssH);
+        const dstX = Math.round(i * colW);
+        const dstW = Math.max(1, Math.round((i + 1) * colW) - dstX);
+        ctx.drawImage(imageBitmap, srcX, 0, srcColW, imgH, dstX, 0, dstW, cssH);
       }
       ctx.fillStyle = COLOR_SORTED;
       ctx.fillRect(0, 0, cssW, cssH);
@@ -111,10 +116,11 @@ function draw() {
         const colIdx = array[i] - minVal;
         if (colIdx < 0 || colIdx >= imageNumCols) continue;
         const srcX = colIdx * srcColW;
-        const dstX = i * colW;
+        const dstX = Math.round(i * colW);
+        const dstW = Math.max(1, Math.round((i + 1) * colW) - dstX);
 
         // 画像列を描画
-        ctx.drawImage(imageBitmap, srcX, 0, srcColW, imgH, dstX, 0, colW, cssH);
+        ctx.drawImage(imageBitmap, srcX, 0, srcColW, imgH, dstX, 0, dstW, cssH);
 
         // ハイライトオーバーレイ
         let overlay = null;
@@ -125,7 +131,7 @@ function draw() {
 
         if (overlay) {
           ctx.fillStyle = overlay;
-          ctx.fillRect(dstX, 0, colW + 0.5, cssH); // +0.5 で隙間をつぶす
+          ctx.fillRect(dstX, 0, dstW, cssH);
         }
       }
     }
@@ -171,9 +177,12 @@ self.onmessage = function (e) {
     }
 
     case 'setImage': {
-      // ArrayBuffer から ImageBitmap を生成（非同期）
-      const blob = new Blob([msg.imageBuffer], { type: msg.mimeType || 'image/png' });
-      createImageBitmap(blob).then(function (bmp) {
+      // Blob（優先）または ArrayBuffer（後方互換）から ImageBitmap を生成
+      const blobOrBuffer = msg.imageBlob
+        ? msg.imageBlob
+        : (msg.imageBuffer ? new Blob([msg.imageBuffer], { type: msg.mimeType || 'image/png' }) : null);
+      if (!blobOrBuffer) break;
+      createImageBitmap(blobOrBuffer).then(function (bmp) {
         imageBitmap = bmp;
         imageNumCols = msg.numCols;
         if (arrays.main && renderParams) scheduleDraw();

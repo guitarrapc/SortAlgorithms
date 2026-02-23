@@ -110,6 +110,9 @@ function draw() {
     const srcBlockW = imgW / srcCols;
     const srcBlockH = imgH / srcRows;
 
+    // サブピクセル描画を抹消
+    ctx.imageSmoothingEnabled = false;
+
     if (showCompletionHighlight) {
       for (let i = 0; i < n; i++) {
         const blockIdx = array[i] - minVal;
@@ -118,10 +121,14 @@ function draw() {
         const dstCol = i % cols;
         const srcRow = Math.floor(blockIdx / srcCols);
         const srcCol = blockIdx % srcCols;
+        const dstX = Math.round(dstCol * blockW);
+        const dstY = Math.round(dstRow * blockH);
+        const dstW = Math.max(1, Math.round((dstCol + 1) * blockW) - dstX);
+        const dstH = Math.max(1, Math.round((dstRow + 1) * blockH) - dstY);
         ctx.drawImage(
           imageBitmap,
           srcCol * srcBlockW, srcRow * srcBlockH, srcBlockW, srcBlockH,
-          dstCol * blockW,    dstRow * blockH,    blockW,    blockH
+          dstX, dstY, dstW, dstH
         );
       }
       ctx.fillStyle = COLOR_SORTED;
@@ -132,14 +139,16 @@ function draw() {
         if (blockIdx < 0 || blockIdx >= imageNumBlocks) continue;
         const dstRow = Math.floor(i / cols);
         const dstCol = i % cols;
-        const dstX   = dstCol * blockW;
-        const dstY   = dstRow * blockH;
+        const dstX = Math.round(dstCol * blockW);
+        const dstY = Math.round(dstRow * blockH);
+        const dstW = Math.max(1, Math.round((dstCol + 1) * blockW) - dstX);
+        const dstH = Math.max(1, Math.round((dstRow + 1) * blockH) - dstY);
         const srcRow = Math.floor(blockIdx / srcCols);
         const srcCol = blockIdx % srcCols;
         ctx.drawImage(
           imageBitmap,
           srcCol * srcBlockW, srcRow * srcBlockH, srcBlockW, srcBlockH,
-          dstX,               dstY,               blockW,    blockH
+          dstX, dstY, dstW, dstH
         );
 
         // ハイライトオーバーレイ
@@ -151,7 +160,7 @@ function draw() {
 
         if (overlay) {
           ctx.fillStyle = overlay;
-          ctx.fillRect(dstX, dstY, blockW + 0.5, blockH + 0.5);
+          ctx.fillRect(dstX, dstY, dstW, dstH);
         }
       }
     }
@@ -201,8 +210,11 @@ self.onmessage = function (e) {
     }
 
     case 'setImage': {
-      const blob = new Blob([msg.imageBuffer], { type: msg.mimeType || 'image/png' });
-      createImageBitmap(blob).then(function (bmp) {
+      const blobOrBuffer = msg.imageBlob
+        ? msg.imageBlob
+        : (msg.imageBuffer ? new Blob([msg.imageBuffer], { type: msg.mimeType || 'image/png' }) : null);
+      if (!blobOrBuffer) break;
+      createImageBitmap(blobOrBuffer).then(function (bmp) {
         imageBitmap = bmp;
         imageNumBlocks = msg.numBlocks;
         if (arrays.main && renderParams) scheduleDraw();
