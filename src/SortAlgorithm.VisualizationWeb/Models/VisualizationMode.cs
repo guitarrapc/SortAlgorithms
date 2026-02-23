@@ -21,5 +21,8 @@ public enum VisualizationMode
     PictureRow,
 
     /// <summary>画像列表示（アップロード画像を列ごとに分割してソート）</summary>
-    PictureColumn
+    PictureColumn,
+
+    /// <summary>画像ブロック表示（アップロード画像を 2D グリッドのブロックに分割してソート）</summary>
+    PictureBlock
 }

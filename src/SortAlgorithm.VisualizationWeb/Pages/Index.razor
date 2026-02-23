@@ -128,6 +128,7 @@
                         <option value="@VisualizationMode.DotPlot">🔵 Dot Plot</option>
                         <option value="@VisualizationMode.PictureRow">🖼️ Picture Row</option>
                         <option value="@VisualizationMode.PictureColumn">🖼️ Picture Column</option>
+                        <option value="@VisualizationMode.PictureBlock">🖼️ Picture Block</option>
                     </select>
                 </div>
 
@@ -208,6 +209,12 @@
                 @* PictureColumn モード: ソート前でも画像アップロード UI を表示 *@
                 <PictureColumnRenderer State="Playback.State"
                                        OnClick="OnVisualizationClick" />
+            }
+            else if (!_isComparisonMode && Playback.State.Mode == VisualizationMode.PictureBlock)
+            {
+                @* PictureBlock モード: ソート前でも画像アップロード UI を表示 *@
+                <PictureBlockRenderer State="Playback.State"
+                                      OnClick="OnVisualizationClick" />
             }
             else if (Playback.State.MainArray.Length > 0)
             {
