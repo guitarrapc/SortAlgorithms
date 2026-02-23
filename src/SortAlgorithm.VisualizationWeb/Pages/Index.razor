@@ -520,8 +520,10 @@ private string _runningAlgorithmName = string.Empty;
 
 
 
-    private void AddAlgorithmToComparison()
+    private async Task AddAlgorithmToComparison()
     {
+        if (ComparisonMode.IsAddingAlgorithm) return;
+
         var pattern = GetSelectedPattern();
         if (pattern == null)
         {
@@ -573,7 +575,7 @@ private string _runningAlgorithmName = string.Empty;
             // すべてのアルゴリズムを新しい設定で再追加
             foreach (var algo in existingAlgorithms)
             {
-                ComparisonMode.AddAlgorithm(algo.AlgorithmName, algo.Metadata);
+                await ComparisonMode.AddAlgorithmAsync(algo.AlgorithmName, algo.Metadata);
                 DebugSettings.Log($"[Index] Re-added {algo.AlgorithmName} with new settings");
                 
                 // 追加直後に速度設定を適用
@@ -615,7 +617,7 @@ private string _runningAlgorithmName = string.Empty;
         }
 
         DebugSettings.Log($"[Index] Adding new algorithm: {SelectedAlgorithm}");
-        ComparisonMode.AddAlgorithm(SelectedAlgorithm, metadata);
+        await ComparisonMode.AddAlgorithmAsync(SelectedAlgorithm, metadata);
         DebugSettings.Log($"[Index] After adding, instances count: {ComparisonMode.State.Instances.Count}");
         
         // 新しく追加したアルゴリズムにも速度設定を適用

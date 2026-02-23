@@ -13,6 +13,12 @@ public class ComparisonModeService : IDisposable
     public ComparisonState State => _state;
     public event Action? OnStateChanged;
 
+    /// <summary>
+    /// AddAlgorithmAsync での記録処理実行中は true。
+    /// UI ボタンの disabled 制御やローディング表示に使用する。
+    /// </summary>
+    public bool IsAddingAlgorithm { get; private set; }
+
     public ComparisonModeService(SortExecutor executor, DebugSettings debug, IJSRuntime js)
     {
         _executor = executor;
@@ -58,6 +64,7 @@ public class ComparisonModeService : IDisposable
         _state.InitialArray = Array.Empty<int>();
         _state.CurrentArraySize = 0;
         _state.CurrentPattern = null;
+        IsAddingAlgorithm = false;
         NotifyStateChanged();
     }
     public void AddAlgorithm(string algorithmName, AlgorithmMetadata metadata)
@@ -68,6 +75,8 @@ public class ComparisonModeService : IDisposable
         try
         {
             var (operations, statistics, actualExecutionTime) = _executor.ExecuteAndRecord(_state.InitialArray, metadata);
+
+
             var playback = new PlaybackService(_js);
             playback.LoadOperations(_state.InitialArray, operations, statistics, actualExecutionTime);
             
@@ -92,6 +101,68 @@ public class ComparisonModeService : IDisposable
             // エラーが発生しても他のアルゴリズムに影響しないように続行
         }
     }
+
+    /// <summary>
+    /// ソートを非同期で実行・記録してアルゴリズムを比較リストに追加する。
+    /// Blazor WASM メインスレッドのフリーズを抑制するために Task.Yield() を挟む。
+    /// </summary>
+    /// <remarks>
+    /// IsAddingAlgorithm が true の間は重複呼び出しを無視する。
+    /// 非同期処理中に Disable() が呼ばれた場合は結果を破棄する。
+    /// </remarks>
+    public async Task AddAlgorithmAsync(string algorithmName, AlgorithmMetadata metadata)
+    {
+        if (_state.Instances.Count >= ComparisonState.MaxComparisons || _state.InitialArray.Length == 0)
+            return;
+
+        if (IsAddingAlgorithm)
+            return;
+
+        IsAddingAlgorithm = true;
+        NotifyStateChanged();
+
+        try
+        {
+            // 配列参照を記録しておき、非同期処理中に Enable/Disable されたか検出する
+            var capturedArray = _state.InitialArray;
+
+            var (operations, statistics, actualExecutionTime) =
+                await _executor.ExecuteAndRecordAsync(capturedArray, metadata);
+
+            // 非同期処理中に ComparisonMode が無効化または配列が差し替えられた場合は破棄
+            if (!_state.IsEnabled || !ReferenceEquals(capturedArray, _state.InitialArray))
+            {
+                _debug.Log($"[ComparisonMode] State changed during async add, discarding {algorithmName}");
+                return;
+            }
+
+            var playback = new PlaybackService(_js);
+            playback.LoadOperations(capturedArray, operations, statistics, actualExecutionTime);
+            playback.StateChanged += OnPlaybackStateChanged;
+
+            _playbackServices.Add(playback);
+            _state.Instances.Add(new ComparisonInstance
+            {
+                AlgorithmName = algorithmName,
+                State = playback.State,
+                Metadata = metadata,
+                Playback = playback
+            });
+
+            _debug.Log($"[ComparisonMode] Added (async) {algorithmName}: {operations.Count} operations");
+            NotifyStateChanged();
+        }
+        catch (Exception ex)
+        {
+            _debug.Log($"[ComparisonMode] ERROR adding {algorithmName}: {ex.Message}");
+        }
+        finally
+        {
+            IsAddingAlgorithm = false;
+            NotifyStateChanged();
+        }
+    }
+
     public void RemoveAlgorithm(int index)
     {
         _debug.Log($"[ComparisonModeService] RemoveAlgorithm called for index: {index}");

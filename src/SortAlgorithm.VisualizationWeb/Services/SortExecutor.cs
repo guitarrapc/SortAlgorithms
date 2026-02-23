@@ -19,6 +19,13 @@ public class SortExecutor
     private const double MeasurementTargetMs = 50.0;
 
     /// <summary>
+    /// 非同期版での UI スレッド解放間隔（ms）。
+    /// 計測ループ内でこの時間が経過するたびに Task.Yield() を呼び、
+    /// Blazor WASM のメインスレッドを一時的に解放して UI 更新を可能にする。
+    /// </summary>
+    private const double YieldIntervalMs = 16.0;
+
+    /// <summary>
     /// ソートを実行し、すべての操作を記録する
     /// </summary>
     public (List<SortOperation> Operations, StatisticsContext Statistics, TimeSpan ActualExecutionTime) ExecuteAndRecord(ReadOnlySpan<int> sourceArray, AlgorithmMetadata algorithm)
@@ -142,6 +149,146 @@ public class SortExecutor
         finally
         {
             // ArrayPoolに配列を返却
+            ArrayPool<int>.Shared.Return(workArray, clearArray: true);
+            ArrayPool<int>.Shared.Return(measureArray, clearArray: true);
+        }
+    }
+
+    /// <summary>
+    /// UI スレッドをブロックしないよう Task.Yield() を挟みながらソートを実行・記録する非同期版。
+    /// Blazor WebAssembly 上で ComparisonMode の複数アルゴリズムを追加する際に使用する。
+    /// </summary>
+    /// <remarks>
+    /// Span&lt;T&gt; は async メソッドのローカル変数として使えないため int[] を受け取る。
+    /// Span はすべてインライン式として使用し、await をまたがない。
+    /// Task.Yield() は計測ループで YieldIntervalMs (~16ms) おきに、
+    /// 記録パス実行の前後にそれぞれ 1 回実行する。
+    /// O(n²) アルゴリズムの記録パスは依然として同期ブロッキングだが、
+    /// yield の挿入により O(n log n) では体感フリーズがほぼ解消される。
+    /// </remarks>
+    public async Task<(List<SortOperation> Operations, StatisticsContext Statistics, TimeSpan ActualExecutionTime)>
+        ExecuteAndRecordAsync(int[] sourceArray, AlgorithmMetadata algorithm)
+    {
+        var n = sourceArray.Length;
+        var workArray = ArrayPool<int>.Shared.Rent(n);
+        var measureArray = ArrayPool<int>.Shared.Rent(n);
+
+        try
+        {
+            // ウォームアップ（Span はインライン式として渡す。ローカル変数に格納しない）
+            sourceArray.AsSpan(0, n).CopyTo(measureArray.AsSpan(0, n));
+            algorithm.SortAction(measureArray.AsSpan(0, n), NullContext.Default);
+
+            // 適応的反復計測
+            sourceArray.AsSpan(0, n).CopyTo(measureArray.AsSpan(0, n));
+            var wallClock = Stopwatch.StartNew();
+            long sortOnlyTicks = 0L;
+            int runs = 0;
+            double lastYieldMs = 0.0;
+
+            do
+            {
+                // イテレーション内では Span をインライン式として使用し、await をまたがない
+                var before = Stopwatch.GetTimestamp();
+                algorithm.SortAction(measureArray.AsSpan(0, n), NullContext.Default);
+                sortOnlyTicks += Stopwatch.GetTimestamp() - before;
+                runs++;
+
+                var elapsed = wallClock.Elapsed.TotalMilliseconds;
+                if (elapsed < MeasurementTargetMs)
+                    sourceArray.AsSpan(0, n).CopyTo(measureArray.AsSpan(0, n));
+
+                // YieldIntervalMs (~16ms / 約1フレーム) おきに UI スレッドへ制御を返す
+                // ここで Span は一切スコープに存在しないため await 可能
+                if (elapsed - lastYieldMs >= YieldIntervalMs)
+                {
+                    lastYieldMs = elapsed;
+                    await Task.Yield();
+                }
+            } while (wallClock.Elapsed.TotalMilliseconds < MeasurementTargetMs);
+
+            wallClock.Stop();
+
+            var actualExecutionTime = TimeSpan.FromSeconds((double)sortOnlyTicks / Stopwatch.Frequency / runs);
+
+            // 記録パス用のワーク配列を準備したあと yield して UI を解放
+            sourceArray.AsSpan(0, n).CopyTo(workArray.AsSpan(0, n));
+            await Task.Yield();
+
+            // 操作記録
+            var operations = new List<SortOperation>();
+            var statisticsContext = new StatisticsContext();
+            var visualizationContext = new VisualizationContext(
+                onCompare: (i, j, result, bufferIdI, bufferIdJ) =>
+                {
+                    operations.Add(new SortOperation
+                    {
+                        Type = OperationType.Compare,
+                        Index1 = i,
+                        Index2 = j,
+                        BufferId1 = bufferIdI,
+                        BufferId2 = bufferIdJ,
+                        CompareResult = result
+                    });
+                },
+                onSwap: (i, j, bufferId) =>
+                {
+                    operations.Add(new SortOperation
+                    {
+                        Type = OperationType.Swap,
+                        Index1 = i,
+                        Index2 = j,
+                        BufferId1 = bufferId
+                    });
+                },
+                onIndexRead: (index, bufferId) =>
+                {
+                    operations.Add(new SortOperation
+                    {
+                        Type = OperationType.IndexRead,
+                        Index1 = index,
+                        BufferId1 = bufferId
+                    });
+                },
+                onIndexWrite: (index, bufferId, value) =>
+                {
+                    operations.Add(new SortOperation
+                    {
+                        Type = OperationType.IndexWrite,
+                        Index1 = index,
+                        BufferId1 = bufferId,
+                        Value = value as int?
+                    });
+                },
+                onRangeCopy: (sourceIndex, destIndex, rangeLength, sourceBufferId, destBufferId, values) =>
+                {
+                    operations.Add(new SortOperation
+                    {
+                        Type = OperationType.RangeCopy,
+                        Index1 = sourceIndex,
+                        Index2 = destIndex,
+                        Length = rangeLength,
+                        BufferId1 = sourceBufferId,
+                        BufferId2 = destBufferId,
+                        Values = values?.Length > 0
+                            ? Array.ConvertAll(values, v => v is int intVal ? intVal : 0)
+                            : null
+                    });
+                }
+            );
+
+            var compositeContext = new CompositeContext(statisticsContext, visualizationContext);
+
+            // 記録パス実行（Span はインライン式）
+            algorithm.SortAction(workArray.AsSpan(0, n), compositeContext);
+
+            // 記録完了後に yield して UI の応答性を即座に回復
+            await Task.Yield();
+
+            return (operations, statisticsContext, actualExecutionTime);
+        }
+        finally
+        {
             ArrayPool<int>.Shared.Return(workArray, clearArray: true);
             ArrayPool<int>.Shared.Return(measureArray, clearArray: true);
         }

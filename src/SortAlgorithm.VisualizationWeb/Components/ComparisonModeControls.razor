@@ -3,13 +3,15 @@
 
 <div class="stat-item">
     @{
-        var isDisabled = ComparisonMode.State.Instances.Count >= ComparisonState.MaxComparisons || !ComparisonMode.State.IsEnabled;
+        var isDisabled = ComparisonMode.State.Instances.Count >= ComparisonState.MaxComparisons
+                      || !ComparisonMode.State.IsEnabled
+                      || ComparisonMode.IsAddingAlgorithm;
     }
     <button class="primary" 
             @onclick="OnAddAlgorithm" 
             style="width: 100%;"
             disabled="@isDisabled">
-        ➕ Add to Comparison
+        @(ComparisonMode.IsAddingAlgorithm ? "⏳ Adding..." : "➕ Add to Comparison")
     </button>
 </div>
 
