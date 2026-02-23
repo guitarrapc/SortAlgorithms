@@ -45,6 +45,27 @@
                 GridColumnCount="@GridColumnCount"
                 OnClick="@OnVisualizationClick" />
         }
+        else if (VisualizationMode == VisualizationMode.PictureRow)
+        {
+            <PictureRowRenderer
+                State="@Instance.State"
+                GridColumnCount="@GridColumnCount"
+                OnClick="@OnVisualizationClick" />
+        }
+        else if (VisualizationMode == VisualizationMode.PictureColumn)
+        {
+            <PictureColumnRenderer
+                State="@Instance.State"
+                GridColumnCount="@GridColumnCount"
+                OnClick="@OnVisualizationClick" />
+        }
+        else if (VisualizationMode == VisualizationMode.PictureBlock)
+        {
+            <PictureBlockRenderer
+                State="@Instance.State"
+                GridColumnCount="@GridColumnCount"
+                OnClick="@OnVisualizationClick" />
+        }
     </div>
     
     <ComparisonStatsSummary State="@Instance.State" />
