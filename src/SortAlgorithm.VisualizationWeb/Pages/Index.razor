@@ -57,134 +57,132 @@
 
         <div class="sidebar-content">
             <fieldset class="controls-fieldset" disabled="@IsLoading">
-            <div class="statistics-panel">
-                <h3>⚙️ Settings</h3>
+                <div class="statistics-panel">
+                    <h3>⚙️ Settings</h3>
 
-                <div class="stat-item">
-                    <span class="stat-label">Algorithm</span>
-                    <select @bind="SelectedAlgorithm" @bind:after="OnAlgorithmChanged" style="width: 100%;">
-                        @if (string.IsNullOrEmpty(SelectedCategory))
-                        {
-                            @foreach (var group in GetAlgorithmsByCategory())
+                    <div class="stat-item">
+                        <span class="stat-label">Algorithm</span>
+                        <select @bind="SelectedAlgorithm" @bind:after="OnAlgorithmChanged" style="width: 100%;">
+                            @if (string.IsNullOrEmpty(SelectedCategory))
+                            {
+                                @foreach (var group in GetAlgorithmsByCategory())
+                                {
+                                    <optgroup label="@group.Key">
+                                        @foreach (var algo in group)
+                                        {
+                                            <option value="@algo.Name">@algo.Name</option>
+                                        }
+                                    </optgroup>
+                                }
+                            }
+                            else
+                            {
+                                @foreach (var algo in GetFilteredAlgorithms())
+                                {
+                                    <option value="@algo.Name">@algo.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="stat-item">
+                        <span class="stat-label">Array Size @GetSizeRecommendation()</span>
+                        <select @bind="ArraySize">
+                            @foreach (var size in AvailableSizes)
+                            {
+                                <option value="@size">@size @(IsRecommendedSize(size) ? "⭐" : "")</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="stat-item">
+                        <span class="stat-label">
+                            Auto Switch to Recommended Size
+                        </span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="_autoSwitchToRecommendedSize" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="stat-item">
+                        <span class="stat-label">Array Pattern</span>
+                        <select @bind="SelectedPatternName" style="width: 100%;">
+                            @foreach (var group in GetPatternsByCategory())
                             {
                                 <optgroup label="@group.Key">
-                                    @foreach (var algo in group)
+                                    @foreach (var pattern in group)
                                     {
-                                        <option value="@algo.Name">@algo.Name</option>
+                                        <option value="@pattern.Name">@pattern.Name</option>
                                     }
                                 </optgroup>
                             }
-                        }
-                        else
-                        {
-                            @foreach (var algo in GetFilteredAlgorithms())
-                            {
-                                <option value="@algo.Name">@algo.Name</option>
-                            }
-                        }
-                    </select>
-                </div>
+                        </select>
+                    </div>
 
-                <div class="stat-item">
-                    <span class="stat-label">Array Size @GetSizeRecommendation()</span>
-                    <select @bind="ArraySize">
-                        @foreach (var size in AvailableSizes)
-                        {
-                            <option value="@size">@size @(IsRecommendedSize(size) ? "⭐" : "")</option>
-                        }
-                    </select>
-                </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Visualization Mode</span>
+                        <select @bind="SelectedVisualizationMode" @bind:after="OnVisualizationModeChanged" style="width: 100%;">
+                            <option value="@VisualizationMode.BarChart">📊 Bar Chart</option>
+                            <option value="@VisualizationMode.Circular">⭕ Circular</option>
+                            <option value="@VisualizationMode.Spiral">🌀 Spiral</option>
+                            <option value="@VisualizationMode.DotPlot">🔵 Dot Plot</option>
+                            <option value="@VisualizationMode.PictureRow">🖼️ Picture Row</option>
+                            <option value="@VisualizationMode.PictureColumn">🖼️ Picture Column</option>
+                            <option value="@VisualizationMode.PictureBlock">🖼️ Picture Block</option>
+                        </select>
+                    </div>
 
-                <div class="stat-item">
-                    <span class="stat-label">
-                        Auto Switch to Recommended Size
-                    </span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" @bind="_autoSwitchToRecommendedSize" />
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-
-                <div class="stat-item">
-                    <span class="stat-label">Array Pattern</span>
-                    <select @bind="SelectedPatternName" style="width: 100%;">
-                        @foreach (var group in GetPatternsByCategory())
-                        {
-                            <optgroup label="@group.Key">
-                                @foreach (var pattern in group)
-                                {
-                                    <option value="@pattern.Name">@pattern.Name</option>
-                                }
-                            </optgroup>
-                        }
-                    </select>
-                </div>
-
-                <div class="stat-item">
-                    <span class="stat-label">Visualization Mode</span>
-                    <select @bind="SelectedVisualizationMode" @bind:after="OnVisualizationModeChanged" style="width: 100%;">
-                        <option value="@VisualizationMode.BarChart">📊 Bar Chart</option>
-                        <option value="@VisualizationMode.Circular">⭕ Circular</option>
-                        <option value="@VisualizationMode.Spiral">🌀 Spiral</option>
-                        <option value="@VisualizationMode.DotPlot">🔵 Dot Plot</option>
-                        <option value="@VisualizationMode.PictureRow">🖼️ Picture Row</option>
-                        <option value="@VisualizationMode.PictureColumn">🖼️ Picture Column</option>
-                        <option value="@VisualizationMode.PictureBlock">🖼️ Picture Block</option>
-                    </select>
-                </div>
-
-                <div class="stat-item">
-                    <span class="stat-label">
-                        Renderer
-                        <span style="font-size: 0.8em; color: #888;">
-                            (@(RenderSettings.UseWebGL ? "WebGL" : "Canvas 2D"))
+                    <div class="stat-item">
+                        <span class="stat-label">
+                            Renderer
+                            <span style="font-size: 0.8em; color: #888;">
+                                (@(RenderSettings.UseWebGL ? "WebGL" : "Canvas 2D"))
+                            </span>
                         </span>
-                    </span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" @bind="RenderSettings.UseWebGL" />
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="RenderSettings.UseWebGL" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
 
-                <div class="stat-item">
-                    <span class="stat-label">
-                        Comparison Mode
-                        <span style="font-size: 0.8em; color: #888;">
-                            (@(ComparisonMode.State.Instances.Count)/@(ComparisonState.MaxComparisons))
+                    <div class="stat-item">
+                        <span class="stat-label">
+                            Comparison Mode
+                            <span style="font-size: 0.8em; color: #888;">
+                                (@(ComparisonMode.State.Instances.Count)/@(ComparisonState.MaxComparisons))
+                            </span>
                         </span>
-                    </span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" @bind="_isComparisonMode" @bind:after="OnComparisonModeChanged" />
-                        <span class="toggle-slider"></span>
-                    </label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="_isComparisonMode" @bind:after="OnComparisonModeChanged" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    @if (_isComparisonMode)
+                    {
+                        <ComparisonModeControls ComparisonMode="ComparisonMode"
+                                                Playback="Playback"
+                                                OnAddAlgorithm="AddAlgorithmToComparison"
+                                                OnSpeedSettingsChanged="OnSpeedSettingsChanged" />
+                    }
+                    else
+                    {
+                        <NormalModeControls Playback="Playback"
+                                            OnGenerateAndSort="GenerateAndSortAsync"
+                                            OnSpeedSettingsChanged="OnSpeedSettingsChanged" />
+                    }
                 </div>
 
-                @if (_isComparisonMode)
+                @if (!_isComparisonMode)
                 {
-                    <ComparisonModeControls 
-                        ComparisonMode="ComparisonMode"
-                        Playback="Playback"
-                        OnAddAlgorithm="AddAlgorithmToComparison"
-                        OnSpeedSettingsChanged="OnSpeedSettingsChanged" />
-                }
-                else
-                {
-                <NormalModeControls 
-                        Playback="Playback"
-                        OnGenerateAndSort="GenerateAndSortAsync"
-                        OnSpeedSettingsChanged="OnSpeedSettingsChanged" />
-                }
-            </div>
+                    <StatisticsPanel State="Playback.State" />
 
-            @if (!_isComparisonMode)
-            {
-                <StatisticsPanel State="Playback.State" />
-
-                <div class="stat-item" style="margin-top: 20px;">
-                    <span class="stat-label">Complexity</span>
-                    <span class="stat-value" style="font-size: 0.9rem;">@GetSelectedAlgorithmComplexity()</span>
-                </div>
-            }
+                    <div class="stat-item" style="margin-top: 20px;">
+                        <span class="stat-label">Complexity</span>
+                        <span class="stat-value" style="font-size: 0.9rem;">@GetSelectedAlgorithmComplexity()</span>
+                    </div>
+                }
             </fieldset>
         </div>
     </div>
@@ -202,11 +200,10 @@
             @if (_isComparisonMode && ComparisonMode.State.Instances.Any())
             {
                 @* 比較モード: グリッド表示 *@
-                <ComparisonGrid 
-                    Instances="ComparisonMode.State.Instances"
-                    VisualizationMode="SelectedVisualizationMode"
-                    OnRemove="RemoveAlgorithmFromComparison"
-                    OnVisualizationClick="OnComparisonVisualizationClick" />
+                <ComparisonGrid Instances="ComparisonMode.State.Instances"
+                                VisualizationMode="SelectedVisualizationMode"
+                                OnRemove="RemoveAlgorithmFromComparison"
+                                OnVisualizationClick="OnComparisonVisualizationClick" />
             }
             else if (!_isComparisonMode && Playback.State.Mode == VisualizationMode.PictureRow)
             {
@@ -237,7 +234,7 @@
                 else if (Playback.State.Mode == VisualizationMode.Circular)
                 {
                     <CircularRenderer State="Playback.State"
-                                   OnClick="OnVisualizationClick" />
+                                      OnClick="OnVisualizationClick" />
                 }
                 else if (Playback.State.Mode == VisualizationMode.Spiral)
                 {
@@ -253,57 +250,55 @@
             else
             {
                 <div style="text-align: center; color: #999;">
-                <p style="font-size: 2rem;">@(Playback.State.Mode == VisualizationMode.Circular ? "⭕" : Playback.State.Mode == VisualizationMode.Spiral ? "🌀" : Playback.State.Mode == VisualizationMode.DotPlot ? "🔵" : "📊")</p>
+                    <p style="font-size: 2rem;">@(Playback.State.Mode == VisualizationMode.Circular ? "⭕" : Playback.State.Mode == VisualizationMode.Spiral ? "🌀" : Playback.State.Mode == VisualizationMode.DotPlot ? "🔵" : "📊")</p>
                     <p>Click "Generate & Sort" to start visualization</p>
                 </div>
             }
         </div>
     </div>
-    
+
     @* 統計比較表（右側ドッキングパネル） *@
     @if (_isComparisonMode && ComparisonMode.State.Instances.Any())
     {
-        <ComparisonStatsTable 
-            Instances="ComparisonMode.State.Instances"
-            @bind-IsOpen="_statsTableOpen" />
+        <ComparisonStatsTable Instances="ComparisonMode.State.Instances"
+                              @bind-IsOpen="_statsTableOpen" />
     }
 
     <div class="controls">
-        <ModeControlPanel 
-            IsComparisonMode="_isComparisonMode"
-            IsPlaying="_isComparisonPlaying"
-            Playback="Playback"
-            ComparisonMode="ComparisonMode"
-            OnReset="HandleReset"
-            OnTogglePlayPause="HandleTogglePlayPause"
-            OnSeek="OnSeek" />
+        <ModeControlPanel IsComparisonMode="_isComparisonMode"
+                          IsPlaying="_isComparisonPlaying"
+                          Playback="Playback"
+                          ComparisonMode="ComparisonMode"
+                          OnReset="HandleReset"
+                          OnTogglePlayPause="HandleTogglePlayPause"
+                          OnSeek="OnSeek" />
     </div>
 </div>
 
 @code {
-private string SelectedAlgorithm { get; set; } = "Bubble sort";
-private string SelectedCategory { get; set; } = "";
-private int ArraySize { get; set; } = 64;
-private string SelectedPatternName { get; set; } = "🎲 Random";
-private VisualizationMode SelectedVisualizationMode { get; set; } = VisualizationMode.BarChart;
-private string _runningAlgorithmName = string.Empty;
+    private string SelectedAlgorithm { get; set; } = "Bubble sort";
+    private string SelectedCategory { get; set; } = "";
+    private int ArraySize { get; set; } = 64;
+    private string SelectedPatternName { get; set; } = "🎲 Random";
+    private VisualizationMode SelectedVisualizationMode { get; set; } = VisualizationMode.BarChart;
+    private string _runningAlgorithmName = string.Empty;
 
     // ローディング状態
     private LoadingState _loadingState = LoadingState.Idle;
     private bool IsLoading => _loadingState != LoadingState.Idle;
     private string LoadingMessage => _loadingState switch
     {
-        LoadingState.Sorting         => "⏳ Sorting...",
+        LoadingState.Sorting => "⏳ Sorting...",
         LoadingState.AddingAlgorithm => "⏳ Adding algorithm...",
-        LoadingState.LoadingImage    => "⏳ Loading image...",
-        _                            => "",
+        LoadingState.LoadingImage => "⏳ Loading image...",
+        _ => "",
     };
 
     // 比較モード関連
     private bool _isComparisonMode = false;
     private bool _isComparisonPlaying = false;
     private bool _statsTableOpen = false;
-    
+
     // 推奨サイズへの自動切り替え
     private bool _autoSwitchToRecommendedSize = false;
 
@@ -321,7 +316,7 @@ private string _runningAlgorithmName = string.Empty;
         Playback.StateChanged += OnStateChanged;
         ComparisonMode.OnStateChanged += OnStateChanged; // 比較モードの状態変更を購読
         DebugSettings.OnChanged += OnStateChanged; // デバッグ設定の変更を購読
-        
+
         // 初期アルゴリズムの推奨サイズを設定
         SetRecommendedSize();
         // 初期モードを同期
@@ -333,7 +328,7 @@ private string _runningAlgorithmName = string.Empty;
         _sidebarCollapsed = !_sidebarCollapsed;
         StateHasChanged();
     }
-    
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -422,13 +417,13 @@ private string _runningAlgorithmName = string.Empty;
     {
         // AlgorithmRegistry に登録された順序を保持しながらカテゴリごとにグループ化
         var allAlgorithms = AlgorithmRegistry.GetAllAlgorithms();
-        
+
         // カテゴリの最初の出現順序を記録
         var categoryOrder = allAlgorithms
             .Select((algo, index) => new { algo.Category, Index = index })
             .GroupBy(x => x.Category)
             .ToDictionary(g => g.Key, g => g.Min(x => x.Index));
-        
+
         // カテゴリごとにグループ化し、カテゴリの最初の出現順でソート
         return allAlgorithms
             .GroupBy(a => a.Category)
@@ -438,13 +433,13 @@ private string _runningAlgorithmName = string.Empty;
     private IEnumerable<IGrouping<string, ArrayPatternMetadata>> GetPatternsByCategory()
     {
         var allPatterns = ArrayPatternRegistry.GetAllPatterns();
-        
+
         // カテゴリの最初の出現順序を記録
         var categoryOrder = allPatterns
             .Select((pattern, index) => new { pattern.Category, Index = index })
             .GroupBy(x => x.Category)
             .ToDictionary(g => g.Key, g => g.Min(x => x.Index));
-        
+
         // カテゴリごとにグループ化し、カテゴリの最初の出現順でソート
         return allPatterns
             .GroupBy(p => p.Category)
@@ -515,7 +510,7 @@ private string _runningAlgorithmName = string.Empty;
     private void OnComparisonModeChanged()
     {
         DebugSettings.Log($"[OnComparisonModeChanged] Called. _isComparisonMode: {_isComparisonMode}");
-        
+
         if (_isComparisonMode)
         {
             var pattern = GetSelectedPattern();
@@ -531,12 +526,12 @@ private string _runningAlgorithmName = string.Empty;
             var random = new Random();
             var array = pattern.Generator(size, random);
             DebugSettings.Log($"[OnComparisonModeChanged] Generated array length: {array.Length}");
-            
+
             ComparisonMode.Enable(array, size, pattern);
-            
+
             // サイドバーの速度設定を比較モードに適用
             ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
-            
+
             DebugSettings.Log($"[OnComparisonModeChanged] Comparison mode enabled with {pattern.Name} pattern");
         }
         else
@@ -577,62 +572,12 @@ private string _runningAlgorithmName = string.Empty;
 
         // 🔧 Array SizeまたはPatternが変更されている場合、既存のアルゴリズムを新しい設定で再実行
         var currentSize = Math.Min(ArraySize, 4096);
-        var needRegeneration = ComparisonMode.State.CurrentArraySize != currentSize 
+        var needRegeneration = ComparisonMode.State.CurrentArraySize != currentSize
                             || ComparisonMode.State.CurrentPattern?.Name != pattern.Name;
-        
-        DebugSettings.Log($"[Index] NeedRegeneration: {needRegeneration} (size: {ComparisonMode.State.CurrentArraySize} vs {currentSize}, pattern: {ComparisonMode.State.CurrentPattern?.Name} vs {pattern.Name})");
-        
-        if (needRegeneration && ComparisonMode.State.Instances.Any())
-        {
-            DebugSettings.Log($"[Index] ✅ Settings changed - regenerating all existing algorithms");
-            DebugSettings.Log($"[Index]    Old: size={ComparisonMode.State.CurrentArraySize}, pattern={ComparisonMode.State.CurrentPattern?.Name}");
-            DebugSettings.Log($"[Index]    New: size={currentSize}, pattern={pattern.Name}");
-            
-            // 既存のアルゴリズム情報を保存
-            var existingAlgorithms = ComparisonMode.State.Instances
-                .Select(i => new { i.AlgorithmName, i.Metadata })
-                .ToList();
-            
-            DebugSettings.Log($"[Index] Saved {existingAlgorithms.Count} existing algorithms");
-            
-            // 新しい配列を生成
-            var random = new Random();
-            var newArray = pattern.Generator(currentSize, random);
-            DebugSettings.Log($"[Index] Generated new array: {newArray.Length} elements with pattern {pattern.Name}");
-            
-            ComparisonMode.Enable(newArray, currentSize, pattern);
-            DebugSettings.Log($"[Index] Called Enable() - instances should be cleared now");
-            
-            // すべてのアルゴリズムを新しい設定で再追加
-            foreach (var algo in existingAlgorithms)
-            {
-                await ComparisonMode.AddAlgorithmAsync(algo.AlgorithmName, algo.Metadata);
-                DebugSettings.Log($"[Index] Re-added {algo.AlgorithmName} with new settings");
-                
-                // 追加直後に速度設定を適用
-                ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
-            }
-            
-            DebugSettings.Log($"[Index] After re-adding, instances count: {ComparisonMode.State.Instances.Count}");
-        }
-        else if (needRegeneration)
-        {
-            DebugSettings.Log($"[Index] ⚠️ No existing instances, just updating settings");
-            
-            // アルゴリズムがまだない場合は、単純に設定を更新
-            var random = new Random();
-            var newArray = pattern.Generator(currentSize, random);
-            ComparisonMode.Enable(newArray, currentSize, pattern);
-            
-            // 速度設定を再適用（パターン変更後にリセットされるのを防ぐ）
-            ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
-        }
-        else
-        {
-            DebugSettings.Log($"[Index] ℹ️ Settings unchanged, using existing configuration");
-        }
 
-        // 現在選択中のアルゴリズムを追加
+        DebugSettings.Log($"[Index] NeedRegeneration: {needRegeneration} (size: {ComparisonMode.State.CurrentArraySize} vs {currentSize}, pattern: {ComparisonMode.State.CurrentPattern?.Name} vs {pattern.Name})");
+
+        // メタデータチェックをローディング前に行う（インスタンスリストに依存しないので早期に検証）
         var metadata = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
         if (metadata == null)
         {
@@ -640,37 +585,105 @@ private string _runningAlgorithmName = string.Empty;
             return;
         }
 
-        // すでに追加済みかチェック
-        if (ComparisonMode.State.Instances.Any(x => x.AlgorithmName == SelectedAlgorithm))
+        // needRegeneration なしで既に追加済みならオーバーレイなしで早期リターン
+        if (!needRegeneration && ComparisonMode.State.Instances.Any(x => x.AlgorithmName == SelectedAlgorithm))
         {
             DebugSettings.Log($"[Index] {SelectedAlgorithm} is already in comparison");
             return;
         }
 
-        DebugSettings.Log($"[Index] Adding new algorithm: {SelectedAlgorithm}");
-        await ComparisonMode.AddAlgorithmAsync(SelectedAlgorithm, metadata);
-        DebugSettings.Log($"[Index] After adding, instances count: {ComparisonMode.State.Instances.Count}");
-        
-        // 新しく追加したアルゴリズムにも速度設定を適用
-        ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
-        DebugSettings.Log($"[Index] Applied speed settings to new algorithm: OperationsPerFrame={Playback.OperationsPerFrame}, SpeedMultiplier={Playback.SpeedMultiplier}");
-        
+        // ローディング表示を開始し、await Task.Yield() でオーバーレイが確定してから重い処理を開始
+        _loadingState = LoadingState.AddingAlgorithm;
         StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            if (needRegeneration && ComparisonMode.State.Instances.Any())
+            {
+                DebugSettings.Log($"[Index] ✅ Settings changed - regenerating all existing algorithms");
+                DebugSettings.Log($"[Index]    Old: size={ComparisonMode.State.CurrentArraySize}, pattern={ComparisonMode.State.CurrentPattern?.Name}");
+                DebugSettings.Log($"[Index]    New: size={currentSize}, pattern={pattern.Name}");
+
+                // 既存のアルゴリズム情報を保存
+                var existingAlgorithms = ComparisonMode.State.Instances
+                    .Select(i => new { i.AlgorithmName, i.Metadata })
+                    .ToList();
+
+                DebugSettings.Log($"[Index] Saved {existingAlgorithms.Count} existing algorithms");
+
+                // 新しい配列を生成
+                var random = new Random();
+                var newArray = pattern.Generator(currentSize, random);
+                DebugSettings.Log($"[Index] Generated new array: {newArray.Length} elements with pattern {pattern.Name}");
+
+                ComparisonMode.Enable(newArray, currentSize, pattern);
+                DebugSettings.Log($"[Index] Called Enable() - instances should be cleared now");
+
+                // すべてのアルゴリズムを新しい設定で再追加
+                foreach (var algo in existingAlgorithms)
+                {
+                    await ComparisonMode.AddAlgorithmAsync(algo.AlgorithmName, algo.Metadata);
+                    DebugSettings.Log($"[Index] Re-added {algo.AlgorithmName} with new settings");
+
+                    // 追加直後に速度設定を適用
+                    ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
+                }
+
+                DebugSettings.Log($"[Index] After re-adding, instances count: {ComparisonMode.State.Instances.Count}");
+            }
+            else if (needRegeneration)
+            {
+                DebugSettings.Log($"[Index] ⚠️ No existing instances, just updating settings");
+
+                // アルゴリズムがまだない場合は、単純に設定を更新
+                var random = new Random();
+                var newArray = pattern.Generator(currentSize, random);
+                ComparisonMode.Enable(newArray, currentSize, pattern);
+
+                // 速度設定を再適用（パターン変更後にリセットされるのを防ぐ）
+                ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
+            }
+            else
+            {
+                DebugSettings.Log($"[Index] ℹ️ Settings unchanged, using existing configuration");
+            }
+
+            // needRegeneration 後に再チェック（再生成で既に含まれていれば追加しない）
+            if (ComparisonMode.State.Instances.Any(x => x.AlgorithmName == SelectedAlgorithm))
+            {
+                DebugSettings.Log($"[Index] {SelectedAlgorithm} is already in comparison");
+                return;
+            }
+
+            DebugSettings.Log($"[Index] Adding new algorithm: {SelectedAlgorithm}");
+            await ComparisonMode.AddAlgorithmAsync(SelectedAlgorithm, metadata);
+            DebugSettings.Log($"[Index] After adding, instances count: {ComparisonMode.State.Instances.Count}");
+
+            // 新しく追加したアルゴリズムにも速度設定を適用
+            ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
+            DebugSettings.Log($"[Index] Applied speed settings to new algorithm: OperationsPerFrame={Playback.OperationsPerFrame}, SpeedMultiplier={Playback.SpeedMultiplier}");
+        }
+        finally
+        {
+            _loadingState = LoadingState.Idle;
+            StateHasChanged();
+        }
     }
 
     private void RemoveAlgorithmFromComparison(int index)
     {
         DebugSettings.Log($"[Index] RemoveAlgorithmFromComparison called for index: {index}");
         DebugSettings.Log($"[Index] Before removal, instances count: {ComparisonMode.State.Instances.Count}");
-        
+
         if (index >= 0 && index < ComparisonMode.State.Instances.Count)
         {
             var algorithmName = ComparisonMode.State.Instances[index].AlgorithmName;
             DebugSettings.Log($"[Index] Removing algorithm: {algorithmName}");
         }
-        
+
         ComparisonMode.RemoveAlgorithm(index);
-        
+
         DebugSettings.Log($"[Index] After removal, instances count: {ComparisonMode.State.Instances.Count}");
         StateHasChanged();
     }
@@ -715,7 +728,7 @@ private string _runningAlgorithmName = string.Empty;
         {
             _isComparisonPlaying = ComparisonMode.IsPlaying();
         }
-        
+
         InvokeAsync(StateHasChanged);
     }
 
@@ -757,13 +770,13 @@ private string _runningAlgorithmName = string.Empty;
     {
         DebugSettings.Log($"[Index] OnSpeedSettingsChanged called. _isComparisonMode: {_isComparisonMode}");
         DebugSettings.Log($"[Index] Current settings: OperationsPerFrame={Playback.OperationsPerFrame}, SpeedMultiplier={Playback.SpeedMultiplier}");
-        
+
         // 比較モードが有効な場合、すべてのアルゴリズムに速度設定を適用
         if (_isComparisonMode)
         {
             ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
             DebugSettings.Log($"[Index] SetSpeedForAll called with ops={Playback.OperationsPerFrame}, speed={Playback.SpeedMultiplier}");
-            
+
             // 適用後の確認
             foreach (var instance in ComparisonMode.State.Instances)
             {
