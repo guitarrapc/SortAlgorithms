@@ -56,6 +56,7 @@
         </button>
 
         <div class="sidebar-content">
+            <fieldset class="controls-fieldset" disabled="@IsLoading">
             <div class="statistics-panel">
                 <h3>⚙️ Settings</h3>
 
@@ -184,10 +185,19 @@
                     <span class="stat-value" style="font-size: 0.9rem;">@GetSelectedAlgorithmComplexity()</span>
                 </div>
             }
+            </fieldset>
         </div>
     </div>
 
+
     <div class="visualization-area">
+        @if (IsLoading)
+        {
+            <div class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <span>@LoadingMessage</span>
+            </div>
+        }
         <div class="visualization-content">
             @if (_isComparisonMode && ComparisonMode.State.Instances.Any())
             {
@@ -277,6 +287,17 @@ private int ArraySize { get; set; } = 64;
 private string SelectedPatternName { get; set; } = "🎲 Random";
 private VisualizationMode SelectedVisualizationMode { get; set; } = VisualizationMode.BarChart;
 private string _runningAlgorithmName = string.Empty;
+
+    // ローディング状態
+    private LoadingState _loadingState = LoadingState.Idle;
+    private bool IsLoading => _loadingState != LoadingState.Idle;
+    private string LoadingMessage => _loadingState switch
+    {
+        LoadingState.Sorting         => "⏳ Sorting...",
+        LoadingState.AddingAlgorithm => "⏳ Adding algorithm...",
+        LoadingState.LoadingImage    => "⏳ Loading image...",
+        _                            => "",
+    };
 
     // 比較モード関連
     private bool _isComparisonMode = false;
@@ -467,6 +488,11 @@ private string _runningAlgorithmName = string.Empty;
         var random = new Random();
         var array = pattern.Generator(size, random);
 
+        // ローディング表示を開始し、await Task.Yield() でオーバーレイが確定してから重い処理を開始
+        _loadingState = LoadingState.Sorting;
+        StateHasChanged();
+        await Task.Yield();
+
         // ソート実行と操作記録（ExecuteAndRecordAsync: Task.Yield() でUIスレッドを解放しながら実行）
         try
         {
@@ -477,6 +503,11 @@ private string _runningAlgorithmName = string.Empty;
         catch (Exception ex)
         {
             DebugSettings.Log($"Error executing sort: {ex.Message}");
+        }
+        finally
+        {
+            _loadingState = LoadingState.Idle;
+            StateHasChanged();
         }
     }
 
