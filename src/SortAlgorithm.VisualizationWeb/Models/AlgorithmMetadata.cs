@@ -27,4 +27,7 @@ public record AlgorithmMetadata
     
     /// <summary>説明</summary>
     public string Description { get; init; } = string.Empty;
+
+    /// <summary>チュートリアルでの説明文（日本語、2〜3文）</summary>
+    public string TutorialDescription { get; init; } = string.Empty;
 }
