@@ -1,0 +1,429 @@
+@using SortAlgorithm.VisualizationWeb.Models
+@using SortAlgorithm.VisualizationWeb.Services
+@inject AlgorithmRegistry AlgorithmRegistry
+@inject ArrayPatternRegistry ArrayPatternRegistry
+@inject IJSRuntime JS
+
+@* モバイル / タブレット: オーバーレイ背景 *@
+@if (IsOpen)
+{
+    <div class="qap-backdrop" @onclick="HandleClose"></div>
+}
+
+<div class="qap @(IsCollapsed ? "qap--collapsed" : "") @(IsOpen ? "qap--mobile-open" : "")">
+
+    @* PC: リサイズハンドル *@
+    <div class="qap__resizer"
+         @onmousedown="e => OnResizeStart.InvokeAsync(e)"
+         @onmousedown:preventDefault></div>
+
+    @* PC: 折りたたみトグル *@
+    <button class="qap__pc-toggle"
+            @onclick="ToggleCollapse"
+            title="@(IsCollapsed ? "Show Panel" : "Hide Panel")">
+        @(IsCollapsed ? "▶" : "◀")
+    </button>
+
+    <div class="qap__content">
+
+        @* パネルタイトル + モバイル閉じるボタン *@
+        <div class="qap__title-row">
+            <span class="qap__title">⚙️ Quick Access</span>
+            <button class="qap__mobile-close" @onclick="HandleClose" title="Close">✕</button>
+        </div>
+
+        <fieldset class="controls-fieldset" disabled="@IsLoading">
+
+            @* ── Algorithm ── *@
+            <div class="qap__item">
+                <div class="qap__label-row">
+                    <span class="stat-label">Algorithm</span>
+                    <NavLink href="tutorial" class="qap__help-link" title="Learn about this algorithm">?</NavLink>
+                </div>
+                <select value="@SelectedAlgorithm"
+                        @onchange="e => HandleAlgorithmChange((string)e.Value!)">
+                    @foreach (var group in GetAlgorithmsByCategory())
+                    {
+                        <optgroup label="@group.Key">
+                            @foreach (var algo in group)
+                            {
+                                <option value="@algo.Name">@algo.Name</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+            </div>
+
+            @* ── Array Size ── *@
+            <div class="qap__item">
+                <span class="stat-label">Array Size @GetSizeRecommendation()</span>
+                <select value="@ArraySize"
+                        @onchange="e => HandleArraySizeChange(int.Parse((string)e.Value!))">
+                    @foreach (var size in AvailableSizes)
+                    {
+                        <option value="@size">@size @(IsRecommendedSize(size) ? "⭐" : "")</option>
+                    }
+                </select>
+            </div>
+
+            @* ── Array Pattern ── *@
+            <div class="qap__item">
+                <span class="stat-label">Array Pattern</span>
+                <select value="@SelectedPatternName"
+                        @onchange="e => HandlePatternChange((string)e.Value!)">
+                    @foreach (var group in GetPatternsByCategory())
+                    {
+                        <optgroup label="@group.Key">
+                            @foreach (var pattern in group)
+                            {
+                                <option value="@pattern.Name">@pattern.Name</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+            </div>
+
+            @* ── Visualization Mode ── *@
+            <div class="qap__item">
+                <span class="stat-label">Visualization Mode</span>
+                <select value="@SelectedVisualizationMode"
+                        @onchange="e => HandleVisualizationModeChange((string)e.Value!)">
+                    <option value="@VisualizationMode.BarChart">📊 Bar Chart</option>
+                    <option value="@VisualizationMode.Circular">⭕ Circular</option>
+                    <option value="@VisualizationMode.Spiral">🌀 Spiral</option>
+                    <option value="@VisualizationMode.DotPlot">🔵 Dot Plot</option>
+                    <option value="@VisualizationMode.PictureRow">🖼️ Picture Row</option>
+                    <option value="@VisualizationMode.PictureColumn">🖼️ Picture Column</option>
+                    <option value="@VisualizationMode.PictureBlock">🖼️ Picture Block</option>
+                </select>
+            </div>
+
+            <hr class="qap__divider" />
+
+            @* ── Operations Per Frame ── *@
+            <div class="qap__item qap__item--vertical">
+                <div class="qap__slider-header">
+                    <span class="stat-label">Operations Per Frame</span>
+                    <span class="stat-value qap__slider-value">@Playback.OperationsPerFrame ops/frame</span>
+                </div>
+                <input type="range" min="1" max="1000"
+                       @bind="Playback.OperationsPerFrame"
+                       @bind:after="HandleSpeedChanged" />
+            </div>
+
+            @* ── Speed Multiplier ── *@
+            <div class="qap__item qap__item--vertical">
+                <div class="qap__slider-header">
+                    <span class="stat-label">Speed Multiplier</span>
+                    <span class="stat-value qap__slider-value">
+                        @Playback.SpeedMultiplier.ToString("F1")x
+                        <span class="qap__fps">(@EffectiveFPS FPS)</span>
+                    </span>
+                </div>
+                <input type="range" min="0.5" max="100" step="0.5"
+                       @bind="Playback.SpeedMultiplier"
+                       @bind:after="HandleSpeedChanged" />
+            </div>
+
+            <hr class="qap__divider" />
+
+            @* ── Comparison Mode ── *@
+            <div class="qap__item">
+                <span class="stat-label">
+                    Comparison Mode
+                    <span class="qap__count">(@ComparisonMode.State.Instances.Count/@ComparisonState.MaxComparisons)</span>
+                </span>
+                <label class="toggle-switch">
+                    <input type="checkbox"
+                           checked="@IsComparisonMode"
+                           @onchange="e => HandleComparisonModeChange((bool)e.Value!)" />
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            @if (IsComparisonMode)
+            {
+                @* ── Add to Comparison ── *@
+                <div class="qap__item">
+                    @{
+                        var addDisabled = ComparisonMode.State.Instances.Count >= ComparisonState.MaxComparisons
+                                       || !ComparisonMode.State.IsEnabled
+                                       || ComparisonMode.IsAddingAlgorithm;
+                    }
+                    <button class="primary qap__btn-full"
+                            @onclick="() => OnAddAlgorithm.InvokeAsync()"
+                            disabled="@addDisabled">
+                        @(ComparisonMode.IsAddingAlgorithm ? "⏳ Adding..." : "➕ Add to Comparison")
+                    </button>
+                </div>
+            }
+
+            @* ── Generate & Sort ── *@
+            <div class="qap__item">
+                <button class="primary qap__btn-full"
+                        @onclick="() => OnGenerateAndSort.InvokeAsync()">
+                    🎲 Generate &amp; Sort
+                </button>
+            </div>
+
+            @* ── Complexity ── *@
+            <div class="qap__item">
+                <span class="stat-label">Complexity</span>
+                <span class="stat-value qap__complexity">@GetComplexity()</span>
+            </div>
+
+        </fieldset>
+
+        @* ── Advanced Settings (Layer 3 items — Phase 3 で Settings モーダルへ移動予定) ── *@
+        <details class="qap__advanced">
+            <summary class="qap__advanced-summary">⚙️ Advanced</summary>
+            <div class="qap__advanced-body">
+
+                <div class="qap__item">
+                    <span class="stat-label">
+                        Renderer
+                        <span class="qap__count">(@(RenderSettings.UseWebGL ? "WebGL" : "Canvas 2D"))</span>
+                    </span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" @bind="RenderSettings.UseWebGL" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="qap__item">
+                    <span class="stat-label">Auto Reset on Complete</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" @bind="Playback.AutoReset" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="qap__item">
+                    <span class="stat-label">Instant Mode</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" @bind="Playback.InstantMode" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="qap__item">
+                    <span class="stat-label">Sound</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" @bind="Playback.SoundEnabled" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                @if (Playback.SoundEnabled)
+                {
+                    <div class="qap__item qap__item--vertical">
+                        <div class="qap__slider-header">
+                            <span class="stat-label">Volume</span>
+                            <span class="stat-value qap__slider-value">@((int)(Playback.SoundVolume * 100))%</span>
+                        </div>
+                        <input type="range" min="0" max="1" step="0.05" @bind="Playback.SoundVolume" />
+                        @if (Playback.SpeedMultiplier > 50)
+                        {
+                            <span class="qap__warn">⚠️ Muted (speed &gt; 50x)</span>
+                        }
+                    </div>
+                }
+
+                <div class="qap__item">
+                    <span class="stat-label">Auto Switch to Recommended Size</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" @bind="_autoSwitchToRecommendedSize" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="qap__item">
+                    <span class="stat-label">Category Filter</span>
+                    <select @bind="_selectedCategory" style="width: 100%;">
+                        <option value="">All Categories</option>
+                        @foreach (var category in AlgorithmRegistry.GetCategories())
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="qap__item">
+                    <span class="stat-label">🐛 Debug Log</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" @bind="DebugSettings.IsEnabled" @bind:after="HandleDebugToggleChanged" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+            </div>
+        </details>
+
+    </div>
+</div>
+
+@code {
+    // ── PC サイドバー状態（Index.razor が所有、@bind 経由） ──────────────────
+    [Parameter] public bool IsCollapsed { get; set; }
+    [Parameter] public EventCallback<bool> IsCollapsedChanged { get; set; }
+
+    [Parameter] public EventCallback<MouseEventArgs> OnResizeStart { get; set; }
+
+    // ── モバイル オーバーレイ状態 ─────────────────────────────────────────────
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    // ── Quick Access 状態（@bind で Index.razor と同期） ──────────────────────
+    [Parameter, EditorRequired] public string SelectedAlgorithm { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SelectedAlgorithmChanged { get; set; }
+
+    [Parameter, EditorRequired] public int ArraySize { get; set; }
+    [Parameter] public EventCallback<int> ArraySizeChanged { get; set; }
+
+    [Parameter, EditorRequired] public string SelectedPatternName { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SelectedPatternNameChanged { get; set; }
+
+    [Parameter, EditorRequired] public VisualizationMode SelectedVisualizationMode { get; set; }
+    [Parameter] public EventCallback<VisualizationMode> SelectedVisualizationModeChanged { get; set; }
+
+    [Parameter] public bool IsComparisonMode { get; set; }
+    [Parameter] public EventCallback<bool> IsComparisonModeChanged { get; set; }
+
+    // ── コンテキスト ──────────────────────────────────────────────────────────
+    [Parameter] public bool IsLoading { get; set; }
+
+    // ── サービス（参照渡し） ──────────────────────────────────────────────────
+    [Parameter, EditorRequired] public PlaybackService Playback { get; set; } = default!;
+    [Parameter, EditorRequired] public ComparisonModeService ComparisonMode { get; set; } = default!;
+    [Parameter, EditorRequired] public RenderSettings RenderSettings { get; set; } = default!;
+    [Parameter, EditorRequired] public DebugSettings DebugSettings { get; set; } = default!;
+
+    // ── アクションコールバック ────────────────────────────────────────────────
+    [Parameter] public EventCallback OnGenerateAndSort { get; set; }
+    [Parameter] public EventCallback OnAddAlgorithm { get; set; }
+    [Parameter] public EventCallback OnAlgorithmChanged { get; set; }
+    [Parameter] public EventCallback OnVisualizationModeChanged { get; set; }
+    [Parameter] public EventCallback OnSpeedSettingsChanged { get; set; }
+    [Parameter] public EventCallback OnComparisonModeChanged { get; set; }
+
+    // ── 内部状態 ──────────────────────────────────────────────────────────────
+    private string _selectedCategory = string.Empty;
+    private bool _autoSwitchToRecommendedSize = false;
+
+    private static readonly int[] AvailableSizes = [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096];
+
+    private int EffectiveFPS => (int)(60 * Playback.SpeedMultiplier);
+
+    // ── PC 折りたたみトグル ──────────────────────────────────────────────────
+    private async Task ToggleCollapse()
+    {
+        await IsCollapsedChanged.InvokeAsync(!IsCollapsed);
+    }
+
+    // ── モバイル クローズ ─────────────────────────────────────────────────────
+    private async Task HandleClose()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    // ── Algorithm 変更 ───────────────────────────────────────────────────────
+    private async Task HandleAlgorithmChange(string newValue)
+    {
+        await SelectedAlgorithmChanged.InvokeAsync(newValue);
+        if (_autoSwitchToRecommendedSize)
+        {
+            var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == newValue);
+            if (algo != null)
+                await ArraySizeChanged.InvokeAsync(algo.RecommendedSize);
+        }
+        await OnAlgorithmChanged.InvokeAsync();
+    }
+
+    // ── ArraySize 変更 ───────────────────────────────────────────────────────
+    private async Task HandleArraySizeChange(int newValue)
+    {
+        await ArraySizeChanged.InvokeAsync(newValue);
+    }
+
+    // ── Pattern 変更 ─────────────────────────────────────────────────────────
+    private async Task HandlePatternChange(string newValue)
+    {
+        await SelectedPatternNameChanged.InvokeAsync(newValue);
+    }
+
+    // ── VisualizationMode 変更 ───────────────────────────────────────────────
+    private async Task HandleVisualizationModeChange(string rawValue)
+    {
+        if (Enum.TryParse<VisualizationMode>(rawValue, out var mode))
+        {
+            await SelectedVisualizationModeChanged.InvokeAsync(mode);
+            await OnVisualizationModeChanged.InvokeAsync();
+        }
+    }
+
+    // ── Speed 変更 ───────────────────────────────────────────────────────────
+    private async Task HandleSpeedChanged()
+    {
+        await OnSpeedSettingsChanged.InvokeAsync();
+    }
+
+    // ── Comparison Mode 変更 ─────────────────────────────────────────────────
+    private async Task HandleComparisonModeChange(bool newValue)
+    {
+        await IsComparisonModeChanged.InvokeAsync(newValue);
+        await OnComparisonModeChanged.InvokeAsync();
+    }
+
+    // ── Debug Log 変更 ───────────────────────────────────────────────────────
+    private async Task HandleDebugToggleChanged()
+    {
+        await JS.InvokeVoidAsync("debugHelper.setDebugMode", DebugSettings.IsEnabled);
+    }
+
+    // ── ヘルパー ─────────────────────────────────────────────────────────────
+    private string GetSizeRecommendation()
+    {
+        var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
+        return (algo != null && algo.RecommendedSize != ArraySize)
+            ? $"(Recommended: {algo.RecommendedSize})"
+            : string.Empty;
+    }
+
+    private bool IsRecommendedSize(int size)
+    {
+        var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
+        return algo?.RecommendedSize == size;
+    }
+
+    private string GetComplexity()
+    {
+        var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
+        return algo?.TimeComplexity ?? "Unknown";
+    }
+
+    private IEnumerable<IGrouping<string, AlgorithmMetadata>> GetAlgorithmsByCategory()
+    {
+        var source = string.IsNullOrEmpty(_selectedCategory)
+            ? AlgorithmRegistry.GetAllAlgorithms()
+            : AlgorithmRegistry.GetByCategory(_selectedCategory);
+
+        var categoryOrder = source
+            .Select((a, i) => new { a.Category, i })
+            .GroupBy(x => x.Category)
+            .ToDictionary(g => g.Key, g => g.Min(x => x.i));
+
+        return source.GroupBy(a => a.Category).OrderBy(g => categoryOrder[g.Key]);
+    }
+
+    private IEnumerable<IGrouping<string, ArrayPatternMetadata>> GetPatternsByCategory()
+    {
+        var all = ArrayPatternRegistry.GetAllPatterns();
+
+        var categoryOrder = all
+            .Select((p, i) => new { p.Category, i })
+            .GroupBy(x => x.Category)
+            .ToDictionary(g => g.Key, g => g.Min(x => x.i));
+
+        return all.GroupBy(p => p.Category).OrderBy(g => categoryOrder[g.Key]);
+    }
+}

@@ -21,162 +21,42 @@
      @onmouseup="OnMouseUp"
      @onmousemove:preventDefault="@_isResizing">
     <div class="header">
-        <h1>
-            🎨 Sort Algorithm Visualization
-            @if (!string.IsNullOrEmpty(_runningAlgorithmName))
-            {
-                <span style="font-size: 0.6em; color: #888; margin-left: 1em;">- @_runningAlgorithmName</span>
-            }
+        @* モバイル / タブレット: ☰ ハンバーガーボタン *@
+        <button class="header__hamburger"
+                @onclick="() => _quickAccessOpen = true"
+                title="Open Quick Access Panel">☰</button>
+
+        <h1 class="header__title">
+            🎨 Sort Visualization
         </h1>
-        <div style="display: flex; align-items: center; gap: 1rem;">
+
+        <div class="header__actions">
             <NavLink href="tutorial" class="tutorial-nav-btn" title="チュートリアルへ">🎓 Tutorial</NavLink>
-            <label class="toggle-switch" style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 0.9em; color: #999;">🐛 Debug Log</span>
-                <input type="checkbox" @bind="DebugSettings.IsEnabled" @bind:after="OnDebugToggleChanged" />
-                <span class="toggle-slider"></span>
-            </label>
-            <select @bind="SelectedCategory">
-                <option value="">All Categories</option>
-                @foreach (var category in AlgorithmRegistry.GetCategories())
-                {
-                    <option value="@category">@category</option>
-                }
-            </select>
+            <button class="header__settings-btn" title="Settings (coming soon)" disabled>⚙ Settings</button>
         </div>
     </div>
 
-    <div class="sidebar @(_sidebarCollapsed ? "collapsed" : "")">
-        <div class="sidebar-resizer"
-             @onmousedown="StartResize"
-             @onmousedown:preventDefault></div>
-
-        <button class="sidebar-toggle"
-                @onclick="ToggleSidebar"
-                title="@(_sidebarCollapsed ? "Show Sidebar" : "Hide Sidebar")">
-            @(_sidebarCollapsed ? "▶" : "◀")
-        </button>
-
-        <div class="sidebar-content">
-            <fieldset class="controls-fieldset" disabled="@IsLoading">
-                <div class="statistics-panel">
-                    <h3>⚙️ Settings</h3>
-
-                    <div class="stat-item">
-                        <span class="stat-label">Algorithm</span>
-                        <select @bind="SelectedAlgorithm" @bind:after="OnAlgorithmChanged" style="width: 100%;">
-                            @if (string.IsNullOrEmpty(SelectedCategory))
-                            {
-                                @foreach (var group in GetAlgorithmsByCategory())
-                                {
-                                    <optgroup label="@group.Key">
-                                        @foreach (var algo in group)
-                                        {
-                                            <option value="@algo.Name">@algo.Name</option>
-                                        }
-                                    </optgroup>
-                                }
-                            }
-                            else
-                            {
-                                @foreach (var algo in GetFilteredAlgorithms())
-                                {
-                                    <option value="@algo.Name">@algo.Name</option>
-                                }
-                            }
-                        </select>
-                    </div>
-
-                    <div class="stat-item">
-                        <span class="stat-label">Array Size @GetSizeRecommendation()</span>
-                        <select @bind="ArraySize">
-                            @foreach (var size in AvailableSizes)
-                            {
-                                <option value="@size">@size @(IsRecommendedSize(size) ? "⭐" : "")</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="stat-item">
-                        <span class="stat-label">
-                            Auto Switch to Recommended Size
-                        </span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" @bind="_autoSwitchToRecommendedSize" />
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="stat-item">
-                        <span class="stat-label">Array Pattern</span>
-                        <select @bind="SelectedPatternName" style="width: 100%;">
-                            @foreach (var group in GetPatternsByCategory())
-                            {
-                                <optgroup label="@group.Key">
-                                    @foreach (var pattern in group)
-                                    {
-                                        <option value="@pattern.Name">@pattern.Name</option>
-                                    }
-                                </optgroup>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="stat-item">
-                        <span class="stat-label">Visualization Mode</span>
-                        <select @bind="SelectedVisualizationMode" @bind:after="OnVisualizationModeChanged" style="width: 100%;">
-                            <option value="@VisualizationMode.BarChart">📊 Bar Chart</option>
-                            <option value="@VisualizationMode.Circular">⭕ Circular</option>
-                            <option value="@VisualizationMode.Spiral">🌀 Spiral</option>
-                            <option value="@VisualizationMode.DotPlot">🔵 Dot Plot</option>
-                            <option value="@VisualizationMode.PictureRow">🖼️ Picture Row</option>
-                            <option value="@VisualizationMode.PictureColumn">🖼️ Picture Column</option>
-                            <option value="@VisualizationMode.PictureBlock">🖼️ Picture Block</option>
-                        </select>
-                    </div>
-
-                    <div class="stat-item">
-                        <span class="stat-label">
-                            Renderer
-                            <span style="font-size: 0.8em; color: #888;">
-                                (@(RenderSettings.UseWebGL ? "WebGL" : "Canvas 2D"))
-                            </span>
-                        </span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" @bind="RenderSettings.UseWebGL" />
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="stat-item">
-                        <span class="stat-label">
-                            Comparison Mode
-                            <span style="font-size: 0.8em; color: #888;">
-                                (@(ComparisonMode.State.Instances.Count)/@(ComparisonState.MaxComparisons))
-                            </span>
-                        </span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" @bind="_isComparisonMode" @bind:after="OnComparisonModeChanged" />
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-
-                    @if (_isComparisonMode)
-                    {
-                        <ComparisonModeControls ComparisonMode="ComparisonMode"
-                                                Playback="Playback"
-                                                OnAddAlgorithm="AddAlgorithmToComparison"
-                                                OnSpeedSettingsChanged="OnSpeedSettingsChanged" />
-                    }
-                    else
-                    {
-                        <NormalModeControls Playback="Playback"
-                                            OnGenerateAndSort="GenerateAndSortAsync"
-                                            OnSpeedSettingsChanged="OnSpeedSettingsChanged" />
-                    }
-                </div>
-            </fieldset>
-        </div>
-    </div>
+    <QuickAccessPanel
+        @bind-IsCollapsed="_sidebarCollapsed"
+        @bind-SelectedAlgorithm="SelectedAlgorithm"
+        @bind-ArraySize="ArraySize"
+        @bind-SelectedPatternName="SelectedPatternName"
+        @bind-SelectedVisualizationMode="SelectedVisualizationMode"
+        @bind-IsComparisonMode="_isComparisonMode"
+        IsOpen="_quickAccessOpen"
+        OnClose="() => _quickAccessOpen = false"
+        OnResizeStart="HandleResizeStart"
+        IsLoading="IsLoading"
+        Playback="Playback"
+        ComparisonMode="ComparisonMode"
+        RenderSettings="RenderSettings"
+        DebugSettings="DebugSettings"
+        OnGenerateAndSort="GenerateAndSortAsync"
+        OnAddAlgorithm="AddAlgorithmToComparison"
+        OnAlgorithmChanged="OnAlgorithmChanged"
+        OnVisualizationModeChanged="OnVisualizationModeChanged"
+        OnSpeedSettingsChanged="OnSpeedSettingsChanged"
+        OnComparisonModeChanged="OnComparisonModeChanged" />
 
 
 
@@ -237,12 +117,11 @@
 </div>
 
 @code {
-    private string SelectedAlgorithm { get; set; } = "Bubble sort";
-    private string SelectedCategory { get; set; } = "";
-    private int ArraySize { get; set; } = 64;
-    private string SelectedPatternName { get; set; } = "🎲 Random";
-    private VisualizationMode SelectedVisualizationMode { get; set; } = VisualizationMode.BarChart;
-    private string _runningAlgorithmName = string.Empty;
+private string SelectedAlgorithm { get; set; } = "Bubble sort";
+private int ArraySize { get; set; } = 64;
+private string SelectedPatternName { get; set; } = "🎲 Random";
+private VisualizationMode SelectedVisualizationMode { get; set; } = VisualizationMode.BarChart;
+private string _runningAlgorithmName = string.Empty;
 
     // ローディング状態
     private LoadingState _loadingState = LoadingState.Idle;
@@ -260,10 +139,8 @@
     private bool _isComparisonPlaying = false;
     private bool _statsTableOpen = false;
 
-    // 推奨サイズへの自動切り替え
-    private bool _autoSwitchToRecommendedSize = false;
-
-    private int[] AvailableSizes = [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096];
+    // Quick Access パネル（モバイル / タブレット）
+    private bool _quickAccessOpen = false;
 
     // サイドバーリサイズ関連
     private int _sidebarWidth = 280; // デフォルト幅（px）
@@ -275,31 +152,22 @@
     protected override void OnInitialized()
     {
         Playback.StateChanged += OnStateChanged;
-        ComparisonMode.OnStateChanged += OnStateChanged; // 比較モードの状態変更を購読
-        DebugSettings.OnChanged += OnStateChanged; // デバッグ設定の変更を購読
+        ComparisonMode.OnStateChanged += OnStateChanged;
+        DebugSettings.OnChanged += OnStateChanged;
 
-        // 初期アルゴリズムの推奨サイズを設定
-        SetRecommendedSize();
         // 初期モードを同期
         SelectedVisualizationMode = Playback.State.Mode;
-    }
-
-    private void ToggleSidebar()
-    {
-        _sidebarCollapsed = !_sidebarCollapsed;
-        StateHasChanged();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // JavaScriptにデバッグ状態の初期値を同期
             await JS.InvokeVoidAsync("debugHelper.setDebugMode", DebugSettings.IsEnabled);
         }
     }
 
-    private void StartResize(MouseEventArgs e)
+    private void HandleResizeStart(MouseEventArgs e)
     {
         _isResizing = true;
         _resizeStartX = (int)e.ClientX;
@@ -324,87 +192,9 @@
         _isResizing = false;
     }
 
-    private async Task OnDebugToggleChanged()
-    {
-        // JavaScriptにデバッグ状態を同期
-        await JS.InvokeVoidAsync("debugHelper.setDebugMode", DebugSettings.IsEnabled);
-        StateHasChanged();
-    }
-
     private void OnAlgorithmChanged()
     {
-        if (_autoSwitchToRecommendedSize)
-        {
-            SetRecommendedSize();
-        }
         StateHasChanged();
-    }
-
-    private void SetRecommendedSize()
-    {
-        var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
-        if (algo != null)
-        {
-            ArraySize = algo.RecommendedSize;
-        }
-    }
-
-    private string GetSizeRecommendation()
-    {
-        var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
-        if (algo != null && algo.RecommendedSize != ArraySize)
-        {
-            return $"(Recommended: {algo.RecommendedSize})";
-        }
-        return "";
-    }
-
-    private bool IsRecommendedSize(int size)
-    {
-        var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
-        return algo?.RecommendedSize == size;
-    }
-
-    private IEnumerable<AlgorithmMetadata> GetFilteredAlgorithms()
-    {
-        var algorithms = string.IsNullOrEmpty(SelectedCategory)
-            ? AlgorithmRegistry.GetAllAlgorithms()
-            : AlgorithmRegistry.GetByCategory(SelectedCategory);
-
-        return algorithms;
-    }
-
-    private IEnumerable<IGrouping<string, AlgorithmMetadata>> GetAlgorithmsByCategory()
-    {
-        // AlgorithmRegistry に登録された順序を保持しながらカテゴリごとにグループ化
-        var allAlgorithms = AlgorithmRegistry.GetAllAlgorithms();
-
-        // カテゴリの最初の出現順序を記録
-        var categoryOrder = allAlgorithms
-            .Select((algo, index) => new { algo.Category, Index = index })
-            .GroupBy(x => x.Category)
-            .ToDictionary(g => g.Key, g => g.Min(x => x.Index));
-
-        // カテゴリごとにグループ化し、カテゴリの最初の出現順でソート
-        return allAlgorithms
-            .GroupBy(a => a.Category)
-            .OrderBy(g => categoryOrder[g.Key]);
-    }
-
-    private IEnumerable<IGrouping<string, ArrayPatternMetadata>> GetPatternsByCategory()
-    {
-        var allPatterns = ArrayPatternRegistry.GetAllPatterns();
-
-        // カテゴリの最初の出現順序を記録
-        var categoryOrder = allPatterns
-            .Select((pattern, index) => new { pattern.Category, Index = index })
-            .GroupBy(x => x.Category)
-            .ToDictionary(g => g.Key, g => g.Min(x => x.Index));
-
-        // カテゴリごとにグループ化し、カテゴリの最初の出現順でソート
-        return allPatterns
-            .GroupBy(p => p.Category)
-            .OrderBy(g => categoryOrder[g.Key]);
     }
 
     private ArrayPatternMetadata? GetSelectedPattern()
