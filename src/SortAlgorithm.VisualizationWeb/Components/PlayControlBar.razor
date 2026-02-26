@@ -1,0 +1,48 @@
+@using SortAlgorithm.VisualizationWeb.Models
+@using SortAlgorithm.VisualizationWeb.Services
+
+<div class="play-control-bar">
+    <button class="play-control-btn @(IsPlaying ? "btn-pause" : "btn-play")"
+            @onclick="OnTogglePlayPause"
+            title="@(IsPlaying ? "Pause" : "Play")">
+        @(IsPlaying ? "⏸" : "▶")
+    </button>
+
+    <button class="play-control-btn btn-stop"
+            @onclick="OnStop"
+            title="Stop">
+        ⏹
+    </button>
+
+    <button class="play-control-btn @(SoundEnabled ? "btn-sound-on" : "btn-sound-off")"
+            @onclick="OnToggleSound"
+            title="@(SoundEnabled ? "Sound ON" : "Sound OFF")">
+        @(SoundEnabled ? "🔊" : "🔇")
+    </button>
+
+    @if (StatusText is not null)
+    {
+        <span class="play-control-status">@StatusText</span>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public bool IsPlaying { get; set; }
+
+    [Parameter]
+    public bool SoundEnabled { get; set; }
+
+    /// <summary>比較モード時の完了数表示 ("2/4 completed" など)。null の場合は非表示。</summary>
+    [Parameter]
+    public string? StatusText { get; set; }
+
+    [Parameter]
+    public EventCallback OnTogglePlayPause { get; set; }
+
+    [Parameter]
+    public EventCallback OnStop { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleSound { get; set; }
+}

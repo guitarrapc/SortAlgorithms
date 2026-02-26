@@ -1,0 +1,65 @@
+@using SortAlgorithm.VisualizationWeb.Models
+@using SortAlgorithm.VisualizationWeb.Services
+
+<div class="sort-card-grid"
+     style="grid-template-columns: repeat(@GetGridColumns(), 1fr);">
+    @for (int i = 0; i < Instances.Count; i++)
+    {
+        var instance = Instances[i];
+        var index = i;
+
+        <SortCard
+            State="@instance.State"
+            AlgorithmName="@instance.AlgorithmName"
+            Complexity="@instance.Metadata.TimeComplexity"
+            VisualizationMode="@VisualizationMode"
+            GridColumnCount="@GetGridColumns()"
+            CardSize="@GetCardSize()"
+            ShowRemoveButton="true"
+            Playback="@instance.Playback"
+            OnRemove="@(() => OnRemoveInstance(index))"
+            OnVisualizationClick="@OnVisualizationClick"
+            @key="instance.AlgorithmName" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<ComparisonInstance> Instances { get; set; } = null!;
+
+    [Parameter]
+    public VisualizationMode VisualizationMode { get; set; } = VisualizationMode.BarChart;
+
+    [Parameter]
+    public EventCallback<int> OnRemove { get; set; }
+
+    [Parameter]
+    public EventCallback OnVisualizationClick { get; set; }
+
+    private int GetGridColumns() => Instances.Count switch
+    {
+        1 => 1,
+        2 => 2,
+        3 => 3,
+        4 => 2,
+        5 => 3,
+        6 => 3,
+        7 => 3,
+        8 => 3,
+        9 => 3,
+        _ => 1,
+    };
+
+    private StatsCardSize GetCardSize() => Instances.Count switch
+    {
+        1 => StatsCardSize.Full,
+        2 or 3 => StatsCardSize.Medium,
+        _ => StatsCardSize.Small,
+    };
+
+    private async Task OnRemoveInstance(int index)
+    {
+        if (OnRemove.HasDelegate)
+            await OnRemove.InvokeAsync(index);
+    }
+}

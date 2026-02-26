@@ -1,0 +1,164 @@
+@using SortAlgorithm.VisualizationWeb.Models
+@using SortAlgorithm.VisualizationWeb.Services
+@implements IDisposable
+
+<div class="sort-card @(State.IsSortCompleted ? "sort-card--completed" : "")">
+    @* カードヘッダー *@
+    <div class="sort-card__header">
+        <span class="sort-card__algorithm-name">@AlgorithmName</span>
+        <div class="sort-card__header-right">
+            <span class="complexity-badge">@Complexity</span>
+            @if (ShowRemoveButton)
+            {
+                <button class="btn-remove-grid"
+                        @onclick="HandleRemove"
+                        title="Remove">
+                    ✖
+                </button>
+            }
+        </div>
+    </div>
+
+    @* 可視化エリア *@
+    <div class="sort-card__visualization">
+        @if (State.MainArray.Length == 0 && !IsPictureMode)
+        {
+            <div class="sort-card__empty">
+                <p class="sort-card__empty-icon">@ModeIcon</p>
+                <p>Click "Generate &amp; Sort" to start visualization</p>
+            </div>
+        }
+        else if (VisualizationMode == VisualizationMode.BarChart)
+        {
+            <BarChartRenderer
+                State="@State"
+                GridColumnCount="@GridColumnCount"
+                OnClick="@OnVisualizationClick" />
+        }
+        else if (VisualizationMode == VisualizationMode.Circular)
+        {
+            <CircularRenderer
+                State="@State"
+                GridColumnCount="@GridColumnCount"
+                OnClick="@OnVisualizationClick" />
+        }
+        else if (VisualizationMode == VisualizationMode.Spiral)
+        {
+            <SpiralRenderer
+                State="@State"
+                GridColumnCount="@GridColumnCount"
+                OnClick="@OnVisualizationClick" />
+        }
+        else if (VisualizationMode == VisualizationMode.DotPlot)
+        {
+            <DotPlotRenderer
+                State="@State"
+                GridColumnCount="@GridColumnCount"
+                OnClick="@OnVisualizationClick" />
+        }
+        else if (VisualizationMode == VisualizationMode.PictureRow)
+        {
+            <PictureRowRenderer
+                State="@State"
+                GridColumnCount="@GridColumnCount"
+                OnClick="@OnVisualizationClick" />
+        }
+        else if (VisualizationMode == VisualizationMode.PictureColumn)
+        {
+            <PictureColumnRenderer
+                State="@State"
+                GridColumnCount="@GridColumnCount"
+                OnClick="@OnVisualizationClick" />
+        }
+        else if (VisualizationMode == VisualizationMode.PictureBlock)
+        {
+            <PictureBlockRenderer
+                State="@State"
+                GridColumnCount="@GridColumnCount"
+                OnClick="@OnVisualizationClick" />
+        }
+    </div>
+
+    @* Stats Summary *@
+    <SortStatsSummary State="@State" CardSize="@CardSize" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public VisualizationState State { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public string AlgorithmName { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Complexity { get; set; } = string.Empty;
+
+    [Parameter]
+    public VisualizationMode VisualizationMode { get; set; } = VisualizationMode.BarChart;
+
+    [Parameter]
+    public int GridColumnCount { get; set; } = 1;
+
+    [Parameter]
+    public StatsCardSize CardSize { get; set; } = StatsCardSize.Full;
+
+    /// <summary>比較モード時のみ true にする。✖ 削除ボタンを表示する。</summary>
+    [Parameter]
+    public bool ShowRemoveButton { get; set; }
+
+    [Parameter]
+    public EventCallback OnRemove { get; set; }
+
+    [Parameter]
+    public EventCallback OnVisualizationClick { get; set; }
+
+    /// <summary>PlaybackService の購読に使用。StateChanged を受けて再描画する。</summary>
+    [Parameter]
+    public PlaybackService? Playback { get; set; }
+
+    private PlaybackService? _subscribedPlayback;
+
+    protected override void OnParametersSet()
+    {
+        if (_subscribedPlayback != Playback)
+        {
+            if (_subscribedPlayback != null)
+                _subscribedPlayback.StateChanged -= OnStateChanged;
+
+            _subscribedPlayback = Playback;
+
+            if (_subscribedPlayback != null)
+                _subscribedPlayback.StateChanged += OnStateChanged;
+        }
+    }
+
+    private void OnStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private bool IsPictureMode =>
+        VisualizationMode is VisualizationMode.PictureRow
+                          or VisualizationMode.PictureColumn
+                          or VisualizationMode.PictureBlock;
+
+    private string ModeIcon => VisualizationMode switch
+    {
+        VisualizationMode.Circular => "⭕",
+        VisualizationMode.Spiral   => "🌀",
+        VisualizationMode.DotPlot  => "🔵",
+        _                          => "📊",
+    };
+
+    private async Task HandleRemove()
+    {
+        if (OnRemove.HasDelegate)
+            await OnRemove.InvokeAsync();
+    }
+
+    public void Dispose()
+    {
+        if (_subscribedPlayback != null)
+            _subscribedPlayback.StateChanged -= OnStateChanged;
+    }
+}

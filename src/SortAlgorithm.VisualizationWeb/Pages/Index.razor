@@ -174,19 +174,10 @@
                                             OnSpeedSettingsChanged="OnSpeedSettingsChanged" />
                     }
                 </div>
-
-                @if (!_isComparisonMode)
-                {
-                    <StatisticsPanel State="Playback.State" />
-
-                    <div class="stat-item" style="margin-top: 20px;">
-                        <span class="stat-label">Complexity</span>
-                        <span class="stat-value" style="font-size: 0.9rem;">@GetSelectedAlgorithmComplexity()</span>
-                    </div>
-                }
             </fieldset>
         </div>
     </div>
+
 
 
     <div class="visualization-area">
@@ -197,65 +188,44 @@
                 <span>@LoadingMessage</span>
             </div>
         }
+
+        <PlayControlBar IsPlaying="@GetIsPlaying()"
+                        SoundEnabled="@Playback.SoundEnabled"
+                        StatusText="@GetComparisonStatusText()"
+                        OnTogglePlayPause="HandleTogglePlayPause"
+                        OnStop="HandleReset"
+                        OnToggleSound="HandleToggleSound" />
+
         <div class="visualization-content">
             @if (_isComparisonMode && ComparisonMode.State.Instances.Any())
             {
-                @* 比較モード: グリッド表示 *@
-                <ComparisonGrid Instances="ComparisonMode.State.Instances"
-                                VisualizationMode="SelectedVisualizationMode"
-                                OnRemove="RemoveAlgorithmFromComparison"
-                                OnVisualizationClick="OnComparisonVisualizationClick" />
-            }
-            else if (!_isComparisonMode && Playback.State.Mode == VisualizationMode.PictureRow)
-            {
-                @* PictureRow モード: ソート前でも画像アップロード UI を表示 *@
-                <PictureRowRenderer State="Playback.State"
-                                    OnClick="OnVisualizationClick" />
-            }
-            else if (!_isComparisonMode && Playback.State.Mode == VisualizationMode.PictureColumn)
-            {
-                @* PictureColumn モード: ソート前でも画像アップロード UI を表示 *@
-                <PictureColumnRenderer State="Playback.State"
-                                       OnClick="OnVisualizationClick" />
-            }
-            else if (!_isComparisonMode && Playback.State.Mode == VisualizationMode.PictureBlock)
-            {
-                @* PictureBlock モード: ソート前でも画像アップロード UI を表示 *@
-                <PictureBlockRenderer State="Playback.State"
-                                      OnClick="OnVisualizationClick" />
-            }
-            else if (Playback.State.MainArray.Length > 0)
-            {
-                @* 通常モード: 単一アルゴリズム表示 *@
-                @if (Playback.State.Mode == VisualizationMode.BarChart)
-                {
-                    <BarChartRenderer State="Playback.State"
-                                      OnClick="OnVisualizationClick" />
-                }
-                else if (Playback.State.Mode == VisualizationMode.Circular)
-                {
-                    <CircularRenderer State="Playback.State"
-                                      OnClick="OnVisualizationClick" />
-                }
-                else if (Playback.State.Mode == VisualizationMode.Spiral)
-                {
-                    <SpiralRenderer State="Playback.State"
-                                    OnClick="OnVisualizationClick" />
-                }
-                else if (Playback.State.Mode == VisualizationMode.DotPlot)
-                {
-                    <DotPlotRenderer State="Playback.State"
-                                     OnClick="OnVisualizationClick" />
-                }
+                @* 比較モード: SortCardGrid *@
+                <SortCardGrid Instances="ComparisonMode.State.Instances"
+                              VisualizationMode="SelectedVisualizationMode"
+                              OnRemove="RemoveAlgorithmFromComparison"
+                              OnVisualizationClick="OnComparisonVisualizationClick" />
             }
             else
             {
-                <div style="text-align: center; color: #999;">
-                    <p style="font-size: 2rem;">@(Playback.State.Mode == VisualizationMode.Circular ? "⭕" : Playback.State.Mode == VisualizationMode.Spiral ? "🌀" : Playback.State.Mode == VisualizationMode.DotPlot ? "🔵" : "📊")</p>
-                    <p>Click "Generate & Sort" to start visualization</p>
-                </div>
+                @* 単一モード: SortCard フルサイズ *@
+                <SortCard State="Playback.State"
+                          AlgorithmName="@SelectedAlgorithm"
+                          Complexity="@GetSelectedAlgorithmComplexity()"
+                          VisualizationMode="@SelectedVisualizationMode"
+                          GridColumnCount="1"
+                          CardSize="StatsCardSize.Full"
+                          ShowRemoveButton="false"
+                          Playback="@Playback"
+                          OnVisualizationClick="@OnVisualizationClick" />
             }
         </div>
+
+        @if (!_isComparisonMode)
+        {
+            <SeekBar CurrentIndex="Playback.State.CurrentOperationIndex"
+                     TotalOperations="Playback.State.TotalOperations"
+                     OnSeek="OnSeek" />
+        }
     </div>
 
     @* 統計比較表（右側ドッキングパネル） *@
@@ -264,16 +234,6 @@
         <ComparisonStatsTable Instances="ComparisonMode.State.Instances"
                               @bind-IsOpen="_statsTableOpen" />
     }
-
-    <div class="controls">
-        <ModeControlPanel IsComparisonMode="_isComparisonMode"
-                          IsPlaying="_isComparisonPlaying"
-                          Playback="Playback"
-                          ComparisonMode="ComparisonMode"
-                          OnReset="HandleReset"
-                          OnTogglePlayPause="HandleTogglePlayPause"
-                          OnSeek="OnSeek" />
-    </div>
 </div>
 
 @code {
@@ -787,10 +747,37 @@
         StateHasChanged();
     }
 
+    private bool GetIsPlaying()
+    {
+        if (_isComparisonMode)
+            return _isComparisonPlaying;
+        return Playback.State.PlaybackState == PlaybackState.Playing;
+    }
+
+    private string? GetComparisonStatusText()
+    {
+        if (!_isComparisonMode || !ComparisonMode.State.Instances.Any())
+            return null;
+
+        if (ComparisonMode.State.AllCompleted)
+            return "✅ All Completed!";
+
+        var completedCount = ComparisonMode.State.Instances.Count(x => x.State.IsSortCompleted);
+        if (completedCount > 0)
+            return $"{completedCount}/{ComparisonMode.State.Instances.Count} completed";
+
+        return null;
+    }
+
+    private void HandleToggleSound()
+    {
+        Playback.SoundEnabled = !Playback.SoundEnabled;
+    }
+
     public void Dispose()
     {
         Playback.StateChanged -= OnStateChanged;
-        ComparisonMode.OnStateChanged -= OnStateChanged; // 比較モードのイベント購読解除
+        ComparisonMode.OnStateChanged -= OnStateChanged;
     }
 }
 
