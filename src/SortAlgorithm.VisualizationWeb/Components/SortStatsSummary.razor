@@ -5,82 +5,179 @@
     Full  (単一モード PC)       : ⏱ 時間, Comparisons, Swaps, Reads, Writes, Progress%
     Medium (比較2〜3枚 PC)      : ⏱ 時間, Comparisons, Swaps, Progress%
     Small  (比較4枚以上 / モバイル): ⏱ 時間, Cmp, Swp, %（省略形）
+
+    タブレット/スマホ: ∨ ボタンでインライン展開
 *@
 <div class="sort-stats-summary sort-stats-summary--@CardSize.ToString().ToLowerInvariant()">
-    @if (CardSize == StatsCardSize.Small)
+
+    @* ── コンパクト行（常時表示） ── *@
+    <div class="sss__compact">
+        @if (CardSize == StatsCardSize.Small)
+        {
+            <span class="stat-mini">
+                <span class="label">⏱</span>
+                <span class="value stat-execution-time">@ExecutionTimeDisplay</span>
+            </span>
+            <span class="stat-mini">
+                <span class="label">Cmp</span>
+                <span class="value">@FormatCompact(State.CompareCount)</span>
+            </span>
+            <span class="stat-mini">
+                <span class="label">Swp</span>
+                <span class="value">@FormatCompact(State.SwapCount)</span>
+            </span>
+            <span class="stat-mini">
+                <span class="label">%</span>
+                <span class="value">@GetProgressPercentage()%</span>
+            </span>
+        }
+        else if (CardSize == StatsCardSize.Medium)
+        {
+            <span class="stat-mini">
+                <span class="label">⏱</span>
+                <span class="value stat-execution-time">@ExecutionTimeDisplay</span>
+            </span>
+            <span class="stat-mini">
+                <span class="label">Cmp</span>
+                <span class="value">@FormatCompact(State.CompareCount)</span>
+            </span>
+            <span class="stat-mini">
+                <span class="label">Swp</span>
+                <span class="value">@FormatCompact(State.SwapCount)</span>
+            </span>
+            <span class="stat-mini">
+                <span class="label">Progress</span>
+                <span class="value">@GetProgressPercentage()%</span>
+            </span>
+        }
+        else
+        {
+            @* Full size *@
+            <span class="stat-mini">
+                <span class="label">⏱</span>
+                <span class="value stat-execution-time">@ExecutionTimeDisplay</span>
+            </span>
+            <span class="stat-mini">
+                <span class="label">Comparisons</span>
+                <span class="value">@State.CompareCount.ToString("N0")</span>
+            </span>
+            <span class="stat-mini">
+                <span class="label">Swaps</span>
+                <span class="value">@State.SwapCount.ToString("N0")</span>
+            </span>
+            <span class="stat-mini">
+                <span class="label">Reads</span>
+                <span class="value">@State.IndexReadCount.ToString("N0")</span>
+            </span>
+            <span class="stat-mini">
+                <span class="label">Writes</span>
+                <span class="value">@State.IndexWriteCount.ToString("N0")</span>
+            </span>
+            <span class="stat-mini">
+                <span class="label">Progress</span>
+                <span class="value">@GetProgressPercentage()%</span>
+            </span>
+        }
+
+        @* ∨/∧ 展開ボタン（PC では CSS で非表示） *@
+        <button class="sss__expand-btn" @onclick="() => _expanded = !_expanded"
+                title="@(_expanded ? "Collapse" : "Expand stats")">
+            @(_expanded ? "∧" : "∨")
+        </button>
+    </div>
+
+    @* ── 展開詳細ビュー（タブレット・スマホのみ有効） ── *@
+    @if (_expanded)
     {
-        <span class="stat-mini">
-            <span class="label">⏱</span>
-            <span class="value stat-execution-time">@ExecutionTimeDisplay</span>
-        </span>
-        <span class="stat-mini">
-            <span class="label">Cmp</span>
-            <span class="value">@FormatCompact(State.CompareCount)</span>
-        </span>
-        <span class="stat-mini">
-            <span class="label">Swp</span>
-            <span class="value">@FormatCompact(State.SwapCount)</span>
-        </span>
-        <span class="stat-mini">
-            <span class="label">%</span>
-            <span class="value">@GetProgressPercentage()%</span>
-        </span>
-    }
-    else if (CardSize == StatsCardSize.Medium)
-    {
-        <span class="stat-mini">
-            <span class="label">⏱</span>
-            <span class="value stat-execution-time">@ExecutionTimeDisplay</span>
-        </span>
-        <span class="stat-mini">
-            <span class="label">Cmp</span>
-            <span class="value">@FormatCompact(State.CompareCount)</span>
-        </span>
-        <span class="stat-mini">
-            <span class="label">Swp</span>
-            <span class="value">@FormatCompact(State.SwapCount)</span>
-        </span>
-        <span class="stat-mini">
-            <span class="label">Progress</span>
-            <span class="value">@GetProgressPercentage()%</span>
-        </span>
-    }
-    else
-    {
-        @* Full size *@
-        <span class="stat-mini">
-            <span class="label">⏱</span>
-            <span class="value stat-execution-time">@ExecutionTimeDisplay</span>
-        </span>
-        <span class="stat-mini">
-            <span class="label">Comparisons</span>
-            <span class="value">@State.CompareCount.ToString("N0")</span>
-        </span>
-        <span class="stat-mini">
-            <span class="label">Swaps</span>
-            <span class="value">@State.SwapCount.ToString("N0")</span>
-        </span>
-        <span class="stat-mini">
-            <span class="label">Reads</span>
-            <span class="value">@State.IndexReadCount.ToString("N0")</span>
-        </span>
-        <span class="stat-mini">
-            <span class="label">Writes</span>
-            <span class="value">@State.IndexWriteCount.ToString("N0")</span>
-        </span>
-        <span class="stat-mini">
-            <span class="label">Progress</span>
-            <span class="value">@GetProgressPercentage()%</span>
-        </span>
+        <div class="sss__detail">
+
+            <div class="sss__detail-section">
+                <span class="sss__detail-heading">⏱ Execution Time</span>
+                @if (State.ActualExecutionTime != TimeSpan.Zero)
+                {
+                    @if (IsPlaying)
+                    {
+                        <div class="sss__detail-row">
+                            <span class="sss__detail-label">Current</span>
+                            <span class="sss__detail-value">@FormatTime(State.EstimatedCurrentExecutionTime)</span>
+                        </div>
+                    }
+                    <div class="sss__detail-row">
+                        <span class="sss__detail-label">Total</span>
+                        <span class="sss__detail-value">@FormatTime(State.ActualExecutionTime)</span>
+                    </div>
+                    @if (State.ActualExecutionTime.TotalMilliseconds > 0 && State.CompareCount > 0)
+                    {
+                        <div class="sss__detail-row">
+                            <span class="sss__detail-label">Performance</span>
+                            <span class="sss__detail-value">@((State.CompareCount / State.ActualExecutionTime.TotalMilliseconds).ToString("N0")) ops/ms</span>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="sss__detail-row">
+                        <span class="sss__detail-label">Time</span>
+                        <span class="sss__detail-value">-</span>
+                    </div>
+                }
+            </div>
+
+            <div class="sss__detail-section">
+                <span class="sss__detail-heading">🔢 Operations</span>
+                <div class="sss__detail-row">
+                    <span class="sss__detail-label">Comparisons</span>
+                    <span class="sss__detail-value">@State.CompareCount.ToString("N0")</span>
+                </div>
+                <div class="sss__detail-row">
+                    <span class="sss__detail-label">Swaps</span>
+                    <span class="sss__detail-value">@State.SwapCount.ToString("N0")</span>
+                </div>
+                <div class="sss__detail-row">
+                    <span class="sss__detail-label">Index Reads</span>
+                    <span class="sss__detail-value">@State.IndexReadCount.ToString("N0")</span>
+                </div>
+                <div class="sss__detail-row">
+                    <span class="sss__detail-label">Index Writes</span>
+                    <span class="sss__detail-value">@State.IndexWriteCount.ToString("N0")</span>
+                </div>
+            </div>
+
+            <div class="sss__detail-section">
+                <div class="sss__progress-header">
+                    <span class="sss__detail-heading">Progress</span>
+                    <span class="sss__detail-value">@GetProgressPercentage()%</span>
+                </div>
+                <div class="sss__progress-track">
+                    <div class="sss__progress-fill" style="width: @GetProgressPercentage()%"></div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Complexity))
+            {
+                <div class="sss__detail-section">
+                    <div class="sss__detail-row">
+                        <span class="sss__detail-label">Complexity</span>
+                        <span class="sss__detail-value sss__complexity">@Complexity</span>
+                    </div>
+                </div>
+            }
+
+        </div>
     }
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public VisualizationState State { get; set; } = null!;
+[Parameter, EditorRequired]
+public VisualizationState State { get; set; } = null!;
 
-    [Parameter]
-    public StatsCardSize CardSize { get; set; } = StatsCardSize.Full;
+[Parameter]
+public StatsCardSize CardSize { get; set; } = StatsCardSize.Full;
+
+[Parameter]
+public string? Complexity { get; set; }
+
+private bool _expanded = false;
 
     private ulong _lastCompareCount;
     private ulong _lastSwapCount;
