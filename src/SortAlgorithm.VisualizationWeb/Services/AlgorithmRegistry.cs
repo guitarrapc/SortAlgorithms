@@ -133,13 +133,16 @@ public class AlgorithmRegistry
         Add("LSD Radix sort (b=4)", "Distribution Sorts", "O(nk)", MAX_SIZE, 4096, (arr, ctx) => RadixLSD4Sort.Sort(arr, ctx),
             tutorialDescription: "Sorts integers digit by digit from the least significant to the most significant position using a stable counting sort at each pass. Using base 4 (2-bit digits) requires more passes than larger bases but keeps the per-pass counting table tiny, which can improve CPU cache utilisation on very large arrays.");
         Add("LSD Radix sort (b=10)", "Distribution Sorts", "O(nk)", MAX_SIZE, 4096, (arr, ctx) => RadixLSD10Sort.Sort(arr, ctx),
-            tutorialDescription: "Sorts integers digit by digit from the least significant to the most significant position using a stable counting sort at each pass. Base 10 is the most intuitive base to follow visually — each pass sorts by the ones, tens, hundreds, … digit — and is a natural choice for illustrating how LSD Radix sort works.");
+            tutorialDescription: "Sorts integers digit by digit from the least significant to the most significant position using a stable counting sort at each pass. Base 10 is the most intuitive base to follow visually — each pass sorts by the ones, tens, hundreds, … digit — and is a natural choice for illustrating how LSD Radix sort works.",
+            tutorialArrayType: TutorialArrayType.TwoDigitDecimal);
         Add("LSD Radix sort (b=256)", "Distribution Sorts", "O(nk)", MAX_SIZE, 4096, (arr, ctx) => RadixLSD256Sort.Sort(arr, ctx),
-            tutorialDescription: "Sorts integers byte by byte from the least significant to the most significant byte using a stable counting sort at each pass. Base 256 (8-bit digits) needs only 4 passes for 32-bit integers and is the most common choice in high-performance implementations because each pass processes the maximum number of bits with a counting table that still fits comfortably in the L1 cache.");
+            tutorialDescription: "Sorts integers byte by byte from the least significant to the most significant byte using a stable counting sort at each pass. Base 256 (8-bit digits) needs only 4 passes for 32-bit integers and is the most common choice in high-performance implementations because each pass processes the maximum number of bits with a counting table that still fits comfortably in the L1 cache.",
+            excludeFromTutorial: true);
         Add("MSD Radix sort (b=4)", "Distribution Sorts", "O(nk)", MAX_SIZE, 4096, (arr, ctx) => RadixMSD4Sort.Sort(arr, ctx),
             tutorialDescription: "Sorts integers digit by digit from the most significant to the least significant position, recursively sorting each bucket before moving to the next digit. Starting from the most significant digit means sub-buckets that already differ at a higher digit need no further work, allowing early termination and giving it adaptive behaviour similar to a comparison sort.");
         Add("MSD Radix sort (b=10)", "Distribution Sorts", "O(nk)", MAX_SIZE, 4096, (arr, ctx) => RadixMSD10Sort.Sort(arr, ctx),
-            tutorialDescription: "A base-10 variant of MSD Radix sort that partitions by the leading decimal digit first, then recurses into each partition for the next digit. The decimal base makes the recursive bucketing intuitive to trace — elements are grouped first by hundreds, then tens, then ones — closely resembling how a human would sort numbered cards by hand.");
+            tutorialDescription: "A base-10 variant of MSD Radix sort that partitions by the leading decimal digit first, then recurses into each partition for the next digit. The decimal base makes the recursive bucketing intuitive to trace — elements are grouped first by hundreds, then tens, then ones — closely resembling how a human would sort numbered cards by hand.",
+            tutorialArrayType: TutorialArrayType.TwoDigitDecimal);
         Add("American flag sort", "Distribution Sorts", "O(nk)", MAX_SIZE, 4096, (arr, ctx) => AmericanFlagSort.Sort(arr, ctx),
             tutorialDescription: "An in-place variant of MSD Radix sort named by analogy with the Dutch national flag problem. It makes two passes per digit: the first counts elements to determine bucket boundaries, and the second cyclically permutes elements into their correct buckets without any auxiliary array, achieving MSD radix sorting with O(1) extra space.");
 
@@ -165,7 +168,8 @@ public class AlgorithmRegistry
     }
 
     private void Add(string name, string category, string complexity, int maxElements, int recommendedSize,
-        Action<Span<int>, ISortContext> sortAction, string description = "", string tutorialDescription = "")
+        Action<Span<int>, ISortContext> sortAction, string description = "", string tutorialDescription = "",
+        TutorialArrayType tutorialArrayType = TutorialArrayType.Default, bool excludeFromTutorial = false)
     {
         _algorithms.Add(new AlgorithmMetadata
         {
@@ -176,7 +180,9 @@ public class AlgorithmRegistry
             RecommendedSize = recommendedSize,
             SortAction = sortAction,
             Description = description,
-            TutorialDescription = tutorialDescription
+            TutorialDescription = tutorialDescription,
+            TutorialArrayType = tutorialArrayType,
+            ExcludeFromTutorial = excludeFromTutorial
         });
     }
 }

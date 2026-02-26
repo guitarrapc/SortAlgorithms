@@ -46,7 +46,7 @@
         <div class="tutorial-empty">
             <div class="empty-icon">🎓</div>
             <div class="empty-text">上のドロップダウンからアルゴリズムを選択してください。</div>
-            <div class="empty-hint">固定配列 [5, 3, 8, 1, 9, 2, 7, 4] を使ってソートの仕組みをステップごとに説明します。</div>
+        <div class="empty-hint">固定配列を使ってソートの仕組みをステップごとに説明します。アルゴリズムによっては説明に適した専用配列を使用します。</div>
         </div>
     }
     else
@@ -151,8 +151,9 @@
 @code {
     [Parameter] public string? AlgorithmName { get; set; }
 
-    // ─── 固定チュートリアル配列 ────────────────────────────────────────────
-    private static readonly int[] TutorialArray = [5, 3, 8, 1, 9, 2, 7, 4];
+    // ─── デフォルトチュートリアル配列 ──────────────────────────────────────
+    private int[] GetTutorialArrayFor(AlgorithmMetadata algo)
+        => algo.TutorialArrayType.ToArray();
 
     // ─── 状態 ──────────────────────────────────────────────────────────────
     private AlgorithmMetadata? _selectedAlgorithm;
@@ -216,8 +217,9 @@
 
         try
         {
-            var (operations, _, _) = await Executor.ExecuteAndRecordAsync(TutorialArray, algo);
-            _steps = TutorialStepBuilder.Build(TutorialArray, operations);
+            var tutorialArray = GetTutorialArrayFor(algo);
+            var (operations, _, _) = await Executor.ExecuteAndRecordAsync(tutorialArray, algo);
+            _steps = TutorialStepBuilder.Build(tutorialArray, operations);
         }
         finally
         {
@@ -348,7 +350,7 @@
     // ─── 現在ステップのデータ取得 ──────────────────────────────────────────
 
     private int[] GetCurrentMainArray()
-        => _currentStepIndex < 0 ? TutorialArray : _steps[_currentStepIndex].ArraySnapshot;
+        => _currentStepIndex < 0 ? GetTutorialArrayFor(_selectedAlgorithm!) : _steps[_currentStepIndex].ArraySnapshot;
 
     private int[] GetCurrentHighlightIndices()
         => _currentStepIndex < 0 ? [] : _steps[_currentStepIndex].HighlightIndices;
@@ -385,7 +387,7 @@
 
     private IEnumerable<AlgorithmMetadata> GetTutorialAlgorithms()
         => AlgorithmRegistry.GetAllAlgorithms()
-            .Where(a => a.Category != "Joke Sorts");
+            .Where(a => a.Category != "Joke Sorts" && !a.ExcludeFromTutorial);
 
     private IEnumerable<string> GetTutorialCategories()
         => GetTutorialAlgorithms()
