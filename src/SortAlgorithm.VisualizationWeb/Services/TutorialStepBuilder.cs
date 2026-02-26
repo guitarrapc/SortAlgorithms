@@ -55,7 +55,7 @@ public static class TutorialStepBuilder
 
         foreach (var op in operations)
         {
-            if (op.BufferId1 != 0)
+            if (op.BufferId1 > 0)
             {
                 int size = op.Type == OperationType.RangeCopy
                     ? op.Index1 + op.Length
@@ -63,7 +63,7 @@ public static class TutorialStepBuilder
                 maxSizes[op.BufferId1] = Math.Max(maxSizes.GetValueOrDefault(op.BufferId1), size);
             }
 
-            if (op.BufferId2 != 0)
+            if (op.BufferId2 > 0)
             {
                 int size = op.Type == OperationType.RangeCopy
                     ? op.Index2 + op.Length
