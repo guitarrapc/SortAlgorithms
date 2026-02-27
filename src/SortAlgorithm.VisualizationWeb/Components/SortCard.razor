@@ -1,11 +1,30 @@
 @using SortAlgorithm.VisualizationWeb.Models
 @using SortAlgorithm.VisualizationWeb.Services
+@inject AlgorithmRegistry AlgorithmRegistry
 @implements IDisposable
 
 <div class="sort-card @(State.IsSortCompleted ? "sort-card--completed" : "")">
     @* カードヘッダー *@
     <div class="sort-card__header">
-        <span class="sort-card__algorithm-name">@AlgorithmName</span>
+        @if (OnAlgorithmSelected.HasDelegate)
+        {
+            <select class="sort-card__algo-select"
+                    @onchange="HandleAlgorithmSelect">
+                @foreach (var group in GetAlgorithmsByCategory())
+                {
+                    <optgroup label="@group.Key">
+                        @foreach (var algo in group)
+                        {
+                            <option value="@algo.Name" selected="@(algo.Name == AlgorithmName)">@algo.Name</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+        }
+        else
+        {
+            <span class="sort-card__algorithm-name">@AlgorithmName</span>
+        }
         <div class="sort-card__header-right">
             <span class="complexity-badge">@Complexity</span>
             @if (ShowRemoveButton)
@@ -25,7 +44,7 @@
         {
             <div class="sort-card__empty">
                 <p class="sort-card__empty-icon">@ModeIcon</p>
-                <p>Click "Generate &amp; Sort" to start visualization</p>
+                <p>Click "Add &amp; Generate" to start visualization</p>
             </div>
         }
         else if (VisualizationMode == VisualizationMode.BarChart)
@@ -112,6 +131,10 @@
     [Parameter]
     public EventCallback OnVisualizationClick { get; set; }
 
+    /// <summary>カードヘッダーのアルゴリズム名セレクタで別のアルゴリズムが選ばれたとき発火する。</summary>
+    [Parameter]
+    public EventCallback<string> OnAlgorithmSelected { get; set; }
+
     /// <summary>PlaybackService の購読に使用。StateChanged を受けて再描画する。</summary>
     [Parameter]
     public PlaybackService? Playback { get; set; }
@@ -154,6 +177,22 @@
     {
         if (OnRemove.HasDelegate)
             await OnRemove.InvokeAsync();
+    }
+
+    private async Task HandleAlgorithmSelect(ChangeEventArgs e)
+    {
+        var selected = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(selected) && selected != AlgorithmName && OnAlgorithmSelected.HasDelegate)
+            await OnAlgorithmSelected.InvokeAsync(selected);
+    }
+
+    private IEnumerable<IGrouping<string, AlgorithmMetadata>> GetAlgorithmsByCategory()
+    {
+        var all = AlgorithmRegistry.GetAllAlgorithms();
+        var order = all.Select((a, i) => new { a.Category, i })
+            .GroupBy(x => x.Category)
+            .ToDictionary(g => g.Key, g => g.Min(x => x.i));
+        return all.GroupBy(a => a.Category).OrderBy(g => order[g.Key]);
     }
 
     public void Dispose()

@@ -3,9 +3,7 @@
 
 <div class="stat-item">
     @{
-        var isDisabled = ComparisonMode.State.Instances.Count >= ComparisonState.MaxComparisons
-                      || !ComparisonMode.State.IsEnabled
-                      || ComparisonMode.IsAddingAlgorithm;
+        var isDisabled = ComparisonMode.State.Instances.Count >= ComparisonState.MaxComparisons || ComparisonMode.IsAddingAlgorithm;
     }
     <button class="primary" 
             @onclick="OnAddAlgorithm" 

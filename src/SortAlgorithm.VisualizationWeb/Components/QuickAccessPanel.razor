@@ -126,47 +126,21 @@
 
             <hr class="qap__divider" />
 
-            @* ── Comparison Mode ── *@
+            @* ── Add & Generate ── *@
             <div class="qap__item">
-                <span class="stat-label">
-                    Comparison Mode
-                    <span class="qap__count">(@ComparisonMode.State.Instances.Count/@ComparisonState.MaxComparisons)</span>
-                </span>
-                <label class="toggle-switch">
-                    <input type="checkbox"
-                           checked="@IsComparisonMode"
-                           @onchange="e => HandleComparisonModeChange((bool)e.Value!)" />
-                    <span class="toggle-slider"></span>
-                </label>
+                @{
+                    var instanceCount = ComparisonMode.State.Instances.Count;
+                    var algoAlreadyPresent = ComparisonMode.State.Instances.Any(i => i.AlgorithmName == SelectedAlgorithm);
+                    var atMaxAndNotPresent = instanceCount >= ComparisonState.MaxComparisons && !algoAlreadyPresent;
+                    var addDisabled = atMaxAndNotPresent || ComparisonMode.IsAddingAlgorithm;
+                }
+                <button class="primary qap__btn-full"
+                        @onclick="() => OnAddAndGenerate.InvokeAsync()"
+                        disabled="@addDisabled">
+                    @(ComparisonMode.IsAddingAlgorithm ? "⏳ Processing..." : "➕ Add &amp; Generate")
+                </button>
+                <span class="qap__count">(@instanceCount / @ComparisonState.MaxComparisons)</span>
             </div>
-
-            @if (IsComparisonMode)
-            {
-                @* ── Add to Comparison ── *@
-                <div class="qap__item">
-                    @{
-                        var addDisabled = ComparisonMode.State.Instances.Count >= ComparisonState.MaxComparisons
-                                       || !ComparisonMode.State.IsEnabled
-                                       || ComparisonMode.IsAddingAlgorithm;
-                    }
-                    <button class="primary qap__btn-full"
-                            @onclick="() => OnAddAlgorithm.InvokeAsync()"
-                            disabled="@addDisabled">
-                        @(ComparisonMode.IsAddingAlgorithm ? "⏳ Adding..." : "➕ Add to Comparison")
-                    </button>
-                </div>
-            }
-
-            @* ── Generate & Sort（単一モード時のみ） ── *@
-            @if (!IsComparisonMode)
-            {
-                <div class="qap__item">
-                    <button class="primary qap__btn-full"
-                            @onclick="() => OnGenerateAndSort.InvokeAsync()">
-                        🎲 Generate &amp; Sort
-                    </button>
-                </div>
-            }
 
             @* ── Complexity ── *@
             <div class="qap__item">
@@ -203,8 +177,6 @@
     [Parameter, EditorRequired] public VisualizationMode SelectedVisualizationMode { get; set; }
     [Parameter] public EventCallback<VisualizationMode> SelectedVisualizationModeChanged { get; set; }
 
-    [Parameter] public bool IsComparisonMode { get; set; }
-    [Parameter] public EventCallback<bool> IsComparisonModeChanged { get; set; }
 
     // ── コンテキスト ──────────────────────────────────────────────────────────
     [Parameter] public bool IsLoading { get; set; }
@@ -216,12 +188,10 @@
     [Parameter, EditorRequired] public DebugSettings DebugSettings { get; set; } = default!;
 
     // ── アクションコールバック ────────────────────────────────────────────────
-    [Parameter] public EventCallback OnGenerateAndSort { get; set; }
-    [Parameter] public EventCallback OnAddAlgorithm { get; set; }
+    [Parameter] public EventCallback OnAddAndGenerate { get; set; }
     [Parameter] public EventCallback OnAlgorithmChanged { get; set; }
     [Parameter] public EventCallback OnVisualizationModeChanged { get; set; }
     [Parameter] public EventCallback OnSpeedSettingsChanged { get; set; }
-    [Parameter] public EventCallback OnComparisonModeChanged { get; set; }
 
     // ── 内部状態 ──────────────────────────────────────────────────────────────
     [Parameter] public string SelectedCategory { get; set; } = string.Empty;
@@ -288,12 +258,6 @@
     }
 
     // ── Comparison Mode 変更 ─────────────────────────────────────────────────
-    private async Task HandleComparisonModeChange(bool newValue)
-    {
-        await IsComparisonModeChanged.InvokeAsync(newValue);
-        await OnComparisonModeChanged.InvokeAsync();
-    }
-
     private string GetSizeRecommendation()
     {
         var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);

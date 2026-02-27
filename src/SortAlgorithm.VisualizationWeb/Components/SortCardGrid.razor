@@ -22,6 +22,7 @@
                 ShowRemoveButton="true"
                 Playback="@instance.Playback"
                 OnRemove="@(() => OnRemoveInstance(index))"
+                OnAlgorithmSelected="@(algoName => OnReplaceAlgorithm.InvokeAsync((index, algoName)))"
                 OnVisualizationClick="@OnVisualizationClick"
                 @key="instance.AlgorithmName" />
         }
@@ -52,6 +53,9 @@
 
     [Parameter]
     public EventCallback<int> OnRemove { get; set; }
+
+    [Parameter]
+    public EventCallback<(int index, string algoName)> OnReplaceAlgorithm { get; set; }
 
     [Parameter]
     public EventCallback OnVisualizationClick { get; set; }
