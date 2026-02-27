@@ -157,13 +157,16 @@
                 </div>
             }
 
-            @* ── Generate & Sort ── *@
-            <div class="qap__item">
-                <button class="primary qap__btn-full"
-                        @onclick="() => OnGenerateAndSort.InvokeAsync()">
-                    🎲 Generate &amp; Sort
-                </button>
-            </div>
+            @* ── Generate & Sort（単一モード時のみ） ── *@
+            @if (!IsComparisonMode)
+            {
+                <div class="qap__item">
+                    <button class="primary qap__btn-full"
+                            @onclick="() => OnGenerateAndSort.InvokeAsync()">
+                        🎲 Generate &amp; Sort
+                    </button>
+                </div>
+            }
 
             @* ── Complexity ── *@
             <div class="qap__item">
