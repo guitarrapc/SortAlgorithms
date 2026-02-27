@@ -1149,297 +1149,274 @@ fieldset.controls-fieldset[disabled] * {
     transform: scale(1.05);
 }
 
-/* 統計パネル（右側ドッキング） */
-.stats-panel-toggle {
+/* =============================================
+   ComparisonStatsTable — カードリスト + バーチャート モーダル
+   ============================================= */
+
+/* トリガーボタン（fixed, 右下） */
+.cst-trigger-btn {
     position: fixed;
-    top: 50%;
-    right: 0;
-    transform: translateY(-50%);
-    padding: 1rem 0.5rem;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    padding: 0.55rem 1rem;
     background: #3B82F6;
     color: white;
     border: none;
-    border-radius: 8px 0 0 8px;
+    border-radius: 20px;
     cursor: pointer;
-    font-size: 1em;
-    transition: background 0.3s, right 0.3s;
-    z-index: 1000;
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
-    writing-mode: vertical-rl;
+    font-size: 0.95em;
+    font-weight: 500;
+    z-index: 900;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transition: background 0.2s, transform 0.1s;
 }
 
-.stats-panel-toggle:hover {
+.cst-trigger-btn:hover {
+    background: #2563EB;
+    transform: translateY(-1px);
+}
+
+.cst-trigger-btn:active {
+    transform: translateY(0);
+}
+
+/* モーダルオーバーレイ */
+.cst-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+/* モーダル本体 */
+.cst-dialog {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    width: min(680px, 100%);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* モーダルヘッダー */
+.cst-dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    background: #252525;
+    border-bottom: 1px solid #333;
+    border-radius: 10px 10px 0 0;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.cst-dialog-title {
+    font-size: 1em;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin: 0;
+    flex: 1;
+    white-space: nowrap;
+}
+
+.cst-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cst-sort-label {
+    font-size: 0.85em;
+    color: #888;
+    white-space: nowrap;
+}
+
+.cst-sort-select {
+    padding: 0.3rem 0.5rem;
+    background: #2a2a2a;
+    color: var(--text-light);
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+.cst-sort-select:focus {
+    outline: none;
+    border-color: var(--color-compare);
+}
+
+.cst-copy-btn {
+    padding: 0.3rem 0.6rem;
+    background: #3B82F6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background 0.2s;
+}
+
+.cst-copy-btn:hover {
     background: #2563EB;
 }
 
-.stats-panel-toggle.open {
-    right: 500px;
+.cst-close-btn {
+    padding: 0.3rem 0.55rem;
+    background: #3a3a3a;
+    color: #ccc;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    line-height: 1;
+    transition: background 0.2s, color 0.2s;
 }
 
-.comparison-stats-panel {
-    position: fixed;
-    top: 60px; /* ヘッダーの高さ分 */
-    right: -500px; /* 初期状態は画面外 */
-    width: 500px;
-    height: calc(100vh - 60px);
-    background: #1e1e1e;
-    border-left: 1px solid #333;
-    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.5);
-    transition: right 0.3s ease-in-out;
-    z-index: 999;
+.cst-close-btn:hover {
+    background: #EF4444;
+    color: white;
+}
+
+/* カードリスト（スクロール領域） */
+.cst-card-list {
+    overflow-y: auto;
+    padding: 0.75rem;
     display: flex;
     flex-direction: column;
+    gap: 0.6rem;
 }
 
-.comparison-stats-panel.open {
-    right: 0;
-}
-
-.stats-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
+/* アルゴリズムカード */
+.cst-card {
     background: #252525;
-    border-bottom: 2px solid #333;
+    border: 1px solid #333;
+    border-radius: 7px;
+    overflow: hidden;
+}
+
+.cst-card--done {
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+/* カードヘッダー行 */
+.cst-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    background: #2a2a2a;
+    border-bottom: 1px solid #333;
+    flex-wrap: wrap;
+}
+
+.cst-rank {
+    font-size: 1.05em;
+    min-width: 1.6em;
+    text-align: center;
     flex-shrink: 0;
 }
 
-.stats-panel-header h3 {
-    margin: 0;
-    color: #e0e0e0;
-    font-size: 1.1em;
-}
-
-.stats-panel-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.comparison-stats-panel .copy-button {
-    padding: 0.3rem 0.6rem;
-    background: #3B82F6;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: all 0.2s;
-}
-
-.comparison-stats-panel .copy-button:hover {
-    background: #2563EB;
-    transform: scale(1.05);
-}
-
-.comparison-stats-panel .table-wrapper {
-    overflow-x: auto;
-    overflow-y: auto;
-    flex: 1;
-    padding: 0;
-}
-
-.comparison-stats-panel .comparison-stats-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85em;
-}
-
-.comparison-stats-panel .comparison-stats-table th {
-    background: #252525;
-    color: #888;
-    padding: 0.6rem 0.5rem;
-    text-align: left;
-    border-bottom: 2px solid #333;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    cursor: pointer;
-    user-select: none;
-    font-size: 0.9em;
-}
-
-.comparison-stats-panel .comparison-stats-table th.sortable:hover {
-    background: #2a2a2a;
-    color: #aaa;
-}
-
-.comparison-stats-panel .comparison-stats-table td {
-    padding: 0.6rem 0.5rem;
-    border-bottom: 1px solid #2a2a2a;
-    color: #e0e0e0;
-}
-
-.comparison-stats-panel .comparison-stats-table tr:hover {
-    background: rgba(59, 130, 246, 0.1);
-}
-
-.comparison-stats-panel .comparison-stats-table tr.completed {
-    background: rgba(16, 185, 129, 0.1);
-}
-
-.comparison-stats-panel .comparison-stats-table tr.completed:hover {
-    background: rgba(16, 185, 129, 0.15);
-}
-
-.comparison-stats-panel .comparison-stats-table .algorithm-name {
-    font-weight: 500;
+.cst-algo-name {
+    font-weight: 600;
     color: #3B82F6;
     font-size: 0.95em;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.comparison-stats-panel .comparison-stats-table .complexity {
+.cst-complexity {
     font-family: 'Courier New', monospace;
     color: #A855F7;
-    font-size: 0.85em;
+    font-size: 0.82em;
+    flex-shrink: 0;
 }
 
-.comparison-stats-panel .comparison-stats-table .stat-value {
-    text-align: right;
-    font-family: 'Courier New', monospace;
+.cst-exec-time {
     color: #FBBF24;
-    font-size: 0.9em;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+    flex-shrink: 0;
 }
 
-.comparison-stats-panel .comparison-stats-table .status {
-    text-align: center;
-}
-
-.comparison-stats-panel .status-badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.8em;
+.cst-status {
+    font-size: 0.82em;
     font-weight: 500;
-    display: inline-block;
+    flex-shrink: 0;
 }
 
-.comparison-stats-panel .status-badge.completed {
-    background: #10B981;
-    color: white;
+.cst-status--done {
+    color: var(--color-sorted);
 }
 
-.comparison-stats-panel .status-badge.running {
-    background: #F59E0B;
-    color: white;
+.cst-status--running {
+    color: #F59E0B;
 }
 
-/* 旧スタイルの削除（互換性のため残す） */
-.comparison-stats-table-container {
-    display: none;
-}
-
-.stats-table-header {
-    display: none;
-}
-
-.copy-button {
-    padding: 0.5rem 1rem;
-    background: #3B82F6;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: all 0.2s;
+/* メトリクスセクション */
+.cst-metrics {
+    padding: 0.5rem 0.75rem;
     display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.cst-metric-row {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr 7rem;
     align-items: center;
     gap: 0.5rem;
 }
 
-.copy-button:hover {
-    background: #2563EB;
-    transform: scale(1.05);
-}
-
-.copy-button:active {
-    transform: scale(0.95);
-}
-
-.table-wrapper {
-    overflow-x: auto;
-    overflow-y: auto;
-    max-height: 400px;
-}
-
-.comparison-stats-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9em;
-}
-
-.comparison-stats-table th {
-    background: #252525;
+.cst-metric-label {
+    font-size: 0.82em;
     color: #888;
-    padding: 0.75rem;
-    text-align: left;
-    border-bottom: 2px solid #333;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    cursor: pointer;
-    user-select: none;
-}
-
-.comparison-stats-table th.sortable:hover {
-    background: #2a2a2a;
-    color: #aaa;
-}
-
-.comparison-stats-table td {
-    padding: 0.75rem;
-    border-bottom: 1px solid #2a2a2a;
-    color: #e0e0e0;
-}
-
-.comparison-stats-table tr:hover {
-    background: rgba(59, 130, 246, 0.1);
-}
-
-.comparison-stats-table tr.completed {
-    background: rgba(16, 185, 129, 0.1);
-}
-
-.comparison-stats-table tr.completed:hover {
-    background: rgba(16, 185, 129, 0.15);
-}
-
-.comparison-stats-table .algorithm-name {
-    font-weight: 500;
-    color: #3B82F6;
-}
-
-.comparison-stats-table .complexity {
-    font-family: 'Courier New', monospace;
-    color: #A855F7;
-    font-size: 0.9em;
-}
-
-.comparison-stats-table .stat-value {
     text-align: right;
-    font-family: 'Courier New', monospace;
-    color: #FBBF24;
+    flex-shrink: 0;
 }
 
-.comparison-stats-table .status {
-    text-align: center;
-}
-
-.status-badge {
-    padding: 0.3rem 0.6rem;
+/* バートラック */
+.cst-bar-track {
+    height: 8px;
+    background: #1a1a1a;
     border-radius: 4px;
-    font-size: 0.85em;
-    font-weight: 500;
-    display: inline-block;
+    overflow: hidden;
 }
 
-.status-badge.completed {
-    background: #10B981;
-    color: white;
+.cst-bar-fill {
+    height: 100%;
+    background: var(--color-compare);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    min-width: 2px;
 }
 
-.status-badge.running {
-    background: #F59E0B;
-    color: white;
+.cst-bar-fill--best {
+    background: var(--color-sorted);
+}
+
+/* 数値ラベル */
+.cst-metric-value {
+    font-family: 'Courier New', monospace;
+    font-size: 0.82em;
+    color: #ccc;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.cst-metric-value--best {
+    color: var(--color-sorted);
+    font-weight: 600;
 }
 
 .btn-remove:active {

@@ -3,97 +3,143 @@
 @inject IJSRuntime JS
 @inject DebugSettings DebugSettings
 
-<!-- トグルボタン（右端に固定） -->
-<button class="stats-panel-toggle @(IsOpen ? "open" : "")" 
-        @onclick="TogglePanel"
-        title="@(IsOpen ? "Hide Statistics" : "Show Statistics")">
-    @(IsOpen ? "📊 ▶" : "◀ 📊")
+<button class="cst-trigger-btn" @onclick="TogglePanel" title="Statistics Comparison">
+    📊 Stats
 </button>
 
-<!-- 統計パネル（右側にドック） -->
-<div class="comparison-stats-panel @(IsOpen ? "open" : "")">
-    <div class="stats-panel-header">
-        <h3>📊 Statistics Comparison</h3>
-        <div class="stats-panel-actions">
-            <button class="copy-button" @onclick="CopyTableToClipboard" title="Copy to Clipboard">
-                📋 Copy
-            </button>
+@if (IsOpen)
+{
+    <div class="cst-overlay" @onclick="CloseModal">
+        <div class="cst-dialog" @onclick:stopPropagation="true">
+
+            <div class="cst-dialog-header">
+                <h3 class="cst-dialog-title">📊 Statistics Comparison</h3>
+                <div class="cst-header-controls">
+                    <span class="cst-sort-label">Sort by</span>
+                    <select class="cst-sort-select" value="@_sortColumn" @onchange="OnSortChanged">
+                        <option value="Compares">Compares</option>
+                        <option value="Swaps">Swaps</option>
+                        <option value="Reads">Reads</option>
+                        <option value="Writes">Writes</option>
+                        <option value="ExecTime">Exec Time</option>
+                        <option value="Algorithm">Algorithm</option>
+                    </select>
+                    <button class="cst-copy-btn" @onclick="CopyToClipboard" title="Copy to Clipboard">
+                        📋 Copy
+                    </button>
+                    <button class="cst-close-btn" @onclick="CloseModal" title="Close">✕</button>
+                </div>
+            </div>
+
+            <div class="cst-card-list">
+                @{
+                    var sortedList = GetSortedInstances().ToList();
+                    var maxCompares = sortedList.Count > 0 ? sortedList.Max(x => x.State.CompareCount)     : 0UL;
+                    var maxSwaps    = sortedList.Count > 0 ? sortedList.Max(x => x.State.SwapCount)        : 0UL;
+                    var maxReads    = sortedList.Count > 0 ? sortedList.Max(x => x.State.IndexReadCount)   : 0UL;
+                    var maxWrites   = sortedList.Count > 0 ? sortedList.Max(x => x.State.IndexWriteCount)  : 0UL;
+
+                    var minCompares = sortedList.Where(x => x.State.CompareCount     > 0).Select(x => x.State.CompareCount).DefaultIfEmpty(0UL).Min();
+                    var minSwaps    = sortedList.Where(x => x.State.SwapCount        > 0).Select(x => x.State.SwapCount).DefaultIfEmpty(0UL).Min();
+                    var minReads    = sortedList.Where(x => x.State.IndexReadCount   > 0).Select(x => x.State.IndexReadCount).DefaultIfEmpty(0UL).Min();
+                    var minWrites   = sortedList.Where(x => x.State.IndexWriteCount  > 0).Select(x => x.State.IndexWriteCount).DefaultIfEmpty(0UL).Min();
+                }
+                @for (int i = 0; i < sortedList.Count; i++)
+                {
+                    var item = sortedList[i];
+                    var rank = i + 1;
+
+                    var cmPct  = maxCompares > 0 ? (int)(item.State.CompareCount     * 100 / maxCompares) : 0;
+                    var swPct  = maxSwaps    > 0 ? (int)(item.State.SwapCount        * 100 / maxSwaps)    : 0;
+                    var rdPct  = maxReads    > 0 ? (int)(item.State.IndexReadCount   * 100 / maxReads)    : 0;
+                    var wrPct  = maxWrites   > 0 ? (int)(item.State.IndexWriteCount  * 100 / maxWrites)   : 0;
+
+                    var cmBest = minCompares > 0 && item.State.CompareCount    == minCompares;
+                    var swBest = minSwaps    > 0 && item.State.SwapCount       == minSwaps;
+                    var rdBest = minReads    > 0 && item.State.IndexReadCount  == minReads;
+                    var wrBest = minWrites   > 0 && item.State.IndexWriteCount == minWrites;
+
+                    <div class="cst-card @(item.State.IsSortCompleted ? "cst-card--done" : "")">
+                        <div class="cst-card-header">
+                            <span class="cst-rank">@GetRankLabel(rank)</span>
+                            <span class="cst-algo-name">@item.AlgorithmName</span>
+                            <span class="cst-complexity">@item.Metadata.TimeComplexity</span>
+                            <span class="cst-exec-time">⏱ @FormatTotalTime(item.State.ActualExecutionTime)</span>
+                            <span class="cst-status @(item.State.IsSortCompleted ? "cst-status--done" : "cst-status--running")">
+                                @(item.State.IsSortCompleted ? "✅ 100%" : $"🔄 {GetProgressPercentage(item)}%")
+                            </span>
+                        </div>
+                        <div class="cst-metrics">
+                            <div class="cst-metric-row">
+                                <span class="cst-metric-label">Compares</span>
+                                <div class="cst-bar-track">
+                                    <div class="cst-bar-fill @(cmBest ? "cst-bar-fill--best" : "")" style="width: @cmPct%"></div>
+                                </div>
+                                <span class="cst-metric-value @(cmBest ? "cst-metric-value--best" : "")">
+                                    @item.State.CompareCount.ToString("N0")@(cmBest ? " 🏆" : "")
+                                </span>
+                            </div>
+                            <div class="cst-metric-row">
+                                <span class="cst-metric-label">Swaps</span>
+                                <div class="cst-bar-track">
+                                    <div class="cst-bar-fill @(swBest ? "cst-bar-fill--best" : "")" style="width: @swPct%"></div>
+                                </div>
+                                <span class="cst-metric-value @(swBest ? "cst-metric-value--best" : "")">
+                                    @item.State.SwapCount.ToString("N0")@(swBest ? " 🏆" : "")
+                                </span>
+                            </div>
+                            <div class="cst-metric-row">
+                                <span class="cst-metric-label">Reads</span>
+                                <div class="cst-bar-track">
+                                    <div class="cst-bar-fill @(rdBest ? "cst-bar-fill--best" : "")" style="width: @rdPct%"></div>
+                                </div>
+                                <span class="cst-metric-value @(rdBest ? "cst-metric-value--best" : "")">
+                                    @item.State.IndexReadCount.ToString("N0")@(rdBest ? " 🏆" : "")
+                                </span>
+                            </div>
+                            <div class="cst-metric-row">
+                                <span class="cst-metric-label">Writes</span>
+                                <div class="cst-bar-track">
+                                    <div class="cst-bar-fill @(wrBest ? "cst-bar-fill--best" : "")" style="width: @wrPct%"></div>
+                                </div>
+                                <span class="cst-metric-value @(wrBest ? "cst-metric-value--best" : "")">
+                                    @item.State.IndexWriteCount.ToString("N0")@(wrBest ? " 🏆" : "")
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
         </div>
     </div>
-    
-    <div class="table-wrapper">
-        <table class="comparison-stats-table">
-            <thead>
-                <tr>
-                    <th @onclick='() => SortBy("Algorithm")' class="sortable">
-                        Algorithm @GetSortIcon("Algorithm")
-                    </th>
-                    <th @onclick='() => SortBy("Complexity")' class="sortable">
-                        Complexity @GetSortIcon("Complexity")
-                    </th>
-                    <th @onclick='() => SortBy("Compares")' class="sortable">
-                        Compares @GetSortIcon("Compares")
-                    </th>
-                    <th @onclick='() => SortBy("Swaps")' class="sortable">
-                        Swaps @GetSortIcon("Swaps")
-                    </th>
-                    <th @onclick='() => SortBy("Reads")' class="sortable">
-                        Reads @GetSortIcon("Reads")
-                    </th>
-                    <th @onclick='() => SortBy("Writes")' class="sortable">
-                        Writes @GetSortIcon("Writes")
-                    </th>
-                    <th @onclick='() => SortBy("Progress")' class="sortable">
-                        Progress @GetSortIcon("Progress")
-                    </th>
-                    <th @onclick='() => SortBy("ExecTime")' class="sortable">
-                        Exec Time @GetSortIcon("ExecTime")
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in GetSortedInstances())
-                {
-                    <tr class="@(item.State.IsSortCompleted ? "completed" : "")">
-                        <td class="algorithm-name">@item.AlgorithmName</td>
-                        <td class="complexity">@item.Metadata.TimeComplexity</td>
-                        <td class="stat-value">@item.State.CompareCount.ToString("N0")</td>
-                        <td class="stat-value">@item.State.SwapCount.ToString("N0")</td>
-                        <td class="stat-value">@item.State.IndexReadCount.ToString("N0")</td>
-                        <td class="stat-value">@item.State.IndexWriteCount.ToString("N0")</td>
-                        <td class="status">
-                            @if (item.State.IsSortCompleted)
-                            {
-                                <span class="status-badge completed">100%</span>
-                            }
-                            else
-                            {
-                                var progress = item.State.TotalOperations > 0 
-                                    ? (int)((item.State.CurrentOperationIndex / (double)item.State.TotalOperations) * 100)
-                                    : 0;
-                                <span class="status-badge running">@progress%</span>
-                            }
-                        </td>
-                        <td class="stat-value exec-time">@FormatTotalTime(item.State.ActualExecutionTime)</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
+}
 
 @code {
     [Parameter, EditorRequired]
     public List<ComparisonInstance> Instances { get; set; } = null!;
-    
+
     [Parameter]
     public bool IsOpen { get; set; } = false;
-    
+
     [Parameter]
     public EventCallback<bool> IsOpenChanged { get; set; }
-    
+
     private string _sortColumn = "Compares";
-    private bool _sortAscending = true;
+
+    private static string GetRankLabel(int rank) => rank switch
+    {
+        1 => "🥇",
+        2 => "🥈",
+        3 => "🥉",
+        _ => $"{rank}",
+    };
+
+    private static int GetProgressPercentage(ComparisonInstance item)
+    {
+        if (item.State.TotalOperations == 0) return 0;
+        return (int)((item.State.CurrentOperationIndex / (double)item.State.TotalOperations) * 100);
+    }
 
     private static string FormatTotalTime(TimeSpan time)
     {
@@ -115,76 +161,43 @@
             s += "0";
         return s;
     }
-    
+
     private async Task TogglePanel()
     {
         IsOpen = !IsOpen;
         await IsOpenChanged.InvokeAsync(IsOpen);
     }
-    
-    private void SortBy(string column)
+
+    private async Task CloseModal()
     {
-        if (_sortColumn == column)
-        {
-            _sortAscending = !_sortAscending;
-        }
-        else
-        {
-            _sortColumn = column;
-            _sortAscending = true;
-        }
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
     }
-    
-    private string GetSortIcon(string column)
+
+    private void OnSortChanged(ChangeEventArgs e)
     {
-        if (_sortColumn != column) return "";
-        return _sortAscending ? "▲" : "▼";
+        _sortColumn = e.Value?.ToString() ?? "Compares";
     }
-    
+
     private IEnumerable<ComparisonInstance> GetSortedInstances()
     {
-        IEnumerable<ComparisonInstance> sorted = _sortColumn switch
+        return _sortColumn switch
         {
-            "Algorithm" => _sortAscending 
-                ? Instances.OrderBy(x => x.AlgorithmName)
-                : Instances.OrderByDescending(x => x.AlgorithmName),
-            "Complexity" => _sortAscending
-                ? Instances.OrderBy(x => x.Metadata.TimeComplexity)
-                : Instances.OrderByDescending(x => x.Metadata.TimeComplexity),
-            "Compares" => _sortAscending
-                ? Instances.OrderBy(x => x.State.CompareCount)
-                : Instances.OrderByDescending(x => x.State.CompareCount),
-            "Swaps" => _sortAscending
-                ? Instances.OrderBy(x => x.State.SwapCount)
-                : Instances.OrderByDescending(x => x.State.SwapCount),
-            "Reads" => _sortAscending
-                ? Instances.OrderBy(x => x.State.IndexReadCount)
-                : Instances.OrderByDescending(x => x.State.IndexReadCount),
-            "Writes" => _sortAscending
-                ? Instances.OrderBy(x => x.State.IndexWriteCount)
-                : Instances.OrderByDescending(x => x.State.IndexWriteCount),
-            "Progress" => _sortAscending
-                ? Instances.OrderBy(x => x.State.TotalOperations > 0 ? (x.State.CurrentOperationIndex / (double)x.State.TotalOperations) : 0)
-                : Instances.OrderByDescending(x => x.State.TotalOperations > 0 ? (x.State.CurrentOperationIndex / (double)x.State.TotalOperations) : 0),
-            "ExecTime" => _sortAscending
-                ? Instances.OrderBy(x => x.State.ActualExecutionTime)
-                : Instances.OrderByDescending(x => x.State.ActualExecutionTime),
-            _ => Instances
+            "Algorithm" => Instances.OrderBy(x => x.AlgorithmName),
+            "Swaps"     => Instances.OrderBy(x => x.State.SwapCount),
+            "Reads"     => Instances.OrderBy(x => x.State.IndexReadCount),
+            "Writes"    => Instances.OrderBy(x => x.State.IndexWriteCount),
+            "ExecTime"  => Instances.OrderBy(x => x.State.ActualExecutionTime),
+            _           => Instances.OrderBy(x => x.State.CompareCount),
         };
-        
-        return sorted;
     }
-    
-    private async Task CopyTableToClipboard()
+
+    private async Task CopyToClipboard()
     {
-        // TSV形式でクリップボードにコピー
         var header = "Algorithm\tComplexity\tCompares\tSwaps\tReads\tWrites\tProgress\tExec Time";
         var rows = Instances.Select(item =>
         {
-            var progress = item.State.TotalOperations > 0
-                ? (int)((item.State.CurrentOperationIndex / (double)item.State.TotalOperations) * 100)
-                : 0;
-            
+            var progress = GetProgressPercentage(item);
             return $"{item.AlgorithmName}\t" +
                    $"{item.Metadata.TimeComplexity}\t" +
                    $"{item.State.CompareCount}\t" +
@@ -194,9 +207,9 @@
                    $"{(item.State.IsSortCompleted ? "100%" : $"{progress}%")}\t" +
                    $"{FormatTotalTime(item.State.ActualExecutionTime)}";
         });
-        
+
         var tsv = header + "\n" + string.Join("\n", rows);
-        
+
         try
         {
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", tsv);
