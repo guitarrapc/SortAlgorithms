@@ -65,9 +65,9 @@
                 </select>
             </div>
 
-            @* ── Array Pattern ── *@
+            @* ── Scramble Pattern ── *@
             <div class="qap__item">
-                <span class="stat-label">Array Pattern</span>
+                <span class="stat-label">Scramble Pattern</span>
                 <select value="@SelectedPatternName"
                         @onchange="e => HandlePatternChange((string)e.Value!)">
                     @foreach (var group in GetPatternsByCategory())

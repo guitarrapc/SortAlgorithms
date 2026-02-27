@@ -300,6 +300,14 @@ html, body {
     gap: 6px;
 }
 
+.qap__item .stat-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-gray);
+}
+
 .qap__item--vertical input[type="range"] {
     width: 100%;
     margin-top: 4px;
