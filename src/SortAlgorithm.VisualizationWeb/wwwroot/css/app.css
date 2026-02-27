@@ -1504,6 +1504,13 @@ fieldset.controls-fieldset[disabled] * {
     transform: scale(0.95);
 }
 
+.play-control-btn:disabled,
+.play-control-btn:disabled:hover {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+}
+
 .btn-play {
     background-color: #3B82F6;
     color: #fff;

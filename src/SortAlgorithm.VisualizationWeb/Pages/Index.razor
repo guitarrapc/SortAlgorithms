@@ -83,6 +83,7 @@
 
         <PlayControlBar IsPlaying="@GetIsPlaying()"
                         SoundEnabled="@Playback.SoundEnabled"
+                        SoundDisabled="@_isComparisonMode"
                         StatusText="@GetComparisonStatusText()"
                         OnTogglePlayPause="HandleTogglePlayPause"
                         OnStop="HandleReset"

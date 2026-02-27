@@ -16,7 +16,8 @@
 
     <button class="play-control-btn @(SoundEnabled ? "btn-sound-on" : "btn-sound-off")"
             @onclick="OnToggleSound"
-            title="@(SoundEnabled ? "Sound ON" : "Sound OFF")">
+            disabled="@SoundDisabled"
+            title="@(SoundDisabled ? "Sound not available in Comparison Mode" : SoundEnabled ? "Sound ON" : "Sound OFF")">
         @(SoundEnabled ? "🔊" : "🔇")
     </button>
 
@@ -32,6 +33,9 @@
 
     [Parameter]
     public bool SoundEnabled { get; set; }
+
+    [Parameter]
+    public bool SoundDisabled { get; set; }
 
     /// <summary>比較モード時の完了数表示 ("2/4 completed" など)。null の場合は非表示。</summary>
     [Parameter]
