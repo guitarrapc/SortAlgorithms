@@ -48,26 +48,6 @@ public class ComparisonState
     };
     
     /// <summary>
-    /// グリッド列数を計算
-    /// </summary>
-    public int GetGridColumns()
-    {
-        return Instances.Count switch
-        {
-            1 => 1,
-            2 => 2,
-            3 => 3,
-            4 => 2,
-            5 => 3,
-            6 => 3,
-            7 => 3,
-            8 => 3,
-            9 => 3,
-            _ => 1
-        };
-    }
-    
-    /// <summary>
     /// すべてのアルゴリズムが完了したかどうか
     /// </summary>
     public bool AllCompleted => Instances.All(x => x.State.IsSortCompleted);
