@@ -137,7 +137,7 @@
                 <button class="primary qap__btn-full"
                         @onclick="() => OnAddAndGenerate.InvokeAsync()"
                         disabled="@addDisabled">
-                    @(ComparisonMode.IsAddingAlgorithm ? "⏳ Processing..." : "➕ Add &amp; Generate")
+                    @(ComparisonMode.IsAddingAlgorithm ? "⏳ Processing..." : "➕ Add & Generate")
                 </button>
                 <span class="qap__count">(@instanceCount / @ComparisonState.MaxComparisons)</span>
             </div>
