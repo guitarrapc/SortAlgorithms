@@ -1,17 +1,56 @@
 /* Sort Algorithm Visualization Styles */
 
 :root {
-    --bg-dark: #1A1A1A;
-    --bg-panel: #2A2A2A;
-    --text-light: #FFFFFF;
-    --text-gray: #999;
-    --color-normal: #3B82F6;
-    --color-read: #FBBF24;
-    --color-write: #F97316;
-    --color-compare: #A855F7;
-    --color-swap: #EF4444;
-    --color-sorted: #10B981;
-    --color-buffer: #6B7280;
+    /* 背景色 */
+    --bg-main: #1a1f27;
+    --bg-card: #272f3b;
+    --bg-panel: #1e2530;
+    --bg-hover: #323c4d;
+
+    /* テキスト色 */
+    --text-primary: #ffffff;
+    --text-secondary: #b8c1d0;
+    --text-disabled: #6b7280;
+    --text-accent: #7fa86f;
+
+    /* アクセントカラー */
+    --color-accent: #7fa86f;
+    --color-accent-hover: #91bd7e;
+    --color-accent-soft: rgba(127, 168, 111, 0.15);
+    --color-accent-dark: #5a7a5a;
+    --color-accent-darker: #6d9460;
+
+    /* 再生コントロール */
+    --color-play: #3b82f6;
+    --color-pause: #a855f7;
+    --color-stop: #e53e3e;
+    --color-sound-on: #22c55e;
+    --color-sound-off: #6b7280;
+
+    /* ソート可視化 */
+    --color-normal: #3b82f6;
+    --color-read: #fbbf24;
+    --color-write: #f97316;
+    --color-compare: #a855f7;
+    --color-swap: #ef4444;
+    --color-sorted: #10b981;
+    --color-buffer: #6b7280;
+
+    /* ボーダー */
+    --border-color: #374151;
+    --border-color-light: #4b5563;
+    --border-color-focus: #7fa86f;
+
+    /* 状態 */
+    --color-success: #10b981;
+    --color-warning: #fbbf24;
+    --color-error: #ef4444;
+    --color-info: #3b82f6;
+
+    /* 廃止される旧カラー変数（後方互換性のため一時的に保持） */
+    --bg-dark: var(--bg-main);
+    --text-light: var(--text-primary);
+    --text-gray: var(--text-secondary);
 }
 
 * {
@@ -22,8 +61,8 @@
 
 html, body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--bg-dark);
-    color: var(--text-light);
+    background-color: var(--bg-main);
+    color: var(--text-primary);
     height: 100%;
     overflow: hidden;
 }
@@ -41,7 +80,7 @@ html, body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: var(--bg-dark);
+    background-color: var(--bg-main);
 }
 
 .bar-chart-container:hover::after {
@@ -63,7 +102,7 @@ html, body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: var(--bg-dark);
+    background-color: var(--bg-main);
 }
 
 .circular-chart-container:hover::after {
@@ -82,7 +121,7 @@ html, body {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    background: #1d4ed8;
+    background: var(--color-play);
     color: #fff;
     text-decoration: none;
     padding: 0.35rem 0.875rem;
@@ -123,16 +162,16 @@ html, body {
     display: none;
     padding: 6px 10px;
     background: transparent;
-    border: 1px solid #4A4A4A;
+    border: 1px solid var(--border-color-light);
     border-radius: 6px;
     font-size: 1.2rem;
-    color: var(--text-light);
+    color: var(--text-primary);
     cursor: pointer;
     flex-shrink: 0;
 }
 
 .header__hamburger:hover {
-    background-color: #3A3A3A;
+    background-color: var(--bg-hover);
 }
 
 .header__title {
@@ -155,8 +194,8 @@ html, body {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    background: #3A3A3A;
-    color: #888;
+    background: var(--bg-hover);
+    color: var(--text-secondary);
     padding: 0.35rem 0.875rem;
     border-radius: 0.375rem;
     font-size: 0.875rem;
@@ -285,14 +324,14 @@ html, body {
 .qap__title {
     font-size: 1rem;
     font-weight: 700;
-    color: var(--text-light);
+    color: var(--text-primary);
 }
 
 /* 各コントロールアイテム */
 .qap__item {
     margin-bottom: 10px;
     padding: 8px 10px;
-    background-color: var(--bg-dark);
+    background-color: var(--bg-card);
     border-radius: 4px;
     display: flex;
     flex-direction: column;
@@ -305,7 +344,7 @@ html, body {
     font-weight: 700;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: var(--text-gray);
+    color: var(--text-secondary);
 }
 
 .qap__item--vertical input[type="range"] {
@@ -336,7 +375,7 @@ html, body {
 }
 
 .qap__help-link:hover {
-    background: var(--color-compare);
+    background: var(--color-accent);
     color: #fff;
 }
 
@@ -350,12 +389,12 @@ html, body {
 .qap__slider-value {
     font-size: 0.85rem;
     font-weight: bold;
-    color: var(--text-light);
+    color: var(--text-primary);
 }
 
 .qap__fps {
     font-size: 0.8rem;
-    color: var(--text-gray);
+    color: var(--text-secondary);
     margin-left: 4px;
 }
 
@@ -367,7 +406,7 @@ html, body {
 .qap__complexity {
     font-size: 0.9rem;
     font-family: 'Courier New', monospace;
-    color: var(--color-compare);
+    color: var(--color-accent);
 }
 
 .qap__btn-full {
@@ -376,7 +415,7 @@ html, body {
 
 /* カードグループ（QuickAccessPanel / TutorialPage ツールバーで共通利用） */
 .ui-card {
-    background-color: var(--bg-dark);
+    background-color: var(--bg-card);
     border-radius: 6px;
     padding: 10px;
     display: flex;
@@ -389,10 +428,10 @@ html, body {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--text-gray);
+    color: var(--text-secondary);
     padding-bottom: 6px;
     margin-bottom: 2px;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--border-color);
 }
 
 /* カード内アイテムはカードがコンテナなので背景・角丸・外マージン不要 */
@@ -518,16 +557,16 @@ details[open] .qap__advanced-summary::before {
         justify-content: center;
         width: 28px;
         height: 28px;
-        background: #3A3A3A;
+        background: var(--bg-hover);
         border: none;
         border-radius: 4px;
-        color: var(--text-light);
+        color: var(--text-primary);
         font-size: 0.9rem;
         cursor: pointer;
     }
 
     .qap__mobile-close:hover {
-        background: #EF4444;
+        background: var(--color-error);
     }
 
     /* 折りたたみ時もコンテンツ表示（モバイルでは折りたたみ不要） */
@@ -666,7 +705,7 @@ details[open] .qap__advanced-summary::before {
 
 .stat-section-title {
     font-size: 0.8rem;
-    color: var(--text-gray);
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 4px;
@@ -684,7 +723,7 @@ details[open] .qap__advanced-summary::before {
 .stat-item {
     margin-bottom: 12px;
     padding: 10px;
-    background-color: var(--bg-dark);
+    background-color: var(--bg-card);
     border-radius: 4px;
     display: flex;
     justify-content: space-between;
@@ -702,13 +741,13 @@ details[open] .qap__advanced-summary::before {
 
 .stat-label {
     font-size: 0.9rem;
-    color: var(--text-gray);
+    color: var(--text-secondary);
 }
 
 .stat-value {
     font-size: 1.2rem;
     font-weight: bold;
-    color: var(--text-light);
+    color: var(--text-primary);
 }
 
 .seek-bar {
@@ -728,7 +767,7 @@ details[open] .qap__advanced-summary::before {
 
 .seek-progress {
     height: 100%;
-    background-color: var(--color-compare);
+    background-color: var(--color-accent);
     border-radius: 4px;
     position: relative;
 }
@@ -740,7 +779,7 @@ details[open] .qap__advanced-summary::before {
     transform: translateY(-50%);
     width: 20px;
     height: 20px;
-    background-color: var(--text-light);
+    background-color: var(--text-primary);
     border-radius: 50%;
     cursor: grab;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
@@ -753,14 +792,14 @@ details[open] .qap__advanced-summary::before {
 .time-display {
     font-family: 'Courier New', monospace;
     font-size: 0.9rem;
-    color: var(--text-gray);
+    color: var(--text-secondary);
     white-space: nowrap;
 }
 
 button {
     padding: 10px 20px;
-    background-color: #3A3A3A;
-    color: var(--text-light);
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -770,26 +809,26 @@ button {
 }
 
 button:hover {
-    background-color: #4A4A4A;
+    background-color: #3d4757;
 }
 
 button:active {
-    background-color: #2A2A2A;
+    background-color: var(--bg-panel);
 }
 
 button.primary {
-    background-color: var(--color-compare);
+    background-color: var(--color-accent);
 }
 
 button.primary:hover {
-    background-color: #9333EA;
+    background-color: var(--color-accent-hover);
 }
 
 select {
     padding: 10px 14px;
-    background-color: #3A3A3A;
-    color: var(--text-light);
-    border: 1px solid #4A4A4A;
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color-light);
     border-radius: 6px;
     font-size: 1rem;
     cursor: pointer;
@@ -798,7 +837,7 @@ select {
 
 select:focus {
     outline: none;
-    border-color: var(--color-compare);
+    border-color: var(--border-color-focus);
 }
 
 input[type="range"] {
@@ -1502,15 +1541,17 @@ fieldset.controls-fieldset[disabled] * {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.15s, transform 0.1s, opacity 0.15s;
+    transition: background-color 0.15s, transform 0.1s, opacity 0.15s, box-shadow 0.15s;
 }
 
-.play-control-btn:hover {
+.play-control-btn:hover:not(:disabled) {
     transform: scale(1.08);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-.play-control-btn:active {
+.play-control-btn:active:not(:disabled) {
     transform: scale(0.95);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .play-control-btn:disabled,
@@ -1521,49 +1562,70 @@ fieldset.controls-fieldset[disabled] * {
 }
 
 .btn-play {
-    background-color: #3B82F6;
+    background-color: var(--color-play);
     color: #fff;
 }
 
-.btn-play:hover {
+.btn-play:hover:not(:disabled) {
     background-color: #2563EB;
 }
 
+.btn-play:active:not(:disabled) {
+    background-color: #1d4ed8;
+}
+
 .btn-pause {
-    background-color: var(--color-compare);
+    background-color: var(--color-pause);
     color: #fff;
 }
 
-.btn-pause:hover {
+.btn-pause:hover:not(:disabled) {
     background-color: #9333EA;
 }
 
+.btn-pause:active:not(:disabled) {
+    background-color: #7e22ce;
+}
+
 .btn-stop {
-    background-color: #3A3A3A;
+    background-color: var(--color-stop);
     color: #fff;
 }
 
-.btn-stop:hover {
-    background-color: #4A4A4A;
+.btn-stop:hover:not(:disabled) {
+    background-color: #dc2626;
+}
+
+.btn-stop:active:not(:disabled) {
+    background-color: #b91c1c;
 }
 
 .btn-sound-on {
-    background-color: #3A3A3A;
+    background-color: var(--color-sound-on);
     color: #fff;
 }
 
-.btn-sound-on:hover {
-    background-color: #4A4A4A;
+.btn-sound-on:hover:not(:disabled) {
+    background-color: #16a34a;
+}
+
+.btn-sound-on:active:not(:disabled) {
+    background-color: #15803d;
 }
 
 .btn-sound-off {
-    background-color: #555;
+    background-color: var(--color-sound-off);
     color: #fff;
     opacity: 0.6;
 }
 
-.btn-sound-off:hover {
+.btn-sound-off:hover:not(:disabled) {
     opacity: 0.85;
+}
+
+.btn-sound-off:active:not(:disabled) {
+    opacity: 1.0;
+    background-color: #4b5563;
 }
 
 .play-control-status {
