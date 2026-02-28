@@ -1129,6 +1129,15 @@ window.stateStorage = {
 | `--color-error` | `#ef4444` | エラー |
 | `--color-info` | `#3b82f6` | 情報 |
 
+**チュートリアル専用カラー:**
+
+| カラー名 | 値 | 用途 |
+|---------|-----|------|
+| `--color-tutorial-bg-start` | `rgba(69, 133, 136, 0.15)` | チュートリアル説明カードの背景グラデーション開始色（緑系の薄い透明色） |
+| `--color-tutorial-bg-end` | `rgba(104, 157, 106, 0.15)` | チュートリアル説明カードの背景グラデーション終了色（緑系の薄い透明色） |
+| `--color-tutorial-accent` | `#8ec07c` | チュートリアル説明カードのアクセント・タイトル（明るい緑） |
+| `--color-tutorial-text` | `#bdae93` | チュートリアル説明カードのテキスト（ベージュ・タン系） |
+
 #### CSS カスタムプロパティ定義
 
 ```css
@@ -1178,6 +1187,12 @@ window.stateStorage = {
     --color-warning: #fbbf24;
     --color-error: #ef4444;
     --color-info: #3b82f6;
+
+    /* チュートリアル専用 */
+    --color-tutorial-bg-start: rgba(69, 133, 136, 0.15);
+    --color-tutorial-bg-end: rgba(104, 157, 106, 0.15);
+    --color-tutorial-accent: #8ec07c;
+    --color-tutorial-text: #bdae93;
 }
 ```
 
@@ -1227,9 +1242,10 @@ window.stateStorage = {
 
 ---
 
-**Document Version**: 1.3
+**Document Version**: 1.4
 **Last Updated**: 2025-06
 **Changelog**:
+- v1.4 - チュートリアル説明カードに緑系の落ち着いた配色を適用（薄い緑のグラデーション背景、アルゴリズム名を明るい緑 #8ec07c、本文をベージュ #bdae93）、チュートリアル専用カラー変数追加
 - v1.3 - §14.1 テーマカラーシステム全面改訂（メインカラー #1a1f27、カード背景 #272f3b、アクセントカラー モスグリーン #7fa86f、再生コントロールボタン個別カラー定義: Play青/Pause紫/Stop赤/Sound鮮やかな緑#22c55e・灰）、§3.3・§10.1 カラー参照更新
 - v1.2 - §1.4 UI Card コンセプト追加、§2.2 カードグルーピング、§7.2 カードベースレイアウト、§8 ページ横断要素マッピング追加、§10 チュートリアル UI Card 化、§11-12 更新
 - v1.1 - §13 状態保持（Query String + localStorage ハイブリッド）追加

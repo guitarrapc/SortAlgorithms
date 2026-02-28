@@ -47,6 +47,12 @@
     --color-error: #ef4444;
     --color-info: #3b82f6;
 
+    /* チュートリアル専用 */
+    --color-tutorial-bg-start: rgba(69, 133, 136, 0.15);
+    --color-tutorial-bg-end: rgba(104, 157, 106, 0.15);
+    --color-tutorial-accent: #8ec07c;
+    --color-tutorial-text: #bdae93;
+
     /* 廃止される旧カラー変数（後方互換性のため一時的に保持） */
     --bg-dark: var(--bg-main);
     --text-light: var(--text-primary);
