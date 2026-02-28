@@ -25,10 +25,6 @@
     <a href="/" class="tutorial-back-link">← Back</a>
     <h1 class="tutorial-title">Sort Visualization: Tutorial</h1>
     <div class="header__actions">
-        @if (_selectedAlgorithm != null)
-        {
-            <a href="@GetTryThisAlgorithmUrl()" class="tutorial-try-btn">▶ Try this algorithm</a>
-        }
     </div>
 </div>
 
@@ -138,7 +134,10 @@
         @* ─── アルゴリズム説明パネル（モバイルで折りたたみ可能） ──────────────── *@
         <div class="tutorial-description-panel">
             <div class="tdp-header">
-                <div class="desc-name">@_selectedAlgorithm.Name</div>
+                <div class="tdp-header__left">
+                    <div class="desc-name">@_selectedAlgorithm.Name</div>
+                    <a href="@GetTryThisAlgorithmUrl()" class="tutorial-try-btn">▶ Try this</a>
+                </div>
                 <div class="tdp-header__right">
                     <div class="desc-meta">
                         <span class="desc-badge">@_selectedAlgorithm.TimeComplexity</span>
