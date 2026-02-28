@@ -421,6 +421,42 @@ html, body {
     width: 100%;
 }
 
+/* ── アルゴリズム説明カード ── */
+.algorithm-description-card {
+    background: linear-gradient(135deg, var(--color-tutorial-bg-start) 0%, var(--color-tutorial-bg-end) 100%);
+    border: 1px solid rgba(127, 168, 111, 0.2);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.algorithm-description-card__label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+.algorithm-description-card__title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-tutorial-accent);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.algorithm-description-card__text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--color-tutorial-text);
+    margin: 0;
+}
+
 /* カードグループ（QuickAccessPanel / TutorialPage ツールバーで共通利用） */
 .ui-card {
     background-color: var(--bg-card);

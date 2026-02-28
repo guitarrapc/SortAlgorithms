@@ -31,6 +31,20 @@
             <button class="qap__mobile-close" @onclick="HandleClose" title="Close">✕</button>
         </div>
 
+        @* ── Current Algorithm 説明カード ── *@
+        @{
+            var currentAlgo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
+            var howItWorks = GetHowItWorksDescription(currentAlgo?.TutorialDescription ?? "");
+        }
+        @if (!string.IsNullOrEmpty(howItWorks))
+        {
+            <div class="algorithm-description-card">
+                <span class="algorithm-description-card__label">CURRENT ALGORITHM</span>
+                <h2 class="algorithm-description-card__title">@SelectedAlgorithm</h2>
+                <p class="algorithm-description-card__text">@howItWorks</p>
+            </div>
+        }
+
         <fieldset class="controls-fieldset" disabled="@IsLoading">
 
             @* ── Sort Target ── *@
@@ -324,5 +338,27 @@
             .ToDictionary(g => g.Key, g => g.Min(x => x.i));
 
         return all.GroupBy(p => p.Category).OrderBy(g => categoryOrder[g.Key]);
+    }
+
+    /// <summary>
+    /// TutorialDescriptionから"How it works:"部分を抽出
+    /// </summary>
+    private static string GetHowItWorksDescription(string tutorialDescription)
+    {
+        if (string.IsNullOrWhiteSpace(tutorialDescription))
+            return string.Empty;
+
+        // "How it works:" で始まる最初のパラグラフを抽出
+        var lines = tutorialDescription.Split('\n', StringSplitOptions.TrimEntries);
+        var howItWorksIndex = Array.FindIndex(lines, l => l.StartsWith("How it works:", StringComparison.OrdinalIgnoreCase));
+        
+        if (howItWorksIndex == -1)
+            return string.Empty;
+
+        // "How it works:" の後の説明文を取得（次の空行または"Key property:"まで）
+        var descriptionLine = lines[howItWorksIndex];
+        var description = descriptionLine["How it works:".Length..].Trim();
+        
+        return description;
     }
 }
