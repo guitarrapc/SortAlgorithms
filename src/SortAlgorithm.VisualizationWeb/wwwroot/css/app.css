@@ -1589,6 +1589,12 @@ fieldset.controls-fieldset[disabled] * {
     transition: background-color 0.15s, transform 0.1s, opacity 0.15s, box-shadow 0.15s;
 }
 
+.play-control-btn svg {
+    width: 28px;
+    height: 28px;
+    display: block;
+}
+
 .play-control-btn:hover:not(:disabled) {
     transform: scale(1.08);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
