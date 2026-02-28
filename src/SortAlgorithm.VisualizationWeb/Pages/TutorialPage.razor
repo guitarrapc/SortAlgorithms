@@ -7,7 +7,7 @@
 @inject AlgorithmRegistry AlgorithmRegistry
 @implements IDisposable
 
-<PageTitle>@(_selectedAlgorithm != null ? $"Tutorial: {_selectedAlgorithm.Name}" : "Tutorial") - Sort Algorithm</PageTitle>
+<PageTitle>Sort Algorithm Visualization: Tutorial</PageTitle>
 
 <div class="tutorial-page" @onkeydown="OnKeyDown" @onkeydown:preventDefault tabindex="0" @ref="_containerRef">
 
@@ -23,13 +23,7 @@
             @onclick="() => _qapOpen = true"
             title="Open Panel">☰</button>
     <a href="/" class="tutorial-back-link">← Back</a>
-    <h1 class="tutorial-title">
-        🎓 Tutorial
-        @if (_selectedAlgorithm != null)
-        {
-            <span class="tutorial-title__algo">: @_selectedAlgorithm.Name</span>
-        }
-    </h1>
+    <h1 class="tutorial-title">Sort Visualization: Tutorial</h1>
     <div class="header__actions">
         @if (_selectedAlgorithm != null)
         {
