@@ -27,125 +27,133 @@
 
         @* パネルタイトル + モバイル閉じるボタン *@
         <div class="qap__title-row">
-            <span class="qap__title">⚙️ Quick Access</span>
+            <span class="qap__title">Quick Access</span>
             <button class="qap__mobile-close" @onclick="HandleClose" title="Close">✕</button>
         </div>
 
         <fieldset class="controls-fieldset" disabled="@IsLoading">
 
-            @* ── Algorithm ── *@
-            <div class="qap__item">
-                <div class="qap__label-row">
-                    <span class="stat-label">Algorithm</span>
-                    <a href="tutorial/@Uri.EscapeDataString(SelectedAlgorithm)" class="qap__help-link" title="Learn about this algorithm">?</a>
+            @* ── Sort Target ── *@
+            <div class="qap__card">
+                <span class="qap__card-title">Sort Target</span>
+
+                <div class="qap__item">
+                    <div class="qap__label-row">
+                        <span class="stat-label">Algorithm</span>
+                        <a href="tutorial/@Uri.EscapeDataString(SelectedAlgorithm)" class="qap__help-link" title="Learn about this algorithm">?</a>
+                    </div>
+                    <select value="@SelectedAlgorithm"
+                            @onchange="e => HandleAlgorithmChange((string)e.Value!)">
+                        @foreach (var group in GetAlgorithmsByCategory())
+                        {
+                            <optgroup label="@group.Key">
+                                @foreach (var algo in group)
+                                {
+                                    <option value="@algo.Name">@algo.Name</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
                 </div>
-                <select value="@SelectedAlgorithm"
-                        @onchange="e => HandleAlgorithmChange((string)e.Value!)">
-                    @foreach (var group in GetAlgorithmsByCategory())
-                    {
-                        <optgroup label="@group.Key">
-                            @foreach (var algo in group)
-                            {
-                                <option value="@algo.Name">@algo.Name</option>
-                            }
-                        </optgroup>
-                    }
-                </select>
-            </div>
 
-            @* ── Array Size ── *@
-            <div class="qap__item">
-                <span class="stat-label">Array Size @GetArraySizeLabel()</span>
-                <select value="@Math.Min(ArraySize, GetEffectiveMaxSize())"
-                        @onchange="e => HandleArraySizeChange(int.Parse((string)e.Value!))">
-                    @foreach (var size in GetFilteredSizes())
-                    {
-                        <option value="@size">@size @(IsRecommendedSize(size) ? "⭐" : "")</option>
-                    }
-                </select>
-            </div>
-
-            @* ── Scramble Pattern ── *@
-            <div class="qap__item">
-                <span class="stat-label">Scramble Pattern</span>
-                <select value="@SelectedPatternName"
-                        @onchange="e => HandlePatternChange((string)e.Value!)">
-                    @foreach (var group in GetPatternsByCategory())
-                    {
-                        <optgroup label="@group.Key">
-                            @foreach (var pattern in group)
-                            {
-                                <option value="@pattern.Name">@pattern.Name</option>
-                            }
-                        </optgroup>
-                    }
-                </select>
-            </div>
-
-            @* ── Visualization Mode ── *@
-            <div class="qap__item">
-                <span class="stat-label">Visualization Mode</span>
-                <select value="@SelectedVisualizationMode"
-                        @onchange="e => HandleVisualizationModeChange((string)e.Value!)">
-                    <option value="@VisualizationMode.BarChart">📊 Bar Chart</option>
-                    <option value="@VisualizationMode.Circular">⭕ Circular</option>
-                    <option value="@VisualizationMode.Spiral">🌀 Spiral</option>
-                    <option value="@VisualizationMode.DotPlot">🔵 Dot Plot</option>
-                    <option value="@VisualizationMode.PictureRow">🖼️ Picture Row</option>
-                    <option value="@VisualizationMode.PictureColumn">🖼️ Picture Column</option>
-                    <option value="@VisualizationMode.PictureBlock">🖼️ Picture Block</option>
-                </select>
-            </div>
-
-            <hr class="qap__divider" />
-
-            @* ── Operations Per Frame ── *@
-            <div class="qap__item qap__item--vertical">
-                <div class="qap__slider-header">
-                    <span class="stat-label">Operations Per Frame</span>
-                    <span class="stat-value qap__slider-value">@Playback.OperationsPerFrame ops/frame</span>
+                <div class="qap__item">
+                    <span class="stat-label">Array Size @GetArraySizeLabel()</span>
+                    <select value="@Math.Min(ArraySize, GetEffectiveMaxSize())"
+                            @onchange="e => HandleArraySizeChange(int.Parse((string)e.Value!))">
+                        @foreach (var size in GetFilteredSizes())
+                        {
+                            <option value="@size">@size @(IsRecommendedSize(size) ? "★" : "")</option>
+                        }
+                    </select>
                 </div>
-                <input type="range" min="1" max="1000"
-                       @bind="Playback.OperationsPerFrame"
-                       @bind:after="HandleSpeedChanged" />
-            </div>
 
-            @* ── Speed Multiplier ── *@
-            <div class="qap__item qap__item--vertical">
-                <div class="qap__slider-header">
-                    <span class="stat-label">Speed Multiplier</span>
-                    <span class="stat-value qap__slider-value">
-                        @Playback.SpeedMultiplier.ToString("F1")x
-                        <span class="qap__fps">(@EffectiveFPS FPS)</span>
-                    </span>
+                <div class="qap__item">
+                    <span class="stat-label">Scramble Pattern</span>
+                    <select value="@SelectedPatternName"
+                            @onchange="e => HandlePatternChange((string)e.Value!)">
+                        @foreach (var group in GetPatternsByCategory())
+                        {
+                            <optgroup label="@group.Key">
+                                @foreach (var pattern in group)
+                                {
+                                    <option value="@pattern.Name">@pattern.Name</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
                 </div>
-                <input type="range" min="0.5" max="100" step="0.5"
-                       @bind="Playback.SpeedMultiplier"
-                       @bind:after="HandleSpeedChanged" />
             </div>
 
-            <hr class="qap__divider" />
+            @* ── Display ── *@
+            <div class="qap__card">
+                <span class="qap__card-title">Display</span>
 
-            @* ── Add & Generate ── *@
-            <div class="qap__item">
+                <div class="qap__item">
+                    <span class="stat-label">Visualization Mode</span>
+                    <select value="@SelectedVisualizationMode"
+                            @onchange="e => HandleVisualizationModeChange((string)e.Value!)">
+                        <option value="@VisualizationMode.BarChart">Bar Chart</option>
+                        <option value="@VisualizationMode.Circular">Circular</option>
+                        <option value="@VisualizationMode.Spiral">Spiral</option>
+                        <option value="@VisualizationMode.DotPlot">Dot Plot</option>
+                        <option value="@VisualizationMode.PictureRow">Picture Row</option>
+                        <option value="@VisualizationMode.PictureColumn">Picture Column</option>
+                        <option value="@VisualizationMode.PictureBlock">Picture Block</option>
+                    </select>
+                </div>
+            </div>
+
+            @* ── Speed ── *@
+            <div class="qap__card">
+                <span class="qap__card-title">Speed</span>
+
+                <div class="qap__item qap__item--vertical">
+                    <div class="qap__slider-header">
+                        <span class="stat-label">Operations Per Frame</span>
+                        <span class="stat-value qap__slider-value">@Playback.OperationsPerFrame ops/frame</span>
+                    </div>
+                    <input type="range" min="1" max="1000"
+                           @bind="Playback.OperationsPerFrame"
+                           @bind:after="HandleSpeedChanged" />
+                </div>
+
+                <div class="qap__item qap__item--vertical">
+                    <div class="qap__slider-header">
+                        <span class="stat-label">Speed Multiplier</span>
+                        <span class="stat-value qap__slider-value">
+                            @Playback.SpeedMultiplier.ToString("F1")x
+                            <span class="qap__fps">(@EffectiveFPS FPS)</span>
+                        </span>
+                    </div>
+                    <input type="range" min="0.5" max="100" step="0.5"
+                           @bind="Playback.SpeedMultiplier"
+                           @bind:after="HandleSpeedChanged" />
+                </div>
+            </div>
+
+            @* ── Action ── *@
+            <div class="qap__card">
+                <span class="qap__card-title">Action</span>
+
                 @{
                     var instanceCount = ComparisonMode.State.Instances.Count;
                     var algoAlreadyPresent = ComparisonMode.State.Instances.Any(i => i.AlgorithmName == SelectedAlgorithm);
                     var atMaxAndNotPresent = instanceCount >= ComparisonState.MaxComparisons && !algoAlreadyPresent;
                     var addDisabled = atMaxAndNotPresent || ComparisonMode.IsAddingAlgorithm;
                 }
-                <button class="primary qap__btn-full"
-                        @onclick="() => OnAddAndGenerate.InvokeAsync()"
-                        disabled="@addDisabled">
-                    @(ComparisonMode.IsAddingAlgorithm ? "⏳ Processing..." : "➕ Add & Generate")
-                </button>
-                <span class="qap__count">(@instanceCount / @ComparisonState.MaxComparisons)</span>
-            </div>
+                <div class="qap__item">
+                    <button class="primary qap__btn-full"
+                            @onclick="() => OnAddAndGenerate.InvokeAsync()"
+                            disabled="@addDisabled">
+                        @(ComparisonMode.IsAddingAlgorithm ? "Processing..." : "Add & Generate")
+                    </button>
+                    <span class="qap__count">(@instanceCount / @ComparisonState.MaxComparisons)</span>
+                </div>
 
-            @* ── Complexity ── *@
-            <div class="qap__item">
-                <span class="stat-label">Complexity</span>
-                <span class="stat-value qap__complexity">@GetComplexity()</span>
+                <div class="qap__item">
+                    <span class="stat-label">Complexity</span>
+                    <span class="stat-value qap__complexity">@GetComplexity()</span>
+                </div>
             </div>
 
         </fieldset>
