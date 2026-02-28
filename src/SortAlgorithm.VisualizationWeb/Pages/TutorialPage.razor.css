@@ -99,8 +99,8 @@
     color: var(--text-light);
     border: 1px solid #4A4A4A;
     border-radius: 6px;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.85rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 1rem;
     min-width: 200px;
     cursor: pointer;
 }
@@ -130,12 +130,12 @@
     color: var(--text-light);
     border: 1px solid #4A4A4A;
     border-radius: 6px;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.95rem;
+    padding: 0 0.875rem;
+    font-size: 1rem;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
-    min-width: 40px;
-    height: 36px;
+    min-width: 44px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -154,9 +154,10 @@
 .ctrl-play {
     background: var(--color-compare);
     border-color: var(--color-compare);
-    font-size: 1rem;
-    padding: 0.375rem 1rem;
-    min-width: 52px;
+    font-size: 1.3rem;
+    padding: 0;
+    min-width: 60px;
+    height: 48px;
 }
 
 .ctrl-play:hover:not(:disabled) {
@@ -502,7 +503,18 @@
 
     .algo-select {
         min-width: 140px;
-        font-size: 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .ctrl-btn {
+        height: 36px;
+        min-width: 38px;
+    }
+
+    .ctrl-play {
+        height: 40px;
+        min-width: 52px;
+        font-size: 1.1rem;
     }
 
     .ctrl-speed input[type="range"] {
