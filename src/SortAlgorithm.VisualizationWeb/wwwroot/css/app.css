@@ -1,11 +1,11 @@
 /* Sort Algorithm Visualization Styles */
 
 :root {
-    /* 背景色 */
-    --bg-main: #1a1f27;
-    --bg-card: #272f3b;
-    --bg-panel: #1e2530;
-    --bg-hover: #323c4d;
+/* 背景色 */
+--bg-main: #181d1a;
+--bg-card: #242a27;
+--bg-panel: #1c2320;
+--bg-hover: #2d3530;
 
     /* テキスト色 */
     --text-primary: #ffffff;
