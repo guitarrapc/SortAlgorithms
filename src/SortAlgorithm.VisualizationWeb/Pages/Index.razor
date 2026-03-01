@@ -180,13 +180,24 @@ private VisualizationMode SelectedVisualizationMode
 
     // ローディング状態
     private LoadingState _loadingState = LoadingState.Idle;
-    private bool IsLoading => _loadingState != LoadingState.Idle;
-    private string LoadingMessage => _loadingState switch
+    private bool IsLoading => _loadingState != LoadingState.Idle || ComparisonMode.IsAddingAlgorithm;
+    private string LoadingMessage
     {
-        LoadingState.AddingAlgorithm => "⏳ Processing...",
-        LoadingState.LoadingImage => "⏳ Loading image...",
-        _ => "",
-    };
+        get
+        {
+            // ComparisonModeServiceでアルゴリズム追加中の場合
+            if (ComparisonMode.IsAddingAlgorithm && !string.IsNullOrEmpty(ComparisonMode.State.ProcessingAlgorithmName))
+                return $"⏳ Processing: {ComparisonMode.State.ProcessingAlgorithmName}...";
+            
+            // その他のローディング状態
+            return _loadingState switch
+            {
+                LoadingState.AddingAlgorithm => "⏳ Processing...",
+                LoadingState.LoadingImage => "⏳ Loading image...",
+                _ => "",
+            };
+        }
+    }
 
     // 比較プレイ中フラグ（OnStateChanged で同期）
     private bool _isComparisonPlaying = false;

@@ -26,6 +26,11 @@ public class ComparisonState
     public ArrayPatternMetadata? CurrentPattern { get; set; }
     
     /// <summary>
+    /// 現在処理中のアルゴリズム名（AddAndGenerate中）
+    /// </summary>
+    public string? ProcessingAlgorithmName { get; set; }
+    
+    /// <summary>
     /// 最大比較可能数
     /// </summary>
     public const int MaxComparisons = 9;

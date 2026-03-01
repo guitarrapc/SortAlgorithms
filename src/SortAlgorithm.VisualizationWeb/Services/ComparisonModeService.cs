@@ -233,10 +233,21 @@ public class ComparisonModeService : IDisposable
     private async Task AddAlgorithmInternalAsync(string algorithmName, AlgorithmMetadata metadata)
     {
         var capturedArray = _state.InitialArray;
+        
+        // プログレス表示用に処理中のアルゴリズム名を設定
+        _state.ProcessingAlgorithmName = algorithmName;
+        NotifyStateChanged();
+        
+        var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
         var (operations, statistics, actualExecutionTime) =
             await _executor.ExecuteAndRecordAsync(capturedArray, metadata);
+        totalStopwatch.Stop();
 
-        if (!ReferenceEquals(capturedArray, _state.InitialArray)) return;
+        if (!ReferenceEquals(capturedArray, _state.InitialArray))
+        {
+            _state.ProcessingAlgorithmName = null;
+            return;
+        }
 
         var playback = new PlaybackService(_js);
         playback.LoadOperations(capturedArray, operations, statistics, actualExecutionTime);
@@ -250,8 +261,14 @@ public class ComparisonModeService : IDisposable
             Metadata = metadata,
             Playback = playback,
         });
+        
+        _state.ProcessingAlgorithmName = null;
 
-        _debug.Log($"[ComparisonMode] Added {algorithmName}: {operations.Count} ops");
+        _debug.Log(
+            $"[ComparisonMode] Added {algorithmName}: {operations.Count:N0} operations " +
+            $"(Comparisons: {statistics.CompareCount:N0}, Swaps: {statistics.SwapCount:N0}) " +
+            $"recorded in {totalStopwatch.ElapsedMilliseconds:N0}ms " +
+            $"(exec: {actualExecutionTime.TotalMilliseconds:F2}ms)");
     }
 
     private void ClearAllInstances()
