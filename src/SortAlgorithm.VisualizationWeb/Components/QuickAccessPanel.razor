@@ -229,11 +229,13 @@
     private async Task HandleAlgorithmChange(string newValue)
     {
         await SelectedAlgorithmChanged.InvokeAsync(newValue);
-        if (AutoSwitchToRecommendedSize)
+        var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == newValue);
+        if (algo != null)
         {
-            var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == newValue);
-            if (algo != null)
+            if (AutoSwitchToRecommendedSize)
                 await ArraySizeChanged.InvokeAsync(algo.RecommendedSize);
+            else if (ArraySize > algo.MaxElements)
+                await ArraySizeChanged.InvokeAsync(algo.MaxElements);
         }
         await OnAlgorithmChanged.InvokeAsync();
     }
@@ -268,7 +270,12 @@
 
     // ── Comparison Mode 変更 ─────────────────────────────────────────────────
     private int GetEffectiveMaxSize()
-        => ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances.Count + 1);
+    {
+        var comparisonMax = ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances.Count + 1);
+        var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
+        var algoMax = algo?.MaxElements ?? int.MaxValue;
+        return Math.Min(comparisonMax, algoMax);
+    }
 
     private IEnumerable<int> GetFilteredSizes()
         => AvailableSizes.Where(s => s <= GetEffectiveMaxSize());
