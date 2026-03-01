@@ -679,11 +679,6 @@ details[open] .qap__advanced-summary::before {
         font-size: 0.9rem;
     }
 
-    .play-control-btn {
-        height: 52px;
-        font-size: 1.4rem;
-    }
-
     /* カルーセル: 横スワイプ scroll-snap */
     .sort-card-grid-wrapper {
         height: 100%;
@@ -1717,6 +1712,22 @@ fieldset.controls-fieldset[disabled] * {
     color: #F59E0B;
     font-weight: 500;
     margin-left: 4px;
+}
+
+@media (min-width: 768px) and (max-width: 1279px) {
+    .play-control-btn {
+        height: 40px;
+        max-width: 100px;
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .play-control-btn {
+        height: 40px;
+        max-width: 100px;
+        font-size: 1.2rem;
+    }
 }
 
 /* =============================================
