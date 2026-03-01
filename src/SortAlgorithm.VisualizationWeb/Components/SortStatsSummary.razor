@@ -2,9 +2,9 @@
 
 @*
     カードサイズに応じて表示内容を切替:
-    Full  (単一モード PC)       : ⏱ 時間, Comparisons, Swaps, Reads, Writes, Progress%
-    Medium (比較2〜3枚 PC)      : ⏱ 時間, Comparisons, Swaps, Progress%
-    Small  (比較4枚以上 / モバイル): ⏱ 時間, Cmp, Swp, %（省略形）
+    Full  (単一モード PC)       : Actual, Comparisons, Swaps, Reads, Writes, Progress%
+    Medium (比較2〜3枚 PC)      : Actual, Comparisons, Swaps, Progress%
+    Small  (比較4枚以上 / モバイル): Actual, Cmp, Swp, %（省略形）
 
     タブレット/スマホ: ∨ ボタンでインライン展開
 *@
@@ -15,7 +15,7 @@
         @if (CardSize == StatsCardSize.Small)
         {
             <span class="stat-mini">
-                <span class="label">⏱</span>
+                <span class="label">Actual</span>
                 <span class="value stat-execution-time">@ExecutionTimeDisplay</span>
             </span>
             <span class="stat-mini">
@@ -34,7 +34,7 @@
         else if (CardSize == StatsCardSize.Medium)
         {
             <span class="stat-mini">
-                <span class="label">⏱</span>
+                <span class="label">Actual</span>
                 <span class="value stat-execution-time">@ExecutionTimeDisplay</span>
             </span>
             <span class="stat-mini">
@@ -54,7 +54,7 @@
         {
             @* Full size *@
             <span class="stat-mini">
-                <span class="label">⏱</span>
+                <span class="label">Actual</span>
                 <span class="value stat-execution-time">@ExecutionTimeDisplay</span>
             </span>
             <span class="stat-mini">
@@ -92,7 +92,7 @@
         <div class="sss__detail">
 
             <div class="sss__detail-section">
-                <span class="sss__detail-heading">⏱ Execution Time</span>
+                <span class="sss__detail-heading">Actual</span>
                 @if (State.ActualExecutionTime != TimeSpan.Zero)
                 {
                     @if (IsPlaying)

@@ -1,0 +1,266 @@
+/* ====================================
+   SortStatsSummary - Card-based Layout
+   ==================================== */
+
+.sort-stats-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: var(--bg-card, #242a27);
+    border-top: 1px solid var(--border-color, #374151);
+}
+
+/* ── コンパクト行（常時表示） ── */
+.sss__compact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+/* ── 統計カード（各項目） ── */
+.stat-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background: rgba(127, 168, 111, 0.08);
+    border: 1px solid rgba(127, 168, 111, 0.2);
+    border-radius: 4px;
+    min-width: fit-content;
+    transition: background-color 0.15s ease;
+}
+
+.stat-mini:hover {
+    background: rgba(127, 168, 111, 0.12);
+}
+
+.stat-mini .label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary, #b8c1d0);
+    white-space: nowrap;
+}
+
+.stat-mini .value {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+    min-width: 4ch; /* 最小4文字分の幅を確保 */
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* 実行時間専用 - より広い固定幅 */
+.stat-mini .stat-execution-time {
+    min-width: 14ch; /* "0.00 ms / 0.00 ms" や "0.00 ms" に対応 */
+}
+
+/* ── サイズバリエーション ── */
+
+/* Small: 省略形表示（比較4枚以上 / モバイル） */
+.sort-stats-summary--small .sss__compact {
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 6px;
+}
+
+.sort-stats-summary--small .stat-mini {
+    padding: 4px 8px;
+    gap: 4px;
+    min-height: 28px;
+}
+
+.sort-stats-summary--small .stat-mini .label {
+    font-size: 0.7rem;
+}
+
+.sort-stats-summary--small .stat-mini .value {
+    font-size: 0.8rem;
+    min-width: 50px;
+}
+
+.sort-stats-summary--small .stat-mini .stat-execution-time {
+    min-width: 120px; /* "0.0 ms / 0.0 ms" に対応 */
+}
+
+/* Medium: 中間表示（比較2〜3枚 PC） */
+.sort-stats-summary--medium .sss__compact {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
+
+.sort-stats-summary--medium .stat-mini {
+    padding: 5px 9px;
+    gap: 5px;
+    min-height: 30px;
+}
+
+.sort-stats-summary--medium .stat-mini .value {
+    min-width: 65px;
+}
+
+.sort-stats-summary--medium .stat-mini .stat-execution-time {
+    min-width: 150px;
+}
+
+/* Full: フル表示（単一モード PC） */
+.sort-stats-summary--full .sss__compact {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.sort-stats-summary--full .stat-mini {
+    gap: 8px;
+}
+
+.sort-stats-summary--full .stat-mini .value {
+    min-width: 80px; /* より広い数値表示 */
+}
+
+.sort-stats-summary--full .stat-mini .stat-execution-time {
+    min-width: 170px; /* "0.000 ms / 0.000 ms" に余裕を持って対応 */
+}
+
+/* ── 展開ボタン ── */
+.sss__expand-btn {
+    margin-left: auto;
+    padding: 4px 12px;
+    background: rgba(127, 168, 111, 0.1);
+    border: 1px solid rgba(127, 168, 111, 0.3);
+    border-radius: 4px;
+    color: var(--color-accent, #7fa86f);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.sss__expand-btn:hover {
+    background: rgba(127, 168, 111, 0.2);
+    border-color: rgba(127, 168, 111, 0.5);
+}
+
+.sss__expand-btn:active {
+    transform: scale(0.95);
+}
+
+/* PC では展開ボタンを非表示 */
+@media (min-width: 1280px) {
+    .sss__expand-btn {
+        display: none;
+    }
+}
+
+/* ── 展開詳細ビュー ── */
+.sss__detail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    margin-top: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color, #374151);
+    border-radius: 6px;
+}
+
+.sss__detail-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sss__detail-heading {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-accent, #7fa86f);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.sss__detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.sss__detail-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #b8c1d0);
+}
+
+.sss__detail-value {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+    min-width: 8ch;
+    text-align: right;
+}
+
+.sss__complexity {
+    color: var(--color-accent, #7fa86f);
+    font-weight: 700;
+}
+
+/* プログレスバー */
+.sss__progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.sss__progress-track {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.sss__progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent, #7fa86f), var(--color-accent-hover, #91bd7e));
+    transition: width 0.2s ease;
+}
+
+/* ── レスポンシブ調整 ── */
+
+/* タブレット（768px〜1279px） */
+@media (max-width: 1279px) {
+    .sort-stats-summary {
+        padding: 10px;
+    }
+
+    .sss__compact {
+        gap: 6px;
+    }
+
+    .stat-mini {
+        padding: 5px 8px;
+    }
+}
+
+/* スマホ（〜767px） */
+@media (max-width: 767px) {
+    .sort-stats-summary {
+        padding: 8px;
+    }
+
+    .sss__compact {
+        gap: 4px;
+    }
+
+    .stat-mini {
+        padding: 4px 6px;
+        font-size: 0.75rem;
+    }
+
+    .stat-mini .label {
+        font-size: 0.68rem;
+    }
+
+    .stat-mini .value {
+        font-size: 0.78rem;
+    }
+}
