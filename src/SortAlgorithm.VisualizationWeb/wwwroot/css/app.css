@@ -677,6 +677,33 @@ details[open] .qap__advanced-summary::before {
    スマホ (〜767px)
    ============================================= */
 @media (max-width: 767px) {
+    /* スクロールを有効化 */
+    html, body {
+        height: auto;
+        min-height: 100%;
+        overflow: auto;
+    }
+
+    #app {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    /* 1画面に収めず、スクロール可能にする */
+    .visualization-page {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    /* 可視化エリアに十分な高さを確保 */
+    .visualization-area {
+        min-height: 600px; /* ソート表示に必要な最小高さ */
+    }
+
+    .visualization-content {
+        min-height: 400px; /* 可視化コンテンツの最小高さ */
+    }
+
     .header__title {
         font-size: 0.9rem;
     }
@@ -684,7 +711,7 @@ details[open] .qap__advanced-summary::before {
     /* カルーセル: 横スワイプ scroll-snap */
     .sort-card-grid-wrapper {
         height: 100%;
-        min-height: 0;
+        min-height: 400px; /* カルーセルにも最小高さを設定 */
     }
 
     .sort-card-grid {
@@ -756,7 +783,7 @@ details[open] .qap__advanced-summary::before {
     background-color: #1A1A1A;
     border-radius: 8px;
     overflow: hidden;
-    min-height: 0;
+    min-height: 300px; /* PC/タブレットでも最小高さを確保 */
 }
 
 .controls {
