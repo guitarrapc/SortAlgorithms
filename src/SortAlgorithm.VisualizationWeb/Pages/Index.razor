@@ -453,7 +453,13 @@ private VisualizationMode SelectedVisualizationMode
 
         var size = Math.Min(ArraySize, Math.Min(metadata.MaxElements,
             ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances.Count + 1)));
-        var array = pattern.Generator(size, new Random());
+
+        // 最適化パス: サイズ・パターン不変 かつ 対象アルゴリズム未登録 かつ 既存カードあり
+        // → 新配列生成・既存カード再実行を省略し、追加アルゴリズムだけ計測する
+        bool canReuseArray = ComparisonMode.State.Instances.Count > 0
+            && size == ComparisonMode.State.CurrentArraySize
+            && pattern.Name == ComparisonMode.State.CurrentPattern?.Name
+            && !ComparisonMode.State.Instances.Any(i => i.AlgorithmName == SelectedAlgorithm);
 
         _loadingState = LoadingState.AddingAlgorithm;
         StateHasChanged();
@@ -461,7 +467,15 @@ private VisualizationMode SelectedVisualizationMode
 
         try
         {
-            await ComparisonMode.AddAndGenerateAsync(SelectedAlgorithm, metadata, array, size, pattern);
+            if (canReuseArray)
+            {
+                await ComparisonMode.AddAlgorithmAsync(SelectedAlgorithm, metadata);
+            }
+            else
+            {
+                var array = pattern.Generator(size, new Random());
+                await ComparisonMode.AddAndGenerateAsync(SelectedAlgorithm, metadata, array, size, pattern);
+            }
             ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
             ComparisonMode.SetAutoResetForAll(Playback.AutoReset);
         }

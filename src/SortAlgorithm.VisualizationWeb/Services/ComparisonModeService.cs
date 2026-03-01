@@ -91,6 +91,39 @@ public class ComparisonModeService : IDisposable
     }
 
     // ────────────────────────────────────────────────────────────────────────
+    // 追加のみ（既存配列・既存カード維持、追加分だけ計測）
+    // ────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// 既存配列と既存カードをそのまま維持し、選択アルゴリズムだけ追加計測する。
+    /// 配列サイズ・パターンが変わっていない場合の最適化パス。
+    /// 呼び出し元で「アルゴリズム未登録 かつ N &lt; N_max かつ配列条件不変」を確認済みであること。
+    /// </summary>
+    public async Task AddAlgorithmAsync(string algorithmName, AlgorithmMetadata metadata)
+    {
+        if (IsAddingAlgorithm) return;
+        if (_state.InitialArray.Length == 0) return;
+
+        IsAddingAlgorithm = true;
+        NotifyStateChanged();
+
+        try
+        {
+            await AddAlgorithmInternalAsync(algorithmName, metadata);
+            _debug.Log($"[ComparisonMode] AddAlgorithm (reuse array) done. N={_state.Instances.Count}");
+        }
+        catch (Exception ex)
+        {
+            _debug.Log($"[ComparisonMode] ERROR AddAlgorithmAsync: {ex.Message}");
+        }
+        finally
+        {
+            IsAddingAlgorithm = false;
+            NotifyStateChanged();
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
     // インライン切替（同じ配列、N 不変）
     // ────────────────────────────────────────────────────────────────────────
 
