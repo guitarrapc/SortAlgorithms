@@ -2055,7 +2055,7 @@ fieldset.controls-fieldset[disabled] * {
     transform: translate(-50%, -50%);
     width: min(480px, calc(100vw - 32px));
     max-height: calc(100vh - 48px);
-    background: var(--bg-panel);
+    background: var(--bg-main);
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
     z-index: 301;
@@ -2121,7 +2121,7 @@ fieldset.controls-fieldset[disabled] * {
 }
 
 .settings-section__body {
-    background: var(--bg-dark);
+    background: var(--bg-card);
     border-radius: 8px;
     overflow: hidden;
 }
