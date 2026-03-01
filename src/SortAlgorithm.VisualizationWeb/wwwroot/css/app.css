@@ -9,6 +9,7 @@
 --bg-card: #242a27;
 --bg-panel: transparent;
 --bg-hover: #2d3530;
+--bg-button: rgba(250, 189, 47, 0.2);
 
     /* テキスト色 */
     --text-primary: #ffffff;
@@ -27,8 +28,9 @@
     --color-play: #3b82f6;
     --color-pause: #a855f7;
     --color-stop: #e53e3e;
-    --color-sound-on: #22c55e;
+    --color-sound-on: #fabd2f;
     --color-sound-off: #6b7280;
+    --color-sound-border: rgba(250, 189, 47, 0.5)
 
     /* ソート可視化 */
     --color-normal: #3b82f6;
@@ -1607,14 +1609,14 @@ fieldset.controls-fieldset[disabled] * {
     max-width: 180px;
     height: 60px;
     padding: 0;
-    border: none;
+    border: 1px solid;
     border-radius: 8px;
     font-size: 1.6rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.15s, transform 0.1s, opacity 0.15s, box-shadow 0.15s;
+    transition: background-color 0.2s, border-color 0.2s, opacity 0.15s;
 }
 
 .play-control-btn svg {
@@ -1624,87 +1626,97 @@ fieldset.controls-fieldset[disabled] * {
 }
 
 .play-control-btn:hover:not(:disabled) {
-    transform: scale(1.08);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    /* ボタンごとの色変化のみ */
 }
 
 .play-control-btn:active:not(:disabled) {
-    transform: scale(0.95);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    /* ボタンごとの色変化のみ */
 }
 
 .play-control-btn:disabled,
 .play-control-btn:disabled:hover {
     opacity: 0.35;
     cursor: not-allowed;
-    transform: none;
 }
 
 .btn-play {
-    background-color: var(--color-play);
-    color: #fff;
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.5);
 }
 
 .btn-play:hover:not(:disabled) {
-    background-color: #2563EB;
+    background-color: rgba(59, 130, 246, 0.35);
+    border-color: #3b82f6;
 }
 
 .btn-play:active:not(:disabled) {
-    background-color: #1d4ed8;
+    background-color: rgba(59, 130, 246, 0.5);
+    border-color: #2563eb;
 }
 
 .btn-pause {
-    background-color: var(--color-pause);
-    color: #fff;
+    background-color: rgba(168, 85, 247, 0.2);
+    color: #c084fc;
+    border-color: rgba(168, 85, 247, 0.5);
 }
 
 .btn-pause:hover:not(:disabled) {
-    background-color: #9333EA;
+    background-color: rgba(168, 85, 247, 0.35);
+    border-color: #a855f7;
 }
 
 .btn-pause:active:not(:disabled) {
-    background-color: #7e22ce;
+    background-color: rgba(168, 85, 247, 0.5);
+    border-color: #9333ea;
 }
 
 .btn-stop {
-    background-color: var(--color-stop);
-    color: #fff;
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.5);
 }
 
 .btn-stop:hover:not(:disabled) {
-    background-color: #dc2626;
+    background-color: rgba(239, 68, 68, 0.35);
+    border-color: #ef4444;
 }
 
 .btn-stop:active:not(:disabled) {
-    background-color: #b91c1c;
+    background-color: rgba(239, 68, 68, 0.5);
+    border-color: #dc2626;
 }
 
 .btn-sound-on {
-    background-color: var(--color-sound-on);
-    color: #fff;
+    background-color: var(--bg-button);
+    color: var(--color-sound-on);
+    border-color: var(--color-sound-border);
 }
 
 .btn-sound-on:hover:not(:disabled) {
-    background-color: #16a34a;
+    background-color: rgba(250, 189, 47, 0.35);
+    border-color: #fabd2f;
 }
 
 .btn-sound-on:active:not(:disabled) {
-    background-color: #15803d;
+    background-color: rgba(250, 189, 47, 0.5);
+    border-color: #d39d26;
 }
 
 .btn-sound-off {
-    background-color: var(--color-sound-off);
-    color: #fff;
-    opacity: 0.6;
+    background-color: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+    border-color: rgba(107, 114, 128, 0.5);
 }
 
 .btn-sound-off:hover:not(:disabled) {
-    opacity: 0.85;
+    background-color: rgba(107, 114, 128, 0.35);
+    border-color: #6b7280;
 }
 
 .btn-sound-off:active:not(:disabled) {
-    opacity: 1.0;
-    background-color: #4b5563;
+    background-color: rgba(107, 114, 128, 0.5);
+    border-color: #4b5563;
 }
 
 .play-control-status {

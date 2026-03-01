@@ -171,16 +171,17 @@
     height: 60px;
     min-width: 70px;
     padding: 0;
-    border: none;
+    border: 2px solid;
     border-radius: 8px;
     font-size: 1.6rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.15s, transform 0.1s, opacity 0.15s, box-shadow 0.15s;
-    background: var(--color-accent-dark); /* モスグリーンの暗めバージョン */
-    color: var(--text-primary);
+    transition: background-color 0.2s, border-color 0.2s, opacity 0.15s;
+    background: rgba(127, 168, 111, 0.2); /* モスグリーン半透明 */
+    color: #91bd7e;
+    border-color: rgba(127, 168, 111, 0.5);
 }
 
 .ctrl-btn svg {
@@ -190,35 +191,36 @@
 }
 
 .ctrl-btn:hover:not(:disabled) {
-    background: var(--color-accent); /* モスグリーン */
-    transform: scale(1.08);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    background: rgba(127, 168, 111, 0.35);
+    border-color: var(--color-accent);
 }
 
 .ctrl-btn:active:not(:disabled) {
-    transform: scale(0.95);
-    background: var(--color-accent-darker); /* モスグリーンの濃いバージョン */
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    background: rgba(127, 168, 111, 0.5);
+    border-color: var(--color-accent-darker);
 }
 
 .ctrl-btn:disabled {
     opacity: 0.35;
     cursor: not-allowed;
-    transform: none;
 }
 
-/* Play/Pause ボタン: 色を変えるだけで高さは統一 */
+/* Play/Pause ボタン: 青系で強調 */
 .ctrl-play {
-    background: var(--color-play);
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.5);
     min-width: 80px; /* 少しだけ幅を広げる */
 }
 
 .ctrl-play:hover:not(:disabled) {
-    background: #2563eb;
+    background: rgba(59, 130, 246, 0.35);
+    border-color: #3b82f6;
 }
 
 .ctrl-play:active:not(:disabled) {
-    background: #1d4ed8;
+    background: rgba(59, 130, 246, 0.5);
+    border-color: #2563eb;
 }
 
 
