@@ -9,6 +9,7 @@ public class ComparisonModeService : IDisposable
     private readonly IJSRuntime _js;
     private readonly ComparisonState _state = new();
     private readonly List<PlaybackService> _playbackServices = new();
+    private bool _completionLogged;
 
     public ComparisonState State => _state;
     public event Action? OnStateChanged;
@@ -203,6 +204,7 @@ public class ComparisonModeService : IDisposable
 
     public void Play()
     {
+        _completionLogged = false;
         foreach (var p in _playbackServices) p.Play();
         NotifyStateChanged();
     }
@@ -307,6 +309,7 @@ public class ComparisonModeService : IDisposable
     private void ClearAllInstances()
     {
         Stop();
+        _completionLogged = false;
         foreach (var p in _playbackServices)
         {
             p.StateChanged -= OnPlaybackStateChanged;
@@ -326,11 +329,12 @@ public class ComparisonModeService : IDisposable
     {
         if (_state.Instances.Count == 0) return;
         var completedCount = _state.Instances.Count(x => x.State.IsSortCompleted);
-        if (completedCount == _state.Instances.Count)
+        if (completedCount == _state.Instances.Count && !_completionLogged)
         {
+            _completionLogged = true;
             _debug.Log($"[ComparisonMode] All {_state.Instances.Count} algorithms completed.");
             foreach (var inst in _state.Instances.OrderBy(x => x.State.CompareCount))
-                _debug.Log($"  - {inst.AlgorithmName}: Cmp={inst.State.CompareCount:N0}");
+                _debug.Log($"  - {inst.AlgorithmName}: Cmp={inst.State.CompareCount:N0}, SWP={inst.State.SwapCount:N0}, READ={inst.State.IndexReadCount}, WRITE={inst.State.IndexWriteCount}");
             Pause();
         }
     }
