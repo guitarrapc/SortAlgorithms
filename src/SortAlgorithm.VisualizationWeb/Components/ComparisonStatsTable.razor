@@ -24,9 +24,25 @@
                         <option value="Reads">Reads</option>
                         <option value="Writes">Writes</option>
                     </select>
-                    <button class="cst-copy-btn" @onclick="CopyToClipboard" title="Copy to Clipboard">
-                        📋 Copy
-                    </button>
+                    <div class="cst-copy-dropdown">
+                        <button class="cst-copy-btn" @onclick="ToggleCopyMenu" title="Copy to Clipboard">
+                            📋 Copy
+                        </button>
+                        @if (_showCopyMenu)
+                        {
+                            <div class="cst-copy-menu">
+                                <button class="cst-copy-menu-item" @onclick="() => CopyToClipboard(CopyFormat.Tsv)">
+                                    📋 TSV (Excel)
+                                </button>
+                                <button class="cst-copy-menu-item" @onclick="() => CopyToClipboard(CopyFormat.Json)">
+                                    📄 JSON
+                                </button>
+                                <button class="cst-copy-menu-item" @onclick="() => CopyToClipboard(CopyFormat.Markdown)">
+                                    📝 Markdown
+                                </button>
+                            </div>
+                        }
+                    </div>
                     <button class="cst-close-btn" @onclick="CloseModal" title="Close">✕</button>
                 </div>
             </div>
@@ -116,16 +132,24 @@
 }
 
 @code {
-    [Parameter, EditorRequired]
-    public List<ComparisonInstance> Instances { get; set; } = null!;
+[Parameter, EditorRequired]
+public List<ComparisonInstance> Instances { get; set; } = null!;
 
-    [Parameter]
-    public bool IsOpen { get; set; } = false;
+[Parameter]
+public bool IsOpen { get; set; } = false;
 
-    [Parameter]
-    public EventCallback<bool> IsOpenChanged { get; set; }
+[Parameter]
+public EventCallback<bool> IsOpenChanged { get; set; }
 
-    private string _sortColumn = "ExecTime";
+private string _sortColumn = "ExecTime";
+private bool _showCopyMenu = false;
+
+private enum CopyFormat
+{
+    Tsv,
+    Json,
+    Markdown
+}
 
     private static string GetRankLabel(int rank) => rank switch
     {
@@ -179,6 +203,11 @@
         _sortColumn = e.Value?.ToString() ?? "ExecTime";
     }
 
+    private void ToggleCopyMenu()
+    {
+        _showCopyMenu = !_showCopyMenu;
+    }
+
     private IEnumerable<ComparisonInstance> GetSortedInstances()
     {
         return _sortColumn switch
@@ -192,13 +221,38 @@
         };
     }
 
-    private async Task CopyToClipboard()
+    private async Task CopyToClipboard(CopyFormat format)
     {
-        var header = "Algorithm\tComplexity\tCompares\tSwaps\tReads\tWrites\tProgress\tExec Time";
-        var rows = Instances.Select(item =>
+        _showCopyMenu = false;
+
+        var sortedList = GetSortedInstances().ToList();
+        string content = format switch
+        {
+            CopyFormat.Json => GenerateJson(sortedList),
+            CopyFormat.Markdown => GenerateMarkdown(sortedList),
+            _ => GenerateTsv(sortedList),
+        };
+
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", content);
+            DebugSettings.Log($"[ComparisonStatsTable] Copied as {format}");
+        }
+        catch (Exception ex)
+        {
+            DebugSettings.Log($"[ComparisonStatsTable] Failed to copy: {ex.Message}");
+        }
+    }
+
+    private string GenerateTsv(List<ComparisonInstance> items)
+    {
+        var header = "Rank\tAlgorithm\tComplexity\tCompares\tSwaps\tReads\tWrites\tProgress\tExec Time";
+        var rank = 1;
+        var rows = items.Select(item =>
         {
             var progress = GetProgressPercentage(item);
-            return $"{item.AlgorithmName}\t" +
+            return $"{rank++}\t" +
+                   $"{item.AlgorithmName}\t" +
                    $"{item.Metadata.TimeComplexity}\t" +
                    $"{item.State.CompareCount}\t" +
                    $"{item.State.SwapCount}\t" +
@@ -208,16 +262,53 @@
                    $"{FormatTotalTime(item.State.ActualExecutionTime)}";
         });
 
-        var tsv = header + "\n" + string.Join("\n", rows);
+        return header + "\n" + string.Join("\n", rows);
+    }
 
-        try
+    private string GenerateJson(List<ComparisonInstance> items)
+    {
+        var rank = 1;
+        var data = items.Select(item => new
         {
-            await JS.InvokeVoidAsync("navigator.clipboard.writeText", tsv);
-            DebugSettings.Log("[ComparisonStatsTable] Table copied to clipboard");
-        }
-        catch (Exception ex)
+            rank = rank++,
+            algorithm = item.AlgorithmName,
+            complexity = item.Metadata.TimeComplexity,
+            compares = item.State.CompareCount,
+            swaps = item.State.SwapCount,
+            reads = item.State.IndexReadCount,
+            writes = item.State.IndexWriteCount,
+            progress = item.State.IsSortCompleted ? 100 : GetProgressPercentage(item),
+            isCompleted = item.State.IsSortCompleted,
+            executionTime = new
+            {
+                totalNanoseconds = item.State.ActualExecutionTime.TotalNanoseconds,
+                formatted = FormatTotalTime(item.State.ActualExecutionTime)
+            }
+        });
+
+        return System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions
         {
-            DebugSettings.Log($"[ComparisonStatsTable] Failed to copy: {ex.Message}");
+            WriteIndented = true
+        });
+    }
+
+    private string GenerateMarkdown(List<ComparisonInstance> items)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("| Rank | Algorithm | Complexity | Compares | Swaps | Reads | Writes | Progress | Exec Time |");
+        sb.AppendLine("|------|-----------|------------|----------|-------|-------|--------|----------|-----------|");
+
+        var rank = 1;
+        foreach (var item in items)
+        {
+            var progress = item.State.IsSortCompleted ? "100%" : $"{GetProgressPercentage(item)}%";
+            sb.AppendLine($"| {rank} | {item.AlgorithmName} | {item.Metadata.TimeComplexity} | " +
+                         $"{item.State.CompareCount:N0} | {item.State.SwapCount:N0} | " +
+                         $"{item.State.IndexReadCount:N0} | {item.State.IndexWriteCount:N0} | " +
+                         $"{progress} | {FormatTotalTime(item.State.ActualExecutionTime)} |");
+            rank++;
         }
+
+        return sb.ToString();
     }
 }
