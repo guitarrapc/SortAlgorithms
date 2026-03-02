@@ -17,12 +17,12 @@
                 <div class="cst-header-controls">
                     <span class="cst-sort-label">Sort by</span>
                     <select class="cst-sort-select" value="@_sortColumn" @onchange="OnSortChanged">
+                        <option value="ExecTime">Exec Time</option>
+                        <option value="Algorithm">Algorithm</option>
                         <option value="Compares">Compares</option>
                         <option value="Swaps">Swaps</option>
                         <option value="Reads">Reads</option>
                         <option value="Writes">Writes</option>
-                        <option value="ExecTime">Exec Time</option>
-                        <option value="Algorithm">Algorithm</option>
                     </select>
                     <button class="cst-copy-btn" @onclick="CopyToClipboard" title="Copy to Clipboard">
                         📋 Copy
@@ -34,30 +34,30 @@
             <div class="cst-card-list">
                 @{
                     var sortedList = GetSortedInstances().ToList();
-                    var maxCompares = sortedList.Count > 0 ? sortedList.Max(x => x.State.CompareCount)     : 0UL;
-                    var maxSwaps    = sortedList.Count > 0 ? sortedList.Max(x => x.State.SwapCount)        : 0UL;
-                    var maxReads    = sortedList.Count > 0 ? sortedList.Max(x => x.State.IndexReadCount)   : 0UL;
-                    var maxWrites   = sortedList.Count > 0 ? sortedList.Max(x => x.State.IndexWriteCount)  : 0UL;
+                    var maxCompares = sortedList.Count > 0 ? sortedList.Max(x => x.State.CompareCount) : 0UL;
+                    var maxSwaps = sortedList.Count > 0 ? sortedList.Max(x => x.State.SwapCount) : 0UL;
+                    var maxReads = sortedList.Count > 0 ? sortedList.Max(x => x.State.IndexReadCount) : 0UL;
+                    var maxWrites = sortedList.Count > 0 ? sortedList.Max(x => x.State.IndexWriteCount) : 0UL;
 
-                    var minCompares = sortedList.Where(x => x.State.CompareCount     > 0).Select(x => x.State.CompareCount).DefaultIfEmpty(0UL).Min();
-                    var minSwaps    = sortedList.Where(x => x.State.SwapCount        > 0).Select(x => x.State.SwapCount).DefaultIfEmpty(0UL).Min();
-                    var minReads    = sortedList.Where(x => x.State.IndexReadCount   > 0).Select(x => x.State.IndexReadCount).DefaultIfEmpty(0UL).Min();
-                    var minWrites   = sortedList.Where(x => x.State.IndexWriteCount  > 0).Select(x => x.State.IndexWriteCount).DefaultIfEmpty(0UL).Min();
+                    var minCompares = sortedList.Where(x => x.State.CompareCount > 0).Select(x => x.State.CompareCount).DefaultIfEmpty(0UL).Min();
+                    var minSwaps = sortedList.Where(x => x.State.SwapCount > 0).Select(x => x.State.SwapCount).DefaultIfEmpty(0UL).Min();
+                    var minReads = sortedList.Where(x => x.State.IndexReadCount > 0).Select(x => x.State.IndexReadCount).DefaultIfEmpty(0UL).Min();
+                    var minWrites = sortedList.Where(x => x.State.IndexWriteCount > 0).Select(x => x.State.IndexWriteCount).DefaultIfEmpty(0UL).Min();
                 }
                 @for (int i = 0; i < sortedList.Count; i++)
                 {
                     var item = sortedList[i];
                     var rank = i + 1;
 
-                    var cmPct  = maxCompares > 0 ? (int)(item.State.CompareCount     * 100 / maxCompares) : 0;
-                    var swPct  = maxSwaps    > 0 ? (int)(item.State.SwapCount        * 100 / maxSwaps)    : 0;
-                    var rdPct  = maxReads    > 0 ? (int)(item.State.IndexReadCount   * 100 / maxReads)    : 0;
-                    var wrPct  = maxWrites   > 0 ? (int)(item.State.IndexWriteCount  * 100 / maxWrites)   : 0;
+                    var cmPct = maxCompares > 0 ? (int)(item.State.CompareCount * 100 / maxCompares) : 0;
+                    var swPct = maxSwaps > 0 ? (int)(item.State.SwapCount * 100 / maxSwaps) : 0;
+                    var rdPct = maxReads > 0 ? (int)(item.State.IndexReadCount * 100 / maxReads) : 0;
+                    var wrPct = maxWrites > 0 ? (int)(item.State.IndexWriteCount * 100 / maxWrites) : 0;
 
-                    var cmBest = minCompares > 0 && item.State.CompareCount    == minCompares;
-                    var swBest = minSwaps    > 0 && item.State.SwapCount       == minSwaps;
-                    var rdBest = minReads    > 0 && item.State.IndexReadCount  == minReads;
-                    var wrBest = minWrites   > 0 && item.State.IndexWriteCount == minWrites;
+                    var cmBest = minCompares > 0 && item.State.CompareCount == minCompares;
+                    var swBest = minSwaps > 0 && item.State.SwapCount == minSwaps;
+                    var rdBest = minReads > 0 && item.State.IndexReadCount == minReads;
+                    var wrBest = minWrites > 0 && item.State.IndexWriteCount == minWrites;
 
                     <div class="cst-card @(item.State.IsSortCompleted ? "cst-card--done" : "")">
                         <div class="cst-card-header">
@@ -125,7 +125,7 @@
     [Parameter]
     public EventCallback<bool> IsOpenChanged { get; set; }
 
-    private string _sortColumn = "Compares";
+    private string _sortColumn = "ExecTime";
 
     private static string GetRankLabel(int rank) => rank switch
     {
@@ -176,7 +176,7 @@
 
     private void OnSortChanged(ChangeEventArgs e)
     {
-        _sortColumn = e.Value?.ToString() ?? "Compares";
+        _sortColumn = e.Value?.ToString() ?? "ExecTime";
     }
 
     private IEnumerable<ComparisonInstance> GetSortedInstances()
@@ -184,11 +184,11 @@
         return _sortColumn switch
         {
             "Algorithm" => Instances.OrderBy(x => x.AlgorithmName),
-            "Swaps"     => Instances.OrderBy(x => x.State.SwapCount),
-            "Reads"     => Instances.OrderBy(x => x.State.IndexReadCount),
-            "Writes"    => Instances.OrderBy(x => x.State.IndexWriteCount),
-            "ExecTime"  => Instances.OrderBy(x => x.State.ActualExecutionTime),
-            _           => Instances.OrderBy(x => x.State.CompareCount),
+            "ExecTime" => Instances.OrderBy(x => x.State.ActualExecutionTime),
+            "Swaps" => Instances.OrderBy(x => x.State.SwapCount),
+            "Reads" => Instances.OrderBy(x => x.State.IndexReadCount),
+            "Writes" => Instances.OrderBy(x => x.State.IndexWriteCount),
+            _ => Instances.OrderBy(x => x.State.CompareCount),
         };
     }
 
