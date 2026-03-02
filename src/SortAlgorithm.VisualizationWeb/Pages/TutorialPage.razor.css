@@ -74,18 +74,10 @@
     pointer-events: none;
 }
 
-/* PC: サイドバー幅を考慮してタイトルを右側エリアの中央に配置 */
-@media (min-width: 1280px) {
-    .tutorial-title {
-        left: calc(280px + (100% - 280px) / 2);
-    }
-}
-
 .tutorial-title__algo {
     font-weight: 400;
     color: var(--text-secondary);
 }
-
 
 .tutorial-try-btn {
     display: inline-flex;
@@ -139,35 +131,6 @@
     overflow-y: auto;
     min-height: 0;
     position: relative;
-}
-
-/* タブレット/モバイル: カードパネルを上段に、メインエリアを下段にシフト */
-@media (max-width: 1279px) {
-    .tutorial-page {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr;
-    }
-
-    .tutorial-cards-panel {
-        grid-column: 1;
-        grid-row: 2;
-        background-color: transparent;
-        padding: 0;
-        border-radius: 0;
-        overflow-y: visible;
-    }
-
-    .tutorial-main-area {
-        grid-column: 1;
-        grid-row: 3;
-    }
-
-    /* タブレット/モバイル: 説明折りたたみトグルを表示 */
-    .tdp-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
 }
 
 /* ─── 再生コントロールバー（PlayControlBar 相当） ────────────────────── */
@@ -413,7 +376,7 @@
         margin-bottom: 0.25rem;
     }
 
-/* 折りたたみトグル: PC では非表示 */
+/* 折りたたみトグル: PC/タブレット では非表示 */
 .tdp-toggle {
     display: none;
     background: rgba(142, 192, 124, 0.15);
@@ -435,13 +398,6 @@
 /* モバイル: 説明本文を折りたたみ */
 .tdp-body--hidden {
     display: none;
-}
-
-/* PC / タブレット: 折りたたみ状態でも常に表示 */
-@media (min-width: 768px) {
-    .tdp-body--hidden {
-        display: block;
-    }
 }
 
 /* ─── ナラティブパネル ─────────────────────────────────────────────────── */
@@ -564,21 +520,91 @@
     font-family: monospace;
 }
 
-/* ─── タブレット (768px〜1279px) ────────────────────────────────────────── */
+/* PC: サイドバー幅を考慮してタイトルを右側エリアの中央に配置 */
+@media (min-width: 1280px) {
+    .tutorial-title {
+        left: calc(280px + (100% - 280px) / 2);
+    }
+}
+
+/* PC / タブレット: 折りたたみ状態でも常に表示 */
+@media (min-width: 768px) {
+    .tdp-body--hidden {
+        display: block;
+    }
+}
+
+/* タブレット/モバイル: カードパネルを上段に、メインエリアを下段にシフト */
 @media (max-width: 1279px) {
+    .tutorial-page {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr;
+    }
+
+    .tutorial-cards-panel {
+        grid-column: 1;
+        grid-row: 2;
+        background-color: transparent;
+        padding: 0;
+        border-radius: 0;
+        overflow-y: visible;
+    }
+
+    .tutorial-main-area {
+        grid-column: 1;
+        grid-row: 3;
+    }
+}
+
+/* ─── タブレット (768px〜1279px) ────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1279px) {
+    /* ページ全体をスクロール可能にする */
+    .tutorial-page {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: visible;
+    }
+
+    .tutorial-cards-panel {
+        grid-row: auto;
+        padding: 0 10px;
+    }
+
+    .tutorial-main-area {
+        grid-row: auto;
+        overflow-y: visible;
+        height: auto;
+    }
+
+    /* マーブルエリアを内容に合わせて拡張し、ページ全体でスクロール */
+    .tutorial-marble-area {
+        flex: none;
+        min-height: auto;
+        overflow-x: auto;
+        overflow-y: visible;
+    }
+
+    .tutorial-header {
+        padding: 0 0.5rem;
+        gap: 0.5rem;
+    }
 
     .tutorial-title {
         font-size: 1.75rem;
     }
 
-    ::deep .marble {
-        width: 48px;
-        height: 48px;
-        font-size: 1.05rem;
+    .tutorial-title__algo {
+        display: none;
     }
 
-    ::deep .marble-row {
+    .tutorial-try-btn {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem;
+    }
+
+    .tutorial-toolbar {
         gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
     }
 
     .algo-select {
@@ -614,13 +640,13 @@
     }
 
     ::deep .marble {
-        width: 36px;
-        height: 36px;
-        font-size: 0.85rem;
+        width: 48px;
+        height: 48px;
+        font-size: 1.05rem;
     }
 
     ::deep .marble-row {
-        gap: 0.5rem; /* 0.4rem→拡大: scale時の視覚的重なりを防ぐ */
+        gap: 0.5rem;
     }
 
     ::deep .marble-index {
@@ -782,5 +808,12 @@
 
     .tutorial-cards-panel input[type="range"] {
         width: 100%;
+    }
+
+    /* モバイル: 説明折りたたみトグルを表示 */
+    .tdp-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }
