@@ -615,9 +615,7 @@ private VisualizationMode SelectedVisualizationMode
         if (!ComparisonMode.State.Instances.Any()) return null;
         if (ComparisonMode.State.AllCompleted) return "✅ All Completed!";
         var completedCount = ComparisonMode.State.Instances.Count(x => x.State.IsSortCompleted);
-        if (completedCount > 0)
-            return $"{completedCount}/{ComparisonMode.State.Instances.Count} completed";
-        return null;
+        return $"{completedCount}/{ComparisonMode.State.Instances.Count} completed";
     }
 
     private void HandleToggleSound()
