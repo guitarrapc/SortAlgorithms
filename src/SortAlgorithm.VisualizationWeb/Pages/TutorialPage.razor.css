@@ -600,10 +600,11 @@
 
 /* ─── スマホ (~767px) ──────────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  /* ページ全体をスクロール可能にして、ヘッダーだけ固定 */
+  /* ページ全体をスクロール可能にする */
   .tutorial-page {
-    grid-template-rows: auto;
-    overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
+    overflow-y: visible;
   }
 
   .tutorial-cards-panel {
