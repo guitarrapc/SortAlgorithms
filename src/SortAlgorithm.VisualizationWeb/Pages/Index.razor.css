@@ -1,0 +1,141 @@
+/* ─── Index ページ専用スタイル ─────────────────────────────────────────── */
+
+/* ページレイアウト */
+.visualization-page {
+    display: grid;
+    grid-template-columns: var(--sidebar-width, 280px) 1fr;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+    gap: 10px;
+    padding: 10px;
+    transition: grid-template-columns 0.3s ease;
+}
+
+/* ヘッダーアイコンボタン - シンプルで統一されたデザイン */
+.header__icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+    text-decoration: none;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1.25rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+    .header__icon-btn:hover {
+        background: var(--color-accent-dark);
+        color: var(--text-primary);
+        border-color: var(--color-accent);
+        transform: translateY(-1px);
+    }
+
+/* ハンバーガーボタン */
+.header__hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid var(--border-color-light);
+    border-radius: 6px;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.15s;
+}
+
+    .header__hamburger:hover {
+        background-color: var(--bg-hover);
+    }
+
+/* ページタイトル */
+.header__title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2.25rem;
+    font-weight: 400;
+    white-space: nowrap;
+    color: var(--text-primary);
+    pointer-events: none;
+}
+
+/* 可視化エリア */
+.visualization-area {
+    grid-row: 2;
+    background-color: var(--bg-panel);
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.visualization-content {
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    background-color: #1A1A1A;
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 300px;
+}
+
+
+/* =============================================
+   タブレット/モバイル (〜1279px)
+   ============================================= */
+@media (max-width: 1279px) {
+    .visualization-page {
+        grid-template-columns: 1fr;
+    }
+
+    .header__icon-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1.125rem;
+    }
+
+    .header__title {
+        font-size: 1.75rem;
+    }
+}
+
+/* =============================================
+   スマホ (〜767px)
+   ============================================= */
+@media (max-width: 767px) {
+    .visualization-page {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .visualization-area {
+        min-height: 600px;
+    }
+
+    .visualization-content {
+        min-height: 400px;
+    }
+
+    .header__icon-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+
+    .header__title {
+        font-size: 1.2rem;
+    }
+}

@@ -131,42 +131,6 @@ html, body {
     content: '⏸';
   }
 
-/* ヘッダーアイコンボタン - シンプルで統一されたデザイン */
-.header__icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: var(--bg-hover);
-  color: var(--text-secondary);
-  text-decoration: none;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 1.25rem;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-  .header__icon-btn:hover {
-    background: var(--color-accent-dark);
-    color: var(--text-primary);
-    border-color: var(--color-accent);
-    transform: translateY(-1px);
-  }
-
-
-.visualization-page {
-  display: grid;
-  grid-template-columns: var(--sidebar-width, 280px) 1fr;
-  grid-template-rows: auto 1fr;
-  height: 100vh;
-  gap: 10px;
-  padding: 10px;
-  transition: grid-template-columns 0.3s ease;
-}
-
 .header {
   grid-column: 1 / -1;
   padding: 12px 8px;
@@ -177,64 +141,12 @@ html, body {
   position: relative;
 }
 
-.header__hamburger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 10px;
-  background: transparent;
-  border: 1px solid var(--border-color-light);
-  border-radius: 6px;
-  font-size: 1.2rem;
-  color: var(--text-primary);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background-color 0.15s;
-}
-
-  .header__hamburger:hover {
-    background-color: var(--bg-hover);
-  }
-
-/* TutorialPage: ハンバーガーメニューはモバイルのみ表示 */
-.header__hamburger--mobile-only {
-  display: none;
-}
-
-.header__title {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 2.25rem;
-  font-weight: 400;
-  white-space: nowrap;
-  color: var(--text-primary);
-  pointer-events: none;
-}
-
 .header__actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
-
-/* 旧Settingsボタンスタイル - header__icon-btnに統合されました
-.header__settings-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    background: var(--bg-hover);
-    color: var(--text-secondary);
-    padding: 0.35rem 0.875rem;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    border: none;
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-*/
 
 /* =============================================
    QuickAccessPanel (qap)
@@ -607,27 +519,7 @@ details[open] .qap__advanced-summary::before {
    タブレット (768px〜1279px)
    ============================================= */
 @media (max-width: 1279px) {
-  /* グリッドを1カラムに */
-  .visualization-page {
-    grid-template-columns: 1fr;
-  }
-
-  .header__icon-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 1.125rem;
-  }
-
-  .header__title {
-    font-size: 1.75rem;
-  }
-
-  /* TutorialPage: モバイル/タブレットでハンバーガーメニューを表示 */
-  .header__hamburger--mobile-only {
-    display: flex;
-  }
-
-  /* QuickAccessPanel は fixed オーバーレイ */
+/* QuickAccessPanel は fixed オーバーレイ */
   .qap {
     position: fixed;
     top: 0;
@@ -735,31 +627,6 @@ details[open] .qap__advanced-summary::before {
     min-height: 100vh;
   }
 
-  /* 1画面に収めず、スクロール可能にする */
-  .visualization-page {
-    height: auto;
-    min-height: 100vh;
-  }
-
-  /* 可視化エリアに十分な高さを確保 */
-  .visualization-area {
-    min-height: 600px; /* ソート表示に必要な最小高さ */
-  }
-
-  .visualization-content {
-    min-height: 400px; /* 可視化コンテンツの最小高さ */
-  }
-
-  .header__icon-btn {
-    width: 32px;
-    height: 32px;
-    font-size: 1rem;
-  }
-
-  .header__title {
-    font-size: 1.2rem;
-  }
-
   .header__actions {
     gap: 6px;
   }
@@ -819,28 +686,7 @@ details[open] .qap__advanced-summary::before {
 
 
 
-.visualization-area {
-  grid-row: 2;
-  background-color: var(--bg-panel);
-  border-radius: 8px;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow: hidden; /* 親要素からはみ出さない */
-  position: relative; /* ローディングオーバーレイの基準点 */
-}
 
-.visualization-content {
-  flex: 1;
-  display: flex;
-  align-items: stretch;
-  justify-content: stretch;
-  background-color: #1A1A1A;
-  border-radius: 8px;
-  overflow: hidden;
-  min-height: 300px; /* PC/タブレットでも最小高さを確保 */
-}
 
 .controls {
   grid-column: 1 / -1;
