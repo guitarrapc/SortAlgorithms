@@ -48,11 +48,6 @@
     z-index: 1;
 }
 
-/* PC: ハンバーガーメニューを非表示 */
-.tutorial-page .header__hamburger {
-    display: none;
-}
-
 .tutorial-title {
     position: absolute;
     left: 50%;
@@ -90,27 +85,29 @@
     opacity: 1;
 }
 
-/* タブレット/モバイル: ハンバーガーメニューを表示 */
-@media (max-width: 1279px) {
-    .tutorial-page .header__hamburger {
-        display: flex;
-    }
+/* --- Cards Panel (PC: left sidebar) ---------------------------------- */
+.tutorial-cards-panel {
+    grid-column: 1;
+    grid-row: 2;
+    background-color: var(--bg-panel);
+    border-radius: 8px;
+    overflow-y: auto;
+    padding: 16px;
+}
 
-    .tutorial-page {
-        grid-template-columns: 1fr;
-    }
-
-    /* タブレット/モバイル: 説明折りたたみトグルを表示 */
-    .tdp-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+.tutorial-cards-panel .controls-fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: none;
+    margin: 0;
+    padding: 0;
 }
 
 
-/* ─── メインエリア（visualization-area 相当） ──────────────────────────── */
+/* ─── メインエリア（visualization-area 相当） ────────────────── */
 .tutorial-main-area {
+    grid-column: 2;
     grid-row: 2;
     background-color: var(--bg-panel);
     border-radius: 8px;
@@ -123,7 +120,36 @@
     position: relative;
 }
 
-/* ─── 再生コントロールバー（PlayControlBar 相当） ──────────────────────── */
+/* タブレット/モバイル: カードパネルを上段に、メインエリアを下段にシフト */
+@media (max-width: 1279px) {
+    .tutorial-page {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr;
+    }
+
+    .tutorial-cards-panel {
+        grid-column: 1;
+        grid-row: 2;
+        background-color: transparent;
+        padding: 0;
+        border-radius: 0;
+        overflow-y: visible;
+    }
+
+    .tutorial-main-area {
+        grid-column: 1;
+        grid-row: 3;
+    }
+
+    /* タブレット/モバイル: 説明折りたたみトグルを表示 */
+    .tdp-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* ─── 再生コントロールバー（PlayControlBar 相当） ────────────────────── */
 .tutorial-play-control-bar {
     display: flex;
     align-items: center;
@@ -624,4 +650,13 @@
     }
 }
 
+@media (max-width: 767px) {
+    .tutorial-cards-panel .controls-fieldset {
+        gap: 8px;
+    }
+
+    .tutorial-cards-panel input[type="range"] {
+        width: 100%;
+    }
+}
 

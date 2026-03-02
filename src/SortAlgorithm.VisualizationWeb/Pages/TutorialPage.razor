@@ -11,18 +11,9 @@
 
 <div class="tutorial-page" @onkeydown="OnKeyDown" tabindex="0" @ref="_containerRef">
 
-@* ─── バックドロップ（モバイル / タブレット） ─────────────────────────── *@
-@if (_qapOpen)
-{
-    <div class="qap-backdrop" @onclick="() => _qapOpen = false"></div>
-}
-
 @* ─── ヘッダー（メインと同スタイル） ──────────────────────────────────── *@
 <div class="header">
     <div class="tutorial-header__left">
-        <button class="header__hamburger"
-                @onclick="() => _qapOpen = true"
-                title="Open Panel">☰</button>
         <a href="/" class="tutorial-back-link">← Back</a>
     </div>
     <h1 class="tutorial-title">Sort Visualization: Tutorial</h1>
@@ -31,14 +22,9 @@
 </div>
 
 
-    @* ─── サイドバー（Sort Target + Speed） ──────────────────────────────── *@
-    <div class="qap @(_qapOpen ? "qap--mobile-open" : "")">
-        <div class="qap__content">
-            <div class="qap__title-row">
-                @* モバイル: 閉じるボタン *@
-                <button class="qap__mobile-close" @onclick="() => _qapOpen = false" title="Close">✕</button>
-            </div>
-            <fieldset class="controls-fieldset" disabled="@_isLoading">
+    @* ─── カードパネル（PC: 左サイドバー / タブレット+スマホ: 再生コントロールバー上段） ─── *@
+    <div class="tutorial-cards-panel">
+        <fieldset class="controls-fieldset" disabled="@_isLoading">
 
                 @* ── Sort Target ── *@
                 <div class="ui-card">
@@ -75,8 +61,7 @@
                     </div>
                 </div>
 
-            </fieldset>
-        </div>
+        </fieldset>
     </div>
 
     @* ─── メインエリア ────────────────────────────────────────────────────── *@
@@ -235,7 +220,6 @@
     private bool _isAutoPlaying;
     private int _autoPlaySpeedMs = 800;
     private bool _descExpanded = false;
-    private bool _qapOpen = false;  // モバイル / タブレットオーバーレイ
 
     private CancellationTokenSource? _autoPlayCts;
     private ElementReference _containerRef;
