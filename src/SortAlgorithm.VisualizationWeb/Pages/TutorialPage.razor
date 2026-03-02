@@ -12,59 +12,59 @@
 
 <div class="tutorial-page" @onkeydown="OnKeyDown" tabindex="0" @ref="_containerRef">
 
-@* ─── ヘッダー（メインと同スタイル） ──────────────────────────────────── *@
+    @* ─── ヘッダー（メインと同スタイル） ──────────────────────────────────── *@
 <div class="header">
-    <div class="tutorial-header__left">
-        <button class="tutorial-back-btn" @onclick="NavigateToHome" title="Back to Home">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-            </svg>
-        </button>
+        <div class="tutorial-header__left">
+            <button class="tutorial-back-btn" @onclick="NavigateToHome" title="Back to Home">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                </svg>
+            </button>
+        </div>
+        <h1 class="tutorial-title">Sort Visualization: Tutorial</h1>
+        <div class="header__actions">
+        </div>
     </div>
-    <h1 class="tutorial-title">Sort Visualization: Tutorial</h1>
-    <div class="header__actions">
-    </div>
-</div>
 
 
     @* ─── カードパネル（PC: 左サイドバー / タブレット+スマホ: 再生コントロールバー上段） ─── *@
     <div class="tutorial-cards-panel">
         <fieldset class="controls-fieldset" disabled="@_isLoading">
 
-                @* ── Sort Target ── *@
-                <div class="ui-card">
-                    <span class="ui-card__title">Sort Target</span>
-                    <div class="qap__item">
-                        <span class="stat-label">Algorithm</span>
-                        <select value="@(_selectedAlgorithm?.Name ?? "")"
-                                @onchange="OnAlgorithmChanged">
-                            @foreach (var category in GetTutorialCategories())
-                            {
-                                <optgroup label="@category">
-                                    @foreach (var algo in GetAlgorithmsByCategory(category))
-                                    {
-                                        <option value="@algo.Name">@algo.Name</option>
-                                    }
-                                </optgroup>
-                            }
-                        </select>
-                    </div>
+            @* ── Sort Target ── *@
+            <div class="ui-card">
+                <span class="ui-card__title">Sort Target</span>
+                <div class="qap__item">
+                    <span class="stat-label">Algorithm</span>
+                    <select value="@(_selectedAlgorithm?.Name ?? "")"
+                            @onchange="OnAlgorithmChanged">
+                        @foreach (var category in GetTutorialCategories())
+                        {
+                            <optgroup label="@category">
+                                @foreach (var algo in GetAlgorithmsByCategory(category))
+                                {
+                                    <option value="@algo.Name">@algo.Name</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
                 </div>
+            </div>
 
-                @* ── Speed ── *@
-                <div class="ui-card">
-                    <span class="ui-card__title">Speed</span>
-                    <div class="qap__item qap__item--vertical">
-                        <div class="qap__slider-header">
-                            <span class="stat-label">Interval</span>
-                            <span class="stat-value qap__slider-value">@_autoPlaySpeedMs ms</span>
-                        </div>
-                        <input type="range" min="200" max="2000" step="100"
-                               value="@_autoPlaySpeedMs"
-                               @oninput="OnSpeedChanged"
-                               @onkeydown:stopPropagation />
+            @* ── Speed ── *@
+            <div class="ui-card">
+                <span class="ui-card__title">Speed</span>
+                <div class="qap__item qap__item--vertical">
+                    <div class="qap__slider-header">
+                        <span class="stat-label">Interval</span>
+                        <span class="stat-value qap__slider-value">@_autoPlaySpeedMs ms</span>
                     </div>
+                    <input type="range" min="200" max="2000" step="100"
+                           value="@_autoPlaySpeedMs"
+                           @oninput="OnSpeedChanged"
+                           @onkeydown:stopPropagation />
                 </div>
+            </div>
 
         </fieldset>
     </div>
@@ -121,91 +121,89 @@
 
 
 
-    @* ─── コンテンツ ──────────────────────────────────────────────────────── *@
-    @if (_isLoading)
-    {
-        <div class="tutorial-loading">
-            <span class="loading-spinner">⏳</span> Computing...
-        </div>
-    }
-    else if (_selectedAlgorithm == null)
-    {
-        <div class="tutorial-empty">
-            <div class="empty-icon">🎓</div>
-            <div class="empty-text">Select an algorithm from the panel on the left.</div>
-            <div class="empty-hint">Each algorithm is demonstrated step by step using a fixed array. Some algorithms use a dedicated array suited for the explanation.</div>
-        </div>
-    }
-    else
-    {
-        @* ─── アルゴリズム説明パネル（モバイルで折りたたみ可能） ──────────────── *@
-        <div class="tutorial-description-panel">
-            <div class="tdp-header">
-                <div class="tdp-header__left">
-                    <div class="desc-name">@_selectedAlgorithm.Name</div>
-                    <a href="@GetTryThisAlgorithmUrl()" class="tutorial-try-btn">▶ Try this</a>
-                </div>
-                <div class="tdp-header__right">
-                    <div class="desc-meta">
-                        <span class="desc-badge">@_selectedAlgorithm.TimeComplexity</span>
-                        <span class="desc-badge">@_selectedAlgorithm.Category</span>
-                    </div>
-                    <button class="tdp-toggle" @onclick="() => _descExpanded = !_descExpanded" title="@(_descExpanded ? "Collapse" : "Expand")">
-                        @(_descExpanded ? "▲" : "▼")
-                    </button>
-                </div>
+        @* ─── コンテンツ ──────────────────────────────────────────────────────── *@
+        @if (_isLoading)
+        {
+            <div class="tutorial-loading">
+                <span class="loading-spinner">⏳</span> Computing...
             </div>
-            @if (!string.IsNullOrEmpty(_selectedAlgorithm.TutorialDescription))
-            {
-                <div class="tdp-body @(_descExpanded ? "" : "tdp-body--hidden")">
-                    <div class="desc-body">@RenderDescription(_selectedAlgorithm.TutorialDescription)</div>
-                </div>
-            }
-        </div>
-
-        @if (_steps.Count == 0)
+        }
+        else if (_selectedAlgorithm == null)
         {
             <div class="tutorial-empty">
-                <div class="empty-text">No recorded operations for this algorithm.</div>
+                <div class="empty-icon">🎓</div>
+                <div class="empty-text">Select an algorithm from the panel on the left.</div>
+                <div class="empty-hint">Each algorithm is demonstrated step by step using a fixed array. Some algorithms use a dedicated array suited for the explanation.</div>
             </div>
         }
         else
         {
-            @* ─── ナラティブパネル ────────────────────────────────────────── *@
-            <div class="tutorial-narrative-panel">
-                <div class="narrative-badge">
-                    @if (_currentStepIndex < 0)
-                    {
-                        <span>Initial State</span>
-                    }
-                    else
-                    {
-                        <span>Step @(_currentStepIndex + 1) / @_steps.Count</span>
-                    }
+            @* ─── アルゴリズム説明パネル（モバイルで折りたたみ可能） ──────────────── *@
+            <div class="tutorial-description-panel">
+                <div class="tdp-header">
+                    <div class="tdp-header__left">
+                        <div class="desc-name">@_selectedAlgorithm.Name</div>
+                        <a href="@GetTryThisAlgorithmUrl()" class="tutorial-try-btn">▶ Try this</a>
+                    </div>
+                    <div class="tdp-header__right">
+                        <div class="desc-meta">
+                            <span class="desc-badge">@_selectedAlgorithm.TimeComplexity</span>
+                            <span class="desc-badge">@_selectedAlgorithm.Category</span>
+                        </div>
+                        <button class="tdp-toggle" @onclick="() => _descExpanded = !_descExpanded" title="@(_descExpanded ? "Collapse" : "Expand")">
+                            @(_descExpanded ? "▲" : "▼")
+                        </button>
+                    </div>
                 </div>
-                <div class="narrative-text">@GetCurrentNarrative()</div>
-            </div>
-
-            @* ─── マーブルエリア ──────────────────────────────────────────── *@
-            <div class="tutorial-marble-area">
-                <MarbleRenderer
-                    Values="@GetCurrentMainArray()"
-                    HighlightIndices="@GetCurrentHighlightIndices()"
-                    HighlightType="@GetCurrentHighlightType()"
-                    Label="Main Array" />
-
-                @foreach (var bufferId in GetCurrentBufferIds())
+                @if (!string.IsNullOrEmpty(_selectedAlgorithm.TutorialDescription))
                 {
-                    <MarbleRenderer
-                        Values="@GetCurrentBufferArray(bufferId)"
-                        HighlightIndices="@GetCurrentBufferHighlightIndices(bufferId)"
-                        HighlightType="@GetCurrentHighlightType()"
-                        Label="@($"Buffer {bufferId}")"
-                        IsBuffer="true" />
+                    <div class="tdp-body @(_descExpanded ? "" : "tdp-body--hidden")">
+                        <div class="desc-body">@RenderDescription(_selectedAlgorithm.TutorialDescription)</div>
+                    </div>
                 }
             </div>
+
+            @if (_steps.Count == 0)
+            {
+                <div class="tutorial-empty">
+                    <div class="empty-text">No recorded operations for this algorithm.</div>
+                </div>
+            }
+            else
+            {
+                @* ─── ナラティブパネル ────────────────────────────────────────── *@
+                <div class="tutorial-narrative-panel">
+                    <div class="narrative-badge">
+                        @if (_currentStepIndex < 0)
+                        {
+                            <span>Initial State</span>
+                        }
+                        else
+                        {
+                            <span>Step @(_currentStepIndex + 1) / @_steps.Count</span>
+                        }
+                    </div>
+                    <div class="narrative-text">@GetCurrentNarrative()</div>
+                </div>
+
+                @* ─── マーブルエリア ──────────────────────────────────────────── *@
+                <div class="tutorial-marble-area">
+                    <MarbleRenderer Values="@GetCurrentMainArray()"
+                                    HighlightIndices="@GetCurrentHighlightIndices()"
+                                    HighlightType="@GetCurrentHighlightType()"
+                                    Label="Main Array" />
+
+                    @foreach (var bufferId in GetCurrentBufferIds())
+                    {
+                        <MarbleRenderer Values="@GetCurrentBufferArray(bufferId)"
+                                        HighlightIndices="@GetCurrentBufferHighlightIndices(bufferId)"
+                                        HighlightType="@GetCurrentHighlightType()"
+                                        Label="@($"Buffer {bufferId}")"
+                                        IsBuffer="true" />
+                    }
+                </div>
+            }
         }
-    }
     </div>
 </div>
 
