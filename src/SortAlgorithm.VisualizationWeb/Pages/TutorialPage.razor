@@ -5,6 +5,7 @@
 @using SortAlgorithm.VisualizationWeb.Components
 @inject SortExecutor Executor
 @inject AlgorithmRegistry AlgorithmRegistry
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <PageTitle>Sort Algorithm Visualization: Tutorial</PageTitle>
@@ -14,7 +15,11 @@
 @* ─── ヘッダー（メインと同スタイル） ──────────────────────────────────── *@
 <div class="header">
     <div class="tutorial-header__left">
-        <a href="/" class="tutorial-back-link">← Back</a>
+        <button class="tutorial-back-btn" @onclick="NavigateToHome" title="Back to Home">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+            </svg>
+        </button>
     </div>
     <h1 class="tutorial-title">Sort Visualization: Tutorial</h1>
     <div class="header__actions">
@@ -223,6 +228,13 @@
 
     private CancellationTokenSource? _autoPlayCts;
     private ElementReference _containerRef;
+
+    // ─── ナビゲーション ────────────────────────────────────────────────────
+
+    private void NavigateToHome()
+    {
+        Navigation.NavigateTo("/");
+    }
 
     // ─── ライフサイクル ────────────────────────────────────────────────────
 

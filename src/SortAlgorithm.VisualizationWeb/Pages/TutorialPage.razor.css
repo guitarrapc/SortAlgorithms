@@ -23,19 +23,33 @@
 }
 
 
-.tutorial-back-link {
+/* モーダル閉じるボタンと同じスタイル: 背景なし、ホバー時に赤 */
+.tutorial-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: none;
+    border: none;
     color: var(--text-secondary);
-    text-decoration: none;
-    font-size: 0.875rem;
-    white-space: nowrap;
-    transition: color 0.2s;
+    font-size: 1.25rem;
+    cursor: pointer;
     flex-shrink: 0;
+    transition: color 0.2s;
+    padding: 0;
     position: relative;
     z-index: 1;
 }
 
-.tutorial-back-link:hover {
-    color: var(--text-primary);
+.tutorial-back-btn svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+
+.tutorial-back-btn:hover {
+    color: #EF4444;
 }
 
 /* ☰ と ← Back を左グループとして束ねる（space-between で Back が中央に押し出されるのを防ぐ） */
