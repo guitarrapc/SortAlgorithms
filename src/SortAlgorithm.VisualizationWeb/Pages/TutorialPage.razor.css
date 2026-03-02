@@ -564,6 +564,22 @@
 
 /* ─── スマホ (~767px) ──────────────────────────────────────────────────── */
 @media (max-width: 767px) {
+    /* ページ全体をスクロール可能にして、ヘッダーだけ固定 */
+    .tutorial-page {
+        grid-template-rows: auto;
+        overflow-y: auto;
+    }
+
+    .tutorial-cards-panel {
+        grid-row: auto;
+    }
+
+    .tutorial-main-area {
+        grid-row: auto;
+        overflow-y: visible;
+        height: auto;
+    }
+
     .tutorial-header {
         padding: 0 0.75rem;
         gap: 0.5rem;
