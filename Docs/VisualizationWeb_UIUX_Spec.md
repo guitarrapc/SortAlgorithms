@@ -542,7 +542,7 @@ TutorialPage.razor
 | **P3** | チュートリアル ⇔ メイン コンテキスト遷移 | 両ページ |
 | **P3** | スマホ比較モードのカルーセル | `SortCardGrid` + CSS/JS |
 | **P3** | ComparisonStatsTable のモーダル化（タブレット/スマホ） | `ComparisonStatsTable` |
-| **P2** | 状態保持（Query String + localStorage） | 新 `StateStorageService`, `Index.razor`, JS Interop |
+| **P2** | 状態保持（Query String + localStorage）✅ | `Index.razor`（`cards` パラメータ追加・`RestoreCardsFromUrlAsync`） |
 
 ---
 
@@ -552,19 +552,20 @@ TutorialPage.razor
 
 | 性質 | 保持先 | 例 |
 |------|--------|-----|
-| コンテンツ状態（何を見ているか・共有したい） | URL Query String | Algorithm, Size, Pattern, Mode |
+| コンテンツ状態（何を見ているか・共有したい） | URL Query String | Algorithm, Size, Pattern, Mode, Cards |
 | プリファレンス（個人設定・共有不要） | localStorage | Speed, WebGL, Volume |
 
 ### 13.2 Query String パラメータ
 
-| パラメータ | 型 | 例 | デフォルト |
-|-----------|-----|-----|-----------|
-| `algo` | string | `QuickSort` | `Bubble sort` |
-| `size` | int | `512` | `64` |
-| `pattern` | string | `Random` | `🎲 Random` |
-| `mode` | string | `BarChart` | `BarChart` |
+| パラメータ | 型 | 例 | デフォルト | 更新タイミング |
+|-----------|-----|-----|-----------|---------------|
+| `algo` | string | `Quick+sort` | `Bubble sort` | アルゴリズム選択変更時 |
+| `size` | int | `1024` | `64` | サイズ変更時 |
+| `pattern` | string | `%F0%9F%8E%B2+Random` | `🎲 Random` | パターン変更時 |
+| `mode` | string | `BarChart` | `BarChart` | モード変更時 |
+| `cards` | string (`\|` 区切り) | `Bubble+sort%7CMerge+sort` | なし | カード追加・削除・置換時 |
 
-URL 例: `/?algo=QuickSort&size=512&pattern=Random&mode=BarChart`
+URL 例: `/?algo=Quick+sort&size=1024&pattern=%F0%9F%8E%B2+Random&mode=BarChart&cards=Bubble+sort%7CMerge+sort%7CQuick+sort`
 
 - 状態変更時は `NavigationManager.NavigateTo(url, replace: true)` で URL を更新（履歴を汚さない）
 - チュートリアルは既存の `/tutorial/{AlgorithmName}` を使用
@@ -587,6 +588,34 @@ URL 例: `/?algo=QuickSort&size=512&pattern=Random&mode=BarChart`
 | `sortvis.sidebarCollapsed` | bool | `false` |
 
 JS Interop 経由でアクセス（プレフィックス `sortvis.` で一括読み書き）。
+
+### 13.4 比較カードの F5 復元（`cards` パラメータ）
+
+`cards` パラメータにより、F5 リロード後も比較カードの構成を自動復元する。URL 共有でも同じ比較状態を再現できる。
+
+**復元フロー:**
+
+```
+OnInitialized
+  URL の cards を | で分割 → _initialCardAlgorithms（レジストリ照合済み・重複除去）
+      ↓
+OnAfterRenderAsync(firstRender)
+  1. LoadPreferencesAsync()      ← localStorage から speed / sound 等を復元
+  2. RestoreCardsFromUrlAsync()
+       1 枚目: pattern.Generator で新配列生成 → ComparisonMode.AddAndGenerateAsync
+       2 枚目以降: 同じ配列を流用             → ComparisonMode.AddAlgorithmAsync
+       完了後: SetSpeedForAll / SetAutoResetForAll / ApplySavedSoundSettings を適用
+```
+
+**`cards` パラメータが更新される操作:**
+
+| 操作 | 更新 |
+|------|------|
+| Add & Generate | ✅ |
+| カードヘッダーからアルゴリズム差し替え | ✅ |
+| ✖ カード削除 | ✅ |
+| `algo` / `size` / `pattern` / `mode` 変更 | ✅（URL 全体を再構築） |
+| `RestoreCardsFromUrlAsync` 実行中 | ❌（`_restoringFromUrl` フラグで抑制） |
 
 ---
 
