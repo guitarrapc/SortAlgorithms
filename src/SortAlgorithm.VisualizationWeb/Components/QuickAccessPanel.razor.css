@@ -2,107 +2,25 @@
 /* 注: .qap__item, .stat-label, .stat-value, .ui-card 等は
    TutorialPage でも使用するため app.css に残します */
 
-/* モバイル オーバーレイ背景 */
-.qap-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-    z-index: 199;
-}
-
+/* カードパネル (PC: left sidebar) */
 .qap {
+    grid-column: 1;
     grid-row: 2;
-    position: relative;
     background-color: var(--bg-panel);
     border-radius: 8px;
-    overflow: hidden;
-    transition: width 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-/* PC: リサイズハンドル */
-.qap__resizer {
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 6px;
-    cursor: col-resize;
-    background: transparent;
-    z-index: 10;
-    transition: background-color 0.2s;
-}
-
-    .qap__resizer:hover {
-        background-color: var(--color-compare);
-    }
-
-    .qap__resizer::after {
-        content: '';
-        position: absolute;
-        right: 2px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 2px;
-        height: 30px;
-        background-color: rgba(255, 255, 255, 0.2);
-        border-radius: 1px;
-    }
-
-    .qap__resizer:hover::after {
-        background-color: rgba(255, 255, 255, 0.5);
-    }
-
-/* PC: ハンバーガーメニュー（折りたたみボタン） */
-.qap__hamburger {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    background: var(--bg-hover);
-    border: 1px solid var(--border-color-light);
-    border-radius: 4px;
-    color: var(--text-secondary);
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-    flex-shrink: 0;
-}
-
-    .qap__hamburger:hover {
-        background: #3a3a3a;
-        color: var(--text-primary);
-    }
-
-/* 折りたたみ状態 */
-.qap--collapsed .qap__content {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.qap--collapsed .qap__resizer {
-    display: none;
-}
-
-/* モバイルの閉じるボタン: PC では非表示 */
-.qap__mobile-close {
-    display: none;
-}
-
-/* パネルのスクロール可能なコンテンツ */
-.qap__content {
-    flex: 1;
     overflow-y: auto;
     padding: 16px;
-    opacity: 1;
-    transition: opacity 0.2s ease;
 }
 
-/* パネルタイトル行 */
+/* パネルのコンテンツ */
+.qap__content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* パネルタイトル行 (不要なのでコメント化、将来使用する可能性あり) */
+/*
 .qap__title-row {
     display: flex;
     justify-content: space-between;
@@ -117,6 +35,7 @@
     color: var(--text-primary);
     flex: 1;
 }
+*/
 
 .qap__label-row {
     display: flex;
@@ -234,53 +153,18 @@
 
 /* ─── タブレット/モバイル ─────────────────────────────────────────────── */
 @media (max-width: 1279px) {
-    /* QuickAccessPanel は fixed オーバーレイ */
+    /* QuickAccessPanel は上段に配置 */
     .qap {
-        position: fixed;
-        top: 0;
-        left: -320px;
-        width: 300px !important;
-        height: 100vh;
+        grid-column: 1;
+        grid-row: 2;
+        background-color: transparent;
+        padding: 0 10px;
         border-radius: 0;
-        z-index: 200;
-        transition: left 0.3s ease;
-        box-shadow: 4px 0 16px rgba(0, 0, 0, 0.5);
+        overflow-y: visible;
     }
 
-    .qap--mobile-open {
-        left: 0;
-    }
-
-    .qap-backdrop {
-        display: block;
-    }
-
-    .qap__resizer,
-    .qap__hamburger {
-        display: none;
-    }
-
-    .qap__mobile-close {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 28px;
-        height: 28px;
-        background: var(--bg-hover);
-        border: none;
-        border-radius: 4px;
-        color: var(--text-primary);
-        font-size: 0.9rem;
-        cursor: pointer;
-    }
-
-        .qap__mobile-close:hover {
-            background: var(--color-error);
-        }
-
-    .qap--collapsed .qap__content {
-        opacity: 1;
-        pointer-events: auto;
+    .qap__content {
+        gap: 8px;
     }
 
     .algorithm-description-card {

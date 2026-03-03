@@ -3,19 +3,7 @@
 @inject AlgorithmRegistry AlgorithmRegistry
 @inject ArrayPatternRegistry ArrayPatternRegistry
 
-@* モバイル / タブレット: オーバーレイ背景 *@
-@if (IsOpen)
-{
-    <div class="qap-backdrop" @onclick="HandleClose"></div>
-}
-
-<div class="qap @(IsCollapsed ? "qap--collapsed" : "") @(IsOpen ? "qap--mobile-open" : "")">
-
-    @* PC: リサイズハンドル *@
-    <div class="qap__resizer"
-         @onmousedown="e => OnResizeStart.InvokeAsync(e)"
-         @onmousedown:preventDefault></div>
-
+<div class="qap">
     <div class="qap__content">
 
         @* ── Current Algorithm 説明カード ── *@
@@ -177,16 +165,6 @@
 </div>
 
 @code {
-    // ── PC サイドバー状態（Index.razor が所有、@bind 経由） ──────────────────
-    [Parameter] public bool IsCollapsed { get; set; }
-    [Parameter] public EventCallback<bool> IsCollapsedChanged { get; set; }
-
-    [Parameter] public EventCallback<MouseEventArgs> OnResizeStart { get; set; }
-
-    // ── モバイル オーバーレイ状態 ─────────────────────────────────────────────
-    [Parameter] public bool IsOpen { get; set; }
-    [Parameter] public EventCallback OnClose { get; set; }
-
     // ── Quick Access 状態（@bind で Index.razor と同期） ──────────────────────
     [Parameter, EditorRequired] public string SelectedAlgorithm { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> SelectedAlgorithmChanged { get; set; }
@@ -226,18 +204,6 @@
     private static readonly int[] AvailableSizes = [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096];
 
     private int EffectiveFPS => (int)(60 * Playback.SpeedMultiplier);
-
-    // ── PC 折りたたみトグル ──────────────────────────────────────────────────
-    private async Task ToggleCollapse()
-    {
-        await IsCollapsedChanged.InvokeAsync(!IsCollapsed);
-    }
-
-    // ── モバイル クローズ ─────────────────────────────────────────────────────
-    private async Task HandleClose()
-    {
-        await OnClose.InvokeAsync();
-    }
 
     // ── Algorithm 変更 ───────────────────────────────────────────────────────
     private async Task HandleAlgorithmChange(string newValue)

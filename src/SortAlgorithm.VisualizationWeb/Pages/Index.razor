@@ -16,16 +16,10 @@
 
 <PageTitle>Sorting Playground</PageTitle>
 
-<div class="visualization-page"
-     style="--sidebar-width: @(_sidebarCollapsed ? "40" : _sidebarWidth)px; user-select: @(_isResizing ? "none" : "auto");"
-     @onmousemove="OnMouseMove"
-     @onmouseup="OnMouseUp"
-     @onmousemove:preventDefault="@_isResizing">
+<div class="visualization-page">
     <div class="header">
-        <button class="header__hamburger" @onclick="HandleHamburgerClick" title="@GetHamburgerTitle()">☰</button>
-
+        <div class="header__left"></div>
         <h1 class="header__title">Sorting Playground</h1>
-
         <div class="header__actions">
             <button class="header__icon-btn" @onclick='() => NavigationManager.NavigateTo("tutorial")' title="Tutorial">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -43,17 +37,12 @@
     </div>
 
     <QuickAccessPanel
-        IsCollapsed="@_sidebarCollapsed"
-        IsCollapsedChanged="@HandleSidebarCollapsedChanged"
         @bind-SelectedAlgorithm="SelectedAlgorithm"
         @bind-ArraySize="ArraySize"
         @bind-SelectedPatternName="SelectedPatternName"
         @bind-SelectedVisualizationMode="SelectedVisualizationMode"
         @bind-SelectedCategory="_selectedCategory"
         @bind-AutoSwitchToRecommendedSize="_autoSwitchToRecommendedSize"
-        IsOpen="_quickAccessOpen"
-        OnClose="() => _quickAccessOpen = false"
-        OnResizeStart="HandleResizeStart"
         IsLoading="IsLoading"
         Playback="Playback"
         ComparisonMode="ComparisonMode"
@@ -211,9 +200,6 @@ private VisualizationMode SelectedVisualizationMode
     private bool _isComparisonPlaying = false;
     private bool _statsTableOpen = false;
 
-    // Quick Access パネル（モバイル / タブレット）
-    private bool _quickAccessOpen = false;
-
     // Settings モーダル
     private bool _settingsOpen = false;
 
@@ -223,14 +209,6 @@ private VisualizationMode SelectedVisualizationMode
     // Settings: QuickAccessPanel と共有する設定
     private string _selectedCategory = string.Empty;
     private bool _autoSwitchToRecommendedSize = false;
-
-    // サイドバーリサイズ関連
-    private int _sidebarWidth = 280; // デフォルト幅（px）
-    private bool _sidebarCollapsed = false; // 折りたたみ状態
-    private bool _isResizing = false;
-    private bool _isMobile = false; // モバイル判定用
-    private int _resizeStartX = 0;
-    private int _resizeStartWidth = 0;
 
     protected override void OnInitialized()
     {
@@ -279,7 +257,6 @@ private VisualizationMode SelectedVisualizationMode
         {
             await JS.InvokeVoidAsync("debugHelper.setDebugMode", DebugSettings.IsEnabled);
             await LoadPreferencesAsync();
-            await UpdateIsMobile();
             return;
         }
 
@@ -330,11 +307,6 @@ private VisualizationMode SelectedVisualizationMode
                 _selectedCategory = cf ?? string.Empty;
             if (prefs.TryGetValue("sortvis.debugLog", out var dl))
                 DebugSettings.IsEnabled = dl == "true";
-            if (prefs.TryGetValue("sortvis.sidebarWidth", out var sw) &&
-                int.TryParse(sw, out var swVal))
-                _sidebarWidth = Math.Clamp(swVal, 200, 500);
-            if (prefs.TryGetValue("sortvis.sidebarCollapsed", out var sc))
-                _sidebarCollapsed = sc == "true";
 
             StateHasChanged();
         }
@@ -362,75 +334,12 @@ private VisualizationMode SelectedVisualizationMode
                 ["sortvis.autoRecommendedSize"]  = _autoSwitchToRecommendedSize ? "true" : "false",
                 ["sortvis.categoryFilter"]       = _selectedCategory ?? string.Empty,
                 ["sortvis.debugLog"]             = DebugSettings.IsEnabled ? "true" : "false",
-                ["sortvis.sidebarWidth"]         = _sidebarWidth.ToString(),
-                ["sortvis.sidebarCollapsed"]     = _sidebarCollapsed ? "true" : "false",
             });
         }
         catch (Exception ex)
         {
             DebugSettings.Log($"[Index] SavePreferences error: {ex.Message}");
         }
-    }
-
-    private void HandleResizeStart(MouseEventArgs e)
-    {
-        _isResizing = true;
-        _resizeStartX = (int)e.ClientX;
-        _resizeStartWidth = _sidebarWidth;
-    }
-
-    private async Task UpdateIsMobile()
-    {
-        try
-        {
-            _isMobile = await JS.InvokeAsync<bool>("eval", "window.innerWidth < 1280");
-        }
-        catch
-        {
-            _isMobile = false;
-        }
-    }
-
-    private async Task HandleHamburgerClick()
-    {
-        await UpdateIsMobile();
-        if (_isMobile)
-        {
-            // モバイル: オーバーレイを開く
-            _quickAccessOpen = true;
-        }
-        else
-        {
-            // PC: パネルの折りたたみをトグル
-            _sidebarCollapsed = !_sidebarCollapsed;
-            _preferencesDirty = true;
-        }
-    }
-
-    private string GetHamburgerTitle()
-    {
-        if (_isMobile)
-            return "Open Quick Access Panel";
-        return _sidebarCollapsed ? "Show Quick Access Panel" : "Hide Quick Access Panel";
-    }
-
-    private void OnMouseMove(MouseEventArgs e)
-    {
-        if (_isResizing)
-        {
-            var deltaX = (int)e.ClientX - _resizeStartX;
-            var newWidth = _resizeStartWidth + deltaX;
-
-            // 最小200px、最大500pxに制限
-            _sidebarWidth = Math.Clamp(newWidth, 200, 500);
-            StateHasChanged();
-        }
-    }
-
-    private void OnMouseUp()
-    {
-        if (_isResizing) _preferencesDirty = true;
-        _isResizing = false;
     }
 
     private void OnAlgorithmChanged()
@@ -672,14 +581,6 @@ private VisualizationMode SelectedVisualizationMode
                 instance.Playback.SoundEnabled = false;
             }
         }
-    }
-
-    // サイドバー折りたたみ状態変更（設定保存もトリガー）
-    private void HandleSidebarCollapsedChanged(bool value)
-    {
-        _sidebarCollapsed = value;
-        _preferencesDirty = true;
-        StateHasChanged();
     }
 
     // Settings モーダルを閉じる（設定保存もトリガー）
