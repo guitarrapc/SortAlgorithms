@@ -158,8 +158,11 @@
 
                     <div class="qap__item qap__item--vertical">
                         <div class="qap__slider-header">
-                            <span class="stat-label">Operations Per Frame</span>
-                            <span class="stat-value qap__slider-value">@Playback.OperationsPerFrame ops/frame</span>
+                            <span class="stat-label">Ops Per Frame</span>
+                            <span class="stat-value qap__slider-value">
+                                @Playback.OperationsPerFrame
+                                <span class="qap__fps">ops/frame</span>
+                            </span>
                         </div>
                         <input type="range" min="1" max="1000"
                                @bind="Playback.OperationsPerFrame"
@@ -168,7 +171,7 @@
 
                     <div class="qap__item qap__item--vertical">
                         <div class="qap__slider-header">
-                            <span class="stat-label">Speed Multiplier</span>
+                            <span class="stat-label">Speed</span>
                             <span class="stat-value qap__slider-value">
                                 @Playback.SpeedMultiplier.ToString("F1")x
                                 <span class="qap__fps">(@EffectiveFPS FPS)</span>
