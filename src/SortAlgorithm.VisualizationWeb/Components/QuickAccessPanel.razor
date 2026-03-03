@@ -67,6 +67,22 @@
                         </select>
                     </div>
 
+                    <div class="qap__item">
+                        <span class="stat-label">Scramble Pattern</span>
+                        <select value="@SelectedPatternName"
+                                @onchange="e => HandlePatternChange((string)e.Value!)">
+                            @foreach (var group in GetPatternsByCategory())
+                            {
+                                <optgroup label="@group.Key">
+                                    @foreach (var pattern in group)
+                                    {
+                                        <option value="@pattern.Name">@pattern.Name</option>
+                                    }
+                                </optgroup>
+                            }
+                        </select>
+                    </div>
+
                     @{
                         var instanceCount = ComparisonMode.State.Instances.Count;
                         var algoAlreadyPresent = ComparisonMode.State.Instances.Any(i => i.AlgorithmName == SelectedAlgorithm);
@@ -110,22 +126,6 @@
                     </span>
                 </button>
                 <div class="ui-card__body @(_appearanceCollapsed ? "ui-card__body--collapsed" : "")">
-
-                    <div class="qap__item">
-                        <span class="stat-label">Scramble Pattern</span>
-                        <select value="@SelectedPatternName"
-                                @onchange="e => HandlePatternChange((string)e.Value!)">
-                            @foreach (var group in GetPatternsByCategory())
-                            {
-                                <optgroup label="@group.Key">
-                                    @foreach (var pattern in group)
-                                    {
-                                        <option value="@pattern.Name">@pattern.Name</option>
-                                    }
-                                </optgroup>
-                            }
-                        </select>
-                    </div>
 
                     <div class="qap__item">
                         <span class="stat-label">Visualization Mode</span>
