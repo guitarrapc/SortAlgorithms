@@ -210,6 +210,11 @@ private VisualizationMode SelectedVisualizationMode
     private string _selectedCategory = string.Empty;
     private bool _autoSwitchToRecommendedSize = false;
 
+    // URL cards パラメータから復元する比較カードのアルゴリズム名一覧（OnInitialized でパース）
+    private List<string> _initialCardAlgorithms = new();
+    // URL 復元中は UpdateContentStateUrl による URL 書き換えを抑制する
+    private bool _restoringFromUrl = false;
+
     protected override void OnInitialized()
     {
         Playback.StateChanged += OnStateChanged;
@@ -246,6 +251,15 @@ private VisualizationMode SelectedVisualizationMode
                         if (Enum.TryParse<VisualizationMode>(val, ignoreCase: true, out var mode))
                             _selectedVisualizationMode = mode;
                         break;
+                    case "cards":
+                        _initialCardAlgorithms = val.Split('|', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(a => AlgorithmRegistry.GetAllAlgorithms()
+                                .FirstOrDefault(r => string.Equals(r.Name, a, StringComparison.OrdinalIgnoreCase))?.Name)
+                            .Where(n => n != null)
+                            .Cast<string>()
+                            .Distinct()
+                            .ToList();
+                        break;
                 }
             }
         }
@@ -257,6 +271,7 @@ private VisualizationMode SelectedVisualizationMode
         {
             await JS.InvokeVoidAsync("debugHelper.setDebugMode", DebugSettings.IsEnabled);
             await LoadPreferencesAsync();
+            await RestoreCardsFromUrlAsync();
             return;
         }
 
@@ -270,10 +285,14 @@ private VisualizationMode SelectedVisualizationMode
     // ── URL 更新（コンテンツ状態） ────────────────────────────────────────────
     private void UpdateContentStateUrl()
     {
+        if (_restoringFromUrl) return;
         var url = $"/?algo={Uri.EscapeDataString(_selectedAlgorithm)}" +
                   $"&size={_arraySize}" +
                   $"&pattern={Uri.EscapeDataString(_selectedPatternName)}" +
                   $"&mode={_selectedVisualizationMode}";
+        var cards = ComparisonMode.State.Instances.Select(i => i.AlgorithmName).ToList();
+        if (cards.Count > 0)
+            url += $"&cards={Uri.EscapeDataString(string.Join("|", cards))}";
         NavigationManager.NavigateTo(url, replace: true);
     }
 
@@ -342,6 +361,62 @@ private VisualizationMode SelectedVisualizationMode
         }
     }
 
+    // ── URL cards パラメータからの比較カード自動復元（初回レンダリング後） ──
+    private async Task RestoreCardsFromUrlAsync()
+    {
+        if (_initialCardAlgorithms.Count == 0) return;
+
+        var pattern = GetSelectedPattern();
+        if (pattern == null) return;
+
+        _restoringFromUrl = true;
+        _loadingState = LoadingState.AddingAlgorithm;
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            foreach (var algoName in _initialCardAlgorithms)
+            {
+                if (ComparisonMode.State.Instances.Count >= ComparisonState.MaxComparisons) break;
+
+                var metadata = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == algoName);
+                if (metadata == null) continue;
+
+                var size = Math.Min(_arraySize, Math.Min(metadata.MaxElements,
+                    ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances.Count + 1)));
+
+                if (ComparisonMode.State.Instances.Count == 0)
+                {
+                    var array = pattern.Generator(size, new Random());
+                    await ComparisonMode.AddAndGenerateAsync(algoName, metadata, array, size, pattern);
+                }
+                else
+                {
+                    await ComparisonMode.AddAlgorithmAsync(algoName, metadata);
+                }
+            }
+
+            if (ComparisonMode.State.Instances.Any())
+            {
+                ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
+                ComparisonMode.SetAutoResetForAll(Playback.AutoReset);
+                ApplySavedSoundSettings();
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugSettings.Log($"[Index] RestoreCardsFromUrl error: {ex.Message}");
+        }
+        finally
+        {
+            _restoringFromUrl = false;
+            _loadingState = LoadingState.Idle;
+            UpdateContentStateUrl();
+            StateHasChanged();
+        }
+    }
+
     private void OnAlgorithmChanged()
     {
         StateHasChanged();
@@ -404,6 +479,7 @@ private VisualizationMode SelectedVisualizationMode
         finally
         {
             _loadingState = LoadingState.Idle;
+            UpdateContentStateUrl();
             StateHasChanged();
         }
     }
@@ -427,6 +503,7 @@ private VisualizationMode SelectedVisualizationMode
         finally
         {
             _loadingState = LoadingState.Idle;
+            UpdateContentStateUrl();
             StateHasChanged();
         }
     }
@@ -446,6 +523,7 @@ private VisualizationMode SelectedVisualizationMode
 
         DebugSettings.Log($"[Index] After removal, instances count: {ComparisonMode.State.Instances.Count}");
         ApplySavedSoundSettings();
+        UpdateContentStateUrl();
         StateHasChanged();
     }
 
