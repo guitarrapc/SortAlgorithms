@@ -41,6 +41,14 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    justify-content: space-between;
+}
+
+/* ラベルと?リンクを左グループとして束ねる */
+.qap__label-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .qap__help-link {
