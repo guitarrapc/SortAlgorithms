@@ -198,12 +198,100 @@ html, body {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* トグルボタンとして機能するタイトル（タブレット・スマホで有効化） */
+.ui-card__title--toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 0 6px 0;
+    margin-bottom: 2px;
+    cursor: default;
+    text-align: left;
+}
+
+/* 折りたたみアイコン（シェブロン ∨） */
+.ui-card__toggle-icon {
+    display: none;
+    width: 14px;
+    height: 14px;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease, color 0.15s;
+    flex-shrink: 0;
+}
+
+    .ui-card__toggle-icon svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+.ui-card__toggle-icon--collapsed {
+    transform: rotate(-90deg);
+}
+
+/* カード本体（コンテンツラッパー） */
+.ui-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 /* カード内アイテムはカードがコンテナなので背景・角丸・外マージン不要 */
 .ui-card .qap__item {
     margin-bottom: 0;
     padding: 2px 0;
     background: transparent;
     border-radius: 0;
+}
+
+/* タブレット・スマホのみ折りたたみ有効 */
+@media (max-width: 1279px) {
+    .ui-card__toggle-icon {
+        display: block;
+    }
+
+    .ui-card__title--toggle {
+        cursor: pointer;
+        transition: background-color 0.15s, color 0.15s;
+    }
+
+        /* ホバー: テキスト色を明るく、シェブロンをアクセントカラーに */
+        .ui-card__title--toggle:hover {
+            color: var(--text-primary);
+        }
+
+        .ui-card__title--toggle:hover .ui-card__toggle-icon {
+            color: var(--color-accent);
+        }
+
+        /* タップ時のフラッシュフィードバック */
+        .ui-card__title--toggle:active {
+            background-color: rgba(255, 255, 255, 0.06);
+        }
+
+    /* 折りたたみ状態: シェブロンをアクセントカラーで常時表示して「開けること」をアピール */
+    .ui-card--collapsed .ui-card__toggle-icon {
+        color: var(--color-accent);
+    }
+
+    /* 折りたたみ時: border-bottom を除去してコンパクトなタブに見せる */
+    .ui-card--collapsed {
+        padding-bottom: 6px;
+    }
+
+    .ui-card--collapsed .ui-card__title--toggle {
+        border-bottom: none;
+        padding-bottom: 0;
+        margin-bottom: 0;
+    }
+
+    .ui-card__body--collapsed {
+        display: none;
+    }
 }
 
 
