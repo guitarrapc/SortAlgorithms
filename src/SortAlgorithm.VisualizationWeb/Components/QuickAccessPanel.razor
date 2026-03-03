@@ -22,9 +22,9 @@
 
         <fieldset class="controls-fieldset" disabled="@IsLoading">
 
-            @* ── Sort Target ── *@
+            @* ── Sort Setup ── *@
             <div class="ui-card">
-                <span class="ui-card__title">Sort Target</span>
+                <span class="ui-card__title">Sort Setup</span>
 
                 <div class="qap__item">
                     <div class="qap__label-row">
@@ -59,6 +59,40 @@
                     </select>
                 </div>
 
+                @{
+                    var instanceCount = ComparisonMode.State.Instances.Count;
+                    var algoAlreadyPresent = ComparisonMode.State.Instances.Any(i => i.AlgorithmName == SelectedAlgorithm);
+                    var atMaxAndNotPresent = instanceCount >= ComparisonState.MaxComparisons && !algoAlreadyPresent;
+                    var addDisabled = atMaxAndNotPresent || ComparisonMode.IsAddingAlgorithm;
+                    var buttonTitle = ComparisonMode.IsAddingAlgorithm
+                    ? "Processing..."
+                    : atMaxAndNotPresent
+                    ? $"Maximum {ComparisonState.MaxComparisons} algorithms reached. Remove one to add a new algorithm."
+                    : algoAlreadyPresent
+                    ? "Regenerate array and re-run all algorithms"
+                    : "Add this algorithm to comparison";
+                }
+                <div class="qap__item qap__item--action-group">
+                    <button class="primary qap__btn-full"
+                            @onclick="() => OnAddAndGenerate.InvokeAsync()"
+                            disabled="@addDisabled"
+                            title="@buttonTitle">
+                        @(ComparisonMode.IsAddingAlgorithm ? "Processing..." : algoAlreadyPresent ? "Regenerate" : "Add & Generate")
+                    </button>
+                </div>
+
+                <div class="qap__item qap__item--status">
+                    <span class="qap__count-label">Algorithms:</span>
+                    <span class="qap__count @(instanceCount >= ComparisonState.MaxComparisons ? "qap__count--max" : "")">
+                        @instanceCount / @ComparisonState.MaxComparisons
+                    </span>
+                </div>
+            </div>
+
+            @* ── Appearance ── *@
+            <div class="ui-card">
+                <span class="ui-card__title">Appearance</span>
+
                 <div class="qap__item">
                     <span class="stat-label">Scramble Pattern</span>
                     <select value="@SelectedPatternName"
@@ -74,11 +108,6 @@
                         }
                     </select>
                 </div>
-            </div>
-
-            @* ── Display ── *@
-            <div class="ui-card">
-                <span class="ui-card__title">Display</span>
 
                 <div class="qap__item">
                     <span class="stat-label">Visualization Mode</span>
@@ -120,40 +149,6 @@
                     <input type="range" min="0.5" max="100" step="0.5"
                            @bind="Playback.SpeedMultiplier"
                            @bind:after="HandleSpeedChanged" />
-                </div>
-            </div>
-
-            @* ── Action ── *@
-            <div class="ui-card">
-                <span class="ui-card__title">Action</span>
-
-                @{
-                    var instanceCount = ComparisonMode.State.Instances.Count;
-                    var algoAlreadyPresent = ComparisonMode.State.Instances.Any(i => i.AlgorithmName == SelectedAlgorithm);
-                    var atMaxAndNotPresent = instanceCount >= ComparisonState.MaxComparisons && !algoAlreadyPresent;
-                    var addDisabled = atMaxAndNotPresent || ComparisonMode.IsAddingAlgorithm;
-                    var buttonTitle = ComparisonMode.IsAddingAlgorithm 
-                        ? "Processing..." 
-                        : atMaxAndNotPresent 
-                            ? $"Maximum {ComparisonState.MaxComparisons} algorithms reached. Remove one to add a new algorithm." 
-                            : algoAlreadyPresent 
-                                ? "Regenerate array and re-run all algorithms" 
-                                : "Add this algorithm to comparison";
-                }
-                <div class="qap__item qap__item--action-group">
-                    <button class="primary qap__btn-full"
-                            @onclick="() => OnAddAndGenerate.InvokeAsync()"
-                            disabled="@addDisabled"
-                            title="@buttonTitle">
-                        @(ComparisonMode.IsAddingAlgorithm ? "Processing..." : algoAlreadyPresent ? "Regenerate" : "Add & Generate")
-                    </button>
-                </div>
-
-                <div class="qap__item qap__item--status">
-                    <span class="qap__count-label">Algorithms:</span>
-                    <span class="qap__count @(instanceCount >= ComparisonState.MaxComparisons ? "qap__count--max" : "")">
-                        @instanceCount / @ComparisonState.MaxComparisons
-                    </span>
                 </div>
             </div>
 
@@ -323,14 +318,14 @@
         // "How it works:" で始まる最初のパラグラフを抽出
         var lines = tutorialDescription.Split('\n', StringSplitOptions.TrimEntries);
         var howItWorksIndex = Array.FindIndex(lines, l => l.StartsWith("How it works:", StringComparison.OrdinalIgnoreCase));
-        
+
         if (howItWorksIndex == -1)
             return string.Empty;
 
         // "How it works:" の後の説明文を取得（次の空行または"Key property:"まで）
         var descriptionLine = lines[howItWorksIndex];
         var description = descriptionLine["How it works:".Length..].Trim();
-        
+
         return description;
     }
 }
