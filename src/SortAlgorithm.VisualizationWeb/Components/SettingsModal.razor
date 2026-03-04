@@ -103,6 +103,14 @@
                 <div class="settings-section__body">
 
                     <div class="settings-row">
+                        <span class="settings-label">Scroll to Sort Panel after Add &amp; Generate <span class="settings-hint-inline">(Tablet / Mobile)</span></span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="RenderSettings.ScrollOnGenerate" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-row">
                         <span class="settings-label">Auto Switch to Recommended Size</span>
                         <label class="toggle-switch">
                             <input type="checkbox"

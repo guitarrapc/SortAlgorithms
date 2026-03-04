@@ -24,6 +24,24 @@ public class RenderSettings
         }
     }
 
+    private bool _scrollOnGenerate = true;
+
+    /// <summary>
+    /// Add &amp; Generate 後にビジュアライゼーションエリアへスクロールするかどうか（タブレット・スマホのみ有効）。
+    /// </summary>
+    public bool ScrollOnGenerate
+    {
+        get => _scrollOnGenerate;
+        set
+        {
+            if (_scrollOnGenerate != value)
+            {
+                _scrollOnGenerate = value;
+                OnChanged?.Invoke();
+            }
+        }
+    }
+
     /// <summary>
     /// 設定変更時に発火するイベント
     /// </summary>

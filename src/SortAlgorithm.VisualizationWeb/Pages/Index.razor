@@ -64,7 +64,7 @@
 
 
 
-    <div class="visualization-area">
+    <div id="visualization-area" class="visualization-area">
         @if (IsLoading)
         {
             <div class="loading-overlay">
@@ -326,6 +326,8 @@ private VisualizationMode SelectedVisualizationMode
                 _selectedCategory = cf ?? string.Empty;
             if (prefs.TryGetValue("sortvis.debugLog", out var dl))
                 DebugSettings.IsEnabled = dl == "true";
+            if (prefs.TryGetValue("sortvis.scrollOnGenerate", out var sog))
+                RenderSettings.ScrollOnGenerate = sog == "true";
 
             StateHasChanged();
         }
@@ -353,6 +355,7 @@ private VisualizationMode SelectedVisualizationMode
                 ["sortvis.autoRecommendedSize"]  = _autoSwitchToRecommendedSize ? "true" : "false",
                 ["sortvis.categoryFilter"]       = _selectedCategory ?? string.Empty,
                 ["sortvis.debugLog"]             = DebugSettings.IsEnabled ? "true" : "false",
+                ["sortvis.scrollOnGenerate"]     = RenderSettings.ScrollOnGenerate ? "true" : "false",
             });
         }
         catch (Exception ex)
@@ -481,6 +484,8 @@ private VisualizationMode SelectedVisualizationMode
             _loadingState = LoadingState.Idle;
             UpdateContentStateUrl();
             StateHasChanged();
+            if (RenderSettings.ScrollOnGenerate)
+                await JS.InvokeVoidAsync("scrollHelper.scrollToVisualization");
         }
     }
 
