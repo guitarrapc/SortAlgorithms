@@ -57,14 +57,14 @@
                 <span class="ui-card__title">Speed</span>
                 <div class="qap__item qap__item--vertical">
                     <div class="qap__slider-header">
-                        <span class="stat-label">Interval</span>
-                        <span class="stat-value qap__slider-value">@_autoPlaySpeedMs ms</span>
+                        <span class="stat-value qap__slider-value">@GetSpeedLabel()</span>
+                        <span class="stat-label">(@(_autoPlaySpeedMs) ms)</span>
                     </div>
-                    <input type="range" min="100" max="2000" step="100"
-                           value="@_autoPlaySpeedMs"
+                    <input type="range" min="0" max="4" step="1"
+                           value="@_speedIndex"
                            @oninput="OnSpeedChanged"
                            @onkeydown:stopPropagation
-                           style="@RangeTrackStyle(_autoPlaySpeedMs, 100, 2000)" />
+                           style="@RangeTrackStyle(_speedIndex, 0, 4)" />
                 </div>
             </div>
 
@@ -229,7 +229,16 @@
     private int _currentStepIndex = -1;  // -1 = 開始状態（操作適用前）
     private bool _isLoading;
     private bool _isAutoPlaying;
-    private int _autoPlaySpeedMs = 800;
+    private int _speedIndex = 2;  // default: Normal (500ms)
+    private static readonly (string Label, int Ms)[] SpeedSteps =
+    [
+        ("Fastest", 100),
+        ("Fast", 250),
+        ("Normal", 500),
+        ("Slow", 1000),
+        ("Slowest", 2000)
+    ];
+    private int _autoPlaySpeedMs => SpeedSteps[_speedIndex].Ms;
     private bool _descExpanded = false;
 
     private int _maxValue = 9;
@@ -400,7 +409,7 @@
     private void OnSpeedChanged(ChangeEventArgs e)
     {
         if (int.TryParse(e.Value?.ToString(), out int val))
-            _autoPlaySpeedMs = val;
+            _speedIndex = Math.Clamp(val, 0, SpeedSteps.Length - 1);
     }
 
     // ─── キーボード ────────────────────────────────────────────────────────
@@ -552,4 +561,6 @@
         var pct = (value - min) / (max - min) * 100;
         return $"background:linear-gradient(to right,var(--color-accent) 0%,var(--color-accent) {pct:F1}%,#4A4A4A {pct:F1}%,#4A4A4A 100%)";
     }
+
+    private string GetSpeedLabel() => SpeedSteps[_speedIndex].Label;
 }
