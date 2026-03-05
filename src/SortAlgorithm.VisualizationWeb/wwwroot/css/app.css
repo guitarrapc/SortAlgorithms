@@ -423,6 +423,18 @@ input[type="range"] {
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
+    input[type="range"]::-moz-range-progress {
+        background-color: var(--color-accent);
+        border-radius: 3px;
+        height: 6px;
+    }
+
+    input[type="range"]::-moz-range-track {
+        background-color: #4A4A4A;
+        border-radius: 3px;
+        height: 6px;
+    }
+
 #blazor-error-ui {
     background: lightyellow;
     bottom: 0;

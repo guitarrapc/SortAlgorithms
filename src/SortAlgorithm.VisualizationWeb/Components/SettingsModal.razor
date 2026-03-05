@@ -85,7 +85,8 @@
                         </div>
                         <input type="range" min="0" max="1" step="0.05"
                                @bind="Playback.SoundVolume"
-                               class="settings-slider" />
+                               class="settings-slider"
+                               style="@RangeTrackStyle(Playback.SoundVolume, 0, 1)" />
                     </div>
 
                 </div>
@@ -167,5 +168,11 @@
     private async Task HandleDebugToggleChanged()
     {
         await JS.InvokeVoidAsync("debugHelper.setDebugMode", DebugSettings.IsEnabled);
+    }
+
+    private static string RangeTrackStyle(double value, double min, double max)
+    {
+        var pct = (value - min) / (max - min) * 100;
+        return $"background:linear-gradient(to right,var(--color-accent) 0%,var(--color-accent) {pct:F1}%,#4A4A4A {pct:F1}%,#4A4A4A 100%)";
     }
 }

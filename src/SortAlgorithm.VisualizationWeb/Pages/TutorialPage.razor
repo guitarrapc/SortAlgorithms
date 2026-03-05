@@ -63,7 +63,8 @@
                     <input type="range" min="200" max="2000" step="100"
                            value="@_autoPlaySpeedMs"
                            @oninput="OnSpeedChanged"
-                           @onkeydown:stopPropagation />
+                           @onkeydown:stopPropagation
+                           style="@RangeTrackStyle(_autoPlaySpeedMs, 200, 2000)" />
                 </div>
             </div>
 
@@ -533,5 +534,11 @@
 
         if (inList) sb.Append("</ul>");
         return new MarkupString(sb.ToString());
+    }
+
+    private static string RangeTrackStyle(double value, double min, double max)
+    {
+        var pct = (value - min) / (max - min) * 100;
+        return $"background:linear-gradient(to right,var(--color-accent) 0%,var(--color-accent) {pct:F1}%,#4A4A4A {pct:F1}%,#4A4A4A 100%)";
     }
 }
