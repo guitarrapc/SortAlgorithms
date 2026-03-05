@@ -14,6 +14,7 @@ public class MergeBenchmark
     private int[] _mergeArray = default!;
     private int[] _powerArray = default!;
     private int[] _rotatemergeArray = default!;
+    private int[] _rotatemergeIterativeArray = default!;
     private int[] _shiftArray = default!;
     private int[] _timArray = default!;
 
@@ -24,6 +25,7 @@ public class MergeBenchmark
         _mergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _powerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _rotatemergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _rotatemergeIterativeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _shiftArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _timArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
@@ -50,6 +52,12 @@ public class MergeBenchmark
     public void RotateMergeSort()
     {
         SortAlgorithm.Algorithms.RotateMergeSort.Sort(_rotatemergeArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void RotateMergeSortItelative()
+    {
+        SortAlgorithm.Algorithms.RotateMergeSortIterative.Sort(_rotatemergeArray.AsSpan());
     }
 
     [Benchmark]
