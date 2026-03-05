@@ -486,6 +486,13 @@
     animation: arrow-fade-in 0.3s ease;
 }
 
+::deep .marble-compare-symbol {
+    display: block;
+    width: 100%;
+    height: 100%;
+    animation: arrow-fade-in 0.3s ease;
+}
+
 @keyframes arrow-fade-in {
     from { opacity: 0; }
     to   { opacity: 1; }

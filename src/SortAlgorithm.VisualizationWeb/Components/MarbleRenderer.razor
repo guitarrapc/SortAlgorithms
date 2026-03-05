@@ -37,6 +37,25 @@
                           marker-end="@($"url(#{_arrowMarkerId})")" opacity="0.85" />
                 </svg>
             }
+            else if (HighlightType == OperationType.Compare && HighlightIndices.Length == 2 && CompareResult.HasValue)
+            {
+                var (li, ri) = GetSortedPair();
+                var unit = 100;
+                var viewW = Values.Length * unit;
+                var viewH = 48;
+                var leftX = li * unit + unit / 2;
+                var rightX = ri * unit + unit / 2;
+                var midX = (leftX + rightX) / 2;
+                // HighlightIndices[0] が元の Index1。左に来たら向きそのまま、右に来たら反転
+                var displayResult = HighlightIndices[0] <= HighlightIndices[1]
+                    ? CompareResult.Value : -CompareResult.Value;
+                var symbol = displayResult > 0 ? ">" : displayResult < 0 ? "<" : "=";
+
+                <svg class="marble-compare-symbol" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="xMidYMid meet">
+                    <text x="@midX" y="@(viewH - 4)" text-anchor="middle" font-size="36"
+                          font-weight="bold" fill="#A855F7" opacity="0.9">@symbol</text>
+                </svg>
+            }
         </div>
         <div class="marble-row">
             @for (int i = 0; i < Values.Length; i++)
@@ -77,6 +96,9 @@
 
     /// <summary>配列内の最大値（HSLグラデーション計算に使用）</summary>
     [Parameter] public int MaxValue { get; set; } = 9;
+
+    /// <summary>Compare 操作の比較結果（正: Index1 > Index2、負: Index1 &lt; Index2、null: Compare 以外）</summary>
+    [Parameter] public int? CompareResult { get; set; }
 
     private readonly string _arrowMarkerId = $"ah-{Guid.NewGuid().ToString("N")[..8]}";
 

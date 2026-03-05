@@ -22,7 +22,7 @@ public static class TutorialStepBuilder
             var op = operations[opIdx];
 
             // Generate narrative and highlights from values before applying the operation
-            var (highlights, bufferHighlights, highlightType, narrative) =
+            var (highlights, bufferHighlights, highlightType, compareResult, narrative) =
                 GenerateStepInfo(op, mainArray, bufferArrays);
 
             // Apply the operation to the array state
@@ -40,6 +40,7 @@ public static class TutorialStepBuilder
                 HighlightIndices = highlights,
                 BufferHighlightIndices = bufferHighlights,
                 HighlightType = highlightType,
+                CompareResult = compareResult,
                 Narrative = narrative
             });
         }
@@ -80,7 +81,7 @@ public static class TutorialStepBuilder
 
     // ─── Step info generation ──────────────────────────────────────────────
 
-    private static (int[] highlights, Dictionary<int, int[]> bufferHighlights, OperationType type, string narrative)
+    private static (int[] highlights, Dictionary<int, int[]> bufferHighlights, OperationType type, int? compareResult, string narrative)
         GenerateStepInfo(SortOperation op, int[] mainArray, Dictionary<int, int[]> bufferArrays)
         => op.Type switch
         {
@@ -89,10 +90,10 @@ public static class TutorialStepBuilder
             OperationType.IndexRead => BuildIndexReadInfo(op, mainArray, bufferArrays),
             OperationType.IndexWrite => BuildIndexWriteInfo(op),
             OperationType.RangeCopy => BuildRangeCopyInfo(op),
-            _ => ([], new Dictionary<int, int[]>(), OperationType.Compare, string.Empty)
+            _ => ([], new Dictionary<int, int[]>(), OperationType.Compare, null, string.Empty)
         };
 
-    private static (int[], Dictionary<int, int[]>, OperationType, string) BuildCompareInfo(
+    private static (int[], Dictionary<int, int[]>, OperationType, int?, string) BuildCompareInfo(
         SortOperation op, int[] mainArray, Dictionary<int, int[]> bufferArrays)
     {
         int vi = GetValue(op.BufferId1, op.Index1, mainArray, bufferArrays);
@@ -116,10 +117,10 @@ public static class TutorialStepBuilder
         AddBufferHighlight(bufHighlights, op.BufferId1, op.Index1);
         AddBufferHighlight(bufHighlights, op.BufferId2, op.Index2);
 
-        return (highlights, bufHighlights, OperationType.Compare, narrative);
+        return (highlights, bufHighlights, OperationType.Compare, op.CompareResult, narrative);
     }
 
-    private static (int[], Dictionary<int, int[]>, OperationType, string) BuildSwapInfo(
+    private static (int[], Dictionary<int, int[]>, OperationType, int?, string) BuildSwapInfo(
         SortOperation op, int[] mainArray, Dictionary<int, int[]> bufferArrays)
     {
         int vi = GetValue(op.BufferId1, op.Index1, mainArray, bufferArrays);
@@ -132,10 +133,10 @@ public static class TutorialStepBuilder
         if (op.BufferId1 != 0)
             bufHighlights[op.BufferId1] = [op.Index1, op.Index2];
 
-        return (highlights, bufHighlights, OperationType.Swap, narrative);
+        return (highlights, bufHighlights, OperationType.Swap, null, narrative);
     }
 
-    private static (int[], Dictionary<int, int[]>, OperationType, string) BuildIndexReadInfo(
+    private static (int[], Dictionary<int, int[]>, OperationType, int?, string) BuildIndexReadInfo(
         SortOperation op, int[] mainArray, Dictionary<int, int[]> bufferArrays)
     {
         int v = GetValue(op.BufferId1, op.Index1, mainArray, bufferArrays);
@@ -147,10 +148,10 @@ public static class TutorialStepBuilder
         if (op.BufferId1 != 0)
             bufHighlights[op.BufferId1] = [op.Index1];
 
-        return (highlights, bufHighlights, OperationType.IndexRead, narrative);
+        return (highlights, bufHighlights, OperationType.IndexRead, null, narrative);
     }
 
-    private static (int[], Dictionary<int, int[]>, OperationType, string) BuildIndexWriteInfo(SortOperation op)
+    private static (int[], Dictionary<int, int[]>, OperationType, int?, string) BuildIndexWriteInfo(SortOperation op)
     {
         string loc = FormatLocation(op.BufferId1, op.Index1);
         string valStr = op.Value.HasValue ? op.Value.Value.ToString() : "?";
@@ -161,10 +162,10 @@ public static class TutorialStepBuilder
         if (op.BufferId1 != 0)
             bufHighlights[op.BufferId1] = [op.Index1];
 
-        return (highlights, bufHighlights, OperationType.IndexWrite, narrative);
+        return (highlights, bufHighlights, OperationType.IndexWrite, null, narrative);
     }
 
-    private static (int[], Dictionary<int, int[]>, OperationType, string) BuildRangeCopyInfo(SortOperation op)
+    private static (int[], Dictionary<int, int[]>, OperationType, int?, string) BuildRangeCopyInfo(SortOperation op)
     {
         string srcName = op.BufferId1 == 0 ? "main array" : $"buffer {op.BufferId1}";
         string dstName = op.BufferId2 == 0 ? "main array" : $"buffer {op.BufferId2}";
@@ -191,7 +192,7 @@ public static class TutorialStepBuilder
                 bufHighlights[op.BufferId2] = destRange;
         }
 
-        return (highlights, bufHighlights, OperationType.RangeCopy, narrative);
+        return (highlights, bufHighlights, OperationType.RangeCopy, null, narrative);
     }
 
     // ─── Apply operation ─────────────────────────────────────────────────

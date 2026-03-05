@@ -193,6 +193,7 @@
                     <MarbleRenderer Values="@GetCurrentMainArray()"
                                     HighlightIndices="@GetCurrentHighlightIndices()"
                                     HighlightType="@GetCurrentHighlightType()"
+                                    CompareResult="@GetCurrentCompareResult()"
                                     MaxValue="@_maxValue"
                                     Label="Main Array" />
 
@@ -201,6 +202,7 @@
                         <MarbleRenderer Values="@GetCurrentBufferArray(bufferId)"
                                         HighlightIndices="@GetCurrentBufferHighlightIndices(bufferId)"
                                         HighlightType="@GetCurrentHighlightType()"
+                                        CompareResult="@GetCurrentCompareResult()"
                                         MaxValue="@_maxValue"
                                         Label="@($"Buffer {bufferId}")"
                                         IsBuffer="true" />
@@ -440,6 +442,9 @@
 
     private OperationType GetCurrentHighlightType()
         => _currentStepIndex < 0 ? OperationType.Compare : _steps[_currentStepIndex].HighlightType;
+
+    private int? GetCurrentCompareResult()
+        => _currentStepIndex < 0 ? null : _steps[_currentStepIndex].CompareResult;
 
     private string GetCurrentNarrative()
         => _currentStepIndex < 0

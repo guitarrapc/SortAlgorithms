@@ -24,6 +24,9 @@ public record TutorialStep
     /// <summary>ハイライトの種類（マーブルの色に影響）</summary>
     public OperationType HighlightType { get; init; }
 
+    /// <summary>Compare 操作の比較結果（正: 左 > 右、負: 左 &lt; 右、0: 等しい、null: Compare 以外）</summary>
+    public int? CompareResult { get; init; }
+
     /// <summary>この操作を日本語で説明するナラティブテキスト</summary>
     public string Narrative { get; init; } = string.Empty;
 }
