@@ -31,9 +31,10 @@ namespace SortAlgorithm.Algorithms;
 /// The left subarray [left..mid] and right subarray [mid+1..right] are sorted before merging.</description></item>
 /// <item><description><strong>In-Place Merge Step:</strong> Two sorted subarrays must be merged without using additional memory.
 /// This is achieved using array rotation, which rearranges elements by shifting blocks of the array.</description></item>
-/// <item><description><strong>Rotation Algorithm (3-Reversal with fast paths):</strong> Array rotation uses fast paths for k==1 and k==n-1
-/// (shift a single element with sequential reads/writes, no swaps) and three-reversal for the general case:
-/// Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).
+/// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal with fast paths):</strong> Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems].
+/// Fast path k==1: move leftmost element to right end (sequential reads/writes, no swap).
+/// Fast path k==n-1: move rightmost element to left end (left rotate n-1 = right rotate 1, sequential reads/writes, no swap).
+/// General case uses 3-reversal: Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).
 /// All three phases are linear scans, enabling hardware prefetching and eliminating GCD/modulo overhead.</description></item>
 /// <item><description><strong>Merge via Rotation:</strong> During merge, find the position where the first element of the right partition
 /// should be inserted in the left partition (using binary search). Rotate elements to place it correctly, then recursively
@@ -197,7 +198,8 @@ public static class RotateMergeSort
                 var blockSize = start2End - start2 + 1;
                 var rotateDistance = start2 - start1;
 
-                // Rotate the block [start1..start2End] to move all elements at once
+                // Left-rotate [start1..start2End] by rotateDistance: [left_part | right_block] → [right_block | left_part]
+                // right_block elements (all < s[start1]) are moved to the front; left_part shifts right.
                 Rotate(s, start1, start2End, rotateDistance);
 
                 // Update pointers after moving the block
@@ -276,7 +278,7 @@ public static class RotateMergeSort
         k = k % n;
         if (k == 0) return;
 
-        // Fast path: k==1 - shift single element to right end (sequential read/write, no swap)
+        // Fast path: k==1 (left rotate 1) - move leftmost element to right end, shift rest left (sequential read/write, no swap)
         if (k == 1)
         {
             var tmp = s.Read(left);
@@ -286,7 +288,7 @@ public static class RotateMergeSort
             return;
         }
 
-        // Fast path: k==n-1 - shift single element to left end (symmetric of k==1)
+        // Fast path: k==n-1 (left rotate n-1 = right rotate 1) - move rightmost element to left end, shift rest right (sequential read/write, no swap)
         if (k == n - 1)
         {
             var tmp = s.Read(right);
@@ -296,7 +298,8 @@ public static class RotateMergeSort
             return;
         }
 
-        // General case: 3-reversal rotation (linear scans, cache-friendly, no GCD overhead)
+        // General case: left rotate by k via 3-reversal (linear scans, cache-friendly, no GCD overhead)
+        // [A|B] → Reverse(A), Reverse(B), Reverse(AB) → [B|A]
         Reverse(s, left, left + k - 1);
         Reverse(s, left + k, right);
         Reverse(s, left, right);
@@ -348,8 +351,8 @@ public static class RotateMergeSort
 /// The left subarray [left..mid] and right subarray [mid+1..right] are sorted before merging.</description></item>
 /// <item><description><strong>In-Place Merge Step:</strong> Two sorted subarrays must be merged without using additional memory.
 /// This is achieved using array rotation, which rearranges elements by shifting blocks of the array.</description></item>
-/// <item><description><strong>Rotation Algorithm (GCD-Cycle / Juggling):</strong> Array rotation is implemented using GCD-based cycle detection.
-/// To rotate array A of length n by k positions: Find GCD(n, k) cycles, and for each cycle, move elements using assignments.
+/// <item><description><strong>Rotation Algorithm (Left-Rotate by k, GCD-Cycle / Juggling):</strong> Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems] using GCD-based cycle detection.
+/// To left-rotate array A of length n by k positions: Find GCD(n, k) independent cycles, and for each cycle, move elements using assignments only.
 /// This achieves O(n) time rotation with O(1) space using only writes (no swaps needed).
 /// The algorithm divides rotation into GCD(n,k) independent cycles, rotating elements within each cycle.</description></item>
 /// <item><description><strong>Merge via Rotation:</strong> During merge, find the position where the first element of the right partition
@@ -513,7 +516,8 @@ public static class RotateMergeSortNonOptimized
                 var blockSize = start2End - start2 + 1;
                 var rotateDistance = start2 - start1;
 
-                // Rotate the block [start1..start2End] to move all elements at once
+                // Left-rotate [start1..start2End] by rotateDistance: [left_part | right_block] → [right_block | left_part]
+                // right_block elements (all < s[start1]) are moved to the front; left_part shifts right.
                 Rotate(s, start1, start2End, rotateDistance);
 
                 // Update pointers after moving the block
@@ -591,7 +595,7 @@ public static class RotateMergeSortNonOptimized
         k = k % n;
         if (k == 0) return;
 
-        // GCD-cycle rotation (Juggling algorithm)
+        // Left rotation via GCD-cycle (Juggling algorithm): [left_k_elems | rest] → [rest | left_k_elems]
         // Divide rotation into gcd(n, k) independent cycles
         var cycles = GCD(n, k);
 
