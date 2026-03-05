@@ -521,10 +521,17 @@ input[type="range"] {
 .loading-progress-fill {
     height: 100%;
     width: calc(var(--blazor-load-percentage, 0%) * 1);
-    background: linear-gradient(90deg, #7fa86f, #10b981);
+    background: linear-gradient(90deg, #7fa86f 0%, #10b981 40%, #a8e6a3 60%, #10b981 80%, #7fa86f 100%);
+    background-size: 200% 100%;
     border-radius: 2px;
     transition: width 0.15s ease-out;
     box-shadow: 0 0 8px rgba(127,168,111,0.5);
+    animation: progress-shimmer 1.8s linear infinite;
+}
+
+@keyframes progress-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 /* Percentage text */
