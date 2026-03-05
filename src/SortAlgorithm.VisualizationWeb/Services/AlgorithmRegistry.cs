@@ -271,6 +271,17 @@ public class AlgorithmRegistry
                 - Swap: the rotation itself is a series of swaps that cyclically shift a block of elements into its target position
                 - End of merge: each rotation resolves part of the overlap and leaves smaller in-place sub-problems, which are solved recursively
                 """);
+        Add("Rotate merge sort (iterative)", "Merge Sorts", "O(n log² n)", MAX_SIZE_NLOGN, 1024, (arr, ctx) => RotateMergeSortIterative.Sort(arr, ctx),
+            tutorialDescription: """
+                How it works: Bottom-up variant of Rotate merge sort. Phase 1 seeds sorted runs by applying insertion sort to each fixed-size block. Phase 2 iteratively merges adjacent run pairs using in-place rotation, doubling the run width each pass until the whole array is sorted.
+
+                Key property: Identical in-place guarantee and O(n log² n) complexity to the recursive variant, but with O(1) call-stack usage — no recursion overhead and no risk of stack overflow on very large arrays.
+
+                Watch for:
+                - Compare: phase 1 compares adjacent pairs within each block; phase 2 skip-checks whether s[mid] ≤ s[mid+1] before each merge, skipping it entirely when the boundary is already in order
+                - Swap: rotation swaps fire only inside MergeInPlace when a block of right-run elements must be moved left past a block of left-run elements
+                - End of pass: watch the merge width double each pass — 16 → 32 → 64 → … — until a single pass covers the whole array
+                """);
         Add("Timsort", "Merge Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => TimSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Scans the input for naturally ordered runs, uses Insertion sort to extend any run shorter than a minimum length (minrun), then merges runs from a stack using a strategy that keeps stack heights balanced.
