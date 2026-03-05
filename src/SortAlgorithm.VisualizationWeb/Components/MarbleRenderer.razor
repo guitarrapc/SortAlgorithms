@@ -5,23 +5,57 @@
     {
         <div class="marble-row-label">@Label</div>
     }
-    <div class="marble-row">
-        @for (int i = 0; i < Values.Length; i++)
-        {
-            var idx = i;
-            var value = Values[idx];
-            bool isEmpty = IsBuffer && value == 0;
-            bool highlighted = HighlightSet.Contains(idx);
-            string bgColor = isEmpty ? "transparent" : GetValueColor(value);
-            string outlineClass = highlighted ? $"marble-outline-{HighlightType.ToString().ToLowerInvariant()}" : "";
-            string marbleClass = $"marble {outlineClass}".Trim();
-            <div class="marble-slot">
-                <div class="@marbleClass" style="background: @bgColor;">
-                    @(isEmpty ? "" : value.ToString())
+    <div class="marble-row-content">
+        <div class="marble-arrow-area">
+            @if (HighlightType == OperationType.Swap && HighlightIndices.Length == 2)
+            {
+                var (li, ri) = GetSortedPair();
+                var unit = 100;
+                var viewW = Values.Length * unit;
+                var viewH = 48;
+                var leftX = li * unit + unit / 2;
+                var rightX = ri * unit + unit / 2;
+                var midX = (leftX + rightX) / 2;
+                var startY = viewH - 2;
+                var ctrlY1 = 6;
+                var ctrlY2 = 22;
+
+                <svg class="marble-swap-arrows" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <marker id="@_arrowMarkerId" markerWidth="10" markerHeight="7"
+                                refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#EF4444" />
+                        </marker>
+                    </defs>
+                    @* Higher arc: left → right *@
+                    <path d="@($"M {leftX},{startY} Q {midX},{ctrlY1} {rightX},{startY}")"
+                          stroke="#EF4444" stroke-width="2.5" fill="none" stroke-linecap="round"
+                          marker-end="@($"url(#{_arrowMarkerId})")" opacity="0.85" />
+                    @* Lower arc: right → left *@
+                    <path d="@($"M {rightX},{startY} Q {midX},{ctrlY2} {leftX},{startY}")"
+                          stroke="#EF4444" stroke-width="2.5" fill="none" stroke-linecap="round"
+                          marker-end="@($"url(#{_arrowMarkerId})")" opacity="0.85" />
+                </svg>
+            }
+        </div>
+        <div class="marble-row">
+            @for (int i = 0; i < Values.Length; i++)
+            {
+                var idx = i;
+                var value = Values[idx];
+                bool isEmpty = IsBuffer && value == 0;
+                bool highlighted = HighlightSet.Contains(idx);
+                string bgColor = isEmpty ? "transparent" : GetValueColor(value);
+                string outlineClass = highlighted ? $"marble-outline-{HighlightType.ToString().ToLowerInvariant()}" : "";
+                string marbleClass = $"marble {outlineClass}".Trim();
+                <div class="marble-slot">
+                    <div class="@marbleClass" style="background: @bgColor;">
+                        @(isEmpty ? "" : value.ToString())
+                    </div>
+                    <div class="marble-index">@idx</div>
                 </div>
-                <div class="marble-index">@idx</div>
-            </div>
-        }
+            }
+        </div>
     </div>
 </div>
 
@@ -44,7 +78,17 @@
     /// <summary>配列内の最大値（HSLグラデーション計算に使用）</summary>
     [Parameter] public int MaxValue { get; set; } = 9;
 
+    private readonly string _arrowMarkerId = $"ah-{Guid.NewGuid().ToString("N")[..8]}";
+
     private HashSet<int> HighlightSet => [.. HighlightIndices];
+
+    /// <summary>ハイライトインデックスを昇順ペアで返す</summary>
+    private (int Left, int Right) GetSortedPair()
+    {
+        var a = HighlightIndices[0];
+        var b = HighlightIndices[1];
+        return a < b ? (a, b) : (b, a);
+    }
 
     /// <summary>
     /// 値に応じたHSLカラーを計算する。
