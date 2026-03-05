@@ -1,10 +1,35 @@
 /* ─── SettingsModal ────────────────────────────────────────────────────── */
 
+@keyframes backdropFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes backdropFadeOut {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
+@keyframes modalIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes modalOut {
+    from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    to   { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+}
+
 .settings-backdrop {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
     z-index: 300;
+    animation: backdropFadeIn 0.2s ease forwards;
+}
+
+.settings-backdrop--leaving {
+    animation: backdropFadeOut 0.2s ease forwards;
 }
 
 .settings-modal {
@@ -21,6 +46,11 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    animation: modalIn 0.2s ease forwards;
+}
+
+.settings-modal--leaving {
+    animation: modalOut 0.2s ease forwards;
 }
 
 .settings-modal__header {
@@ -238,6 +268,16 @@
 }
 
 /* ─── スマホ: フルスクリーンモーダル ──────────────────────────────────── */
+@keyframes modalInMobile {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalOutMobile {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(8px); }
+}
+
 @media (max-width: 767px) {
     .settings-modal {
         top: 0;
@@ -247,5 +287,10 @@
         height: 100vh;
         max-height: 100vh;
         border-radius: 0;
+        animation: modalInMobile 0.2s ease forwards;
+    }
+
+    .settings-modal--leaving {
+        animation: modalOutMobile 0.2s ease forwards;
     }
 }

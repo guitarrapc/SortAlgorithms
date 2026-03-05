@@ -3,13 +3,13 @@
 @inject AlgorithmRegistry AlgorithmRegistry
 @inject IJSRuntime JS
 
-@if (IsOpen)
+@if (IsOpen || _isClosing)
 {
     @* 背景暗転: クリックで閉じる *@
-    <div class="settings-backdrop" @onclick="HandleClose"></div>
+    <div class="settings-backdrop @(_isClosing ? "settings-backdrop--leaving" : "")" @onclick="HandleClose"></div>
 
     @* モーダル本体: クリックが背景に伝播しないよう stopPropagation *@
-    <div class="settings-modal" @onclick:stopPropagation>
+    <div class="settings-modal @(_isClosing ? "settings-modal--leaving" : "")" @onclick:stopPropagation>
 
         @* ── ヘッダー ── *@
         <div class="settings-modal__header">
@@ -154,6 +154,8 @@
     [Parameter, EditorRequired] public RenderSettings RenderSettings { get; set; } = default!;
     [Parameter, EditorRequired] public DebugSettings DebugSettings { get; set; } = default!;
 
+    private bool _isClosing = false;
+
     [Parameter] public bool AutoSwitchToRecommendedSize { get; set; }
     [Parameter] public EventCallback<bool> AutoSwitchToRecommendedSizeChanged { get; set; }
 
@@ -162,6 +164,10 @@
 
     private async Task HandleClose()
     {
+        if (_isClosing) return;
+        _isClosing = true;
+        await Task.Delay(200);
+        _isClosing = false;
         await OnClose.InvokeAsync();
     }
 
