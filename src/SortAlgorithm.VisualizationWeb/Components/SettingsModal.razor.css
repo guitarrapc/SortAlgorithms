@@ -179,7 +179,7 @@
     }
 
 .settings-segment__btn--active {
-    background: var(--color-compare);
+    background: var(--color-accent);
     color: #fff;
     font-weight: 600;
 }
@@ -221,7 +221,7 @@
     }
 
 .toggle-switch input[type="checkbox"]:checked + .toggle-slider {
-    background-color: var(--color-compare);
+    background-color: var(--color-accent);
 }
 
     .toggle-switch input[type="checkbox"]:checked + .toggle-slider::before {
