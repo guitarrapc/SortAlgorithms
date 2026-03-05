@@ -113,6 +113,24 @@ public record TutorialStep
 - **アニメーション**: `marble-pop` / `marble-pop-sm` キーフレーム（0.3s / 0.25s）
 - **通常状態**: `border: 3px solid transparent`（レイアウトシフト防止）
 
+##### マーブルリフト（操作対象の浮き上がり）
+
+操作対象のマーブルは行から**上方向に浮き上がる**ことで、どのマーブルが操作中かを直感的に示す。`transform` ではなく `position: relative; top` を使用し、既存の `transform` アニメーション（scale、translateX）との競合を回避する。
+
+```
+                >               ← 比較記号（矢印エリア内）
+   [5]   ┌───┐   [8]   [1]    ← 操作対象が浮き上がる
+         │ 3 │
+         └───┘
+    0     1     2     3
+```
+
+- **CSS クラス**: `.marble-slot--lifted`（ハイライト対象に付与）
+- **リフト距離**: `top: -20px`（PC）/ `-14px`（タブレット）/ `-10px`（スマホ）
+- **トランジション**: `transition: top 0.25s ease` — ステップ切り替え時に滑らかに浮き上がり/着地
+- **レイアウト影響なし**: `position: relative` + `top` は他のマーブルの位置に影響しない
+- **全操作タイプに適用**: Compare / Swap / IndexRead / IndexWrite / RangeCopy
+
 ##### Swap 矢印（方向インジケーター）
 
 Swap 操作時、マーブル行の**上部**に2本の曲線矢印を SVG で描画し、入れ替えの方向を視覚的に示す。

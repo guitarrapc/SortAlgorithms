@@ -69,7 +69,9 @@
                 string marbleClass = $"marble {outlineClass}".Trim();
                 bool isSwapTarget = HighlightType == OperationType.Swap
                     && HighlightIndices.Length == 2 && highlighted;
-                string slotClass = isSwapTarget ? "marble-slot marble-swapping" : "marble-slot";
+                string liftClass = highlighted ? " marble-slot--lifted" : "";
+                string swapClass = isSwapTarget ? " marble-swapping" : "";
+                string slotClass = $"marble-slot{liftClass}{swapClass}";
                 string slotStyle = "";
                 if (isSwapTarget)
                 {
