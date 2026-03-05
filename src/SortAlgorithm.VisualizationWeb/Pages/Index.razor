@@ -387,7 +387,7 @@ private VisualizationMode SelectedVisualizationMode
                 if (metadata == null) continue;
 
                 var size = Math.Min(_arraySize, Math.Min(metadata.MaxElements,
-                    ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances.Count + 1)));
+                    ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances, algoName)));
 
                 if (ComparisonMode.State.Instances.Count == 0)
                 {
@@ -447,7 +447,7 @@ private VisualizationMode SelectedVisualizationMode
         if (pattern == null) { DebugSettings.Log($"Pattern not found: {SelectedPatternName}"); return; }
 
         var size = Math.Min(ArraySize, Math.Min(metadata.MaxElements,
-            ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances.Count + 1)));
+            ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances, SelectedAlgorithm)));
 
         // 最適化パス: サイズ・パターン不変 かつ 対象アルゴリズム未登録 かつ 既存カードあり
         // → 新配列生成・既存カード再実行を省略し、追加アルゴリズムだけ計測する

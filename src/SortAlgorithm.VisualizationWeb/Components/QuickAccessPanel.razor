@@ -296,7 +296,7 @@
     // ── Comparison Mode 変更 ─────────────────────────────────────────────────
     private int GetEffectiveMaxSize()
     {
-        var comparisonMax = ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances.Count + 1);
+        var comparisonMax = ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances, SelectedAlgorithm);
         var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
         var algoMax = algo?.MaxElements ?? int.MaxValue;
         return Math.Min(comparisonMax, algoMax);
