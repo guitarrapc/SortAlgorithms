@@ -72,7 +72,7 @@ indices = [0, floor(count / 2), count - 1]
 
 ## 🚀 高速再生時の発音制御（B4方式）
 
-Speed Multiplier が高い場合、音の持続時間を短縮し、一定速度を超えたら自動で音を無効化する。
+Speed Multiplier が高い場合、音の持続時間を短縮する。どの速度でも音は鳴り続ける。
 
 ### 持続時間テーブル
 
@@ -82,9 +82,7 @@ Speed Multiplier が高い場合、音の持続時間を短縮し、一定速度
 | 2x 〜 5x | 80 ms | 短縮 |
 | 5x 〜 20x | 40 ms | 短縮 |
 | 20x 〜 50x | 20 ms | 短縮 |
-| **50x 超** | — | **自動無効化**（音なし） |
-
-> 50x 超で自動無効化されるが、UI トグルは ON のまま保持する（速度を下げると再び音が出る）。
+| 50x 超 | 10 ms | 最短 |
 
 ---
 
@@ -146,6 +144,7 @@ gainPerNote = (0.15 × vol) / (expectedOverlap × notes)
 | 5x | 80ms | 4.8 | 0.031 | **0.15** |
 | 10x | 40ms | 2.4 | 0.063 | **0.15** |
 | 20x | 40ms | 2.4 | 0.063 | **0.15** |
+| 100x | 10ms | 0.6 | 0.15 | **0.15** |
 
 ### 安全リミッター
 
@@ -180,15 +179,13 @@ gainPerNote = (0.15 × vol) / (expectedOverlap × notes)
 （Sound ON 時のみ表示）
 Volume              50%
 [══════════════════════]  ← 0%〜100% スライダー
-⚠️ Muted (speed > 50x)   ← Speed > 50x 時のみ表示
 ```
 
 | 項目 | 仕様 |
 |------|------|
 | Sound トグル | デフォルト OFF、ON 時に `soundEngine.initAudio()` を呼ぶ |
 | Volume スライダー | Sound ON 時のみ表示、範囲 0%〜100%、ステップ 5%、デフォルト 50% |
-| Muted 警告 | SpeedMultiplier > 50x の場合に Volume スライダー下部に表示 |
-| 配置コンポーネント | `NormalModeControls.razor`（Auto Reset トグルの下） |
+| 配置コンポーネント | `SettingsModal.razor`（Sound セクション） |
 
 ---
 
@@ -238,9 +235,8 @@ src/SortAlgorithm.VisualizationWeb/
 | Autoplay 対応 | Sound トグル ON（ユーザー操作）後に `AudioContext` を初期化する |
 | 発音操作の限定 | IndexRead / IndexWrite のみ発音（Compare / Swap は直接鳴らさない） |
 | OpsPerFrame 多い時 | 収集数に応じて最大 3音（4〜10）または 1音（11以上）に制限 |
-| 高速時の自動無効化 | SpeedMultiplier > 50x で自動的に音が止まる |
-| 速度戻し後の復活 | 50x 以下に戻すと再び音が出る |
-| 持続時間の段階制御 | 速度に応じて 150/80/40/20ms に変化する |
+| 全速度で発音 | SpeedMultiplier に関わらず音が鳴る（高速時は持続時間が短くなる） |
+| 持続時間の段階制御 | 速度に応じて 150/80/40/20/10ms に変化する |
 | クリックノイズなし | 5ms アタックでゲインをゼロから立ち上げる |
 | ポンピングノイズなし | 適応ゲイン方式により総ゲインを一定化（DynamicsCompressor が作動しない） |
 | プツプツノイズなし | ボイスプール方式により再生中の AudioNode 生成ゼロ化 |
@@ -283,7 +279,8 @@ src/SortAlgorithm.VisualizationWeb/
 | エンベロープ | 即時アタック | **5ms アタック** | クリックノイズ除去 |
 | A4サンプリング閾値 | `OpsPerFrame` 設定値 | **実際の収集数 `count`** | 高速時の過発音防止 |
 | 音量調整 | 対象外 | **Volume スライダー追加** | ユーザー要望 |
-| UI 配置 | `Index.razor` | **`NormalModeControls.razor`** | コンポーネント構造に合わせる |
+| UI 配置 | `Index.razor` | **`SettingsModal.razor`** | コンポーネント構造に合わせる |
+| 高速時の自動無効化 | 50x 超で無音 | **全速度で発音（50x 超は 10ms）** | 高速時も音で進行を把握したい |
 
 
 ## 📋 概要
@@ -361,7 +358,7 @@ indices = [0, floor(count / 2), count - 1]
 
 ## 🚀 高速再生時の発音制御（B4方式）
 
-Speed Multiplier が高い場合、音の持続時間を短縮し、一定速度を超えたら自動で音を無効化する。
+Speed Multiplier が高い場合、音の持続時間を短縮する。どの速度でも音は鳴り続ける。
 
 ### 持続時間テーブル
 
@@ -371,15 +368,13 @@ Speed Multiplier が高い場合、音の持続時間を短縮し、一定速度
 | 2x 〜 5x | 80 ms | 短縮 |
 | 5x 〜 20x | 40 ms | 短縮 |
 | 20x 〜 50x | 20 ms | 短縮 |
-| **50x 超** | — | **自動無効化**（音なし） |
-
-> 50x 超で自動無効化されるが、UI トグルは ON のまま保持する（速度を下げると再び音が出る）。
+| 50x 超 | 10 ms | 最短 |
 
 #### 持続時間の計算ロジック
 
 ```javascript
 function getSoundDuration(speedMultiplier) {
-    if (speedMultiplier > 50)  return 0;   // 無効化
+    if (speedMultiplier > 50)  return 10;   // 最短
     if (speedMultiplier > 20)  return 20;
     if (speedMultiplier > 5)   return 40;
     if (speedMultiplier > 2)   return 80;
@@ -466,16 +461,6 @@ function ensureAudioContext() {
 - Auto Reset トグルの **右隣** に配置
 - ラベル: `🔊 Sound`
 - デフォルト: **OFF**（`false`）
-- 50x 超で音が無効化されている場合、トグルは ON のまま表示（速度を下げると復活）
-
-### 無効化中の視覚フィードバック
-
-Speed Multiplier が 50x 超で音トグルが ON の場合:
-
-```
-[🔊 Sound  ●──○]  ← ONだが速度超過で無音
-                  ⚠️ Muted (speed > 50x)  ← 小文字で注釈
-```
 
 ---
 
@@ -510,7 +495,7 @@ if (SoundEnabled)
 {
     var frequencies = SampleFrequencies(frameOps, OperationsPerFrame, _currentArraySize);
     var duration = GetSoundDuration(SpeedMultiplier);
-    if (duration > 0 && frequencies.Length > 0)
+    if (frequencies.Length > 0)
     {
         await _js.InvokeVoidAsync("soundEngine.playNotes", frequencies, duration);
     }
@@ -553,9 +538,8 @@ private float[] SampleFrequencies(IReadOnlyList<SortOperation> frameOps, int ops
 | デフォルト OFF | ページロード時に音が鳴らない |
 | Autoplay 対応 | ユーザー操作前に `AudioContext` を生成しない |
 | OpsPerFrame 多い時 | 最大発音数が 3（4〜10） or 1（11以上）に制限される |
-| 高速時の自動無効化 | SpeedMultiplier > 50 で自動的に音が止まる |
-| 速度戻し後の復活 | 50x 以下に戻すと再び音が出る |
-| 持続時間の段階制御 | 速度に応じて 150/80/40/20ms に変化する |
+| 全速度で発音 | SpeedMultiplier に関わらず音が鳴る（高速時は持続時間が短くなる） |
+| 持続時間の段階制御 | 速度に応じて 150/80/40/20/10ms に変化する |
 | エンベロープ | 急激に音が切れない（フェードアウトあり） |
 | 音量制限 | 複数音の重なりでクリッピングしない（gain ≤ 0.3） |
 | JS 呼び出し最適化 | フレームあたり最大 1回のみ JS Interop を呼ぶ |

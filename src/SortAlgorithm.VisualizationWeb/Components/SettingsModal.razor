@@ -86,10 +86,6 @@
                         <input type="range" min="0" max="1" step="0.05"
                                @bind="Playback.SoundVolume"
                                class="settings-slider" />
-                        @if (Playback.SpeedMultiplier > 50)
-                        {
-                            <span class="settings-warn">⚠ Muted when speed &gt; 50x</span>
-                        }
                     </div>
 
                 </div>

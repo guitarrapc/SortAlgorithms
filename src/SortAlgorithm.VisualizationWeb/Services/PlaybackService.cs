@@ -353,8 +353,8 @@ public class PlaybackService : IDisposable
         var effectiveOps = Math.Min(OperationsPerFrame * framesToProcess,
                                     _operations.Count - State.CurrentOperationIndex);
 
-        // 音: 発音対象フレームかどうか判定（SpeedMultiplier > 50 は自動無効）
-        var soundActive = SoundEnabled && SpeedMultiplier <= 50.0;
+        // 音: 発音対象フレームかどうか判定
+        var soundActive = SoundEnabled;
         if (soundActive) _soundFreqBuffer.Clear();
 
         for (int i = 0; i < effectiveOps && State.CurrentOperationIndex < _operations.Count; i++)
@@ -715,11 +715,11 @@ public class PlaybackService : IDisposable
     }
 
     /// <summary>
-    /// 仕様 B4: SpeedMultiplier に応じた発音持続時間（ms）を返す。50x 超は 0（無効）。
+    /// 仕様 B4: SpeedMultiplier に応じた発音持続時間（ms）を返す。全速度で発音する。
     /// </summary>
     private static int GetSoundDuration(double speedMultiplier) => speedMultiplier switch
     {
-        > 50 => 0,
+        > 50 => 10,
         > 20 => 20,
         > 5  => 40,
         > 2  => 80,
