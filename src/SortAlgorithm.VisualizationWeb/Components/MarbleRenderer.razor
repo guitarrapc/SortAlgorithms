@@ -108,11 +108,11 @@
                     <div class="@marbleClass" style="background: @bgColor;">
                         @(isEmpty ? "" : value.ToString())
                     </div>
+                    <div class="marble-index">@idx</div>
                     @if (IsWriteTarget(idx))
                     {
                         <div class="marble-ghost">@WritePreviousValue → @value</div>
                     }
-                    <div class="marble-index">@idx</div>
                 </div>
             }
         </div>
