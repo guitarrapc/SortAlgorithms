@@ -454,33 +454,86 @@ input[type="range"] {
         top: 0.5rem;
     }
 
-.loading-progress {
-    position: relative;
-    display: block;
-    width: 8rem;
-    height: 8rem;
-    margin: 20vh auto 1rem auto;
+/* ── Loading screen ── */
+.loading-screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    background: #181d1a;
+    z-index: 9999;
 }
 
-    .loading-progress circle {
-        fill: none;
-        stroke: var(--color-compare);
-        stroke-width: 0.6rem;
-        transform-origin: 50% 50%;
-        transform: rotate(-90deg);
-    }
+/* Animated sorting bars */
+.loading-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 120px;
+    padding: 0 1rem;
+}
 
-        .loading-progress circle:last-child {
-            stroke: var(--color-sorted);
-            stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
-            transition: stroke-dasharray 0.05s ease-in-out;
-        }
+.loading-bar {
+    width: 10px;
+    border-radius: 3px 3px 0 0;
+    animation: bar-sort 2.8s cubic-bezier(.4,0,.2,1) infinite;
+    animation-delay: calc(var(--i) * 0.12s);
+}
 
+@keyframes bar-sort {
+    0%   { height: var(--h); background: #3b82f6; }
+    15%  { background: #a855f7; transform: translateY(-8px); }
+    30%  { height: calc(100% - (100% - var(--h))); background: #fbbf24; }
+    50%  { height: calc(var(--i) * 6% + 8%); background: #ef4444; transform: translateY(0); }
+    70%  { background: #10b981; }
+    85%  { height: calc(var(--i) * 5.5% + 5%); background: #10b981; }
+    100% { height: var(--h); background: #3b82f6; }
+}
+
+/* Title */
+.loading-title {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #ffffff;
+    text-shadow: 0 0 30px rgba(127,168,111,0.35);
+    animation: title-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes title-pulse {
+    0%, 100% { opacity: 0.8; text-shadow: 0 0 30px rgba(127,168,111,0.25); }
+    50%      { opacity: 1;   text-shadow: 0 0 40px rgba(127,168,111,0.5); }
+}
+
+/* Progress track */
+.loading-progress-track {
+    width: min(260px, 70vw);
+    height: 4px;
+    background: #374151;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.loading-progress-fill {
+    height: 100%;
+    width: calc(var(--blazor-load-percentage, 0%) * 1);
+    background: linear-gradient(90deg, #7fa86f, #10b981);
+    border-radius: 2px;
+    transition: width 0.15s ease-out;
+    box-shadow: 0 0 8px rgba(127,168,111,0.5);
+}
+
+/* Percentage text */
 .loading-progress-text {
-    position: absolute;
-    text-align: center;
-    font-weight: bold;
-    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #b8c1d0;
+    letter-spacing: 0.05em;
 }
 
 
@@ -549,35 +602,7 @@ a, .btn-link {
         content: "An error has occurred."
     }
 
-.loading-progress {
-    position: absolute;
-    display: block;
-    width: 8rem;
-    height: 8rem;
-    inset: 20vh 0 auto 0;
-    margin: 0 auto 0 auto;
-}
-
-    .loading-progress circle {
-        fill: none;
-        stroke: #e0e0e0;
-        stroke-width: 0.6rem;
-        transform-origin: 50% 50%;
-        transform: rotate(-90deg);
-    }
-
-        .loading-progress circle:last-child {
-            stroke: #1b6ec2;
-            stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
-            transition: stroke-dasharray 0.05s ease-in-out;
-        }
-
-.loading-progress-text {
-    position: absolute;
-    text-align: center;
-    font-weight: bold;
-    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
-}
+/* Second loading-progress block removed — replaced by .loading-screen above */
 
     .loading-progress-text:after {
         content: var(--blazor-load-percentage-text, "Loading");
