@@ -48,10 +48,13 @@ sealed class BstTracker : IVisualizationTracker
 
     public void Process(SortOperation op, int[] mainArray, Dictionary<int, int[]> buffers)
     {
-        _cachedSnapshot = null;
         _cachedNarrative = null;
 
+        // BUFFER_TREE operations (BufferId1 = -1) are AVL internal node accesses.
+        // Skip them but preserve the previous _cachedSnapshot so the tree stays visible.
         if (op.BufferId1 != 0) return;
+
+        _cachedSnapshot = null;
 
         if (op.Type == OperationType.IndexRead)
         {
