@@ -209,6 +209,8 @@ public static class PDQSort
             // Use insertion sort for small arrays
             if (size < InsertionSortThreshold)
             {
+                s.Context.OnRole(begin, BUFFER_MAIN, RoleType.None);
+
                 if (leftmost)
                 {
                     InsertionSort.SortCore(s, begin, end);
@@ -247,6 +249,7 @@ public static class PDQSort
 
             // Partition and detect equal elements block
             s.Context.OnPhase(SortPhase.QuickSortPartition, begin, end - 1);
+            s.Context.OnRole(begin, BUFFER_MAIN, RoleType.Pivot);
             var (equalLeft, equalRight, alreadyPartitioned) = PartitionRightSkipEquals(s, begin, end);
 
             // Calculate sizes excluding the equal block
