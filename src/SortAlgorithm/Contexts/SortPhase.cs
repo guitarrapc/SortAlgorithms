@@ -236,6 +236,18 @@ public enum SortPhase
     /// </summary>
     BogoShuffle,
 
+    /// <summary>
+    /// Slow Sort: settling the maximum of [start..end] at position end.
+    /// param1=start (subrange start), param2=end (subrange end, receives the settled max)
+    /// </summary>
+    SlowSortSettle,
+
+    /// <summary>
+    /// Stooge Sort: one of the three recursive 2/3-passes.
+    /// param1=start, param2=end (of the current sub-pass range), param3=pass (1=first 2/3, 2=last 2/3, 3=repeat first 2/3)
+    /// </summary>
+    StoogeSortPass,
+
     // ── Distribution family ──────────────────────────────────────────────────
 
     /// <summary>

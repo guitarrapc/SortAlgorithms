@@ -308,6 +308,14 @@ public static class TutorialStepBuilder
             SortAlgorithm.Contexts.SortPhase.BitonicLevel              => $"Level k={p1}: building bitonic sequence of size {p1} (count={p2})",
             SortAlgorithm.Contexts.SortPhase.BitonicStage              => $"Stage j={p1}: compare-swap at distance {p1} within level {p2}",
             SortAlgorithm.Contexts.SortPhase.BogoShuffle               => $"Shuffle attempt #{p1}",
+            SortAlgorithm.Contexts.SortPhase.SlowSortSettle            => $"Settle max of [{p1}..{p2}] at position {p2}",
+            SortAlgorithm.Contexts.SortPhase.StoogeSortPass            => p3 switch
+            {
+                1 => $"Pass 1/3: sort first 2/3 [{p1}..{p2}]",
+                2 => $"Pass 2/3: sort last 2/3 [{p1}..{p2}]",
+                3 => $"Pass 3/3: sort first 2/3 again [{p1}..{p2}]",
+                _ => string.Empty,
+            },
             SortAlgorithm.Contexts.SortPhase.RadixPass                 => $"Radix pass: digit {p1} (0=least significant)",
             SortAlgorithm.Contexts.SortPhase.DistributionCount         => "Count: counting element occurrences",
             SortAlgorithm.Contexts.SortPhase.DistributionAccumulate    => "Accumulate: computing bucket offsets (prefix sum)",

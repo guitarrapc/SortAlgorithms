@@ -131,12 +131,18 @@ public static class SlowSort
         SortCore(span, m + 1, end);
 
         // Ensure the overall maximum is at position end
+        span.Context.OnPhase(SortPhase.SlowSortSettle, start, end);
         if (span.Compare(m, end) > 0)
         {
             span.Swap(m, end);
         }
 
+        // Mark end as settled maximum, then sort the remaining [start..end-1]
+        span.Context.OnRole(end, BUFFER_MAIN, RoleType.CurrentMax);
+
         // Recursively sort the remaining elements (excluding the maximum at end)
         SortCore(span, start, end - 1);
+
+        span.Context.OnRole(end, BUFFER_MAIN, RoleType.None);
     }
 }

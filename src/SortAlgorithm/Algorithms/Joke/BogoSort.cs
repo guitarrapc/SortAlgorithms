@@ -78,8 +78,11 @@ public static class BogoSort
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
+        var attempt = 0;
         while (!IsSorted(s))
         {
+            attempt++;
+            context.OnPhase(SortPhase.BogoShuffle, attempt);
             Shuffle(s);
         }
     }
