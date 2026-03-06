@@ -72,6 +72,10 @@ public sealed class StatisticsContext : ISortContext
             Interlocked.Add(ref _indexWriteCount, (ulong)length);
     }
 
+    public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0) { }
+
+    public void OnRole(int index, int bufferId, RoleType role) { }
+
     /// <summary>
     /// Resets all operation counters to zero.
     /// </summary>

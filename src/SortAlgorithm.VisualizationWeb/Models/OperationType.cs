@@ -18,5 +18,11 @@ public enum OperationType
     IndexWrite,
     
     /// <summary>範囲コピー（連続した要素をまとめてコピー）</summary>
-    RangeCopy
+    RangeCopy,
+
+    /// <summary>アルゴリズムのフェーズ通知（チュートリアル用メタデータ）</summary>
+    Phase,
+
+    /// <summary>配列要素への役割付与（チュートリアル用メタデータ）</summary>
+    RoleAssign,
 }

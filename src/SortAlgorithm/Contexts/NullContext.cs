@@ -27,4 +27,10 @@ public readonly struct NullContext : ISortContext
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null) { }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0) { }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnRole(int index, int bufferId, RoleType role) { }
 }

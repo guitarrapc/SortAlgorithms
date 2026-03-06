@@ -137,16 +137,24 @@ public static class SelectionSort
     {
         for (var i = first; i < last - 1; i++)
         {
+            s.Context.OnPhase(SortPhase.SelectionFindMin, i, last - 1);
             var min = i;
+            s.Context.OnRole(min, BUFFER_MAIN, RoleType.CurrentMin);
 
             // Find the index of the minimum element
             for (var j = i + 1; j < last; j++)
             {
                 if (s.Compare(j, min) < 0)
                 {
+                    // Clear old CurrentMin role, set new one
+                    s.Context.OnRole(min, BUFFER_MAIN, RoleType.None);
                     min = j;
+                    s.Context.OnRole(min, BUFFER_MAIN, RoleType.CurrentMin);
                 }
             }
+
+            // Clear CurrentMin role before swap
+            s.Context.OnRole(min, BUFFER_MAIN, RoleType.None);
 
             // Swap the found minimum element with the first element of the unsorted part
             if (min != i)

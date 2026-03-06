@@ -175,17 +175,26 @@
             {
                 @* ─── ナラティブパネル ────────────────────────────────────────── *@
                 <div class="tutorial-narrative-panel">
-                    <div class="narrative-badge">
-                        @if (_currentStepIndex < 0)
-                        {
-                            <span>Initial State</span>
-                        }
-                        else
-                        {
-                            <span>Step @(_currentStepIndex + 1) / @_steps.Count</span>
-                        }
+                    @{
+                        var currentPhase = GetCurrentPhase();
+                    }
+                    @if (!string.IsNullOrEmpty(currentPhase))
+                    {
+                        <div class="phase-bar">@currentPhase</div>
+                    }
+                    <div class="narrative-row">
+                        <div class="narrative-badge">
+                            @if (_currentStepIndex < 0)
+                            {
+                                <span>Initial State</span>
+                            }
+                            else
+                            {
+                                <span>Step @(_currentStepIndex + 1) / @_steps.Count</span>
+                            }
+                        </div>
+                        <div class="narrative-text">@GetCurrentNarrative()</div>
                     </div>
-                    <div class="narrative-text">@GetCurrentNarrative()</div>
                 </div>
 
                 @* ─── 表示切替トグル（ヒープ木・BST・バケット・ネットワーク対応アルゴリズムのみ） ──────────── *@
@@ -256,8 +265,9 @@
                                         MaxValue="@_maxValue"
                                         StepIndex="@_currentStepIndex"
                                         ShellGap="@GetCurrentShellGap()"
+                                        Roles="@GetCurrentRoles()"
                                         Label="Main Array" />
-                        <DistributionBucketRenderer Snapshot="@GetCurrentDistribution()"
+                        <DistributionBucketRenderer
                                                     MaxValue="@_maxValue"
                                                     StepIndex="@_currentStepIndex"
                                                     Label="Buckets" />
@@ -302,6 +312,7 @@
                                         MaxValue="@_maxValue"
                                         StepIndex="@_currentStepIndex"
                                         ShellGap="@GetCurrentShellGap()"
+                                        Roles="@GetCurrentRoles()"
                                         Label="Main Array" />
                     }
 
@@ -775,6 +786,12 @@
         => _currentStepIndex < 0
             ? $"This is the array before sorting. Follow {_selectedAlgorithm?.Name} step by step."
             : _steps[_currentStepIndex].Narrative;
+
+    private string GetCurrentPhase()
+        => _currentStepIndex < 0 ? string.Empty : _steps[_currentStepIndex].Phase;
+
+    private Dictionary<int, SortAlgorithm.Contexts.RoleType> GetCurrentRoles()
+        => _currentStepIndex < 0 ? [] : _steps[_currentStepIndex].Roles;
 
     private IEnumerable<int> GetCurrentBufferIds()
     {

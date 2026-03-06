@@ -37,22 +37,45 @@ public static class TutorialStepBuilder
         var bufferArrays = InitializeBufferArrays(initialArray.Length, operations);
         var tracker = CreateTracker(hint, lsdRadix, initialArray);
 
+        // Phase / Role 伝播用の状態
+        string currentPhase = string.Empty;
+        var currentRoles = new Dictionary<int, SortAlgorithm.Contexts.RoleType>();
+
         int opIdx = 0;
         while (opIdx < operations.Count)
         {
+            var op = operations[opIdx];
+
+            // Phase / RoleAssign はステップを生成せず内部状態を更新して次へ進む
+            if (op.Type == OperationType.Phase)
+            {
+                currentPhase = BuildPhaseText(op.PhaseKind, op.Index1, op.Index2, op.Length);
+                opIdx++;
+                continue;
+            }
+            if (op.Type == OperationType.RoleAssign && op.RoleValue.HasValue)
+            {
+                if (op.RoleValue.Value == SortAlgorithm.Contexts.RoleType.None)
+                    currentRoles.Remove(op.Index1);
+                else
+                    currentRoles[op.Index1] = op.RoleValue.Value;
+                opIdx++;
+                continue;
+            }
+
             int groupEnd = TryDetectInsertionGroup(operations, opIdx, mainArray);
 
             if (groupEnd > opIdx)
             {
                 // Grouped insertion step: Read + shifts + insert → 1 logical step
                 var step = BuildGroupedInsertionStep(operations, opIdx, groupEnd, mainArray, bufferArrays);
-                steps.Add(tracker.Decorate(step));
+                var decorated = tracker.Decorate(step);
+                steps.Add(decorated with { Phase = currentPhase, Roles = new Dictionary<int, SortAlgorithm.Contexts.RoleType>(currentRoles) });
                 opIdx = groupEnd + 1;
             }
             else
             {
                 // Individual step
-                var op = operations[opIdx];
 
                 // 1. Process: tracker が内部状態を更新する (ApplyOperation 前)
                 tracker.Process(op, mainArray, bufferArrays);
@@ -77,6 +100,8 @@ public static class TutorialStepBuilder
                     WriteSourceIndex = writeSourceIndex,
                     WritePreviousValue = writePreviousValue,
                     Narrative = narrative,
+                    Phase = currentPhase,
+                    Roles = new Dictionary<int, SortAlgorithm.Contexts.RoleType>(currentRoles),
                 };
 
                 // 5. Decorate: tracker がビジュアライゼーション固有フィールドを追加
@@ -209,6 +234,10 @@ public static class TutorialStepBuilder
 
         foreach (var op in operations)
         {
+            // Phase / RoleAssign はバッファーサイズ計算の対象外
+            if (op.Type is OperationType.Phase or OperationType.RoleAssign)
+                continue;
+
             if (op.BufferId1 > 0)
             {
                 int size = op.Type == OperationType.RangeCopy
@@ -231,6 +260,20 @@ public static class TutorialStepBuilder
             kv => kv.Key,
             kv => new int[Math.Max(kv.Value, mainArrayLength)]);
     }
+
+    // ─── Phase text assembly ────────────────────────────────────────────────
+
+    /// <summary>
+    /// SortPhase 種別と数値パラメータからチュートリアル表示用のフェーズテキストを組み立てる。
+    /// 文字列アロケーションはここ（チュートリアル側）でのみ発生させる。
+    /// </summary>
+    private static string BuildPhaseText(SortAlgorithm.Contexts.SortPhase phase, int p1, int p2, int p3)
+        => phase switch
+        {
+            SortAlgorithm.Contexts.SortPhase.BubblePass       => $"Pass {p1}/{p2}: bubbling max to position {p3}",
+            SortAlgorithm.Contexts.SortPhase.SelectionFindMin => $"Find minimum in [{p1}..{p2}]",
+            _ => string.Empty,
+        };
 
     // ─── Step info generation ──────────────────────────────────────────────
 

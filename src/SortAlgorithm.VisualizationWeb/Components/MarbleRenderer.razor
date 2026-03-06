@@ -108,6 +108,10 @@
                 }
                 <div @key="@(isSwapTarget ? (object)$"s{StepIndex}-{idx}" : idx)"
                      class="@slotClass" style="@slotStyle">
+                    @if (Roles.TryGetValue(idx, out var role) && role != SortAlgorithm.Contexts.RoleType.None)
+                    {
+                        <div class="marble-role-badge" style="background: @GetRoleBadgeColor(role);" title="@role">@GetRoleBadgeLabel(role)</div>
+                    }
                     <div class="@marbleClass" style="background: @bgColor;">
                         @(isEmpty ? "" : value.ToString())
                     </div>
@@ -165,6 +169,11 @@
     /// </summary>
     [Parameter] public int? ShellGap { get; set; }
 
+    /// <summary>
+    /// 各インデックスに付与された役割マーカー（例: { 3: Pivot }）。
+    /// </summary>
+    [Parameter] public Dictionary<int, SortAlgorithm.Contexts.RoleType> Roles { get; set; } = [];
+
     private readonly string _arrowMarkerId = $"ah-{Guid.NewGuid().ToString("N")[..8]}";
     private readonly string _writeArrowMarkerId = $"wh-{Guid.NewGuid().ToString("N")[..8]}";
 
@@ -219,4 +228,27 @@
         ];
         return palette[subgroup % palette.Length];
     }
+
+    /// <summary>ロールタイプに対応するバッジ情報を返す</summary>
+    private static string GetRoleBadgeColor(SortAlgorithm.Contexts.RoleType role)
+        => role switch
+        {
+            SortAlgorithm.Contexts.RoleType.Pivot        => "#EAB308",
+            SortAlgorithm.Contexts.RoleType.CurrentMin   => "#FBBF24",
+            SortAlgorithm.Contexts.RoleType.CurrentMax   => "#F97316",
+            SortAlgorithm.Contexts.RoleType.LeftPointer  => "#38BDF8",
+            SortAlgorithm.Contexts.RoleType.RightPointer => "#4ADE80",
+            _ => "transparent"
+        };
+
+    private static string GetRoleBadgeLabel(SortAlgorithm.Contexts.RoleType role)
+        => role switch
+        {
+            SortAlgorithm.Contexts.RoleType.Pivot        => "P",
+            SortAlgorithm.Contexts.RoleType.CurrentMin   => "min",
+            SortAlgorithm.Contexts.RoleType.CurrentMax   => "max",
+            SortAlgorithm.Contexts.RoleType.LeftPointer  => "L",
+            SortAlgorithm.Contexts.RoleType.RightPointer => "R",
+            _ => ""
+        };
 }

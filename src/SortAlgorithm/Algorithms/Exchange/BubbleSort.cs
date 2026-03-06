@@ -83,8 +83,11 @@ public static class BubbleSort
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         var n = s.Length - 1;
+        int pass = 1;
+        int totalPasses = n;
         while (n > 0)
         {
+            context.OnPhase(SortPhase.BubblePass, pass, totalPasses, n);
             var lastSwapped = 0;
             for (var j = 0; j < n; j++)
             {
@@ -97,6 +100,7 @@ public static class BubbleSort
             // Early termination: if no swaps occurred, the array is already sorted
             // Next pass only needs to check up to the last swap position
             n = lastSwapped;
+            pass++;
         }
     }
 }

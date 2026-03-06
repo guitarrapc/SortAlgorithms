@@ -28,7 +28,16 @@ public record SortOperation
     
     /// <summary>書き込まれる値（IndexWriteの場合）</summary>
     public int? Value { get; init; }
-    
+
     /// <summary>コピーされる値の配列（RangeCopyの場合）</summary>
     public int[]? Values { get; init; }
+
+    /// <summary>
+    /// フェーズ種別（Phase 操作の場合）。
+    /// param1/param2/param3 は既存の Index1/Index2/Length フィールドで保持する。
+    /// </summary>
+    public SortAlgorithm.Contexts.SortPhase PhaseKind { get; init; }
+
+    /// <summary>ロールタイプ（RoleAssign 操作の場合、Index1 がインデックス、BufferId1 がバッファーID）</summary>
+    public SortAlgorithm.Contexts.RoleType? RoleValue { get; init; }
 }

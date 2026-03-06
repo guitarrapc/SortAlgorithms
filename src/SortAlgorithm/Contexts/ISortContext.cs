@@ -49,5 +49,26 @@ public interface ISortContext
     /// <param name="destinationBufferId">Destination buffer identifier (0 = main array, 1+ = auxiliary buffers, -1 = external)</param>
     /// <param name="values">The actual values being copied (used for visualization accuracy). May be null if values are not available.</param>
     void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null);
+
+    /// <summary>
+    /// Announces the current algorithm phase using structured data.
+    /// The tutorial layer assembles the display string from <paramref name="phase"/> and its parameters.
+    /// Implementations that do not support tutorial visualization may implement this as a no-op.
+    /// </summary>
+    /// <param name="phase">Phase kind. Determines how parameters are interpreted.</param>
+    /// <param name="param1">First phase parameter (meaning depends on <paramref name="phase"/>).</param>
+    /// <param name="param2">Second phase parameter (meaning depends on <paramref name="phase"/>).</param>
+    /// <param name="param3">Third phase parameter (meaning depends on <paramref name="phase"/>).</param>
+    void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0);
+
+    /// <summary>
+    /// Assigns a semantic role to a specific array element (e.g., Pivot, CurrentMin).
+    /// The role persists across steps until explicitly cleared with <see cref="RoleType.None"/>.
+    /// Implementations that do not support tutorial visualization may implement this as a no-op.
+    /// </summary>
+    /// <param name="index">The zero-based index of the element</param>
+    /// <param name="bufferId">Buffer identifier (0 = main array, 1+ = auxiliary buffers)</param>
+    /// <param name="role">The role to assign; use <see cref="RoleType.None"/> to clear</param>
+    void OnRole(int index, int bufferId, RoleType role);
 }
 
