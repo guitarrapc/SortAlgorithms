@@ -600,7 +600,7 @@ Pages/
 | アルゴリズム | BST 表示 | 備考 |
 |---|---|---|
 | Unbalanced binary tree sort | ✅ | 非平衡 BST（右子 = 値 ≥ 親）、挿入順 ID |
-| Balanced binary tree sort | ❌（将来対応） | 回転操作の専用表示が必要 |
+| Balanced binary tree sort (AVL) | ✅ | 平衡 BST（回転後の木を表示）、balance factor ラベル + 回転ノードハイライト |
 
 ##### BST のレイアウト
 
@@ -689,6 +689,172 @@ Services/
 Pages/
   TutorialPage.razor             ← 変更: IsBstView / GetCurrentBst / BstTreeRenderer
   TutorialPage.razor.css         ← 変更: BST tree スタイル追加
+```
+
+---
+
+#### AVL 木表示（BalancedBinaryTreeSort 専用ビジュアライゼーション）
+
+`BalancedBinaryTreeSort` では AVL 木（自己平衡二分探索木）を SVG で描画し、挿入フェーズで自動的に行われる回転操作を可視化する。BST 表示を拡張し、balance factor ラベルと回転ノードのハイライトを追加する。
+
+##### 対象アルゴリズム
+
+| アルゴリズム | AVL 表示 | 備考 |
+|---|---|---|
+| Balanced binary tree sort (AVL) | ✅ | 回転後の木を表示（Option A: 回転アニメーションなし）、balance factor 付き |
+
+##### AVL 木のレイアウト
+
+BST と同一の in-order rank × BFS depth レイアウトを使用。追加で以下の要素を表示：
+
+```
+配列: [5, 3, 8, 1, 9, 2, 7, 4]  挿入順 → AVL 木
+
+              (5)              ← node 0, bf=0
+             /   \
+           (3)   (8)           ← nodes 1,2, bf=+1, bf=-1
+           / \   / \
+         (1) (4)(7) (9)        ← nodes 3,7,6,4
+         +1  0  0   0
+           \
+           (2)                 ← node 5, bf=0
+            0
+
+balance factor = height(left) - height(right)
+```
+
+- **balance factor ラベル**: ノード下部に小さいフォントで表示
+  - `bf = 0`: 緑色 `#6EE7B7`（完全平衡）
+  - `bf = ±1`: 黄色 `#FCD34D`（許容範囲内）
+  - `bf = ±2`: 赤色 `#F87171`（一時的不均衡、回転直前のみ表示される）
+- **回転ノードのハイライト**: 直前の挿入で回転に関与したノードを紫リング `#A855F7` で表示
+
+##### 操作フェーズと表示
+
+| フェーズ | 操作 | 表示 |
+|---|---|---|
+| **ビルドフェーズ** | `IndexRead(i)` × n | AVL 木に新ノード挿入 → 経路を遡りながら回転（もし必要なら）→ 回転後の木を表示 |
+| **走査フェーズ** | `IndexWrite(j, v)` × n | 全ノード挿入済み AVL 木で現在訪問中のノード（orange）をハイライト |
+
+##### ノードのハイライト規則（優先順位順）
+
+| ノード種別 | 色 | 意味 | 優先度 |
+|---|---|---|---|
+| `NewNode` | green `#4ADE80` | 今回挿入されたノード（挿入先） | 1 |
+| `RotatedNodes` | purple `#A855F7` | 今回の挿入で回転に関与したノード（回転軸 + その親・子） | 2 |
+| `ActiveNode` | orange `#F97316` | 中順走査で現在配列に書き戻し中のノード | 3 |
+| `InsertionPath` | amber `#FBBF24` | 今回の挿入で比較・通過したノード | 4 |
+
+##### 回転タイプの表示
+
+narrative に回転タイプを明示する：
+
+```
+"Insert 9 at depth 2 — LL at 5"   ← LL rotation（左-左ケース）が node 5 で発生
+"Insert 2 at depth 3 — LR at 3"   ← LR rotation（左-右ケース）が node 3 で発生
+"Insert 7 at depth 2"             ← 回転なし（バランス OK）
+```
+
+回転タイプ:
+- **LL**: 左部分木の左子が重い → 右回転
+- **RR**: 右部分木の右子が重い → 左回転
+- **LR**: 左部分木の右子が重い → 左子を左回転してから右回転
+- **RL**: 右部分木の左子が重い → 右子を右回転してから左回転
+
+##### `BstSnapshot` データモデル拡張
+
+AVL 用に `Heights` と `RotatedNodes` を追加：
+
+```csharp
+public record BstSnapshot
+{
+    public int    Size;            // 現在のノード数
+    public int    Root;            // 根 ID (-1 = 空)
+    public int[]  Values;          // ノード ID → 値
+    public int[]  Left;            // ノード ID → 左子 ID (-1 = なし)
+    public int[]  Right;           // ノード ID → 右子 ID (-1 = なし)
+    public int[]  InsertionPath;   // 直前挿入で辿ったノード ID リスト
+    public int    NewNode;         // 直前に挿入されたノード ID (-1 = なし)
+    public int    ActiveNode;      // 走査中の現在ノード ID (-1 = なし)
+    public bool   IsTraversalPhase;
+
+    // AVL-only fields
+    public int[]? Heights;         // ノード ID → height（null = BST モード）
+    public int[]  RotatedNodes;    // 直前の挿入で回転に関与したノード ID リスト
+}
+```
+
+##### 追跡ロジック（TutorialStepBuilder）
+
+```
+trackAvl = (hint == TutorialVisualizationHint.AvlTree)
+
+IndexRead(i) →
+  1. value = mainArray[i] を shadow BST に挿入（経路記録）
+  2. avlHeight[newNode] = 1
+  3. 挿入経路を末尾から遡る:
+     while (pathTop > 0)
+       node = avlPathBuf[--pathTop]
+       AvlUpdateHeight(node)
+       (newRoot, rotType) = AvlBalance(node)  ← LL/RR/LR/RL 判定
+       if rotType != null:
+         rotatedNodes.Add(node)
+         rotatedNodes.Add(newRoot)  // 回転後の新ルート
+         rotationDesc += "{rotType} at {node.Value}"
+       subtreeRoot = newRoot
+  4. bstRoot = 最終 subtreeRoot
+  5. RotatedNodes, narrative に反映
+
+AVL 静的ヘルパー（TutorialStepBuilder 内）:
+  - AvlUpdateHeight(i): height[i] = 1 + max(left.height, right.height)
+  - AvlGetBalance(i): return left.height - right.height
+  - AvlRotateRight(y): x = y.left; y.left = x.right; x.right = y; return x
+  - AvlRotateLeft(x): y = x.right; x.right = y.left; y.left = x; return y
+  - AvlBalance(node):
+      bf = AvlGetBalance(node)
+      if bf > 1:        // Left-heavy
+        if left.bf < 0: left = RotateLeft(left); rotType = "LR"
+        else:           rotType = "LL"
+        return (RotateRight(node), rotType)
+      if bf < -1:       // Right-heavy
+        if right.bf > 0: right = RotateRight(right); rotType = "RL"
+        else:            rotType = "RR"
+        return (RotateLeft(node), rotType)
+      return (node, null)  // already balanced
+```
+
+##### BstTreeRenderer の AVL 対応
+
+- **`avlMode = (Bst.Heights != null)`** で AVL モードを判定
+- **viewH 調整**: `bfPad = avlMode ? 18 : 0` で balance factor ラベル分のスペースを追加
+- **balance factor ラベル**: 各ノード下部に `MarkupString` で SVG `<text>` を出力
+  ```csharp
+  int bf = ComputeBalanceFactor(i);
+  string bfColor = bf == 0 ? "#6EE7B7" : (Math.Abs(bf) == 1 ? "#FCD34D" : "#F87171");
+  string bfText = $"{(bf > 0 ? "+" : "")}{bf}";
+  @(new MarkupString($"<text x=\"{nx}\" y=\"{ny + nodeR + 11}\" ...>{bfText}</text>"))
+  ```
+- **回転ノードハイライト**: `rotatedSet.Contains(i)` で紫リング表示
+- **フェーズバッジ**: "Building AVL Tree" vs "Building BST"
+
+##### アーキテクチャへの影響
+
+```
+Models/
+  BstSnapshot.cs                 ← 変更: Heights, RotatedNodes 追加
+  TutorialVisualizationHint.cs   ← 変更: AvlTree 追加
+  TutorialStep.cs                ← 既存の Bst プロパティで対応
+
+Components/
+  BstTreeRenderer.razor          ← 変更: avlMode 判定、balance factor ラベル、rotated node ハイライト
+
+Services/
+  TutorialStepBuilder.cs         ← 変更: trackAvl, AVL rebalancing block, AVL static helpers (UpdateHeight/Balance/Rotate)
+  AlgorithmRegistry.cs           ← 変更: BalancedBinaryTreeSort に AvlTree 設定
+
+Pages/
+  TutorialPage.razor             ← 変更: IsBstView に AvlTree 追加、GetTreeToggleLabel に "AVL Tree" 追加
+  TutorialPage.razor.css         ← 既存の bst-* スタイルで対応
 ```
 
 #### アーキテクチャへの影響（新規ファイル）
