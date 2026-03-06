@@ -107,12 +107,15 @@ public static class StoogeSort
             var third = (end - start + 1) / 3;
 
             // Sort first 2/3
+            s.Context.OnPhase(SortPhase.StoogeSortPass, start, end - third, 1);
             SortCore(s, start, end - third);
 
             // Sort last 2/3
+            s.Context.OnPhase(SortPhase.StoogeSortPass, start + third, end, 2);
             SortCore(s, start + third, end);
 
             // Sort first 2/3 again
+            s.Context.OnPhase(SortPhase.StoogeSortPass, start, end - third, 3);
             SortCore(s, start, end - third);
         }
     }

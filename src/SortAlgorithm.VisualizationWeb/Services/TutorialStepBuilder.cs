@@ -37,22 +37,45 @@ public static class TutorialStepBuilder
         var bufferArrays = InitializeBufferArrays(initialArray.Length, operations);
         var tracker = CreateTracker(hint, lsdRadix, initialArray);
 
+        // Phase / Role 伝播用の状態
+        string currentPhase = string.Empty;
+        var currentRoles = new Dictionary<int, SortAlgorithm.Contexts.RoleType>();
+
         int opIdx = 0;
         while (opIdx < operations.Count)
         {
+            var op = operations[opIdx];
+
+            // Phase / RoleAssign はステップを生成せず内部状態を更新して次へ進む
+            if (op.Type == OperationType.Phase)
+            {
+                currentPhase = BuildPhaseText(op.PhaseKind, op.Index1, op.Index2, op.Length);
+                opIdx++;
+                continue;
+            }
+            if (op.Type == OperationType.RoleAssign && op.RoleValue.HasValue)
+            {
+                if (op.RoleValue.Value == SortAlgorithm.Contexts.RoleType.None)
+                    currentRoles.Remove(op.Index1);
+                else
+                    currentRoles[op.Index1] = op.RoleValue.Value;
+                opIdx++;
+                continue;
+            }
+
             int groupEnd = TryDetectInsertionGroup(operations, opIdx, mainArray);
 
             if (groupEnd > opIdx)
             {
                 // Grouped insertion step: Read + shifts + insert → 1 logical step
                 var step = BuildGroupedInsertionStep(operations, opIdx, groupEnd, mainArray, bufferArrays);
-                steps.Add(tracker.Decorate(step));
+                var decorated = tracker.Decorate(step);
+                steps.Add(decorated with { Phase = currentPhase, Roles = new Dictionary<int, SortAlgorithm.Contexts.RoleType>(currentRoles) });
                 opIdx = groupEnd + 1;
             }
             else
             {
                 // Individual step
-                var op = operations[opIdx];
 
                 // 1. Process: tracker が内部状態を更新する (ApplyOperation 前)
                 tracker.Process(op, mainArray, bufferArrays);
@@ -77,6 +100,8 @@ public static class TutorialStepBuilder
                     WriteSourceIndex = writeSourceIndex,
                     WritePreviousValue = writePreviousValue,
                     Narrative = narrative,
+                    Phase = currentPhase,
+                    Roles = new Dictionary<int, SortAlgorithm.Contexts.RoleType>(currentRoles),
                 };
 
                 // 5. Decorate: tracker がビジュアライゼーション固有フィールドを追加
@@ -209,6 +234,10 @@ public static class TutorialStepBuilder
 
         foreach (var op in operations)
         {
+            // Phase / RoleAssign はバッファーサイズ計算の対象外
+            if (op.Type is OperationType.Phase or OperationType.RoleAssign)
+                continue;
+
             if (op.BufferId1 > 0)
             {
                 int size = op.Type == OperationType.RangeCopy
@@ -231,6 +260,71 @@ public static class TutorialStepBuilder
             kv => kv.Key,
             kv => new int[Math.Max(kv.Value, mainArrayLength)]);
     }
+
+    // ─── Phase text assembly ────────────────────────────────────────────────
+
+    /// <summary>
+    /// SortPhase 種別と数値パラメータからチュートリアル表示用のフェーズテキストを組み立てる。
+    /// 文字列アロケーションはここ（チュートリアル側）でのみ発生させる。
+    /// </summary>
+    private static string BuildPhaseText(SortAlgorithm.Contexts.SortPhase phase, int p1, int p2, int p3)
+        => phase switch
+        {
+            SortAlgorithm.Contexts.SortPhase.BubblePass                => $"Pass {p1}/{p2}: bubbling max to position {p3}",
+            SortAlgorithm.Contexts.SortPhase.SelectionFindMin          => $"Find minimum in [{p1}..{p2}]",
+            SortAlgorithm.Contexts.SortPhase.CocktailForwardPass       => $"Pass {p1} forward →: bubbling max through [{p2}..{p3}]",
+            SortAlgorithm.Contexts.SortPhase.CocktailBackwardPass      => $"Pass {p1} backward ←: bubbling min through [{p2}..{p3}]",
+            SortAlgorithm.Contexts.SortPhase.CombGapPass               => $"Gap {p1}: comparing elements {p1} apart ({p2} total)",
+            SortAlgorithm.Contexts.SortPhase.CombBubblePass            => $"Bubble phase (gap=1): range [0..{p1}]",
+            SortAlgorithm.Contexts.SortPhase.OddEvenOddPhase           => $"Pass {p1} odd-even: pairs (0,1), (2,3), ...",
+            SortAlgorithm.Contexts.SortPhase.OddEvenEvenPhase          => $"Pass {p1} even-odd: pairs (1,2), (3,4), ...",
+            SortAlgorithm.Contexts.SortPhase.DoubleSelectionFindMinMax => $"Find min & max in [{p1}..{p2}]",
+            SortAlgorithm.Contexts.SortPhase.CycleSortCycle            => $"Cycle from index {p1} (range [0..{p2}])",
+            SortAlgorithm.Contexts.SortPhase.PancakeFindMax            => $"Find max in [{p1}..{p2}]",
+            SortAlgorithm.Contexts.SortPhase.InsertionPass             => $"Inserting [{p1}] into sorted [{p2}..{p1 - 1}]",
+            SortAlgorithm.Contexts.SortPhase.BinaryInsertionPass       => $"Binary inserting [{p1}] into sorted [{p2}..{p1 - 1}]",
+            SortAlgorithm.Contexts.SortPhase.GnomePass                 => $"Gnome at position {p1} / {p2}",
+            SortAlgorithm.Contexts.SortPhase.ShellGapPass              => $"Gap {p1}: pass {p2}/{p3} (h-insertion sort)",
+            SortAlgorithm.Contexts.SortPhase.PairInsertionPass         => $"Inserting pair at [{p1}], [{p1 + 1}] into sorted region",
+            SortAlgorithm.Contexts.SortPhase.LibrarySortPhase          => p1 switch
+            {
+                1 => "Phase 1: initial sort (insertion sort on first block)",
+                2 => "Phase 2: insert remaining elements with gaps",
+                3 => "Phase 3: extract sorted elements from auxiliary array",
+                _ => string.Empty,
+            },
+            SortAlgorithm.Contexts.SortPhase.TreeSortInsert            => $"Insert [{p1}] into BST (element {p1 + 1}/{p2 + 1})",
+            SortAlgorithm.Contexts.SortPhase.TreeSortExtract           => "Extract: in-order traversal → write sorted array",
+            SortAlgorithm.Contexts.SortPhase.HeapBuild                 => $"Build max-heap: [{p1}..{p2}]",
+            SortAlgorithm.Contexts.SortPhase.HeapExtract               => $"Extract max ({p1}/{p2}): move root to sorted region",
+            SortAlgorithm.Contexts.SortPhase.MergeSortMerge            => $"Merge [{p1}..{p2}] + [{p2 + 1}..{p3}]",
+            SortAlgorithm.Contexts.SortPhase.MergePass                 => $"Merge pass {p2}: width {p1} (merging pairs of {p1})",
+            SortAlgorithm.Contexts.SortPhase.MergeInitSort             => $"Initial sort: insertion sort in blocks of {p1}",
+            SortAlgorithm.Contexts.SortPhase.MergeRunDetect            => "Detecting natural runs",
+            SortAlgorithm.Contexts.SortPhase.MergeRunCollapse          => $"Collapsing {p1} run(s) on stack",
+            SortAlgorithm.Contexts.SortPhase.DropMergeDetect           => "Detecting LNS (Longest Nondecreasing Subsequence)",
+            SortAlgorithm.Contexts.SortPhase.DropMergeSort             => $"Sorting {p1} dropped element(s)",
+            SortAlgorithm.Contexts.SortPhase.DropMergeMerge            => $"Merging LNS with {p1} dropped element(s) into [{0}..{p2 - 1}]",
+            SortAlgorithm.Contexts.SortPhase.BitonicLevel              => $"Level k={p1}: building bitonic sequence of size {p1} (count={p2})",
+            SortAlgorithm.Contexts.SortPhase.BitonicStage              => $"Stage j={p1}: compare-swap at distance {p1} within level {p2}",
+            SortAlgorithm.Contexts.SortPhase.BogoShuffle               => $"Shuffle attempt #{p1}",
+            SortAlgorithm.Contexts.SortPhase.SlowSortSettle            => $"Settle max of [{p1}..{p2}] at position {p2}",
+            SortAlgorithm.Contexts.SortPhase.StoogeSortPass            => p3 switch
+            {
+                1 => $"Pass 1/3: sort first 2/3 [{p1}..{p2}]",
+                2 => $"Pass 2/3: sort last 2/3 [{p1}..{p2}]",
+                3 => $"Pass 3/3: sort first 2/3 again [{p1}..{p2}]",
+                _ => string.Empty,
+            },
+            SortAlgorithm.Contexts.SortPhase.RadixPass                 => $"Radix pass: digit {p1} (0=least significant)",
+            SortAlgorithm.Contexts.SortPhase.DistributionCount         => "Count: counting element occurrences",
+            SortAlgorithm.Contexts.SortPhase.DistributionAccumulate    => "Accumulate: computing bucket offsets (prefix sum)",
+            SortAlgorithm.Contexts.SortPhase.DistributionWrite         => "Write: scattering elements to sorted positions",
+            SortAlgorithm.Contexts.SortPhase.QuickSortPartition        => p3 >= 0
+                ? $"Partition [{p1}..{p2}] — pivot at [{p3}]"
+                : $"Partition [{p1}..{p2}]",
+            _ => string.Empty,
+        };
 
     // ─── Step info generation ──────────────────────────────────────────────
 

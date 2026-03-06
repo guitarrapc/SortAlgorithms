@@ -105,6 +105,7 @@ public static class SmoothSort
 
         // Build heap fase
         // Temporary variables for Shift operations within the build phase
+        context.OnPhase(SortPhase.HeapBuild, 0, span.Length - 1);
         int r1 = 0, b1 = 0, c1 = 0;
         
         while (q < span.Length)
@@ -155,6 +156,7 @@ public static class SmoothSort
 
         // Sort fase
         //Debug.WriteLine($"[SmoothSort - Sort] Start q={q}, r={r}, p={p}, b={b}, c={c}");
+        context.OnPhase(SortPhase.HeapExtract, 0, span.Length - 1);
         Trinkle(s, p, b, c, r);
 
         while (q > 1)

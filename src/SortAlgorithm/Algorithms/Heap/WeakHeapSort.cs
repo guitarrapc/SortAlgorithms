@@ -170,6 +170,7 @@ public static class WeakHeapSort
 
             // Phase 1: Build max weak heap (bottom-up merges)
             // After this, offset+0 contains the maximum element
+            s.Context.OnPhase(SortPhase.HeapBuild, offset, offset + n - 1);
             for (var j = n - 1; j > 0; j--)
             {
                 var i = DistinguishedAncestor(j, r);
@@ -178,10 +179,16 @@ public static class WeakHeapSort
 
             // Phase 2: Extract max elements from n-1 down to 2
             // Each iteration moves the current maximum to its final position
+            var totalExtractions = n - 1;
             for (var m = n - 1; m >= 2; m--)
             {
+                s.Context.OnPhase(SortPhase.HeapExtract, n - m, totalExtractions);
+                s.Context.OnRole(offset, BUFFER_MAIN, RoleType.CurrentMax);
+
                 // Move current max (at offset+0) to position offset+m
                 s.Swap(offset, offset + m);
+
+                s.Context.OnRole(offset, BUFFER_MAIN, RoleType.None);
 
                 // Restore weak heap property for reduced heap [0..m-1]
                 // Step 1: Descend the distinguished path from node 1 (root's right child) to a leaf

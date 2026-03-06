@@ -154,17 +154,24 @@ public static class HeapSort
         var n = last - first;
 
         // Build heap
+        s.Context.OnPhase(SortPhase.HeapBuild, first, last - 1);
         for (var i = first + n / 2; i-- > first;)
             FloydHeapify(s, i, n, first);
 
         // Extract elements from heap
+        var totalExtractions = n - 1;
         for (var i = last - 1; i > first; i--)
         {
+            s.Context.OnPhase(SortPhase.HeapExtract, last - i, totalExtractions);
+            s.Context.OnRole(first, BUFFER_MAIN, RoleType.CurrentMax);
+
             // Save max (root) and the last element, then sift down the last element
             var max = s.Read(first);
             var lastVal = s.Read(i);
             Heapify(s, first, i - first, first, lastVal);
             s.Write(i, max);
+
+            s.Context.OnRole(first, BUFFER_MAIN, RoleType.None);
         }
     }
 
@@ -400,16 +407,23 @@ public static class HeapSortNonOptimized
         var n = last - first;
 
         // Build heap
+        s.Context.OnPhase(SortPhase.HeapBuild, first, last - 1);
         for (var i = first + n / 2 - 1; i >= first; i--)
         {
             Heapify(s, i, n, first);
         }
 
         // Extract elements from heap
+        var totalExtractions = n - 1;
         for (var i = last - 1; i > first; i--)
         {
+            s.Context.OnPhase(SortPhase.HeapExtract, last - i, totalExtractions);
+            s.Context.OnRole(first, BUFFER_MAIN, RoleType.CurrentMax);
+
             // Move current root to end
             s.Swap(first, i);
+
+            s.Context.OnRole(first, BUFFER_MAIN, RoleType.None);
 
             // Re-heapify the reduced heap (standard sift-down)
             Heapify(s, first, i - first, first);

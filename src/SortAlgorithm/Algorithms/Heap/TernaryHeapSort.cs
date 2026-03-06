@@ -144,19 +144,26 @@ public static class TernaryHeapSort
         // This reduces comparisons by ~25-30% compared to standard bottom-up heapify
         // In ternary heap, parent of node i is at (i-1)/3
         // So last non-leaf is at (n-2)/3
+        s.Context.OnPhase(SortPhase.HeapBuild, first, last - 1);
         for (var i = first + (n - 2) / 3; i >= first; i--)
         {
             FloydHeapify(s, i, n, first);
         }
 
         // Extract elements from heap
+        var totalExtractions = n - 1;
         for (var i = last - 1; i > first; i--)
         {
+            s.Context.OnPhase(SortPhase.HeapExtract, last - i, totalExtractions);
+            s.Context.OnRole(first, BUFFER_MAIN, RoleType.CurrentMax);
+
             // Save max (root) and the last element, then sift down the last element
             var max = s.Read(first);
             var lastVal = s.Read(i);
             Heapify(s, first, i - first, first, lastVal);
             s.Write(i, max);
+
+            s.Context.OnRole(first, BUFFER_MAIN, RoleType.None);
         }
     }
 

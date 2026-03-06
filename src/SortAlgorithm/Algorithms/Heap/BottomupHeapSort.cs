@@ -176,16 +176,23 @@ public static class BottomupHeapSort
         var n = last - first;
 
         // Build heap using Floyd's bottom-up algorithm
+        s.Context.OnPhase(SortPhase.HeapBuild, first, last - 1);
         for (var i = first + n / 2 - 1; i >= first; i--)
         {
             FloydHeapify(s, i, n, first);
         }
 
         // Extract elements from heap using bottom-up deletion
+        var totalExtractions = n - 1;
         for (var i = last - 1; i > first; i--)
         {
+            s.Context.OnPhase(SortPhase.HeapExtract, last - i, totalExtractions);
+            s.Context.OnRole(first, BUFFER_MAIN, RoleType.CurrentMax);
+
             // Move current root (max) to end
             s.Swap(first, i);
+
+            s.Context.OnRole(first, BUFFER_MAIN, RoleType.None);
 
             // Re-heapify using true bottom-up sift-down
             BottomUpSiftDown(s, first, i - first, first);

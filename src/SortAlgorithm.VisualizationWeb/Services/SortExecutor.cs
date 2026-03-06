@@ -138,12 +138,33 @@ public class SortExecutor(DebugSettings debug)
                             ? Array.ConvertAll(values, v => v is int intVal ? intVal : 0)
                             : null
                     });
+                },
+                onPhase: (phase, p1, p2, p3) =>
+                {
+                    operations.Add(new SortOperation
+                    {
+                        Type = OperationType.Phase,
+                        PhaseKind = phase,
+                        Index1 = p1,
+                        Index2 = p2,
+                        Length = p3,
+                    });
+                },
+                onRole: (index, bufferId, role) =>
+                {
+                    operations.Add(new SortOperation
+                    {
+                        Type = OperationType.RoleAssign,
+                        Index1 = index,
+                        BufferId1 = bufferId,
+                        RoleValue = role
+                    });
                 }
             );
-            
+
             // CompositeContextを作成して両方のコンテキストを組み合わせる
             var compositeContext = new CompositeContext(statisticsContext, visualizationContext);
-            
+
             // 2回目: CompositeContextで操作・統計を記録（NullContextで計測した実行時間を使用）
             algorithm.SortAction(workArray.AsSpan(0, sourceArray.Length), compositeContext);
             
@@ -285,6 +306,27 @@ public class SortExecutor(DebugSettings debug)
                         Values = values?.Length > 0
                             ? Array.ConvertAll(values, v => v is int intVal ? intVal : 0)
                             : null
+                    });
+                },
+                onPhase: (phase, p1, p2, p3) =>
+                {
+                    operations.Add(new SortOperation
+                    {
+                        Type = OperationType.Phase,
+                        PhaseKind = phase,
+                        Index1 = p1,
+                        Index2 = p2,
+                        Length = p3,
+                    });
+                },
+                onRole: (index, bufferId, role) =>
+                {
+                    operations.Add(new SortOperation
+                    {
+                        Type = OperationType.RoleAssign,
+                        Index1 = index,
+                        BufferId1 = bufferId,
+                        RoleValue = role
                     });
                 }
             );

@@ -198,6 +198,7 @@ public static class TimSort
         
         try
         {
+            context.OnPhase(SortPhase.MergeRunDetect);
             var i = first;
             while (i < last)
             {
@@ -249,6 +250,7 @@ public static class TimSort
             }
 
             // Force merge all remaining runs
+            context.OnPhase(SortPhase.MergeRunCollapse, stackSize);
             MergeForceCollapse(s, runBase, runLen, ref stackSize, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
         }
         finally

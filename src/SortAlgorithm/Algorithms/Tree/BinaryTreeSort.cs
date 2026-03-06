@@ -100,11 +100,15 @@ public static class BinaryTreeSort
 
         for (var i = 0; i < s.Length; i++)
         {
+            context.OnPhase(SortPhase.TreeSortInsert, i, s.Length - 1);
+            context.OnRole(i, BUFFER_MAIN, RoleType.RightPointer);
             var value = s.Read(i);
             InsertIterative(ref root, value, comparer, context, ref nodeCounter);
+            context.OnRole(i, BUFFER_MAIN, RoleType.None);
         }
 
         // Traverse the tree in inorder and write elements back into the array.
+        context.OnPhase(SortPhase.TreeSortExtract);
         var n = 0;
         Inorder(s, root, ref n);
     }

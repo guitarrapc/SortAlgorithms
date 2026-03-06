@@ -80,4 +80,16 @@ public record TutorialStep
 
     /// <summary>この操作を日本語で説明するナラティブテキスト</summary>
     public string Narrative { get; init; } = string.Empty;
+
+    /// <summary>
+    /// 現在のアルゴリズムフェーズを説明するテキスト（例: "Pass 1/7: bubbling max to position 7"）。
+    /// 空文字の場合はフェーズバーを非表示にする。前のステップから引き継がれる。
+    /// </summary>
+    public string Phase { get; init; } = string.Empty;
+
+    /// <summary>
+    /// インデックスに付与された役割マーカー（例: { 3: Pivot, 0: LeftPointer }）。
+    /// ステップをまたいで保持され、RoleType.None で明示的にクリアするまで継続する。
+    /// </summary>
+    public Dictionary<int, SortAlgorithm.Contexts.RoleType> Roles { get; init; } = new();
 }

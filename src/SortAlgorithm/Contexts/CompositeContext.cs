@@ -57,4 +57,20 @@ public sealed class CompositeContext : ISortContext
             context.OnRangeCopy(sourceIndex, destinationIndex, length, sourceBufferId, destinationBufferId, values);
         }
     }
+
+    public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0)
+    {
+        foreach (var context in _contexts)
+        {
+            context.OnPhase(phase, param1, param2, param3);
+        }
+    }
+
+    public void OnRole(int index, int bufferId, RoleType role)
+    {
+        foreach (var context in _contexts)
+        {
+            context.OnRole(index, bufferId, role);
+        }
+    }
 }

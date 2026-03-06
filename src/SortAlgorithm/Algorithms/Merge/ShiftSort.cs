@@ -164,6 +164,7 @@ public static class ShiftSort
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Phase 1: Natural Run Detection - scan left to right
+        context.OnPhase(SortPhase.MergeRunDetect);
         // Extends each run as far as possible: non-descending runs grow as-is,
         // strictly descending runs are reversed in-place to produce ascending runs.
         // Builds the ascending boundary sequence directly: [0, b₁, …, bₖ, n]
@@ -258,7 +259,12 @@ public static class ShiftSort
         Split(s, zeroIndices, mid, hi, workBuffer);
 
         // Merge the two sorted halves into [zeroIndices[lo], zeroIndices[hi])
+        s.Context.OnPhase(SortPhase.MergeSortMerge, zeroIndices[lo], zeroIndices[mid] - 1, zeroIndices[hi] - 1);
+        s.Context.OnRole(zeroIndices[lo], BUFFER_MAIN, RoleType.LeftPointer);
+        s.Context.OnRole(zeroIndices[hi] - 1, BUFFER_MAIN, RoleType.RightPointer);
         Merge(s, zeroIndices[lo], zeroIndices[mid], zeroIndices[hi], workBuffer);
+        s.Context.OnRole(zeroIndices[lo], BUFFER_MAIN, RoleType.None);
+        s.Context.OnRole(zeroIndices[hi] - 1, BUFFER_MAIN, RoleType.None);
     }
 
     /// <summary>
