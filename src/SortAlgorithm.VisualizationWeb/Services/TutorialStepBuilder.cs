@@ -295,6 +295,8 @@ public static class TutorialStepBuilder
             },
             SortAlgorithm.Contexts.SortPhase.TreeSortInsert            => $"Insert [{p1}] into BST (element {p1 + 1}/{p2 + 1})",
             SortAlgorithm.Contexts.SortPhase.TreeSortExtract           => "Extract: in-order traversal → write sorted array",
+            SortAlgorithm.Contexts.SortPhase.HeapBuild                 => $"Build max-heap: [{p1}..{p2}]",
+            SortAlgorithm.Contexts.SortPhase.HeapExtract               => $"Extract max ({p1}/{p2}): move root to sorted region",
             _ => string.Empty,
         };
 

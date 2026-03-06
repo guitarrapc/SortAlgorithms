@@ -147,4 +147,18 @@ public enum SortPhase
     /// No parameters used.
     /// </summary>
     TreeSortExtract,
+
+    // ── Heap family ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Heap Sort build phase: constructing the max-heap from the input array.
+    /// param1=first (start index), param2=last-1 (end index)
+    /// </summary>
+    HeapBuild,
+
+    /// <summary>
+    /// Heap Sort extract phase: extracting the max element and shrinking the heap.
+    /// param1=current extraction step (1-based), param2=total extractions (n-1)
+    /// </summary>
+    HeapExtract,
 }
