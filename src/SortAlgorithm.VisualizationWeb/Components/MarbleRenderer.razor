@@ -18,8 +18,8 @@
                 var rightX = ri * unit + marbleHalf;
                 var midX = (leftX + rightX) / 2;
                 var startY = 24;       // arrow_area(56) - lift(20) - scale(4) - glow(4) - margin(4)
-                var ctrlY1 = 4;
-                var ctrlY2 = 14;
+                var ctrlY1 = 2;        // higher arc (left→right): peak near SVG top
+                var ctrlY2 = 2;       // lower arc  (right→left): clearly below ctrlY1
 
                 <svg class="marble-swap-arrows" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="none">
                     <defs>
