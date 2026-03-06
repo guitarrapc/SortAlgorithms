@@ -146,10 +146,13 @@ public static class BitonicSort
         // This determines which "level" of the bitonic network we're building
         for (int k = 2; k <= count; k <<= 1) // Level
         {
+            s.Context.OnPhase(SortPhase.BitonicLevel, k, count);
+
             // Middle loop: comparison distance j (k/2, k/4, ..., 1)
             // This determines the "stage" within each level
             for (int j = k >> 1; j > 0; j >>= 1) // Stage
             {
+                s.Context.OnPhase(SortPhase.BitonicStage, j, k, count);
                 // Inner loop: use 0-based local index for network structure
                 for (int i = 0; i < count; i++) // Local index
                 {
