@@ -436,6 +436,50 @@
     flex: 1;
 }
 
+/* ─── 表示切替トグル ───────────────────────────────────────────────────── */
+.tutorial-view-toggle {
+    display: flex;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 2px;
+    align-self: center;
+    flex-shrink: 0;
+}
+
+.toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+    .toggle-btn svg {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+    }
+
+    .toggle-btn:hover:not(.toggle-btn--active) {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-primary);
+    }
+
+.toggle-btn--active {
+    background: rgba(142, 192, 124, 0.15);
+    color: var(--color-tutorial-accent);
+    border-color: rgba(142, 192, 124, 0.3);
+}
+
 /* ─── マーブルエリア ───────────────────────────────────────────────────── */
 .tutorial-marble-area {
     background: var(--bg-panel);
@@ -449,6 +493,199 @@
     overflow-x: auto;
     flex: 1;
     min-height: 150px;
+}
+
+/* ─── HeapTreeRenderer スコープ外から指定するスタイル ──────────────────── */
+::deep .heap-tree-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+::deep .heap-tree-label {
+    font-size: 0.75rem;
+    color: var(--text-gray);
+    align-self: flex-start;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+::deep .heap-tree-svg {
+    width: 100%;
+    max-width: 640px;
+    height: auto;
+}
+
+::deep .heap-node {
+    transition: opacity 0.25s ease;
+}
+
+::deep .heap-node--highlighted circle {
+    animation: heap-node-pop 0.3s ease;
+}
+
+@keyframes heap-node-pop {
+    0% { transform-origin: center; r: 21; }
+    50% { r: 25; }
+    100% { r: 21; }
+}
+
+::deep .heap-tree-empty {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+::deep .heap-sorted-region {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    flex-wrap: wrap;
+}
+
+::deep .heap-sorted-label {
+    font-size: 0.72rem;
+    color: var(--text-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+::deep .heap-sorted-values {
+    display: flex;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+}
+
+::deep .heap-sorted-marble {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    opacity: 0.7;
+}
+
+/* ─── BstTreeRenderer スコープ外から指定するスタイル ────────────────────── */
+::deep .bst-tree-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+::deep .bst-tree-label {
+    font-size: 0.75rem;
+    color: var(--text-gray);
+    align-self: flex-start;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+::deep .bst-tree-svg {
+    width: 100%;
+    max-width: 760px;
+    height: auto;
+}
+
+::deep .bst-node {
+    transition: opacity 0.2s ease;
+}
+
+::deep .bst-node--highlighted circle:nth-child(2) {
+    animation: bst-node-pop 0.3s ease;
+}
+
+@keyframes bst-node-pop {
+    0%   { transform-box: fill-box; transform-origin: center; transform: scale(1); }
+    50%  { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+::deep .bst-tree-empty {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+::deep .bst-phase-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+}
+
+::deep .bst-phase-badge--build {
+    background: rgba(251, 191, 36, 0.15);
+    color: #FBBF24;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+::deep .bst-phase-badge--traversal {
+    background: rgba(249, 115, 22, 0.15);
+    color: #F97316;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+/* ─── RecursionTreeRenderer ─────────────────────────────────────────── */
+::deep .recursion-tree-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+::deep .recursion-tree-label {
+    font-size: 0.75rem;
+    color: var(--text-gray);
+    align-self: flex-start;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+::deep .recursion-tree-svg {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+::deep .recursion-node {
+    transition: opacity 0.2s ease;
+}
+
+::deep .recursion-node--active rect:nth-child(2) {
+    animation: recursion-node-pop 0.3s ease;
+}
+
+@keyframes recursion-node-pop {
+    0%   { transform-box: fill-box; transform-origin: center; transform: scale(1); }
+    50%  { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+::deep .recursion-tree-empty {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: 2rem;
+    text-align: center;
 }
 
 /* ─── MarbleRenderer スコープ外から指定するスタイル ───────────────────── */
@@ -475,7 +712,7 @@
 }
 
 ::deep .marble-arrow-area {
-    height: 32px;
+    height: 56px;
     width: 100%;
 }
 
@@ -600,6 +837,252 @@
     animation: marble-pop 0.3s ease;
 }
 
+/* ─── DistributionBucketRenderer スコープ外から指定するスタイル ──────────── */
+::deep .dist-bucket-view {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+::deep .dist-label-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+::deep .dist-row-label {
+    font-size: 0.75rem;
+    color: var(--text-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+::deep .dist-phase-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    text-transform: capitalize;
+}
+
+::deep .dist-phase-scatter {
+    background: rgba(251, 191, 36, 0.15);
+    color: #FBBF24;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+::deep .dist-phase-gather {
+    background: rgba(249, 115, 22, 0.15);
+    color: #F97316;
+    border: 1px solid rgba(249, 115, 22, 0.35);
+}
+
+::deep .dist-pass-label {
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+::deep .dist-empty {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+::deep .dist-buckets {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 0.25rem 0.5rem;
+}
+
+::deep .dist-bucket {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+::deep .dist-bucket-body {
+    display: flex;
+    flex-direction: column-reverse; /* 最後に追加した要素が上（天辺）に来る */
+    align-items: center;
+    gap: 3px;
+    min-height: 56px;            /* 空バケット時も枠を確保 */
+    width: 50px;
+    padding: 4px 3px;
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Scatter アクティブバケット: amber */
+::deep .dist-bucket--scatter .dist-bucket-body {
+    border-color: rgba(251, 191, 36, 0.55);
+    background: rgba(251, 191, 36, 0.06);
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
+}
+
+/* Gather アクティブバケット: orange */
+::deep .dist-bucket--gather .dist-bucket-body {
+    border-color: rgba(249, 115, 22, 0.55);
+    background: rgba(249, 115, 22, 0.06);
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.2);
+}
+
+::deep .dist-bucket-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-align: center;
+    min-width: 20px;
+    font-family: monospace;
+}
+
+::deep .dist-bucket--active .dist-bucket-label {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* ─── Counting sort ヒストグラム表示 ────────────────────────────────── */
+::deep .dist-histogram {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 0.5rem;
+    min-height: 150px;
+}
+
+::deep .dist-histogram-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+::deep .dist-histogram-bar {
+    width: 36px;
+    min-height: 8px;
+    background: linear-gradient(180deg, rgba(142, 192, 124, 0.6) 0%, rgba(142, 192, 124, 0.35) 100%);
+    border: 1.5px solid rgba(142, 192, 124, 0.4);
+    border-radius: 4px 4px 0 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 4px;
+    position: relative;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+::deep .dist-histogram-bar--active {
+    background: linear-gradient(180deg, rgba(251, 191, 36, 0.75) 0%, rgba(251, 191, 36, 0.5) 100%);
+    border-color: rgba(251, 191, 36, 0.7);
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+}
+
+::deep .dist-histogram-count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+::deep .dist-histogram-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-align: center;
+    min-width: 20px;
+    font-family: monospace;
+}
+
+::deep .dist-marble {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #ffffff;
+    border: 2.5px solid transparent;
+    flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Scatter でアクティブなマーブル: amber ハイライト */
+::deep .dist-marble--scatter {
+    border-color: #FBBF24;
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.5), 0 0 10px rgba(251, 191, 36, 0.35);
+    transform: scale(1.1);
+}
+
+/* Gather でアクティブなマーブル: orange ハイライト */
+::deep .dist-marble--gather {
+    border-color: #F97316;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.5), 0 0 10px rgba(249, 115, 22, 0.35);
+    transform: scale(1.1);
+}
+
+::deep .dist-pass-index {
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    padding: 0.15rem 0.45rem;
+}
+
+::deep .dist-range-label {
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: rgba(168, 85, 247, 0.15);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 9999px;
+    padding: 0.15rem 0.45rem;
+}
+
+/* ─── NetworkDiagramRenderer スコープ外から指定するスタイル ──────────────── */
+::deep .network-diagram-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+::deep .network-diagram-label {
+    font-size: 0.75rem;
+    color: var(--text-gray);
+    align-self: flex-start;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+::deep .network-diagram-svg {
+    width: 100%;
+    max-width: 1200px;
+    height: auto;
+    min-height: 400px;
+}
+
+::deep .network-diagram-empty {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+
 @keyframes marble-pop {
     0% {
         transform: scale(1);
@@ -640,6 +1123,22 @@
     font-size: 0.68rem;
     color: var(--text-gray);
     font-family: monospace;
+}
+
+/* ─── Shell sort gap 部分列カラードット ────────────────────────────────── */
+::deep .marble-gap-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin: 0 auto;
+    opacity: 0.9;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    animation: gap-dot-fade-in 0.25s ease;
+}
+
+@keyframes gap-dot-fade-in {
+    from { opacity: 0; transform: scale(0.5); }
+    to   { opacity: 0.9; transform: scale(1); }
 }
 
 /* PC: サイドバー幅を考慮してタイトルを右側エリアの中央に配置 */
@@ -804,6 +1303,32 @@
         font-size: 0.65rem;
     }
 
+    ::deep .heap-sorted-marble {
+        width: 26px;
+        height: 26px;
+        font-size: 0.7rem;
+    }
+
+    /* タブレット: dist-bucket を少し小さく */
+    ::deep .dist-bucket-body {
+        width: 44px;
+        min-height: 50px;
+    }
+
+    ::deep .dist-marble {
+        width: 36px;
+        height: 36px;
+        font-size: 0.82rem;
+    }
+
+    ::deep .dist-buckets {
+        gap: 4px;
+    }
+
+    ::deep .dist-histogram-bar {
+        width: 30px;
+    }
+
     .tutorial-cards-panel .controls-fieldset {
         gap: 8px;
     }
@@ -938,6 +1463,55 @@
 
     ::deep .marble-ghost {
         font-size: 0.6rem;
+    }
+
+    ::deep .heap-sorted-marble {
+        width: 22px;
+        height: 22px;
+        font-size: 0.65rem;
+    }
+
+    /* スマホ: dist-bucket をさらに小さく */
+    ::deep .dist-bucket-body {
+        width: 36px;
+        min-height: 42px;
+        padding: 3px 2px;
+    }
+
+    ::deep .dist-marble {
+        width: 30px;
+        height: 30px;
+        font-size: 0.72rem;
+        border-width: 2px;
+    }
+
+    ::deep .dist-buckets {
+        gap: 3px;
+    }
+
+    ::deep .dist-bucket-label {
+        font-size: 0.62rem;
+    }
+
+    ::deep .dist-histogram {
+        min-height: 120px;
+    }
+
+    ::deep .dist-histogram-bar {
+        width: 26px;
+    }
+
+    ::deep .dist-histogram-count {
+        font-size: 0.65rem;
+    }
+
+    ::deep .dist-histogram-label {
+        font-size: 0.62rem;
+    }
+
+    .toggle-btn {
+        font-size: 0.72rem;
+        padding: 0.25rem 0.5rem;
     }
 
     .tutorial-cards-panel .controls-fieldset {

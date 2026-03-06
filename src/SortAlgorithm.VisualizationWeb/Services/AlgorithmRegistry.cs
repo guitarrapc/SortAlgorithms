@@ -191,7 +191,8 @@ public class AlgorithmRegistry
                 - Compare: elements h positions apart are compared; with a large h, a badly misplaced element can leap close to its destination in a single step
                 - IndexWrite: the current element shifts leftward through its h-spaced subsequence — skipping over the intervening positions — until it finds its insertion point
                 - End of pass: h shrinks to the next sequence value; as h decreases the array grows progressively more ordered, leaving very little work for the final h = 1 pass
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
         Add("Shell sort (Sedgewick 1986)", "Insertion Sorts", "O(n^1.5)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => ShellSortSedgewick1986.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Runs a series of Insertion sort passes over h-spaced subsequences of the array for a decreasing sequence of gap values h, finishing with h = 1 as a standard Insertion sort pass on a nearly-sorted array.
@@ -202,7 +203,8 @@ public class AlgorithmRegistry
                 - Compare: elements h positions apart are compared; with a large h, a badly misplaced element can leap close to its destination in a single step
                 - IndexWrite: the current element shifts leftward through its h-spaced subsequence — skipping over the intervening positions — until it finds its insertion point
                 - End of pass: h shrinks to the next sequence value; as h decreases the array grows progressively more ordered, leaving very little work for the final h = 1 pass
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
         Add("Shell sort (Tokuda 1992)", "Insertion Sorts", "O(n^1.5)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => ShellSortTokuda1992.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Runs a series of Insertion sort passes over h-spaced subsequences of the array for a decreasing sequence of gap values h, finishing with h = 1 as a standard Insertion sort pass on a nearly-sorted array.
@@ -213,7 +215,8 @@ public class AlgorithmRegistry
                 - Compare: elements h positions apart are compared; with a large h, a badly misplaced element can leap close to its destination in a single step
                 - IndexWrite: the current element shifts leftward through its h-spaced subsequence — skipping over the intervening positions — until it finds its insertion point
                 - End of pass: h shrinks to the next sequence value; as h decreases the array grows progressively more ordered, leaving very little work for the final h = 1 pass
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
         Add("Shell sort (Ciura 2001)", "Insertion Sorts", "O(n^1.5)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => ShellSortCiura2001.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Runs a series of Insertion sort passes over h-spaced subsequences of the array for a decreasing sequence of gap values h, finishing with h = 1 as a standard Insertion sort pass on a nearly-sorted array.
@@ -224,7 +227,8 @@ public class AlgorithmRegistry
                 - Compare: elements h positions apart are compared; with a large h, a badly misplaced element can leap close to its destination in a single step
                 - IndexWrite: the current element shifts leftward through its h-spaced subsequence — skipping over the intervening positions — until it finds its insertion point
                 - End of pass: h shrinks to the next sequence value; as h decreases the array grows progressively more ordered, leaving very little work for the final h = 1 pass
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
         Add("Shell sort (Lee 2021)", "Insertion Sorts", "O(n^1.5)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => ShellSortLee2021.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Runs a series of Insertion sort passes over h-spaced subsequences of the array for a decreasing sequence of gap values h, finishing with h = 1 as a standard Insertion sort pass on a nearly-sorted array.
@@ -235,9 +239,10 @@ public class AlgorithmRegistry
                 - Compare: elements h positions apart are compared; with a large h, a badly misplaced element can leap close to its destination in a single step
                 - IndexWrite: the current element shifts leftward through its h-spaced subsequence — skipping over the intervening positions — until it finds its insertion point
                 - End of pass: h shrinks to the next sequence value; as h decreases the array grows progressively more ordered, leaving very little work for the final h = 1 pass
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
 
-        // Merge Sorts - O(n log n) - 推奨2048
+        // Merge Sorts
         Add("Merge sort", "Merge Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => MergeSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Recursively splits the array in half until each sub-array holds a single element, then merges adjacent sub-arrays back together in sorted order, building the fully sorted array bottom-up through the call stack.
@@ -248,7 +253,8 @@ public class AlgorithmRegistry
                 - RangeCopy: both halves of the current sub-array are copied into a temporary buffer before the merge begins
                 - Compare: the merge reads from both buffer halves simultaneously, always picking the smaller front value to write back
                 - IndexWrite: the chosen value is written back to the original array one position at a time until both buffer halves are exhausted
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
         Add("Bottom-up merge sort", "Merge Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => BottomupMergeSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Treats every individual element as a sorted run of length 1, then iteratively merges adjacent runs and doubles the merge width each pass: 1 → 2 → 4 → 8 → … until a single sorted run spans the whole array.
@@ -293,18 +299,6 @@ public class AlgorithmRegistry
                 - Swap: a single rotation — implemented via 3-reversal — moves all misplaced elements into position at once, rather than the many small rotations that Rotate merge sort performs
                 - End of merge: two recursive SymMerge calls handle the two resulting subproblems on each half of the range, halving the problem at each level until the base case is reached
                 """);
-        Add("Timsort", "Merge Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => TimSort.Sort(arr, ctx),
-            tutorialDescription: """
-                How it works: Scans the input for naturally ordered runs, uses Insertion sort to extend any run shorter than a minimum length (minrun), then merges runs from a stack using a strategy that keeps stack heights balanced.
-
-                Key property: Adaptive — the more existing order the input has, the fewer merges are needed, approaching O(n) on nearly-sorted data; this is why it was chosen as the standard library sort for CPython and Java.
-
-                Watch for:
-                - Compare: adjacent pairs are tested during the run-detection scan; each confirmed run is pushed onto the merge stack
-                - IndexWrite: Insertion sort extends runs that fall below minrun, stitching short sequences into longer ones before any merging begins
-                - RangeCopy: when the stack triggers a merge, the shorter of the two runs is copied into a buffer; sorted values are then written back
-                """,
-            tutorialArrayType: TutorialArrayType.MultiRun);
         Add("Powersort", "Merge Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => PowerSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Scans the input for natural runs like Timsort, but schedules merges by computing a "power" value from each run's position and size to determine the provably optimal merge order.
@@ -329,6 +323,18 @@ public class AlgorithmRegistry
                 - RangeCopy: after all runs are prepared, adjacent runs are merged using a buffer-based merge step identical to Timsort's
                 """,
             tutorialArrayType: TutorialArrayType.MultiRun);
+        Add("Timsort", "Merge Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => TimSort.Sort(arr, ctx),
+            tutorialDescription: """
+                How it works: Scans the input for naturally ordered runs, uses Insertion sort to extend any run shorter than a minimum length (minrun), then merges runs from a stack using a strategy that keeps stack heights balanced.
+
+                Key property: Adaptive — the more existing order the input has, the fewer merges are needed, approaching O(n) on nearly-sorted data; this is why it was chosen as the standard library sort for CPython and Java.
+
+                Watch for:
+                - Compare: adjacent pairs are tested during the run-detection scan; each confirmed run is pushed onto the merge stack
+                - IndexWrite: Insertion sort extends runs that fall below minrun, stitching short sequences into longer ones before any merging begins
+                - RangeCopy: when the stack triggers a merge, the shorter of the two runs is copied into a buffer; sorted values are then written back
+                """,
+            tutorialArrayType: TutorialArrayType.MultiRun);
 
         // Heap Sorts - O(n log n) - 推奨2048
         Add("Heapsort", "Heap Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => HeapSort.Sort(arr, ctx),
@@ -341,7 +347,8 @@ public class AlgorithmRegistry
                 - Compare: during sift-down, the current node is compared against its two children; the larger child is promoted if it beats the parent
                 - Swap: the root swaps with the last unsorted element to extract the maximum; sift-down then swaps the demoted root downward until the heap property is restored
                 - End of phase: a heap-build phase first heapifies the entire array from the bottom up; the extraction phase then begins, growing the sorted region at the right one element per step
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.HeapTree);
         Add("Ternary heapsort", "Heap Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => TernaryHeapSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Same build-then-extract structure as Heapsort but uses a ternary heap where each node has up to three children; sift-down promotes the largest of the three children if it beats the current node.
@@ -352,7 +359,8 @@ public class AlgorithmRegistry
                 - Compare: each sift-down step compares the current node against all three children to find the largest; up to two comparisons are needed per level to identify the winner
                 - Swap: the winning child is promoted if it beats the parent; sift-down continues from that child's position but reaches the leaf level in fewer steps than a binary heap
                 - End of extraction: the sorted region at the right grows one element per extraction step, identical in structure to standard Heapsort
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.TernaryHeapTree);
         Add("Bottom-up heapSort", "Heap Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => BottomupHeapSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Modifies Heapsort's sift-down by first descending all the way to the leaf without any comparisons — always following the larger child — then walking back up to find the displaced root's correct position.
@@ -363,7 +371,8 @@ public class AlgorithmRegistry
                 - Compare: no comparisons are made during the initial blind descent to the leaf; comparisons only occur during the upward walk to locate the correct insertion point for the displaced root
                 - Swap: once the correct level is found on the way up, the element is placed there with fewer total swaps than a standard top-down sift-down would require
                 - End of extraction: the pattern is identical to Heapsort — the sorted right region grows one element per step, but each step completes with fewer comparisons
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.HeapTree);
         Add("Weak heapSort", "Heap Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => WeakHeapSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Builds a weak heap — a relaxed binary tree where each node only needs to dominate its right subtree — tracked with one reverse-bit per node, then merges sub-heaps to extract elements in sorted order.
@@ -374,7 +383,8 @@ public class AlgorithmRegistry
                 - Compare: each weak-heap merge requires exactly one comparison between a parent and the root of its distinguished child (determined by the reverse-bit)
                 - Swap: when the merge comparison fails, the parent and distinguished child values are exchanged and the reverse-bit for that node is toggled, maintaining the weak heap invariant
                 - End of extraction: the maximum is removed from the root; the left and right sub-heaps are re-merged one comparison at a time to restore the weak heap structure
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.WeakHeapTree);
         Add("Smoothsort", "Heap Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => SmoothSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Maintains a forest of Leonardo heaps — whose sizes follow the Leonardo number series 1, 1, 3, 5, 9, 15, 25, … — adding each element to extend the rightmost heap, then extracts elements by dismantling the forest in reverse order.
@@ -398,7 +408,8 @@ public class AlgorithmRegistry
                 - Compare: each element in the unsorted region is tested against the pivot to determine which side it belongs to
                 - Swap: elements found on the wrong side of the partition boundary are swapped across it; the pivot is placed at its final sorted position at the end
                 - End of partition: the pivot's position is fixed, splitting the remaining unsorted work into two independent sub-problems
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
         Add("Quicksort (Median3)", "Partition Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => QuickSortMedian3.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Selects the pivot as the median of the first, middle, and last elements, then performs the same in-place partition and recursion as basic Quicksort.
@@ -524,7 +535,8 @@ public class AlgorithmRegistry
                 - IndexRead: each element is read to increment its slot in the frequency table; no element moves during this phase
                 - IndexWrite: the prefix-sum pass overwrites the frequency table with cumulative output positions; each element is then written to its computed position in a single placement pass
                 - End of phase: three distinct phases are clearly visible — count, prefix-sum, and place — none of which involves any comparisons
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.ValueBucket);
         Add("Pigeonhole sort", "Distribution Sorts", "O(n+k)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => PigeonholeSortInteger.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Allocates one pigeonhole bucket per possible value in the range, drops each input element into its matching bucket, then reads the buckets back in value order to reconstruct a sorted output.
@@ -535,7 +547,8 @@ public class AlgorithmRegistry
                 - IndexRead: each element's value is used directly as the bucket index; the element is deposited into that bucket slot
                 - IndexWrite: elements are written into their bucket positions during the scatter phase
                 - IndexRead + IndexWrite: during the gather phase, buckets are read in value order and each element is written back to the output array
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.ValueBucket);
         Add("Bucket sort", "Distribution Sorts", "O(n)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => BucketSortInteger.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Divides the value range into a fixed number of equal-width buckets, scatters each element into its corresponding bucket, sorts each non-empty bucket independently, then concatenates all buckets in order.
@@ -546,7 +559,8 @@ public class AlgorithmRegistry
                 - IndexRead: each element's value is mapped to a bucket index arithmetically; the element is deposited into that bucket
                 - Compare + IndexWrite: each non-empty bucket is sorted independently (typically with Insertion sort); watch per-bucket comparisons and shifts
                 - IndexWrite (gather): sorted buckets are concatenated back into the original array in bucket order
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.ValueBucket);
         Add("LSD Radix sort (b=4)", "Distribution Sorts", "O(nk)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => RadixLSD4Sort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Sorts integers digit by digit from the least significant to the most significant 2-bit group, applying a stable counting sort at each pass so that the order established by previous passes is never disturbed.
@@ -557,7 +571,9 @@ public class AlgorithmRegistry
                 - IndexRead: each element's current 2-bit digit group is extracted by a bitwise operation; the digit value increments its slot in the four-entry counting table
                 - IndexWrite: the prefix-sum pass converts counts to output positions; elements are then written to the output buffer in stable order by their current digit
                 - End of pass: each pass produces an array sorted by all digit positions processed so far; watch the partial order grow pass by pass from the least significant bits upward
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.DigitBucketLsd,
+            tutorialLsdRadix: 4);
         Add("LSD Radix sort (b=10)", "Distribution Sorts", "O(nk)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => RadixLSD10Sort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Sorts integers digit by digit from the least significant to the most significant decimal digit, applying a stable counting sort at each pass so that the order established by previous passes is never disturbed.
@@ -569,7 +585,9 @@ public class AlgorithmRegistry
                 - IndexWrite: the prefix-sum pass converts counts to output positions; elements are then written to the output buffer in stable order by their current digit
                 - End of pass: after the ones pass elements are grouped by last digit; after the tens pass by last two digits; each pass visibly extends the sorted prefix
                 """,
-            tutorialArrayType: TutorialArrayType.TwoDigitDecimal);
+            tutorialArrayType: TutorialArrayType.TwoDigitDecimal,
+            tutorialVisualizationHint: TutorialVisualizationHint.DigitBucketLsd,
+            tutorialLsdRadix: 10);
         Add("LSD Radix sort (b=256)", "Distribution Sorts", "O(nk)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => RadixLSD256Sort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Sorts integers byte by byte from the least significant to the most significant byte, applying a stable counting sort at each pass; for 32-bit integers only four passes are needed to fully sort the array.
@@ -592,7 +610,9 @@ public class AlgorithmRegistry
                 - IndexRead: each element's current most-significant remaining digit is extracted by a bitwise operation; the digit determines which of the four buckets the element enters
                 - IndexWrite: elements are placed into their digit buckets; each bucket is then processed recursively for the next digit position
                 - End of pass: sub-buckets of size 1 terminate immediately; watch small sub-buckets stop early while larger ones recurse deeper into finer digit positions
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.DigitBucketMsd,
+            tutorialLsdRadix: 4);
         Add("MSD Radix sort (b=10)", "Distribution Sorts", "O(nk)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => RadixMSD10Sort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Sorts integers digit by digit from the most significant decimal digit first, distributing elements into up to ten buckets per pass and then recursively sorting each bucket for the next digit.
@@ -604,7 +624,9 @@ public class AlgorithmRegistry
                 - IndexWrite: elements are placed into their digit buckets; each bucket is then processed recursively for the next digit
                 - End of pass: elements that already differ at the current digit are permanently separated and never processed together again; watch the recursive depth grow only for elements sharing a long common prefix
                 """,
-            tutorialArrayType: TutorialArrayType.TwoDigitDecimal);
+            tutorialArrayType: TutorialArrayType.TwoDigitDecimal,
+            tutorialVisualizationHint: TutorialVisualizationHint.DigitBucketMsd,
+            tutorialLsdRadix: 10);
         Add("American flag sort", "Distribution Sorts", "O(nk)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => AmericanFlagSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: An in-place MSD Radix sort that makes two passes per digit: the first counts elements per bucket to compute bucket boundaries, the second cyclically permutes elements into their correct buckets without any auxiliary array.
@@ -628,7 +650,8 @@ public class AlgorithmRegistry
                 - Compare: pairs at predetermined index positions are tested; the positions are dictated by the network topology, not by element values
                 - Swap: fires when a comparator finds elements in the wrong order for the current direction (ascending or descending sub-sequence being built or merged)
                 - End of phase: the build phase creates bitonic sub-sequences by alternating direction; the merge phase then collapses them into a single ascending sorted sequence
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.SortingNetwork);
         Add("Bitonic sort (Recursive)", "Network Sorts", "O(log²n)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => BitonicSortNonOptimized.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: The same bitonic build-then-merge structure as iterative Bitonic sort, but expressed directly as recursive calls that mirror the network's divide-and-conquer shape.
@@ -639,10 +662,11 @@ public class AlgorithmRegistry
                 - Compare: pairs at predetermined index positions are tested; identical comparator positions to the iterative version
                 - Swap: fires when a comparator finds elements in the wrong order for the current direction
                 - End of phase: the recursive call depth corresponds directly to the number of network stages; watch the build and merge phases emerge as distinct call-depth levels
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.SortingNetwork);
 
         // Tree Sorts - O(n log n) - 推奨1024
-        Add("Unbalanced binary tree sort", "Tree Sorts", "O(n log n)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => BinaryTreeSort.Sort(arr, ctx),
+        Add("Binary tree sort (BST)", "Tree Sorts", "O(n log n)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => BinaryTreeSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Inserts every element into a plain binary search tree — smaller values go left, larger values go right — then recovers sorted output by reading all nodes in in-order traversal (left, root, right).
 
@@ -652,8 +676,9 @@ public class AlgorithmRegistry
                 - Compare: each insertion navigates the tree by comparing the new element against the current node, turning left or right until an empty slot is found
                 - IndexWrite: the new element is placed at the found empty slot, extending the tree by one node
                 - IndexRead (in-order traversal): after all insertions, nodes are visited left-root-right to reconstruct the sorted sequence without any further comparisons
-                """);
-        Add("Balanced binary tree sort", "Tree Sorts", "O(n log n)", MAX_SIZE_NLOGN15, 2048, (arr, ctx) => BalancedBinaryTreeSort.Sort(arr, ctx),
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.BstTree);
+        Add("Binary tree sort (AVL)", "Tree Sorts", "O(n log n)", MAX_SIZE_NLOGN15, 2048, (arr, ctx) => BalancedBinaryTreeSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Inserts elements into a self-balancing binary search tree that automatically keeps its height at O(log n), then recovers sorted output via in-order traversal.
 
@@ -663,7 +688,8 @@ public class AlgorithmRegistry
                 - Compare: each insertion navigates the tree by comparing the new element against the current node, turning left or right until an empty slot is found
                 - Swap (rotation): when an insertion unbalances the tree, one or more rotations rearrange a small cluster of nodes to restore the height constraint
                 - IndexRead (in-order traversal): after all insertions, nodes are visited left-root-right to reconstruct the sorted sequence
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.AvlTree);
 
         // Joke Sorts - O(n!) ~ O(∞) - 推奨8（注意: 極めて遅い）
         // Bogo sort: ランダムシャッフルで非決定的のためチュートリアル対象外。
@@ -707,7 +733,9 @@ public class AlgorithmRegistry
 
     private void Add(string name, string category, string complexity, int maxElements, int recommendedSize,
         Action<Span<int>, ISortContext> sortAction, string description = "", string tutorialDescription = "",
-        TutorialArrayType tutorialArrayType = TutorialArrayType.Default, bool excludeFromTutorial = false)
+        TutorialArrayType tutorialArrayType = TutorialArrayType.Default, bool excludeFromTutorial = false,
+        TutorialVisualizationHint tutorialVisualizationHint = TutorialVisualizationHint.None,
+        int tutorialLsdRadix = 0)
     {
         _algorithms.Add(new AlgorithmMetadata
         {
@@ -720,7 +748,9 @@ public class AlgorithmRegistry
             Description = description,
             TutorialDescription = tutorialDescription,
             TutorialArrayType = tutorialArrayType,
-            ExcludeFromTutorial = excludeFromTutorial
+            ExcludeFromTutorial = excludeFromTutorial,
+            TutorialVisualizationHint = tutorialVisualizationHint,
+            TutorialLsdRadix = tutorialLsdRadix,
         });
     }
 }

@@ -188,28 +188,136 @@
                     <div class="narrative-text">@GetCurrentNarrative()</div>
                 </div>
 
-                @* ─── マーブルエリア ──────────────────────────────────────────── *@
-                <div class="tutorial-marble-area">
-                    <MarbleRenderer Values="@GetCurrentMainArray()"
-                                    HighlightIndices="@GetCurrentHighlightIndices()"
-                                    HighlightType="@GetCurrentHighlightType()"
-                                    CompareResult="@GetCurrentCompareResult()"
-                                    WriteSourceIndex="@GetCurrentWriteSourceIndex()"
-                                    WritePreviousValue="@GetCurrentWritePreviousValue()"
-                                    MaxValue="@_maxValue"
-                                    StepIndex="@_currentStepIndex"
-                                    Label="Main Array" />
+                @* ─── 表示切替トグル（ヒープ木・BST・バケット・ネットワーク対応アルゴリズムのみ） ──────────── *@
+                @if (HasAlternateView())
+                {
+                    <div class="tutorial-view-toggle">
+                        <button class="toggle-btn @(!_showTreeView && !_showBucketView && !_showNetworkView ? "toggle-btn--active" : "")"
+                                @onclick="() => { _showTreeView = false; _showBucketView = false; _showNetworkView = false; }">
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><circle cx="10" cy="10" r="7" /></svg>
+                            Marble
+                        </button>
+                        @if (HasTreeView())
+                        {
+                            <button class="toggle-btn @(_showTreeView ? "toggle-btn--active" : "")"
+                                    @onclick="() => { _showTreeView = true; _showBucketView = false; _showNetworkView = false; }">
+                                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M10 2 L10 8 M10 8 L4 14 M10 8 L16 14" stroke="currentColor" stroke-width="2" fill="none" /></svg>
+                                @GetTreeToggleLabel()
+                            </button>
+                        }
+                        @if (HasBucketView())
+                        {
+                            <button class="toggle-btn @(_showBucketView ? "toggle-btn--active" : "")"
+                                    @onclick="() => { _showBucketView = true; _showTreeView = false; _showNetworkView = false; }">
+                                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                                    <rect x="2" y="8" width="4" height="10" rx="1" />
+                                    <rect x="8" y="5" width="4" height="13" rx="1" />
+                                    <rect x="14" y="11" width="4" height="7" rx="1" />
+                                </svg>
+                                Buckets
+                            </button>
+                        }
+                        @if (HasNetworkView())
+                        {
+                            <button class="toggle-btn @(_showNetworkView ? "toggle-btn--active" : "")"
+                                    @onclick="() => { _showNetworkView = true; _showTreeView = false; _showBucketView = false; }">
+                                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                                    <line x1="2" y1="6" x2="18" y2="6" stroke="currentColor" stroke-width="1.5" />
+                                    <line x1="2" y1="14" x2="18" y2="14" stroke="currentColor" stroke-width="1.5" />
+                                    <line x1="10" y1="6" x2="10" y2="14" stroke="currentColor" stroke-width="2" />
+                                    <circle cx="10" cy="6" r="2" />
+                                    <circle cx="10" cy="14" r="2" />
+                                </svg>
+                                Network
+                            </button>
+                        }
+                    </div>
+                }
 
-                    @foreach (var bufferId in GetCurrentBufferIds())
+                @* ─── ビジュアライゼーションエリア ──────────────────────────────── *@
+                <div class="tutorial-marble-area">
+                    @if (_showNetworkView && HasNetworkView())
                     {
-                        <MarbleRenderer Values="@GetCurrentBufferArray(bufferId)"
-                                        HighlightIndices="@GetCurrentBufferHighlightIndices(bufferId)"
+                        @* Network view: ソーティングネットワーク図（マーブルは表示しない） *@
+                        <NetworkDiagramRenderer Snapshot="@GetCurrentNetwork()"
+                                                MaxValue="@_maxValue"
+                                                StepIndex="@_currentStepIndex"
+                                                Label="Sorting Network" />
+                    }
+                    else if (_showBucketView && HasBucketView())
+                    {
+                        @* Distribution view: Main Array マーブル + バケット表示（temp buffer は非表示） *@
+                        <MarbleRenderer Values="@GetCurrentMainArray()"
+                                        HighlightIndices="@GetCurrentHighlightIndices()"
                                         HighlightType="@GetCurrentHighlightType()"
                                         CompareResult="@GetCurrentCompareResult()"
+                                        WriteSourceIndex="@GetCurrentWriteSourceIndex()"
+                                        WritePreviousValue="@GetCurrentWritePreviousValue()"
                                         MaxValue="@_maxValue"
                                         StepIndex="@_currentStepIndex"
-                                        Label="@($"Buffer {bufferId}")"
-                                        IsBuffer="true" />
+                                        ShellGap="@GetCurrentShellGap()"
+                                        Label="Main Array" />
+                        <DistributionBucketRenderer Snapshot="@GetCurrentDistribution()"
+                                                    MaxValue="@_maxValue"
+                                                    StepIndex="@_currentStepIndex"
+                                                    Label="Buckets" />
+                    }
+                    else if (_showTreeView && HasTreeView())
+                    {
+                        @if (IsRecursionView())
+                        {
+                            <RecursionTreeRenderer Snapshot="@GetCurrentRecursion()"
+                                                   MaxValue="@_maxValue"
+                                                   StepIndex="@_currentStepIndex"
+                                                   Label="Recursion Tree" />
+                        }
+                        else if (IsBstView())
+                        {
+                            <BstTreeRenderer Bst="@GetCurrentBst()"
+                                             MaxValue="@_maxValue"
+                                             StepIndex="@_currentStepIndex"
+                                             Label="BST" />
+                        }
+                        else
+                        {
+                            <HeapTreeRenderer Values="@GetCurrentMainArray()"
+                                              HeapBoundary="@GetCurrentHeapBoundary()"
+                                              HighlightIndices="@GetCurrentHighlightIndices()"
+                                              HighlightType="@GetCurrentHighlightType()"
+                                              MaxValue="@_maxValue"
+                                              BranchingFactor="@GetBranchingFactor()"
+                                              ReverseBits="@GetCurrentWeakHeapReverseBits()"
+                                              StepIndex="@_currentStepIndex"
+                                              Label="@GetTreeToggleLabel()" />
+                        }
+                    }
+                    else
+                    {
+                        <MarbleRenderer Values="@GetCurrentMainArray()"
+                                        HighlightIndices="@GetCurrentHighlightIndices()"
+                                        HighlightType="@GetCurrentHighlightType()"
+                                        CompareResult="@GetCurrentCompareResult()"
+                                        WriteSourceIndex="@GetCurrentWriteSourceIndex()"
+                                        WritePreviousValue="@GetCurrentWritePreviousValue()"
+                                        MaxValue="@_maxValue"
+                                        StepIndex="@_currentStepIndex"
+                                        ShellGap="@GetCurrentShellGap()"
+                                        Label="Main Array" />
+                    }
+
+                    @if (!_showBucketView && !_showNetworkView)
+                    {
+                        @foreach (var bufferId in GetCurrentBufferIds())
+                        {
+                            <MarbleRenderer Values="@GetCurrentBufferArray(bufferId)"
+                                            HighlightIndices="@GetCurrentBufferHighlightIndices(bufferId)"
+                                            HighlightType="@GetCurrentHighlightType()"
+                                            CompareResult="@GetCurrentCompareResult()"
+                                            MaxValue="@_maxValue"
+                                            StepIndex="@_currentStepIndex"
+                                            Label="@($"Buffer {bufferId}")"
+                                            IsBuffer="true" />
+                        }
                     }
                 </div>
             }
@@ -246,6 +354,9 @@
     private int _maxValue = 9;
     private CancellationTokenSource? _autoPlayCts;
     private ElementReference _containerRef;
+    private bool _showTreeView = true;  // デフォルトは木表示（ヒープ木対応アルゴリズムのみ）
+    private bool _showBucketView = true; // デフォルトはバケット表示（Distribution 対応アルゴリズムのみ）
+    private bool _showNetworkView = true; // デフォルトはネットワーク表示（Network 対応アルゴリズムのみ）
 
     // ─── ナビゲーション ────────────────────────────────────────────────────
 
@@ -308,7 +419,9 @@
             var tutorialArray = GetTutorialArrayFor(algo);
             _maxValue = tutorialArray.Length > 0 ? tutorialArray.Max() : 9;
             var (operations, _, _) = await Executor.ExecuteAndRecordAsync(tutorialArray, algo);
-            _steps = TutorialStepBuilder.Build(tutorialArray, operations);
+            _steps = TutorialStepBuilder.Build(tutorialArray, operations, algo.TutorialVisualizationHint, algo.TutorialLsdRadix);
+            _showTreeView = HasTreeView();
+            _showBucketView = HasBucketView();
         }
         finally
         {
@@ -464,6 +577,199 @@
 
     private int? GetCurrentWritePreviousValue()
         => _currentStepIndex < 0 ? null : _steps[_currentStepIndex].WritePreviousValue;
+
+    private int GetCurrentHeapBoundary()
+    {
+        if (_currentStepIndex < 0)
+            return GetTutorialArrayFor(_selectedAlgorithm!).Length;
+        return _steps[_currentStepIndex].HeapBoundary ?? GetTutorialArrayFor(_selectedAlgorithm!).Length;
+    }
+
+    private bool HasAlternateView()
+        => _selectedAlgorithm?.TutorialVisualizationHint != TutorialVisualizationHint.None;
+
+    private bool HasTreeView()
+        => _selectedAlgorithm?.TutorialVisualizationHint is
+            TutorialVisualizationHint.HeapTree or
+            TutorialVisualizationHint.TernaryHeapTree or
+            TutorialVisualizationHint.WeakHeapTree or
+            TutorialVisualizationHint.BstTree or
+            TutorialVisualizationHint.AvlTree or
+            TutorialVisualizationHint.RecursionTree;
+
+    private bool HasBucketView()
+        => _selectedAlgorithm?.TutorialVisualizationHint is
+            TutorialVisualizationHint.ValueBucket or
+            TutorialVisualizationHint.DigitBucketLsd or
+            TutorialVisualizationHint.DigitBucketMsd;
+
+    private bool HasNetworkView()
+        => _selectedAlgorithm?.TutorialVisualizationHint is
+            TutorialVisualizationHint.SortingNetwork;
+
+    private bool IsBstView()
+        => _selectedAlgorithm?.TutorialVisualizationHint is
+            TutorialVisualizationHint.BstTree or
+            TutorialVisualizationHint.AvlTree;
+
+    private bool IsRecursionView()
+        => _selectedAlgorithm?.TutorialVisualizationHint == TutorialVisualizationHint.RecursionTree;
+
+    private int GetBranchingFactor()
+        => _selectedAlgorithm?.TutorialVisualizationHint == TutorialVisualizationHint.TernaryHeapTree ? 3 : 2;
+
+    private string GetTreeToggleLabel()
+        => _selectedAlgorithm?.TutorialVisualizationHint switch
+        {
+            TutorialVisualizationHint.TernaryHeapTree => "Ternary Heap",
+            TutorialVisualizationHint.WeakHeapTree    => "Weak Heap",
+            TutorialVisualizationHint.BstTree         => "BST",
+            TutorialVisualizationHint.AvlTree         => "AVL Tree",
+            TutorialVisualizationHint.RecursionTree   => "Recursion Tree",
+            _ => "Heap Tree"
+        };
+
+    private bool[]? GetCurrentWeakHeapReverseBits()
+        => _currentStepIndex < 0 ? null : _steps[_currentStepIndex].WeakHeapReverseBits;
+
+    private BstSnapshot? GetCurrentBst()
+        => _currentStepIndex < 0 ? new BstSnapshot { Size = 0, Root = -1 }
+            : _steps[_currentStepIndex].Bst;
+
+    private RecursionSnapshot? GetCurrentRecursion()
+    {
+        if (_currentStepIndex < 0)
+            return BuildInitialRecursionSnapshot();
+        return _steps[_currentStepIndex].Recursion;
+    }
+
+    private DistributionSnapshot? GetCurrentDistribution()
+    {
+        if (_currentStepIndex < 0)
+            return BuildInitialDistributionSnapshot();
+        return _steps[_currentStepIndex].Distribution;
+    }
+
+    private NetworkSnapshot? GetCurrentNetwork()
+    {
+        if (_currentStepIndex < 0)
+            return BuildInitialNetworkSnapshot();
+        return _steps[_currentStepIndex].Network;
+    }
+
+    private int? GetCurrentShellGap()
+        => _currentStepIndex < 0 ? null : _steps[_currentStepIndex].ShellGap;
+
+    private DistributionSnapshot? BuildInitialDistributionSnapshot()
+    {
+        if (_selectedAlgorithm == null || !HasBucketView()) return null;
+        var arr = GetTutorialArrayFor(_selectedAlgorithm);
+        if (arr.Length == 0) return null;
+
+        if (_selectedAlgorithm.TutorialVisualizationHint == TutorialVisualizationHint.DigitBucketLsd)
+        {
+            int radix = _selectedAlgorithm.TutorialLsdRadix > 0 ? _selectedAlgorithm.TutorialLsdRadix : 10;
+            return new DistributionSnapshot
+            {
+                BucketCount = radix,
+                BucketLabels = Enumerable.Range(0, radix).Select(i => i.ToString()).ToArray(),
+                Buckets = Enumerable.Range(0, radix).Select(_ => Array.Empty<int>()).ToArray(),
+                Phase = DistributionPhase.Scatter,
+                ActiveBucketIndex = -1,
+                ActiveElementInBucket = -1,
+                PassIndex = 0,
+                PassLabel = radix == 4 ? "bits 0-1" : "ones digit",
+            };
+        }
+
+        if (_selectedAlgorithm.TutorialVisualizationHint == TutorialVisualizationHint.DigitBucketMsd)
+        {
+            int radix = _selectedAlgorithm.TutorialLsdRadix > 0 ? _selectedAlgorithm.TutorialLsdRadix : 10;
+            var msdMaxVal = arr.Max();
+            int maxDigit;
+            if (radix == 4)
+            {
+                uint key = (uint)msdMaxVal ^ 0x8000_0000u;
+                maxDigit = key > 0 ? (32 - System.Numerics.BitOperations.LeadingZeroCount(key) + 1) / 2 : 1;
+            }
+            else // b=10
+            {
+                ulong absMax = (ulong)Math.Abs(msdMaxVal);
+                maxDigit = absMax > 0 ? (int)Math.Floor(Math.Log10(absMax)) + 1 : 1;
+            }
+            int digitIndex = maxDigit - 1;
+            return new DistributionSnapshot
+            {
+                BucketCount = radix,
+                BucketLabels = Enumerable.Range(0, radix).Select(i => i.ToString()).ToArray(),
+                Buckets = Enumerable.Range(0, radix).Select(_ => Array.Empty<int>()).ToArray(),
+                Phase = DistributionPhase.Scatter,
+                ActiveBucketIndex = -1,
+                ActiveElementInBucket = -1,
+                PassIndex = 0,
+                PassLabel = radix == 4 ? $"bits {digitIndex * 2}-{digitIndex * 2 + 1}" : (digitIndex == 0 ? "ones digit" : digitIndex == 1 ? "tens digit" : $"10^{digitIndex} digit"),
+                ActiveRange = (0, arr.Length),
+                DigitIndex = digitIndex,
+            };
+        }
+
+        // ValueBucket (Pigeonhole / Counting / Bucket)
+        var minVal = arr.Min();
+        var maxVal = arr.Max();
+        var bucketCount = maxVal > minVal ? maxVal - minVal + 1 : 1;
+        return new DistributionSnapshot
+        {
+            BucketCount = bucketCount,
+            BucketLabels = Enumerable.Range(minVal, bucketCount).Select(v => v.ToString()).ToArray(),
+            Buckets = Enumerable.Range(0, bucketCount).Select(_ => Array.Empty<int>()).ToArray(),
+            Phase = DistributionPhase.Scatter,
+            ActiveBucketIndex = -1,
+            ActiveElementInBucket = -1,
+        };
+    }
+
+    private NetworkSnapshot? BuildInitialNetworkSnapshot()
+    {
+        if (_selectedAlgorithm == null || !HasNetworkView()) return null;
+        var arr = GetTutorialArrayFor(_selectedAlgorithm);
+        if (arr.Length == 0) return null;
+
+        // Network structure is pre-calculated by NetworkTracker, so initial state has empty comparators
+        // The first step will have the full network structure
+        return new NetworkSnapshot
+        {
+            WireCount = arr.Length,
+            Comparators = [],
+            ActiveComparatorIndex = -1,
+            ComparatorResults = [],
+            WireValues = arr,
+        };
+    }
+
+    private RecursionSnapshot? BuildInitialRecursionSnapshot()
+    {
+        if (_selectedAlgorithm == null || !IsRecursionView()) return null;
+        var arr = GetTutorialArrayFor(_selectedAlgorithm);
+        if (arr.Length == 0) return null;
+
+        // Initial state: root node only, pending
+        var rootNode = new RecursionNode
+        {
+            Id = 0,
+            ParentId = -1,
+            Start = 0,
+            End = arr.Length,
+            State = RecursionNodeState.Pending,
+            Values = arr,
+            Depth = 0
+        };
+
+        return new RecursionSnapshot
+        {
+            Nodes = [rootNode],
+            ActiveNodeId = -1
+        };
+    }
 
     private string GetCurrentNarrative()
         => _currentStepIndex < 0

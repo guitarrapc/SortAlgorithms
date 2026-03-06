@@ -84,6 +84,9 @@ public record TutorialStep
     public int? WriteSourceIndex { get; init; }
     public int? WritePreviousValue { get; init; }
 
+    public string Phase { get; init; } = string.Empty;
+    public Dictionary<int, RoleType> Roles { get; init; } = new();
+
     public string Narrative { get; init; } = string.Empty;
 }
 ```
@@ -100,6 +103,112 @@ public record TutorialStep
 | IndexRead | 「位置 {i} の値 {v} を読み取る」 |
 | IndexWrite | 「位置 {i} に値 {v} を書き込む」 |
 | RangeCopy | 「位置 {src}〜{src+len-1} をバッファの位置 {dst} へコピーする」 |
+
+#### フェーズ・役割マーカー（Phase / Role Tracker）
+
+アルゴリズムの意味論的なポイントを伝えるため、各ステップに**フェーズ（局面）**と**役割マーカー（Role）**を付与する。
+
+##### フェーズ（Phase）
+
+複数ステップにまたがる「今何をしているか」を1行テキストで表示する。
+
+| アルゴリズム | フェーズテキスト例 |
+|---|---|
+| Bubble Sort | 「パス 1/7：最大値を右端へバブル中」 |
+| Selection Sort | 「位置 0〜7 の最小値を探索中」 |
+| Quick Sort | 「ピボット 5 で左右に分割中」 |
+| Radix LSD | 「一の位でソート中（パス 1/2）」 |
+
+- **UI**: ナラティブパネルの**直上**に `フェーズバー` として表示（薄いグレー背景 + 小フォント）
+- **更新タイミング**: フェーズが変わったステップのみ更新。変わらないステップは前のフェーズを継続表示
+- **非設定時**: `Phase` が空文字の場合はフェーズバーを非表示
+
+`ISortContext` への追加:
+
+```csharp
+void OnPhase(string description);
+```
+
+`TutorialStepBuilder` の動作:
+- `OnPhase` が記録された操作に対応するステップへ `Phase` をセット
+- 呼び出しのないステップは直前の `Phase` 値を引き継ぐ
+
+##### 役割マーカー（Role）
+
+特定インデックスに付与する「この要素は今何者か」の情報。マーブルの**上部**に小さいラベルバッジとして表示する。
+
+```csharp
+public enum RoleType
+{
+    None,
+    Pivot,
+    CurrentMin,
+    CurrentMax,
+    LeftPointer,
+    RightPointer,
+}
+```
+
+| ロール | 対象アルゴリズム例 | バッジ色 |
+|---|---|---|
+| `Pivot` | Quick Sort のピボット | 金 `#EAB308` |
+| `CurrentMin` | Selection Sort の最小値候補 | 黄 `#FBBF24` |
+| `CurrentMax` | Bubble Sort の右端バブル要素 | 橙 `#F97316` |
+| `LeftPointer` | 2 ポインタ系の左端 | 水 `#38BDF8` |
+| `RightPointer` | 2 ポインタ系の右端 | 緑 `#4ADE80` |
+
+- **表示条件**: `TutorialStep.Roles` に含まれるインデックスのマーブルのみ表示
+- **複数ロール**: 同一インデックスに複数ロールは付与しない（最後に設定されたものを使用）
+- **ロールのクリア**: `RoleType.None` を指定すると該当インデックスのロールを削除
+
+`ISortContext` への追加:
+
+```csharp
+void OnRole(int index, int bufferId, RoleType role);
+```
+
+- `index`: ロールを付与する配列インデックス
+- `bufferId`: メイン配列（`BUFFER_MAIN`）またはバッファー ID
+- `role`: 付与するロール（`None` を指定するとロールをクリア）
+
+`TutorialStepBuilder` の動作:
+- `OnRole` が記録された操作に対応するステップへ `Roles` をセット
+- ロール情報はステップをまたいで保持（`None` で明示的にクリアするまで継続）
+
+##### データフロー
+
+```
+ISortContext（TutorialContext 実装）
+  OnPhase("パス 1/7：最大値を右端へバブル中")
+  OnRole(pivotIdx, BUFFER_MAIN, RoleType.Pivot)
+        ↓
+TutorialStepBuilder.Build(operations)
+        ↓
+TutorialStep.Phase = "パス 1/7：最大値を右端へバブル中"
+TutorialStep.Roles = { 3: Pivot }
+        ↓
+TutorialPage → TutorialNarrativePanel / MarbleRenderer
+  ├ フェーズバー（Phase テキスト）
+  └ マーブル上部ロールバッジ
+```
+
+##### アーキテクチャへの影響
+
+```
+Contexts/
+  ISortContext.cs                ← 変更: OnPhase / OnRole メソッド追加
+
+Models/
+  RoleType.cs                   ← 新規: RoleType enum 定義
+  TutorialStep.cs               ← 変更: Phase / Roles プロパティ追加
+
+Services/
+  TutorialStepBuilder.cs        ← 変更: Phase / Roles 伝播ロジック追加
+
+Components/
+  MarbleRenderer.razor          ← 変更: Roles パラメータ追加、ロールバッジ表示
+  TutorialNarrativePanel.razor  ← 変更: フェーズバー表示追加
+```
 
 #### マーブルのビジュアル仕様
 
@@ -318,6 +427,8 @@ Merge sort など補助配列が必要なアルゴリズムは、バッファー
 │  │ 時間計算量: O(n²)  空間計算量: O(1)  安定: ✓                    │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
 ├────────────────────────────────────────────────────────────────────────┤
+│  📍 パス 1/7：最大値を右端へバブル中（フェーズバー、Phase 非空時のみ）  │
+├────────────────────────────────────────────────────────────────────────┤
 │  ステップ説明テキスト（中部）                                          │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
 │  │ 位置 2 の値 8 と 位置 3 の値 1 を比較 → 8 > 1 なので入れ替える  │  │
@@ -403,6 +514,460 @@ tutorialDescription: """
     """
 ```
 
+#### ヒープ木表示（Heap Sort 専用ビジュアライゼーション）
+
+Heap Sort カテゴリのアルゴリズム（Heapsort / Bottom-up heapsort）では、マーブル表示に加えて**ヒープ木表示**に切り替え可能とする。配列を二分ヒープの木構造として SVG で描画し、ヒープ構築・抽出の過程を直感的に示す。
+
+##### 対象アルゴリズム
+
+| アルゴリズム | ヒープ木表示 | 備考 |
+|---|---|---|
+| Heapsort | ✅ | 標準二分ヒープ（子: `2i+1`, `2i+2`） |
+| Bottom-up heapsort | ✅ | 同上 |
+| Ternary heapsort | ✅ | 三分木（子: `3i+1`, `3i+2`, `3i+3`）、`BranchingFactor=3` で描画 |
+| Weak heapsort | ✅ | 二分木レイアウト + reverse bit による distinguished / non-distinguished 辺区別 |
+| Smoothsort | ❌（将来対応） | Leonardo ヒープの森で標準二分ヒープと構造が異なる |
+
+##### ヒープ木のレイアウト
+
+配列インデックスからヒープの親子関係を計算し、SVG で二分木を描画する。
+
+```
+配列: [9, 7, 8, 1, 5, 2, 4, 3]
+ヒープ境界: 8（全要素がヒープ内）
+
+            (9)              ← arr[0] (root)
+           /   \
+         (7)   (8)           ← arr[1], arr[2]
+        / \    / \
+      (1) (5)(2) (4)         ← arr[3]~arr[6]
+      /
+    (3)                      ← arr[7]
+
+抽出後: ヒープ境界 = 7
+配列: [8, 7, 4, 1, 5, 2, 3, |9]
+                              ↑ ソート済み（木から除外、薄く表示）
+            (8)
+           /   \
+         (7)   (4)
+        / \    /
+      (1) (5)(2)
+      /
+    (3)
+```
+
+- **親子関係**: `parent(i) = (i-1) / b`、`child_k(i) = b*i+1+k`（`b` = 分岐数、`k = 0..b-1`）
+- **分岐数**: `BranchingFactor` パラメータで二分木（2）・三分木（3）を切り替え
+- **ヒープ境界**: `HeapBoundary` で指定。`0 ≤ i < HeapBoundary` がヒープ内のノード
+- **ソート済み領域**: `HeapBoundary ≤ i < n` のノードは描画しない（マーブル行にのみ表示）
+
+##### ノードの描画仕様
+
+- **形状**: 直径 42px（PC）/ 36px（タブレット）/ 28px（スマホ）の円形
+- **背景色**: マーブルと同じ HSL カラーグラデーション（値ベース）
+- **数値表示**: 中央に白文字で値を表示
+- **ハイライト**: マーブルと同じアウトラインリング + グロー（Compare: 紫、Swap: 赤、Write: 橙）
+- **エッジ（辺）**: 親→子の直線、色 `rgba(255, 255, 255, 0.3)`、幅 1.5px
+  - ハイライト対象の辺: 操作色と同色、幅 2.5px、不透明度 0.7
+
+##### ノード配置の計算
+
+SVG viewBox ベースの座標計算でレスポンシブ対応。
+
+- **レベル間隔**: viewBox 高さを `depth + 1` 等分
+- **水平配置**: レベル `d` のノード数は最大 `2^d`。各ノードの水平位置はレベル内の位置に基づいて等間隔配置
+- **座標計算**:
+  ```
+  b = BranchingFactor (2 or 3)
+  depth = ⌊log_b(heapBoundary)⌋
+  levelStart(L) = (b^L - 1) / (b - 1)
+  levelSize(L)  = b^L
+  nodeY(level) = topPad + level × (availH / depth)
+  nodeX(level, posInLevel) = (posInLevel + 0.5) × (viewW / levelSize)
+  ```
+
+##### ヒープ境界の追跡
+
+`TutorialStep` に `HeapBoundary`（`int?`）を追加する。
+
+- **初期状態**: `null`（ヒープ木表示対象外）
+- **ヒープ構築フェーズ**: `HeapBoundary = n`（全要素がヒープ内）
+- **抽出フェーズ**: Swap 操作で root と末尾を交換するたびに `HeapBoundary` が 1 減少
+
+`TutorialStepBuilder` がアルゴリズムの `TutorialVisualizationHint == HeapTree` のとき、ヒープ境界を自動追跡する。
+
+**追跡ロジック**:
+1. 最初の Swap 操作（index1=0 を含む）が現れるまでは `HeapBoundary = n`（構築フェーズ）
+2. Swap で `index1 == 0`（root）かつ `index2 == heapBoundary - 1` のとき、`heapBoundary--`
+3. 全ステップに `HeapBoundary` を記録
+
+##### 切り替え UI
+
+```
+[🔵 Marble]  [🌳 Heap Tree]     ← セグメントボタン
+```
+
+- **表示条件**: `AlgorithmMetadata.TutorialVisualizationHint == HeapTree` のときのみ表示
+- **デフォルト**: Heap Tree（教育目的では木表示が主役）
+- **切り替え**: マーブル表示と木表示を排他的に切り替え（同時表示はしない）
+- **状態保持**: アルゴリズム切り替え時にリセット（デフォルトに戻る）
+
+##### WeakHeap 辺の区別表示
+
+Weak Heap は通常の二分ヒープと異なり、各ノード `i` に **reverse bit `r[i]`** があり、Merge 機流でスワップと同時に履履される。この bit はどの子が「distinguished child」かを決定する。
+
+```
+r[i] = false のとき:        r[i] = true のとき (flip 後):
+       (i)                          (i)
+      /   ₢                        /   ₡
+  ⭐(2i)   (2i+1)              (2i)  ⭐(2i+1)
+
+  ⭐ = distinguished child         ⭐ = distinguished child
+       (weak heap 性質の保証範囲)       (right side に移動した)
+```
+
+**辺の表示ルール:**
+
+| 辺の種類 | 表示 | 意味 |
+|---|---|---|
+| Distinguished edge | 実線、通常輝度 | weak heap 性質が保証される部分木への辺 |
+| Non-distinguished edge | **破線**、低輝度 | 次序保証なしの部分木への辺 |
+| Highlighted distinguished | 操作色で実線 | Compare / Swap の対象辺 |
+| Highlighted non-distinguished | 操作色で破線 | 強調はあるが次序保証なし |
+
+##### `TutorialVisualizationHint` enum
+
+```csharp
+/// <summary>
+/// チュートリアルで利用可能な追加ビジュアライゼーションのヒント。
+/// アルゴリズムごとに設定し、木表示などの代替表現を有効化する。
+/// </summary>
+public enum TutorialVisualizationHint
+{
+    /// <summary>追加表示なし（マーブルのみ）</summary>
+    None,
+    /// <summary>ヒープ木表示（二分ヒープを SVG ツリーで描画）</summary>
+    HeapTree,
+    /// <summary>三分ヒープ木表示（三分ヒープを SVG ツリーで描画）</summary>
+    TernaryHeapTree,
+    /// <summary>弱ヒープ木表示（二分木レイアウト + reverse bit による辺区別）</summary>
+    WeakHeapTree,
+}
+```
+
+`AlgorithmMetadata` に追加:
+
+```csharp
+/// <summary>チュートリアルで利用可能な追加ビジュアライゼーション</summary>
+public TutorialVisualizationHint TutorialVisualizationHint { get; init; } = TutorialVisualizationHint.None;
+```
+
+##### データフロー
+
+```
+AlgorithmMetadata.TutorialVisualizationHint == HeapTree
+    ↓
+TutorialStepBuilder.Build(initialArray, operations, hint)
+    ↓ ヒープ境界を自動追跡
+TutorialStep.HeapBoundary = 8, 7, 6, ...
+    ↓
+TutorialPage: ユーザーがトグルで表示切替
+    ↓
+HeapTreeRenderer.razor
+    ├ Values = step.ArraySnapshot
+    ├ HeapBoundary = step.HeapBoundary
+    ├ HighlightIndices / HighlightType
+    └ SVG で二分木を描画
+```
+
+##### アーキテクチャへの影響
+
+```
+Models/
+  TutorialVisualizationHint.cs   ← 変更: WeakHeapTree 追加
+  TutorialStep.cs                ← 変更: HeapBoundary + WeakHeapReverseBits プロパティ追加
+  AlgorithmMetadata.cs           ← 変更: TutorialVisualizationHint プロパティ追加
+
+Components/
+  HeapTreeRenderer.razor         ← 新規: ヒープ木 SVG 描画コンポーネント
+
+Services/
+  TutorialStepBuilder.cs         ← 変更: HeapBoundary 追跡ロジック追加
+  AlgorithmRegistry.cs           ← 変更: Heapsort / Bottom-up heapsort に HeapTree 設定
+
+Pages/
+  TutorialPage.razor             ← 変更: トグル UI + HeapTreeRenderer 呼び出し
+  TutorialPage.razor.css         ← 変更: トグル + ヒープ木スタイル追加
+```
+
+---
+
+#### 非平衡 BST 表示（BinaryTreeSort 専用ビジュアライゼーション）
+
+`BinaryTreeSort` では二分探索木（BST）を SVG で描画し、挿入フェーズ・走査フェーズを視覚的に示す。ヒープ木と異なり、配列インデックスと木構造に直接対応しない（ノードは挿入順に ID が付与される）。
+
+##### 対象アルゴリズム
+
+| アルゴリズム | BST 表示 | 備考 |
+|---|---|---|
+| Unbalanced binary tree sort | ✅ | 非平衡 BST（右子 = 値 ≥ 親）、挿入順 ID |
+| Balanced binary tree sort (AVL) | ✅ | 平衡 BST（回転後の木を表示）、balance factor ラベル + 回転ノードハイライト |
+
+##### BST のレイアウト
+
+```
+配列: [5, 3, 8, 1, 9, 2, 7, 4]  挿入順 → BST
+
+              (5)  ← node 0 (root), depth 0, rank 4
+             /   \
+           (3)   (8)           ← nodes 1,2, depth 1
+           / \   / \
+         (1) (4)(7) (9)        ← nodes 3,7,6,4, depth 2
+           \
+           (2)                 ← node 5, depth 3
+
+in-order traversal: 1, 2, 3, 4, 5, 7, 8, 9
+```
+
+- **x 座標**: 中順走査の rank（0..n-1）。左部分木 < 親 < 右部分木が自然に反映される
+- **y 座標**: BFS で計算した深さ（0 = 根）
+- **ノード ID**: 挿入順（0 = 最初に挿入した要素 = 根）
+
+##### 操作フェーズと表示
+
+| フェーズ | 操作 | 表示 |
+|---|---|---|
+| **ビルドフェーズ** | `IndexRead(i)` × n | BST に新ノード追加。挿入経路（amber）+ 新ノード（green）をハイライト |
+| **走査フェーズ** | `IndexWrite(j, v)` × n | 全ノード挿入済み BST で現在訪問中のノード（orange）をハイライト |
+
+##### ノードのハイライト規則
+
+| ノード種別 | 色 | 意味 |
+|---|---|---|
+| `InsertionPath` | amber `#FBBF24` | 今回の挿入で比較・通過したノード |
+| `NewNode` | green `#4ADE80` | 今回挿入されたノード（挿入先） |
+| `ActiveNode` | orange `#F97316` | 中順走査で現在配列に書き戻し中のノード |
+
+##### `BstSnapshot` データモデル
+
+```csharp
+public record BstSnapshot
+{
+    public int    Size;            // 現在のノード数
+    public int    Root;            // 根 ID (-1 = 空)
+    public int[]  Values;          // ノード ID → 値
+    public int[]  Left;            // ノード ID → 左子 ID (-1 = なし)
+    public int[]  Right;           // ノード ID → 右子 ID (-1 = なし)
+    public int[]  InsertionPath;   // 直前挿入で辿ったノード ID リスト
+    public int    NewNode;         // 直前に挿入されたノード ID (-1 = なし)
+    public int    ActiveNode;      // 走査中の現在ノード ID (-1 = なし)
+    public bool   IsTraversalPhase;
+}
+```
+
+##### 追跡ロジック（TutorialStepBuilder）
+
+```
+IndexRead(i) →
+  1. value = mainArray[i] を shadow BST に挿入（BinaryTreeSort と同一ロジック）
+  2. 挿入経路 InsertionPath と NewNode を記録
+  3. BstSnapshot をスナップショット化
+
+最初の IndexWrite が来たとき →
+  1. 中順走査リストを事前計算: BstComputeInorder(root, left, right, size)
+  2. IsTraversalPhase = true
+
+IndexWrite(j, v) →
+  1. ActiveNode = inorderList[j]  (j 番目の中順訪問ノード)
+  2. BstSnapshot を更新
+```
+
+##### アーキテクチャへの影響
+
+```
+Models/
+  BstSnapshot.cs                 ← 新規: BST スナップショットレコード
+  TutorialVisualizationHint.cs   ← 変更: BstTree 追加
+  TutorialStep.cs                ← 変更: Bst プロパティ追加
+
+Components/
+  BstTreeRenderer.razor          ← 新規: BST SVG 描画コンポーネント
+
+Services/
+  TutorialStepBuilder.cs         ← 変更: BST シャドウリプレイ + narrative オーバーライド
+  AlgorithmRegistry.cs           ← 変更: BinaryTreeSort に BstTree 設定
+
+Pages/
+  TutorialPage.razor             ← 変更: IsBstView / GetCurrentBst / BstTreeRenderer
+  TutorialPage.razor.css         ← 変更: BST tree スタイル追加
+```
+
+---
+
+#### AVL 木表示（BalancedBinaryTreeSort 専用ビジュアライゼーション）
+
+`BalancedBinaryTreeSort` では AVL 木（自己平衡二分探索木）を SVG で描画し、挿入フェーズで自動的に行われる回転操作を可視化する。BST 表示を拡張し、balance factor ラベルと回転ノードのハイライトを追加する。
+
+##### 対象アルゴリズム
+
+| アルゴリズム | AVL 表示 | 備考 |
+|---|---|---|
+| Balanced binary tree sort (AVL) | ✅ | 回転後の木を表示（Option A: 回転アニメーションなし）、balance factor 付き |
+
+##### AVL 木のレイアウト
+
+BST と同一の in-order rank × BFS depth レイアウトを使用。追加で以下の要素を表示：
+
+```
+配列: [5, 3, 8, 1, 9, 2, 7, 4]  挿入順 → AVL 木
+
+              (5)              ← node 0, bf=0
+             /   \
+           (3)   (8)           ← nodes 1,2, bf=+1, bf=-1
+           / \   / \
+         (1) (4)(7) (9)        ← nodes 3,7,6,4
+         +1  0  0   0
+           \
+           (2)                 ← node 5, bf=0
+            0
+
+balance factor = height(left) - height(right)
+```
+
+- **balance factor ラベル**: ノード下部に小さいフォントで表示
+  - `bf = 0`: 緑色 `#6EE7B7`（完全平衡）
+  - `bf = ±1`: 黄色 `#FCD34D`（許容範囲内）
+  - `bf = ±2`: 赤色 `#F87171`（一時的不均衡、回転直前のみ表示される）
+- **回転ノードのハイライト**: 直前の挿入で回転に関与したノードを紫リング `#A855F7` で表示
+
+##### 操作フェーズと表示
+
+| フェーズ | 操作 | 表示 |
+|---|---|---|
+| **ビルドフェーズ** | `IndexRead(i)` × n | AVL 木に新ノード挿入 → 経路を遡りながら回転（もし必要なら）→ 回転後の木を表示 |
+| **走査フェーズ** | `IndexWrite(j, v)` × n | 全ノード挿入済み AVL 木で現在訪問中のノード（orange）をハイライト |
+
+##### ノードのハイライト規則（優先順位順）
+
+| ノード種別 | 色 | 意味 | 優先度 |
+|---|---|---|---|
+| `NewNode` | green `#4ADE80` | 今回挿入されたノード（挿入先） | 1 |
+| `RotatedNodes` | purple `#A855F7` | 今回の挿入で回転に関与したノード（回転軸 + その親・子） | 2 |
+| `ActiveNode` | orange `#F97316` | 中順走査で現在配列に書き戻し中のノード | 3 |
+| `InsertionPath` | amber `#FBBF24` | 今回の挿入で比較・通過したノード | 4 |
+
+##### 回転タイプの表示
+
+narrative に回転タイプを明示する：
+
+```
+"Insert 9 at depth 2 — LL at 5"   ← LL rotation（左-左ケース）が node 5 で発生
+"Insert 2 at depth 3 — LR at 3"   ← LR rotation（左-右ケース）が node 3 で発生
+"Insert 7 at depth 2"             ← 回転なし（バランス OK）
+```
+
+回転タイプ:
+- **LL**: 左部分木の左子が重い → 右回転
+- **RR**: 右部分木の右子が重い → 左回転
+- **LR**: 左部分木の右子が重い → 左子を左回転してから右回転
+- **RL**: 右部分木の左子が重い → 右子を右回転してから左回転
+
+##### `BstSnapshot` データモデル拡張
+
+AVL 用に `Heights` と `RotatedNodes` を追加：
+
+```csharp
+public record BstSnapshot
+{
+    public int    Size;            // 現在のノード数
+    public int    Root;            // 根 ID (-1 = 空)
+    public int[]  Values;          // ノード ID → 値
+    public int[]  Left;            // ノード ID → 左子 ID (-1 = なし)
+    public int[]  Right;           // ノード ID → 右子 ID (-1 = なし)
+    public int[]  InsertionPath;   // 直前挿入で辿ったノード ID リスト
+    public int    NewNode;         // 直前に挿入されたノード ID (-1 = なし)
+    public int    ActiveNode;      // 走査中の現在ノード ID (-1 = なし)
+    public bool   IsTraversalPhase;
+
+    // AVL-only fields
+    public int[]? Heights;         // ノード ID → height（null = BST モード）
+    public int[]  RotatedNodes;    // 直前の挿入で回転に関与したノード ID リスト
+}
+```
+
+##### 追跡ロジック（TutorialStepBuilder）
+
+```
+trackAvl = (hint == TutorialVisualizationHint.AvlTree)
+
+IndexRead(i) →
+  1. value = mainArray[i] を shadow BST に挿入（経路記録）
+  2. avlHeight[newNode] = 1
+  3. 挿入経路を末尾から遡る:
+     while (pathTop > 0)
+       node = avlPathBuf[--pathTop]
+       AvlUpdateHeight(node)
+       (newRoot, rotType) = AvlBalance(node)  ← LL/RR/LR/RL 判定
+       if rotType != null:
+         rotatedNodes.Add(node)
+         rotatedNodes.Add(newRoot)  // 回転後の新ルート
+         rotationDesc += "{rotType} at {node.Value}"
+       subtreeRoot = newRoot
+  4. bstRoot = 最終 subtreeRoot
+  5. RotatedNodes, narrative に反映
+
+AVL 静的ヘルパー（TutorialStepBuilder 内）:
+  - AvlUpdateHeight(i): height[i] = 1 + max(left.height, right.height)
+  - AvlGetBalance(i): return left.height - right.height
+  - AvlRotateRight(y): x = y.left; y.left = x.right; x.right = y; return x
+  - AvlRotateLeft(x): y = x.right; x.right = y.left; y.left = x; return y
+  - AvlBalance(node):
+      bf = AvlGetBalance(node)
+      if bf > 1:        // Left-heavy
+        if left.bf < 0: left = RotateLeft(left); rotType = "LR"
+        else:           rotType = "LL"
+        return (RotateRight(node), rotType)
+      if bf < -1:       // Right-heavy
+        if right.bf > 0: right = RotateRight(right); rotType = "RL"
+        else:            rotType = "RR"
+        return (RotateLeft(node), rotType)
+      return (node, null)  // already balanced
+```
+
+##### BstTreeRenderer の AVL 対応
+
+- **`avlMode = (Bst.Heights != null)`** で AVL モードを判定
+- **viewH 調整**: `bfPad = avlMode ? 18 : 0` で balance factor ラベル分のスペースを追加
+- **balance factor ラベル**: 各ノード下部に `MarkupString` で SVG `<text>` を出力
+  ```csharp
+  int bf = ComputeBalanceFactor(i);
+  string bfColor = bf == 0 ? "#6EE7B7" : (Math.Abs(bf) == 1 ? "#FCD34D" : "#F87171");
+  string bfText = $"{(bf > 0 ? "+" : "")}{bf}";
+  @(new MarkupString($"<text x=\"{nx}\" y=\"{ny + nodeR + 11}\" ...>{bfText}</text>"))
+  ```
+- **回転ノードハイライト**: `rotatedSet.Contains(i)` で紫リング表示
+- **フェーズバッジ**: "Building AVL Tree" vs "Building BST"
+
+##### アーキテクチャへの影響
+
+```
+Models/
+  BstSnapshot.cs                 ← 変更: Heights, RotatedNodes 追加
+  TutorialVisualizationHint.cs   ← 変更: AvlTree 追加
+  TutorialStep.cs                ← 既存の Bst プロパティで対応
+
+Components/
+  BstTreeRenderer.razor          ← 変更: avlMode 判定、balance factor ラベル、rotated node ハイライト
+
+Services/
+  TutorialStepBuilder.cs         ← 変更: trackAvl, AVL rebalancing block, AVL static helpers (UpdateHeight/Balance/Rotate)
+  AlgorithmRegistry.cs           ← 変更: BalancedBinaryTreeSort に AvlTree 設定
+
+Pages/
+  TutorialPage.razor             ← 変更: IsBstView に AvlTree 追加、GetTreeToggleLabel に "AVL Tree" 追加
+  TutorialPage.razor.css         ← 既存の bst-* スタイルで対応
+```
+
 #### アーキテクチャへの影響（新規ファイル）
 
 ```
@@ -411,6 +976,8 @@ Pages/
 
 Components/
   MarbleRenderer.razor         ← マーブル描画コンポーネント
+  HeapTreeRenderer.razor       ← ヒープ木描画コンポーネント（Heap Sort 用）
+  BstTreeRenderer.razor        ← BST 描画コンポーネント（BinaryTreeSort 用）
   TutorialAlgorithmPanel.razor ← 説明パネル（上部）
   TutorialNarrativePanel.razor ← ステップ説明テキスト（中部）
   TutorialControls.razor       ← ナビゲーションボタン群
@@ -420,6 +987,9 @@ Services/
 
 Models/
   TutorialStep.cs              ← TutorialStep レコード定義
+  TutorialVisualizationHint.cs ← チュートリアル追加表示ヒント
+  BstSnapshot.cs               ← BST スナップショットレコード
+  RoleType.cs                  ← RoleType enum 定義（Phase / Role Tracker）
 ```
 
 既存の `SortExecutor`・`AlgorithmRegistry`・`PlaybackService` はそのまま再利用する。

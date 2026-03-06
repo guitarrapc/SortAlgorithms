@@ -10,17 +10,18 @@
             @if (HighlightType == OperationType.Swap && HighlightIndices.Length == 2)
             {
                 var (li, ri) = GetSortedPair();
-                var unit = 100;
-                var viewW = Values.Length * unit;
-                var viewH = 48;
-                var leftX = li * unit + unit / 2;
-                var rightX = ri * unit + unit / 2;
+                var unit = 68;         // marble_width(56) + gap(12)
+                var marbleHalf = 28;   // marble_width / 2
+                var viewW = Values.Length * unit - 12;
+                var viewH = 56;
+                var leftX = li * unit + marbleHalf;
+                var rightX = ri * unit + marbleHalf;
                 var midX = (leftX + rightX) / 2;
-                var startY = viewH - 2;
-                var ctrlY1 = 6;
-                var ctrlY2 = 22;
+                var startY = 24;       // arrow_area(56) - lift(20) - scale(4) - glow(4) - margin(4)
+                var ctrlY1 = 2;        // higher arc (left→right): peak near SVG top
+                var ctrlY2 = 2;       // lower arc  (right→left): clearly below ctrlY1
 
-                <svg class="marble-swap-arrows" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="xMidYMid meet">
+                <svg class="marble-swap-arrows" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="none">
                     <defs>
                         <marker id="@_arrowMarkerId" markerWidth="10" markerHeight="7"
                                 refX="9" refY="3.5" orient="auto">
@@ -40,19 +41,20 @@
             else if (HighlightType == OperationType.Compare && HighlightIndices.Length == 2 && CompareResult.HasValue)
             {
                 var (li, ri) = GetSortedPair();
-                var unit = 100;
-                var viewW = Values.Length * unit;
-                var viewH = 48;
-                var leftX = li * unit + unit / 2;
-                var rightX = ri * unit + unit / 2;
+                var unit = 68;
+                var marbleHalf = 28;
+                var viewW = Values.Length * unit - 12;
+                var viewH = 56;
+                var leftX = li * unit + marbleHalf;
+                var rightX = ri * unit + marbleHalf;
                 var midX = (leftX + rightX) / 2;
                 // HighlightIndices[0] が元の Index1。左に来たら向きそのまま、右に来たら反転
                 var displayResult = HighlightIndices[0] <= HighlightIndices[1]
                     ? CompareResult.Value : -CompareResult.Value;
                 var symbol = displayResult > 0 ? ">" : displayResult < 0 ? "<" : "=";
 
-                <svg class="marble-compare-symbol" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="xMidYMid meet">
-                    <text x="@midX" y="@(viewH - 4)" text-anchor="middle" font-size="36"
+                <svg class="marble-compare-symbol" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="none">
+                    <text x="@midX" y="22" text-anchor="middle" dominant-baseline="auto" font-size="16"
                           font-weight="bold" fill="#A855F7" opacity="0.9">@symbol</text>
                 </svg>
             }
@@ -60,16 +62,17 @@
             {
                 var srcIdx = WriteSourceIndex.Value;
                 var dstIdx = HighlightIndices[0];
-                var unit = 100;
-                var viewW = Values.Length * unit;
-                var viewH = 48;
-                var srcX = srcIdx * unit + unit / 2;
-                var dstX = dstIdx * unit + unit / 2;
+                var unit = 68;
+                var marbleHalf = 28;
+                var viewW = Values.Length * unit - 12;
+                var viewH = 56;
+                var srcX = srcIdx * unit + marbleHalf;
+                var dstX = dstIdx * unit + marbleHalf;
                 var midX = (srcX + dstX) / 2;
-                var startY = viewH - 2;
+                var startY = 24;
                 var ctrlY = 8;
 
-                <svg class="marble-write-arrow" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="xMidYMid meet">
+                <svg class="marble-write-arrow" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="none">
                     <defs>
                         <marker id="@_writeArrowMarkerId" markerWidth="10" markerHeight="7"
                                 refX="9" refY="3.5" orient="auto">
@@ -109,6 +112,11 @@
                         @(isEmpty ? "" : value.ToString())
                     </div>
                     <div class="marble-index">@idx</div>
+                    @if (ShellGap.HasValue && ShellGap.Value > 1)
+                    {
+                        int subgroup = idx % ShellGap.Value;
+                        <div class="marble-gap-dot" style="background: @GetSubgroupColor(subgroup);" title="Group @subgroup (gap=@ShellGap)"></div>
+                    }
                     @if (IsWriteTarget(idx))
                     {
                         <div class="marble-ghost">@WritePreviousValue → @value</div>
@@ -150,6 +158,13 @@
     /// <summary>IndexWrite 操作で上書きされる前の値（null: Write 以外）</summary>
     [Parameter] public int? WritePreviousValue { get; set; }
 
+    /// <summary>
+    /// Shell sort の h-spaced 部分列色分け用のギャップ値。
+    /// null または 1 の場合はドットを非表示。
+    /// 各マーブルのインデックス i に対して i % ShellGap で部分列グループを決定する。
+    /// </summary>
+    [Parameter] public int? ShellGap { get; set; }
+
     private readonly string _arrowMarkerId = $"ah-{Guid.NewGuid().ToString("N")[..8]}";
     private readonly string _writeArrowMarkerId = $"wh-{Guid.NewGuid().ToString("N")[..8]}";
 
@@ -183,5 +198,25 @@
         var ratio = (double)(value - 1) / (MaxValue - 1);
         var hue = (int)(210 * (1.0 - ratio));
         return $"hsl({hue}, 75%, 42%)";
+    }
+
+    /// <summary>
+    /// Shell sort の h-spaced 部分列グループに対する識別色を返す。
+    /// 最大8色まで対応（チュートリアルの 8 要素配列で最大 gap=8）。
+    /// </summary>
+    private static string GetSubgroupColor(int subgroup)
+    {
+        ReadOnlySpan<string> palette =
+        [
+            "#EF4444", // 0: red
+            "#3B82F6", // 1: blue
+            "#22C55E", // 2: green
+            "#EAB308", // 3: yellow
+            "#A855F7", // 4: purple
+            "#F97316", // 5: orange
+            "#06B6D4", // 6: cyan
+            "#EC4899", // 7: pink
+        ];
+        return palette[subgroup % palette.Length];
     }
 }

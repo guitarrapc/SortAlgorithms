@@ -14,10 +14,28 @@ public static class TutorialStepBuilder
     /// into a single logical step for clarity.
     /// </summary>
     public static List<TutorialStep> Build(int[] initialArray, List<SortOperation> operations)
+        => Build(initialArray, operations, TutorialVisualizationHint.None);
+
+    /// <summary>
+    /// Builds a list of TutorialSteps with optional visualization hint support.
+    /// When <paramref name="hint"/> is <see cref="TutorialVisualizationHint.HeapTree"/>,
+    /// tracks the heap boundary for heap tree rendering.
+    /// </summary>
+    public static List<TutorialStep> Build(int[] initialArray, List<SortOperation> operations, TutorialVisualizationHint hint)
+        => Build(initialArray, operations, hint, lsdRadix: 0);
+
+    /// <summary>
+    /// Builds a list of TutorialSteps with optional visualization hint and LSD radix support.
+    /// <paramref name="lsdRadix"/> is used when <paramref name="hint"/> is
+    /// <see cref="TutorialVisualizationHint.DigitBucketLsd"/> to select bucket digit computation:
+    /// 10 = decimal (b=10), 4 = 2-bit groups (b=4).
+    /// </summary>
+    public static List<TutorialStep> Build(int[] initialArray, List<SortOperation> operations, TutorialVisualizationHint hint, int lsdRadix)
     {
         var steps = new List<TutorialStep>(operations.Count);
         var mainArray = (int[])initialArray.Clone();
         var bufferArrays = InitializeBufferArrays(initialArray.Length, operations);
+        var tracker = CreateTracker(hint, lsdRadix, initialArray);
 
         int opIdx = 0;
         while (opIdx < operations.Count)
@@ -27,7 +45,8 @@ public static class TutorialStepBuilder
             if (groupEnd > opIdx)
             {
                 // Grouped insertion step: Read + shifts + insert → 1 logical step
-                steps.Add(BuildGroupedInsertionStep(operations, opIdx, groupEnd, mainArray, bufferArrays));
+                var step = BuildGroupedInsertionStep(operations, opIdx, groupEnd, mainArray, bufferArrays);
+                steps.Add(tracker.Decorate(step));
                 opIdx = groupEnd + 1;
             }
             else
@@ -35,12 +54,18 @@ public static class TutorialStepBuilder
                 // Individual step
                 var op = operations[opIdx];
 
+                // 1. Process: tracker が内部状態を更新する (ApplyOperation 前)
+                tracker.Process(op, mainArray, bufferArrays);
+
+                // 2. Generate base step info
                 var (highlights, bufferHighlights, highlightType, compareResult, writeSourceIndex, writePreviousValue, narrative) =
                     GenerateStepInfo(op, mainArray, bufferArrays);
 
+                // 3. Apply operation to arrays
                 ApplyOperation(op, mainArray, bufferArrays);
 
-                steps.Add(new TutorialStep
+                // 4. Build base step
+                var baseStep = new TutorialStep
                 {
                     OperationIndex = opIdx,
                     ArraySnapshot = (int[])mainArray.Clone(),
@@ -51,14 +76,44 @@ public static class TutorialStepBuilder
                     CompareResult = compareResult,
                     WriteSourceIndex = writeSourceIndex,
                     WritePreviousValue = writePreviousValue,
-                    Narrative = narrative
-                });
+                    Narrative = narrative,
+                };
+
+                // 5. Decorate: tracker がビジュアライゼーション固有フィールドを追加
+                steps.Add(tracker.Decorate(baseStep));
+
+                // 6. PostStep: 後処理 (LSD バケットクリア等)
+                tracker.PostStep();
+
                 opIdx++;
             }
         }
 
         return steps;
     }
+
+    // ─── Tracker factory ─────────────────────────────────────────
+
+    /// <summary>
+    /// TutorialVisualizationHint に対応する IVisualizationTracker を生成する。
+    /// </summary>
+    private static IVisualizationTracker CreateTracker(
+        TutorialVisualizationHint hint, int lsdRadix, int[] initialArray)
+        => hint switch
+        {
+            TutorialVisualizationHint.HeapTree
+            or TutorialVisualizationHint.TernaryHeapTree
+            or TutorialVisualizationHint.WeakHeapTree => new HeapTracker(hint, initialArray.Length),
+            TutorialVisualizationHint.BstTree         => new BstTracker(initialArray.Length, avl: false),
+            TutorialVisualizationHint.AvlTree         => new BstTracker(initialArray.Length, avl: true),
+            TutorialVisualizationHint.ValueBucket     => new DistributionTracker(initialArray),
+            TutorialVisualizationHint.DigitBucketLsd  => new LsdRadixTracker(initialArray, lsdRadix),
+            TutorialVisualizationHint.DigitBucketMsd  => new MsdRadixTracker(initialArray, lsdRadix),
+            TutorialVisualizationHint.SortingNetwork  => new NetworkTracker(initialArray.Length),
+            TutorialVisualizationHint.RecursionTree   => new RecursionTracker(initialArray.Length),
+            TutorialVisualizationHint.ShellGap        => new ShellGapTracker(),
+            _                                          => NullTracker.Instance,
+        };
 
     // ─── Insertion group detection ──────────────────────────────────────────
 
