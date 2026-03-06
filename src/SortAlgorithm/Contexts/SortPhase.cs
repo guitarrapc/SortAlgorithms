@@ -1,4 +1,4 @@
-﻿namespace SortAlgorithm.Contexts;
+namespace SortAlgorithm.Contexts;
 
 /// <summary>
 /// Enumeration representing the current phase of the algorithm.
@@ -26,17 +26,13 @@ public enum SortPhase
     /// <summary>Phase not set (hides tutorial phase bar)</summary>
     None = 0,
 
+    // ── Exchange family ────────────────────────────────────────────────────
+
     /// <summary>
     /// Bubble Sort pass.
     /// param1=pass (current pass number, 1-based), param2=totalPasses (total passes), param3=boundary (right boundary position)
     /// </summary>
     BubblePass,
-
-    /// <summary>
-    /// Selection Sort minimum value search.
-    /// param1=i (sorted boundary index), param2=last (search end index, inclusive)
-    /// </summary>
-    SelectionFindMin,
 
     /// <summary>
     /// Cocktail Shaker Sort forward pass (left to right, moving maximum to the right).
@@ -73,6 +69,14 @@ public enum SortPhase
     /// param1=pass (current pass number, 1-based)
     /// </summary>
     OddEvenEvenPhase,
+
+    // ── Selection family ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Selection Sort minimum value search.
+    /// param1=i (sorted boundary index), param2=last (search end index, inclusive)
+    /// </summary>
+    SelectionFindMin,
 
     /// <summary>
     /// Double Selection Sort simultaneous min/max search.
