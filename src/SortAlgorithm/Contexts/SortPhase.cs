@@ -1,4 +1,4 @@
-namespace SortAlgorithm.Contexts;
+﻿namespace SortAlgorithm.Contexts;
 
 /// <summary>
 /// Enumeration representing the current phase of the algorithm.
@@ -133,4 +133,18 @@ public enum SortPhase
     /// param1=phase (1=initial sort, 2=insert remaining, 3=extract)
     /// </summary>
     LibrarySortPhase,
+
+    // ── Tree family ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Tree Sort insertion phase: inserting element at index i into the BST.
+    /// param1=i (index of element being inserted), param2=last (array last index)
+    /// </summary>
+    TreeSortInsert,
+
+    /// <summary>
+    /// Tree Sort extraction phase: in-order traversal writing sorted elements back.
+    /// No parameters used.
+    /// </summary>
+    TreeSortExtract,
 }

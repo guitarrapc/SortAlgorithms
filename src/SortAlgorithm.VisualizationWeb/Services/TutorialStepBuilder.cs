@@ -293,6 +293,8 @@ public static class TutorialStepBuilder
                 3 => "Phase 3: extract sorted elements from auxiliary array",
                 _ => string.Empty,
             },
+            SortAlgorithm.Contexts.SortPhase.TreeSortInsert            => $"Insert [{p1}] into BST (element {p1 + 1}/{p2 + 1})",
+            SortAlgorithm.Contexts.SortPhase.TreeSortExtract           => "Extract: in-order traversal → write sorted array",
             _ => string.Empty,
         };
 

@@ -136,10 +136,14 @@ public static class BalancedBinaryTreeSort
             // Insert each element into the AVL tree (iteratively with rebalancing)
             for (int i = 0; i < s.Length; i++)
             {
+                context.OnPhase(SortPhase.TreeSortInsert, i, s.Length - 1);
+                context.OnRole(i, BUFFER_MAIN, RoleType.RightPointer);
                 rootIndex = InsertIterative(arena, rootIndex, ref nodeCount, i, s, pathStack);
+                context.OnRole(i, BUFFER_MAIN, RoleType.None);
             }
 
             // Traverse in order and write back into the array (iterative to avoid stack overflow)
+            context.OnPhase(SortPhase.TreeSortExtract);
             var writeIndex = 0;
             Inorder(s, arena, rootIndex, ref writeIndex);
         }
