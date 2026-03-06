@@ -1,15 +1,18 @@
 ﻿using SortAlgorithm.Contexts;
+using System.Diagnostics;
 
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// ピボット要素を基準に配列を2つの領域に分割し、各領域を再帰的にソートする分割統治法のソートアルゴリズムです。
+/// ピボット要素を基準に配列を2つの領域に分割し、各領域をイテラティブにソートする分割統治法のソートアルゴリズムです。
 /// 実用的なソートアルゴリズムの基礎として広く知られており、平均的には高速ですが最悪ケースでO(n²)の性能となります。
 /// 本実装はDual-Pivotや3-way partitioningなどの高度な手法は使用せず、またInsertionSortなどの他アルゴリズムへの切り替えも行わない、ごく一般的なQuickSortです。
+/// 再帰の代わりに明示的スタック（stackalloc）を用いたイテラティブ実装により、AntiQuickSortなどの逆境入力でもStackOverflowが発生しません。
 /// <br/>
-/// A divide-and-conquer sorting algorithm that partitions the array into two regions based on a pivot element and recursively sorts each region.
+/// A divide-and-conquer sorting algorithm that partitions the array into two regions based on a pivot element and iteratively sorts each region.
 /// Widely known as the foundation of practical sorting algorithms, it is fast on average but has O(n²) performance in the worst case.
 /// This implementation is a basic QuickSort without advanced techniques such as dual-pivot or 3-way partitioning, and does not switch to other algorithms like InsertionSort.
+/// An iterative implementation with an explicit stack-allocated stack replaces recursion to prevent stack overflow on adversarial inputs such as AntiQuickSort.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct QuickSort:</strong></para>
@@ -29,21 +32,23 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// After partitioning, all elements in [left, j] are ≤ pivot, and all elements in [i, right] are ≥ pivot.
 /// Note: Hoare's scheme does not guarantee the pivot ends up at its final position, unlike Lomuto's scheme.</description></item>
-/// <item><description><strong>Recursive Division:</strong> The algorithm recursively sorts two independent subranges:
+/// <item><description><strong>Iterative Division:</strong> Instead of recursing, pending subranges are managed on an explicit stack-allocated stack.
+/// The "smaller partition first" strategy immediately continues with the smaller partition and defers the larger one,
+/// bounding the explicit stack depth to O(log n) regardless of pivot quality.
 /// - Left region: [left, j]
 /// - Right region: [i, right]
 /// Base case: when right ≤ left, the range has ≤ 1 element and is trivially sorted.</description></item>
 /// <item><description><strong>Termination:</strong> The algorithm terminates because:
-/// - Each recursive call operates on a strictly smaller subarray (at least one element is partitioned out)
+/// - Each iteration operates on a strictly smaller subarray (at least one element is partitioned out)
 /// - The base case (right ≤ left) is eventually reached for all subarrays
-/// - Maximum recursion depth: O(log n) on average, O(n) in worst case</description></item>
+/// - Maximum explicit stack depth: O(log n) guaranteed by the smaller-partition-first strategy</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
 /// <item><description>Partition   : Hoare partition scheme (bidirectional scan)</description></item>
 /// <item><description>Stable      : No (partitioning does not preserve relative order of equal elements)</description></item>
-/// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack in average case, O(n) in worst case)</description></item>
+/// <item><description>In-place    : Yes (O(log n) auxiliary space for explicit stack, guaranteed by smaller-partition-first strategy)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Balanced partitions (pivot divides array into two equal halves)</description></item>
 /// <item><description>Average case: Θ(n log n) - Expected number of comparisons: 2n ln n ≈ 1.39n log₂ n</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when pivot is always the smallest or largest element (e.g., sorted or reverse-sorted arrays with poor pivot selection)</description></item>
@@ -60,7 +65,7 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Worst-case O(n²) performance on sorted or reverse-sorted arrays with poor pivot selection</description></item>
 /// <item><description>Not stable: relative order of equal elements is not preserved</description></item>
-/// <item><description>Recursion depth can be O(n) in worst case, risking stack overflow on large arrays</description></item>
+/// <item><description>Worst-case O(n²) comparisons/swaps on already-sorted or reverse-sorted arrays with poor pivot selection</description></item>
 /// <item><description>Poor performance on arrays with many duplicate elements (use 3-way partitioning instead)</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
@@ -150,6 +155,8 @@ public static class QuickSort
     /// Sorts the subrange [left..right] (inclusive) using the provided sort context.
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
     /// Uses Hoare's partitioning scheme with the middle element as pivot.
+    /// Iterative implementation with an explicit stack avoids call-stack overflow on adversarial inputs.
+    /// The "smaller partition first" strategy guarantees the explicit stack depth stays within O(log n).
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
@@ -161,49 +168,83 @@ public static class QuickSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (right <= left) return;
+        // Explicit stack for iterative QuickSort.
+        // With smaller-partition-first, stack depth is bounded by O(log n).
+        // 64 entries are more than enough for any practical Span<T> length addressable by int indexing.
+        Span<int> stackL = stackalloc int[64];
+        Span<int> stackR = stackalloc int[64];
+        var top = -1;
 
-        // Select pivot as the middle element
-        var pivot = s.Read((left + right) / 2);
-
-        // Hoare partition: two pointers moving from opposite ends
-        var i = left;
-        var j = right;
-
-        while (i <= j)
+        while (true)
         {
-            // Move i forward while elements are less than pivot
-            while (s.Compare(i, pivot) < 0)
+            if (left < right)
             {
-                i++;
-            }
+                // Select pivot as the middle element (same as `s.Read((left + right) / 2)`)
+                var pivotIdx = left + ((right - left) >> 1);
+                s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, pivotIdx);
+                s.Context.OnRole(pivotIdx, BUFFER_MAIN, RoleType.Pivot);
+                var pivot = s.Read(pivotIdx);
 
-            // Move j backward while elements are greater than pivot
-            while (s.Compare(pivot, j) < 0)
+                // Uses a Hoare-style bidirectional partitioning scheme
+                var i = left;
+                var j = right;
+
+                while (i <= j)
+                {
+                    // Move i forward while elements are less than pivot
+                    while (s.Compare(i, pivot) < 0)
+                    {
+                        i++;
+                    }
+
+                    // Move j backward while elements are greater than pivot
+                    while (s.Compare(pivot, j) < 0)
+                    {
+                        j--;
+                    }
+
+                    // Swap if pointers haven't crossed
+                    if (i <= j)
+                    {
+                        s.Swap(i, j);
+                        i++;
+                        j--;
+                    }
+                }
+
+                s.Context.OnRole(pivotIdx, BUFFER_MAIN, RoleType.None);
+
+                // After partitioning, no element in [left..j] is greater than the pivot value,
+                // and no element in [i..right] is less than the pivot value.
+                if (j - left < right - i)
+                {
+                    // Left partition [left, j] is smaller → continue with it; defer right [i, right]
+                    if (i < right)
+                    {
+                        Debug.Assert(top + 1 < stackL.Length);
+                        stackL[++top] = i;
+                        stackR[top] = right;
+                    }
+                    right = j;
+                }
+                else
+                {
+                    // Right partition [i, right] is smaller → continue with it; defer left [left, j]
+                    if (left < j)
+                    {
+                        Debug.Assert(top + 1 < stackL.Length);
+                        stackL[++top] = left;
+                        stackR[top] = j;
+                    }
+                    left = i;
+                }
+            }
+            else
             {
-                j--;
+                if (top < 0) break;
+                left = stackL[top];
+                right = stackR[top--];
             }
-
-            // Swap if pointers haven't crossed
-            if (i <= j)
-            {
-                s.Swap(i, j);
-                i++;
-                j--;
-            }
-        }
-
-        // Recursively sort left and right partitions
-        // After partitioning, elements in [left..j] are not greater than the pivot region,
-        // and elements in [i..right] are not less than the pivot region.
-        if (left < j)
-        {
-            SortCore<T, TComparer, TContext>(s, left, j);
-        }
-
-        if (i < right)
-        {
-            SortCore<T, TComparer, TContext>(s, i, right);
         }
     }
 }
