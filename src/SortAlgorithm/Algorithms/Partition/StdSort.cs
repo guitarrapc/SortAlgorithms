@@ -38,7 +38,7 @@ public static class StdSort
     private const int BUFFER_MAIN = 0;       // Main input array
 
     // Upper bound for using insertion sort for sorting
-    private const int INSERTION_SORT_LIMIT = 24;
+    private const int InsertionSortThreshold = 24;
     // Lower bound for using Tuckey's ninther technique for median computation
     private const int NINTHER_THRESHOLD = 128;
 
@@ -272,7 +272,7 @@ public static class StdSort
             }
 
             // Use insertion sort for small arrays
-            if (len < INSERTION_SORT_LIMIT)
+            if (len < InsertionSortThreshold)
             {
                 if (leftmost)
                 {
