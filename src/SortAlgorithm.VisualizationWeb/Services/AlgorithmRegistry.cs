@@ -668,7 +668,8 @@ public class AlgorithmRegistry
                 - Compare: each insertion navigates the tree by comparing the new element against the current node, turning left or right until an empty slot is found
                 - Swap (rotation): when an insertion unbalances the tree, one or more rotations rearrange a small cluster of nodes to restore the height constraint
                 - IndexRead (in-order traversal): after all insertions, nodes are visited left-root-right to reconstruct the sorted sequence
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.AvlTree);
 
         // Joke Sorts - O(n!) ~ O(∞) - 推奨8（注意: 極めて遅い）
         // Bogo sort: ランダムシャッフルで非決定的のためチュートリアル対象外。

@@ -20,4 +20,7 @@ public enum TutorialVisualizationHint
 
     /// <summary>非平衡 BST 表示（in-order rank × 深さのレイアウトで二分探索木を描画）</summary>
     BstTree,
+
+    /// <summary>AVL 木表示（回転後の平衡 BST を描画。balance factor 付き）</summary>
+    AvlTree,
 }

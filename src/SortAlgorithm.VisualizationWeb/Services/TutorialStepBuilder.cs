@@ -44,21 +44,29 @@ public static class TutorialStepBuilder
         // For WeakHeapSort: bit-parallel reverse bit array (r[i] = true → right child 2i+1 is distinguished)
         bool[] reverseBits = trackWeakHeap ? new bool[initialArray.Length] : [];
 
-        // BST shadow-replay for BstTree visualization
+        // BST / AVL shadow-replay for BstTree / AvlTree visualization
         // BinaryTreeSort emits IndexRead × n (build) then IndexWrite × n (traversal).
-        // We replay the BST insertion locally to reconstruct tree structure at each step.
+        // We replay the BST/AVL insertion locally to reconstruct tree structure at each step.
+        // AvlTree adds height tracking + rebalancing (RotateLeft/Right) after each insertion.
         var trackBst = hint == TutorialVisualizationHint.BstTree;
+        var trackAvl = hint == TutorialVisualizationHint.AvlTree;
+        var trackBstOrAvl = trackBst || trackAvl;
         int bstCap = initialArray.Length;
         int bstSize = 0;
         int bstRoot = -1;
-        int[] bstValues = trackBst ? new int[bstCap] : [];
-        int[] bstLeft  = trackBst ? Enumerable.Repeat(-1, bstCap).ToArray() : [];
-        int[] bstRight = trackBst ? Enumerable.Repeat(-1, bstCap).ToArray() : [];
+        int[] bstValues = trackBstOrAvl ? new int[bstCap] : [];
+        int[] bstLeft  = trackBstOrAvl ? Enumerable.Repeat(-1, bstCap).ToArray() : [];
+        int[] bstRight = trackBstOrAvl ? Enumerable.Repeat(-1, bstCap).ToArray() : [];
         int[] bstInsertionPath = [];
         int   bstNewNode = -1;
         bool  bstIsTraversalPhase = false;
         int   bstActiveNode = -1;
         int[] bstInorderList = [];   // precomputed once all nodes are inserted
+        // AVL-only state: height array, path stack for rebalancing, rotation info
+        int[] avlHeight   = trackAvl ? new int[bstCap] : [];
+        int[] avlPathBuf  = trackAvl ? new int[bstCap] : [];
+        int[] avlRotatedNodes = [];
+        string? avlRotationDesc = null;
 
         int opIdx = 0;
         while (opIdx < operations.Count)
@@ -119,18 +127,20 @@ public static class TutorialStepBuilder
                     }
                 }
 
-                // Track BST state for BstTree visualization
+                // Track BST / AVL state for BstTree / AvlTree visualization
                 BstSnapshot? bstSnapshot = null;
-                if (trackBst && op.BufferId1 == 0)
+                if (trackBstOrAvl && op.BufferId1 == 0)
                 {
                     if (op.Type == OperationType.IndexRead)
                     {
-                        // Insert value into shadow BST (mirrors BinaryTreeSort.InsertIterative)
+                        // Create new node (common for BST and AVL)
                         int nodeId = bstSize++;
                         int value = mainArray[op.Index1];
                         bstValues[nodeId] = value;
                         bstLeft[nodeId] = bstRight[nodeId] = -1;
+                        if (trackAvl) { avlHeight[nodeId] = 1; avlRotatedNodes = []; avlRotationDesc = null; }
 
+                        // Navigate to insertion point (common path traversal for BST and AVL)
                         var path = new List<int>();
                         if (bstRoot == -1)
                         {
@@ -139,9 +149,11 @@ public static class TutorialStepBuilder
                         else
                         {
                             int cur = bstRoot;
+                            int avlPathTop = 0;
                             while (true)
                             {
                                 path.Add(cur);
+                                if (trackAvl) avlPathBuf[avlPathTop++] = cur;
                                 if (value < bstValues[cur])
                                 {
                                     if (bstLeft[cur] == -1) { bstLeft[cur] = nodeId; break; }
@@ -152,6 +164,38 @@ public static class TutorialStepBuilder
                                     if (bstRight[cur] == -1) { bstRight[cur] = nodeId; break; }
                                     cur = bstRight[cur];
                                 }
+                            }
+
+                            // AVL only: rebalance bottom-up along the insertion path
+                            if (trackAvl)
+                            {
+                                var rotatedList = new List<int>();
+                                var rotDescs = new List<string>();
+                                int subtreeRoot = nodeId;
+                                int subtreeFrom = nodeId;
+
+                                while (avlPathTop > 0)
+                                {
+                                    int ni = avlPathBuf[--avlPathTop];
+                                    if (bstLeft[ni] == subtreeFrom) bstLeft[ni] = subtreeRoot;
+                                    else if (bstRight[ni] == subtreeFrom) bstRight[ni] = subtreeRoot;
+
+                                    AvlUpdateHeight(ni, bstLeft, bstRight, avlHeight);
+                                    var (newRoot, rotType) = AvlBalance(ni, bstLeft, bstRight, avlHeight);
+
+                                    if (rotType != null)
+                                    {
+                                        rotDescs.Add($"{rotType} at {bstValues[ni]}");
+                                        rotatedList.Add(ni);
+                                        if (newRoot != ni) rotatedList.Add(newRoot);
+                                    }
+                                    subtreeFrom = ni;
+                                    subtreeRoot = newRoot;
+                                }
+
+                                bstRoot = subtreeRoot;
+                                avlRotatedNodes = [.. rotatedList.Distinct()];
+                                avlRotationDesc = rotDescs.Count > 0 ? string.Join("; ", rotDescs) : null;
                             }
                         }
                         bstInsertionPath = [.. path];
@@ -165,6 +209,7 @@ public static class TutorialStepBuilder
                             bstInorderList = BstComputeInorder(bstRoot, bstLeft, bstRight, bstSize);
                             bstInsertionPath = [];
                             bstNewNode = -1;
+                            if (trackAvl) { avlRotatedNodes = []; avlRotationDesc = null; }
                         }
                         bstActiveNode = op.Index1 < bstInorderList.Length ? bstInorderList[op.Index1] : -1;
                     }
@@ -179,22 +224,31 @@ public static class TutorialStepBuilder
                         InsertionPath = bstInsertionPath,
                         NewNode = bstNewNode,
                         ActiveNode = bstActiveNode,
-                        IsTraversalPhase = bstIsTraversalPhase
+                        IsTraversalPhase = bstIsTraversalPhase,
+                        Heights = trackAvl ? avlHeight[..bstSize] : null,
+                        RotatedNodes = trackAvl ? avlRotatedNodes : []
                     };
                 }
 
                 var (highlights, bufferHighlights, highlightType, compareResult, writeSourceIndex, writePreviousValue, narrative) =
                     GenerateStepInfo(op, mainArray, bufferArrays);
 
-                // Override narrative with BST-specific text
-                if (bstSnapshot != null)
+                // Override narrative with BST / AVL-specific text
+                if (bstSnapshot != null && op.BufferId1 == 0)
                 {
+                    bool isAvl = trackAvl;
                     narrative = op.Type switch
                     {
                         OperationType.IndexRead when bstSnapshot.Root == bstSnapshot.NewNode
-                            => $"Insert {bstSnapshot.Values[bstSnapshot.NewNode]} as BST root",
+                            => isAvl
+                                ? $"Insert {bstSnapshot.Values[bstSnapshot.NewNode]} as AVL root"
+                                : $"Insert {bstSnapshot.Values[bstSnapshot.NewNode]} as BST root",
+                        OperationType.IndexRead when bstSnapshot.NewNode >= 0 && avlRotationDesc != null
+                            => $"Insert {bstSnapshot.Values[bstSnapshot.NewNode]} at depth {bstInsertionPath.Length} — {avlRotationDesc}",
                         OperationType.IndexRead when bstSnapshot.NewNode >= 0
-                            => $"Insert {bstSnapshot.Values[bstSnapshot.NewNode]} into BST at depth {bstInsertionPath.Length}",
+                            => isAvl
+                                ? $"Insert {bstSnapshot.Values[bstSnapshot.NewNode]} into AVL tree at depth {bstInsertionPath.Length}"
+                                : $"Insert {bstSnapshot.Values[bstSnapshot.NewNode]} into BST at depth {bstInsertionPath.Length}",
                         OperationType.IndexWrite
                             => $"In-order traversal: write {op.Value} to index {op.Index1}",
                         _ => narrative
@@ -585,5 +639,92 @@ public static class TutorialStepBuilder
             cur = right[cur];
         }
         return [.. result];
+    }
+
+    // ─── AVL helpers ─────────────────────────────────────────────────────
+    // These mirror BalancedBinaryTreeSort's arena-based UpdateHeight / GetBalance / Rotate / Balance.
+    // Arrays left[], right[], height[] are mutated in-place (same as the production code).
+
+    private static void AvlUpdateHeight(int i, int[] left, int[] right, int[] height)
+    {
+        int lh = left[i]  >= 0 ? height[left[i]]  : 0;
+        int rh = right[i] >= 0 ? height[right[i]] : 0;
+        height[i] = 1 + Math.Max(lh, rh);
+    }
+
+    private static int AvlGetBalance(int i, int[] left, int[] right, int[] height)
+    {
+        int lh = left[i]  >= 0 ? height[left[i]]  : 0;
+        int rh = right[i] >= 0 ? height[right[i]] : 0;
+        return lh - rh;
+    }
+
+    /// <summary>Right rotation around y. Returns new subtree root (x = y.Left before rotation).</summary>
+    private static int AvlRotateRight(int y, int[] left, int[] right, int[] height)
+    {
+        int x  = left[y];
+        int t2 = right[x];
+        right[x] = y;
+        left[y]  = t2;
+        AvlUpdateHeight(y, left, right, height);
+        AvlUpdateHeight(x, left, right, height);
+        return x;
+    }
+
+    /// <summary>Left rotation around x. Returns new subtree root (y = x.Right before rotation).</summary>
+    private static int AvlRotateLeft(int x, int[] left, int[] right, int[] height)
+    {
+        int y  = right[x];
+        int t2 = left[y];
+        left[y]  = x;
+        right[x] = t2;
+        AvlUpdateHeight(x, left, right, height);
+        AvlUpdateHeight(y, left, right, height);
+        return y;
+    }
+
+    /// <summary>
+    /// Rebalance the subtree rooted at node. Mirrors BalancedBinaryTreeSort.Balance().
+    /// Returns (newRoot, rotationType) where rotationType is "LL", "RR", "LR", "RL" or null (no rotation).
+    /// </summary>
+    private static (int newRoot, string? rotationType) AvlBalance(int node, int[] left, int[] right, int[] height)
+    {
+        int bf = AvlGetBalance(node, left, right, height);
+
+        if (bf > 1)
+        {
+            int li = left[node];
+            string rotType;
+            if (AvlGetBalance(li, left, right, height) < 0)
+            {
+                // Left-Right case: left-rotate left child first, then right-rotate node
+                left[node] = AvlRotateLeft(li, left, right, height);
+                rotType = "LR";
+            }
+            else
+            {
+                rotType = "LL";
+            }
+            return (AvlRotateRight(node, left, right, height), rotType);
+        }
+
+        if (bf < -1)
+        {
+            int ri = right[node];
+            string rotType;
+            if (AvlGetBalance(ri, left, right, height) > 0)
+            {
+                // Right-Left case: right-rotate right child first, then left-rotate node
+                right[node] = AvlRotateRight(ri, left, right, height);
+                rotType = "RL";
+            }
+            else
+            {
+                rotType = "RR";
+            }
+            return (AvlRotateLeft(node, left, right, height), rotType);
+        }
+
+        return (node, null);  // already balanced
     }
 }

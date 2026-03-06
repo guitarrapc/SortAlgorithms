@@ -42,4 +42,16 @@ public record BstSnapshot
 
     /// <summary>true のとき走査フェーズ（全ノード挿入済み、中順で配列に書き戻し中）</summary>
     public bool IsTraversalPhase { get; init; }
+
+    /// <summary>
+    /// AVL 木の各ノードの高さ配列（ノード ID → height）。
+    /// null のとき通常 BST（高さ非表示）、non-null のとき AVL モード（balance factor を表示）。
+    /// </summary>
+    public int[]? Heights { get; init; }
+
+    /// <summary>
+    /// 直前の挿入で回転に関与したノード ID リスト。AVL のみ使用（他は空配列）。
+    /// 紫色でハイライト表示する。
+    /// </summary>
+    public int[] RotatedNodes { get; init; } = [];
 }

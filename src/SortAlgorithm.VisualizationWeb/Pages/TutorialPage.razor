@@ -515,14 +515,12 @@
     }
 
     private bool HasAlternateView()
-        => _selectedAlgorithm?.TutorialVisualizationHint is
-            TutorialVisualizationHint.HeapTree or
-            TutorialVisualizationHint.TernaryHeapTree or
-            TutorialVisualizationHint.WeakHeapTree or
-            TutorialVisualizationHint.BstTree;
+        => _selectedAlgorithm?.TutorialVisualizationHint != TutorialVisualizationHint.None;
 
     private bool IsBstView()
-        => _selectedAlgorithm?.TutorialVisualizationHint == TutorialVisualizationHint.BstTree;
+        => _selectedAlgorithm?.TutorialVisualizationHint is
+            TutorialVisualizationHint.BstTree or
+            TutorialVisualizationHint.AvlTree;
 
     private int GetBranchingFactor()
         => _selectedAlgorithm?.TutorialVisualizationHint == TutorialVisualizationHint.TernaryHeapTree ? 3 : 2;
@@ -533,6 +531,7 @@
             TutorialVisualizationHint.TernaryHeapTree => "Ternary Heap",
             TutorialVisualizationHint.WeakHeapTree    => "Weak Heap",
             TutorialVisualizationHint.BstTree         => "BST",
+            TutorialVisualizationHint.AvlTree         => "AVL Tree",
             _ => "Heap Tree"
         };
 
