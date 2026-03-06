@@ -164,10 +164,7 @@ public static class QuickSort
         if (right <= left) return;
 
         // Select pivot as the middle element
-        var pivotIdx = (left + right) / 2;
-        s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, pivotIdx);
-        s.Context.OnRole(pivotIdx, BUFFER_MAIN, RoleType.Pivot);
-        var pivot = s.Read(pivotIdx);
+        var pivot = s.Read((left + right) / 2);
 
         // Hoare partition: two pointers moving from opposite ends
         var i = left;
@@ -198,7 +195,6 @@ public static class QuickSort
 
         // Recursively sort left and right partitions
         // After partitioning: [left..j] <= pivot, [i..right] >= pivot
-        s.Context.OnRole(pivotIdx, BUFFER_MAIN, RoleType.None);
         if (left < j)
         {
             SortCore<T, TComparer, TContext>(s, left, j);
