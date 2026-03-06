@@ -179,8 +179,11 @@ public static class QuickSort
         {
             if (left < right)
             {
-                // Select pivot as the middle element
-                var pivot = s.Read(left + ((right - left) >> 1));
+                // Select pivot as the middle element (same as `s.Read((left + right) / 2)`)
+                var pivotIdx = left + ((right - left) >> 1);
+                s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, pivotIdx);
+                s.Context.OnRole(pivotIdx, BUFFER_MAIN, RoleType.Pivot);
+                var pivot = s.Read(pivotIdx);
 
                 // Uses a Hoare-style bidirectional partitioning scheme
                 var i = left;
@@ -208,6 +211,8 @@ public static class QuickSort
                         j--;
                     }
                 }
+
+                s.Context.OnRole(pivotIdx, BUFFER_MAIN, RoleType.None);
 
                 // After partitioning, no element in [left..j] is greater than the pivot value,
                 // and no element in [i..right] is less than the pivot value.
