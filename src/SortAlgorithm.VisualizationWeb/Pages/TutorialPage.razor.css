@@ -902,6 +902,60 @@
     font-weight: 600;
 }
 
+/* ─── Counting sort ヒストグラム表示 ────────────────────────────────── */
+::deep .dist-histogram {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 0.5rem;
+    min-height: 150px;
+}
+
+::deep .dist-histogram-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+::deep .dist-histogram-bar {
+    width: 36px;
+    min-height: 8px;
+    background: linear-gradient(180deg, rgba(142, 192, 124, 0.6) 0%, rgba(142, 192, 124, 0.35) 100%);
+    border: 1.5px solid rgba(142, 192, 124, 0.4);
+    border-radius: 4px 4px 0 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 4px;
+    position: relative;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+::deep .dist-histogram-bar--active {
+    background: linear-gradient(180deg, rgba(251, 191, 36, 0.75) 0%, rgba(251, 191, 36, 0.5) 100%);
+    border-color: rgba(251, 191, 36, 0.7);
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+}
+
+::deep .dist-histogram-count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+::deep .dist-histogram-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-align: center;
+    min-width: 20px;
+    font-family: monospace;
+}
+
 ::deep .dist-marble {
     width: 40px;
     height: 40px;
@@ -1168,6 +1222,10 @@
         gap: 4px;
     }
 
+    ::deep .dist-histogram-bar {
+        width: 30px;
+    }
+
     .tutorial-cards-panel .controls-fieldset {
         gap: 8px;
     }
@@ -1329,6 +1387,22 @@
     }
 
     ::deep .dist-bucket-label {
+        font-size: 0.62rem;
+    }
+
+    ::deep .dist-histogram {
+        min-height: 120px;
+    }
+
+    ::deep .dist-histogram-bar {
+        width: 26px;
+    }
+
+    ::deep .dist-histogram-count {
+        font-size: 0.65rem;
+    }
+
+    ::deep .dist-histogram-label {
         font-size: 0.62rem;
     }
 

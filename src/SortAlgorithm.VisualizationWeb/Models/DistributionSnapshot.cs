@@ -42,6 +42,13 @@ public record DistributionSnapshot
     /// Phase A-2 以降のマルチパス LSD で使用する。
     /// </summary>
     public int PassIndex { get; init; }
+
+    /// <summary>
+    /// 各バケット（値）の出現回数配列（Counting sort 用）。
+    /// Phase == Count または Place のときにヒストグラム表示する。
+    /// null = Counting sort 以外のアルゴリズム。
+    /// </summary>
+    public int[]? Counts { get; init; }
 }
 
 /// <summary>

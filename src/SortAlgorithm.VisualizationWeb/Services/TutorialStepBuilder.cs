@@ -90,6 +90,10 @@ public static class TutorialStepBuilder
         int[] distShadowTemp = [];       // shadow of temp buffer: distShadowTemp[pos] = value written there
         DistributionPhase distPhase = DistributionPhase.Scatter;
         int? distPendingGatherBucket = null;  // bucket index from most recent Read(temp), cleared by Write(main)
+        int[] distCounts = [];               // Counting sort 用カウント配列のシャドウコピー
+        bool trackCountingSort = false;      // Counting sort 検出フラグ
+        bool trackBucketSort = false;        // Bucket sort 検出フラグ
+        int distCountPhaseReadCount = 0;     // Count フェーズの Read 回数（n 回で Count→Place 遷移）
         if (trackDistribution)
         {
             distMinValue = initialArray.Length > 0 ? initialArray.Min() : 0;
@@ -98,6 +102,7 @@ public static class TutorialStepBuilder
             distBucketLabels = Enumerable.Range(distMinValue, distBucketCount).Select(v => v.ToString()).ToArray();
             distBuckets = Enumerable.Range(0, distBucketCount).Select(_ => new List<int>()).ToArray();
             distShadowTemp = new int[initialArray.Length];
+            distCounts = new int[distBucketCount];
         }
 
         // LSD Radix sort tracking for DigitBucketLsd visualization.
@@ -286,15 +291,83 @@ public static class TutorialStepBuilder
                     };
                 }
 
-                // Track Distribution state for ValueBucket visualization (Pigeonhole sort)
+                // Track Distribution state for ValueBucket visualization (Pigeonhole / Counting / Bucket sort)
                 // Operations are processed BEFORE ApplyOperation so that bucket state matches the snapshot.
                 DistributionSnapshot? distSnapshot = null;
                 int distActiveBucket = -1;
                 int distActiveElement = -1;
                 if (trackDistribution)
                 {
-                    if (op.Type == OperationType.IndexWrite && op.BufferId1 == 1 && op.Value.HasValue)
+                    // === Counting sort detection ===
+                    // Pattern: n × Read(main) (Count) → n × (Read(main) + Write(temp)) (Place) → RangeCopy
+                    // Count phase: only Read(main), no Write → increment distCounts
+                    // Place phase: Read + Write appears → switch to Place
+                    if (op.Type == OperationType.IndexRead && op.BufferId1 == 0 && !trackCountingSort && !trackBucketSort)
                     {
+                        // First Read(main) without preceding Write → may be Counting sort Count phase
+                        if (distCountPhaseReadCount == 0 && operations.Take(opIdx).All(o => o.Type != OperationType.IndexWrite || o.BufferId1 != 1))
+                        {
+                            trackCountingSort = true;
+                            distPhase = DistributionPhase.Count;
+                        }
+                    }
+
+                    if (trackCountingSort && distPhase == DistributionPhase.Count)
+                    {
+                        if (op.Type == OperationType.IndexRead && op.BufferId1 == 0)
+                        {
+                            int v = mainArray[op.Index1];
+                            int bIdx = v - distMinValue;
+                            if ((uint)bIdx < (uint)distBucketCount)
+                            {
+                                distCounts[bIdx]++;
+                                distActiveBucket = bIdx;
+                                distCountPhaseReadCount++;
+                            }
+                        }
+                        else if (op.Type == OperationType.IndexWrite && op.BufferId1 == 1)
+                        {
+                            // Count phase ended, Place phase started
+                            distPhase = DistributionPhase.Place;
+                            distCountPhaseReadCount = 0;
+                        }
+                    }
+
+                    if (trackCountingSort && distPhase == DistributionPhase.Place)
+                    {
+                        if (op.Type == OperationType.IndexWrite && op.BufferId1 == 1 && op.Value.HasValue)
+                        {
+                            int v = op.Value.Value;
+                            int bIdx = v - distMinValue;
+                            if ((uint)bIdx < (uint)distBucketCount)
+                            {
+                                distBuckets[bIdx].Add(v);
+                                if (op.Index1 < distShadowTemp.Length)
+                                    distShadowTemp[op.Index1] = v;
+                                distActiveBucket = bIdx;
+                                distActiveElement = distBuckets[bIdx].Count - 1;
+                            }
+                        }
+                        else if (op.Type == OperationType.RangeCopy && op.BufferId1 == 1 && op.BufferId2 == 0)
+                        {
+                            distPhase = DistributionPhase.Gather;
+                            distActiveBucket = -1;
+                        }
+                    }
+
+                    // === Bucket sort detection ===
+                    // Pattern: n × (Read(main) + Write(temp)) (Scatter) → (InsertionSort: 追跡不可) → RangeCopy
+                    // Scatter と Pigeonhole を区別: Write(temp) が出現したら Bucket sort 確定
+                    if (!trackCountingSort && op.Type == OperationType.IndexWrite && op.BufferId1 == 1 && op.Value.HasValue)
+                    {
+                        if (!trackBucketSort && distCountPhaseReadCount == 0)
+                        {
+                            // First Write(temp) without Count phase → Bucket sort or Pigeonhole
+                            // Distinguish by checking if buckets == value (Pigeonhole) or ranges (Bucket)
+                            // For simplicity, we treat all as bucket sort unless it's pure Pigeonhole pattern
+                            trackBucketSort = true;
+                        }
+
                         // Scatter: Write(temp, pos, v) — element enters its logical bucket
                         int v = op.Value.Value;
                         int bIdx = v - distMinValue;
@@ -308,32 +381,44 @@ public static class TutorialStepBuilder
                             distPhase = DistributionPhase.Scatter;
                         }
                     }
-                    else if (op.Type == OperationType.IndexRead && op.BufferId1 == 1)
+
+                    // Pigeonhole Gather: Read(temp) + Write(main)
+                    if (!trackCountingSort && !trackBucketSort)
                     {
-                        // Gather: Read(temp, j) — identify which bucket this gather is from
-                        if (op.Index1 >= 0 && op.Index1 < distShadowTemp.Length)
+                        if (op.Type == OperationType.IndexRead && op.BufferId1 == 1)
                         {
-                            int v = distShadowTemp[op.Index1];
-                            int bIdx = v - distMinValue;
-                            if ((uint)bIdx < (uint)distBucketCount)
+                            // Gather: Read(temp, j) — identify which bucket this gather is from
+                            if (op.Index1 >= 0 && op.Index1 < distShadowTemp.Length)
                             {
-                                distActiveBucket = bIdx;
-                                distActiveElement = distBuckets[bIdx].Count - 1;
-                                distPendingGatherBucket = bIdx;
-                                distPhase = DistributionPhase.Gather;
+                                int v = distShadowTemp[op.Index1];
+                                int bIdx = v - distMinValue;
+                                if ((uint)bIdx < (uint)distBucketCount)
+                                {
+                                    distActiveBucket = bIdx;
+                                    distActiveElement = distBuckets[bIdx].Count - 1;
+                                    distPendingGatherBucket = bIdx;
+                                    distPhase = DistributionPhase.Gather;
+                                }
                             }
                         }
+                        else if (op.Type == OperationType.IndexWrite && op.BufferId1 == 0 && distPendingGatherBucket.HasValue)
+                        {
+                            // Gather: Write(main, pos, v) — element leaves its bucket
+                            int bIdx = distPendingGatherBucket.Value;
+                            if (distBuckets[bIdx].Count > 0)
+                                distBuckets[bIdx].RemoveAt(distBuckets[bIdx].Count - 1);
+                            distActiveBucket = bIdx;
+                            distActiveElement = -1;
+                            distPendingGatherBucket = null;
+                            distPhase = DistributionPhase.Gather;
+                        }
                     }
-                    else if (op.Type == OperationType.IndexWrite && op.BufferId1 == 0 && distPendingGatherBucket.HasValue)
+
+                    // Bucket sort Gather: RangeCopy(temp→main)
+                    if (trackBucketSort && op.Type == OperationType.RangeCopy && op.BufferId1 == 1 && op.BufferId2 == 0)
                     {
-                        // Gather: Write(main, pos, v) — element leaves its bucket
-                        int bIdx = distPendingGatherBucket.Value;
-                        if (distBuckets[bIdx].Count > 0)
-                            distBuckets[bIdx].RemoveAt(distBuckets[bIdx].Count - 1);
-                        distActiveBucket = bIdx;
-                        distActiveElement = -1;
-                        distPendingGatherBucket = null;
                         distPhase = DistributionPhase.Gather;
+                        distActiveBucket = -1;
                     }
 
                     distSnapshot = new DistributionSnapshot
@@ -344,6 +429,7 @@ public static class TutorialStepBuilder
                         Phase = distPhase,
                         ActiveBucketIndex = distActiveBucket,
                         ActiveElementInBucket = distActiveElement,
+                        Counts = trackCountingSort ? (int[])distCounts.Clone() : null,
                     };
                 }
 
@@ -428,21 +514,50 @@ public static class TutorialStepBuilder
                     };
                 }
 
-                // Override narrative with Distribution-specific text (Pigeonhole)
+                // Override narrative with Distribution-specific text (Pigeonhole / Counting / Bucket)
                 if (distSnapshot != null && trackDistribution)
                 {
-                    narrative = (op.Type, op.BufferId1) switch
+                    if (trackCountingSort)
                     {
-                        (OperationType.IndexRead, 0) when distPhase == DistributionPhase.Scatter
-                            => $"Read value {GetValue(0, op.Index1, mainArray, bufferArrays)} from index {op.Index1}",
-                        (OperationType.IndexWrite, 1) when op.Value.HasValue && distActiveBucket >= 0
-                            => $"Scatter value {op.Value.Value} into bucket [{distBucketLabels[distActiveBucket]}]",
-                        (OperationType.IndexRead, 1) when distActiveBucket >= 0 && op.Index1 < distShadowTemp.Length
-                            => $"Pick up value {distShadowTemp[op.Index1]} from bucket [{distBucketLabels[distActiveBucket]}]",
-                        (OperationType.IndexWrite, 0) when distPhase == DistributionPhase.Gather && distActiveBucket >= 0
-                            => $"Place value {op.Value!.Value} from bucket [{distBucketLabels[distActiveBucket]}] to index {op.Index1}",
-                        _ => narrative
-                    };
+                        narrative = (op.Type, distPhase) switch
+                        {
+                            (OperationType.IndexRead, DistributionPhase.Count)
+                                => $"Count value {GetValue(0, op.Index1, mainArray, bufferArrays)} — increment bucket [{distBucketLabels[distActiveBucket]}]",
+                            (OperationType.IndexWrite, DistributionPhase.Place) when op.Value.HasValue && distActiveBucket >= 0
+                                => $"Place value {op.Value.Value} into position {op.Index1} from bucket [{distBucketLabels[distActiveBucket]}]",
+                            (OperationType.RangeCopy, _)
+                                => "Gather all values back to main array — sorting complete",
+                            _ => narrative
+                        };
+                    }
+                    else if (trackBucketSort)
+                    {
+                        narrative = (op.Type, op.BufferId1) switch
+                        {
+                            (OperationType.IndexRead, 0)
+                                => $"Read value {GetValue(0, op.Index1, mainArray, bufferArrays)} from index {op.Index1}",
+                            (OperationType.IndexWrite, 1) when op.Value.HasValue && distActiveBucket >= 0
+                                => $"Scatter value {op.Value.Value} into bucket [{distBucketLabels[distActiveBucket]}]",
+                            (OperationType.RangeCopy, _)
+                                => "Gather sorted buckets back to main array",
+                            _ => narrative
+                        };
+                    }
+                    else // Pigeonhole
+                    {
+                        narrative = (op.Type, op.BufferId1) switch
+                        {
+                            (OperationType.IndexRead, 0) when distPhase == DistributionPhase.Scatter
+                                => $"Read value {GetValue(0, op.Index1, mainArray, bufferArrays)} from index {op.Index1}",
+                            (OperationType.IndexWrite, 1) when op.Value.HasValue && distActiveBucket >= 0
+                                => $"Scatter value {op.Value.Value} into bucket [{distBucketLabels[distActiveBucket]}]",
+                            (OperationType.IndexRead, 1) when distActiveBucket >= 0 && op.Index1 < distShadowTemp.Length
+                                => $"Pick up value {distShadowTemp[op.Index1]} from bucket [{distBucketLabels[distActiveBucket]}]",
+                            (OperationType.IndexWrite, 0) when distPhase == DistributionPhase.Gather && distActiveBucket >= 0
+                                => $"Place value {op.Value!.Value} from bucket [{distBucketLabels[distActiveBucket]}] to index {op.Index1}",
+                            _ => narrative
+                        };
+                    }
                 }
 
                 // Override narrative with LSD-specific text

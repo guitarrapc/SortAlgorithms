@@ -528,7 +528,8 @@ public class AlgorithmRegistry
                 - IndexRead: each element is read to increment its slot in the frequency table; no element moves during this phase
                 - IndexWrite: the prefix-sum pass overwrites the frequency table with cumulative output positions; each element is then written to its computed position in a single placement pass
                 - End of phase: three distinct phases are clearly visible — count, prefix-sum, and place — none of which involves any comparisons
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.ValueBucket);
         Add("Pigeonhole sort", "Distribution Sorts", "O(n+k)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => PigeonholeSortInteger.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Allocates one pigeonhole bucket per possible value in the range, drops each input element into its matching bucket, then reads the buckets back in value order to reconstruct a sorted output.
@@ -551,7 +552,8 @@ public class AlgorithmRegistry
                 - IndexRead: each element's value is mapped to a bucket index arithmetically; the element is deposited into that bucket
                 - Compare + IndexWrite: each non-empty bucket is sorted independently (typically with Insertion sort); watch per-bucket comparisons and shifts
                 - IndexWrite (gather): sorted buckets are concatenated back into the original array in bucket order
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.ValueBucket);
         Add("LSD Radix sort (b=4)", "Distribution Sorts", "O(nk)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => RadixLSD4Sort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Sorts integers digit by digit from the least significant to the most significant 2-bit group, applying a stable counting sort at each pass so that the order established by previous passes is never disturbed.

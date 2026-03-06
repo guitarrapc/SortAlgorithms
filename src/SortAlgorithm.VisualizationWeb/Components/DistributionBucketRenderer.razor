@@ -26,8 +26,34 @@
     {
         <div class="dist-empty">Waiting for sort to begin…</div>
     }
+    else if (Snapshot.Phase == DistributionPhase.Count && Snapshot.Counts != null)
+    {
+        @* Counting sort: Count フェーズはヒストグラム表示 *@
+        <div class="dist-histogram">
+            @for (int b = 0; b < Snapshot.BucketCount; b++)
+            {
+                var bucketIdx = b;
+                bool isActiveBucket = Snapshot.ActiveBucketIndex == bucketIdx;
+                int count = Snapshot.Counts[bucketIdx];
+                int maxCount = Snapshot.Counts.Max();
+                double barHeight = maxCount > 0 ? (double)count / maxCount * 100.0 : 0;
+                string barActiveClass = isActiveBucket ? " dist-histogram-bar--active" : "";
+
+                <div @key="bucketIdx" class="dist-histogram-item">
+                    <div class="dist-histogram-bar@(barActiveClass)" style="height: @(barHeight)%;">
+                        @if (count > 0)
+                        {
+                            <span class="dist-histogram-count">@count</span>
+                        }
+                    </div>
+                    <div class="dist-histogram-label">@Snapshot.BucketLabels[bucketIdx]</div>
+                </div>
+            }
+        </div>
+    }
     else
     {
+        @* Scatter / Gather / Place: バケット表示 *@
         <div class="dist-buckets">
             @for (int b = 0; b < Snapshot.BucketCount; b++)
             {
