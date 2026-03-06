@@ -137,7 +137,12 @@ public static class MergeSort
         }
 
         // Merge: Combine two sorted halves
+        s.Context.OnPhase(SortPhase.MergeSortMerge, left, mid, right);
+        s.Context.OnRole(left, BUFFER_MAIN, RoleType.LeftPointer);
+        s.Context.OnRole(right, BUFFER_MAIN, RoleType.RightPointer);
         Merge(s, b, left, mid, right);
+        s.Context.OnRole(left, BUFFER_MAIN, RoleType.None);
+        s.Context.OnRole(right, BUFFER_MAIN, RoleType.None);
     }
 
     /// <summary>

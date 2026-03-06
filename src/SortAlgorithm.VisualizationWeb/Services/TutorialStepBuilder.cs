@@ -297,6 +297,11 @@ public static class TutorialStepBuilder
             SortAlgorithm.Contexts.SortPhase.TreeSortExtract           => "Extract: in-order traversal → write sorted array",
             SortAlgorithm.Contexts.SortPhase.HeapBuild                 => $"Build max-heap: [{p1}..{p2}]",
             SortAlgorithm.Contexts.SortPhase.HeapExtract               => $"Extract max ({p1}/{p2}): move root to sorted region",
+            SortAlgorithm.Contexts.SortPhase.MergeSortMerge            => $"Merge [{p1}..{p2}] + [{p2 + 1}..{p3}]",
+            SortAlgorithm.Contexts.SortPhase.MergePass                 => $"Merge pass {p2}: width {p1} (merging pairs of {p1})",
+            SortAlgorithm.Contexts.SortPhase.MergeInitSort             => $"Initial sort: insertion sort in blocks of {p1}",
+            SortAlgorithm.Contexts.SortPhase.MergeRunDetect            => "Detecting natural runs",
+            SortAlgorithm.Contexts.SortPhase.MergeRunCollapse          => $"Collapsing {p1} run(s) on stack",
             _ => string.Empty,
         };
 

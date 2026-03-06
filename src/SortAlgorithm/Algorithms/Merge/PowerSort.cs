@@ -229,6 +229,7 @@ public static class PowerSort
         try
         {
             // No boundary yet (need at least 2 runs for a boundary)
+            context.OnPhase(SortPhase.MergeRunDetect);
 
             // Process remaining runs
             runStart = runEnd;
@@ -294,6 +295,7 @@ public static class PowerSort
             }
 
             // Force merge all remaining runs from right to left
+            context.OnPhase(SortPhase.MergeRunCollapse, runCount);
             while (runCount > 1)
             {
                 // Verify invariant before final merge

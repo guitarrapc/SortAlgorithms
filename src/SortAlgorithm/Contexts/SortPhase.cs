@@ -161,4 +161,36 @@ public enum SortPhase
     /// param1=current extraction step (1-based), param2=total extractions (n-1)
     /// </summary>
     HeapExtract,
+
+    // ── Merge family ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Merge Sort merge step: merging two sorted halves [left..mid] and [mid+1..right].
+    /// param1=left (inclusive start), param2=mid (inclusive end of left half), param3=right (inclusive end)
+    /// </summary>
+    MergeSortMerge,
+
+    /// <summary>
+    /// Bottom-up merge pass: one sweep merging pairs of runs with a given width.
+    /// param1=width (run size being merged), param2=pass number (1-based)
+    /// </summary>
+    MergePass,
+
+    /// <summary>
+    /// Initial insertion sort phase used by hybrid merge sorts (e.g., RotateMerge, SymMerge).
+    /// param1=blockSize (insertion sort threshold)
+    /// </summary>
+    MergeInitSort,
+
+    /// <summary>
+    /// Natural run detection phase (ShiftSort, TimSort, PowerSort).
+    /// No parameters.
+    /// </summary>
+    MergeRunDetect,
+
+    /// <summary>
+    /// Final run collapse/merge phase (TimSort MergeForceCollapse, PowerSort final flush).
+    /// param1=remaining run count on the stack
+    /// </summary>
+    MergeRunCollapse,
 }

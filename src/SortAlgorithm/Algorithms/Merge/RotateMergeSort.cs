@@ -114,13 +114,17 @@ public static class RotateMergeSort
     {
         // Phase 1: sort every block of size InsertionSortThreshold with insertion sort.
         // InsertionSort.SortCore uses exclusive end [first, last), so pass Math.Min(i + threshold, n).
+        s.Context.OnPhase(SortPhase.MergeInitSort, InsertionSortThreshold);
         for (var i = 0; i < n; i += InsertionSortThreshold)
             InsertionSort.SortCore(s, i, Math.Min(i + InsertionSortThreshold, n));
 
         // Phase 2: bottom-up merge passes.
         // Each pass merges adjacent pairs of runs of length `width`, then doubles width.
+        var passNum = 0;
         for (var width = InsertionSortThreshold; width < n; width *= 2)
         {
+            passNum++;
+            s.Context.OnPhase(SortPhase.MergePass, width, passNum);
             // left + width < n guarantees a non-empty right run ([mid+1..right]) exists.
             for (var left = 0; left < n - width; left += width * 2)
             {

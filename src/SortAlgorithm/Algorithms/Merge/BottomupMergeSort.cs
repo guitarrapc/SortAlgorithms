@@ -142,8 +142,11 @@ public static class BottomupMergeSort
         // Iterate through merge sizes: 1, 2, 4, 8, ..., until size >= n
         // Each pass writes all elements from src to dst (ping-pong)
         // Guard against overflow: size > 0 ensures we stop if size * 2 overflows to negative
+        var passNum = 0;
         for (var size = 1; size < n && size > 0; size *= 2)
         {
+            passNum++;
+            src.Context.OnPhase(SortPhase.MergePass, size, passNum);
             for (var left = 0; left < n; left += size * 2)
             {
                 var mid = left + size;                      // exclusive end of left half
