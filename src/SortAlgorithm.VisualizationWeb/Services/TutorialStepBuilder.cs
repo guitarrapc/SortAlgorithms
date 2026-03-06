@@ -27,16 +27,22 @@ public static class TutorialStepBuilder
         var mainArray = (int[])initialArray.Clone();
         var bufferArrays = InitializeBufferArrays(initialArray.Length, operations);
 
-        // Heap boundary tracking for HeapTree / TernaryHeapTree visualization
+        // Heap boundary tracking for HeapTree / TernaryHeapTree / WeakHeapTree visualization
         // HeapSort uses two extraction patterns:
-        //   BottomupHeapSort: Swap(0, i) — root swapped with last heap element
-        //   HeapSort/TernaryHeapSort: Read(0) + Read(i) + sift-down + Write(i, max) — root value written to end
-        // We track both patterns to detect when the boundary shrinks.
-        var trackHeap = hint is TutorialVisualizationHint.HeapTree or TutorialVisualizationHint.TernaryHeapTree;
+        //   BottomupHeapSort/WeakHeapSort: Swap(0, i) — root swapped with last heap element
+        //   HeapSort/TernaryHeapSort:      Read(0) + sift-down + Write(i, max) — root value written to end
+        // WeakHeapSort additionally has reverse bits: every Merge swap flips r[max(i,j)].
+        // Extraction swaps (root ↔ last) do NOT flip reverse bits.
+        var trackHeap = hint is TutorialVisualizationHint.HeapTree
+            or TutorialVisualizationHint.TernaryHeapTree
+            or TutorialVisualizationHint.WeakHeapTree;
+        var trackWeakHeap = hint == TutorialVisualizationHint.WeakHeapTree;
         int heapBoundary = trackHeap ? initialArray.Length : 0;
         bool heapBuildDone = false;
         // For HeapSort's Read+Write pattern: track the last Read(0) value
         int? pendingRootValue = null;
+        // For WeakHeapSort: bit-parallel reverse bit array (r[i] = true → right child 2i+1 is distinguished)
+        bool[] reverseBits = trackWeakHeap ? new bool[initialArray.Length] : [];
 
         int opIdx = 0;
         while (opIdx < operations.Count)
@@ -48,6 +54,7 @@ public static class TutorialStepBuilder
                 // Grouped insertion step: Read + shifts + insert → 1 logical step
                 var step = BuildGroupedInsertionStep(operations, opIdx, groupEnd, mainArray, bufferArrays);
                 if (trackHeap) step = step with { HeapBoundary = heapBoundary };
+                if (trackWeakHeap) step = step with { WeakHeapReverseBits = (bool[])reverseBits.Clone() };
                 steps.Add(step);
                 opIdx = groupEnd + 1;
             }
@@ -59,18 +66,25 @@ public static class TutorialStepBuilder
                 // Track heap boundary: detect extraction events
                 if (trackHeap && op.BufferId1 == 0)
                 {
-                    // Pattern 1: Swap(0, i) — BottomupHeapSort extraction
+                    // Pattern 1: Swap(0, i) — BottomupHeapSort / WeakHeapSort extraction
                     if (op.Type == OperationType.Swap)
                     {
                         if (!heapBuildDone && (op.Index1 == 0 || op.Index2 == 0))
                             heapBuildDone = true;
 
-                        if (heapBuildDone)
+                        int rootIdx = Math.Min(op.Index1, op.Index2);
+                        int lastIdx = Math.Max(op.Index1, op.Index2);
+                        bool isExtractionSwap = heapBuildDone && rootIdx == 0 && lastIdx == heapBoundary - 1;
+
+                        if (isExtractionSwap)
                         {
-                            int rootIdx = Math.Min(op.Index1, op.Index2);
-                            int lastIdx = Math.Max(op.Index1, op.Index2);
-                            if (rootIdx == 0 && lastIdx == heapBoundary - 1)
-                                heapBoundary--;
+                            heapBoundary--;
+                            // Extraction swap: move root → sorted region, do NOT flip reverse bit
+                        }
+                        else if (trackWeakHeap)
+                        {
+                            // Merge swap: a[lastIdx] > a[rootIdx] was true → FlipBit(lastIdx)
+                            reverseBits[lastIdx] = !reverseBits[lastIdx];
                         }
                     }
                     // Pattern 2: Read(0) then Write(heapBoundary-1, rootValue) — HeapSort extraction
@@ -106,7 +120,8 @@ public static class TutorialStepBuilder
                     WriteSourceIndex = writeSourceIndex,
                     WritePreviousValue = writePreviousValue,
                     Narrative = narrative,
-                    HeapBoundary = trackHeap ? heapBoundary : null
+                    HeapBoundary = trackHeap ? heapBoundary : null,
+                    WeakHeapReverseBits = trackWeakHeap ? (bool[])reverseBits.Clone() : null
                 });
                 opIdx++;
             }

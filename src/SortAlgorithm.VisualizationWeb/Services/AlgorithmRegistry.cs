@@ -377,7 +377,8 @@ public class AlgorithmRegistry
                 - Compare: each weak-heap merge requires exactly one comparison between a parent and the root of its distinguished child (determined by the reverse-bit)
                 - Swap: when the merge comparison fails, the parent and distinguished child values are exchanged and the reverse-bit for that node is toggled, maintaining the weak heap invariant
                 - End of extraction: the maximum is removed from the root; the left and right sub-heaps are re-merged one comparison at a time to restore the weak heap structure
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.WeakHeapTree);
         Add("Smoothsort", "Heap Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => SmoothSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Maintains a forest of Leonardo heaps — whose sizes follow the Leonardo number series 1, 1, 3, 5, 9, 15, 25, … — adding each element to extend the rightmost heap, then extracts elements by dismantling the forest in reverse order.

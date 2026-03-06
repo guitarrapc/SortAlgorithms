@@ -213,6 +213,7 @@
                                           HighlightType="@GetCurrentHighlightType()"
                                           MaxValue="@_maxValue"
                                           BranchingFactor="@GetBranchingFactor()"
+                                          ReverseBits="@GetCurrentWeakHeapReverseBits()"
                                           StepIndex="@_currentStepIndex"
                                           Label="@GetTreeToggleLabel()" />
                     }
@@ -504,13 +505,24 @@
     }
 
     private bool HasAlternateView()
-        => _selectedAlgorithm?.TutorialVisualizationHint is TutorialVisualizationHint.HeapTree or TutorialVisualizationHint.TernaryHeapTree;
+        => _selectedAlgorithm?.TutorialVisualizationHint is
+            TutorialVisualizationHint.HeapTree or
+            TutorialVisualizationHint.TernaryHeapTree or
+            TutorialVisualizationHint.WeakHeapTree;
 
     private int GetBranchingFactor()
         => _selectedAlgorithm?.TutorialVisualizationHint == TutorialVisualizationHint.TernaryHeapTree ? 3 : 2;
 
     private string GetTreeToggleLabel()
-        => _selectedAlgorithm?.TutorialVisualizationHint == TutorialVisualizationHint.TernaryHeapTree ? "Ternary Heap" : "Heap Tree";
+        => _selectedAlgorithm?.TutorialVisualizationHint switch
+        {
+            TutorialVisualizationHint.TernaryHeapTree => "Ternary Heap",
+            TutorialVisualizationHint.WeakHeapTree => "Weak Heap",
+            _ => "Heap Tree"
+        };
+
+    private bool[]? GetCurrentWeakHeapReverseBits()
+        => _currentStepIndex < 0 ? null : _steps[_currentStepIndex].WeakHeapReverseBits;
 
     private string GetCurrentNarrative()
         => _currentStepIndex < 0

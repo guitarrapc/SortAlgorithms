@@ -14,4 +14,7 @@ public enum TutorialVisualizationHint
 
     /// <summary>三分ヒープ木表示（三分ヒープを SVG ツリーで描画）</summary>
     TernaryHeapTree,
+
+    /// <summary>弱ヒープ木表示（二分木レイアウト + reverse bit による辺の区別）</summary>
+    WeakHeapTree,
 }

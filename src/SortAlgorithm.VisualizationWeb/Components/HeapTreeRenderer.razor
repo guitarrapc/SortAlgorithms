@@ -36,10 +36,16 @@
                     {
                         var (cx, cy) = GetNodePosition(child, depth, viewW, viewH, nodeR);
                         bool edgeHighlighted = HighlightSet.Contains(i) && HighlightSet.Contains(child);
+                        bool distinguished = IsDistinguishedEdge(i, child);
+                        var edgeStroke = edgeHighlighted
+                            ? GetHighlightColor()
+                            : distinguished ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.12)";
+                        var edgeWidth = edgeHighlighted ? "2.5" : "1.5";
+                        var edgeDash = !distinguished ? "5 3" : "none";
                         <line x1="@px" y1="@py" x2="@cx" y2="@cy"
-                              stroke="@(edgeHighlighted ? GetHighlightColor() : "rgba(255,255,255,0.25)")"
-                              stroke-width="@(edgeHighlighted ? "2.5" : "1.5")"
-                              opacity="@(edgeHighlighted ? "0.7" : "1")" />
+                              stroke="@edgeStroke"
+                              stroke-width="@edgeWidth"
+                              stroke-dasharray="@edgeDash" />
                     }
                 }
             }
@@ -116,12 +122,31 @@
     /// <summary>ヒープの分岐数（2 = 二分ヒープ、3 = 三分ヒープ）</summary>
     [Parameter] public int BranchingFactor { get; set; } = 2;
 
+    /// <summary>
+    /// WeakHeap の reverse bit 配列（r[i] = true → 右子 2i+1 が distinguished child）。
+    /// null の場合は全辺を solid 表示（通常の二分 / 三分ヒープ）。
+    /// </summary>
+    [Parameter] public bool[]? ReverseBits { get; set; }
+
     /// <summary>現在のステップインデックス（アニメーション再トリガー用）</summary>
     [Parameter] public int StepIndex { get; set; } = -1;
 
     private readonly string _glowFilterId = $"glow-{Guid.NewGuid().ToString("N")[..8]}";
 
     private HashSet<int> HighlightSet => [.. HighlightIndices];
+
+    /// <summary>
+    /// 辺 (parent → child) が distinguished edge かどうかを返す。
+    /// ReverseBits が null（通常ヒープ）の場合は常に true（全辺 solid）。
+    /// WeakHeap の場合: distinguished child = 2*parent + r[parent]。
+    /// </summary>
+    private bool IsDistinguishedEdge(int parent, int child)
+    {
+        if (ReverseBits == null) return true;
+        bool rParent = parent < ReverseBits.Length && ReverseBits[parent];
+        int distinguishedChild = 2 * parent + (rParent ? 1 : 0);
+        return child == distinguishedChild;
+    }
 
     /// <summary>ヒープの深さ（0-indexed）を計算。n-ary ヒープに対応。</summary>
     private int GetTreeDepth()

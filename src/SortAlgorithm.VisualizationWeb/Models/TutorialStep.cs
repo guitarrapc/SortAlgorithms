@@ -39,6 +39,13 @@ public record TutorialStep
     /// </summary>
     public int? HeapBoundary { get; init; }
 
+    /// <summary>
+    /// WeakHeap の reverse bit 配列スナップショット（インデックス i → r[i]）。
+    /// r[i] = false のとき distinguished child は 2i、true のとき 2i+1。
+    /// WeakHeapSort 以外では null。
+    /// </summary>
+    public bool[]? WeakHeapReverseBits { get; init; }
+
     /// <summary>この操作を日本語で説明するナラティブテキスト</summary>
     public string Narrative { get; init; } = string.Empty;
 }
