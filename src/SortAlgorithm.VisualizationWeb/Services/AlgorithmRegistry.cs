@@ -646,7 +646,7 @@ public class AlgorithmRegistry
                 """);
 
         // Tree Sorts - O(n log n) - 推奨1024
-        Add("Unbalanced binary tree sort", "Tree Sorts", "O(n log n)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => BinaryTreeSort.Sort(arr, ctx),
+        Add("Binary tree sort (BST)", "Tree Sorts", "O(n log n)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => BinaryTreeSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Inserts every element into a plain binary search tree — smaller values go left, larger values go right — then recovers sorted output by reading all nodes in in-order traversal (left, root, right).
 
@@ -656,8 +656,9 @@ public class AlgorithmRegistry
                 - Compare: each insertion navigates the tree by comparing the new element against the current node, turning left or right until an empty slot is found
                 - IndexWrite: the new element is placed at the found empty slot, extending the tree by one node
                 - IndexRead (in-order traversal): after all insertions, nodes are visited left-root-right to reconstruct the sorted sequence without any further comparisons
-                """);
-        Add("Balanced binary tree sort", "Tree Sorts", "O(n log n)", MAX_SIZE_NLOGN15, 2048, (arr, ctx) => BalancedBinaryTreeSort.Sort(arr, ctx),
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.BstTree);
+        Add("Binary tree sort (AVL)", "Tree Sorts", "O(n log n)", MAX_SIZE_NLOGN15, 2048, (arr, ctx) => BalancedBinaryTreeSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Inserts elements into a self-balancing binary search tree that automatically keeps its height at O(log n), then recovers sorted output via in-order traversal.
 

@@ -46,6 +46,12 @@ public record TutorialStep
     /// </summary>
     public bool[]? WeakHeapReverseBits { get; init; }
 
+    /// <summary>
+    /// BST スナップショット。BinaryTreeSort のみ使用（他は null）。
+    /// ビルドフェーズは挿入経路、走査フェーズはアクティブノードを保持する。
+    /// </summary>
+    public BstSnapshot? Bst { get; init; }
+
     /// <summary>この操作を日本語で説明するナラティブテキスト</summary>
     public string Narrative { get; init; } = string.Empty;
 }

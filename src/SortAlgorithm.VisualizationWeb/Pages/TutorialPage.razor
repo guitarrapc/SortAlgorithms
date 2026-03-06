@@ -207,15 +207,25 @@
                 <div class="tutorial-marble-area">
                     @if (_showTreeView && HasAlternateView())
                     {
-                        <HeapTreeRenderer Values="@GetCurrentMainArray()"
-                                          HeapBoundary="@GetCurrentHeapBoundary()"
-                                          HighlightIndices="@GetCurrentHighlightIndices()"
-                                          HighlightType="@GetCurrentHighlightType()"
-                                          MaxValue="@_maxValue"
-                                          BranchingFactor="@GetBranchingFactor()"
-                                          ReverseBits="@GetCurrentWeakHeapReverseBits()"
-                                          StepIndex="@_currentStepIndex"
-                                          Label="@GetTreeToggleLabel()" />
+                        @if (IsBstView())
+                        {
+                            <BstTreeRenderer Bst="@GetCurrentBst()"
+                                             MaxValue="@_maxValue"
+                                             StepIndex="@_currentStepIndex"
+                                             Label="BST" />
+                        }
+                        else
+                        {
+                            <HeapTreeRenderer Values="@GetCurrentMainArray()"
+                                              HeapBoundary="@GetCurrentHeapBoundary()"
+                                              HighlightIndices="@GetCurrentHighlightIndices()"
+                                              HighlightType="@GetCurrentHighlightType()"
+                                              MaxValue="@_maxValue"
+                                              BranchingFactor="@GetBranchingFactor()"
+                                              ReverseBits="@GetCurrentWeakHeapReverseBits()"
+                                              StepIndex="@_currentStepIndex"
+                                              Label="@GetTreeToggleLabel()" />
+                        }
                     }
                     else
                     {
@@ -508,7 +518,11 @@
         => _selectedAlgorithm?.TutorialVisualizationHint is
             TutorialVisualizationHint.HeapTree or
             TutorialVisualizationHint.TernaryHeapTree or
-            TutorialVisualizationHint.WeakHeapTree;
+            TutorialVisualizationHint.WeakHeapTree or
+            TutorialVisualizationHint.BstTree;
+
+    private bool IsBstView()
+        => _selectedAlgorithm?.TutorialVisualizationHint == TutorialVisualizationHint.BstTree;
 
     private int GetBranchingFactor()
         => _selectedAlgorithm?.TutorialVisualizationHint == TutorialVisualizationHint.TernaryHeapTree ? 3 : 2;
@@ -517,12 +531,17 @@
         => _selectedAlgorithm?.TutorialVisualizationHint switch
         {
             TutorialVisualizationHint.TernaryHeapTree => "Ternary Heap",
-            TutorialVisualizationHint.WeakHeapTree => "Weak Heap",
+            TutorialVisualizationHint.WeakHeapTree    => "Weak Heap",
+            TutorialVisualizationHint.BstTree         => "BST",
             _ => "Heap Tree"
         };
 
     private bool[]? GetCurrentWeakHeapReverseBits()
         => _currentStepIndex < 0 ? null : _steps[_currentStepIndex].WeakHeapReverseBits;
+
+    private BstSnapshot? GetCurrentBst()
+        => _currentStepIndex < 0 ? new BstSnapshot { Size = 0, Root = -1 }
+            : _steps[_currentStepIndex].Bst;
 
     private string GetCurrentNarrative()
         => _currentStepIndex < 0

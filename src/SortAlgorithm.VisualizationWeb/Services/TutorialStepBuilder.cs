@@ -44,6 +44,22 @@ public static class TutorialStepBuilder
         // For WeakHeapSort: bit-parallel reverse bit array (r[i] = true → right child 2i+1 is distinguished)
         bool[] reverseBits = trackWeakHeap ? new bool[initialArray.Length] : [];
 
+        // BST shadow-replay for BstTree visualization
+        // BinaryTreeSort emits IndexRead × n (build) then IndexWrite × n (traversal).
+        // We replay the BST insertion locally to reconstruct tree structure at each step.
+        var trackBst = hint == TutorialVisualizationHint.BstTree;
+        int bstCap = initialArray.Length;
+        int bstSize = 0;
+        int bstRoot = -1;
+        int[] bstValues = trackBst ? new int[bstCap] : [];
+        int[] bstLeft  = trackBst ? Enumerable.Repeat(-1, bstCap).ToArray() : [];
+        int[] bstRight = trackBst ? Enumerable.Repeat(-1, bstCap).ToArray() : [];
+        int[] bstInsertionPath = [];
+        int   bstNewNode = -1;
+        bool  bstIsTraversalPhase = false;
+        int   bstActiveNode = -1;
+        int[] bstInorderList = [];   // precomputed once all nodes are inserted
+
         int opIdx = 0;
         while (opIdx < operations.Count)
         {
@@ -103,8 +119,87 @@ public static class TutorialStepBuilder
                     }
                 }
 
+                // Track BST state for BstTree visualization
+                BstSnapshot? bstSnapshot = null;
+                if (trackBst && op.BufferId1 == 0)
+                {
+                    if (op.Type == OperationType.IndexRead)
+                    {
+                        // Insert value into shadow BST (mirrors BinaryTreeSort.InsertIterative)
+                        int nodeId = bstSize++;
+                        int value = mainArray[op.Index1];
+                        bstValues[nodeId] = value;
+                        bstLeft[nodeId] = bstRight[nodeId] = -1;
+
+                        var path = new List<int>();
+                        if (bstRoot == -1)
+                        {
+                            bstRoot = nodeId;
+                        }
+                        else
+                        {
+                            int cur = bstRoot;
+                            while (true)
+                            {
+                                path.Add(cur);
+                                if (value < bstValues[cur])
+                                {
+                                    if (bstLeft[cur] == -1) { bstLeft[cur] = nodeId; break; }
+                                    cur = bstLeft[cur];
+                                }
+                                else
+                                {
+                                    if (bstRight[cur] == -1) { bstRight[cur] = nodeId; break; }
+                                    cur = bstRight[cur];
+                                }
+                            }
+                        }
+                        bstInsertionPath = [.. path];
+                        bstNewNode = nodeId;
+                    }
+                    else if (op.Type == OperationType.IndexWrite)
+                    {
+                        if (!bstIsTraversalPhase)
+                        {
+                            bstIsTraversalPhase = true;
+                            bstInorderList = BstComputeInorder(bstRoot, bstLeft, bstRight, bstSize);
+                            bstInsertionPath = [];
+                            bstNewNode = -1;
+                        }
+                        bstActiveNode = op.Index1 < bstInorderList.Length ? bstInorderList[op.Index1] : -1;
+                    }
+
+                    bstSnapshot = new BstSnapshot
+                    {
+                        Size = bstSize,
+                        Root = bstRoot,
+                        Values = bstValues[..bstSize],
+                        Left = bstLeft[..bstSize],
+                        Right = bstRight[..bstSize],
+                        InsertionPath = bstInsertionPath,
+                        NewNode = bstNewNode,
+                        ActiveNode = bstActiveNode,
+                        IsTraversalPhase = bstIsTraversalPhase
+                    };
+                }
+
                 var (highlights, bufferHighlights, highlightType, compareResult, writeSourceIndex, writePreviousValue, narrative) =
                     GenerateStepInfo(op, mainArray, bufferArrays);
+
+                // Override narrative with BST-specific text
+                if (bstSnapshot != null)
+                {
+                    narrative = op.Type switch
+                    {
+                        OperationType.IndexRead when bstSnapshot.Root == bstSnapshot.NewNode
+                            => $"Insert {bstSnapshot.Values[bstSnapshot.NewNode]} as BST root",
+                        OperationType.IndexRead when bstSnapshot.NewNode >= 0
+                            => $"Insert {bstSnapshot.Values[bstSnapshot.NewNode]} into BST at depth {bstInsertionPath.Length}",
+                        OperationType.IndexWrite
+                            => $"In-order traversal: write {op.Value} to index {op.Index1}",
+                        _ => narrative
+                    };
+                }
 
                 ApplyOperation(op, mainArray, bufferArrays);
 
@@ -121,7 +216,8 @@ public static class TutorialStepBuilder
                     WritePreviousValue = writePreviousValue,
                     Narrative = narrative,
                     HeapBoundary = trackHeap ? heapBoundary : null,
-                    WeakHeapReverseBits = trackWeakHeap ? (bool[])reverseBits.Clone() : null
+                    WeakHeapReverseBits = trackWeakHeap ? (bool[])reverseBits.Clone() : null,
+                    Bst = bstSnapshot
                 });
                 opIdx++;
             }
@@ -468,5 +564,26 @@ public static class TutorialStepBuilder
             dict[bufferId] = [.. existing, index];
         else
             dict[bufferId] = [index];
+    }
+
+    // ─── BST helpers ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// 非再帰の中順走査で BST の全ノードを訪問順に列挙する。
+    /// BinaryTreeSort の走査フェーズで「何番目の IndexWrite がどのノードか」を決定するために使用。
+    /// </summary>
+    private static int[] BstComputeInorder(int root, int[] left, int[] right, int size)
+    {
+        var result = new List<int>(size);
+        var stack = new Stack<int>();
+        int cur = root;
+        while (cur != -1 || stack.Count > 0)
+        {
+            while (cur != -1) { stack.Push(cur); cur = left[cur]; }
+            cur = stack.Pop();
+            result.Add(cur);
+            cur = right[cur];
+        }
+        return [.. result];
     }
 }

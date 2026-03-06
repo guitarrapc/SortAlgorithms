@@ -17,4 +17,7 @@ public enum TutorialVisualizationHint
 
     /// <summary>弱ヒープ木表示（二分木レイアウト + reverse bit による辺の区別）</summary>
     WeakHeapTree,
+
+    /// <summary>非平衡 BST 表示（in-order rank × 深さのレイアウトで二分探索木を描画）</summary>
+    BstTree,
 }

@@ -1,0 +1,169 @@
+@using SortAlgorithm.VisualizationWeb.Models
+
+<div class="bst-tree-container">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <div class="bst-tree-label">@Label</div>
+    }
+
+    @if (Bst == null || Bst.Size == 0)
+    {
+        <div class="bst-tree-empty">Insert elements to build BST…</div>
+    }
+    else
+    {
+        var n = Bst.Size;
+        var ranks  = ComputeInorderRanks();
+        var depths = ComputeDepths(out int maxDepth);
+        var nodeR  = Math.Max(14, Math.Min(21, 800 / (n * 3)));
+        var viewW  = Math.Max(400, n * (nodeR * 3));
+        var viewH  = Math.Max(100, (maxDepth + 1) * (nodeR * 4 + 10));
+        var slotW  = (double)viewW / n;
+        var levelH = maxDepth == 0 ? (double)viewH / 2 : (double)viewH / (maxDepth + 1);
+
+        var pathSet   = new HashSet<int>(Bst.InsertionPath);
+        var lastInPath = Bst.InsertionPath.Length > 0 ? Bst.InsertionPath[^1] : -1;
+
+        <svg class="bst-tree-svg" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="xMidYMid meet">
+            <defs>
+                <filter id="@_glowId" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+
+            @* ─── Edges (drawn behind nodes) ─── *@
+            @for (int i = 0; i < n; i++)
+            {
+                double px = (ranks[i] + 0.5) * slotW;
+                double py = (depths[i] + 0.5) * levelH;
+
+                foreach (int child in new[] { Bst.Left[i], Bst.Right[i] })
+                {
+                    if (child < 0) continue;
+                    double cx = (ranks[child] + 0.5) * slotW;
+                    double cy = (depths[child] + 0.5) * levelH;
+
+                    // Edge highlight: insertion path edge or normal
+                    bool isPathEdge = pathSet.Contains(i) && pathSet.Contains(child);
+                    bool isNewEdge  = i == lastInPath && child == Bst.NewNode;
+                    string edgeColor = isNewEdge  ? "#4ADE80"
+                                     : isPathEdge ? "#FBBF24"
+                                     : "rgba(255,255,255,0.25)";
+                    string edgeWidth = (isPathEdge || isNewEdge) ? "2.5" : "1.5";
+
+                    <line x1="@px" y1="@py" x2="@cx" y2="@cy"
+                          stroke="@edgeColor" stroke-width="@edgeWidth" />
+                }
+            }
+
+            @* ─── Nodes ─── *@
+            @for (int i = 0; i < n; i++)
+            {
+                double nx = (ranks[i] + 0.5) * slotW;
+                double ny = (depths[i] + 0.5) * levelH;
+                string bg = GetValueColor(Bst.Values[i]);
+
+                bool isNewNode    = i == Bst.NewNode;
+                bool isPathNode   = pathSet.Contains(i);
+                bool isActiveNode = i == Bst.ActiveNode;
+
+                string ringColor = isNewNode    ? "#4ADE80"
+                                 : isActiveNode ? "#F97316"
+                                 : isPathNode   ? "#FBBF24"
+                                 : "";
+                bool hasRing = ringColor.Length > 0;
+
+                <g class="@(hasRing ? "bst-node bst-node--highlighted" : "bst-node")">
+                    @if (hasRing)
+                    {
+                        <circle cx="@nx" cy="@ny" r="@(nodeR + 5)"
+                                fill="none"
+                                stroke="@ringColor"
+                                stroke-width="2.5"
+                                opacity="0.5"
+                                filter="@($"url(#{_glowId})")" />
+                    }
+                    <circle cx="@nx" cy="@ny" r="@nodeR"
+                            fill="@bg"
+                            stroke="@(hasRing ? ringColor : "rgba(255,255,255,0.15)")"
+                            stroke-width="@(hasRing ? "3" : "1.5")" />
+                    <text x="@nx" y="@(ny + 1)" text-anchor="middle" dominant-baseline="central"
+                          fill="white" font-size="@(nodeR - 3)" font-weight="700">@Bst.Values[i]</text>
+                </g>
+            }
+        </svg>
+
+        @* ─── Phase badge ─── *@
+        <div class="bst-phase-badge @(Bst.IsTraversalPhase ? "bst-phase-badge--traversal" : "bst-phase-badge--build")">
+            @(Bst.IsTraversalPhase ? "In-order traversal" : "Building BST")
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>表示する BST スナップショット</summary>
+    [Parameter] public BstSnapshot? Bst { get; set; }
+
+    /// <summary>行ラベル</summary>
+    [Parameter] public string Label { get; set; } = string.Empty;
+
+    /// <summary>配列内の最大値（HSL グラデーション計算に使用）</summary>
+    [Parameter] public int MaxValue { get; set; } = 9;
+
+    /// <summary>現在のステップインデックス（アニメーション再トリガー用）</summary>
+    [Parameter] public int StepIndex { get; set; } = -1;
+
+    private readonly string _glowId = $"bst-glow-{Guid.NewGuid().ToString("N")[..8]}";
+
+    /// <summary>各ノードの in-order rank（x 座標の基準）を非再帰で計算する</summary>
+    private int[] ComputeInorderRanks()
+    {
+        if (Bst is null) return [];
+        int n = Bst.Size;
+        var rank = new int[n];
+        var stack = new Stack<int>();
+        int cur = Bst.Root;
+        int counter = 0;
+        while (cur != -1 || stack.Count > 0)
+        {
+            while (cur != -1) { stack.Push(cur); cur = Bst.Left[cur]; }
+            cur = stack.Pop();
+            rank[cur] = counter++;
+            cur = Bst.Right[cur];
+        }
+        return rank;
+    }
+
+    /// <summary>各ノードの深さ（y 座標の基準）を BFS で計算する</summary>
+    private int[] ComputeDepths(out int maxDepth)
+    {
+        maxDepth = 0;
+        if (Bst is null || Bst.Root == -1) return [];
+        int n = Bst.Size;
+        var depth = new int[n];
+        var queue = new Queue<int>();
+        queue.Enqueue(Bst.Root);
+        depth[Bst.Root] = 0;
+        while (queue.Count > 0)
+        {
+            int node = queue.Dequeue();
+            if (depth[node] > maxDepth) maxDepth = depth[node];
+            if (Bst.Left[node]  != -1) { depth[Bst.Left[node]]  = depth[node] + 1; queue.Enqueue(Bst.Left[node]); }
+            if (Bst.Right[node] != -1) { depth[Bst.Right[node]] = depth[node] + 1; queue.Enqueue(Bst.Right[node]); }
+        }
+        return depth;
+    }
+
+    /// <summary>値に応じた HSL カラーを計算（マーブルと同じ）</summary>
+    private string GetValueColor(int value)
+    {
+        if (MaxValue <= 1) return "hsl(210, 75%, 42%)";
+        var ratio = (double)(value - 1) / (MaxValue - 1);
+        var hue = (int)(210 * (1.0 - ratio));
+        return $"hsl({hue}, 75%, 42%)";
+    }
+}

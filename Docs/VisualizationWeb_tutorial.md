@@ -589,6 +589,108 @@ Pages/
   TutorialPage.razor.css         ← 変更: トグル + ヒープ木スタイル追加
 ```
 
+---
+
+#### 非平衡 BST 表示（BinaryTreeSort 専用ビジュアライゼーション）
+
+`BinaryTreeSort` では二分探索木（BST）を SVG で描画し、挿入フェーズ・走査フェーズを視覚的に示す。ヒープ木と異なり、配列インデックスと木構造に直接対応しない（ノードは挿入順に ID が付与される）。
+
+##### 対象アルゴリズム
+
+| アルゴリズム | BST 表示 | 備考 |
+|---|---|---|
+| Unbalanced binary tree sort | ✅ | 非平衡 BST（右子 = 値 ≥ 親）、挿入順 ID |
+| Balanced binary tree sort | ❌（将来対応） | 回転操作の専用表示が必要 |
+
+##### BST のレイアウト
+
+```
+配列: [5, 3, 8, 1, 9, 2, 7, 4]  挿入順 → BST
+
+              (5)  ← node 0 (root), depth 0, rank 4
+             /   \
+           (3)   (8)           ← nodes 1,2, depth 1
+           / \   / \
+         (1) (4)(7) (9)        ← nodes 3,7,6,4, depth 2
+           \
+           (2)                 ← node 5, depth 3
+
+in-order traversal: 1, 2, 3, 4, 5, 7, 8, 9
+```
+
+- **x 座標**: 中順走査の rank（0..n-1）。左部分木 < 親 < 右部分木が自然に反映される
+- **y 座標**: BFS で計算した深さ（0 = 根）
+- **ノード ID**: 挿入順（0 = 最初に挿入した要素 = 根）
+
+##### 操作フェーズと表示
+
+| フェーズ | 操作 | 表示 |
+|---|---|---|
+| **ビルドフェーズ** | `IndexRead(i)` × n | BST に新ノード追加。挿入経路（amber）+ 新ノード（green）をハイライト |
+| **走査フェーズ** | `IndexWrite(j, v)` × n | 全ノード挿入済み BST で現在訪問中のノード（orange）をハイライト |
+
+##### ノードのハイライト規則
+
+| ノード種別 | 色 | 意味 |
+|---|---|---|
+| `InsertionPath` | amber `#FBBF24` | 今回の挿入で比較・通過したノード |
+| `NewNode` | green `#4ADE80` | 今回挿入されたノード（挿入先） |
+| `ActiveNode` | orange `#F97316` | 中順走査で現在配列に書き戻し中のノード |
+
+##### `BstSnapshot` データモデル
+
+```csharp
+public record BstSnapshot
+{
+    public int    Size;            // 現在のノード数
+    public int    Root;            // 根 ID (-1 = 空)
+    public int[]  Values;          // ノード ID → 値
+    public int[]  Left;            // ノード ID → 左子 ID (-1 = なし)
+    public int[]  Right;           // ノード ID → 右子 ID (-1 = なし)
+    public int[]  InsertionPath;   // 直前挿入で辿ったノード ID リスト
+    public int    NewNode;         // 直前に挿入されたノード ID (-1 = なし)
+    public int    ActiveNode;      // 走査中の現在ノード ID (-1 = なし)
+    public bool   IsTraversalPhase;
+}
+```
+
+##### 追跡ロジック（TutorialStepBuilder）
+
+```
+IndexRead(i) →
+  1. value = mainArray[i] を shadow BST に挿入（BinaryTreeSort と同一ロジック）
+  2. 挿入経路 InsertionPath と NewNode を記録
+  3. BstSnapshot をスナップショット化
+
+最初の IndexWrite が来たとき →
+  1. 中順走査リストを事前計算: BstComputeInorder(root, left, right, size)
+  2. IsTraversalPhase = true
+
+IndexWrite(j, v) →
+  1. ActiveNode = inorderList[j]  (j 番目の中順訪問ノード)
+  2. BstSnapshot を更新
+```
+
+##### アーキテクチャへの影響
+
+```
+Models/
+  BstSnapshot.cs                 ← 新規: BST スナップショットレコード
+  TutorialVisualizationHint.cs   ← 変更: BstTree 追加
+  TutorialStep.cs                ← 変更: Bst プロパティ追加
+
+Components/
+  BstTreeRenderer.razor          ← 新規: BST SVG 描画コンポーネント
+
+Services/
+  TutorialStepBuilder.cs         ← 変更: BST シャドウリプレイ + narrative オーバーライド
+  AlgorithmRegistry.cs           ← 変更: BinaryTreeSort に BstTree 設定
+
+Pages/
+  TutorialPage.razor             ← 変更: IsBstView / GetCurrentBst / BstTreeRenderer
+  TutorialPage.razor.css         ← 変更: BST tree スタイル追加
+```
+
 #### アーキテクチャへの影響（新規ファイル）
 
 ```
@@ -598,6 +700,7 @@ Pages/
 Components/
   MarbleRenderer.razor         ← マーブル描画コンポーネント
   HeapTreeRenderer.razor       ← ヒープ木描画コンポーネント（Heap Sort 用）
+  BstTreeRenderer.razor        ← BST 描画コンポーネント（BinaryTreeSort 用）
   TutorialAlgorithmPanel.razor ← 説明パネル（上部）
   TutorialNarrativePanel.razor ← ステップ説明テキスト（中部）
   TutorialControls.razor       ← ナビゲーションボタン群
@@ -608,6 +711,7 @@ Services/
 Models/
   TutorialStep.cs              ← TutorialStep レコード定義
   TutorialVisualizationHint.cs ← チュートリアル追加表示ヒント
+  BstSnapshot.cs               ← BST スナップショットレコード
 ```
 
 既存の `SortExecutor`・`AlgorithmRegistry`・`PlaybackService` はそのまま再利用する。
