@@ -317,7 +317,6 @@
 
 .desc-meta {
     display: flex;
-    flex-wrap: wrap;
     gap: 0.4rem;
     align-items: center;
 }
@@ -1563,10 +1562,6 @@
     }
 
     /* desc-name + try-btn が横に収まらない場合は縦に折り返す */
-    .tdp-header {
-        flex-wrap: wrap;
-    }
-
     .tdp-header__left {
         flex-wrap: wrap;
     }
