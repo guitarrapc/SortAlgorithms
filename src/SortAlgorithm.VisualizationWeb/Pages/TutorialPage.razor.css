@@ -1415,15 +1415,22 @@
         font-size: 0.9rem;
     }
 
+    /* ボタンをコンテナ幅に比例分配 */
+    .ctrl-buttons {
+        width: 100%;
+    }
+
     .ctrl-btn {
         height: 40px;
-        min-width: 50px;
+        flex: 1;
+        min-width: 0;
         font-size: 1.0rem;
     }
 
     .ctrl-play {
         height: 40px;
-        min-width: 100px;
+        flex: 1.5; /* Play/Pause は他のボタンより 1.5 倍幅 */
+        min-width: 0;
         font-size: 1.1rem;
     }
 
