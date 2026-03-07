@@ -1,4 +1,4 @@
-# VisualizationWeb UI/UX 仕様書
+# SortViz - UI/UX 仕様書
 
 ## 1. 設計思想
 

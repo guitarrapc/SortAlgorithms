@@ -1,4 +1,4 @@
-# Sort Algorithm Visualization Web App
+# SortViz - Sort Algorithm Visualization Web App
 
 ソートアルゴリズムの動作をリアルタイムでグラフィカルに可視化するBlazor WebAssemblyアプリケーション。
 
