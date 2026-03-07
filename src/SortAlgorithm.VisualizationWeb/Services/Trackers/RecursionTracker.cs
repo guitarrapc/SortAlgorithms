@@ -119,7 +119,8 @@ sealed class RecursionTracker : IVisualizationTracker
         }
 
         // 前のノードの状態を遷移させる
-        if (prevNode != null && prevNode.State is RecursionNodeState.Active or RecursionNodeState.Merging)
+        if (prevNode != null && prevNode.State is RecursionNodeState.Active or RecursionNodeState.Merging
+                                                  or RecursionNodeState.InsertionSortLeaf or RecursionNodeState.HeapSortLeaf)
         {
             if (node.Depth <= prevNode.Depth)
             {
@@ -142,6 +143,56 @@ sealed class RecursionTracker : IVisualizationTracker
 
         _activeNodeId = node.Id;
         GenerateNarrative(node, prevNode, op);
+        RebuildSnapshot();
+    }
+
+    /// <summary>
+    /// Phase シグナルを受け取り、InsertionSort / HeapSort のリーフノードを作成・アクティブ化する。
+    /// ハイブリッドソートが InsertionSort/HeapSort に委譲する際に呼ばれる。
+    /// </summary>
+    public void ProcessPhase(SortAlgorithm.Contexts.SortPhase phase, int p1, int p2, int p3)
+    {
+        RecursionNodeState leafState;
+        string narrative;
+
+        switch (phase)
+        {
+            case SortAlgorithm.Contexts.SortPhase.HybridToInsertionSort:
+                // p1=left, p2=right (inclusive), p3=threshold
+                leafState = RecursionNodeState.InsertionSortLeaf;
+                narrative = $"Size {p2 - p1 + 1} ≤ {p3} → InsertionSort [{p1}..{p2}]";
+                break;
+
+            case SortAlgorithm.Contexts.SortPhase.PDQPartialInsertionSort:
+                // p1=begin, p2=end-1 (inclusive)
+                leafState = RecursionNodeState.InsertionSortLeaf;
+                narrative = $"Already partitioned → PartialInsertionSort [{p1}..{p2}]";
+                break;
+
+            case SortAlgorithm.Contexts.SortPhase.HybridToHeapSort:
+                // p1=left, p2=right (inclusive)
+                leafState = RecursionNodeState.HeapSortLeaf;
+                narrative = $"Depth limit exceeded → HeapSort [{p1}..{p2}]";
+                break;
+
+            default:
+                return;
+        }
+
+        int start = p1;
+        int end   = p2 + 1; // inclusive right → exclusive end
+
+        // 前のアクティブが Leaf なら完了させる（パーティションノードはそのまま保持）
+        var prevNode = _activeNodeId >= 0 ? FindNodeById(_activeNodeId) : null;
+        if (prevNode != null && prevNode.State is RecursionNodeState.InsertionSortLeaf or RecursionNodeState.HeapSortLeaf)
+            MarkSubtreeCompleted(prevNode.Id);
+
+        var node = FindOrCreateLeafNode(start, end);
+        if (node == null) return;
+
+        UpdateNodeState(node.Id, leafState);
+        _activeNodeId    = node.Id;
+        _cachedNarrative = narrative;
         RebuildSnapshot();
     }
 
@@ -214,6 +265,39 @@ sealed class RecursionTracker : IVisualizationTracker
         // 仮の親（上位ノード）に接続されている子候補を正しい親に付け替える。
         ReattachChildren(newNode);
 
+        return newNode;
+    }
+
+    /// <summary>
+    /// Phase シグナル用ノード作成。mainArray 不要（Values は Decorate() で後から設定される）。
+    /// </summary>
+    private RecursionNode? FindOrCreateLeafNode(int start, int end)
+    {
+        if (start < 0 || end > _arrayLength || start >= end) return null;
+
+        var existing = _nodes.FirstOrDefault(n => n.Start == start && n.End == end);
+        if (existing != null) return existing;
+
+        var parent = _nodes
+            .Where(n => n.Start <= start && n.End >= end && (n.End - n.Start) > (end - start))
+            .OrderByDescending(n => n.Depth)
+            .FirstOrDefault();
+
+        if (parent == null)
+            return _nodes.FirstOrDefault(n => n.ParentId == -1);
+
+        var newNode = new RecursionNode
+        {
+            Id       = _nextNodeId++,
+            ParentId = parent.Id,
+            Start    = start,
+            End      = end,
+            State    = RecursionNodeState.Pending,
+            Values   = [],
+            Depth    = parent.Depth + 1
+        };
+        _nodes.Add(newNode);
+        ReattachChildren(newNode);
         return newNode;
     }
 

@@ -14,6 +14,13 @@ interface IVisualizationTracker
     void Process(SortOperation op, int[] mainArray, Dictionary<int, int[]> buffers);
 
     /// <summary>
+    /// Phase 操作を受け取り、内部状態を更新する。
+    /// TutorialStepBuilder が OperationType.Phase 操作を検出したときに呼び出す。
+    /// デフォルト実装は何もしない。
+    /// </summary>
+    void ProcessPhase(SortAlgorithm.Contexts.SortPhase phase, int p1, int p2, int p3) { }
+
+    /// <summary>
     /// ベース TutorialStep が構築された後に呼び出す。
     /// ヒント固有フィールドを付加し、必要に応じて Narrative を上書きした新しい step を返す。
     /// </summary>

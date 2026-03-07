@@ -59,4 +59,10 @@ public enum RecursionNodeState
 
     /// <summary>完了（ソート済み）</summary>
     Completed,
+
+    /// <summary>InsertionSort に委譲されたリーフ範囲（ハイブリッドソート用）</summary>
+    InsertionSortLeaf,
+
+    /// <summary>HeapSort に委譲されたリーフ範囲（ハイブリッドソートの深さ制限超過用）</summary>
+    HeapSortLeaf,
 }

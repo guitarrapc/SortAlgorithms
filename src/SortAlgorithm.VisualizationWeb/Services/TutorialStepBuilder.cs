@@ -50,6 +50,7 @@ public static class TutorialStepBuilder
             if (op.Type == OperationType.Phase)
             {
                 currentPhase = BuildPhaseText(op.PhaseKind, op.Index1, op.Index2, op.Length);
+                tracker.ProcessPhase(op.PhaseKind, op.Index1, op.Index2, op.Length);
                 opIdx++;
                 continue;
             }

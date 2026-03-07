@@ -163,6 +163,16 @@
                         @(new MarkupString($"<text x=\"{nx:F2}\" y=\"{pivotY:F2}\" text-anchor=\"middle\" dominant-baseline=\"central\" fill=\"#FBBF24\" font-size=\"10\" font-weight=\"600\">{pivotText}</text>"))
                     }
 
+                    @* リーフ種別ラベル（InsertionSort / HeapSort 委譲）*@
+                    @if (node.State == RecursionNodeState.InsertionSortLeaf)
+                    {
+                        @(new MarkupString($"<text x=\"{nx:F2}\" y=\"{pivotY:F2}\" text-anchor=\"middle\" dominant-baseline=\"central\" fill=\"#06B6D4\" font-size=\"10\" font-weight=\"600\">↓ InsertionSort</text>"))
+                    }
+                    @if (node.State == RecursionNodeState.HeapSortLeaf)
+                    {
+                        @(new MarkupString($"<text x=\"{nx:F2}\" y=\"{pivotY:F2}\" text-anchor=\"middle\" dominant-baseline=\"central\" fill=\"#F97316\" font-size=\"10\" font-weight=\"600\">↓ HeapSort</text>"))
+                    }
+
                     @* 状態インジケーター：@ifの内側なのでMarkupString使用 *@
                     @if (node.State == RecursionNodeState.Completed)
                     {
@@ -293,10 +303,12 @@
     /// </summary>
     private string GetNodeStateColor(RecursionNodeState state) => state switch
     {
-        RecursionNodeState.Pending => "rgba(107, 114, 128, 0.5)",  // グレー
-        RecursionNodeState.Active => "#A855F7",                     // 紫（分割中）
-        RecursionNodeState.Merging => "#F59E0B",                    // 橙（マージ中）
-        RecursionNodeState.Completed => "#10B981",                  // 緑（完了）
+        RecursionNodeState.Pending          => "rgba(107, 114, 128, 0.5)",  // グレー
+        RecursionNodeState.Active           => "#A855F7",                     // 紫（分割中）
+        RecursionNodeState.Merging          => "#F59E0B",                     // 橙（マージ中）
+        RecursionNodeState.Completed        => "#10B981",                     // 緑（完了）
+        RecursionNodeState.InsertionSortLeaf => "#06B6D4",                    // シアン（InsertionSort 委譲）
+        RecursionNodeState.HeapSortLeaf      => "#F97316",                    // オレンジ（HeapSort 委譲）
         _ => "rgba(255,255,255,0.2)"
     };
 
