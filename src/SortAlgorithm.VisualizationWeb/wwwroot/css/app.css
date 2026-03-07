@@ -513,6 +513,11 @@ input[type="range"] {
     font-size: 8rem;
     font-weight: 700;
     letter-spacing: 0.04em;
+    background: linear-gradient(#c8aa6e,#785a28);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+
+    /* glow animation */
     color: #ffffff;
     text-shadow: 0 0 30px rgba(127,168,111,0.35);
     animation: title-pulse 2.4s ease-in-out infinite;
