@@ -480,6 +480,9 @@ input[type="range"] {
 
 /* Animated sorting bars */
 .loading-bars {
+    position: absolute;
+    right: 2rem;
+    bottom: 2rem;
     display: flex;
     align-items: flex-end;
     gap: 4px;
