@@ -10,20 +10,15 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-<PageTitle>Tutorial | SortViz</PageTitle>
+<PageTitle>Tutorial</PageTitle>
 
 <div class="tutorial-page" @onkeydown="OnKeyDown" tabindex="0" @ref="_containerRef">
 
 <div class="header">
-        <div class="tutorial-header__left">
-            <button class="tutorial-back-btn" @onclick="NavigateToHome" title="Back to Home">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-                </svg>
-            </button>
-        </div>
-        <h1 class="tutorial__title">Tutorial</h1>
+        <div class="header__left"></div>
+        <h1 class="tutorial__title">SORTVIZ TUTORIAL</h1>
         <div class="header__actions">
+            <button class="tutorial-close-btn" @onclick="NavigateToHome" title="Close">✕</button>
         </div>
     </div>
 
@@ -279,6 +274,7 @@
                             <RecursionTreeRenderer Snapshot="@GetCurrentRecursion()"
                                                    MaxValue="@_maxValue"
                                                    StepIndex="@_currentStepIndex"
+                                                   HorizScale="@GetRecursionHorizScale()"
                                                    Label="Recursion Tree" />
                         }
                         else if (IsBstView())
@@ -368,6 +364,7 @@
     private bool _showTreeView = true;  // デフォルトは木表示（ヒープ木対応アルゴリズムのみ）
     private bool _showBucketView = true; // デフォルトはバケット表示（Distribution 対応アルゴリズムのみ）
     private bool _showNetworkView = true; // デフォルトはネットワーク表示（Network 対応アルゴリズムのみ）
+    private int _windowWidth = 0; // ウィンドウ幅（0 = 未取得1.0）
 
     // ─── ナビゲーション ────────────────────────────────────────────────────
 
@@ -393,7 +390,11 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
+        {
             await _containerRef.FocusAsync();
+            _windowWidth = await JS.InvokeAsync<int>("scrollHelper.getWindowWidth");
+            StateHasChanged();
+        }
     }
 
     public void Dispose()
@@ -401,6 +402,14 @@
         _autoPlayCts?.Cancel();
         _autoPlayCts?.Dispose();
     }
+
+    // タブレット・スマホ向けに RecursionTree の水平間隔を圧縮するスケール係数
+    private double GetRecursionHorizScale() => _windowWidth switch
+    {
+        > 0 and <= 767 => 0.5,
+        >= 768 and <= 1279 => 0.65,
+        _ => 1.0
+    };
 
     // ─── アルゴリズム選択 ──────────────────────────────────────────────────
 

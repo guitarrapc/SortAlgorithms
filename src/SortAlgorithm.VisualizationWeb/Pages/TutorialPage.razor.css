@@ -1,4 +1,4 @@
-/* ─── ページ全体（メインと同グリッドレイアウト） ─────────────────────────── */
+/* ページ全体（グリッドレイアウト） */
 .tutorial-page {
     display: grid;
     grid-template-columns: 280px 1fr;
@@ -8,73 +8,58 @@
     padding: 10px;
     background: var(--bg-main);
     color: var(--text-primary);
-    outline: none;
     width: 100%;
     max-width: var(--page-max-width);
     margin: 0 auto;
 }
 
-    /* ─── ヘッダー（背景なし、直接載せる） ────────────────────────────────── */
+    /* ヘッダー（背景なし、直接載せる） */
     .tutorial-page .header {
         grid-column: 1 / -1;
         padding: 12px 8px;
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-start;
         gap: 16px;
         position: relative;
     }
 
 
-/* モーダル閉じるボタンと同じスタイル: 背景なし、ホバー時に赤 */
-.tutorial-back-btn {
+/* 閉じるボタン（Settingsモーダルと同じスタイル） */
+.tutorial-close-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #aaa;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 1.25rem;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: color 0.2s;
-    padding: 0;
-    position: relative;
-    z-index: 1;
+    transition: background 0.15s;
 }
 
-    .tutorial-back-btn svg {
-        width: 24px;
-        height: 24px;
-        display: block;
-    }
-
-    .tutorial-back-btn:hover {
+    .tutorial-close-btn:hover {
         color: #EF4444;
     }
 
-/* ☰ と ← Back を左グループとして束ねる（space-between で Back が中央に押し出されるのを防ぐ） */
-.tutorial-header__left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 1;
+/* 右端に閉じるボタンを寄せる */
+.header__actions {
+    margin-left: auto;
 }
 
 .tutorial__title {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
     margin: 0;
     font-size: 2.25rem;
-    font-weight: 400;
-    color: var(--text-primary);
+    font-weight: 700;
     white-space: nowrap;
-    pointer-events: none;
+    background: linear-gradient(#c8aa6e,#785a28);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .tutorial__title__algo {
@@ -331,7 +316,6 @@
 
 .desc-meta {
     display: flex;
-    flex-wrap: wrap;
     gap: 0.4rem;
     align-items: center;
 }
@@ -1281,7 +1265,6 @@
     .tutorial-description-panel,
     .tutorial-narrative-panel,
     .tutorial-marble-area {
-        margin: 0 0.75rem;
         border-radius: 6px;
     }
 
@@ -1429,15 +1412,22 @@
         font-size: 0.9rem;
     }
 
+    /* ボタンをコンテナ幅に比例分配 */
+    .ctrl-buttons {
+        width: 100%;
+    }
+
     .ctrl-btn {
         height: 40px;
-        min-width: 50px;
+        flex: 1;
+        min-width: 0;
         font-size: 1.0rem;
     }
 
     .ctrl-play {
         height: 40px;
-        min-width: 100px;
+        flex: 1.5; /* Play/Pause は他のボタンより 1.5 倍幅 */
+        min-width: 0;
         font-size: 1.1rem;
     }
 
@@ -1448,7 +1438,6 @@
     .tutorial-description-panel,
     .tutorial-narrative-panel,
     .tutorial-marble-area {
-        margin: 0 0.75rem;
         border-radius: 6px;
     }
 
@@ -1458,8 +1447,15 @@
         min-height: 9rem;
     }
 
+    /* 矢印SVGはシングル行前提の座標計算のため、複数行レイアウトでは非表示 */
     ::deep .marble-arrow-area {
-        height: 38px;
+        display: none;
+    }
+
+    /* inline-flex だと折り返し時に幅が循環参照になるため flex + width:100% で解消 */
+    ::deep .marble-row-content {
+        display: flex;
+        width: 100%;
     }
 
     ::deep .marble {
@@ -1471,7 +1467,7 @@
 
     ::deep .marble-row {
         gap: 0.375rem;
-        flex-wrap: nowrap; /* 8個が折り返さないよう強制1行 */
+        /* flex-wrap: wrap はベースCSSから継承 */
         --marble-slot-width: calc(36px + 0.375rem);
     }
 
@@ -1562,6 +1558,11 @@
 
     .tutorial-cards-panel input[type="range"] {
         width: 100%;
+    }
+
+    /* desc-name + try-btn が横に収まらない場合は縦に折り返す */
+    .tdp-header__left {
+        flex-wrap: wrap;
     }
 
     /* モバイル: 説明折りたたみトグルを表示 */

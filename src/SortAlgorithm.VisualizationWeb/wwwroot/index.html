@@ -9,7 +9,7 @@
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link href="SortAlgorithm.VisualizationWeb.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
     <script src="js/loadingHelper.js"></script>
@@ -35,6 +35,16 @@
     <div id="app"></div>
 
     <div class="loading-screen">
+        <div class="loading-title">SORTVIZ</div>
+        <div class="loading-subtitle">LEARN SORTING ALGORITHMS</div>
+        <div class="loading-description">
+            Free browser-based tool to understand sorting algorithms visually. Explore
+            multiple visualizations, follow guided tutorials, and compare performance.
+        </div>
+        <div class="loading-progress-track">
+            <div class="loading-progress-fill"></div>
+        </div>
+        <div class="loading-progress-text"></div>
         <div class="loading-bars">
             <div class="loading-bar" style="--h:30%;--i:0"></div>
             <div class="loading-bar" style="--h:50%;--i:1"></div>
@@ -55,11 +65,6 @@
             <div class="loading-bar" style="--h:10%;--i:16"></div>
             <div class="loading-bar" style="--h:65%;--i:17"></div>
         </div>
-        <div class="loading-title">Sorting Playground</div>
-        <div class="loading-progress-track">
-            <div class="loading-progress-fill"></div>
-        </div>
-        <div class="loading-progress-text"></div>
     </div>
 
     <div id="blazor-error-ui">
@@ -67,7 +72,10 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+
+    <!-- Custom loader. custom loader handle autostart by js -->
+    <!--<script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>-->
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js" autostart="false"></script>
 </body>
 
 </html>

@@ -480,18 +480,36 @@ input[type="range"] {
 
 /* Animated sorting bars */
 .loading-bars {
+    position: absolute;
+    right: 2rem;
+    bottom: 2rem;
     display: flex;
     align-items: flex-end;
-    gap: 4px;
-    height: 120px;
-    padding: 0 1rem;
+    gap: 3px;
+    height: 80px;
+    padding: 0 0.5rem;
 }
 
 .loading-bar {
-    width: 10px;
-    border-radius: 3px 3px 0 0;
+    width: 6px;
+    border-radius: 2px 2px 0 0;
     animation: bar-sort 2.8s cubic-bezier(.4,0,.2,1) infinite;
     animation-delay: calc(var(--i) * 0.12s);
+}
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+    .loading-bars {
+        right: 1rem;
+        bottom: 1rem;
+        gap: 2px;
+        height: 50px;
+        padding: 0 0.25rem;
+    }
+
+    .loading-bar {
+        width: 4px;
+    }
 }
 
 @keyframes bar-sort {
@@ -507,9 +525,16 @@ input[type="range"] {
 /* Title */
 .loading-title {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 1.6rem;
-    font-weight: 600;
+    font-size: clamp(3rem, 15vw, 8rem);
+    font-weight: 700;
     letter-spacing: 0.04em;
+    background: linear-gradient(#c8aa6e,#785a28);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    padding: 0 1rem;
+    text-align: center;
+
+    /* glow animation */
     color: #ffffff;
     text-shadow: 0 0 30px rgba(127,168,111,0.35);
     animation: title-pulse 2.4s ease-in-out infinite;
@@ -520,10 +545,37 @@ input[type="range"] {
     50%      { opacity: 1;   text-shadow: 0 0 40px rgba(127,168,111,0.5); }
 }
 
+/* Subtitle */
+.loading-subtitle {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: clamp(0.875rem, 3.5vw, 2.5rem);
+    font-weight: 600;
+    letter-spacing: clamp(0.05em, 0.15em, 0.15em);
+    color: #7fa86f;
+    text-transform: uppercase;
+    margin-top: -1rem;
+    padding: 0 1rem;
+    text-align: center;
+}
+
+/* Description */
+.loading-description {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: clamp(0.875rem, 2vw, 1.5rem);
+    font-weight: 400;
+    line-height: 1.6;
+    color: #9ca3af;
+    max-width: min(900px, 90vw);
+    text-align: center;
+    padding: 0 1.5rem;
+    margin-top: 0.5rem;
+}
+
 /* Progress track */
 .loading-progress-track {
     width: min(260px, 70vw);
     height: 4px;
+    margin-top: 2rem;
     background: #374151;
     border-radius: 2px;
     overflow: hidden;
@@ -621,10 +673,6 @@ a, .btn-link {
     }
 
 /* Second loading-progress block removed — replaced by .loading-screen above */
-
-    .loading-progress-text:after {
-        content: var(--blazor-load-percentage-text, "Loading");
-    }
 
 code {
     color: #c02d76;
