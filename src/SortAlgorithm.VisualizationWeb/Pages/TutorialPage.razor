@@ -15,15 +15,9 @@
 <div class="tutorial-page" @onkeydown="OnKeyDown" tabindex="0" @ref="_containerRef">
 
 <div class="header">
-        <div class="tutorial-header__left">
-            <button class="tutorial-back-btn" @onclick="NavigateToHome" title="Back to Home">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-                </svg>
-            </button>
-        </div>
         <h1 class="tutorial__title">SORTVIZ TUTORIAL</h1>
         <div class="header__actions">
+            <button class="tutorial-close-btn" @onclick="NavigateToHome" title="Close">✕</button>
         </div>
     </div>
 

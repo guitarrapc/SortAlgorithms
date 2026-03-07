@@ -20,60 +20,44 @@
         padding: 12px 8px;
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-start;
         gap: 16px;
         position: relative;
     }
 
 
-/* モーダル閉じるボタンと同じスタイル: 背景なし、ホバー時に赤 */
-.tutorial-back-btn {
+/* 閉じるボタン（Settingsモーダルと同じスタイル） */
+.tutorial-close-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #aaa;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 1.25rem;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: color 0.2s;
-    padding: 0;
-    position: relative;
-    z-index: 1;
+    transition: background 0.15s;
 }
 
-    .tutorial-back-btn svg {
-        width: 24px;
-        height: 24px;
-        display: block;
-    }
-
-    .tutorial-back-btn:hover {
+    .tutorial-close-btn:hover {
         color: #EF4444;
     }
 
-/* ☰ と ← Back を左グループとして束ねる（space-between で Back が中央に押し出されるのを防ぐ） */
-.tutorial-header__left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 1;
+/* 右端に閉じるボタンを寄せる */
+.header__actions {
+    margin-left: auto;
 }
 
 .tutorial__title {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
     margin: 0;
     font-size: 2.25rem;
     font-weight: 700;
     white-space: nowrap;
-    pointer-events: none;
     background: linear-gradient(#c8aa6e,#785a28);
     background-clip: text;
     -webkit-text-fill-color: transparent;
