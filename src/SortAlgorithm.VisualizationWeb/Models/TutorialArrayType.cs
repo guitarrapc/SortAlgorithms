@@ -50,6 +50,18 @@ public enum TutorialArrayType
     /// （BlockQuickSort / IntroSort / IntroSortDotnet / PDQSort / C++ std::sort）
     /// </summary>
     PartitionSortHybrid,
+
+    /// <summary>
+    /// ShellSort 専用配列: 1〜40 の値を持つ 40 要素シャッフル配列。
+    /// length/2 = 20 により全 ShellSort ギャップ列が 3 pass 以上使用される:
+    ///   Knuth 1973     → [13, 4, 1]      3 pass, first gap=13
+    ///   Sedgewick 1986 → [19, 5, 1]      3 pass, first gap=19
+    ///   Tokuda 1992    → [20, 9, 4, 1]   4 pass, first gap=20
+    ///   Ciura 2001     → [10, 4, 1]      3 pass, first gap=10
+    ///   Lee 2021       → [20, 9, 4, 1]   4 pass, first gap=20
+    /// 初回ギャップ (10/13/19/20) の差がチュートリアルで視覚的に確認できる。
+    /// </summary>
+    ShellSort,
 }
 
 /// <summary>
@@ -73,6 +85,9 @@ public static class TutorialArrayTypeExtensions
         // 31要素・値1〜31。IntroSort の四分位 median-of-3 が index7=8, index15=16, index23=24 → median=16
         // → 最初の partition で左15/右15の完全均等分割。全 Hybrid 系の最大しきい値 30 を超える要素数
         TutorialArrayType.PartitionSortHybrid => [5, 1, 7, 3, 6, 2, 4, 8, 13, 9, 15, 11, 14, 10, 12, 16, 21, 17, 23, 19, 22, 18, 20, 24, 29, 25, 31, 27, 30, 26, 28],
+        // 40要素・値1〜40。length/2=20 により全シーケンスが 3 pass 以上使用される
+        // Knuth[13,4,1] / Sedgewick[19,5,1] / Tokuda[20,9,4,1] / Ciura[10,4,1] / Lee[20,9,4,1]
+        TutorialArrayType.ShellSort => [23, 7, 38, 15, 31, 2, 19, 34, 11, 27, 40, 5, 22, 36, 13, 29, 8, 17, 33, 1, 26, 14, 39, 10, 21, 37, 4, 28, 16, 32, 9, 24, 6, 30, 18, 35, 12, 3, 25, 20],
         _ => [5, 3, 8, 1, 9, 2, 7, 4],
     };
 }

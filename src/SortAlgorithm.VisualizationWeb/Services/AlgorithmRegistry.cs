@@ -1,4 +1,4 @@
-using SortAlgorithm.VisualizationWeb.Models;
+﻿using SortAlgorithm.VisualizationWeb.Models;
 using SortAlgorithm.Contexts;
 using SortAlgorithm.Algorithms;
 
@@ -192,7 +192,8 @@ public class AlgorithmRegistry
                 - IndexWrite: the current element shifts leftward through its h-spaced subsequence — skipping over the intervening positions — until it finds its insertion point
                 - End of pass: h shrinks to the next sequence value; as h decreases the array grows progressively more ordered, leaving very little work for the final h = 1 pass
                 """,
-            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
+            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap,
+            tutorialArrayType: TutorialArrayType.ShellSort);
         Add("Shell sort (Sedgewick 1986)", "Insertion Sorts", "O(n^1.5)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => ShellSortSedgewick1986.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Runs a series of Insertion sort passes over h-spaced subsequences of the array for a decreasing sequence of gap values h, finishing with h = 1 as a standard Insertion sort pass on a nearly-sorted array.
@@ -204,7 +205,8 @@ public class AlgorithmRegistry
                 - IndexWrite: the current element shifts leftward through its h-spaced subsequence — skipping over the intervening positions — until it finds its insertion point
                 - End of pass: h shrinks to the next sequence value; as h decreases the array grows progressively more ordered, leaving very little work for the final h = 1 pass
                 """,
-            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
+            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap,
+            tutorialArrayType: TutorialArrayType.ShellSort);
         Add("Shell sort (Tokuda 1992)", "Insertion Sorts", "O(n^1.5)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => ShellSortTokuda1992.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Runs a series of Insertion sort passes over h-spaced subsequences of the array for a decreasing sequence of gap values h, finishing with h = 1 as a standard Insertion sort pass on a nearly-sorted array.
@@ -216,7 +218,8 @@ public class AlgorithmRegistry
                 - IndexWrite: the current element shifts leftward through its h-spaced subsequence — skipping over the intervening positions — until it finds its insertion point
                 - End of pass: h shrinks to the next sequence value; as h decreases the array grows progressively more ordered, leaving very little work for the final h = 1 pass
                 """,
-            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
+            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap,
+            tutorialArrayType: TutorialArrayType.ShellSort);
         Add("Shell sort (Ciura 2001)", "Insertion Sorts", "O(n^1.5)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => ShellSortCiura2001.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Runs a series of Insertion sort passes over h-spaced subsequences of the array for a decreasing sequence of gap values h, finishing with h = 1 as a standard Insertion sort pass on a nearly-sorted array.
@@ -228,7 +231,8 @@ public class AlgorithmRegistry
                 - IndexWrite: the current element shifts leftward through its h-spaced subsequence — skipping over the intervening positions — until it finds its insertion point
                 - End of pass: h shrinks to the next sequence value; as h decreases the array grows progressively more ordered, leaving very little work for the final h = 1 pass
                 """,
-            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
+            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap,
+            tutorialArrayType: TutorialArrayType.ShellSort);
         Add("Shell sort (Lee 2021)", "Insertion Sorts", "O(n^1.5)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => ShellSortLee2021.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Runs a series of Insertion sort passes over h-spaced subsequences of the array for a decreasing sequence of gap values h, finishing with h = 1 as a standard Insertion sort pass on a nearly-sorted array.
@@ -240,7 +244,8 @@ public class AlgorithmRegistry
                 - IndexWrite: the current element shifts leftward through its h-spaced subsequence — skipping over the intervening positions — until it finds its insertion point
                 - End of pass: h shrinks to the next sequence value; as h decreases the array grows progressively more ordered, leaving very little work for the final h = 1 pass
                 """,
-            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
+            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap,
+            tutorialArrayType: TutorialArrayType.ShellSort);
 
         // Merge Sorts
         Add("Merge sort", "Merge Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => MergeSort.Sort(arr, ctx),
