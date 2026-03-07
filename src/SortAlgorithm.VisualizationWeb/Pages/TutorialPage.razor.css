@@ -1453,8 +1453,9 @@
     }
 
     /* Compare文は3行になり得るため min-height で高さを確保してマーブルのズレを防ぐ */
+    /* phase-bar あり + 3行テキストで ~8.2rem 必要なため余裕をもって 9rem に設定 */
     .tutorial-narrative-panel {
-        min-height: 6.5rem;
+        min-height: 9rem;
     }
 
     ::deep .marble-arrow-area {
