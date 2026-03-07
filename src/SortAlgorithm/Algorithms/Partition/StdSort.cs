@@ -274,6 +274,7 @@ public static class StdSort
             // Use insertion sort for small arrays
             if (len < InsertionSortThreshold)
             {
+                s.Context.OnPhase(SortPhase.HybridToInsertionSort, first, last - 1, InsertionSortThreshold);
                 if (leftmost)
                 {
                     // First partition: use guarded insertion sort (with bounds checking)
@@ -292,6 +293,7 @@ public static class StdSort
             // Fallback to heapsort if recursion depth is too deep
             if (depth == 0)
             {
+                s.Context.OnPhase(SortPhase.HybridToHeapSort, first, last - 1);
                 HeapSort.SortCore(s, first, last);
                 return;
             }

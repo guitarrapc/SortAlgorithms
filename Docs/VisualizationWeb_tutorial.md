@@ -114,10 +114,14 @@ public record TutorialStep
 
 | アルゴリズム | フェーズテキスト例 |
 |---|---|
-| Bubble Sort | 「パス 1/7：最大値を右端へバブル中」 |
-| Selection Sort | 「位置 0〜7 の最小値を探索中」 |
-| Quick Sort | 「ピボット 5 で左右に分割中」 |
-| Radix LSD | 「一の位でソート中（パス 1/2）」 |
+| Bubble Sort | 「Pass 1/7: bubbling max to position 7」 |
+| Selection Sort | 「Find minimum in [0..7]」 |
+| Quick Sort | 「Partition [0..7] — pivot at [3]」 |
+| Radix LSD | 「Radix pass: digit 0 (0=least significant)」 |
+| IntroSort / PDQSort / StdSort / BlockQuickSort | 「Size 6 ≤ 16 → switch to InsertionSort [2..7]」 |
+| IntroSort / PDQSort / StdSort / BlockQuickSort | 「Depth limit exceeded → switch to HeapSort [0..7]」 |
+| PDQSort | 「Already partitioned → try PartialInsertionSort [0..5]」 |
+| PDQSort | 「Unbalanced partition (bad=2) → shuffle to break pattern [0..7]」 |
 
 - **UI**: ナラティブパネルの**直上**に `フェーズバー` として表示（薄いグレー背景 + 小フォント）
 - **更新タイミング**: フェーズが変わったステップのみ更新。変わらないステップは前のフェーズを継続表示
@@ -126,7 +130,7 @@ public record TutorialStep
 `ISortContext` への追加:
 
 ```csharp
-void OnPhase(string description);
+void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0);
 ```
 
 `TutorialStepBuilder` の動作:
@@ -179,12 +183,12 @@ void OnRole(int index, int bufferId, RoleType role);
 
 ```
 ISortContext（TutorialContext 実装）
-  OnPhase("パス 1/7：最大値を右端へバブル中")
+  OnPhase(SortPhase.HybridToInsertionSort, 2, 7, 16)
   OnRole(pivotIdx, BUFFER_MAIN, RoleType.Pivot)
         ↓
 TutorialStepBuilder.Build(operations)
         ↓
-TutorialStep.Phase = "パス 1/7：最大値を右端へバブル中"
+TutorialStep.Phase = "Size 6 ≤ 16 → switch to InsertionSort [2..7]"
 TutorialStep.Roles = { 3: Pivot }
         ↓
 TutorialPage → TutorialNarrativePanel / MarbleRenderer
@@ -197,6 +201,8 @@ TutorialPage → TutorialNarrativePanel / MarbleRenderer
 ```
 Contexts/
   ISortContext.cs                ← 変更: OnPhase / OnRole メソッド追加
+  SortPhase.cs                  ← 変更: HybridToInsertionSort / HybridToHeapSort /
+                                         PDQPartialInsertionSort / PDQPatternShuffle 追加
 
 Models/
   RoleType.cs                   ← 新規: RoleType enum 定義
@@ -205,10 +211,27 @@ Models/
 Services/
   TutorialStepBuilder.cs        ← 変更: Phase / Roles 伝播ロジック追加
 
+Algorithms/Partition/
+  IntroSortDotnet.cs            ← 変更: InsertionSort / HeapSort 切替点に OnPhase 追加
+  IntroSort.cs                  ← 変更: InsertionSort / HeapSort 切替点に OnPhase 追加
+  PDQSort.cs                    ← 変更: InsertionSort / HeapSort /
+                                         PDQPartialInsertionSort / PDQPatternShuffle 切替点に OnPhase 追加
+  StdSort.cs                    ← 変更: InsertionSort / HeapSort 切替点に OnPhase 追加
+  BlockQuickSort.cs             ← 変更: InsertionSort / HeapSort 切替点に OnPhase 追加
+
 Components/
   MarbleRenderer.razor          ← 変更: Roles パラメータ追加、ロールバッジ表示
   TutorialNarrativePanel.razor  ← 変更: フェーズバー表示追加
 ```
+
+##### ハイブリッドソートのフェーズ一覧（`SortPhase` 追加値）
+
+| SortPhase 値 | 対象アルゴリズム | param1 | param2 | param3 | フェーズバーテキスト |
+|---|---|---|---|---|---|
+| `HybridToInsertionSort` | IntroSort / PDQSort / StdSort / BlockQuickSort | left | right (incl.) | threshold | `"Size {size} ≤ {threshold} → switch to InsertionSort [{left}..{right}]"` |
+| `HybridToHeapSort` | IntroSort / PDQSort / StdSort / BlockQuickSort | left | right (incl.) | — | `"Depth limit exceeded → switch to HeapSort [{left}..{right}]"` |
+| `PDQPartialInsertionSort` | PDQSort のみ | begin | end-1 | — | `"Already partitioned → try PartialInsertionSort [{begin}..{end-1}]"` |
+| `PDQPatternShuffle` | PDQSort のみ | begin | end-1 | badAllowed remaining | `"Unbalanced partition (bad={badAllowed}) → shuffle to break pattern [{begin}..{end-1}]"` |
 
 #### マーブルのビジュアル仕様
 

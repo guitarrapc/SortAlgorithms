@@ -19,6 +19,11 @@
 ///   <item><term>CombBubblePass</term><description>bubbleEnd (right boundary position of bubble phase)</description></item>
 ///   <item><term>OddEvenOddPhase</term><description>pass (current pass number)</description></item>
 ///   <item><term>OddEvenEvenPhase</term><description>pass (current pass number)</description></item>
+///   <item><term>QuickSortPartition</term><description>left / right / pivotIndex</description></item>
+///   <item><term>HybridToInsertionSort</term><description>left (inclusive) / right (inclusive) / threshold</description></item>
+///   <item><term>HybridToHeapSort</term><description>left (inclusive) / right (inclusive)</description></item>
+///   <item><term>PDQPartialInsertionSort</term><description>begin (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>PDQPatternShuffle</term><description>begin (inclusive) / end-1 (inclusive) / badAllowed remaining</description></item>
 /// </list>
 /// </remarks>
 public enum SortPhase
@@ -281,4 +286,32 @@ public enum SortPhase
     /// param1=left, param2=right, param3=pivotIndex
     /// </summary>
     QuickSortPartition,
+
+    /// <summary>
+    /// Hybrid sort (IntroSort / PDQSort / StdSort / BlockQuickSort) switching to InsertionSort
+    /// because the partition size is at or below the threshold.
+    /// param1=left (inclusive), param2=right (inclusive), param3=threshold
+    /// </summary>
+    HybridToInsertionSort,
+
+    /// <summary>
+    /// Hybrid sort switching to HeapSort because the recursion depth limit (or bad-partition
+    /// counter for PDQSort) has been exceeded, guaranteeing O(n log n) worst-case.
+    /// param1=left (inclusive), param2=right (inclusive)
+    /// </summary>
+    HybridToHeapSort,
+
+    /// <summary>
+    /// PDQSort: the partition appears already sorted; attempting PartialInsertionSort
+    /// (up to PartialInsertionSortLimit moves) before deciding whether to recurse.
+    /// param1=begin (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    PDQPartialInsertionSort,
+
+    /// <summary>
+    /// PDQSort: a highly unbalanced partition was detected; shuffling elements to break
+    /// adversarial patterns before re-partitioning.
+    /// param1=begin (inclusive), param2=end-1 (inclusive), param3=badAllowed remaining
+    /// </summary>
+    PDQPatternShuffle,
 }

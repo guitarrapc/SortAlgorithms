@@ -220,6 +220,7 @@ public static class IntroSort
             // For non-leftmost partitions, use unguarded version (pivot acts as sentinel)
             if (size <= IntrosortSizeThreshold)
             {
+                s.Context.OnPhase(SortPhase.HybridToInsertionSort, left, right, IntrosortSizeThreshold);
                 if (leftmost)
                 {
                     InsertionSort.SortCore(s, left, right + 1);
@@ -234,6 +235,7 @@ public static class IntroSort
             // Max depth reached: switch to HeapSort to guarantee O(n log n)
             if (depthLimit == 0)
             {
+                s.Context.OnPhase(SortPhase.HybridToHeapSort, left, right);
                 HeapSort.SortCore(s, left, right + 1);
                 return;
             }

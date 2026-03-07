@@ -210,6 +210,7 @@ public static class PDQSort
             if (size < InsertionSortThreshold)
             {
                 s.Context.OnRole(begin, BUFFER_MAIN, RoleType.None);
+                s.Context.OnPhase(SortPhase.HybridToInsertionSort, begin, end - 1, InsertionSortThreshold);
 
                 if (leftmost)
                 {
@@ -270,9 +271,11 @@ public static class PDQSort
             // If we got a highly unbalanced partition we shuffle elements to break many patterns
             if (highlyUnbalanced)
             {
+                s.Context.OnPhase(SortPhase.PDQPatternShuffle, begin, end - 1, badAllowed);
                 // If we had too many bad partitions, switch to heapsort to guarantee O(n log n)
                 if (--badAllowed == 0)
                 {
+                    s.Context.OnPhase(SortPhase.HybridToHeapSort, begin, end - 1);
                     HeapSort.SortCore(s, begin, end);
                     return;
                 }
@@ -309,11 +312,14 @@ public static class PDQSort
             {
                 // If we were decently balanced and we tried to sort an already partitioned
                 // sequence try to use insertion sort (excluding equal elements block)
-                if (alreadyPartitioned &&
-                    PartialInsertionSort(s, begin, equalLeft) &&
-                    PartialInsertionSort(s, equalRight, end))
+                if (alreadyPartitioned)
                 {
-                    return;
+                    s.Context.OnPhase(SortPhase.PDQPartialInsertionSort, begin, end - 1);
+                    if (PartialInsertionSort(s, begin, equalLeft) &&
+                        PartialInsertionSort(s, equalRight, end))
+                    {
+                        return;
+                    }
                 }
             }
 

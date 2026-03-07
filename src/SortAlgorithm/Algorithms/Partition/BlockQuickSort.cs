@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -249,6 +249,7 @@ public static class BlockQuickSort
             // This prevents worst-case O(n²) behavior on adversarial inputs
             if (depthLimit == 0)
             {
+                s.Context.OnPhase(SortPhase.HybridToHeapSort, left, right);
                 HeapSort.SortCore(s, left, right + 1);
                 return;
             }
@@ -256,6 +257,7 @@ public static class BlockQuickSort
             // Use insertion sort for small subarrays
             if (size <= InsertionSortThreshold)
             {
+                s.Context.OnPhase(SortPhase.HybridToInsertionSort, left, right, InsertionSortThreshold);
                 InsertionSort.SortCore(s, left, right + 1);
                 return;
             }

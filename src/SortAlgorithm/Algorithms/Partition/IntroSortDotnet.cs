@@ -138,6 +138,7 @@ public static class IntroSortDotnet
             // Small arrays: use InsertionSort
             if (partitionSize <= IntrosortSizeThreshold)
             {
+                s.Context.OnPhase(SortPhase.HybridToInsertionSort, left, left + partitionSize - 1, IntrosortSizeThreshold);
                 if (partitionSize == 2)
                 {
                     SwapIfGreater(s, left, left + 1);
@@ -159,6 +160,7 @@ public static class IntroSortDotnet
             // Max depth reached: switch to HeapSort to guarantee O(n log n)
             if (depthLimit == 0)
             {
+                s.Context.OnPhase(SortPhase.HybridToHeapSort, left, left + partitionSize - 1);
                 HeapSortInternal(s, left, partitionSize);
                 return;
             }
