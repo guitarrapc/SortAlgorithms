@@ -10,20 +10,21 @@
     {
         // レイアウトキャッシュをクリアして再計算
         _nodeXPositions.Clear();
+        _subtreeWidthCache.Clear();
+        _nodeDepths.Clear();
 
-        var maxDepth = Snapshot.Nodes.Max(n => n.Depth);
-
-        // ビューボックスを動的に計算（葉ノードの数に応じて幅を拡大）
+        // ビューボックス幅を動的に計算（葉ノードの数に応じて拡大）
         var leafNodes = Snapshot.Nodes.Where(n => !Snapshot.Nodes.Any(c => c.ParentId == n.Id)).Count();
         var viewW = Math.Max(1200, leafNodes * 200 + 200);
-        var viewH = Math.Max(200, (maxDepth + 1) * 140 + 100);
 
-        // まず全ノードのX座標を計算してからviewW中央に寄せる
+        // X座標と走査深さを計算してからviewW中央に寄せる
         var treeRoot = Snapshot.Nodes.FirstOrDefault(n => n.ParentId == -1);
         if (treeRoot != null) CalculateTreeLayout(treeRoot);
         if (_nodeXPositions.Count > 0)
         {
-            double treeMinX = _nodeXPositions.Values.Min() - GetActualNodeWidth(treeRoot!) / 2;
+            double treeMinX = _nodeXPositions
+                .Select(kv => kv.Value - GetActualNodeWidth(Snapshot.Nodes.First(n => n.Id == kv.Key)) / 2)
+                .Min();
             double treeMaxX = _nodeXPositions
                 .Select(kv => kv.Value + GetActualNodeWidth(Snapshot.Nodes.First(n => n.Id == kv.Key)) / 2)
                 .Max();
@@ -32,6 +33,10 @@
             foreach (var key in _nodeXPositions.Keys.ToList())
                 _nodeXPositions[key] += centerOffset;
         }
+
+        // CalculateTreeLayout で記録した走査深さで viewH を正確に計算する
+        var maxDepth = _nodeDepths.Count > 0 ? _nodeDepths.Values.Max() : Snapshot.Nodes.Max(n => n.Depth);
+        var viewH = Math.Max(200, (maxDepth + 1) * 140 + 100);
 
         var nodeHeight = 70;
         var levelGap = 140;
@@ -56,10 +61,9 @@
                     var parent = Snapshot.Nodes.FirstOrDefault(n => n.Id == node.ParentId);
                     if (parent != null)
                     {
-                        // 親が Completed なら子ノードは非表示 → エッジも非表示
-                        if (parent.State == RecursionNodeState.Completed) continue;
-                        // 祖先が Completed なら同様に非表示
-                        if (IsChildOfCompletedNode(parent)) continue;
+                        // レイアウトツリーに含まれないノードへのエッジは非表示。
+                        // IsChildOfCompletedNode は 1 階層上の確認のみなので、孫ノードが孤立するケースをカバーできない。
+                        if (!_nodeXPositions.ContainsKey(node.Id) || !_nodeXPositions.ContainsKey(parent.Id)) continue;
                         var (px, py) = GetNodePosition(parent, maxDepth, viewW);
                         var (cx, cy) = GetNodePosition(node, maxDepth, viewW);
 
@@ -83,8 +87,9 @@
             {
                 var node = Snapshot.Nodes[nodeIdx];
 
-                // 親が Completed → このノードは「マージ済みで吸収された」ので非表示
-                if (IsChildOfCompletedNode(node)) continue;
+                // レイアウトツリーに含まれないノードは非表示。
+                // 孤立ノード（祖先が Completed で親の深さまで IsChildOfCompleted が伝播されないケース）も除外される。
+                if (!_nodeXPositions.ContainsKey(node.Id)) continue;
 
                 var (nx, ny) = GetNodePosition(node, maxDepth, viewW);
 
@@ -190,6 +195,8 @@
 
     // レイアウト計算用キャッシュ
     private readonly Dictionary<int, double> _nodeXPositions = new();
+    private readonly Dictionary<int, double> _subtreeWidthCache = new();
+    private readonly Dictionary<int, int> _nodeDepths = new();
 
     /// <summary>
     /// ノードの実際の描画幅を計算する（要素数に応じた動的幅）。
@@ -204,63 +211,72 @@
     private (double x, double y) GetNodePosition(RecursionNode node, int maxDepth, double viewW)
     {
         const double levelHeight = 140;
-        double y = 60 + node.Depth * levelHeight;
+        // _nodeDepths は CalculateTreeLayout の走査で記録した実際の深さ。
+        // node.Depth は ReattachChildren の伝播漏れで誤った値になる場合があるため使用しない。
+        int depth = _nodeDepths.GetValueOrDefault(node.Id, node.Depth);
+        double y = 60 + depth * levelHeight;
 
         double x = _nodeXPositions.GetValueOrDefault(node.Id, viewW / 2);
         return (x, y);
     }
 
     /// <summary>
-    /// ツリー全体のX座標を再帰的に計算する（後順走査）。
-    /// 各ノードの実際の描画幅と表示対象ノードのみを考慮して重なりを防ぐ。
+    /// ノードのサブツリー描画幅を返す（メモ化付き）。
+    /// 自身の描画幅と全可視子ノードのサブツリー幅の合計の大きい方を採用する。
+    /// これにより親ノードが子ノードより広い場合でも兄弟ノードと重ならない。
     /// </summary>
-    private double CalculateTreeLayout(RecursionNode node)
+    private double GetSubtreeWidth(RecursionNode node)
     {
-        if (_nodeXPositions.ContainsKey(node.Id))
-            return _nodeXPositions[node.Id];
+        if (_subtreeWidthCache.TryGetValue(node.Id, out var cached)) return cached;
 
+        const double gap = 40;
         var visibleChildren = Snapshot!.Nodes
             .Where(n => n.ParentId == node.Id && !IsChildOfCompletedNode(n))
             .OrderBy(n => n.Start)
             .ToList();
 
+        double width;
         if (visibleChildren.Count == 0)
         {
-            // 表示上の葉ノード：全表示葉ノードの中での順番を基に実際の幅で積み上げ配置
-            var allLeaves = GetAllVisibleLeaves();
-            int myIdx = allLeaves.FindIndex(n => n.Id == node.Id);
-            if (myIdx < 0) myIdx = 0;
-
-            const double gap = 40;
-            double x = 80;
-            for (int i = 0; i < myIdx; i++)
-                x += GetActualNodeWidth(allLeaves[i]) + gap;
-            x += GetActualNodeWidth(node) / 2;
-
-            _nodeXPositions[node.Id] = x;
-            return x;
+            width = GetActualNodeWidth(node);
+        }
+        else
+        {
+            double totalChildWidth = visibleChildren.Sum(c => GetSubtreeWidth(c)) + (visibleChildren.Count - 1) * gap;
+            width = Math.Max(GetActualNodeWidth(node), totalChildWidth);
         }
 
-        // 子ノードを先に配置
-        var childPositions = visibleChildren.Select(c => CalculateTreeLayout(c)).ToList();
-
-        // 親は子ノードの中央に配置
-        double parentX = (childPositions.Min() + childPositions.Max()) / 2;
-        _nodeXPositions[node.Id] = parentX;
-        return parentX;
+        _subtreeWidthCache[node.Id] = width;
+        return width;
     }
 
     /// <summary>
-    /// 表示されているノードのうち「表示上の葉ノード（可視の子を持たないノード）」を
-    /// start 順で返す。深さが混在していても重ならない配置を実現する。
+    /// ツリー全体のX座標をトップダウンで計算する。
+    /// サブツリー幅を基にノードを配置するため、親ノードが子ノードより幅広い場合でも
+    /// 同じ深さの兄弟ノードが重ならない。
     /// </summary>
-    private List<RecursionNode> GetAllVisibleLeaves()
+    private void CalculateTreeLayout(RecursionNode node, double left = 0, int depth = 0)
     {
-        return Snapshot!.Nodes
-            .Where(n => !IsChildOfCompletedNode(n))
-            .Where(n => !Snapshot.Nodes.Any(c => c.ParentId == n.Id && !IsChildOfCompletedNode(c)))
+        _nodeDepths[node.Id] = depth;
+        double subtreeWidth = GetSubtreeWidth(node);
+        _nodeXPositions[node.Id] = left + subtreeWidth / 2;
+
+        const double gap = 40;
+        var visibleChildren = Snapshot!.Nodes
+            .Where(n => n.ParentId == node.Id && !IsChildOfCompletedNode(n))
             .OrderBy(n => n.Start)
             .ToList();
+
+        if (visibleChildren.Count == 0) return;
+
+        double totalChildrenWidth = visibleChildren.Sum(c => GetSubtreeWidth(c)) + (visibleChildren.Count - 1) * gap;
+        double childLeft = left + (subtreeWidth - totalChildrenWidth) / 2;
+
+        foreach (var child in visibleChildren)
+        {
+            CalculateTreeLayout(child, childLeft, depth + 1);
+            childLeft += GetSubtreeWidth(child) + gap;
+        }
     }
 
     /// <summary>

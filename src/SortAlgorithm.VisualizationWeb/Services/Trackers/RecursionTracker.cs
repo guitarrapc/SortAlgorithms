@@ -239,11 +239,32 @@ sealed class RecursionTracker : IVisualizationTracker
                 && candidateSize < newSize
                 && candidate.ParentId == newNode.ParentId)
             {
+                int depthDelta = (newNode.Depth + 1) - candidate.Depth;
                 _nodes[i] = candidate with
                 {
                     ParentId = newNode.Id,
                     Depth    = newNode.Depth + 1,
                 };
+                // 子孫ノードの Depth も再帰的に更新する。
+                // 更新しないと子孫が親と同じ Depth になり、同じ行に重なって表示される。
+                if (depthDelta != 0)
+                    UpdateDescendantDepths(candidate.Id, depthDelta);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 指定された親 ID を持つ全ての子孫ノードの Depth を depthDelta だけ増減する。
+    /// ReattachChildren による深さ変化を子孫に伝播させるために使用する。
+    /// </summary>
+    private void UpdateDescendantDepths(int parentId, int depthDelta)
+    {
+        for (int i = 0; i < _nodes.Count; i++)
+        {
+            if (_nodes[i].ParentId == parentId)
+            {
+                _nodes[i] = _nodes[i] with { Depth = _nodes[i].Depth + depthDelta };
+                UpdateDescendantDepths(_nodes[i].Id, depthDelta);
             }
         }
     }
