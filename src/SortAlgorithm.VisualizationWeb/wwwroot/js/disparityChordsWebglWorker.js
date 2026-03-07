@@ -248,8 +248,9 @@ void main() { outColor = v_color; }`;
   const aPos   = gl.getAttribLocation(program, 'a_pos');
   const aColor = gl.getAttribLocation(program, 'a_color');
 
-  // VBO 初期確保（後で ensureVBOCapacity() で拡張）
-  const INIT_CAP = 4096 * STRIDE;
+  // INIT_CAP: n=4096 の弦クワッド（4096弦 × 6頂点 × STRIDE floats = 147,456）+ ドット（4096 × STRIDE = 24,576）を余裕で収容
+  // 32768 * 6 = 196,608 floats → 最大 n = floor(196,608 / (6 * 6)) = 5461 要素まで対応（弦クワッド最大ケース）
+  const INIT_CAP = 32768 * STRIDE;  // 196,608 floats
   vboData = new Float32Array(INIT_CAP);
   vboCap  = INIT_CAP;
   vbo = gl.createBuffer();
