@@ -1444,8 +1444,15 @@
         min-height: 9rem;
     }
 
+    /* 矢印SVGはシングル行前提の座標計算のため、複数行レイアウトでは非表示 */
     ::deep .marble-arrow-area {
-        height: 38px;
+        display: none;
+    }
+
+    /* inline-flex だと折り返し時に幅が循環参照になるため flex + width:100% で解消 */
+    ::deep .marble-row-content {
+        display: flex;
+        width: 100%;
     }
 
     ::deep .marble {
@@ -1457,7 +1464,7 @@
 
     ::deep .marble-row {
         gap: 0.375rem;
-        flex-wrap: nowrap; /* 8個が折り返さないよう強制1行 */
+        /* flex-wrap: wrap はベースCSSから継承 */
         --marble-slot-width: calc(36px + 0.375rem);
     }
 
