@@ -1,4 +1,4 @@
-/* ─── ページ全体（メインと同グリッドレイアウト） ─────────────────────────── */
+/* ページ全体（グリッドレイアウト） */
 .tutorial-page {
     display: grid;
     grid-template-columns: 280px 1fr;
@@ -8,13 +8,12 @@
     padding: 10px;
     background: var(--bg-main);
     color: var(--text-primary);
-    outline: none;
     width: 100%;
     max-width: var(--page-max-width);
     margin: 0 auto;
 }
 
-    /* ─── ヘッダー（背景なし、直接載せる） ────────────────────────────────── */
+    /* ヘッダー（背景なし、直接載せる） */
     .tutorial-page .header {
         grid-column: 1 / -1;
         padding: 12px 8px;

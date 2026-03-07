@@ -1,5 +1,3 @@
-/* ─── Index ページ専用スタイル ─────────────────────────────────────────── */
-
 /* ページ全体（グリッドレイアウト） */
 .visualization-page {
     display: grid;
@@ -15,16 +13,16 @@
     margin: 0 auto;
 }
 
-/* ヘッダー（背景なし、直接載せる） */
-.visualization-page .header {
-    grid-column: 1 / -1;
-    padding: 12px 8px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 16px;
-    position: relative;
-}
+    /* ヘッダー（背景なし、直接載せる） */
+    .visualization-page .header {
+        grid-column: 1 / -1;
+        padding: 12px 8px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 16px;
+        position: relative;
+    }
 
 /* 左グループ（将来の拡張用） */
 .header__left {
