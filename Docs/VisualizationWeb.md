@@ -10,6 +10,10 @@
 ### 配置場所
 `sandbox/SortAlgorithm.VisualizationWeb/`
 
+### サイト名
+
+SortViz
+
 ### 技術スタック
 - **フロントエンド**: Blazor WebAssembly (.NET 10)
 - **グラフィックス**: HTML5 Canvas / SVG
