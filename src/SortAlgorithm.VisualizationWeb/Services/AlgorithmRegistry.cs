@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.VisualizationWeb.Models;
+using SortAlgorithm.VisualizationWeb.Models;
 using SortAlgorithm.Contexts;
 using SortAlgorithm.Algorithms;
 
@@ -422,7 +422,8 @@ public class AlgorithmRegistry
                 - Compare: same left-right partition scan as basic Quicksort; elements are tested against the selected median pivot
                 - Swap: same as basic Quicksort — elements on the wrong side are swapped across the partition boundary
                 """,
-            tutorialArrayType: TutorialArrayType.PartitionSort);
+            tutorialArrayType: TutorialArrayType.PartitionSort,
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
         Add("Quicksort (Median9)", "Partition Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => QuickSortMedian9.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Samples nine elements from three equally spaced groups of three, takes the median of each group, then takes the median of those three medians as the pivot before partitioning.
@@ -434,7 +435,8 @@ public class AlgorithmRegistry
                 - Compare: same left-right partition scan as basic Quicksort; the better-chosen pivot typically produces more even splits
                 - Swap: same as basic Quicksort — elements on the wrong side are swapped across the partition boundary
                 """,
-            tutorialArrayType: TutorialArrayType.PartitionSort);
+            tutorialArrayType: TutorialArrayType.PartitionSort,
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
         Add("Quicksort (DualPivot)", "Partition Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => QuickSortDualPivot.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Picks two pivots p1 ≤ p2 and partitions the array into three regions in a single pass: elements < p1, elements between p1 and p2, and elements > p2; each region is then sorted recursively.
@@ -446,7 +448,8 @@ public class AlgorithmRegistry
                 - Swap: elements are moved to their correct region; at the end of each step both pivots are placed at their final sorted positions, fixing two positions at once
                 - End of partition: two pivot positions are fixed simultaneously, splitting the remaining work into three independent sub-problems
                 """,
-            tutorialArrayType: TutorialArrayType.PartitionSortHybrid);
+            tutorialArrayType: TutorialArrayType.PartitionSortHybrid,
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
         Add("Quicksort (Stable)", "Partition Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => StableQuickSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Performs Quicksort's partition step using an auxiliary buffer to collect elements from each side in their original order, then writes them back — preserving the relative order of equal elements.
@@ -470,7 +473,8 @@ public class AlgorithmRegistry
                 - Swap: once full blocks are collected on both sides, the indexed pairs are swapped in sequence; the swap pattern is data-independent and branch-free
                 - End of partition: leftover elements outside the filled blocks are handled with a short standard scan, then the pivot is placed at its final position
                 """,
-            tutorialArrayType: TutorialArrayType.PartitionSortHybrid);
+            tutorialArrayType: TutorialArrayType.PartitionSortHybrid,
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
         Add("Introsort", "Partition Sorts", "O(n log n)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => IntroSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: Starts with Quicksort but monitors recursion depth; switches to Heapsort when depth exceeds 2⌊log₂ n⌋ to guarantee O(n log n) worst-case, and finishes sub-arrays smaller than a fixed threshold with Insertion sort.
@@ -482,7 +486,8 @@ public class AlgorithmRegistry
                 - Swap (Heapsort fallback): when the depth limit is hit, the pattern shifts to sift-down swaps moving elements downward through heap levels
                 - IndexWrite (Insertion sort finish): once sub-arrays shrink below the threshold, leftward element shifts replace partitioning
                 """,
-            tutorialArrayType: TutorialArrayType.PartitionSortHybrid);
+            tutorialArrayType: TutorialArrayType.PartitionSortHybrid,
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
         Add("IntrosortDotnet", "Partition Sorts", "O(n log n)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => IntroSortDotnet.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: The Introsort variant used inside the .NET runtime (Array.Sort); follows the same Quicksort → Heapsort → Insertion sort hybrid strategy but with .NET-specific depth threshold and small-array cutoff values.
@@ -494,7 +499,8 @@ public class AlgorithmRegistry
                 - Swap (Heapsort fallback): when the .NET-specific depth limit is hit, the pattern shifts to sift-down swaps moving elements downward through heap levels
                 - IndexWrite (Insertion sort finish): once sub-arrays shrink below the .NET-specific cutoff, leftward element shifts replace partitioning
                 """,
-            tutorialArrayType: TutorialArrayType.PartitionSortHybrid);
+            tutorialArrayType: TutorialArrayType.PartitionSortHybrid,
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
         Add("Pattern-defeating quicksort", "Partition Sorts", "O(n log n)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => PDQSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: An Introsort variant that tests the input for common structural patterns before each partition — sorted, reverse-sorted, many equal elements — and takes a fast path when structure is detected, otherwise using block partitioning and pivot shuffling.
@@ -506,7 +512,8 @@ public class AlgorithmRegistry
                 - Swap (block partition): when a full partition is needed, compare and swap phases are separated like BlockQuickSort; pivot-shuffling swaps also fire when a bad partition is detected
                 - End of phase: transitions between Quicksort, Insertion sort, and Heapsort are reactive to input structure — more frequent and earlier than in standard Introsort
                 """,
-            tutorialArrayType: TutorialArrayType.PartitionSortHybrid);
+            tutorialArrayType: TutorialArrayType.PartitionSortHybrid,
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
         Add("std::sort (LLVM)", "Partition Sorts", "O(n log n)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => StdSort.Sort(arr, ctx),
             tutorialDescription: """
                 How it works: A faithful re-implementation of the GNU libstdc++ Introsort: uses median-of-three pivot selection, falls back to Heapsort after too many recursion levels, and switches to Insertion sort for sub-arrays below a fixed threshold.
@@ -518,7 +525,8 @@ public class AlgorithmRegistry
                 - Swap (Heapsort fallback): when the recursion depth limit is exceeded, the algorithm switches to Heapsort's sift-down swap pattern
                 - IndexWrite (Insertion sort finish): once sub-arrays fall below the small-array threshold, Insertion sort takes over with leftward element shifts
                 """,
-            tutorialArrayType: TutorialArrayType.PartitionSortHybrid);
+            tutorialArrayType: TutorialArrayType.PartitionSortHybrid,
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
 
         // Adaptive Sorts
         Add("Drop-Merge sort", "Adaptive Sorts", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => DropMergeSort.Sort(arr, ctx),
