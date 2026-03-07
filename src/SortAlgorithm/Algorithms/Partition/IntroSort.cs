@@ -244,7 +244,7 @@ public static class IntroSort
             // - For large arrays (>= 1000): use Ninther (median-of-5) for better pivot quality
             // - For smaller arrays: use median-of-3 (quartile-based)
             var length = right - left + 1;
-            T pivot;
+            int pivotIndex;
 
             if (length >= 1000)
             {
@@ -253,7 +253,7 @@ public static class IntroSort
                 var mid = left + delta;
                 var q1 = left + delta / 2;
                 var q3 = mid + delta / 2;
-                pivot = MedianOf5Value(s, left, q1, mid, q3, right);
+                pivotIndex = MedianOf5Index(s, left, q1, mid, q3, right);
             }
             else
             {
@@ -261,11 +261,13 @@ public static class IntroSort
                 var q1 = left + length / 4;
                 var mid = left + length / 2;
                 var q3 = left + (length * 3) / 4;
-                pivot = MedianOf3Value(s, q1, mid, q3);
+                pivotIndex = MedianOf3Index(s, q1, mid, q3);
             }
 
             // Hoare partition scheme with swap counting for nearly-sorted detection
-            s.Context.OnPhase(SortPhase.QuickSortPartition, left, right);
+            s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, pivotIndex);
+            s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.Pivot);
+            var pivot = s.Read(pivotIndex);
             var l = left;
             var r = right;
             var swapCount = 0;
@@ -319,6 +321,7 @@ public static class IntroSort
                 if (allEqual)
                 {
                     // All elements equal - range is sorted, done
+                    s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
                     return;
                 }
             }
@@ -336,11 +339,12 @@ public static class IntroSort
                 if (allEqual)
                 {
                     // All elements equal - range is sorted, done
+                    s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
                     return;
                 }
             }
 
-            // Nearly-sorted detection: if no swaps occurred, try InsertionSort with early abort
+            // Nearly-sorted detection
             // This is similar to C++ std::introsort's __insertion_sort_incomplete optimization
             if (swapCount == 0)
             {
@@ -354,11 +358,13 @@ public static class IntroSort
                     if (rightSorted)
                     {
                         // Both partitions completed successfully - done
+                        s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
                         return;
                     }
                     else
                     {
                         // Left done, right needs more work - continue with right partition
+                        s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
                         leftmost = false;
                         left = l;
                         continue;
@@ -369,6 +375,7 @@ public static class IntroSort
                     if (rightSorted)
                     {
                         // Right done, left needs more work - continue with left partition
+                        s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
                         right = r;
                         continue;
                     }
@@ -382,6 +389,7 @@ public static class IntroSort
             // Tail recursion optimization: always recurse on smaller partition, loop on larger
             // This guarantees O(log n) stack depth even for pathological inputs
             // (similar to C++ std::introsort and LLVM implementation)
+            s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
             var leftSize = r - left + 1;
             var rightSize = right - l + 1;
 
@@ -412,10 +420,10 @@ public static class IntroSort
     }
 
     /// <summary>
-    /// Returns the median value among three elements at specified indices.
-    /// This method performs exactly 2-3 comparisons to determine the median value.
+    /// Returns the median index among three elements at specified indices.
+    /// This method performs exactly 2-3 comparisons to determine the median index.
     /// </summary>
-    private static T MedianOf3Value<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
+    private static int MedianOf3Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -427,12 +435,12 @@ public static class IntroSort
             var cmpMidHigh = s.Compare(midIdx, highIdx);
             if (cmpMidHigh > 0) // low > mid > high
             {
-                return s.Read(midIdx); // mid is median
+                return midIdx; // mid is median
             }
             else // low > mid, mid <= high
             {
                 var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? s.Read(highIdx) : s.Read(lowIdx);
+                return cmpLowHigh > 0 ? highIdx : lowIdx;
             }
         }
         else // low <= mid
@@ -441,19 +449,19 @@ public static class IntroSort
             if (cmpMidHigh > 0) // low <= mid, mid > high
             {
                 var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? s.Read(lowIdx) : s.Read(highIdx);
+                return cmpLowHigh > 0 ? lowIdx : highIdx;
             }
             else // low <= mid <= high
             {
-                return s.Read(midIdx); // mid is median
+                return midIdx; // mid is median
             }
         }
     }
 
     /// <summary>
-    /// Returns the median value among five elements at specified indices.
+    /// Returns the median index among five elements at specified indices.
     /// This implements "Ninther" - median-of-medians using 5 samples for better pivot quality on large arrays.
-    /// Performs 6-8 comparisons to determine the median value.
+    /// Performs 6-8 comparisons to determine the median index.
     /// </summary>
     /// <remarks>
     /// This is based on C++ std::introsort's __sort5 optimization for arrays >= 1000 elements.
@@ -461,7 +469,7 @@ public static class IntroSort
     /// This provides better pivot selection than simple 3-point sampling, especially for large arrays
     /// with patterns like partially-sorted or mountain-shaped distributions.
     /// </remarks>
-    private static T MedianOf5Value<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i1, int i2, int i3, int i4, int i5)
+    private static int MedianOf5Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i1, int i2, int i3, int i4, int i5)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -491,15 +499,15 @@ public static class IntroSort
         {
             if (s.Compare(i3, i4) > 0)
             {
-                return s.Read(i4);
+                return i4;
             }
             else
             {
-                return s.Read(i3);
+                return i3;
             }
         }
 
-        return s.Read(i2);
+        return i2;
     }
 
     /// <summary>

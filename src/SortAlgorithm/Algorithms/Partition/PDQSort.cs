@@ -243,14 +243,19 @@ public static class PDQSort
             // Then if our pivot compares equal to *(begin - 1) we change strategy.
             if (!leftmost && s.Compare(begin - 1, begin) >= 0)
             {
+                s.Context.OnPhase(SortPhase.QuickSortPartition, begin, end - 1, begin);
+                s.Context.OnRole(begin, BUFFER_MAIN, RoleType.Pivot);
+                var pivotBegin = begin;
                 begin = PartitionLeft(s, begin, end) + 1;
+                s.Context.OnRole(pivotBegin, BUFFER_MAIN, RoleType.None);
                 continue;
             }
 
             // Partition and detect equal elements block
-            s.Context.OnPhase(SortPhase.QuickSortPartition, begin, end - 1);
+            s.Context.OnPhase(SortPhase.QuickSortPartition, begin, end - 1, begin);
             s.Context.OnRole(begin, BUFFER_MAIN, RoleType.Pivot);
             var (equalLeft, equalRight, alreadyPartitioned) = PartitionRightSkipEquals(s, begin, end);
+            s.Context.OnRole(begin, BUFFER_MAIN, RoleType.None);
 
             // Calculate sizes excluding the equal block
             var lSize = equalLeft - begin;        // Elements < pivot
