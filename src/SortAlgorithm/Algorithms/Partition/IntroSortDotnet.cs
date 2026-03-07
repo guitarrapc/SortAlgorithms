@@ -165,15 +165,10 @@ public static class IntroSortDotnet
             depthLimit--;
 
             // Partition and get pivot position (returns position relative to left)
-            s.Context.OnPhase(SortPhase.QuickSortPartition, left, left + partitionSize - 1);
             int p = PickPivotAndPartition(s, left, partitionSize);
-
-            // Mark pivot position
-            s.Context.OnRole(left + p, BUFFER_MAIN, RoleType.Pivot);
 
             // Recursively sort right partition, loop on left (tail recursion elimination)
             // Note: pivot at position (left + p) is already in final position, exclude from recursion
-            s.Context.OnRole(left + p, BUFFER_MAIN, RoleType.None);
             IntroSortInternal(s, left + p + 1, left + partitionSize, depthLimit);
             partitionSize = p;
         }
@@ -221,6 +216,8 @@ public static class IntroSortDotnet
         // Select the middle value as the pivot, and move it to be just before the last element.
         T pivot = s.Read(offset + middle);
         s.Swap(offset + middle, offset + hi - 1);
+        s.Context.OnPhase(SortPhase.QuickSortPartition, offset, offset + hi, offset + hi - 1);
+        s.Context.OnRole(offset + hi - 1, BUFFER_MAIN, RoleType.Pivot);
 
         // We already partitioned lo and hi and put the pivot in hi - 1.
         // And we pre-increment & decrement below.
@@ -245,6 +242,7 @@ public static class IntroSortDotnet
         }
 
         // Put pivot in the right location.
+        s.Context.OnRole(offset + hi - 1, BUFFER_MAIN, RoleType.None);
         if (left != hi - 1)
         {
             s.Swap(offset + left, offset + hi - 1);

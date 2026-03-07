@@ -324,12 +324,16 @@ public static class StdSort
             // This means we do not need to sort the left side of the partition.
             if (!leftmost && s.Compare(first - 1, first) >= 0)
             {
+                s.Context.OnPhase(SortPhase.QuickSortPartition, first, last - 1, first);
+                s.Context.OnRole(first, BUFFER_MAIN, RoleType.Pivot);
+                var pivotFirst = first;
                 first = PartitionWithEqualsOnLeft(s, first, last);
+                s.Context.OnRole(pivotFirst, BUFFER_MAIN, RoleType.None);
                 continue;
             }
 
             // Partition
-            s.Context.OnPhase(SortPhase.QuickSortPartition, first, last - 1);
+            s.Context.OnPhase(SortPhase.QuickSortPartition, first, last - 1, first);
             s.Context.OnRole(first, BUFFER_MAIN, RoleType.Pivot);
             var (pivotPos, alreadyPartitioned) = PartitionWithEqualsOnRight(s, first, last);
             s.Context.OnRole(first, BUFFER_MAIN, RoleType.None);
