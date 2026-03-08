@@ -14,7 +14,7 @@
 
 <div class="tutorial-page" @onkeydown="OnKeyDown" tabindex="0" @ref="_containerRef">
 
-<div class="header">
+    <div class="header">
         <div class="header__left"></div>
         <h1 class="tutorial__title">TUTORIAL</h1>
         <div class="header__actions">
@@ -262,8 +262,7 @@
                                         ShellGap="@GetCurrentShellGap()"
                                         Roles="@GetCurrentRoles()"
                                         Label="Main Array" />
-                        <DistributionBucketRenderer
-                                                    MaxValue="@_maxValue"
+                        <DistributionBucketRenderer MaxValue="@_maxValue"
                                                     StepIndex="@_currentStepIndex"
                                                     Label="Buckets" />
                     }
@@ -642,10 +641,10 @@
         => _selectedAlgorithm?.TutorialVisualizationHint switch
         {
             TutorialVisualizationHint.TernaryHeapTree => "Ternary Heap",
-            TutorialVisualizationHint.WeakHeapTree    => "Weak Heap",
-            TutorialVisualizationHint.BstTree         => "BST",
-            TutorialVisualizationHint.AvlTree         => "AVL Tree",
-            TutorialVisualizationHint.RecursionTree   => "Recursion Tree",
+            TutorialVisualizationHint.WeakHeapTree => "Weak Heap",
+            TutorialVisualizationHint.BstTree => "BST",
+            TutorialVisualizationHint.AvlTree => "AVL Tree",
+            TutorialVisualizationHint.RecursionTree => "Recursion Tree",
             _ => "Heap Tree"
         };
 

@@ -37,32 +37,30 @@
         </div>
     </div>
 
-    <QuickAccessPanel
-        @bind-SelectedAlgorithm="SelectedAlgorithm"
-        @bind-ArraySize="ArraySize"
-        @bind-SelectedPatternName="SelectedPatternName"
-        @bind-SelectedVisualizationMode="SelectedVisualizationMode"
-        @bind-SelectedCategory="_selectedCategory"
-        @bind-AutoSwitchToRecommendedSize="_autoSwitchToRecommendedSize"
-        IsLoading="IsLoading"
-        Playback="Playback"
-        ComparisonMode="ComparisonMode"
-        RenderSettings="RenderSettings"
-        DebugSettings="DebugSettings"
-        OnAddAndGenerate="AddAndGenerateAsync"
-        OnAlgorithmChanged="OnAlgorithmChanged"
-        OnVisualizationModeChanged="OnVisualizationModeChanged"
-        OnSpeedSettingsChanged="OnSpeedSettingsChanged" />
+    <QuickAccessPanel @bind-SelectedAlgorithm="SelectedAlgorithm"
+                      @bind-ArraySize="ArraySize"
+                      @bind-SelectedPatternName="SelectedPatternName"
+                      @bind-SelectedVisualizationMode="SelectedVisualizationMode"
+                      @bind-SelectedCategory="_selectedCategory"
+                      @bind-AutoSwitchToRecommendedSize="_autoSwitchToRecommendedSize"
+                      IsLoading="IsLoading"
+                      Playback="Playback"
+                      ComparisonMode="ComparisonMode"
+                      RenderSettings="RenderSettings"
+                      DebugSettings="DebugSettings"
+                      OnAddAndGenerate="AddAndGenerateAsync"
+                      OnAlgorithmChanged="OnAlgorithmChanged"
+                      OnVisualizationModeChanged="OnVisualizationModeChanged"
+                      OnSpeedSettingsChanged="OnSpeedSettingsChanged" />
 
-    <SettingsModal
-        IsOpen="_settingsOpen"
-        OnClose="HandleSettingsClose"
-        Playback="Playback"
-        RenderSettings="RenderSettings"
-        DebugSettings="DebugSettings"
-        ComparisonMode="ComparisonMode"
-        @bind-AutoSwitchToRecommendedSize="_autoSwitchToRecommendedSize"
-        @bind-SelectedCategory="_selectedCategory" />
+    <SettingsModal IsOpen="_settingsOpen"
+                   OnClose="HandleSettingsClose"
+                   Playback="Playback"
+                   RenderSettings="RenderSettings"
+                   DebugSettings="DebugSettings"
+                   ComparisonMode="ComparisonMode"
+                   @bind-AutoSwitchToRecommendedSize="_autoSwitchToRecommendedSize"
+                   @bind-SelectedCategory="_selectedCategory" />
 
 
 
@@ -145,34 +143,34 @@
 </div>
 
 @code {
-// ── コンテンツ状態（URL Query String で保持） ─────────────────────────────
-private string _selectedAlgorithm = "Bubble sort";
-private string SelectedAlgorithm
-{
-    get => _selectedAlgorithm;
-    set { if (_selectedAlgorithm != value) { _selectedAlgorithm = value; UpdateContentStateUrl(); } }
-}
+    // ── コンテンツ状態（URL Query String で保持） ─────────────────────────────
+    private string _selectedAlgorithm = "Quicksort";
+    private string SelectedAlgorithm
+    {
+        get => _selectedAlgorithm;
+        set { if (_selectedAlgorithm != value) { _selectedAlgorithm = value; UpdateContentStateUrl(); } }
+    }
 
-private int _arraySize = 1024;
-private int ArraySize
-{
-    get => _arraySize;
-    set { if (_arraySize != value) { _arraySize = value; UpdateContentStateUrl(); } }
-}
+    private int _arraySize = 1024;
+    private int ArraySize
+    {
+        get => _arraySize;
+        set { if (_arraySize != value) { _arraySize = value; UpdateContentStateUrl(); } }
+    }
 
-private string _selectedPatternName = "🎲 Random";
-private string SelectedPatternName
-{
-    get => _selectedPatternName;
-    set { if (_selectedPatternName != value) { _selectedPatternName = value; UpdateContentStateUrl(); } }
-}
+    private string _selectedPatternName = "🎲 Random";
+    private string SelectedPatternName
+    {
+        get => _selectedPatternName;
+        set { if (_selectedPatternName != value) { _selectedPatternName = value; UpdateContentStateUrl(); } }
+    }
 
-private VisualizationMode _selectedVisualizationMode = VisualizationMode.BarChart;
-private VisualizationMode SelectedVisualizationMode
-{
-    get => _selectedVisualizationMode;
-    set { if (_selectedVisualizationMode != value) { _selectedVisualizationMode = value; UpdateContentStateUrl(); } }
-}
+    private VisualizationMode _selectedVisualizationMode = VisualizationMode.DisparityChords;
+    private VisualizationMode SelectedVisualizationMode
+    {
+        get => _selectedVisualizationMode;
+        set { if (_selectedVisualizationMode != value) { _selectedVisualizationMode = value; UpdateContentStateUrl(); } }
+    }
 
     // N に基づく暗黙的モード（トグル不要）
     private bool IsComparisonMode => ComparisonMode.State.Instances.Count > 1;
@@ -187,7 +185,7 @@ private VisualizationMode SelectedVisualizationMode
             // ComparisonModeServiceでアルゴリズム追加中の場合
             if (ComparisonMode.IsAddingAlgorithm && !string.IsNullOrEmpty(ComparisonMode.State.ProcessingAlgorithmName))
                 return $"⏳ Processing: {ComparisonMode.State.ProcessingAlgorithmName}...";
-            
+
             // その他のローディング状態
             return _loadingState switch
             {
@@ -353,18 +351,18 @@ private VisualizationMode SelectedVisualizationMode
             var inv = System.Globalization.CultureInfo.InvariantCulture;
             await JS.InvokeVoidAsync("stateStorage.saveAll", new Dictionary<string, string>
             {
-                ["sortvis.opsPerFrame"]          = Playback.OperationsPerFrame.ToString(),
-                ["sortvis.speedMultiplier"]      = Playback.SpeedMultiplier.ToString(inv),
-                ["sortvis.renderer"]             = RenderSettings.UseWebGL ? "true" : "false",
-                ["sortvis.autoReset"]            = Playback.AutoReset ? "true" : "false",
-                ["sortvis.instantMode"]          = Playback.InstantMode ? "true" : "false",
-                ["sortvis.soundEnabled"]         = Playback.SoundEnabled ? "true" : "false",
-                ["sortvis.soundVolume"]          = Playback.SoundVolume.ToString(inv),
-                ["sortvis.soundType"]            = Playback.SoundType,
-                ["sortvis.autoRecommendedSize"]  = _autoSwitchToRecommendedSize ? "true" : "false",
-                ["sortvis.categoryFilter"]       = _selectedCategory ?? string.Empty,
-                ["sortvis.debugLog"]             = DebugSettings.IsEnabled ? "true" : "false",
-                ["sortvis.scrollOnGenerate"]     = RenderSettings.ScrollOnGenerate ? "true" : "false",
+                ["sortvis.opsPerFrame"] = Playback.OperationsPerFrame.ToString(),
+                ["sortvis.speedMultiplier"] = Playback.SpeedMultiplier.ToString(inv),
+                ["sortvis.renderer"] = RenderSettings.UseWebGL ? "true" : "false",
+                ["sortvis.autoReset"] = Playback.AutoReset ? "true" : "false",
+                ["sortvis.instantMode"] = Playback.InstantMode ? "true" : "false",
+                ["sortvis.soundEnabled"] = Playback.SoundEnabled ? "true" : "false",
+                ["sortvis.soundVolume"] = Playback.SoundVolume.ToString(inv),
+                ["sortvis.soundType"] = Playback.SoundType,
+                ["sortvis.autoRecommendedSize"] = _autoSwitchToRecommendedSize ? "true" : "false",
+                ["sortvis.categoryFilter"] = _selectedCategory ?? string.Empty,
+                ["sortvis.debugLog"] = DebugSettings.IsEnabled ? "true" : "false",
+                ["sortvis.scrollOnGenerate"] = RenderSettings.ScrollOnGenerate ? "true" : "false",
             });
         }
         catch (Exception ex)
