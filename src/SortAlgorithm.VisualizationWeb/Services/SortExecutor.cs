@@ -40,9 +40,10 @@ public class SortExecutor(DebugSettings debug)
 
         try
         {
-            // ウォームアップ（JIT最適化を促進、計測に含めない）
-            sourceArray.CopyTo(measureSpan);
-            algorithm.SortAction(measureSpan, NullContext.Default);
+            // Warm up not needed for AOT
+            //// ウォームアップ（JIT最適化を促進、計測に含めない）
+            //sourceArray.CopyTo(measureSpan);
+            //algorithm.SortAction(measureSpan, NullContext.Default);
 
             // 適応的反復計測:
             // wallClock     → ループ終了判定用（CopyTo 込みの経過時間）
