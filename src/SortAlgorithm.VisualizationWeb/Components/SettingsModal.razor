@@ -90,6 +90,21 @@
                                style="@RangeTrackStyle(Playback.SoundVolume, 0, 1)" />
                     </div>
 
+                    <div class="settings-row settings-row--vertical">
+                        <span class="settings-label">Sound Type</span>
+                        <div class="settings-segment">
+                            <button class="settings-segment__btn @(Playback.SoundType == "sine" ? "settings-segment__btn--active" : "")"
+                                    @onclick='() => HandleSoundTypeChanged("sine")'>
+                                Sine
+                            </button>
+                            <button class="settings-segment__btn @(Playback.SoundType == "poko" ? "settings-segment__btn--active" : "")"
+                                    @onclick='() => HandleSoundTypeChanged("poko")'>
+                                Poko
+                            </button>
+                        </div>
+                        <span class="settings-hint">Poko is a soft, round sound with a gentle pitch drop.</span>
+                    </div>
+
                 </div>
             </section>
 
@@ -175,6 +190,12 @@
     private async Task HandleDebugToggleChanged()
     {
         await JS.InvokeVoidAsync("debugHelper.setDebugMode", DebugSettings.IsEnabled);
+    }
+
+    private async Task HandleSoundTypeChanged(string soundType)
+    {
+        Playback.SoundType = soundType;
+        await JS.InvokeVoidAsync("soundEngine.setSoundType", soundType);
     }
 
     private static string RangeTrackStyle(double value, double min, double max)

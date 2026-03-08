@@ -13,6 +13,16 @@ window.soundEngine = {
     _output: null,    // DynamicsCompressor → destination
     _voices: [],      // 固定ボイスプール: { osc, gain, freeAt }
     _voiceCount: 32,  // 最大ポリフォニー数（240Hz 表示でも横取りなし: 3音 × ceil(40ms/4ms) = 30）
+    _soundType: 'sine', // 現在のサウンドタイプ: 'sine' | 'poko'
+
+    /**
+     * サウンドタイプを設定する。'sine'（デフォルト）または 'poko'。
+     * AudioContext 初期化前でも呼び出し可能。
+     * @param {string} type - 'sine' | 'poko'
+     */
+    setSoundType: function (type) {
+        this._soundType = (type === 'poko') ? 'poko' : 'sine';
+    },
 
     /**
      * AudioContext を初期化・再開する。ユーザー操作（トグル押下など）後に呼ぶ。
@@ -115,14 +125,15 @@ window.soundEngine = {
         const ctx = this._audioContext;
         const now = ctx.currentTime;
         const durationSec = duration / 1000;
-        const attackSec = 0.005;  // 5ms アタック: ゼロからランプアップしてクリックノイズを除去
 
         const vol = Math.max(0, Math.min(1, volume ?? 1));
         // オーバーラップ適応ゲイン:速度に関わらず総ゲイン ≈ 0.15 で一定化しポンピングを防止する。
         // 同時発音数 expectedOverlap ≈ duration × 60fps。
-        // 総ゲイン = expectedOverlap × notes × gainPerNote = 0.15 × vol（リミッターの -1dBFS 閘より常に小）
+        // 総ゲイン = expectedOverlap × notes × gainPerNote = 0.15 × vol（リミッターの -1dBFS 閾より常に小）
         const expectedOverlap = Math.max(1, durationSec * 60);
         const gainPerNote = (0.15 * vol) / (expectedOverlap * Math.max(1, frequencies.length));
+
+        const soundFn = this._soundType === 'poko' ? this._pokoSound : this._sineSound;
 
         for (let i = 0; i < frequencies.length; i++) {
             const freq = frequencies[i];
@@ -130,28 +141,64 @@ window.soundEngine = {
 
             const voice = this._acquireVoice(now);
             const stealing = voice.freeAt > now;
+            const startAt = stealing ? now + 0.002 : now;
 
-            // 周波数を上書き（横取り時は 2ms 後から変化）
-            voice.osc.frequency.setValueAtTime(freq, stealing ? now + 0.002 : now);
-
-            // 既存スケジュールをキャンセルしてエンベロープを設定
+            // 既存スケジュールをキャンセル
             voice.gain.gain.cancelScheduledValues(now);
+            voice.osc.frequency.cancelScheduledValues(now);
+
             if (stealing) {
                 // スムーズな横取り: 現在値から 2ms でフェードアウトして新音を開始
-                const currentGain = voice.gain.gain.value;
-                voice.gain.gain.setValueAtTime(currentGain, now);
-                voice.gain.gain.linearRampToValueAtTime(0.0, now + 0.002);
-                voice.gain.gain.linearRampToValueAtTime(gainPerNote, now + 0.002 + attackSec);
-                voice.gain.gain.linearRampToValueAtTime(0.0, now + 0.002 + durationSec);
-                voice.freeAt = now + 0.002 + durationSec;
-            } else {
-                // 通常割り当て: 0 → ピーク（5ms）→ 0
-                voice.gain.gain.setValueAtTime(0.0, now);
-                voice.gain.gain.linearRampToValueAtTime(gainPerNote, now + attackSec);
-                voice.gain.gain.linearRampToValueAtTime(0.0, now + durationSec);
-                voice.freeAt = now + durationSec;
+                voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
+                voice.gain.gain.linearRampToValueAtTime(0.0, startAt);
             }
+
+            soundFn(voice, freq, startAt, gainPerNote, durationSec);
         }
+    },
+
+    /**
+     * サイン波: ピッチ固定・5ms アタック・リニアディケイ。
+     * @param {object} voice - ボイスプールエントリ { osc, gain, freeAt }
+     * @param {number} freq - 周波数（Hz）
+     * @param {number} startAt - 発音開始時刻（AudioContext 秒）
+     * @param {number} gainPerNote - ノートあたりのゲイン
+     * @param {number} durationSec - 発音時間（秒）
+     */
+    _sineSound: function (voice, freq, startAt, gainPerNote, durationSec) {
+        const attackSec = 0.005;  // 5ms アタック: クリックノイズを除去
+
+        voice.osc.frequency.setValueAtTime(freq, startAt);
+
+        voice.gain.gain.setValueAtTime(0.0, startAt);
+        voice.gain.gain.linearRampToValueAtTime(gainPerNote, startAt + attackSec);
+        voice.gain.gain.linearRampToValueAtTime(0.0, startAt + durationSec);
+
+        voice.freeAt = startAt + durationSec;
+    },
+
+    /**
+     * ポコポコ: 高速アタック + ピッチドロップ + 短めディケイ。
+     * 音程が durationSec の 50% にかけて freq * 0.4 まで落ち、65% で消音する。
+     * @param {object} voice - ボイスプールエントリ { osc, gain, freeAt }
+     * @param {number} freq - 周波数（Hz）
+     * @param {number} startAt - 発音開始時刻（AudioContext 秒）
+     * @param {number} gainPerNote - ノートあたりのゲイン
+     * @param {number} durationSec - 発音時間（秒）
+     */
+    _pokoSound: function (voice, freq, startAt, gainPerNote, durationSec) {
+        const pokoAttack = 0.003;  // 3ms 高速アタック
+        const pitchEnd = startAt + durationSec * 0.5;
+        const gainEnd  = startAt + durationSec * 0.65;
+
+        voice.osc.frequency.setValueAtTime(freq, startAt);
+        voice.osc.frequency.exponentialRampToValueAtTime(Math.max(freq * 0.4, 20), pitchEnd);
+
+        voice.gain.gain.setValueAtTime(0.0, startAt);
+        voice.gain.gain.linearRampToValueAtTime(gainPerNote, startAt + pokoAttack);
+        voice.gain.gain.linearRampToValueAtTime(0.0, gainEnd);
+
+        voice.freeAt = gainEnd;
     },
 
     /**
