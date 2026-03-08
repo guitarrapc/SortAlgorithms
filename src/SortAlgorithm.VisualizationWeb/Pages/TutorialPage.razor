@@ -140,19 +140,17 @@
                 <div class="tdp-header">
                     <div class="tdp-header__left">
                         <div class="desc-name">@_selectedAlgorithm.Name</div>
-                        <div class="desc-meta">
                         <a href="@GetTryThisAlgorithmUrl()" class="tutorial-try-btn">▶ Try this</a>
-                        @if (!string.IsNullOrEmpty(_selectedAlgorithm.GitHubSourceUrl))
-                        {
-                            <a href="@_selectedAlgorithm.GitHubSourceUrl" target="_blank" rel="noopener noreferrer" class="tutorial-source-btn">&lt;/&gt; Source</a>
-                        }
-                        </div>
-                    </div>
-                    <div class="tdp-header__right">
                         <div class="desc-meta">
+                            @if (!string.IsNullOrEmpty(_selectedAlgorithm.GitHubSourceUrl))
+                            {
+                                <a href="@_selectedAlgorithm.GitHubSourceUrl" target="_blank" rel="noopener noreferrer" class="tutorial-source-btn">&lt;/&gt; Source</a>
+                            }
                             <span class="desc-badge">@_selectedAlgorithm.TimeComplexity</span>
                             <span class="desc-badge">@_selectedAlgorithm.Category</span>
                         </div>
+                    </div>
+                    <div class="tdp-header__right">
                         <button class="tdp-toggle" @onclick="() => _descExpanded = !_descExpanded" title="@(_descExpanded ? "Collapse" : "Expand")">
                             @(_descExpanded ? "▲" : "▼")
                         </button>

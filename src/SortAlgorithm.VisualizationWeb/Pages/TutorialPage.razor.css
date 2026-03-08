@@ -1638,14 +1638,26 @@
     }
 
     /* desc-name + try-btn が横に収まらない場合は縦に折り返す */
+    .tdp-header {
+        position: relative;
+        padding-right: 36px;
+    }
+
     .tdp-header__left {
         flex-wrap: wrap;
     }
 
-    /* モバイル: 説明折りたたみトグルを表示 */
+    .tdp-header__right {
+        flex-wrap: wrap;
+    }
+
+    /* モバイル: 説明折りたたみトグルを右上に固定 */
     .tdp-toggle {
         display: flex;
         align-items: center;
         justify-content: center;
+        position: absolute;
+        top: 0;
+        right: 0;
     }
 }
