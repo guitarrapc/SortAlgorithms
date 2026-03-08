@@ -187,7 +187,7 @@ window.soundEngine = {
 
     /**
      * ポコポコ: 専用ボイスプール（_pokoVoices）を使った完全ゼロアロケーション実装。
-     * - メイン: sine 波 + lowpass + 控えめピッチドロップ（25ms）で優しい「ぽこっ」感
+     * - メイン: triangle 波 + lowpass + 控えめピッチドロップ（25ms）で優しい「ぽこっ」感
      * - クリック: 高調波 sine （10ms）でごく薄いアタック
      * @param {number} now - AudioContext の現在時刻（秒）
      * @param {number} freq - 周波数（Hz）
@@ -218,8 +218,8 @@ window.soundEngine = {
         voice.mainOsc.frequency.setValueAtTime(freq * 1.04, startAt);
         voice.mainOsc.frequency.exponentialRampToValueAtTime(freq, startAt + 0.025);
 
-        // 高域を軽く丸める（freq * 1.6、最大 1800Hz、Q = 0.5）
-        voice.lowpass.frequency.setValueAtTime(Math.min(freq * 1.6, 1800), startAt);
+        // 第3倍音（3f）まで通す（freq * 3、最大 3000Hz、Q = 0.5）
+        voice.lowpass.frequency.setValueAtTime(Math.min(freq * 3, 3000), startAt);
         voice.lowpass.Q.setValueAtTime(0.5, startAt);
 
         const mainEndTime = startAt + 0.12;
@@ -256,7 +256,7 @@ window.soundEngine = {
             const mainGain = ctx.createGain();
             const lowpass  = ctx.createBiquadFilter();
 
-            mainOsc.type = 'sine';
+            mainOsc.type = 'triangle';
             lowpass.type = 'lowpass';
             lowpass.Q.setValueAtTime(0.7, ctx.currentTime);
             mainGain.gain.setValueAtTime(0.0001, ctx.currentTime);
