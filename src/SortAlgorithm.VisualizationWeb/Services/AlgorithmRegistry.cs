@@ -75,7 +75,8 @@ public class AlgorithmRegistry
                 - Compare: highlighted pairs are separated by the current gap rather than being adjacent; the gap distance is clearly visible in the animation
                 - Swap: fires when element at position i > element at position i+gap, moving the larger value rightward by a full gap width in one step
                 - End of pass: watch the gap value shrink each pass until it reaches 1, after which the algorithm completes with standard Bubble sort passes
-                """);
+                """,
+            tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
 
         // Selection Sorts - O(n²) - 推奨256
         Add("Selection sort", "SELECTION", "O(n²)", MAX_SIZE_N2, 256, (arr, ctx) => SelectionSort.Sort(arr, ctx),
