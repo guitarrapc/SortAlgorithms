@@ -392,6 +392,7 @@
         {
             await _containerRef.FocusAsync();
             _windowWidth = await JS.InvokeAsync<int>("scrollHelper.getWindowWidth");
+            _descExpanded = _windowWidth >= 768;
             StateHasChanged();
         }
     }

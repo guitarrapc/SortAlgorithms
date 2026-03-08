@@ -1212,8 +1212,8 @@
     }
 }
 
-/* PC / タブレット: 折りたたみ状態でも常に表示 */
-@media (min-width: 768px) {
+/* PC: 折りたたみ状態でも常に表示 */
+@media (min-width: 1280px) {
     .tdp-body--hidden {
         display: block;
     }
@@ -1316,6 +1316,13 @@
     .tutorial-narrative-panel,
     .tutorial-marble-area {
         border-radius: 6px;
+    }
+
+    /* タブレット: 説明折りたたみトグルを表示 */
+    .tdp-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     /* Compare文は3行になり得るため min-height で高さを確保してマーブルのズレを防ぐ */
