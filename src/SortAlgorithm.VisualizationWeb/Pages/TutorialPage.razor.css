@@ -749,7 +749,57 @@
     line-height: 1.4;
     animation: arrow-fade-in 0.25s ease;
     align-self: center;
+    cursor: help;
 }
+
+::deep .marble-role-badge-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-self: center;
+}
+
+::deep .marble-role-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.95);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+::deep .marble-role-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.95);
+}
+
+::deep .marble-role-badge-wrapper:hover .marble-role-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+@media (hover: none) and (pointer: coarse) {
+    ::deep .marble-role-badge:active ~ .marble-role-tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+}
+
 
 ::deep .marble-ghost {
     font-size: 0.8rem;

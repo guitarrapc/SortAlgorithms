@@ -110,7 +110,10 @@
                      class="@slotClass" style="@slotStyle">
                     @if (Roles.TryGetValue(idx, out var role) && role != SortAlgorithm.Contexts.RoleType.None)
                     {
-                        <div class="marble-role-badge" style="background: @GetRoleBadgeColor(role);" title="@role">@GetRoleBadgeLabel(role)</div>
+                        <div class="marble-role-badge-wrapper">
+                            <div class="marble-role-badge" style="background: @GetRoleBadgeColor(role);">@GetRoleBadgeLabel(role)</div>
+                            <div class="marble-role-tooltip">@GetRoleBadgeDescription(role)</div>
+                        </div>
                     }
                     <div class="@marbleClass" style="background: @bgColor;">
                         @(isEmpty ? "" : value.ToString())
@@ -249,6 +252,17 @@
             SortAlgorithm.Contexts.RoleType.CurrentMax   => "max",
             SortAlgorithm.Contexts.RoleType.LeftPointer  => "L",
             SortAlgorithm.Contexts.RoleType.RightPointer => "R",
+            _ => ""
+        };
+
+    private static string GetRoleBadgeDescription(SortAlgorithm.Contexts.RoleType role)
+        => role switch
+        {
+            SortAlgorithm.Contexts.RoleType.Pivot        => "Pivot element (Quick Sort)",
+            SortAlgorithm.Contexts.RoleType.CurrentMin   => "Current minimum candidate",
+            SortAlgorithm.Contexts.RoleType.CurrentMax   => "Current maximum candidate",
+            SortAlgorithm.Contexts.RoleType.LeftPointer  => "Left pointer (two-pointer algorithm)",
+            SortAlgorithm.Contexts.RoleType.RightPointer => "Right pointer (two-pointer algorithm)",
             _ => ""
         };
 }
