@@ -13,7 +13,9 @@ window.soundEngine = {
     _output: null,    // DynamicsCompressor → destination
     _voices: [],      // 固定ボイスプール: { osc, gain, freeAt }
     _voiceCount: 32,  // 最大ポリフォニー数（240Hz 表示でも横取りなし: 3音 × ceil(40ms/4ms) = 30）
-    _soundType: 'sine', // 現在のサウンドタイプ: 'sine' | 'poko'
+    _soundType: 'sine',     // 現在のサウンドタイプ: 'sine' | 'poko'
+    _pokoVoices: [],        // ポコ用固定ボイスプール: { mainOsc, mainGain, lowpass, clickOsc, clickGain, freeAt }
+    _pokoVoiceCount: 24,    // ポコの最大ポリフォニー数（90ms × 60fps × 3音 ≈ 16 で余裕を持って 24）
 
     /**
      * サウンドタイプを設定する。'sine'（デフォルト）または 'poko'。
@@ -47,6 +49,7 @@ window.soundEngine = {
         this._audioContext = new AudioContext();
         this._setupOutput();
         this._setupVoices();
+        this._setupPokoVoices();
     },
 
     /**
@@ -133,27 +136,32 @@ window.soundEngine = {
         const expectedOverlap = Math.max(1, durationSec * 60);
         const gainPerNote = (0.15 * vol) / (expectedOverlap * Math.max(1, frequencies.length));
 
-        const soundFn = this._soundType === 'poko' ? this._pokoSound : this._sineSound;
+        // poko は固定 90ms ディケイに基づいて独立計算（SpeedMultiplier によらず実効時間は常に 90ms）
+        const gainPerPoko = (0.22 * vol) / (Math.max(1, 0.09 * 60) * Math.max(1, frequencies.length));
 
         for (let i = 0; i < frequencies.length; i++) {
             const freq = frequencies[i];
             if (freq <= 0) continue;
 
-            const voice = this._acquireVoice(now);
-            const stealing = voice.freeAt > now;
-            const startAt = stealing ? now + 0.002 : now;
+            if (this._soundType === 'poko') {
+                this._pokoSound(now, freq, gainPerPoko);
+            } else {
+                const voice = this._acquireVoice(now);
+                const stealing = voice.freeAt > now;
+                const startAt = stealing ? now + 0.002 : now;
 
-            // 既存スケジュールをキャンセル
-            voice.gain.gain.cancelScheduledValues(now);
-            voice.osc.frequency.cancelScheduledValues(now);
+                // 既存スケジュールをキャンセル
+                voice.gain.gain.cancelScheduledValues(now);
+                voice.osc.frequency.cancelScheduledValues(now);
 
-            if (stealing) {
-                // スムーズな横取り: 現在値から 2ms でフェードアウトして新音を開始
-                voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
-                voice.gain.gain.linearRampToValueAtTime(0.0, startAt);
+                if (stealing) {
+                    // スムーズな横取り: 現在値から 2ms でフェードアウトして新音を開始
+                    voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
+                    voice.gain.gain.linearRampToValueAtTime(0.0, startAt);
+                }
+
+                this._sineSound(voice, freq, startAt, gainPerNote, durationSec);
             }
-
-            soundFn(voice, freq, startAt, gainPerNote, durationSec);
         }
     },
 
@@ -178,27 +186,106 @@ window.soundEngine = {
     },
 
     /**
-     * ポコポコ: 高速アタック + ピッチドロップ + 短めディケイ。
-     * 音程が durationSec の 50% にかけて freq * 0.4 まで落ち、65% で消音する。
-     * @param {object} voice - ボイスプールエントリ { osc, gain, freeAt }
+     * ポコポコ: 専用ボイスプール（_pokoVoices）を使った完全ゼロアロケーション実装。
+     * - メイン: triangle 波 + lowpass + ピッチドロップ（18ms）で「ぽこっ」感
+     * - クリック: 高調波 sine （12ms）で「ぽ」の頭だけ追加
+     * @param {number} now - AudioContext の現在時刻（秒）
      * @param {number} freq - 周波数（Hz）
-     * @param {number} startAt - 発音開始時刻（AudioContext 秒）
      * @param {number} gainPerNote - ノートあたりのゲイン
-     * @param {number} durationSec - 発音時間（秒）
      */
-    _pokoSound: function (voice, freq, startAt, gainPerNote, durationSec) {
-        const pokoAttack = 0.003;  // 3ms 高速アタック
-        const pitchEnd = startAt + durationSec * 0.5;
-        const gainEnd  = startAt + durationSec * 0.65;
+    _pokoSound: function (now, freq, gainPerNote) {
+        const voice = this._acquirePokoVoice(now);
+        const stealing = voice.freeAt > now;
+        const startAt = stealing ? now + 0.002 : now;
 
-        voice.osc.frequency.setValueAtTime(freq, startAt);
-        voice.osc.frequency.exponentialRampToValueAtTime(Math.max(freq * 0.4, 20), pitchEnd);
+        // 既存スケジュールをキャンセル
+        voice.mainOsc.frequency.cancelScheduledValues(now);
+        voice.mainGain.gain.cancelScheduledValues(now);
+        voice.lowpass.frequency.cancelScheduledValues(now);
+        voice.clickOsc.frequency.cancelScheduledValues(now);
+        voice.clickGain.gain.cancelScheduledValues(now);
 
-        voice.gain.gain.setValueAtTime(0.0, startAt);
-        voice.gain.gain.linearRampToValueAtTime(gainPerNote, startAt + pokoAttack);
-        voice.gain.gain.linearRampToValueAtTime(0.0, gainEnd);
+        if (stealing) {
+            // スムーズな横取り: 2ms でフェードアウト
+            voice.mainGain.gain.setValueAtTime(voice.mainGain.gain.value, now);
+            voice.mainGain.gain.linearRampToValueAtTime(0.0001, startAt);
+            voice.clickGain.gain.setValueAtTime(voice.clickGain.gain.value, now);
+            voice.clickGain.gain.linearRampToValueAtTime(0.0001, startAt);
+        }
 
-        voice.freeAt = gainEnd;
+        // ── メイン（triangle + lowpass）──
+        // freq * 1.18 → freq へ 18ms exponential ramp で「ぽこ」感
+        voice.mainOsc.frequency.setValueAtTime(freq * 1.18, startAt);
+        voice.mainOsc.frequency.exponentialRampToValueAtTime(freq, startAt + 0.018);
+
+        voice.lowpass.frequency.setValueAtTime(Math.min(freq * 2.4, 3500), startAt);
+
+        voice.mainGain.gain.setValueAtTime(0.0001, startAt);
+        voice.mainGain.gain.linearRampToValueAtTime(gainPerNote, startAt + 0.004);
+        voice.mainGain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.09);
+
+        // ── アタッククリック（sine 高調波、12ms で消音）──
+        voice.clickOsc.frequency.setValueAtTime(freq * 2.2, startAt);
+
+        const clickPeak = gainPerNote * (0.05 / 0.22);
+        voice.clickGain.gain.setValueAtTime(0.0001, startAt);
+        voice.clickGain.gain.linearRampToValueAtTime(clickPeak, startAt + 0.0015);
+        voice.clickGain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.012);
+
+        voice.freeAt = startAt + 0.10;  // 90ms + 10ms マージン
+    },
+
+    /**
+     * ポコ専用ボイスプールを初期化する。
+     * 各ボイス: triangle mainOsc → mainGain → lowpass → output
+     *           sine clickOsc → clickGain → output
+     * 全ノードは起動済みで、ゲイン 0.0001 で待機する。
+     */
+    _setupPokoVoices: function () {
+        const ctx = this._audioContext;
+        const output = this._output || ctx.destination;
+        this._pokoVoices = [];
+        for (let i = 0; i < this._pokoVoiceCount; i++) {
+            const mainOsc  = ctx.createOscillator();
+            const mainGain = ctx.createGain();
+            const lowpass  = ctx.createBiquadFilter();
+
+            mainOsc.type = 'triangle';
+            lowpass.type = 'lowpass';
+            lowpass.Q.setValueAtTime(0.7, ctx.currentTime);
+            mainGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+
+            mainOsc.connect(mainGain);
+            mainGain.connect(lowpass);
+            lowpass.connect(output);
+            mainOsc.start();
+
+            const clickOsc  = ctx.createOscillator();
+            const clickGain = ctx.createGain();
+
+            clickOsc.type = 'sine';
+            clickGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+
+            clickOsc.connect(clickGain);
+            clickGain.connect(output);
+            clickOsc.start();
+
+            this._pokoVoices.push({ mainOsc, mainGain, lowpass, clickOsc, clickGain, freeAt: 0 });
+        }
+    },
+
+    /**
+     * ポコ専用プールから空きボイスを取得する。
+     * @param {number} now - AudioContext の現在時刻（秒）
+     */
+    _acquirePokoVoice: function (now) {
+        let best = this._pokoVoices[0];
+        for (let i = 0; i < this._pokoVoices.length; i++) {
+            const v = this._pokoVoices[i];
+            if (v.freeAt <= now) return v;
+            if (v.freeAt < best.freeAt) best = v;
+        }
+        return best;
     },
 
     /**
@@ -209,6 +296,11 @@ window.soundEngine = {
             try { v.osc.stop(); } catch (e) { /* already stopped */ }
         }
         this._voices = [];
+        for (const v of this._pokoVoices) {
+            try { v.mainOsc.stop(); } catch (e) { /* already stopped */ }
+            try { v.clickOsc.stop(); } catch (e) { /* already stopped */ }
+        }
+        this._pokoVoices = [];
         if (this._output) {
             this._output.disconnect();
             this._output = null;
