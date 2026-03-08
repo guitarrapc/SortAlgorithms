@@ -218,9 +218,9 @@ window.soundEngine = {
         voice.mainOsc.frequency.setValueAtTime(freq * 1.04, startAt);
         voice.mainOsc.frequency.exponentialRampToValueAtTime(freq, startAt + 0.025);
 
-        // 第3倍音（3f）まで通す（freq * 3、最大 3000Hz、Q = 0.5）
-        voice.lowpass.frequency.setValueAtTime(Math.min(freq * 3, 3000), startAt);
-        voice.lowpass.Q.setValueAtTime(0.5, startAt);
+        // 高域を強めに抑える（freq * 1.5、最大 1000Hz、Q = 0.8）
+        voice.lowpass.frequency.setValueAtTime(Math.min(freq * 1.5, 1000), startAt);
+        voice.lowpass.Q.setValueAtTime(0.8, startAt);
 
         const mainEndTime = startAt + 0.12;
         voice.mainGain.gain.setValueAtTime(0.0001, startAt);
