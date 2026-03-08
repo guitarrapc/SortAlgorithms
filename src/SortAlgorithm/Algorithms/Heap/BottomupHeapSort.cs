@@ -187,15 +187,17 @@ public static class BottomupHeapSort
         for (var i = last - 1; i > first; i--)
         {
             s.Context.OnPhase(SortPhase.HeapExtract, last - i, totalExtractions);
-            s.Context.OnRole(first, BUFFER_MAIN, RoleType.CurrentMax);
 
             // Move current root (max) to end
             s.Swap(first, i);
 
-            s.Context.OnRole(first, BUFFER_MAIN, RoleType.None);
+            // Index i now holds the confirmed max value
+            s.Context.OnRole(i, BUFFER_MAIN, RoleType.CurrentMax);
 
             // Re-heapify using true bottom-up sift-down
             BottomUpSiftDown(s, first, i - first, first);
+
+            s.Context.OnRole(i, BUFFER_MAIN, RoleType.None);
         }
     }
 

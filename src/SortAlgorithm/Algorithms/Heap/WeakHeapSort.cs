@@ -183,12 +183,12 @@ public static class WeakHeapSort
             for (var m = n - 1; m >= 2; m--)
             {
                 s.Context.OnPhase(SortPhase.HeapExtract, n - m, totalExtractions);
-                s.Context.OnRole(offset, BUFFER_MAIN, RoleType.CurrentMax);
 
                 // Move current max (at offset+0) to position offset+m
                 s.Swap(offset, offset + m);
 
-                s.Context.OnRole(offset, BUFFER_MAIN, RoleType.None);
+                // Index offset+m now holds the confirmed max value
+                s.Context.OnRole(offset + m, BUFFER_MAIN, RoleType.CurrentMax);
 
                 // Restore weak heap property for reduced heap [0..m-1]
                 // Step 1: Descend the distinguished path from node 1 (root's right child) to a leaf
@@ -210,6 +210,8 @@ public static class WeakHeapSort
                     Merge(s, offset, r, 0, node);
                     node >>= 1;
                 }
+
+                s.Context.OnRole(offset + m, BUFFER_MAIN, RoleType.None);
             }
 
             // Final step: Sort the last two elements (guaranteed n >= 2 here)
