@@ -135,9 +135,10 @@
     @* 統計比較表（右側ドッキングパネル） *@
     @if (ComparisonMode.State.Instances.Count > 1)
     {
-        <ComparisonStatsTable Instances="ComparisonMode.State.Instances"
-                              @bind-IsOpen="_statsTableOpen" />
+        <ComparisonStatsTable Instances="ComparisonMode.State.Instances" @bind-IsOpen="_statsTableOpen" />
     }
+
+    <Footer />
 </div>
 
 @code {

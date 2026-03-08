@@ -2,8 +2,8 @@
 .tutorial-page {
     display: grid;
     grid-template-columns: 280px 1fr;
-    grid-template-rows: auto 1fr;
-    height: 100vh;
+    grid-template-rows: auto 1fr auto;
+    min-height: 100vh;
     gap: 10px;
     padding: 10px;
     background: var(--bg-main);
@@ -23,6 +23,12 @@
         gap: 16px;
         position: relative;
     }
+
+/* フッター（全幅） */
+.tutorial-page ::deep .site-footer {
+    grid-column: 1 / -1;
+    margin-top: 0;
+}
 
 
 /* 閉じるボタン（Settingsモーダルと同じスタイル） */
@@ -1243,7 +1249,7 @@
 @media (max-width: 1279px) {
     .tutorial-page {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr;
+        grid-template-rows: auto auto 1fr auto;
     }
 
     .tutorial-cards-panel {

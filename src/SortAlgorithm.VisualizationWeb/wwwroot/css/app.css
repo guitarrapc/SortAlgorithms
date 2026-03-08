@@ -571,6 +571,30 @@ input[type="range"] {
     margin-top: 0.5rem;
 }
 
+/* Privacy Badge */
+.loading-privacy-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding: 0.625rem 1.25rem;
+    background: rgba(127, 168, 111, 0.1);
+    border: 1px solid rgba(127, 168, 111, 0.3);
+    border-radius: 6px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: clamp(0.75rem, 1.8vw, 0.95rem);
+    font-weight: 500;
+    color: #7fa86f;
+    max-width: min(600px, 85vw);
+}
+
+.privacy-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+}
+
 /* Progress track */
 .loading-progress-track {
     width: min(260px, 70vw);

@@ -1,0 +1,82 @@
+/* ─── Site Footer ────────────────────────────────────────────────────────── */
+
+.site-footer {
+    width: 100%;
+    border-top: 1px solid var(--border-color);
+    padding: 0.75rem 1.5rem 0.25rem 1.5rem;
+    margin-top: auto;
+}
+
+.footer-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: var(--page-max-width, 1920px);
+    margin: 0 auto;
+}
+
+.footer-privacy {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.footer-links {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.footer-icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    color: var(--color-accent);
+}
+
+.footer-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.footer-tech {
+    font-size: 0.8rem;
+}
+
+.footer-link {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.85rem;
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+
+    .footer-link:hover {
+        color: var(--color-accent-hover);
+        text-decoration: underline;
+    }
+
+.footer-separator {
+    color: var(--text-disabled);
+    font-size: 0.85rem;
+}
+
+/* PC: 右寄せ */
+@media (min-width: 768px) {
+    .footer-content {
+        flex-direction: row;
+        justify-content: flex-end;
+        gap: 1.5rem;
+    }
+
+    .footer-links {
+        justify-content: flex-end;
+    }
+}

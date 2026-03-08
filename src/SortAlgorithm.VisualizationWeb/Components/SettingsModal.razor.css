@@ -279,6 +279,46 @@
     to   { opacity: 0; transform: translateY(8px); }
 }
 
+/* ─── About セクション ──────────────────────────────────────────────── */
+.about-content {
+    padding: 0;
+}
+
+.about-item {
+    padding: 14px 14px;
+    border-bottom: 1px solid #2A2A2A;
+}
+
+    .about-item:last-child {
+        border-bottom: none;
+    }
+
+.about-item__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin: 0 0 6px 0;
+}
+
+.about-item__text {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text-gray);
+    margin: 0;
+}
+
+.about-link {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+
+    .about-link:hover {
+        color: var(--color-accent-hover);
+        text-decoration: underline;
+    }
+
 @media (max-width: 767px) {
     .settings-modal {
         top: 0;

@@ -2,8 +2,8 @@
 .visualization-page {
     display: grid;
     grid-template-columns: 280px 1fr;
-    grid-template-rows: auto 1fr;
-    height: 100vh;
+    grid-template-rows: auto 1fr auto;
+    min-height: 100vh;
     gap: 10px;
     padding: 10px;
     background: var(--bg-main);
@@ -50,6 +50,12 @@
     margin-left: auto;
 }
 
+/* フッター（全幅） */
+.visualization-page ::deep .site-footer {
+    grid-column: 1 / -1;
+    margin-top: 0;
+}
+
 /* 可視化エリア（メインエリア） */
 .visualization-area {
     grid-column: 2;
@@ -80,7 +86,7 @@
 @media (max-width: 1279px) {
     .visualization-page {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr;
+        grid-template-rows: auto auto 1fr auto;
     }
 
     .visualization-area {
