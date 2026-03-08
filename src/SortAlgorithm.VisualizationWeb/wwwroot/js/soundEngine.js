@@ -144,7 +144,7 @@ window.soundEngine = {
         // poko は固定 60ms ディケイに基づいて独立計算（SpeedMultiplier によらず実効時間は常に 60ms）
         const gainPerPoko = (0.3 * vol) / (Math.max(1, 0.06 * 60) * Math.max(1, frequencies.length));
         // cutePop は固定 70ms ディケイに基づいて独立計算
-        const gainPerCutePop = (0.25 * vol) / (Math.max(1, 0.07 * 60) * Math.max(1, frequencies.length));
+        const gainPerCutePop = (0.35 * vol) / (Math.max(1, 0.07 * 60) * Math.max(1, frequencies.length));
 
         for (let i = 0; i < frequencies.length; i++) {
             const freq = frequencies[i];
@@ -223,6 +223,7 @@ window.soundEngine = {
         voice.gain.gain.setValueAtTime(0.0001, startAt);
         voice.gain.gain.exponentialRampToValueAtTime(gainPerNote, startAt + 0.005);
         voice.gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+        voice.gain.gain.setValueAtTime(0.0, startAt + duration);  // 残響カット
 
         voice.freeAt = startAt + duration;
     },
@@ -231,6 +232,7 @@ window.soundEngine = {
      * CutePop: 専用ボイスプール（_cutePopVoices）を使った完全ゼロアロケーション実装。
      * - osc1: sine、freq*1.35 → freq（duration*0.75）で丸いメイン音
      * - osc2: triangle、freq*2.0 → freq*1.3（duration*0.35）で薄いアタック層
+     * - bandpass: 基音 freq、Q=4 で木琴特有の共鳴射をエミュレート
      * @param {number} now - AudioContext の現在時刻（秒）
      * @param {number} freq - 周波数（Hz）
      * @param {number} gainPerNote - ノートあたりのゲイン
@@ -246,6 +248,7 @@ window.soundEngine = {
         voice.gain1.gain.cancelScheduledValues(now);
         voice.osc2.frequency.cancelScheduledValues(now);
         voice.gain2.gain.cancelScheduledValues(now);
+        voice.bandpass.frequency.cancelScheduledValues(now);
 
         if (stealing) {
             voice.gain1.gain.setValueAtTime(voice.gain1.gain.value, now);
@@ -254,12 +257,17 @@ window.soundEngine = {
             voice.gain2.gain.linearRampToValueAtTime(0.0001, startAt);
         }
 
+        // bandpass: 基音にセンターを割り当て、木琴特有の共鳴射を強調
+        voice.bandpass.frequency.setValueAtTime(freq, startAt);
+        voice.bandpass.Q.setValueAtTime(4, startAt);
+
         // osc1: 丸いメイン音
         voice.osc1.frequency.setValueAtTime(freq * 1.35, startAt);
         voice.osc1.frequency.exponentialRampToValueAtTime(freq, startAt + duration * 0.75);
         voice.gain1.gain.setValueAtTime(0.0001, startAt);
         voice.gain1.gain.exponentialRampToValueAtTime(gainPerNote, startAt + 0.004);
         voice.gain1.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+        voice.gain1.gain.setValueAtTime(0.0, startAt + duration);          // 残響カット
 
         // osc2: 薄いアタック層
         voice.osc2.frequency.setValueAtTime(freq * 2.0, startAt);
@@ -267,6 +275,7 @@ window.soundEngine = {
         voice.gain2.gain.setValueAtTime(0.0001, startAt);
         voice.gain2.gain.exponentialRampToValueAtTime(gainPerNote * 0.25, startAt + 0.002);
         voice.gain2.gain.exponentialRampToValueAtTime(0.0001, startAt + duration * 0.45);
+        voice.gain2.gain.setValueAtTime(0.0, startAt + duration * 0.45);   // 残響カット
 
         voice.freeAt = startAt + duration;
     },
@@ -311,32 +320,38 @@ window.soundEngine = {
 
     /**
      * CutePop 専用ボイスプールを初期化する。
-     * 各ボイス: sine osc1 → gain1 → output
-     *           triangle osc2 → gain2 → output
-     * 全ノードは起動済みで、ゲイン 0.0001 で待機する。
+     * 各ボイス: sine osc1 → gain1 ⇘
+     *           triangle osc2 → gain2 → bandpass → output
+     * 全ノードは起動済みで、ゲイン 0.0 で待機する。
      */
     _setupCutePopVoices: function () {
         const ctx = this._audioContext;
         const output = this._output || ctx.destination;
         this._cutePopVoices = [];
         for (let i = 0; i < this._cutePopVoiceCount; i++) {
-            const osc1  = ctx.createOscillator();
-            const gain1 = ctx.createGain();
-            osc1.type = 'sine';
-            gain1.gain.setValueAtTime(0.0001, ctx.currentTime);
-            osc1.connect(gain1);
-            gain1.connect(output);
-            osc1.start();
+            const osc1     = ctx.createOscillator();
+            const gain1    = ctx.createGain();
+            const osc2     = ctx.createOscillator();
+            const gain2    = ctx.createGain();
+            const bandpass = ctx.createBiquadFilter();
 
-            const osc2  = ctx.createOscillator();
-            const gain2 = ctx.createGain();
+            osc1.type = 'sine';
+            gain1.gain.setValueAtTime(0.0, ctx.currentTime);
             osc2.type = 'triangle';
-            gain2.gain.setValueAtTime(0.0001, ctx.currentTime);
+            gain2.gain.setValueAtTime(0.0, ctx.currentTime);
+            bandpass.type = 'bandpass';
+            bandpass.Q.setValueAtTime(4, ctx.currentTime);
+
+            osc1.connect(gain1);
             osc2.connect(gain2);
-            gain2.connect(output);
+            gain1.connect(bandpass);
+            gain2.connect(bandpass);
+            bandpass.connect(output);
+
+            osc1.start();
             osc2.start();
 
-            this._cutePopVoices.push({ osc1, gain1, osc2, gain2, freeAt: 0 });
+            this._cutePopVoices.push({ osc1, gain1, osc2, gain2, bandpass, freeAt: 0 });
         }
     },
 
