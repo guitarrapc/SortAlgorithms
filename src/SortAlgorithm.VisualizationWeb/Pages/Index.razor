@@ -74,13 +74,15 @@
         <PlayControlBar IsPlaying="@GetIsPlaying()"
                         PlayDisabled="@(ComparisonMode.State.Instances.Count == 0)"
                         StopDisabled="@(ComparisonMode.State.Instances.Count == 0)"
+                        ClearAllDisabled="@(ComparisonMode.State.Instances.Count == 0)"
                         SoundEnabled="@GetSoundEnabled()"
                         SoundDisabled="false"
                         StatusText="@GetComparisonStatusText()"
                         ArraySize="@GetArraySize()"
                         OnTogglePlayPause="HandleTogglePlayPause"
                         OnStop="HandleReset"
-                        OnToggleSound="HandleToggleSound" />
+                        OnToggleSound="HandleToggleSound"
+                        OnClearAll="HandleClearAll" />
 
         <div class="visualization-content">
             @{
@@ -533,6 +535,13 @@
 
         DebugSettings.Log($"[Index] After removal, instances count: {ComparisonMode.State.Instances.Count}");
         ApplySavedSoundSettings();
+        UpdateContentStateUrl();
+        StateHasChanged();
+    }
+
+    private void HandleClearAll()
+    {
+        ComparisonMode.ClearAll();
         UpdateContentStateUrl();
         StateHasChanged();
     }

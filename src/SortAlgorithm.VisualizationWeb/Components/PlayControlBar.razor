@@ -31,6 +31,19 @@
             </svg>
         </button>
 
+        <button class="play-control-btn btn-clear"
+                @onclick="OnClearAll"
+                disabled="@ClearAllDisabled"
+                title="Clear All">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6l-1 14H6L5 6"></path>
+                <path d="M10 11v6"></path>
+                <path d="M14 11v6"></path>
+                <path d="M9 6V4h6v2"></path>
+            </svg>
+        </button>
+
         <button class="play-control-btn @(SoundEnabled ? "btn-sound-on" : "btn-sound-off")"
                 @onclick="OnToggleSound"
                 disabled="@SoundDisabled"
@@ -85,6 +98,9 @@
     public int ArraySize { get; set; }
 
     [Parameter]
+    public bool ClearAllDisabled { get; set; }
+
+    [Parameter]
     public EventCallback OnTogglePlayPause { get; set; }
 
     [Parameter]
@@ -92,4 +108,7 @@
 
     [Parameter]
     public EventCallback OnToggleSound { get; set; }
+
+    [Parameter]
+    public EventCallback OnClearAll { get; set; }
 }

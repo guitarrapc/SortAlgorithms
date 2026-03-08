@@ -109,6 +109,22 @@
         border-color: #dc2626;
     }
 
+.btn-clear {
+    background-color: rgba(249, 115, 22, 0.2);
+    color: #fb923c;
+    border-color: rgba(249, 115, 22, 0.5);
+}
+
+    .btn-clear:hover:not(:disabled) {
+        background-color: rgba(249, 115, 22, 0.35);
+        border-color: #f97316;
+    }
+
+    .btn-clear:active:not(:disabled) {
+        background-color: rgba(249, 115, 22, 0.5);
+        border-color: #ea6800;
+    }
+
 .btn-sound-on {
     background-color: var(--bg-button);
     color: var(--color-sound-on);

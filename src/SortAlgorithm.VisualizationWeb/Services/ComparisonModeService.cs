@@ -198,6 +198,13 @@ public class ComparisonModeService : IDisposable
         NotifyStateChanged();
     }
 
+    public void ClearAll()
+    {
+        _debug.Log($"[ComparisonMode] ClearAll: removing {_state.Instances.Count} instance(s)");
+        ClearAllInstances();
+        NotifyStateChanged();
+    }
+
     // ────────────────────────────────────────────────────────────────────────
     // 再生制御
     // ────────────────────────────────────────────────────────────────────────
