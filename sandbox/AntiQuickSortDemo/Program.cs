@@ -29,11 +29,11 @@ foreach (var (name, pattern) in patterns)
 {
     var stats = new StatisticsContext();
     var array = pattern.ToArray();
-    
+
     QuickSort.Sort(array.AsSpan(), stats);
-    
+
     Console.WriteLine($"{name,-16} | {stats.CompareCount,11:N0} | {stats.SwapCount,8:N0} | {stats.IndexReadCount,10:N0} | {stats.IndexWriteCount,11:N0}");
-    
+
     if (stats.CompareCount > maxComparisons)
     {
         maxComparisons = stats.CompareCount;

@@ -98,12 +98,12 @@
                         var atMaxAndNotPresent = instanceCount >= ComparisonState.MaxComparisons && !algoAlreadyPresent;
                         var addDisabled = atMaxAndNotPresent || ComparisonMode.IsAddingAlgorithm;
                         var buttonTitle = ComparisonMode.IsAddingAlgorithm
-                            ? "Processing..."
-                            : atMaxAndNotPresent
-                                ? $"Maximum {ComparisonState.MaxComparisons} algorithms reached. Remove one to add a new algorithm."
-                                : algoAlreadyPresent
-                                    ? "Regenerate array and re-run all algorithms"
-                                    : "Add this algorithm to comparison";
+                        ? "Processing..."
+                        : atMaxAndNotPresent
+                        ? $"Maximum {ComparisonState.MaxComparisons} algorithms reached. Remove one to add a new algorithm."
+                        : algoAlreadyPresent
+                        ? "Regenerate array and re-run all algorithms"
+                        : "Add this algorithm to comparison";
                     }
                     <div class="qap__item qap__item--action-group">
                         <button class="primary qap__btn-full"
@@ -138,16 +138,15 @@
 
                     <div class="qap__item">
                         <span class="stat-label">Visualization Mode</span>
-                        <select value="@SelectedVisualizationMode"
-                                @onchange="e => HandleVisualizationModeChange((string)e.Value!)">
-                            <option value="@VisualizationMode.BarChart">Bar Chart</option>
-                            <option value="@VisualizationMode.Circular">Circular</option>
-                            <option value="@VisualizationMode.Spiral">Spiral</option>
-                            <option value="@VisualizationMode.DotPlot">Dot Plot</option>
+                        <select value="@SelectedVisualizationMode" @onchange="e => HandleVisualizationModeChange((string)e.Value!)">
                             <option value="@VisualizationMode.DisparityChords">Disparity Chords</option>
                             <option value="@VisualizationMode.PictureRow">Picture Row</option>
                             <option value="@VisualizationMode.PictureColumn">Picture Column</option>
                             <option value="@VisualizationMode.PictureBlock">Picture Block</option>
+                            <option value="@VisualizationMode.BarChart">Bar Chart</option>
+                            <option value="@VisualizationMode.Circular">Circular</option>
+                            <option value="@VisualizationMode.Spiral">Spiral</option>
+                            <option value="@VisualizationMode.DotPlot">Dot Plot</option>
                         </select>
                     </div>
 

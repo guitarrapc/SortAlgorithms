@@ -19,13 +19,13 @@ public enum VisualizationMode
 
     /// <summary>棒グラフ表示（デフォルト）</summary>
     BarChart,
-    
+
     /// <summary>円形表示</summary>
     Circular,
-    
+
     /// <summary>螺旋表示（将来実装）</summary>
     Spiral,
-    
+
     /// <summary>ドットプロット表示（将来実装）</summary>
     DotPlot,
 }

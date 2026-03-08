@@ -192,7 +192,7 @@ public static class AmericanFlagSort
         {
             bucketCounts[i] += bucketCounts[i - 1];
         }
-        
+
         // Phase 2.5: Initialize next write positions
         // bucketNext[i] tracks the current write position for bucket i
         // Copy bucket start positions from bucketCounts[i] (after prefix sum, bucketCounts[i] = start of bucket i)

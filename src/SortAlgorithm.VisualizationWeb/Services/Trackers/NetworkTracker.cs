@@ -71,38 +71,38 @@ sealed class NetworkTracker : IVisualizationTracker
         switch (op.Type)
         {
             case OperationType.Compare:
-            {
-                // Compare が来たら次のコンパレータをアクティブ化
-                if (_currentComparatorIndex < _comparators.Length)
                 {
-                    var comp = _comparators[_currentComparatorIndex];
-                    // Compare のインデックスがコンパレータと一致するか確認
-                    if ((op.Index1 == comp.Wire1 && op.Index2 == comp.Wire2) ||
-                        (op.Index1 == comp.Wire2 && op.Index2 == comp.Wire1))
-                    {
-                        _activeComparatorIndex = _currentComparatorIndex;
-                        _pendingCompare = (comp.Wire1, comp.Wire2);
-                    }
-                }
-                break;
-            }
-
-            case OperationType.Swap:
-            {
-                // Swap が来た場合、直前の Compare に対応するコンパレータの結果を true に
-                if (_pendingCompare.HasValue &&
-                    ((op.Index1 == _pendingCompare.Value.Item1 && op.Index2 == _pendingCompare.Value.Item2) ||
-                     (op.Index1 == _pendingCompare.Value.Item2 && op.Index2 == _pendingCompare.Value.Item1)))
-                {
+                    // Compare が来たら次のコンパレータをアクティブ化
                     if (_currentComparatorIndex < _comparators.Length)
                     {
-                        _comparatorResults[_currentComparatorIndex] = true;
-                        _currentComparatorIndex++;
-                        _pendingCompare = null;
+                        var comp = _comparators[_currentComparatorIndex];
+                        // Compare のインデックスがコンパレータと一致するか確認
+                        if ((op.Index1 == comp.Wire1 && op.Index2 == comp.Wire2) ||
+                            (op.Index1 == comp.Wire2 && op.Index2 == comp.Wire1))
+                        {
+                            _activeComparatorIndex = _currentComparatorIndex;
+                            _pendingCompare = (comp.Wire1, comp.Wire2);
+                        }
                     }
+                    break;
                 }
-                break;
-            }
+
+            case OperationType.Swap:
+                {
+                    // Swap が来た場合、直前の Compare に対応するコンパレータの結果を true に
+                    if (_pendingCompare.HasValue &&
+                        ((op.Index1 == _pendingCompare.Value.Item1 && op.Index2 == _pendingCompare.Value.Item2) ||
+                         (op.Index1 == _pendingCompare.Value.Item2 && op.Index2 == _pendingCompare.Value.Item1)))
+                    {
+                        if (_currentComparatorIndex < _comparators.Length)
+                        {
+                            _comparatorResults[_currentComparatorIndex] = true;
+                            _currentComparatorIndex++;
+                            _pendingCompare = null;
+                        }
+                    }
+                    break;
+                }
         }
 
         // Snapshot を作成

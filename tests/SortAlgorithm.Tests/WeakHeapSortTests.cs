@@ -97,7 +97,7 @@ public class WeakHeapSortTests
         WeakHeapSort.Sort(array.AsSpan(), 2, 6, stats);
 
         // Expected: first 2 elements unchanged, middle 4 sorted, last 3 unchanged
-        await Assert.That(array).IsEquivalentTo([5, 3, 1, 2, 8, 9, 7, 4, 6 ], CollectionOrdering.Matching);
+        await Assert.That(array).IsEquivalentTo([5, 3, 1, 2, 8, 9, 7, 4, 6], CollectionOrdering.Matching);
     }
 
     [Test]

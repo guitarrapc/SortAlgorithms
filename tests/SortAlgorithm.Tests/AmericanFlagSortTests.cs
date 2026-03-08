@@ -39,7 +39,7 @@ public class AmericanFlagSortTests
         var array = new[] { int.MinValue, -1, 0, 1, int.MaxValue };
         AmericanFlagSort.Sort(array.AsSpan(), stats);
 
-        await Assert.That(array).IsEquivalentTo([ int.MinValue, -1, 0, 1, int.MaxValue ], CollectionOrdering.Matching);
+        await Assert.That(array).IsEquivalentTo([int.MinValue, -1, 0, 1, int.MaxValue], CollectionOrdering.Matching);
     }
 
     [Test]

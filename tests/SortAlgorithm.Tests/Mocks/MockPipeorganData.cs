@@ -7,7 +7,7 @@ public static class MockPipeorganData
 
     public static IEnumerable<Func<InputSample<int>>> Generate()
     {
-        
+
         yield return () => new InputSample<int>()
         {
             InputType = InputType.Mountain,

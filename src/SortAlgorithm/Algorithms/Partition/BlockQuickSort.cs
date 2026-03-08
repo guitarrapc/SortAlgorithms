@@ -226,7 +226,7 @@ public static class BlockQuickSort
         where TContext : ISortContext
     {
         if (right <= left) return;
-        
+
         // Calculate depth limit: 2 * log2(n) + 1
         // Based on IntroSort pattern and BlockQuickSort paper reference implementation
         var depthLimit = 2 * BitOperations.Log2((uint)(right - left + 1)) + 1;
@@ -639,7 +639,7 @@ public static class BlockQuickSort
         if (s.Compare(i1, i2) > 0) s.Swap(i1, i2);
         if (s.Compare(i2, i3) > 0) s.Swap(i2, i3);
         if (s.Compare(i1, i2) > 0) s.Swap(i1, i2);
-        
+
         // After sorting network: i1 <= i2 <= i3, pivot is i2
         // Check if pivot value appears at least twice (exact paper condition)
         var pivotIdx = i2;
@@ -665,32 +665,32 @@ public static class BlockQuickSort
         where TContext : ISortContext
     {
         hasDuplicate = false;
-        
+
         // Network for median-of-5, detecting duplicates
         var cmp = s.Compare(i1, i2);
         hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i1, i2);
-        
+
         cmp = s.Compare(i4, i5);
         hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i4, i5);
-        
+
         cmp = s.Compare(i1, i4);
         hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i1, i4);
-        
+
         cmp = s.Compare(i2, i5);
         hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i2, i5);
-        
+
         cmp = s.Compare(i3, i4);
         hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i3, i4);
-        
+
         cmp = s.Compare(i2, i3);
         hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i2, i3);
-        
+
         cmp = s.Compare(i3, i4);
         hasDuplicate |= cmp == 0;
         if (cmp > 0) s.Swap(i3, i4);
@@ -709,11 +709,11 @@ public static class BlockQuickSort
     {
         var length = right - left + 1;
         var first = MedianOf3(s, left, left + 1, left + 2, out hasDuplicate);
-        
+
         bool hasDup;
         var mid = MedianOf3(s, left + length / 2 - 1, left + length / 2, left + length / 2 + 1, out hasDup);
         hasDuplicate |= hasDup;
-        
+
         var last = MedianOf3(s, right - 2, right - 1, right, out hasDup);
         hasDuplicate |= hasDup;
 
@@ -723,7 +723,7 @@ public static class BlockQuickSort
 
         var result = MedianOf3(s, left, mid, right, out hasDup);
         hasDuplicate |= hasDup;
-        
+
         return result;
     }
 
@@ -749,17 +749,17 @@ public static class BlockQuickSort
         var q3 = left + (3 * length) / 4 - 3;
 
         var first = MedianOf5(s, left, left + 1, left + 2, left + 3, left + 4, out hasDuplicate);
-        
+
         bool hasDup;
         var m1 = MedianOf5(s, q1, q1 + 1, q1 + 2, q1 + 3, q1 + 4, out hasDup);
         hasDuplicate |= hasDup;
-        
+
         var m2 = MedianOf5(s, mid, mid + 1, mid + 2, mid + 3, mid + 4, out hasDup);
         hasDuplicate |= hasDup;
-        
+
         var m3 = MedianOf5(s, q3, q3 + 1, q3 + 2, q3 + 3, q3 + 4, out hasDup);
         hasDuplicate |= hasDup;
-        
+
         var last = MedianOf5(s, right - 4, right - 3, right - 2, right - 1, right, out hasDup);
         hasDuplicate |= hasDup;
 
@@ -769,7 +769,7 @@ public static class BlockQuickSort
 
         var result = MedianOf5(s, left, m1, m2, m3, right, out hasDup);
         hasDuplicate |= hasDup;
-        
+
         return result;
     }
 
@@ -800,7 +800,7 @@ public static class BlockQuickSort
                 s.Swap(placeIt, searchLeft);
             }
             placeIt++;
-            
+
             if (placeIt != searchRight)
             {
                 s.Swap(placeIt, searchRight);

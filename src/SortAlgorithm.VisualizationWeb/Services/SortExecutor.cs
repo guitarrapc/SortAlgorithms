@@ -74,13 +74,13 @@ public class SortExecutor(DebugSettings debug)
 
             // StatisticsContextを作成（正確な統計情報を記録）
             var statisticsContext = new StatisticsContext();
-            
+
             // 操作リストの容量を事前設定（メモリ再割り当てを削減）
             // O(n²)アルゴリズムの最悪ケースを想定: 比較 ~n²/2, スワップ ~n²/2 → 合計 ~n²
             int n = sourceArray.Length;
             int estimatedCapacity = Math.Min(n * n, 10_000_000); // 上限10M（メモリ保護）
             var operations = new List<SortOperation>(estimatedCapacity);
-            
+
             // VisualizationContextを使って操作を記録
             var visualizationContext = new VisualizationContext(
                 onCompare: (i, j, result, bufferIdI, bufferIdJ) =>
@@ -167,8 +167,8 @@ public class SortExecutor(DebugSettings debug)
 
             // 2回目: CompositeContextで操作・統計を記録（NullContextで計測した実行時間を使用）
             algorithm.SortAction(workArray.AsSpan(0, sourceArray.Length), compositeContext);
-            
-            
+
+
             return (operations, statisticsContext, actualExecutionTime);
         }
         finally
@@ -241,16 +241,16 @@ public class SortExecutor(DebugSettings debug)
 
             // 操作記録の準備
             var statisticsContext = new StatisticsContext();
-            
+
             // 操作リストの容量を事前設定（メモリ再割り当てを削減）
             // O(n²)アルゴリズムの最悪ケースを想定
             int estimatedCapacity = Math.Min(n * n, 10_000_000); // 上限10M（メモリ保護）
             var operations = new List<SortOperation>(estimatedCapacity);
-            
+
             // 記録処理時間の計測（純粋なソート時間は actualExecutionTime に既に計測済み）
             // この時間はコールバックオーバーヘッド + List操作のコストを含む
             var recordingStopwatch = Stopwatch.StartNew();
-            
+
             var visualizationContext = new VisualizationContext(
                 onCompare: (i, j, result, bufferIdI, bufferIdJ) =>
                 {
@@ -335,7 +335,7 @@ public class SortExecutor(DebugSettings debug)
 
             // 記録パス実行（Span はインライン式）
             algorithm.SortAction(workArray.AsSpan(0, n), compositeContext);
-            
+
             recordingStopwatch.Stop();
 
             // 記録完了後に yield して UI の応答性を即座に回復

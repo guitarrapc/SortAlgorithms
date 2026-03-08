@@ -192,10 +192,10 @@ public static class TimSort
         // Start with minRun size (reasonable initial capacity)
         var tmpBufferSize = Math.Min(minRun, n / 2);
         var tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
-        
+
         // Adaptive galloping threshold - shared across all merges for learning
         var minGallop = MIN_GALLOP;
-        
+
         try
         {
             context.OnPhase(SortPhase.MergeRunDetect);
@@ -676,15 +676,15 @@ public static class TimSort
             minGallop += 2;  // Penalize for leaving galloping mode
         }
 
-            exitMerge:
-            minGallop = minGallop < 1 ? 1 : minGallop;
+    exitMerge:
+        minGallop = minGallop < 1 ? 1 : minGallop;
 
-            if (len2 == 0)
-            {
-                // Run2 is exhausted, copy remaining run1 from temp
-                t.CopyTo(cursor1, s, dest, len1);
-            }
-            // else: len1 == 0, run2 is already in correct position
+        if (len2 == 0)
+        {
+            // Run2 is exhausted, copy remaining run1 from temp
+            t.CopyTo(cursor1, s, dest, len1);
+        }
+        // else: len1 == 0, run2 is already in correct position
     }
 
     /// <summary>
@@ -816,15 +816,15 @@ public static class TimSort
             minGallop += 2;  // Penalize for leaving galloping mode
         }
 
-            exitMerge:
-            minGallop = minGallop < 1 ? 1 : minGallop;
+    exitMerge:
+        minGallop = minGallop < 1 ? 1 : minGallop;
 
-            if (len1 == 0)
-            {
-                // Run1 is exhausted, copy remaining run2 from temp
-                t.CopyTo(0, s, dest - (len2 - 1), len2);
-            }
-            // else: len2 == 0, run1 is already in correct position
+        if (len1 == 0)
+        {
+            // Run1 is exhausted, copy remaining run2 from temp
+            t.CopyTo(0, s, dest - (len2 - 1), len2);
+        }
+        // else: len2 == 0, run1 is already in correct position
     }
 
 }

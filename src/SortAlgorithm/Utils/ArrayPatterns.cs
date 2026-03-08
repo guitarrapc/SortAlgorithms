@@ -2722,7 +2722,7 @@ public static class ArrayPatterns
     public static float[] GenerateSortedFloatWithNaN(int size, int nanCount = 3)
     {
         var array = new float[size];
-        
+
         // NaN at the beginning
         for (int i = 0; i < Math.Min(nanCount, size); i++)
         {

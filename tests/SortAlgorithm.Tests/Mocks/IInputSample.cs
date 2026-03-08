@@ -1,4 +1,4 @@
-namespace SortAlgorithm.Tests;
+﻿namespace SortAlgorithm.Tests;
 
 public enum InputType
 {

@@ -76,12 +76,12 @@ public static class TutorialArrayTypeExtensions
     public static int[] ToArray(this TutorialArrayType type) => type switch
     {
         TutorialArrayType.TwoDigitDecimal => [53, 57, 31, 36, 82, 85, 61, 48],
-        TutorialArrayType.FourElement     => [4, 1, 3, 2],
+        TutorialArrayType.FourElement => [4, 1, 3, 2],
         // 昇降混在・不均一 run (5,4,6,3,4,4,3,3) × 8 run、値 2〜37 全32要素
         // run 長が不揃いなため TimSort の stack invariant 調整が多く発生する
-        TutorialArrayType.MultiRun        => [3, 8, 15, 22, 31, 28, 20, 13, 5, 7, 12, 18, 24, 30, 37, 34, 25, 11, 14, 19, 26, 35, 32, 23, 16, 6, 9, 17, 27, 21, 10, 2],
+        TutorialArrayType.MultiRun => [3, 8, 15, 22, 31, 28, 20, 13, 5, 7, 12, 18, 24, 30, 37, 34, 25, 11, 14, 19, 26, 35, 32, 23, 16, 6, 9, 17, 27, 21, 10, 2],
         // 9要素・値1〜9・重複なし。中央 index=4 の値=5（中間値）→ 最初の partition で左4/右4の均等分割
-        TutorialArrayType.PartitionSort   => [3, 7, 1, 9, 5, 2, 8, 4, 6],
+        TutorialArrayType.PartitionSort => [3, 7, 1, 9, 5, 2, 8, 4, 6],
         // 31要素・値1〜31。IntroSort の四分位 median-of-3 が index7=8, index15=16, index23=24 → median=16
         // → 最初の partition で左15/右15の完全均等分割。全 Hybrid 系の最大しきい値 30 を超える要素数
         TutorialArrayType.PartitionSortHybrid => [5, 1, 7, 3, 6, 2, 4, 8, 13, 9, 15, 11, 14, 10, 12, 16, 21, 17, 23, 19, 22, 18, 20, 24, 29, 25, 31, 27, 30, 26, 28],

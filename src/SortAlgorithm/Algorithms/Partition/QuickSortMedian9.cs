@@ -184,7 +184,7 @@ public static class QuickSortMedian9
             // causing duplicate index sampling and wasted comparisons. Fall back to median-of-3.
             int pivotIndex;
             var rangeSize = right - left + 1;
-            
+
             if (rangeSize < 64)
             {
                 // Small range: use median-of-3 to avoid sampling degeneration
@@ -196,7 +196,7 @@ public static class QuickSortMedian9
                 // Large range: use full median-of-9 for superior pivot quality
                 pivotIndex = MedianOf9Index(s, left, right);
             }
-            
+
             // Move pivot to right position to enable consistent index-based comparison
             // Avoid self-swap when pivot is already at right
             if (pivotIndex != right)

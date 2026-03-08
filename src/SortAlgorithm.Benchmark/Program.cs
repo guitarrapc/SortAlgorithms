@@ -14,6 +14,6 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
 {
     config.AddJob(Job.ShortRun);
 }
-    
+
 
 BenchmarkSwitcher.FromAssembly(Assembly.GetEntryAssembly()!).Run(args, config);

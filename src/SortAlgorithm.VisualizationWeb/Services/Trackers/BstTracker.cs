@@ -200,14 +200,14 @@ sealed class BstTracker : IVisualizationTracker
 
     private void AvlUpdateHeight(int i)
     {
-        int lh = _left[i]  >= 0 ? _avlHeight[_left[i]]  : 0;
+        int lh = _left[i] >= 0 ? _avlHeight[_left[i]] : 0;
         int rh = _right[i] >= 0 ? _avlHeight[_right[i]] : 0;
         _avlHeight[i] = 1 + Math.Max(lh, rh);
     }
 
     private int AvlGetBalance(int i)
     {
-        int lh = _left[i]  >= 0 ? _avlHeight[_left[i]]  : 0;
+        int lh = _left[i] >= 0 ? _avlHeight[_left[i]] : 0;
         int rh = _right[i] >= 0 ? _avlHeight[_right[i]] : 0;
         return lh - rh;
     }
@@ -215,10 +215,10 @@ sealed class BstTracker : IVisualizationTracker
     /// <summary>y を中心に右回転。新しいサブツリー根 (x = y.Left) を返す。</summary>
     private int AvlRotateRight(int y)
     {
-        int x  = _left[y];
+        int x = _left[y];
         int t2 = _right[x];
         _right[x] = y;
-        _left[y]  = t2;
+        _left[y] = t2;
         AvlUpdateHeight(y);
         AvlUpdateHeight(x);
         return x;
@@ -227,9 +227,9 @@ sealed class BstTracker : IVisualizationTracker
     /// <summary>x を中心に左回転。新しいサブツリー根 (y = x.Right) を返す。</summary>
     private int AvlRotateLeft(int x)
     {
-        int y  = _right[x];
+        int y = _right[x];
         int t2 = _left[y];
-        _left[y]  = x;
+        _left[y] = x;
         _right[x] = t2;
         AvlUpdateHeight(x);
         AvlUpdateHeight(y);

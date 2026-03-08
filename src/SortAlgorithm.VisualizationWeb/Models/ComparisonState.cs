@@ -9,27 +9,27 @@ public class ComparisonState
     /// 比較中のアルゴリズムリスト（1-6個）
     /// </summary>
     public List<ComparisonInstance> Instances { get; set; } = new();
-    
+
     /// <summary>
     /// 共通の初期配列
     /// </summary>
     public int[] InitialArray { get; set; } = Array.Empty<int>();
-    
+
     /// <summary>
     /// 現在の配列サイズ
     /// </summary>
     public int CurrentArraySize { get; set; }
-    
+
     /// <summary>
     /// 現在の配列パターン
     /// </summary>
     public ArrayPatternMetadata? CurrentPattern { get; set; }
-    
+
     /// <summary>
     /// 現在処理中のアルゴリズム名（AddAndGenerate中）
     /// </summary>
     public string? ProcessingAlgorithmName { get; set; }
-    
+
     /// <summary>
     /// 最大比較可能数
     /// </summary>
@@ -47,7 +47,7 @@ public class ComparisonState
     {
         <= 1 => int.MaxValue,
         <= 2 => 4096,
-        _    => 2048,
+        _ => 2048,
     };
 
     /// <summary>
@@ -61,7 +61,7 @@ public class ComparisonState
             distinctCount++;
         return MaxComparisonElements(distinctCount);
     }
-    
+
     /// <summary>
     /// すべてのアルゴリズムが完了したかどうか
     /// </summary>

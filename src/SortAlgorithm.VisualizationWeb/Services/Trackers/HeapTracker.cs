@@ -34,25 +34,25 @@ sealed class HeapTracker : IVisualizationTracker
         switch (op.Type)
         {
             case OperationType.Swap:
-            {
-                if (!_heapBuildDone && (op.Index1 == 0 || op.Index2 == 0))
-                    _heapBuildDone = true;
-
-                int rootIdx = Math.Min(op.Index1, op.Index2);
-                int lastIdx = Math.Max(op.Index1, op.Index2);
-
-                if (_heapBuildDone && rootIdx == 0 && lastIdx == _heapBoundary - 1)
                 {
-                    // 抽出 Swap: root ↔ last ヒープ要素 — reverse bit は反転しない
-                    _heapBoundary--;
+                    if (!_heapBuildDone && (op.Index1 == 0 || op.Index2 == 0))
+                        _heapBuildDone = true;
+
+                    int rootIdx = Math.Min(op.Index1, op.Index2);
+                    int lastIdx = Math.Max(op.Index1, op.Index2);
+
+                    if (_heapBuildDone && rootIdx == 0 && lastIdx == _heapBoundary - 1)
+                    {
+                        // 抽出 Swap: root ↔ last ヒープ要素 — reverse bit は反転しない
+                        _heapBoundary--;
+                    }
+                    else if (_isWeak)
+                    {
+                        // Merge Swap: a[lastIdx] > a[rootIdx] → FlipBit(lastIdx)
+                        _reverseBits[lastIdx] = !_reverseBits[lastIdx];
+                    }
+                    break;
                 }
-                else if (_isWeak)
-                {
-                    // Merge Swap: a[lastIdx] > a[rootIdx] → FlipBit(lastIdx)
-                    _reverseBits[lastIdx] = !_reverseBits[lastIdx];
-                }
-                break;
-            }
             case OperationType.IndexRead when op.Index1 == 0:
                 if (!_heapBuildDone) _heapBuildDone = true;
                 _pendingRootValue = mainArray[0];

@@ -37,13 +37,13 @@ sealed class RecursionTracker : IVisualizationTracker
         // ルートノード作成（全体範囲、最初は Pending）
         var root = new RecursionNode
         {
-            Id       = _nextNodeId++,
+            Id = _nextNodeId++,
             ParentId = -1,
-            Start    = 0,
-            End      = arrayLength,
-            State    = RecursionNodeState.Pending,
-            Values   = [],
-            Depth    = 0
+            Start = 0,
+            End = arrayLength,
+            State = RecursionNodeState.Pending,
+            Values = [],
+            Depth = 0
         };
         _nodes.Add(root);
     }
@@ -60,7 +60,7 @@ sealed class RecursionTracker : IVisualizationTracker
             // 等分割なら end = src + len * 2
             case OperationType.RangeCopy when op.BufferId1 == 0 && op.BufferId2 == 1:
                 newStart = op.Index1;
-                newEnd   = Math.Min(op.Index1 + op.Length * 2, _arrayLength);
+                newEnd = Math.Min(op.Index1 + op.Length * 2, _arrayLength);
                 _lastOpType = OperationType.RangeCopy;
                 allowCreate = true; // Merge フェーズ開始 → 新規ノード作成OK
                 break;
@@ -69,7 +69,7 @@ sealed class RecursionTracker : IVisualizationTracker
             // Swap(i, j, buf=0): 現在のパーティション作業範囲 [min..max+1) を推定
             case OperationType.Swap when op.BufferId1 == 0 && op.Index1 != op.Index2:
                 newStart = Math.Min(op.Index1, op.Index2);
-                newEnd   = Math.Max(op.Index1, op.Index2) + 1;
+                newEnd = Math.Max(op.Index1, op.Index2) + 1;
                 _lastOpType = OperationType.Swap;
                 allowCreate = true; // Quicksort パーティション → 新規ノード作成OK
                 break;
@@ -82,7 +82,7 @@ sealed class RecursionTracker : IVisualizationTracker
                 when op.Index1 >= 0 && op.Index2 >= 0
                   && op.BufferId1 == 0 && op.BufferId2 == 0:
                 newStart = Math.Min(op.Index1, op.Index2);
-                newEnd   = Math.Max(op.Index1, op.Index2) + 1;
+                newEnd = Math.Max(op.Index1, op.Index2) + 1;
                 _lastOpType = OperationType.Compare;
                 allowCreate = false; // Compare は既存ノード検索のみ、新規作成禁止
                 break;
@@ -180,7 +180,7 @@ sealed class RecursionTracker : IVisualizationTracker
         }
 
         int start = p1;
-        int end   = p2 + 1; // inclusive right → exclusive end
+        int end = p2 + 1; // inclusive right → exclusive end
 
         // 前のアクティブが Leaf なら完了させる（パーティションノードはそのまま保持）
         var prevNode = _activeNodeId >= 0 ? FindNodeById(_activeNodeId) : null;
@@ -191,7 +191,7 @@ sealed class RecursionTracker : IVisualizationTracker
         if (node == null) return;
 
         UpdateNodeState(node.Id, leafState);
-        _activeNodeId    = node.Id;
+        _activeNodeId = node.Id;
         _cachedNarrative = narrative;
         RebuildSnapshot();
     }
@@ -250,13 +250,13 @@ sealed class RecursionTracker : IVisualizationTracker
 
         var newNode = new RecursionNode
         {
-            Id       = _nextNodeId++,
+            Id = _nextNodeId++,
             ParentId = parent.Id,
-            Start    = start,
-            End      = end,
-            State    = RecursionNodeState.Pending,
-            Values   = mainArray[start..end].ToArray(),
-            Depth    = parent.Depth + 1
+            Start = start,
+            End = end,
+            State = RecursionNodeState.Pending,
+            Values = mainArray[start..end].ToArray(),
+            Depth = parent.Depth + 1
         };
         _nodes.Add(newNode);
 
@@ -288,13 +288,13 @@ sealed class RecursionTracker : IVisualizationTracker
 
         var newNode = new RecursionNode
         {
-            Id       = _nextNodeId++,
+            Id = _nextNodeId++,
             ParentId = parent.Id,
-            Start    = start,
-            End      = end,
-            State    = RecursionNodeState.Pending,
-            Values   = [],
-            Depth    = parent.Depth + 1
+            Start = start,
+            End = end,
+            State = RecursionNodeState.Pending,
+            Values = [],
+            Depth = parent.Depth + 1
         };
         _nodes.Add(newNode);
         ReattachChildren(newNode);
@@ -327,7 +327,7 @@ sealed class RecursionTracker : IVisualizationTracker
                 _nodes[i] = candidate with
                 {
                     ParentId = newNode.Id,
-                    Depth    = newNode.Depth + 1,
+                    Depth = newNode.Depth + 1,
                 };
                 // 子孫ノードの Depth も再帰的に更新する。
                 // 更新しないと子孫が親と同じ Depth になり、同じ行に重なって表示される。
@@ -476,7 +476,7 @@ sealed class RecursionTracker : IVisualizationTracker
     {
         _cachedSnapshot = new RecursionSnapshot
         {
-            Nodes        = _nodes.ToArray(),
+            Nodes = _nodes.ToArray(),
             ActiveNodeId = _activeNodeId
         };
     }

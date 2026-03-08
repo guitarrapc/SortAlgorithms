@@ -107,7 +107,7 @@ public static class SmoothSort
         // Temporary variables for Shift operations within the build phase
         context.OnPhase(SortPhase.HeapBuild, 0, span.Length - 1);
         int r1 = 0, b1 = 0, c1 = 0;
-        
+
         while (q < span.Length)
         {
             r1 = r;
@@ -163,7 +163,7 @@ public static class SmoothSort
         {
             //Debug.WriteLine($"[SmoothSort - Sort] Loop q={q}, r={r}, p={p}, b={b}, c={c}");
             --q; // Move to previous element (this element is now sorted and fixed)
-            
+
             if (b == 1)
             {
                 // Single-element heap: just move to the previous heap
@@ -185,7 +185,7 @@ public static class SmoothSort
                     // Current root r becomes fixed (sorted), now process its two child heap roots
                     // Before: b = L(k), c = L(k-1)
                     --p; // Remove L(k) heap from bitstring (marks current root as sorted)
-                    
+
                     // Move r to right child heap root: r - L(k) + L(k-1)
                     // This gives the root position of the L(k-2) heap (right subtree)
                     r = r - b + c;
@@ -205,10 +205,10 @@ public static class SmoothSort
                     // So: (r_original - L(k) + L(k-1)) + L(k-2) = r_original - 1
                     // which gives the root position of the L(k-1) heap (left subtree)
                     r = r + c;
-                    
+
                     // Process left child heap L(k-1) and its left neighbors
                     SemiTrinkle(s, p, b, c, r);
-                    
+
                     Down(ref b, ref c); // Now b = L(k-2), c = L(k-3)
                     p = (p << 1) + 1;   // Mark L(k-2) heap as present in bitstring
 

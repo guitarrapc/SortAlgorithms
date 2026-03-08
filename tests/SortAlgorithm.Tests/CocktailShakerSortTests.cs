@@ -170,7 +170,7 @@ public class CocktailShakerSortTests
 
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
-        CocktailShakerSort.Sort(array.AsSpan(),stats);
+        CocktailShakerSort.Sort(array.AsSpan(), stats);
 
         await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);

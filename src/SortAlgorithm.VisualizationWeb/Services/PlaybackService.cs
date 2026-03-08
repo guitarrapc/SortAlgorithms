@@ -50,19 +50,19 @@ public class PlaybackService : IDisposable
 
     // 音: 今フレームの Read/Write 周波数バッファ（再利用してアロケーション抑制）
     private readonly List<float> _soundFreqBuffer = new(capacity: 16);
-    
+
     /// <summary>現在の状態</summary>
     public VisualizationState State { get; private set; } = new();
-    
+
     /// <summary>1フレームあたりの操作数（1-1000）</summary>
     public int OperationsPerFrame { get; set; } = 1;
-    
+
     /// <summary>速度倍率（0.1x - 100x）</summary>
     public double SpeedMultiplier { get; set; } = 10.0;
-    
+
     /// <summary>ソート完了時に自動的にリセットするか</summary>
     public bool AutoReset { get; set; } = false;
-    
+
     /// <summary>描画なし超高速モード</summary>
     public bool InstantMode { get; set; } = false;
 
@@ -77,7 +77,7 @@ public class PlaybackService : IDisposable
 
     /// <summary>状態が変更されたときのイベント</summary>
     public event Action? StateChanged;
-    
+
     public PlaybackService(IJSRuntime js)
     {
         _js = js;
@@ -94,7 +94,7 @@ public class PlaybackService : IDisposable
         await _js.InvokeVoidAsync("soundEngine.initAudio");
         await _js.InvokeVoidAsync("soundEngine.setSoundType", SoundType);
     }
-    
+
     /// <summary>
     /// ソート操作をロードする
     /// </summary>
@@ -115,25 +115,25 @@ public class PlaybackService : IDisposable
         initialArray.CopyTo(_pooledArray.AsSpan(0, _currentArraySize));
         _initialArray = _pooledArray.AsSpan(0, _currentArraySize).ToArray(); // 初期状態のコピーを保持
         _initialBuffers.Clear();
-        
+
         // 累積統計を計算（StatisticsContextの計算ロジックを使用）
         _cumulativeStats = new CumulativeStats[operations.Count + 1]; // +1は初期状態用
         ulong cumulativeCompares = 0;
         ulong cumulativeSwaps = 0;
         ulong cumulativeReads = 0;
         ulong cumulativeWrites = 0;
-        
+
         for (int i = 0; i < operations.Count; i++)
         {
             var op = operations[i];
-            
+
             // StatisticsContextと同じロジックで累積統計を計算
             switch (op.Type)
             {
                 case OperationType.Compare:
                     cumulativeCompares++;
                     break;
-                    
+
                 case OperationType.Swap:
                     if (op.BufferId1 >= 0) // StatisticsContextと同じ条件
                     {
@@ -142,21 +142,21 @@ public class PlaybackService : IDisposable
                         cumulativeWrites += 2; // Swap = 2 writes
                     }
                     break;
-                    
+
                 case OperationType.IndexRead:
                     if (op.BufferId1 >= 0)
                     {
                         cumulativeReads++;
                     }
                     break;
-                    
+
                 case OperationType.IndexWrite:
                     if (op.BufferId1 >= 0)
                     {
                         cumulativeWrites++;
                     }
                     break;
-                    
+
                 case OperationType.RangeCopy:
                     if (op.BufferId1 >= 0)
                     {
@@ -168,7 +168,7 @@ public class PlaybackService : IDisposable
                     }
                     break;
             }
-            
+
             // この操作後の累積統計を保存（インデックスi+1に保存）
             _cumulativeStats[i + 1] = new CumulativeStats
             {
@@ -178,11 +178,11 @@ public class PlaybackService : IDisposable
                 IndexWriteCount = cumulativeWrites
             };
         }
-        
+
         // 現在のVisualizationModeを保持
         var currentMode = State.Mode;
         var nextSortVersion = State.SortVersion + 1;
-        
+
         State = new VisualizationState
         {
             MainArray = _pooledArray.AsSpan(0, _currentArraySize).ToArray(), // 現在の状態用のコピー
@@ -199,10 +199,10 @@ public class PlaybackService : IDisposable
             MainArrayDelta = null,         // 最初のレンダリングは全量更新
         };
         DiscardPendingDeltas();
-        
+
         StateChanged?.Invoke();
     }
-    
+
     /// <summary>
     /// 再生開始
     /// </summary>
@@ -227,7 +227,7 @@ public class PlaybackService : IDisposable
 
         StateChanged?.Invoke();
     }
-    
+
     /// <summary>
     /// 描画なし超高速実行
     /// </summary>
@@ -235,7 +235,7 @@ public class PlaybackService : IDisposable
     {
         // InstantMode は全操作を一気に処理するため、差分追跡をスキップして最終状態だけ送信する
         _trackDeltas = false;
-        
+
         // UI更新を完全スキップして全操作を処理
         while (State.CurrentOperationIndex < _operations.Count)
         {
@@ -243,19 +243,19 @@ public class PlaybackService : IDisposable
             ApplyOperation(operation, applyToArray: true, updateStats: true);
             State.CurrentOperationIndex++;
         }
-        
+
         _trackDeltas = true;
         DiscardPendingDeltas(); // 全量更新を指示（MainArrayDelta = null）
-        
+
         // 完了
         ClearHighlights(); // ソート完了時にハイライトをクリア
         State.IsSortCompleted = true; // ソート完了フラグを設定
         State.ShowCompletionHighlight = true; // ハイライト表示を開始
         State.PlaybackState = PlaybackState.Paused;
-        
+
         // 最終状態を描画（緑色ハイライト表示）
         StateChanged?.Invoke();
-        
+
         // AutoResetがONの場合は、少し待ってからリセット
         if (AutoReset)
         {
@@ -268,7 +268,7 @@ public class PlaybackService : IDisposable
             ScheduleCompletionHighlightClear();
         }
     }
-    
+
     /// <summary>
     /// 一時停止
     /// </summary>
@@ -280,7 +280,7 @@ public class PlaybackService : IDisposable
         StopLoop();
         StateChanged?.Invoke();
     }
-    
+
     /// <summary>
     /// 停止してリセット
     /// </summary>
@@ -318,7 +318,7 @@ public class PlaybackService : IDisposable
             _isRegisteredWithLoop = false;
         }
     }
-    
+
     /// <summary>
     /// rAF ループから毎フレーム呼び出されるメソッド（playbackHelper.js が invokeMethod で同期呼出し）
     /// </summary>
@@ -429,7 +429,7 @@ public class PlaybackService : IDisposable
             ScheduleCompletionHighlightClear();
         }
     }
-    
+
     /// <summary>
     /// 再生/一時停止を切り替え
     /// </summary>
@@ -444,7 +444,7 @@ public class PlaybackService : IDisposable
             Play();
         }
     }
-    
+
     /// <summary>
     /// 指定位置にシーク（インクリメンタル方式で高速化）
     /// </summary>
@@ -452,7 +452,7 @@ public class PlaybackService : IDisposable
     {
         if (operationIndex < 0 || operationIndex > _operations.Count)
             return;
-        
+
         // スロットリング: 連続シーク時は一定間隔でのみ処理
         if (throttle)
         {
@@ -464,14 +464,14 @@ public class PlaybackService : IDisposable
             }
             _lastSeekTime = now;
         }
-        
+
         var currentIndex = State.CurrentOperationIndex;
         var targetIndex = operationIndex;
-        
+
         // 現在位置と目的位置が近い場合は、インクリメンタルシーク
         var distance = Math.Abs(targetIndex - currentIndex);
         var replayThreshold = Math.Min(1000, _operations.Count / 4); // 閾値: 1000操作 or 全体の25%
-        
+
         if (distance < replayThreshold && currentIndex <= targetIndex)
         {
             // 前方シーク: 現在位置から目的位置まで進める（高速）
@@ -482,24 +482,24 @@ public class PlaybackService : IDisposable
             // 後方シークまたは距離が遠い場合: 初期状態からリプレイ
             SeekFromBeginning(targetIndex);
         }
-        
+
         State.CurrentOperationIndex = targetIndex;
-        
+
         // ソート完了状態を更新
         State.IsSortCompleted = (operationIndex >= _operations.Count);
         State.ShowCompletionHighlight = State.IsSortCompleted;
-        
+
         // 現在の操作をハイライト（完了時はハイライトなし）
         ClearHighlights();
         if (targetIndex < _operations.Count)
         {
             ApplyOperation(_operations[targetIndex], applyToArray: false, updateStats: false);
         }
-        
+
         DiscardPendingDeltas(); // シーク後は差分ではなく全量更新
         StateChanged?.Invoke();
     }
-    
+
     /// <summary>
     /// 前方シーク: 現在位置から目的位置まで進める
     /// </summary>
@@ -510,7 +510,7 @@ public class PlaybackService : IDisposable
             ApplyOperation(_operations[i], applyToArray: true, updateStats: true);
         }
     }
-    
+
     /// <summary>
     /// 初期状態からリプレイ
     /// </summary>
@@ -520,13 +520,13 @@ public class PlaybackService : IDisposable
         State.MainArray = [.. _initialArray];
         State.BufferArrays.Clear();
         ResetStatistics();
-        
+
         for (int i = 0; i < targetIndex && i < _operations.Count; i++)
         {
             ApplyOperation(_operations[i], applyToArray: true, updateStats: true);
         }
     }
-    
+
     private void ApplyOperation(SortOperation operation, bool applyToArray, bool updateStats)
     {
         switch (operation.Type)
@@ -535,7 +535,7 @@ public class PlaybackService : IDisposable
                 State.CompareIndices.Add(operation.Index1);
                 State.CompareIndices.Add(operation.Index2);
                 break;
-                
+
             case OperationType.Swap:
                 State.SwapIndices.Add(operation.Index1);
                 State.SwapIndices.Add(operation.Index2);
@@ -547,11 +547,11 @@ public class PlaybackService : IDisposable
                     RecordDelta(operation.BufferId1, operation.Index2, arr[operation.Index2]);
                 }
                 break;
-                
+
             case OperationType.IndexRead:
                 State.ReadIndices.Add(operation.Index1);
                 break;
-                
+
             case OperationType.IndexWrite:
                 State.WriteIndices.Add(operation.Index1);
                 if (applyToArray && operation.Value.HasValue)
@@ -564,7 +564,7 @@ public class PlaybackService : IDisposable
                     }
                 }
                 break;
-                
+
             case OperationType.RangeCopy:
                 // ハイライト表示: sourceとdestinationの範囲をハイライト
                 for (int i = 0; i < operation.Length; i++)
@@ -578,7 +578,7 @@ public class PlaybackService : IDisposable
                         State.WriteIndices.Add(operation.Index2 + i);
                     }
                 }
-                
+
                 if (applyToArray)
                 {
                     if (operation.Values is { Length: > 0 })
@@ -586,7 +586,7 @@ public class PlaybackService : IDisposable
                         // 記録された値を直接書き込む（バッファー状態に依存しない正確な再生）
                         var destArr = GetArray(operation.BufferId2);
                         var destSpan = destArr.AsSpan();
-                        
+
                         for (int i = 0; i < operation.Values.Length && operation.Index2 + i < destSpan.Length; i++)
                         {
                             destSpan[operation.Index2 + i] = operation.Values[i];
@@ -598,18 +598,18 @@ public class PlaybackService : IDisposable
                         // フォールバック: 値が記録されていない場合はソースからコピー
                         var sourceArr = GetArray(operation.BufferId1);
                         var destArr = GetArray(operation.BufferId2);
-                        
+
                         var sourceSpan = sourceArr.AsSpan();
                         var destSpan = destArr.AsSpan();
-                        
-                        if (operation.Index1 >= 0 && operation.Index2 >= 0 && 
+
+                        if (operation.Index1 >= 0 && operation.Index2 >= 0 &&
                             operation.Length > 0 &&
                             operation.Index1 + operation.Length <= sourceSpan.Length &&
                             operation.Index2 + operation.Length <= destSpan.Length)
                         {
                             sourceSpan.Slice(operation.Index1, operation.Length)
                                 .CopyTo(destSpan.Slice(operation.Index2, operation.Length));
-                            
+
                             for (int i = 0; i < operation.Length; i++)
                             {
                                 RecordDelta(operation.BufferId2, operation.Index2 + i, destSpan[operation.Index2 + i]);
@@ -620,11 +620,11 @@ public class PlaybackService : IDisposable
                 break;
         }
     }
-    
+
     private int[] GetArray(int bufferId)
     {
         if (bufferId == 0) return State.MainArray;
-        
+
         // バッファー配列が存在しない場合のみ作成
         if (!State.BufferArrays.ContainsKey(bufferId))
         {
@@ -632,8 +632,8 @@ public class PlaybackService : IDisposable
         }
         return State.BufferArrays[bufferId];
     }
-    
-    
+
+
     /// <summary>
     /// フレームを進める（ComparisonModeService用の公開メソッド）
     /// </summary>
@@ -641,9 +641,9 @@ public class PlaybackService : IDisposable
     {
         if (State.CurrentOperationIndex >= _operations.Count)
             return;
-        
+
         ClearHighlights();
-        
+
         int actualOps = Math.Min(opsToProcess, _operations.Count - State.CurrentOperationIndex);
         for (int i = 0; i < actualOps && State.CurrentOperationIndex < _operations.Count; i++)
         {
@@ -651,17 +651,17 @@ public class PlaybackService : IDisposable
             ApplyOperation(operation, applyToArray: true, updateStats: true);
             State.CurrentOperationIndex++;
         }
-        
+
         // ハイライト更新（最後の操作）
         if (State.CurrentOperationIndex > 0 && State.CurrentOperationIndex < _operations.Count)
         {
             var lastOperation = _operations[State.CurrentOperationIndex - 1];
             ApplyOperation(lastOperation, applyToArray: false, updateStats: false);
         }
-        
+
         // StateChangedは呼ばない（ComparisonModeServiceが統一的に呼ぶ）
     }
-    
+
     private void ClearHighlights()
     {
         State.CompareIndices.Clear();
@@ -725,9 +725,9 @@ public class PlaybackService : IDisposable
     {
         > 50 => 10,
         > 20 => 20,
-        > 5  => 40,
-        > 2  => 80,
-        _    => 150,
+        > 5 => 40,
+        > 2 => 80,
+        _ => 150,
     };
 
     /// <summary>
@@ -791,12 +791,12 @@ public class PlaybackService : IDisposable
         State.MainArrayDelta = null;   // null = 全量更新フラグ
         State.BufferArrayDeltas = null;
     }
-    
+
     private void ResetStatistics()
     {
         // StatisticsContextがある場合は何もしない（イミュータブル）
     }
-    
+
     /// <summary>
     /// 完了ハイライトを指定時間後にクリア
     /// </summary>
@@ -805,11 +805,11 @@ public class PlaybackService : IDisposable
         // 既存のタイマーをキャンセル
         _completionHighlightCts?.Cancel();
         _completionHighlightCts = new CancellationTokenSource();
-        
+
         try
         {
             await Task.Delay(COMPLETION_HIGHLIGHT_DURATION_MS, _completionHighlightCts.Token);
-            
+
             // ハイライト表示だけをクリア（IsSortCompletedは維持）
             State.ShowCompletionHighlight = false;
             StateChanged?.Invoke();
@@ -819,7 +819,7 @@ public class PlaybackService : IDisposable
             // キャンセルされた場合は何もしない
         }
     }
-    
+
     public void Dispose()
     {
         StopLoop();

@@ -145,7 +145,7 @@ public class PDQSortTests
         PDQSort.Sort(array.AsSpan(), 2, 6, stats);
 
         // Expected: first 2 elements unchanged, middle 4 sorted, last 3 unchanged
-        await Assert.That(array).IsEquivalentTo([5, 3, 1, 2, 8, 9, 7, 4, 6 ], CollectionOrdering.Matching);
+        await Assert.That(array).IsEquivalentTo([5, 3, 1, 2, 8, 9, 7, 4, 6], CollectionOrdering.Matching);
     }
 
     [Test]
@@ -197,7 +197,7 @@ public class PDQSortTests
         var duplicates = new[] { 1, 2, 1, 3, 2, 1, 4, 3, 2, 1, 5, 4, 3, 2, 1 };
         PDQSort.Sort(duplicates.AsSpan(), stats);
 
-        await Assert.That(duplicates).IsEquivalentTo([1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5 ], CollectionOrdering.Matching);
+        await Assert.That(duplicates).IsEquivalentTo([1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5], CollectionOrdering.Matching);
     }
 
     [Test]

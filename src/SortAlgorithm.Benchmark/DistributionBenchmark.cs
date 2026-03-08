@@ -49,7 +49,7 @@ public class DistributionBenchmark
     [Benchmark]
     public void BucketSort()
     {
-        SortAlgorithm.Algorithms.BucketSort.Sort(_bucketArray.AsSpan(), x=> x);
+        SortAlgorithm.Algorithms.BucketSort.Sort(_bucketArray.AsSpan(), x => x);
     }
 
     [Benchmark]

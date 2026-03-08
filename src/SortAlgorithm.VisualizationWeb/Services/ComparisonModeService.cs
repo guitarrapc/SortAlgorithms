@@ -287,11 +287,11 @@ public class ComparisonModeService : IDisposable
     private async Task AddAlgorithmInternalAsync(string algorithmName, AlgorithmMetadata metadata)
     {
         var capturedArray = _state.InitialArray;
-        
+
         // プログレス表示用に処理中のアルゴリズム名を設定
         _state.ProcessingAlgorithmName = algorithmName;
         NotifyStateChanged();
-        
+
         var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
         var (operations, statistics, actualExecutionTime) =
             await _executor.ExecuteAndRecordAsync(capturedArray, metadata);
@@ -315,7 +315,7 @@ public class ComparisonModeService : IDisposable
             Metadata = metadata,
             Playback = playback,
         });
-        
+
         _state.ProcessingAlgorithmName = null;
 
         _debug.Log(

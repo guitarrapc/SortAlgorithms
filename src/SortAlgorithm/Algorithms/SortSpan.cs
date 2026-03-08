@@ -13,7 +13,7 @@ namespace SortAlgorithm.Algorithms;
 /// <typeparam name="T">The type of elements in the span</typeparam>
 /// <typeparam name="TComparer">The type of comparer to use for element comparisons</typeparam>
 /// <typeparam name="TContext">The type of context for tracking operations (use NullContext for zero-overhead fast path)</typeparam>
-internal readonly ref struct SortSpan<T, TComparer, TContext> 
+internal readonly ref struct SortSpan<T, TComparer, TContext>
     where TComparer : IComparer<T>
     where TContext : ISortContext
 {

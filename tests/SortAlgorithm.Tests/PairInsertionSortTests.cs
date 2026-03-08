@@ -207,23 +207,23 @@ public class PairInsertionSortTests
     }
 
 
-[Test]
-[MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-{
-    if (inputSample.Samples.Length > 1024)
-        return;
+    [Test]
+    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
+    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
+    {
+        if (inputSample.Samples.Length > 1024)
+            return;
 
-    var stats = new StatisticsContext();
-    var array = inputSample.Samples.ToArray();
-    PairInsertionSort.Sort(array.AsSpan(), stats);
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+        PairInsertionSort.Sort(array.AsSpan(), stats);
 
-    await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-    await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
+        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
+        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
 
-    // Pair Insertion Sort writes pairs even when data is sorted
-    // The number of writes depends on whether data is truly sorted or not
-    // For sorted data: writes = 2 * number_of_pairs (because we read pairs upfront)
+        // Pair Insertion Sort writes pairs even when data is sorted
+        // The number of writes depends on whether data is truly sorted or not
+        // For sorted data: writes = 2 * number_of_pairs (because we read pairs upfront)
         // Just verify writes occurred and no swaps
         await Assert.That(stats.IndexWriteCount > 0UL).IsTrue();
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);

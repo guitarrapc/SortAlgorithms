@@ -145,7 +145,7 @@ public class IntroSortTests
         IntroSort.Sort(array.AsSpan(), 2, 6, stats);
 
         // Expected: first 2 elements unchanged, middle 4 sorted, last 3 unchanged
-        await Assert.That(array).IsEquivalentTo([5, 3, 1, 2, 8, 9, 7, 4, 6 ], CollectionOrdering.Matching);
+        await Assert.That(array).IsEquivalentTo([5, 3, 1, 2, 8, 9, 7, 4, 6], CollectionOrdering.Matching);
     }
 
     [Test]
@@ -197,7 +197,7 @@ public class IntroSortTests
         var duplicates = new[] { 1, 2, 1, 3, 2, 1, 4, 3, 2, 1, 5, 4, 3, 2, 1 };
         IntroSort.Sort(duplicates.AsSpan(), stats);
 
-        await Assert.That(duplicates).IsEquivalentTo([1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5 ], CollectionOrdering.Matching);
+        await Assert.That(duplicates).IsEquivalentTo([1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5], CollectionOrdering.Matching);
     }
 
     [Test]
@@ -394,7 +394,7 @@ public class IntroSortTests
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
 
         // Verify array is still correct (all values unchanged)
-        foreach(var item in sameValues) await Assert.That(item).IsEqualTo(42);
+        foreach (var item in sameValues) await Assert.That(item).IsEqualTo(42);
 
         var minIndexReads = stats.CompareCount;
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");

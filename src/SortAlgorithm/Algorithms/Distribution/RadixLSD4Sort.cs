@@ -125,7 +125,7 @@ public static class RadixLSD4Sort
             var tempBuffer = tempArray.AsSpan(0, span.Length);
             var keys = keysArray.AsSpan(0, span.Length);
             var keysBuffer = keysBufferArray.AsSpan(0, span.Length);
-            
+
             // Use stackalloc for small fixed-size bucket offsets (5 ints = 20 bytes)
             Span<int> bucketOffsets = stackalloc int[RadixSize + 1];
 
