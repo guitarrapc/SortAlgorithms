@@ -246,6 +246,24 @@ wwwroot/locales/
       "description": "Fully randomized array"
     }
     // ... 各パターン
+  },
+
+  // ── 統計比較ダイアログ (ComparisonStatsTable.razor) ──
+  "comparisonStats": {
+    "title": "Statistics Comparison",
+    "sortBy": "Sort by",
+    "execTime": "Exec Time",
+    "algorithm": "Algorithm",
+    "compares": "Compares",
+    "swaps": "Swaps",
+    "reads": "Reads",
+    "writes": "Writes",
+    "copy": "Copy",
+    "copyToClipboard": "Copy to Clipboard",
+    "copyTsv": "TSV (Excel)",
+    "copyJson": "JSON",
+    "copyMarkdown": "Markdown",
+    "close": "Close"
   }
 }
 ```
@@ -260,9 +278,12 @@ public sealed class LocalizationService
 {
     private readonly HttpClient _http;
     private JsonElement _currentStrings;
-    private JsonElement _fallbackStrings; // 常に英語を保持
+    private JsonElement _fallbackStrings; // 常に en を保持
 
     public string CurrentLanguage { get; private set; } = "en";
+
+    // JSON ロード完了フラグ。App.razor の <Router> ゲートに使用
+    public bool IsInitialized { get; private set; }
 
     // サポート言語一覧。言語追加時はここに追加するだけ
     public static readonly string[] SupportedLanguages = ["en", "ja"];
@@ -272,11 +293,14 @@ public sealed class LocalizationService
     {
         "en" => "English",
         "ja" => "日本語",
-        _ => lang
+        _ => lang,
     };
 
     // 言語変更イベント (UI 再レンダリングのトリガー)
     public event Action? OnLanguageChanged;
+
+    // HttpClient を受け取るコンストラクタ (DI はファクトリラムダで登録)
+    public LocalizationService(HttpClient http) { ... }
 
     // キー引き: L["settings.title"] → ネスト解決 → "Settings"
     public string this[string key] => Resolve(key);
@@ -284,11 +308,12 @@ public sealed class LocalizationService
     // プレースホルダー付き: L["index.completedCount", completed, total]
     public string this[string key, params object[] args] => FormatResolved(key, args);
 
-    // 初期化 (ブラウザ言語検出 + JSON ロード)
+    // 初期化 (ブラウザ言語検出 + JSON ロード)。完了後 IsInitialized = true + OnLanguageChanged 発火
     public async Task InitializeAsync(IJSRuntime js) { ... }
 
     // 言語切り替え (JSON ロード + localStorage 保存 + イベント発火)
-    public async Task SetLanguageAsync(string lang) { ... }
+    // IJSRuntime を引数で受け取る (Singleton サービスはスコープを跨いで保持しないため)
+    public async Task SetLanguageAsync(string lang, IJSRuntime js) { ... }
 }
 ```
 
@@ -303,9 +328,12 @@ public sealed class LocalizationService
 
 ### DI 登録
 
+`LocalizationService` は Singleton だが内部で `HttpClient` を使う。Blazor WASM の DI が登録する `HttpClient` はスコープサービスのため、直接 `AddSingleton<LocalizationService>()` で解決させると DI 例外が発生する。専用の `HttpClient` インスタンスをファクトリラムダで渡す。
+
 ```csharp
 // Program.cs
-builder.Services.AddSingleton<LocalizationService>();
+builder.Services.AddSingleton<LocalizationService>(_ =>
+    new LocalizationService(new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) }));
 ```
 
 ### JS Interop
@@ -383,9 +411,44 @@ SetLanguageAsync("ja") 呼び出し
 <button title="@L["common.close"]">✕</button>
 ```
 
-### 言語変更イベントの購読
+### 初期化ゲートと言語変更イベントの購読
 
-`OnLanguageChanged` を購読して `StateHasChanged()` を呼ぶ必要がある。これは各コンポーネントで個別にやると煩雑なため、初期化タイミングで `MainLayout` がまとめてハンドルし、`CascadingValue` を使ってカスケードで更新が走るようにする。
+JSON ロード完了前に `<Router>` が動作すると生キーが一瞬表示される。`App.razor` で `L.IsInitialized` を条件にして `<Router>` をゲートする。`InitializeAsync` の呼び出しも `App.razor` の `OnAfterRenderAsync` で行う。
+
+```razor
+@* App.razor *@
+@inject IJSRuntime JS
+@inject LocalizationService L
+@implements IDisposable
+
+@if (L.IsInitialized)
+{
+    <Router AppAssembly="@typeof(Program).Assembly">
+        ...
+    </Router>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        L.OnLanguageChanged += HandleLanguageChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await L.InitializeAsync(JS);
+        }
+    }
+
+    private void HandleLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.OnLanguageChanged -= HandleLanguageChanged;
+}
+```
+
+`MainLayout.razor` も `OnLanguageChanged` を購読して再レンダリングをトリガーする。
 
 ```razor
 @* MainLayout.razor *@
@@ -454,15 +517,22 @@ SetLanguageAsync("ja") 呼び出し
 - `TimeComplexity`, `SpaceComplexity`: 翻訳しない。数式表現
 - `TutorialDescription`: 翻訳対象。JSON の `algorithmDescriptions.{id}.tutorial` から取得
 
-`AlgorithmRegistry` にアルゴリズム ID (文字列キー) を追加し、`LocalizationService` 経由で説明文を引く:
+`AlgorithmMetadata` にアルゴリズム ID (文字列キー) を追加し、`LocalizationService` 経由で説明文を引く。
+C# 側の `TutorialDescription` プロパティは**削除済み**。説明文は JSON のみで管理する:
 
 ```csharp
-// AlgorithmInfo に追加
-public string AlgorithmId { get; init; } // e.g. "BubbleSort"
+// AlgorithmMetadata に追加
+public string AlgorithmId { get; init; } = string.Empty; // e.g. "BubbleSort"
 
 // 説明文取得
+// キーが JSON に存在しない場合は string.Empty を返す (キー文字列をそのまま返さない)
 public string GetLocalizedTutorial(LocalizationService l)
-    => l[$"algorithmDescriptions.{AlgorithmId}.tutorial"];
+{
+    if (string.IsNullOrEmpty(AlgorithmId)) return string.Empty;
+    var key = $"algorithmDescriptions.{AlgorithmId}.tutorial";
+    var result = l[key];
+    return result == key ? string.Empty : result;
+}
 ```
 
 ### ArrayPatternRegistry
@@ -502,83 +572,3 @@ public void AllKeysInEnglishExistInJapanese()
 - ブラウザ言語を `en` に設定して初回アクセス → 英語 UI
 - Settings で言語切り替え → 即座に UI 反映
 - ページリロード → localStorage の言語設定が維持される
-
----
-
-## Implementation Phases
-
-### Phase 1: Infrastructure (新規ファイルのみ、既存コード変更なし)
-
-**目的:** ローカライゼーション基盤の構築
-
-**作業内容:**
-1. `wwwroot/locales/en.json` を作成 (全キーを定義)
-2. `wwwroot/locales/ja.json` を作成 (全キーの日本語訳)
-3. `Services/LocalizationService.cs` を作成
-4. `stateStorage.js` に `getBrowserLanguage` メソッド追加
-5. `Program.cs` に `LocalizationService` の DI 登録追加
-
-**検証:** `LocalizationService` がキーを正しく解決できることを確認
-
-### Phase 2: Settings UI + Language Detection (Settings のみ変更)
-
-**目的:** 言語切り替え機能の提供
-
-**作業内容:**
-1. `MainLayout.razor` に `LocalizationService` の初期化と `OnLanguageChanged` 購読を追加
-2. `SettingsModal.razor` に Language セクション追加
-3. `Index.razor` の `OnAfterRenderAsync` に `sortvis.language` の永続化を追加
-
-**検証:** Settings で言語が切り替わり、リロード後も維持されることを確認
-
-### Phase 3: Core Pages (メイン画面のローカライズ)
-
-**目的:** 主要 UI ラベルのローカライズ
-
-**対象コンポーネント:**
-1. `NavMenu.razor` — "Home", "Tutorial"
-2. `NotFound.razor` — 404 テキスト
-3. `PlayControlBar.razor` — Play/Pause/Stop ツールチップ
-4. `SortCard.razor` — 空状態テキスト
-5. `SortStatsSummary.razor` — Time/Cmp/Swp ラベル
-6. `Index.razor` — タイトル、ステータステキスト、ボタンラベル
-
-**検証:** 各コンポーネントの文字列が切り替わることを確認
-
-### Phase 4: Panels (パネル類のローカライズ)
-
-**目的:** 設定・操作パネルのローカライズ
-
-**対象コンポーネント:**
-1. `QuickAccessPanel.razor` — Sort Setup/Appearance/Speed のラベル全般
-2. `SettingsModal.razor` — セクション名、ラベル、ヒントテキスト
-
-**検証:** パネル内の全テキストが切り替わることを確認
-
-### Phase 5: Tutorial Page (チュートリアルのローカライズ)
-
-**目的:** チュートリアルの UI テキストローカライズ
-
-**対象コンポーネント:**
-1. `TutorialPage.razor` — ステップ表示、速度ラベル、操作ガイド、レンダラー名
-
-**検証:** チュートリアル全体が問題なく動作することを確認
-
-### Phase 6: Registry Descriptions (説明文のローカライズ)
-
-**目的:** アルゴリズム・パターンの説明文ローカライズ
-
-**作業内容:**
-1. `AlgorithmRegistry` にアルゴリズム ID を追加
-2. `ArrayPatternRegistry` にパターン ID を追加
-3. チュートリアル説明文を JSON から取得するように変更
-4. パターン名・説明文を JSON から取得するように変更
-
-**検証:** 説明文が言語に応じて切り替わることを確認
-
-### Phase 7: Testing (品質保証)
-
-**作業内容:**
-1. キー網羅テスト (en.json と ja.json のキー差分検出)
-2. `LocalizationService` のユニットテスト
-3. ブラウザ言語検出の手動テスト
