@@ -372,9 +372,9 @@
 
     // ─── ナビゲーション ────────────────────────────────────────────────────
 
-    private async Task NavigateToHome()
+    private void NavigateToHome()
     {
-        await JS.InvokeVoidAsync("history.back");
+        Navigation.NavigateTo(NavigationState.LastIndexUrl ?? "/");
     }
 
     // ─── ライフサイクル ────────────────────────────────────────────────────
