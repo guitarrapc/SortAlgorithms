@@ -115,6 +115,14 @@
         transform: translateY(-1px);
     }
 
+    .stats-icon-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        animation: none;
+        box-shadow: none;
+        border-color: var(--border-color);
+    }
+
 @keyframes stats-glow-pulse {
     0%, 100% {
         box-shadow: 0 0 5px rgba(200, 170, 110, 0.35);
