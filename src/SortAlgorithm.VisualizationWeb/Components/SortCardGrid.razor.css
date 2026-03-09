@@ -37,7 +37,7 @@
 }
 
 .carousel-dot--active {
-    background: var(--color-compare);
+    background: var(--color-accent);
     transform: scale(1.3);
 }
 
