@@ -247,6 +247,7 @@
         var qs = uri.Query.TrimStart('?');
         if (!string.IsNullOrEmpty(qs))
         {
+            var parsedCards = new List<string>();
             foreach (var pair in qs.Split('&'))
             {
                 var parts = pair.Split('=', 2);
@@ -273,16 +274,17 @@
                             _selectedVisualizationMode = mode;
                         break;
                     case "cards":
-                        _initialCardAlgorithms = val.Split('|', StringSplitOptions.RemoveEmptyEntries)
+                        // 複数の cards パラメータ（cards=A&cards=B）を累積する（上書きしない）
+                        parsedCards.AddRange(val.Split('|', StringSplitOptions.RemoveEmptyEntries)
                             .Select(a => AlgorithmRegistry.GetAllAlgorithms()
                                 .FirstOrDefault(r => string.Equals(r.Name, a, StringComparison.OrdinalIgnoreCase))?.Name)
                             .Where(n => n != null)
-                            .Cast<string>()
-                            .Distinct()
-                            .ToList();
+                            .Cast<string>());
                         break;
                 }
             }
+            // 複数 cards パラメータの重複を排除して確定
+            _initialCardAlgorithms = parsedCards.Distinct().ToList();
         }
     }
 
