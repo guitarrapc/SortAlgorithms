@@ -275,17 +275,18 @@
                             break;
                         case "mode":
                             if (!seenKeys.Add("mode")) break;
-                            if (Enum.TryParse<VisualizationMode>(val, ignoreCase: true, out var mode))
+                            if (Enum.TryParse<VisualizationMode>(val, ignoreCase: true, out var mode) && Enum.IsDefined(mode))
                                 _selectedVisualizationMode = mode;
                             break;
                         case "cards":
                             // 複数の cards パラメータ（cards=A&cards=B）を累積する（上書きしない）
-                            parsedCards.AddRange(val.Split('|', StringSplitOptions.RemoveEmptyEntries)
-                                .Take(ComparisonState.MaxComparisons)
-                                .Select(a => AlgorithmRegistry.GetAllAlgorithms()
-                                    .FirstOrDefault(r => string.Equals(r.Name, a, StringComparison.OrdinalIgnoreCase))?.Name)
-                                .Where(n => n != null)
-                                .Cast<string>());
+                            if (parsedCards.Count < ComparisonState.MaxComparisons)
+                                parsedCards.AddRange(val.Split('|', StringSplitOptions.RemoveEmptyEntries)
+                                    .Take(ComparisonState.MaxComparisons - parsedCards.Count)
+                                    .Select(a => AlgorithmRegistry.GetAllAlgorithms()
+                                        .FirstOrDefault(r => string.Equals(r.Name, a, StringComparison.OrdinalIgnoreCase))?.Name)
+                                    .Where(n => n != null)
+                                    .Cast<string>());
                             break;
                     }
             }
