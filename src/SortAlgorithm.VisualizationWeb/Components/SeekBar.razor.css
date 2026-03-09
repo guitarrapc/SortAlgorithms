@@ -48,6 +48,10 @@
     white-space: nowrap;
 }
 
+.time-display--full {
+    white-space: pre; /* PadLeft のスペースを保持して幅を固定 */
+}
+
 .time-display--compact {
     display: none;
     min-width: 6ch;

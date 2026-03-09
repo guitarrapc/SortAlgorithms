@@ -47,7 +47,16 @@
         ? (double)CurrentIndex / TotalOperations * 100
         : 0;
 
-    private string ProgressText => $"{CurrentIndex:N0} / {TotalOperations:N0} ops ({ProgressPercentage:F1}%)";
+    private string ProgressText
+    {
+        get
+        {
+            var total = TotalOperations.ToString("N0");
+            var current = CurrentIndex.ToString("N0").PadLeft(total.Length);
+            var pct = ProgressPercentage.ToString("F1").PadLeft(5); // "100.0" が最大 5 文字
+            return $"{current} / {total} ops ({pct}%)";
+        }
+    }
 
     private double MarkerPercent(SeekBarMarker marker) =>
         TotalOperations > 0 ? (double)marker.CompletionOps / TotalOperations * 100 : 0;
