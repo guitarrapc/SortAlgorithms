@@ -133,24 +133,24 @@
 }
 
 @code {
-[Parameter, EditorRequired]
-public List<ComparisonInstance> Instances { get; set; } = null!;
+    [Parameter, EditorRequired]
+    public List<ComparisonInstance> Instances { get; set; } = null!;
 
-[Parameter]
-public bool IsOpen { get; set; } = false;
+    [Parameter]
+    public bool IsOpen { get; set; } = false;
 
-[Parameter]
-public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter]
+    public EventCallback<bool> IsOpenChanged { get; set; }
 
-private string _sortColumn = "ExecTime";
-private bool _showCopyMenu = false;
+    private string _sortColumn = "ExecTime";
+    private bool _showCopyMenu = false;
 
-private enum CopyFormat
-{
-    Tsv,
-    Json,
-    Markdown
-}
+    private enum CopyFormat
+    {
+        Tsv,
+        Json,
+        Markdown
+    }
 
     private static string GetRankLabel(int rank) => rank switch
     {
