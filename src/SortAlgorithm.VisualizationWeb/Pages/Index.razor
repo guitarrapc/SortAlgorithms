@@ -242,7 +242,29 @@
         ComparisonMode.OnStateChanged += OnStateChanged;
         DebugSettings.OnChanged += OnStateChanged;
 
-        // URL Query String からコンテンツ状態を復元
+        RestoreStateFromUrl();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("debugHelper.setDebugMode", DebugSettings.IsEnabled);
+            await LoadPreferencesAsync();
+            await RestoreCardsFromUrlAsync();
+            return;
+        }
+
+        if (_preferencesDirty)
+        {
+            _preferencesDirty = false;
+            await SavePreferencesAsync();
+        }
+    }
+
+    // ── URL 読み込み（コンテンツ状態） ─────────────────────────────────────────
+    private void RestoreStateFromUrl()
+    {
         var parsedCards = new List<string>();
         try
         {
@@ -302,23 +324,6 @@
         {
             // 例外発生時も途中まで蓄積されたカード情報を確定する
             _initialCardAlgorithms = parsedCards.Distinct().ToList();
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("debugHelper.setDebugMode", DebugSettings.IsEnabled);
-            await LoadPreferencesAsync();
-            await RestoreCardsFromUrlAsync();
-            return;
-        }
-
-        if (_preferencesDirty)
-        {
-            _preferencesDirty = false;
-            await SavePreferencesAsync();
         }
     }
 
