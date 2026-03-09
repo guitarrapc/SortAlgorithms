@@ -15,6 +15,7 @@ public sealed class LocalizationService
     private bool _initialized;
 
     public string CurrentLanguage { get; private set; } = "en";
+    public bool IsInitialized { get; private set; }
 
     /// <summary>サポートする言語コード一覧。言語追加時はここに追加するだけ。</summary>
     public static readonly string[] SupportedLanguages = ["en", "ja"];
@@ -83,6 +84,8 @@ public sealed class LocalizationService
 
         CurrentLanguage = lang;
         _initialized = true;
+        IsInitialized = true;
+        OnLanguageChanged?.Invoke();
     }
 
     /// <summary>言語を切り替える。JSON をフェッチし localStorage に保存してイベントを発火する。</summary>
