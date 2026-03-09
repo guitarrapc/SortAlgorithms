@@ -269,9 +269,9 @@ html, body {
             color: var(--text-primary);
         }
 
-        .ui-card__title--toggle:hover .ui-card__toggle-icon {
-            color: var(--color-accent);
-        }
+            .ui-card__title--toggle:hover .ui-card__toggle-icon {
+                color: var(--color-accent);
+            }
 
         /* タップ時のフラッシュフィードバック */
         .ui-card__title--toggle:active {
@@ -288,11 +288,11 @@ html, body {
         padding-bottom: 6px;
     }
 
-    .ui-card--collapsed .ui-card__title--toggle {
-        border-bottom: none;
-        padding-bottom: 0;
-        margin-bottom: 0;
-    }
+        .ui-card--collapsed .ui-card__title--toggle {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
 
     .ui-card__body--collapsed {
         display: none;
@@ -305,8 +305,10 @@ html, body {
    html/body/#app はコンポーネントスコープ外のため app.css で制御
    ============================================= */
 @media (min-width: 768px) and (max-width: 1279px) {
+
     /* TutorialPage + Index（タブレットは全ページスクロール可能） */
-    html, body {
+    html,
+    body {
         height: auto;
         min-height: 100%;
         overflow: auto;
@@ -322,8 +324,10 @@ html, body {
    スマホ (〜767px)
    ============================================= */
 @media (max-width: 767px) {
+
     /* スクロールを有効化 */
-    html, body {
+    html,
+    body {
         height: auto;
         min-height: 100%;
         overflow: auto;
@@ -413,7 +417,7 @@ input[type="range"] {
         border-radius: 50%;
         background-color: var(--color-accent);
         cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     input[type="range"]::-moz-range-thumb {
@@ -423,7 +427,7 @@ input[type="range"] {
         background-color: var(--color-accent);
         cursor: pointer;
         border: none;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     input[type="range"]::-moz-range-progress {
@@ -483,45 +487,75 @@ input[type="range"] {
 /* Animated sorting bars */
 .loading-bars {
     position: absolute;
-    right: 2rem;
-    bottom: 2rem;
+    right: clamp(1rem, 3vw, 2rem);
+    bottom: clamp(1rem, 3vh, 2rem);
     display: flex;
     align-items: flex-end;
-    gap: 3px;
-    height: 80px;
+    gap: clamp(2px, 0.3vw, 3px);
+    height: clamp(40px, 10vh, 80px);
     padding: 0 0.5rem;
 }
 
 .loading-bar {
-    width: 6px;
+    width: clamp(3px, 0.5vw, 6px);
     border-radius: 2px 2px 0 0;
-    animation: bar-sort 2.8s cubic-bezier(.4,0,.2,1) infinite;
+    animation: bar-sort 2.8s cubic-bezier(.4, 0, .2, 1) infinite;
     animation-delay: calc(var(--i) * 0.12s);
 }
 
-/* モバイル対応 */
+/* タブレット対応 */
 @media (max-width: 768px) {
     .loading-bars {
-        right: 1rem;
-        bottom: 1rem;
-        gap: 2px;
-        height: 50px;
-        padding: 0 0.25rem;
+        height: clamp(30px, 8vh, 50px);
     }
 
     .loading-bar {
-        width: 4px;
+        width: clamp(3px, 0.8vw, 4px);
+    }
+}
+
+/* 極小画面では非表示 */
+@media (max-width: 400px) {
+    .loading-bars {
+        display: none;
     }
 }
 
 @keyframes bar-sort {
-    0%   { height: var(--h); background: #3b82f6; }
-    15%  { background: #a855f7; transform: translateY(-8px); }
-    30%  { height: calc(100% - (100% - var(--h))); background: #fbbf24; }
-    50%  { height: calc(var(--i) * 6% + 8%); background: #ef4444; transform: translateY(0); }
-    70%  { background: #10b981; }
-    85%  { height: calc(var(--i) * 5.5% + 5%); background: #10b981; }
-    100% { height: var(--h); background: #3b82f6; }
+    0% {
+        height: var(--h);
+        background: #3b82f6;
+    }
+
+    15% {
+        background: #a855f7;
+        transform: translateY(-8px);
+    }
+
+    30% {
+        height: calc(100% - (100% - var(--h)));
+        background: #fbbf24;
+    }
+
+    50% {
+        height: calc(var(--i) * 6% + 8%);
+        background: #ef4444;
+        transform: translateY(0);
+    }
+
+    70% {
+        background: #10b981;
+    }
+
+    85% {
+        height: calc(var(--i) * 5.5% + 5%);
+        background: #10b981;
+    }
+
+    100% {
+        height: var(--h);
+        background: #3b82f6;
+    }
 }
 
 /* Title */
@@ -530,12 +564,11 @@ input[type="range"] {
     font-size: clamp(3rem, 15vw, 8rem);
     font-weight: 700;
     letter-spacing: 0.04em;
-    background: linear-gradient(#c8aa6e,#785a28);
+    background: linear-gradient(#c8aa6e, #785a28);
     background-clip: text;
     -webkit-text-fill-color: transparent;
     padding: 0 1rem;
     text-align: center;
-
     /* glow animation */
     color: #ffffff;
     text-shadow: 0 0 30px rgba(0, 127, 168, 0.35);
@@ -543,8 +576,16 @@ input[type="range"] {
 }
 
 @keyframes title-pulse {
-    0%, 100% { opacity: 0.8; text-shadow: 0 0 30px rgba(0, 127, 168, 0.25); }
-    50%      { opacity: 1;   text-shadow: 0 0 40px rgba(0, 127, 168, 0.5); }
+
+    0%, 100% {
+        opacity: 0.8;
+        text-shadow: 0 0 30px rgba(0, 127, 168, 0.25);
+    }
+
+    50% {
+        opacity: 1;
+        text-shadow: 0 0 40px rgba(0, 127, 168, 0.5);
+    }
 }
 
 /* Subtitle */
@@ -614,13 +655,18 @@ input[type="range"] {
     background-size: 200% 100%;
     border-radius: 2px;
     transition: width 0.15s ease-out;
-    box-shadow: 0 0 8px rgba(127,168,111,0.5);
+    box-shadow: 0 0 8px rgba(127, 168, 111, 0.5);
     animation: progress-shimmer 1.8s linear infinite;
 }
 
 @keyframes progress-shimmer {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 /* Percentage text */
@@ -637,7 +683,8 @@ h1:focus {
     outline: none;
 }
 
-a, .btn-link {
+a,
+.btn-link {
     color: #0071c1;
 }
 
@@ -647,7 +694,11 @@ a, .btn-link {
     border-color: #1861ac;
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
     box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
@@ -704,12 +755,14 @@ code {
     color: #c02d76;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+.form-floating > .form-control-plaintext::placeholder,
+.form-floating > .form-control::placeholder {
     color: var(--bs-secondary-color);
     text-align: end;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+.form-floating > .form-control-plaintext:focus::placeholder,
+.form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
 
