@@ -56,7 +56,15 @@
 .share-option__icon {
     font-size: 18px;
     width: 24px;
-    text-align: center;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.share-option__icon svg {
+    width: 18px;
+    height: 18px;
 }
 
 .share-option__label {
