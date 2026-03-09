@@ -121,6 +121,11 @@ public class ComparisonModeService : IDisposable
         if (IsAddingAlgorithm) return;
         if (_state.InitialArray.Length == 0) return;
 
+        // 新アルゴリズム追加前に全インスタンスを先頭に戻す（再生位置のリセット）。
+        // ソートの記録データ（操作列・統計）は再計算せず再利用する。
+        foreach (var p in _playbackServices) p.Stop();
+        GlobalSeekIndex = 0;
+
         IsAddingAlgorithm = true;
         NotifyStateChanged();
 
@@ -153,6 +158,10 @@ public class ComparisonModeService : IDisposable
         if (index < 0 || index >= _state.Instances.Count) return;
         if (_state.InitialArray.Length == 0) return;
         if (IsAddingAlgorithm) return;
+
+        // 差し替え前に全インスタンスを先頭に戻す（再生位置のリセット）。
+        foreach (var p in _playbackServices) p.Stop();
+        GlobalSeekIndex = 0;
 
         IsAddingAlgorithm = true;
         NotifyStateChanged();
