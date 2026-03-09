@@ -131,12 +131,24 @@
             <SeekBar CurrentIndex="GetSeekState().CurrentOperationIndex"
                  TotalOperations="GetSeekState().TotalOperations"
                  OnSeek="OnSeek" />
-            <button class="header__icon-btn" @onclick="() => _statsTableOpen = !_statsTableOpen" title="@L["comparisonStats.title"]">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="20" x2="18" y2="10"></line>
-                    <line x1="12" y1="20" x2="12" y2="4"></line>
-                    <line x1="6" y1="20" x2="6" y2="14"></line>
-                    <line x1="2" y1="20" x2="22" y2="20"></line>
+            <button class="header__icon-btn stats-icon-btn" @onclick="() => _statsTableOpen = !_statsTableOpen" title="@L["comparisonStats.title"]">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                    <defs>
+                        <linearGradient id="statsBarGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#c8aa6e;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#785a28;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <g fill="url(#statsBarGradient)">
+                        <rect x="5" y="17" width="1.8" height="6" rx="0.5"/>
+                        <rect x="8" y="14" width="1.8" height="9" rx="0.5"/>
+                        <rect x="11" y="12" width="1.8" height="11" rx="0.5"/>
+                        <rect x="14" y="9" width="1.8" height="14" rx="0.5"/>
+                        <rect x="17" y="13" width="1.8" height="10" rx="0.5"/>
+                        <rect x="20" y="11" width="1.8" height="12" rx="0.5"/>
+                        <rect x="23" y="15" width="1.8" height="8" rx="0.5"/>
+                        <rect x="26" y="8" width="1.8" height="15" rx="0.5"/>
+                    </g>
                 </svg>
             </button>
         </div>

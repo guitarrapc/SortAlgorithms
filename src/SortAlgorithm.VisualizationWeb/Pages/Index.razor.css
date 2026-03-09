@@ -99,6 +99,11 @@
     flex: 1;
 }
 
+.stats-icon-btn svg {
+    width: 28px;
+    height: 28px;
+}
+
 /* タブレット/モバイル: カードパネルを上段に、メインエリアを下段にシフト */
 @media (max-width: 1279px) {
     .visualization-page {
