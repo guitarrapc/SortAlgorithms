@@ -242,48 +242,7 @@
         ComparisonMode.OnStateChanged += OnStateChanged;
         DebugSettings.OnChanged += OnStateChanged;
 
-        // URL Query String からコンテンツ状態を復元
-        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
-        var qs = uri.Query.TrimStart('?');
-        if (!string.IsNullOrEmpty(qs))
-        {
-            foreach (var pair in qs.Split('&'))
-            {
-                var parts = pair.Split('=', 2);
-                if (parts.Length != 2) continue;
-                var key = Uri.UnescapeDataString(parts[0]);
-                var val = Uri.UnescapeDataString(parts[1].Replace("+", " "));
-                switch (key.ToLowerInvariant())
-                {
-                    case "algo":
-                        var algo = AlgorithmRegistry.GetAllAlgorithms()
-                            .FirstOrDefault(a => string.Equals(a.Name, val, StringComparison.OrdinalIgnoreCase));
-                        if (algo != null) _selectedAlgorithm = algo.Name;
-                        break;
-                    case "size":
-                        if (int.TryParse(val, out var size)) _arraySize = size;
-                        break;
-                    case "pattern":
-                        var pattern = ArrayPatternRegistry.GetAllPatterns()
-                            .FirstOrDefault(p => string.Equals(p.Name, val, StringComparison.OrdinalIgnoreCase));
-                        if (pattern != null) _selectedPatternName = pattern.Name;
-                        break;
-                    case "mode":
-                        if (Enum.TryParse<VisualizationMode>(val, ignoreCase: true, out var mode))
-                            _selectedVisualizationMode = mode;
-                        break;
-                    case "cards":
-                        _initialCardAlgorithms = val.Split('|', StringSplitOptions.RemoveEmptyEntries)
-                            .Select(a => AlgorithmRegistry.GetAllAlgorithms()
-                                .FirstOrDefault(r => string.Equals(r.Name, a, StringComparison.OrdinalIgnoreCase))?.Name)
-                            .Where(n => n != null)
-                            .Cast<string>()
-                            .Distinct()
-                            .ToList();
-                        break;
-                }
-            }
-        }
+        RestoreStateFromUrl();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -300,6 +259,71 @@
         {
             _preferencesDirty = false;
             await SavePreferencesAsync();
+        }
+    }
+
+    // ── URL 読み込み（コンテンツ状態） ─────────────────────────────────────────
+    private void RestoreStateFromUrl()
+    {
+        var parsedCards = new List<string>();
+        try
+        {
+            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+            var qs = uri.Query.TrimStart('?');
+            if (!string.IsNullOrEmpty(qs))
+            {
+                var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var pair in qs.Split('&'))
+                {
+                    var parts = pair.Split('=', 2);
+                    if (parts.Length != 2) continue;
+                    var key = Uri.UnescapeDataString(parts[0]);
+                    var val = Uri.UnescapeDataString(parts[1].Replace("+", " "));
+                    switch (key.ToLowerInvariant())
+                    {
+                        case "algo":
+                            if (!seenKeys.Add("algo")) break;
+                            var algo = AlgorithmRegistry.GetAllAlgorithms()
+                                .FirstOrDefault(a => string.Equals(a.Name, val, StringComparison.OrdinalIgnoreCase));
+                            if (algo != null) _selectedAlgorithm = algo.Name;
+                            break;
+                        case "size":
+                            if (!seenKeys.Add("size")) break;
+                            if (int.TryParse(val, out var size) && size >= 1 && size <= 8192) _arraySize = size;
+                            break;
+                        case "pattern":
+                            if (!seenKeys.Add("pattern")) break;
+                            var pattern = ArrayPatternRegistry.GetAllPatterns()
+                                .FirstOrDefault(p => string.Equals(p.Name, val, StringComparison.OrdinalIgnoreCase));
+                            if (pattern != null) _selectedPatternName = pattern.Name;
+                            break;
+                        case "mode":
+                            if (!seenKeys.Add("mode")) break;
+                            if (Enum.TryParse<VisualizationMode>(val, ignoreCase: true, out var mode) && Enum.IsDefined(mode))
+                                _selectedVisualizationMode = mode;
+                            break;
+                        case "cards":
+                            // 複数の cards パラメータ（cards=A&cards=B）を累積する（上書きしない）
+                            if (parsedCards.Count < ComparisonState.MaxComparisons)
+                                parsedCards.AddRange(val.Split('|', StringSplitOptions.RemoveEmptyEntries)
+                                    .Take(ComparisonState.MaxComparisons - parsedCards.Count)
+                                    .Select(a => AlgorithmRegistry.GetAllAlgorithms()
+                                        .FirstOrDefault(r => string.Equals(r.Name, a, StringComparison.OrdinalIgnoreCase))?.Name)
+                                    .Where(n => n != null)
+                                    .Cast<string>());
+                            break;
+                    }
+                }
+            }
+        }
+        catch (UriFormatException)
+        {
+            // 不正なパーセントエンコードは無視してデフォルト値で続行
+        }
+        finally
+        {
+            // 例外発生時も途中まで蓄積されたカード情報を確定する
+            _initialCardAlgorithms = parsedCards.Distinct().ToList();
         }
     }
 
