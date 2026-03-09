@@ -87,6 +87,51 @@
     min-height: 300px;
 }
 
+/* SeekBar / Stats ボタン 共有行 */
+.seek-stats-row {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+    gap: 10px;
+}
+
+.seek-stats-row ::deep .seek-bar {
+    flex: 1;
+}
+
+.stats-icon-btn svg {
+    width: 28px;
+    height: 28px;
+}
+
+.stats-icon-btn {
+    border-color: rgba(200, 170, 110, 0.45);
+    animation: stats-glow-pulse 2s ease-in-out infinite;
+}
+
+    .stats-icon-btn:hover {
+        background: rgba(200, 170, 110, 0.12);
+        border-color: #c8aa6e;
+        transform: translateY(-1px);
+    }
+
+    .stats-icon-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        animation: none;
+        box-shadow: none;
+        border-color: var(--border-color);
+    }
+
+@keyframes stats-glow-pulse {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(200, 170, 110, 0.35);
+    }
+    50% {
+        box-shadow: 0 0 12px rgba(200, 170, 110, 0.65), 0 0 4px rgba(200, 170, 110, 0.4);
+    }
+}
+
 /* タブレット/モバイル: カードパネルを上段に、メインエリアを下段にシフト */
 @media (max-width: 1279px) {
     .visualization-page {

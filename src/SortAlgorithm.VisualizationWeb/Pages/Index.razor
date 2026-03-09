@@ -127,16 +127,36 @@
             }
         </div>
 
-        @if (ComparisonMode.State.Instances.Count <= 1)
-        {
-            <SeekBar CurrentIndex="GetSeekState().CurrentOperationIndex"
-                     TotalOperations="GetSeekState().TotalOperations"
-                     OnSeek="OnSeek" />
-        }
+        <div class="seek-stats-row">
+            <SeekBar CurrentIndex="@GetSeekCurrentIndex()"
+                 TotalOperations="@GetSeekMaxOps()"
+                 Markers="@GetSeekMarkers()"
+                 OnSeek="OnSeek" />
+            <button class="header__icon-btn stats-icon-btn" @onclick="() => _statsTableOpen = !_statsTableOpen" title="@L["comparisonStats.title"]" disabled="@(ComparisonMode.State.Instances.Count == 0)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                    <defs>
+                        <linearGradient id="statsBarGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#c8aa6e;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#785a28;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <g fill="url(#statsBarGradient)">
+                        <rect x="5" y="17" width="1.8" height="6" rx="0.5"/>
+                        <rect x="8" y="14" width="1.8" height="9" rx="0.5"/>
+                        <rect x="11" y="12" width="1.8" height="11" rx="0.5"/>
+                        <rect x="14" y="9" width="1.8" height="14" rx="0.5"/>
+                        <rect x="17" y="13" width="1.8" height="10" rx="0.5"/>
+                        <rect x="20" y="11" width="1.8" height="12" rx="0.5"/>
+                        <rect x="23" y="15" width="1.8" height="8" rx="0.5"/>
+                        <rect x="26" y="8" width="1.8" height="15" rx="0.5"/>
+                    </g>
+                </svg>
+            </button>
+        </div>
     </div>
 
-    @* 統計比較表（右側ドッキングパネル） *@
-    @if (ComparisonMode.State.Instances.Count > 1)
+    @* 統計比較表モーダル *@
+    @if (ComparisonMode.State.Instances.Count > 0)
     {
         <ComparisonStatsTable Instances="ComparisonMode.State.Instances" @bind-IsOpen="_statsTableOpen" />
     }
@@ -553,16 +573,35 @@
 
     private void OnSeek(int index)
     {
-        if (ComparisonMode.State.Instances.Count == 1)
+        var n = ComparisonMode.State.Instances.Count;
+        if (n == 1)
             ComparisonMode.State.Instances[0].Playback.SeekTo(index, throttle: true);
-        else
-            Playback.SeekTo(index, throttle: true);
+        else if (n > 1)
+            ComparisonMode.SeekAll(index);
     }
 
-    private VisualizationState GetSeekState() =>
-        ComparisonMode.State.Instances.Count == 1
-            ? ComparisonMode.State.Instances[0].Playback.State
-            : Playback.State;
+    private int GetSeekCurrentIndex()
+    {
+        var n = ComparisonMode.State.Instances.Count;
+        if (n == 1) return ComparisonMode.State.Instances[0].Playback.State.CurrentOperationIndex;
+        if (n > 1) return ComparisonMode.GlobalSeekIndex;
+        return Playback.State.CurrentOperationIndex;
+    }
+
+    private int GetSeekMaxOps()
+    {
+        var n = ComparisonMode.State.Instances.Count;
+        if (n == 1) return ComparisonMode.State.Instances[0].Playback.State.TotalOperations;
+        if (n > 1) return ComparisonMode.MaxOps;
+        return Playback.State.TotalOperations;
+    }
+
+    private IReadOnlyList<SeekBarMarker> GetSeekMarkers()
+    {
+        if (ComparisonMode.State.Instances.Count > 1)
+            return ComparisonMode.GetCompletionMarkers();
+        return [];
+    }
 
     private void OnVisualizationModeChanged()
     {
