@@ -24,6 +24,7 @@ window.seekBarInterop = {
       dotnetHelper.invokeMethodAsync('OnDrag', percentage);
     };
 
+    // ─── マウスイベント ──────────────────────────────────────────────────
     const onMouseDown = (e) => {
       isDragging = true;
       updatePosition(e.clientX);
@@ -41,9 +42,33 @@ window.seekBarInterop = {
       isDragging = false;
     };
 
+    // ─── タッチイベント ──────────────────────────────────────────────────
+    const onTouchStart = (e) => {
+      isDragging = true;
+      updatePosition(e.touches[0].clientX);
+      e.preventDefault();
+    };
+
+    const onTouchMove = (e) => {
+      if (isDragging) {
+        updatePosition(e.touches[0].clientX);
+        e.preventDefault();
+      }
+    };
+
+    const onTouchEnd = () => {
+      isDragging = false;
+    };
+
     element.addEventListener('mousedown', onMouseDown);
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+
+    // passive: false でタッチ中のページスクロールを抑止する
+    element.addEventListener('touchstart', onTouchStart, { passive: false });
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchcancel', onTouchEnd);
 
     // クリーンアップ関数を返す
     return {
@@ -51,6 +76,10 @@ window.seekBarInterop = {
         element.removeEventListener('mousedown', onMouseDown);
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+        element.removeEventListener('touchstart', onTouchStart);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
+        document.removeEventListener('touchcancel', onTouchEnd);
       }
     };
   }

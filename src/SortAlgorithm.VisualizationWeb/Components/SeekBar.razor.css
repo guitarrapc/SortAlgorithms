@@ -13,6 +13,7 @@
     background-color: #4A4A4A;
     border-radius: 4px;
     cursor: pointer;
+    touch-action: none;
 }
 
 .seek-progress {
@@ -33,6 +34,7 @@
     border-radius: 50%;
     cursor: grab;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    touch-action: none;
 }
 
     .seek-handle:active {
