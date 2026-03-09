@@ -126,7 +126,19 @@ public class ArrayPatternRegistry
             Name = name,
             Category = category,
             Generator = generator,
+            PatternId = ToId(name),
             Description = description
         });
+    }
+
+    private static string ToId(string name)
+    {
+        var parts = System.Text.RegularExpressions.Regex.Split(name, @"[^a-zA-Z0-9]+")
+            .Where(p => !string.IsNullOrEmpty(p))
+            .ToArray();
+        if (parts.Length == 0) return string.Empty;
+        var first = char.ToLowerInvariant(parts[0][0]) + (parts[0].Length > 1 ? parts[0][1..] : "");
+        var rest = parts.Skip(1).Select(p => char.ToUpperInvariant(p[0]) + (p.Length > 1 ? p[1..] : ""));
+        return first + string.Concat(rest);
     }
 }

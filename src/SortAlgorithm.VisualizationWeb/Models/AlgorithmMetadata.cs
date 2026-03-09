@@ -1,4 +1,5 @@
 ﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.VisualizationWeb.Services;
 
 namespace SortAlgorithm.VisualizationWeb.Models;
 
@@ -28,8 +29,17 @@ public record AlgorithmMetadata
     /// <summary>説明</summary>
     public string Description { get; init; } = string.Empty;
 
-    /// <summary>チュートリアルでの説明文（日本語、2〜3文）</summary>
-    public string TutorialDescription { get; init; } = string.Empty;
+    /// <summary>ローカライズ用アルゴリズムID (JSON キー)</summary>
+    public string AlgorithmId { get; init; } = string.Empty;
+
+    /// <summary>ローカライズされたチュートリアル説明文を返す。</summary>
+    public string GetLocalizedTutorial(LocalizationService l)
+    {
+        if (string.IsNullOrEmpty(AlgorithmId)) return string.Empty;
+        var key = $"algorithmDescriptions.{AlgorithmId}.tutorial";
+        var result = l[key];
+        return result == key ? string.Empty : result;
+    }
 
     /// <summary>
     /// チュートリアルで使用する初期配列の種類。
