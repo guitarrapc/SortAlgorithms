@@ -137,9 +137,8 @@ public class ArrayPatternRegistry
             .Where(p => !string.IsNullOrEmpty(p))
             .ToArray();
         if (parts.Length == 0) return string.Empty;
-        return string.Concat(
-            char.ToLowerInvariant(parts[0][0]) + (parts[0].Length > 1 ? parts[0][1..] : ""),
-            parts.Skip(1).Select(p => char.ToUpperInvariant(p[0]) + (p.Length > 1 ? p[1..] : ""))
-        );
+        var first = char.ToLowerInvariant(parts[0][0]) + (parts[0].Length > 1 ? parts[0][1..] : "");
+        var rest = parts.Skip(1).Select(p => char.ToUpperInvariant(p[0]) + (p.Length > 1 ? p[1..] : ""));
+        return first + string.Concat(rest);
     }
 }
