@@ -12,6 +12,28 @@ window.seekBarInterop = {
     return percentage;
   },
 
+  // DOM の .seek-marker 要素から現在のマーカー位置（0〜1）を取得
+  _getMarkerPercentages: function (element) {
+    return Array.from(element.querySelectorAll('.seek-marker'))
+      .map(m => parseFloat(m.style.left))
+      .filter(v => !isNaN(v))
+      .map(v => v / 100);
+  },
+
+  // 指定位置の近くにマーカーがあればスナップ（threshold はバー幅に対する比率）
+  _snapToMarker: function (percentage, markers, threshold) {
+    let closest = null;
+    let minDist = Infinity;
+    for (const m of markers) {
+      const dist = Math.abs(m - percentage);
+      if (dist < threshold && dist < minDist) {
+        minDist = dist;
+        closest = m;
+      }
+    }
+    return closest !== null ? closest : percentage;
+  },
+
   // ドラッグ&ドロップのセットアップ
   setupDragDrop: function (elementId, dotnetHelper) {
     const element = document.getElementById(elementId);
@@ -19,21 +41,30 @@ window.seekBarInterop = {
 
     let isDragging = false;
 
-    const updatePosition = (clientX) => {
-      const percentage = this.getClickPercentage(elementId, clientX);
-      dotnetHelper.invokeMethodAsync('OnDrag', percentage);
+    // タップ・クリック開始時のみマーカーにスナップ（16px 以内）
+    const SNAP_PX = 16;
+
+    const updatePosition = (clientX, snap) => {
+      let pct = this.getClickPercentage(elementId, clientX);
+      if (snap) {
+        const rect = element.getBoundingClientRect();
+        const threshold = rect.width > 0 ? SNAP_PX / rect.width : 0;
+        const markers = this._getMarkerPercentages(element);
+        pct = this._snapToMarker(pct, markers, threshold);
+      }
+      dotnetHelper.invokeMethodAsync('OnDrag', pct);
     };
 
     // ─── マウスイベント ──────────────────────────────────────────────────
     const onMouseDown = (e) => {
       isDragging = true;
-      updatePosition(e.clientX);
+      updatePosition(e.clientX, true); // クリック開始時はスナップあり
       e.preventDefault();
     };
 
     const onMouseMove = (e) => {
       if (isDragging) {
-        updatePosition(e.clientX);
+        updatePosition(e.clientX, false); // ドラッグ中はスナップなし
         e.preventDefault();
       }
     };
@@ -45,13 +76,13 @@ window.seekBarInterop = {
     // ─── タッチイベント ──────────────────────────────────────────────────
     const onTouchStart = (e) => {
       isDragging = true;
-      updatePosition(e.touches[0].clientX);
+      updatePosition(e.touches[0].clientX, true); // タップ開始時はスナップあり
       e.preventDefault();
     };
 
     const onTouchMove = (e) => {
       if (isDragging) {
-        updatePosition(e.touches[0].clientX);
+        updatePosition(e.touches[0].clientX, false); // ドラッグ中はスナップなし
         e.preventDefault();
       }
     };
