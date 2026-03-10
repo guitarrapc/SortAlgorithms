@@ -24,19 +24,19 @@
                     </select>
                     <div class="cst-copy-dropdown">
                         <button class="cst-copy-btn" @onclick="ToggleCopyMenu" title="@L["comparisonStats.copyToClipboard"]">
-                            📋 @L["comparisonStats.copy"]
+                            @L["comparisonStats.copy"]
                         </button>
                         @if (_showCopyMenu)
                         {
                             <div class="cst-copy-menu">
                                 <button class="cst-copy-menu-item" @onclick="() => CopyToClipboard(CopyFormat.Tsv)">
-                                    📋 @L["comparisonStats.copyTsv"]
+                                    @L["comparisonStats.copyTsv"]
                                 </button>
                                 <button class="cst-copy-menu-item" @onclick="() => CopyToClipboard(CopyFormat.Json)">
-                                    📄 @L["comparisonStats.copyJson"]
+                                    @L["comparisonStats.copyJson"]
                                 </button>
                                 <button class="cst-copy-menu-item" @onclick="() => CopyToClipboard(CopyFormat.Markdown)">
-                                    📝 @L["comparisonStats.copyMarkdown"]
+                                    @L["comparisonStats.copyMarkdown"]
                                 </button>
                             </div>
                         }

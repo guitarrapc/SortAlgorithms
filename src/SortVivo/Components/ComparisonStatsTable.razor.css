@@ -80,17 +80,19 @@
 
 .cst-copy-btn {
     padding: 0.3rem 0.6rem;
-    background: #3B82F6;
-    color: white;
-    border: none;
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+    border: 1px solid var(--color-accent-dark);
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.85em;
-    transition: background 0.2s;
+    transition: background 0.2s, border-color 0.2s;
 }
 
     .cst-copy-btn:hover {
-        background: #2563EB;
+        background: var(--color-accent-darker);
+        color: var(--text-primary);
+        border-color: var(--color-accent);
     }
 
 .cst-copy-menu {
@@ -120,7 +122,8 @@
 }
 
     .cst-copy-menu-item:hover {
-        background: #3B82F6;
+        background: var(--color-accent-soft);
+        color: var(--color-accent-hover);
     }
 
 .cst-close-btn {
