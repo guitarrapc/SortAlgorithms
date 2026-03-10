@@ -100,6 +100,7 @@
 .tutorial-source-btn {
     display: inline-flex;
     align-items: center;
+    gap: 0.3rem;
     padding: 0.25rem 0.625rem;
     background: transparent;
     color: var(--text-secondary);
