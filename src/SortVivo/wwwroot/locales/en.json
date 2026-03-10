@@ -51,7 +51,7 @@
     "title": "Settings",
     "general": "General",
     "renderer": "Renderer",
-    "canvas2d": "Canvas 2D",
+    "canvas2d": "Canvas",
     "webgl": "WebGL",
     "webglHint": "WebGL is faster but may have compatibility issues.",
     "autoReset": "Auto Reset on Complete",
