@@ -1,10 +1,10 @@
-# SortAlgorithmLab - Project Instructions
+# SortVivo - Project Instructions
 
 ## What is this project?
 
-This is a C# sorting algorithm laboratory for educational and performance analysis purposes. It implements various sorting algorithms with comprehensive statistics tracking and visualization support.
+This is a C# sorting algorithm project for educational and performance analysis purposes. It implements various sorting algorithms with comprehensive statistics tracking and visualization support.
 
-**Tech Stack:** C# (.NET 10+), xUnit, BenchmarkDotNet
+**Tech Stack:** C# (.NET 10+), TUnit, BenchmarkDotNet, Blazor WebAssembly for visualization.
 
 ## Project Structure
 

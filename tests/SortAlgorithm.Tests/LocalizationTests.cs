@@ -227,6 +227,6 @@ public class LocalizationTests
         if (dir == null)
             throw new DirectoryNotFoundException("ソリューションルートが見つかりません。");
 
-        return Path.Combine(dir.FullName, "src", "SortAlgorithm.VisualizationWeb", "wwwroot", "locales");
+        return Path.Combine(dir.FullName, "src", "SortVivo", "wwwroot", "locales");
     }
 }

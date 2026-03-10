@@ -1,0 +1,268 @@
+@using SortVivo.Models
+
+<div class="marble-row-container">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <div class="marble-row-label">@Label</div>
+    }
+    <div class="marble-row-content">
+        <div class="marble-arrow-area">
+            @if (HighlightType == OperationType.Swap && HighlightIndices.Length == 2)
+            {
+                var (li, ri) = GetSortedPair();
+                var unit = 68;         // marble_width(56) + gap(12)
+                var marbleHalf = 28;   // marble_width / 2
+                var viewW = Values.Length * unit - 12;
+                var viewH = 56;
+                var leftX = li * unit + marbleHalf;
+                var rightX = ri * unit + marbleHalf;
+                var midX = (leftX + rightX) / 2;
+                var startY = 24;       // arrow_area(56) - lift(20) - scale(4) - glow(4) - margin(4)
+                var ctrlY1 = 2;        // higher arc (left→right): peak near SVG top
+                var ctrlY2 = 2;       // lower arc  (right→left): clearly below ctrlY1
+
+                <svg class="marble-swap-arrows" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="none">
+                    <defs>
+                        <marker id="@_arrowMarkerId" markerWidth="10" markerHeight="7"
+                                refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#EF4444" />
+                        </marker>
+                    </defs>
+                    @* Higher arc: left → right *@
+                    <path d="@($"M {leftX},{startY} Q {midX},{ctrlY1} {rightX},{startY}")"
+                          stroke="#EF4444" stroke-width="2.5" fill="none" stroke-linecap="round"
+                          marker-end="@($"url(#{_arrowMarkerId})")" opacity="0.85" />
+                    @* Lower arc: right → left *@
+                    <path d="@($"M {rightX},{startY} Q {midX},{ctrlY2} {leftX},{startY}")"
+                          stroke="#EF4444" stroke-width="2.5" fill="none" stroke-linecap="round"
+                          marker-end="@($"url(#{_arrowMarkerId})")" opacity="0.85" />
+                </svg>
+            }
+            else if (HighlightType == OperationType.Compare && HighlightIndices.Length == 2 && CompareResult.HasValue)
+            {
+                var (li, ri) = GetSortedPair();
+                var unit = 68;
+                var marbleHalf = 28;
+                var viewW = Values.Length * unit - 12;
+                var viewH = 56;
+                var leftX = li * unit + marbleHalf;
+                var rightX = ri * unit + marbleHalf;
+                var midX = (leftX + rightX) / 2;
+                // HighlightIndices[0] が元の Index1。左に来たら向きそのまま、右に来たら反転
+                var displayResult = HighlightIndices[0] <= HighlightIndices[1]
+                    ? CompareResult.Value : -CompareResult.Value;
+                var symbol = displayResult > 0 ? ">" : displayResult < 0 ? "<" : "=";
+
+                <svg class="marble-compare-symbol" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="none">
+                    <text x="@midX" y="28" text-anchor="middle" dominant-baseline="middle" font-size="28"
+                          font-weight="bold" fill="#A855F7" opacity="0.9">@symbol</text>
+                </svg>
+            }
+            else if (HighlightType == OperationType.IndexWrite && HighlightIndices.Length == 1 && WriteSourceIndex.HasValue && WriteSourceIndex.Value >= 0)
+            {
+                var srcIdx = WriteSourceIndex.Value;
+                var dstIdx = HighlightIndices[0];
+                var unit = 68;
+                var marbleHalf = 28;
+                var viewW = Values.Length * unit - 12;
+                var viewH = 56;
+                var srcX = srcIdx * unit + marbleHalf;
+                var dstX = dstIdx * unit + marbleHalf;
+                var midX = (srcX + dstX) / 2;
+                var startY = 24;
+                var ctrlY = 8;
+
+                <svg class="marble-write-arrow" viewBox="@($"0 0 {viewW} {viewH}")" preserveAspectRatio="none">
+                    <defs>
+                        <marker id="@_writeArrowMarkerId" markerWidth="10" markerHeight="7"
+                                refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#F97316" />
+                        </marker>
+                    </defs>
+                    <path d="@($"M {srcX},{startY} Q {midX},{ctrlY} {dstX},{startY}")"
+                          stroke="#F97316" stroke-width="2.5" fill="none" stroke-linecap="round"
+                          marker-end="@($"url(#{_writeArrowMarkerId})")" opacity="0.85" />
+                </svg>
+            }
+        </div>
+        <div class="marble-row">
+            @for (int i = 0; i < Values.Length; i++)
+            {
+                var idx = i;
+                var value = Values[idx];
+                bool isEmpty = IsBuffer && value == 0;
+                bool highlighted = HighlightSet.Contains(idx);
+                string bgColor = isEmpty ? "transparent" : GetValueColor(value);
+                string outlineClass = highlighted ? $"marble-outline-{HighlightType.ToString().ToLowerInvariant()}" : "";
+                string marbleClass = $"marble {outlineClass}".Trim();
+                bool isSwapTarget = HighlightType == OperationType.Swap
+                    && HighlightIndices.Length == 2 && highlighted;
+                string liftClass = highlighted ? " marble-slot--lifted" : "";
+                string swapClass = isSwapTarget ? " marble-swapping" : "";
+                string slotClass = $"marble-slot{liftClass}{swapClass}";
+                string slotStyle = "";
+                if (isSwapTarget)
+                {
+                    int otherIdx = HighlightIndices[0] == idx ? HighlightIndices[1] : HighlightIndices[0];
+                    slotStyle = $"--slide-offset: {otherIdx - idx}";
+                }
+                <div @key="@(isSwapTarget ? (object)$"s{StepIndex}-{idx}" : idx)"
+                     class="@slotClass" style="@slotStyle">
+                    @if (Roles.TryGetValue(idx, out var role) && role != SortAlgorithm.Contexts.RoleType.None)
+                    {
+                        <div class="marble-role-badge-wrapper">
+                            <div class="marble-role-badge" style="background: @GetRoleBadgeColor(role);">@GetRoleBadgeLabel(role)</div>
+                            <div class="marble-role-tooltip">@GetRoleBadgeDescription(role)</div>
+                        </div>
+                    }
+                    <div class="@marbleClass" style="background: @bgColor;">
+                        @(isEmpty ? "" : value.ToString())
+                    </div>
+                    <div class="marble-index">@idx</div>
+                    @if (ShellGap.HasValue && ShellGap.Value > 1)
+                    {
+                        int subgroup = idx % ShellGap.Value;
+                        <div class="marble-gap-dot" style="background: @GetSubgroupColor(subgroup);" title="Group @subgroup (gap=@ShellGap)"></div>
+                    }
+                    @if (IsWriteTarget(idx))
+                    {
+                        <div class="marble-ghost">@WritePreviousValue → @value</div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>表示する配列の値</summary>
+    [Parameter] public int[] Values { get; set; } = [];
+
+    /// <summary>ハイライト対象のインデックス</summary>
+    [Parameter] public int[] HighlightIndices { get; set; } = [];
+
+    /// <summary>ハイライトの種類（アウトライン色を決定）</summary>
+    [Parameter] public OperationType HighlightType { get; set; }
+
+    /// <summary>行ラベル（例: "メイン配列"）</summary>
+    [Parameter] public string Label { get; set; } = string.Empty;
+
+    /// <summary>バッファー配列かどうか（true の場合、値 0 を空表示にする）</summary>
+    [Parameter] public bool IsBuffer { get; set; } = false;
+
+    /// <summary>配列内の最大値（HSLグラデーション計算に使用）</summary>
+    [Parameter] public int MaxValue { get; set; } = 9;
+
+    /// <summary>Compare 操作の比較結果（正: Index1 > Index2、負: Index1 &lt; Index2、null: Compare 以外）</summary>
+    [Parameter] public int? CompareResult { get; set; }
+
+    /// <summary>現在のステップインデックス（Swap アニメーション再トリガー用）</summary>
+    [Parameter] public int StepIndex { get; set; } = -1;
+
+    /// <summary>IndexWrite 操作の移動元インデックス（null: Write 以外）</summary>
+    [Parameter] public int? WriteSourceIndex { get; set; }
+
+    /// <summary>IndexWrite 操作で上書きされる前の値（null: Write 以外）</summary>
+    [Parameter] public int? WritePreviousValue { get; set; }
+
+    /// <summary>
+    /// Shell sort の h-spaced 部分列色分け用のギャップ値。
+    /// null または 1 の場合はドットを非表示。
+    /// 各マーブルのインデックス i に対して i % ShellGap で部分列グループを決定する。
+    /// </summary>
+    [Parameter] public int? ShellGap { get; set; }
+
+    /// <summary>
+    /// 各インデックスに付与された役割マーカー（例: { 3: Pivot }）。
+    /// </summary>
+    [Parameter] public Dictionary<int, SortAlgorithm.Contexts.RoleType> Roles { get; set; } = [];
+
+    private readonly string _arrowMarkerId = $"ah-{Guid.NewGuid().ToString("N")[..8]}";
+    private readonly string _writeArrowMarkerId = $"wh-{Guid.NewGuid().ToString("N")[..8]}";
+
+    private HashSet<int> HighlightSet => [.. HighlightIndices];
+
+    /// <summary>ハイライトインデックスを昇順ペアで返す</summary>
+    private (int Left, int Right) GetSortedPair()
+    {
+        var a = HighlightIndices[0];
+        var b = HighlightIndices[1];
+        return a < b ? (a, b) : (b, a);
+    }
+
+    /// <summary>指定インデックスが Write 操作の書き込み先で、かつ値が変化したか</summary>
+    private bool IsWriteTarget(int idx)
+        => HighlightType == OperationType.IndexWrite
+        && HighlightIndices.Length == 1
+        && HighlightIndices[0] == idx
+        && WritePreviousValue.HasValue
+        && WritePreviousValue.Value != Values[idx];
+
+    /// <summary>
+    /// 値に応じたHSLカラーを計算する。
+    /// 小さい値=青(hue=210)〜大きい値=赤(hue=0) のグラデーション。
+    /// 彩度・輝度を固定して見やすい色味を維持する。
+    /// </summary>
+    private string GetValueColor(int value)
+    {
+        if (MaxValue <= 1) return "hsl(210, 75%, 42%)";
+        // hue: 210(青) → 0(赤) で値の大小を直感的に表現
+        var ratio = (double)(value - 1) / (MaxValue - 1);
+        var hue = (int)(210 * (1.0 - ratio));
+        return $"hsl({hue}, 75%, 42%)";
+    }
+
+    /// <summary>
+    /// Shell sort の h-spaced 部分列グループに対する識別色を返す。
+    /// 最大8色まで対応（チュートリアルの 8 要素配列で最大 gap=8）。
+    /// </summary>
+    private static string GetSubgroupColor(int subgroup)
+    {
+        ReadOnlySpan<string> palette =
+        [
+            "#EF4444", // 0: red
+            "#3B82F6", // 1: blue
+            "#22C55E", // 2: green
+            "#EAB308", // 3: yellow
+            "#A855F7", // 4: purple
+            "#F97316", // 5: orange
+            "#06B6D4", // 6: cyan
+            "#EC4899", // 7: pink
+        ];
+        return palette[subgroup % palette.Length];
+    }
+
+    /// <summary>ロールタイプに対応するバッジ情報を返す</summary>
+    private static string GetRoleBadgeColor(SortAlgorithm.Contexts.RoleType role)
+        => role switch
+        {
+            SortAlgorithm.Contexts.RoleType.Pivot        => "#EAB308",
+            SortAlgorithm.Contexts.RoleType.CurrentMin   => "#FBBF24",
+            SortAlgorithm.Contexts.RoleType.CurrentMax   => "#F97316",
+            SortAlgorithm.Contexts.RoleType.LeftPointer  => "#38BDF8",
+            SortAlgorithm.Contexts.RoleType.RightPointer => "#4ADE80",
+            _ => "transparent"
+        };
+
+    private static string GetRoleBadgeLabel(SortAlgorithm.Contexts.RoleType role)
+        => role switch
+        {
+            SortAlgorithm.Contexts.RoleType.Pivot        => "P",
+            SortAlgorithm.Contexts.RoleType.CurrentMin   => "min",
+            SortAlgorithm.Contexts.RoleType.CurrentMax   => "max",
+            SortAlgorithm.Contexts.RoleType.LeftPointer  => "L",
+            SortAlgorithm.Contexts.RoleType.RightPointer => "R",
+            _ => ""
+        };
+
+    private static string GetRoleBadgeDescription(SortAlgorithm.Contexts.RoleType role)
+        => role switch
+        {
+            SortAlgorithm.Contexts.RoleType.Pivot        => "Pivot element (Quick Sort)",
+            SortAlgorithm.Contexts.RoleType.CurrentMin   => "Current minimum candidate",
+            SortAlgorithm.Contexts.RoleType.CurrentMax   => "Current maximum candidate",
+            SortAlgorithm.Contexts.RoleType.LeftPointer  => "Left pointer (two-pointer algorithm)",
+            SortAlgorithm.Contexts.RoleType.RightPointer => "Right pointer (two-pointer algorithm)",
+            _ => ""
+        };
+}

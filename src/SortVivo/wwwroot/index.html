@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>SortVivo - Sort Algorithm Visualization</title>
+    <meta name="twitter:card" content="summary" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sortvivo.guitarrapc.com/" />
+    <meta property="og:title" content="SortVivo | Sort Algorithm Visualization" />
+    <meta property="og:description" content="Interactive visualization of sorting algorithms." />
+    <meta property="og:image" content="https://sortvivo.guitarrapc.com/og/default-summary.png" />
+    <meta property="og:site_name" content="SortVivo" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="preload" id="webassembly" />
+    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link href="SortVivo.styles.css" rel="stylesheet" />
+    <script type="importmap"></script>
+    <script src="js/loadingHelper.js"></script>
+    <script src="js/debugHelper.js"></script>
+    <script src="js/playbackHelper.js"></script>
+    <script src="js/soundEngine.js"></script>
+    <script src="js/shareHelper.js"></script>
+    <script src="js/popoverHelper.js"></script>
+    <script src="js/barChartCanvasRenderer.js"></script>
+    <script src="js/circularCanvasRenderer.js"></script>
+    <script src="js/dotPlotCanvasRenderer.js"></script>
+    <script src="js/spiralCanvasRenderer.js"></script>
+    <script src="js/disparityChordsCanvasRenderer.js"></script>
+    <script src="js/pictureRowCanvasRenderer.js"></script>
+    <script src="js/pictureColumnCanvasRenderer.js"></script>
+    <script src="js/pictureBlockCanvasRenderer.js"></script>
+    <script src="js/seekBar.js"></script>
+    <script src="js/carousel.js"></script>
+    <script src="js/stateStorage.js"></script>
+    <script src="js/scrollHelper.js"></script>
+
+</head>
+
+<body>
+    <div id="app"></div>
+
+    <div class="loading-screen">
+        <div class="loading-title">SORTVIVO</div>
+        <div class="loading-subtitle">LEARN SORTING ALGORITHMS</div>
+        <div class="loading-description">
+            Free browser-based tool to understand sorting algorithms visually. Explore
+            multiple visualizations, follow guided tutorials, and compare performance.
+        </div>
+        <div class="loading-privacy-badge">
+            <svg class="privacy-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                    d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+            </svg>
+            <span>Your data never leaves your device. Picture sorting processes images entirely in the browser. No
+                uploads, no tracking, no external requests.</span>
+        </div>
+        <div class="loading-progress-track">
+            <div class="loading-progress-fill"></div>
+        </div>
+        <div class="loading-progress-text"></div>
+        <div class="loading-bars">
+            <div class="loading-bar" style="--h:30%;--i:0"></div>
+            <div class="loading-bar" style="--h:50%;--i:1"></div>
+            <div class="loading-bar" style="--h:15%;--i:2"></div>
+            <div class="loading-bar" style="--h:80%;--i:3"></div>
+            <div class="loading-bar" style="--h:45%;--i:4"></div>
+            <div class="loading-bar" style="--h:95%;--i:5"></div>
+            <div class="loading-bar" style="--h:25%;--i:6"></div>
+            <div class="loading-bar" style="--h:60%;--i:7"></div>
+            <div class="loading-bar" style="--h:70%;--i:8"></div>
+            <div class="loading-bar" style="--h:40%;--i:9"></div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">🗙</span>
+    </div>
+
+    <!-- Custom loader. custom loader handle autostart by js -->
+    <!--<script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>-->
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js" autostart="false"></script>
+</body>
+
+</html>

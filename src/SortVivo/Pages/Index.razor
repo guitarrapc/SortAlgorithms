@@ -1,0 +1,757 @@
+@page "/"
+@using SortVivo.Models
+@using SortVivo.Services
+@using SortVivo.Components
+@using Microsoft.JSInterop
+@inject PlaybackService Playback
+@inject SortExecutor Executor
+@inject AlgorithmRegistry AlgorithmRegistry
+@inject ArrayPatternRegistry ArrayPatternRegistry
+@inject ComparisonModeService ComparisonMode
+@inject DebugSettings DebugSettings
+@inject RenderSettings RenderSettings
+@inject NavigationManager NavigationManager
+@inject NavigationStateService NavigationState
+@inject IJSRuntime JS
+@inject LocalizationService L
+@implements IDisposable
+
+<PageTitle>SortVivo</PageTitle>
+
+<div class="visualization-page">
+    <div class="header">
+        <div class="header__left"></div>
+        <a href="/" class="header__title-link"><h1 class="header__title">SORTVIVO</h1></a>
+        <div class="header__actions">
+            <ShareButton />
+            <button class="header__icon-btn" @onclick='() => NavigationManager.NavigateTo($"tutorial/{Uri.EscapeDataString(SelectedAlgorithm)}")' title="@L["nav.tutorial"]">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </button>
+            <button class="header__icon-btn" @onclick="() => _settingsOpen = true" title="@L["settings.title"]">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                    <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <QuickAccessPanel @bind-SelectedAlgorithm="SelectedAlgorithm"
+                      @bind-ArraySize="ArraySize"
+                      @bind-SelectedPatternName="SelectedPatternName"
+                      @bind-SelectedVisualizationMode="SelectedVisualizationMode"
+                      @bind-AutoSwitchToRecommendedSize="_autoSwitchToRecommendedSize"
+                      IsLoading="IsLoading"
+                      Playback="Playback"
+                      ComparisonMode="ComparisonMode"
+                      RenderSettings="RenderSettings"
+                      DebugSettings="DebugSettings"
+                      OnAddAndGenerate="AddAndGenerateAsync"
+                      OnAlgorithmChanged="OnAlgorithmChanged"
+                      OnVisualizationModeChanged="OnVisualizationModeChanged"
+                      OnSpeedSettingsChanged="OnSpeedSettingsChanged" />
+
+    <SettingsModal IsOpen="_settingsOpen"
+                   OnClose="HandleSettingsClose"
+                   Playback="Playback"
+                   RenderSettings="RenderSettings"
+                   DebugSettings="DebugSettings"
+                   ComparisonMode="ComparisonMode"
+                   @bind-AutoSwitchToRecommendedSize="_autoSwitchToRecommendedSize" />
+
+
+
+    <div id="visualization-area" class="visualization-area">
+        @if (IsLoading)
+        {
+            <div class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <span>@LoadingMessage</span>
+            </div>
+        }
+
+        <PlayControlBar IsPlaying="@GetIsPlaying()"
+                        PlayDisabled="@(ComparisonMode.State.Instances.Count == 0)"
+                        StopDisabled="@(ComparisonMode.State.Instances.Count == 0)"
+                        ClearAllDisabled="@(ComparisonMode.State.Instances.Count == 0)"
+                        SoundEnabled="@GetSoundEnabled()"
+                        SoundDisabled="false"
+                        StatusText="@GetComparisonStatusText()"
+                        ArraySize="@GetArraySize()"
+                        OnTogglePlayPause="HandleTogglePlayPause"
+                        OnStop="HandleReset"
+                        OnToggleSound="HandleToggleSound"
+                        OnClearAll="HandleClearAll" />
+
+        <div class="visualization-content">
+            @{
+                var n = ComparisonMode.State.Instances.Count;
+            }
+            @if (n == 0)
+            {
+                @* N=0: 初期空状態（アルゴリズム情報は表示しない） *@
+                <SortCard State="Playback.State"
+                          AlgorithmName=""
+                          Complexity=""
+                          VisualizationMode="@SelectedVisualizationMode"
+                          GridColumnCount="1"
+                          CardSize="StatsCardSize.Full"
+                          ShowRemoveButton="false"
+                          Playback="@Playback"
+                          OnVisualizationClick="@OnVisualizationClick" />
+            }
+            else if (n == 1)
+            {
+                @* N=1: 単一表示（フルサイズ、✖なし） *@
+                <SortCard State="@ComparisonMode.State.Instances[0].State"
+                          AlgorithmName="@ComparisonMode.State.Instances[0].AlgorithmName"
+                          Complexity="@ComparisonMode.State.Instances[0].Metadata.TimeComplexity"
+                          VisualizationMode="@SelectedVisualizationMode"
+                          GridColumnCount="1"
+                          CardSize="StatsCardSize.Full"
+                          ShowRemoveButton="false"
+                          Playback="@ComparisonMode.State.Instances[0].Playback"
+                          OnAlgorithmSelected="@(algoName => ReplaceAlgorithmInCard(0, algoName))"
+                          OnVisualizationClick="@OnVisualizationClick" />
+            }
+            else
+            {
+                @* N>1: 比較表示 *@
+                <SortCardGrid Instances="ComparisonMode.State.Instances"
+                              VisualizationMode="SelectedVisualizationMode"
+                              OnRemove="RemoveAlgorithmFromComparison"
+                              OnReplaceAlgorithm="@(args => ReplaceAlgorithmInCard(args.index, args.algoName))"
+                              OnVisualizationClick="OnComparisonVisualizationClick" />
+            }
+        </div>
+
+        <div class="seek-stats-row">
+            <SeekBar CurrentIndex="@GetSeekCurrentIndex()"
+                 TotalOperations="@GetSeekMaxOps()"
+                 Markers="@GetSeekMarkers()"
+                 OnSeek="OnSeek" />
+            <button class="header__icon-btn stats-icon-btn" @onclick="() => _statsTableOpen = !_statsTableOpen" title="@L["comparisonStats.title"]" disabled="@(ComparisonMode.State.Instances.Count == 0)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                    <defs>
+                        <linearGradient id="statsBarGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#c8aa6e;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#785a28;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <g fill="url(#statsBarGradient)">
+                        <rect x="5" y="17" width="1.8" height="6" rx="0.5"/>
+                        <rect x="8" y="14" width="1.8" height="9" rx="0.5"/>
+                        <rect x="11" y="12" width="1.8" height="11" rx="0.5"/>
+                        <rect x="14" y="9" width="1.8" height="14" rx="0.5"/>
+                        <rect x="17" y="13" width="1.8" height="10" rx="0.5"/>
+                        <rect x="20" y="11" width="1.8" height="12" rx="0.5"/>
+                        <rect x="23" y="15" width="1.8" height="8" rx="0.5"/>
+                        <rect x="26" y="8" width="1.8" height="15" rx="0.5"/>
+                    </g>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    @* 統計比較表モーダル *@
+    @if (ComparisonMode.State.Instances.Count > 0)
+    {
+        <ComparisonStatsTable Instances="ComparisonMode.State.Instances" @bind-IsOpen="_statsTableOpen" />
+    }
+
+    <Footer />
+</div>
+
+@code {
+    // ── コンテンツ状態（URL Query String で保持） ─────────────────────────────
+    private string _selectedAlgorithm = "Quicksort";
+    private string SelectedAlgorithm
+    {
+        get => _selectedAlgorithm;
+        set { if (_selectedAlgorithm != value) { _selectedAlgorithm = value; UpdateContentStateUrl(); } }
+    }
+
+    private int _arraySize = 1024;
+    private int ArraySize
+    {
+        get => _arraySize;
+        set { if (_arraySize != value) { _arraySize = value; UpdateContentStateUrl(); } }
+    }
+
+    private string _selectedPatternName = "🎲 Random";
+    private string SelectedPatternName
+    {
+        get => _selectedPatternName;
+        set { if (_selectedPatternName != value) { _selectedPatternName = value; UpdateContentStateUrl(); } }
+    }
+
+    private VisualizationMode _selectedVisualizationMode = VisualizationMode.DisparityChords;
+    private VisualizationMode SelectedVisualizationMode
+    {
+        get => _selectedVisualizationMode;
+        set { if (_selectedVisualizationMode != value) { _selectedVisualizationMode = value; UpdateContentStateUrl(); } }
+    }
+
+    // N に基づく暗黙的モード（トグル不要）
+    private bool IsComparisonMode => ComparisonMode.State.Instances.Count > 1;
+
+    // ローディング状態
+    private LoadingState _loadingState = LoadingState.Idle;
+    private bool IsLoading => _loadingState != LoadingState.Idle || ComparisonMode.IsAddingAlgorithm;
+    private string LoadingMessage
+    {
+        get
+        {
+            // ComparisonModeServiceでアルゴリズム追加中の場合
+            if (ComparisonMode.IsAddingAlgorithm && !string.IsNullOrEmpty(ComparisonMode.State.ProcessingAlgorithmName))
+                return L["index.processingAlgo", ComparisonMode.State.ProcessingAlgorithmName];
+
+            // その他のローディング状態
+            return _loadingState switch
+            {
+                LoadingState.AddingAlgorithm => L["common.processing"],
+                LoadingState.LoadingImage => L["index.loadingImage"],
+                _ => "",
+            };
+        }
+    }
+
+    // 比較プレイ中フラグ（OnStateChanged で同期）
+    private bool _isComparisonPlaying = false;
+    private bool _statsTableOpen = false;
+
+    // Settings モーダル
+    private bool _settingsOpen = false;
+
+    // 環境設定ダーティフラグ（OnAfterRenderAsync で localStorage に保存）
+    private bool _preferencesDirty = false;
+
+    // Settings: QuickAccessPanel と共有する設定
+    private bool _autoSwitchToRecommendedSize = false;
+
+    // URL cards パラメータから復元する比較カードのアルゴリズム名一覧（OnInitialized でパース）
+    private List<string> _initialCardAlgorithms = new();
+    // URL 復元中は UpdateContentStateUrl による URL 書き換えを抑制する
+    private bool _restoringFromUrl = false;
+
+    protected override void OnInitialized()
+    {
+        Playback.StateChanged += OnStateChanged;
+        ComparisonMode.OnStateChanged += OnStateChanged;
+        DebugSettings.OnChanged += OnStateChanged;
+
+        RestoreStateFromUrl();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("debugHelper.setDebugMode", DebugSettings.IsEnabled);
+            await LoadPreferencesAsync();
+            await RestoreCardsFromUrlAsync();
+            return;
+        }
+
+        if (_preferencesDirty)
+        {
+            _preferencesDirty = false;
+            await SavePreferencesAsync();
+        }
+    }
+
+    // ── URL 読み込み（コンテンツ状態） ─────────────────────────────────────────
+    private void RestoreStateFromUrl()
+    {
+        var parsedCards = new List<string>();
+        try
+        {
+            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+            var qs = uri.Query.TrimStart('?');
+            if (!string.IsNullOrEmpty(qs))
+            {
+                var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var pair in qs.Split('&'))
+                {
+                    var parts = pair.Split('=', 2);
+                    if (parts.Length != 2) continue;
+                    var key = Uri.UnescapeDataString(parts[0]);
+                    var val = Uri.UnescapeDataString(parts[1].Replace("+", " "));
+                    switch (key.ToLowerInvariant())
+                    {
+                        case "algo":
+                            if (!seenKeys.Add("algo")) break;
+                            var algo = AlgorithmRegistry.GetAllAlgorithms()
+                                .FirstOrDefault(a => string.Equals(a.Name, val, StringComparison.OrdinalIgnoreCase));
+                            if (algo != null) _selectedAlgorithm = algo.Name;
+                            break;
+                        case "size":
+                            if (!seenKeys.Add("size")) break;
+                            if (int.TryParse(val, out var size) && size >= 1 && size <= 8192) _arraySize = size;
+                            break;
+                        case "pattern":
+                            if (!seenKeys.Add("pattern")) break;
+                            var pattern = ArrayPatternRegistry.GetAllPatterns()
+                                .FirstOrDefault(p => string.Equals(p.Name, val, StringComparison.OrdinalIgnoreCase));
+                            if (pattern != null) _selectedPatternName = pattern.Name;
+                            break;
+                        case "mode":
+                            if (!seenKeys.Add("mode")) break;
+                            if (Enum.TryParse<VisualizationMode>(val, ignoreCase: true, out var mode) && Enum.IsDefined(mode))
+                                _selectedVisualizationMode = mode;
+                            break;
+                        case "cards":
+                            // 複数の cards パラメータ（cards=A&cards=B）を累積する（上書きしない）
+                            if (parsedCards.Count < ComparisonState.MaxComparisons)
+                                parsedCards.AddRange(val.Split('|', StringSplitOptions.RemoveEmptyEntries)
+                                    .Take(ComparisonState.MaxComparisons - parsedCards.Count)
+                                    .Select(a => AlgorithmRegistry.GetAllAlgorithms()
+                                        .FirstOrDefault(r => string.Equals(r.Name, a, StringComparison.OrdinalIgnoreCase))?.Name)
+                                    .Where(n => n != null)
+                                    .Cast<string>());
+                            break;
+                    }
+                }
+            }
+        }
+        catch (UriFormatException)
+        {
+            // 不正なパーセントエンコードは無視してデフォルト値で続行
+        }
+        finally
+        {
+            // 例外発生時も途中まで蓄積されたカード情報を確定する
+            _initialCardAlgorithms = parsedCards.Distinct().ToList();
+        }
+    }
+
+    // ── URL 更新（コンテンツ状態） ────────────────────────────────────────────
+    private void UpdateContentStateUrl()
+    {
+        if (_restoringFromUrl) return;
+        var url = $"/?algo={Uri.EscapeDataString(_selectedAlgorithm)}" +
+                  $"&size={_arraySize}" +
+                  $"&pattern={Uri.EscapeDataString(_selectedPatternName)}" +
+                  $"&mode={_selectedVisualizationMode}";
+        var cards = ComparisonMode.State.Instances.Select(i => i.AlgorithmName).ToList();
+        if (cards.Count > 0)
+            url += $"&cards={Uri.EscapeDataString(string.Join("|", cards))}";
+        NavigationState.LastIndexUrl = url;
+        NavigationManager.NavigateTo(url, replace: true);
+    }
+
+    // ── localStorage 読み込み（初回レンダリング後） ──────────────────────────
+    private async Task LoadPreferencesAsync()
+    {
+        try
+        {
+            var prefs = await JS.InvokeAsync<Dictionary<string, string>>("stateStorage.loadAll");
+            if (prefs == null) return;
+
+            if (prefs.TryGetValue("sortvis.opsPerFrame", out var ops) && int.TryParse(ops, out var opsVal))
+                Playback.OperationsPerFrame = opsVal;
+            if (prefs.TryGetValue("sortvis.speedMultiplier", out var spd) &&
+                double.TryParse(spd, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var spdVal))
+                Playback.SpeedMultiplier = spdVal;
+            if (prefs.TryGetValue("sortvis.renderer", out var rend))
+                RenderSettings.UseWebGL = rend == "true";
+            if (prefs.TryGetValue("sortvis.autoReset", out var ar))
+                Playback.AutoReset = ar == "true";
+            if (prefs.TryGetValue("sortvis.instantMode", out var im))
+                Playback.InstantMode = im == "true";
+            if (prefs.TryGetValue("sortvis.soundEnabled", out var se))
+                Playback.SoundEnabled = se == "true";
+            if (prefs.TryGetValue("sortvis.soundVolume", out var sv) &&
+                double.TryParse(sv, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var svVal))
+                Playback.SoundVolume = svVal;
+            if (prefs.TryGetValue("sortvis.soundType", out var stype))
+            {
+                Playback.SoundType = stype is "poko" ? "poko" : "sine";
+                await JS.InvokeVoidAsync("soundEngine.setSoundType", Playback.SoundType);
+            }
+            if (prefs.TryGetValue("sortvis.autoRecommendedSize", out var ars))
+                _autoSwitchToRecommendedSize = ars == "true";
+            if (prefs.TryGetValue("sortvis.debugLog", out var dl))
+                DebugSettings.IsEnabled = dl == "true";
+            if (prefs.TryGetValue("sortvis.scrollOnGenerate", out var sog))
+                RenderSettings.ScrollOnGenerate = sog == "true";
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            DebugSettings.Log($"[Index] LoadPreferences error: {ex.Message}");
+        }
+    }
+
+    // ── localStorage 保存 ────────────────────────────────────────────────────
+    private async Task SavePreferencesAsync()
+    {
+        try
+        {
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            await JS.InvokeVoidAsync("stateStorage.saveAll", new Dictionary<string, string>
+            {
+                ["sortvis.opsPerFrame"] = Playback.OperationsPerFrame.ToString(),
+                ["sortvis.speedMultiplier"] = Playback.SpeedMultiplier.ToString(inv),
+                ["sortvis.renderer"] = RenderSettings.UseWebGL ? "true" : "false",
+                ["sortvis.autoReset"] = Playback.AutoReset ? "true" : "false",
+                ["sortvis.instantMode"] = Playback.InstantMode ? "true" : "false",
+                ["sortvis.soundEnabled"] = Playback.SoundEnabled ? "true" : "false",
+                ["sortvis.soundVolume"] = Playback.SoundVolume.ToString(inv),
+                ["sortvis.soundType"] = Playback.SoundType,
+                ["sortvis.autoRecommendedSize"] = _autoSwitchToRecommendedSize ? "true" : "false",
+                ["sortvis.debugLog"] = DebugSettings.IsEnabled ? "true" : "false",
+                ["sortvis.scrollOnGenerate"] = RenderSettings.ScrollOnGenerate ? "true" : "false",
+            });
+        }
+        catch (Exception ex)
+        {
+            DebugSettings.Log($"[Index] SavePreferences error: {ex.Message}");
+        }
+    }
+
+    // ── URL cards パラメータからの比較カード自動復元（初回レンダリング後） ──
+    private async Task RestoreCardsFromUrlAsync()
+    {
+        if (_initialCardAlgorithms.Count == 0) return;
+
+        var pattern = GetSelectedPattern();
+        if (pattern == null) return;
+
+        _restoringFromUrl = true;
+        _loadingState = LoadingState.AddingAlgorithm;
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            foreach (var algoName in _initialCardAlgorithms)
+            {
+                if (ComparisonMode.State.Instances.Count >= ComparisonState.MaxComparisons) break;
+
+                // サービスに既に存在するアルゴリズムはスキップ（SPA 内遷移で状態が残っている場合）
+                if (ComparisonMode.State.Instances.Any(i => i.AlgorithmName == algoName)) continue;
+
+                var metadata = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == algoName);
+                if (metadata == null) continue;
+
+                var size = Math.Min(_arraySize, Math.Min(metadata.MaxElements,
+                    ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances, algoName)));
+
+                if (ComparisonMode.State.Instances.Count == 0)
+                {
+                    var array = pattern.Generator(size, new Random());
+                    await ComparisonMode.AddAndGenerateAsync(algoName, metadata, array, size, pattern);
+                }
+                else
+                {
+                    await ComparisonMode.AddAlgorithmAsync(algoName, metadata);
+                }
+            }
+
+            if (ComparisonMode.State.Instances.Any())
+            {
+                ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
+                ComparisonMode.SetAutoResetForAll(Playback.AutoReset);
+                ApplySavedSoundSettings();
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugSettings.Log($"[Index] RestoreCardsFromUrl error: {ex.Message}");
+        }
+        finally
+        {
+            _restoringFromUrl = false;
+            _loadingState = LoadingState.Idle;
+            UpdateContentStateUrl();
+            StateHasChanged();
+        }
+    }
+
+    private void OnAlgorithmChanged()
+    {
+        StateHasChanged();
+    }
+
+    private ArrayPatternMetadata? GetSelectedPattern()
+    {
+        return ArrayPatternRegistry.GetAllPatterns().FirstOrDefault(p => p.Name == SelectedPatternName);
+    }
+
+    private string GetSelectedAlgorithmComplexity()
+    {
+        var algo = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
+        return algo?.TimeComplexity ?? "Unknown";
+    }
+
+    private async Task AddAndGenerateAsync()
+    {
+        if (ComparisonMode.IsAddingAlgorithm) return;
+
+        var metadata = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == SelectedAlgorithm);
+        if (metadata == null) { DebugSettings.Log($"Algorithm not found: {SelectedAlgorithm}"); return; }
+
+        var pattern = GetSelectedPattern();
+        if (pattern == null) { DebugSettings.Log($"Pattern not found: {SelectedPatternName}"); return; }
+
+        var size = Math.Min(ArraySize, Math.Min(metadata.MaxElements,
+            ComparisonState.MaxComparisonElements(ComparisonMode.State.Instances, SelectedAlgorithm)));
+
+        // 最適化パス: サイズ・パターン不変 かつ 対象アルゴリズム未登録 かつ 既存カードあり
+        // → 新配列生成・既存カード再実行を省略し、追加アルゴリズムだけ計測する
+        bool canReuseArray = ComparisonMode.State.Instances.Count > 0
+            && size == ComparisonMode.State.CurrentArraySize
+            && pattern.Name == ComparisonMode.State.CurrentPattern?.Name
+            && !ComparisonMode.State.Instances.Any(i => i.AlgorithmName == SelectedAlgorithm);
+
+        _loadingState = LoadingState.AddingAlgorithm;
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            if (canReuseArray)
+            {
+                await ComparisonMode.AddAlgorithmAsync(SelectedAlgorithm, metadata);
+            }
+            else
+            {
+                var array = pattern.Generator(size, new Random());
+                await ComparisonMode.AddAndGenerateAsync(SelectedAlgorithm, metadata, array, size, pattern);
+            }
+            ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
+            ComparisonMode.SetAutoResetForAll(Playback.AutoReset);
+            ApplySavedSoundSettings();
+        }
+        catch (Exception ex)
+        {
+            DebugSettings.Log($"[Index] Error in AddAndGenerateAsync: {ex.Message}");
+        }
+        finally
+        {
+            _loadingState = LoadingState.Idle;
+            UpdateContentStateUrl();
+            StateHasChanged();
+            if (RenderSettings.ScrollOnGenerate)
+                await JS.InvokeVoidAsync("scrollHelper.scrollToVisualization");
+        }
+    }
+
+    private async Task ReplaceAlgorithmInCard(int index, string algoName)
+    {
+        var metadata = AlgorithmRegistry.GetAllAlgorithms().FirstOrDefault(a => a.Name == algoName);
+        if (metadata == null) return;
+        if (ComparisonMode.IsAddingAlgorithm) return;
+
+        _loadingState = LoadingState.AddingAlgorithm;
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            await ComparisonMode.ReplaceAlgorithmAsync(index, algoName, metadata);
+            ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
+            ApplySavedSoundSettings();
+        }
+        finally
+        {
+            _loadingState = LoadingState.Idle;
+            UpdateContentStateUrl();
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveAlgorithmFromComparison(int index)
+    {
+        DebugSettings.Log($"[Index] RemoveAlgorithmFromComparison called for index: {index}");
+        DebugSettings.Log($"[Index] Before removal, instances count: {ComparisonMode.State.Instances.Count}");
+
+        if (index >= 0 && index < ComparisonMode.State.Instances.Count)
+        {
+            var algorithmName = ComparisonMode.State.Instances[index].AlgorithmName;
+            DebugSettings.Log($"[Index] Removing algorithm: {algorithmName}");
+        }
+
+        ComparisonMode.RemoveAlgorithm(index);
+
+        DebugSettings.Log($"[Index] After removal, instances count: {ComparisonMode.State.Instances.Count}");
+        ApplySavedSoundSettings();
+        UpdateContentStateUrl();
+        StateHasChanged();
+    }
+
+    private void HandleClearAll()
+    {
+        ComparisonMode.ClearAll();
+        UpdateContentStateUrl();
+        StateHasChanged();
+    }
+
+    private void OnVisualizationClick() => HandleTogglePlayPause();
+
+    private void OnComparisonVisualizationClick() => HandleTogglePlayPause();
+
+    private void OnSeek(int index)
+    {
+        var n = ComparisonMode.State.Instances.Count;
+        if (n == 1)
+            ComparisonMode.State.Instances[0].Playback.SeekTo(index, throttle: true);
+        else if (n > 1)
+            ComparisonMode.SeekAll(index);
+    }
+
+    private int GetSeekCurrentIndex()
+    {
+        var n = ComparisonMode.State.Instances.Count;
+        if (n == 1) return ComparisonMode.State.Instances[0].Playback.State.CurrentOperationIndex;
+        if (n > 1) return ComparisonMode.GlobalSeekIndex;
+        return Playback.State.CurrentOperationIndex;
+    }
+
+    private int GetSeekMaxOps()
+    {
+        var n = ComparisonMode.State.Instances.Count;
+        if (n == 1) return ComparisonMode.State.Instances[0].Playback.State.TotalOperations;
+        if (n > 1) return ComparisonMode.MaxOps;
+        return Playback.State.TotalOperations;
+    }
+
+    private IReadOnlyList<SeekBarMarker> GetSeekMarkers()
+    {
+        if (ComparisonMode.State.Instances.Count > 1)
+            return ComparisonMode.GetCompletionMarkers();
+        return [];
+    }
+
+    private void OnVisualizationModeChanged()
+    {
+        StateHasChanged();
+    }
+
+    private void OnStateChanged()
+    {
+        if (ComparisonMode.State.Instances.Any())
+            _isComparisonPlaying = ComparisonMode.IsPlaying();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleReset()
+    {
+        if (ComparisonMode.State.Instances.Any())
+            ComparisonMode.Reset();
+        else
+            Playback.Stop();
+    }
+
+    private void HandleTogglePlayPause()
+    {
+        if (ComparisonMode.State.Instances.Any())
+        {
+            if (ComparisonMode.IsPlaying())
+            {
+                ComparisonMode.Pause();
+                _isComparisonPlaying = false;
+            }
+            else
+            {
+                ComparisonMode.Play();
+                _isComparisonPlaying = true;
+            }
+        }
+        else
+        {
+            Playback.TogglePlayPause();
+        }
+        StateHasChanged();
+    }
+
+    private void OnSpeedSettingsChanged()
+    {
+        if (ComparisonMode.State.Instances.Any())
+            ComparisonMode.SetSpeedForAll(Playback.OperationsPerFrame, Playback.SpeedMultiplier);
+        _preferencesDirty = true;
+        StateHasChanged();
+    }
+
+    private bool GetIsPlaying()
+    {
+        if (ComparisonMode.State.Instances.Any())
+            return ComparisonMode.IsPlaying();
+        return Playback.State.PlaybackState == PlaybackState.Playing;
+    }
+
+    private bool GetSoundEnabled() =>
+        ComparisonMode.State.Instances.Count > 0
+            ? ComparisonMode.SoundEnabled
+            : Playback.SoundEnabled;
+
+    private string? GetComparisonStatusText()
+    {
+        if (!ComparisonMode.State.Instances.Any()) return null;
+        if (ComparisonMode.State.AllCompleted) return L["index.allCompleted"];
+        var completedCount = ComparisonMode.State.Instances.Count(x => x.State.IsSortCompleted);
+        return L["index.completedCount", completedCount, ComparisonMode.State.Instances.Count];
+    }
+
+    private int GetArraySize()
+    {
+        if (ComparisonMode.State.Instances.Count > 0)
+            return ComparisonMode.State.Instances[0].State.MainArray.Length;
+        return Playback.State.MainArray.Length;
+    }
+
+    private async Task HandleToggleSound()
+    {
+        if (ComparisonMode.State.Instances.Count >= 1)
+        {
+            // N>=1: 全インスタンスとグローバルPlayback両方を更新
+            ComparisonMode.ToggleSound();
+            // グローバルPlaybackにも同期（localStorageへの保存用）
+            Playback.SoundEnabled = ComparisonMode.SoundEnabled;
+            // サウンドON時にAudioContextを初期化（ブラウザAutoplay Policy対応）
+            if (ComparisonMode.SoundEnabled)
+            {
+                foreach (var instance in ComparisonMode.State.Instances)
+                    await instance.Playback.InitSoundAsync();
+            }
+        }
+        else
+        {
+            Playback.SoundEnabled = !Playback.SoundEnabled;
+        }
+        _preferencesDirty = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// 全インスタンスに localStorage から読み込んだサウンド設定を適用する。
+    /// </summary>
+    private void ApplySavedSoundSettings()
+    {
+        foreach (var instance in ComparisonMode.State.Instances)
+        {
+            instance.Playback.SoundEnabled = Playback.SoundEnabled;
+            instance.Playback.SoundVolume = Playback.SoundVolume;
+            instance.Playback.SoundType = Playback.SoundType;
+        }
+    }
+
+    // Settings モーダルを閉じる（設定保存もトリガー）
+    private void HandleSettingsClose()
+    {
+        _settingsOpen = false;
+        _preferencesDirty = true;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        Playback.StateChanged -= OnStateChanged;
+        ComparisonMode.OnStateChanged -= OnStateChanged;
+    }
+}

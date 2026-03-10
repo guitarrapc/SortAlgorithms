@@ -1,0 +1,273 @@
+@using SortVivo.Models
+@using SortVivo.Services
+@inject AlgorithmRegistry AlgorithmRegistry
+@inject IJSRuntime JS
+@inject LocalizationService L
+
+@if (IsOpen || _isClosing)
+{
+    @* 背景暗転: クリックで閉じる *@
+    <div class="settings-backdrop @(_isClosing ? "settings-backdrop--leaving" : "")" @onclick="HandleClose"></div>
+
+    @* モーダル本体: クリックが背景に伝播しないよう stopPropagation *@
+    <div class="settings-modal @(_isClosing ? "settings-modal--leaving" : "")" @onclick:stopPropagation>
+
+        @* ── ヘッダー ── *@
+        <div class="settings-modal__header">
+            <span class="settings-modal__title">@L["settings.title"]</span>
+            <button class="settings-modal__close" @onclick="HandleClose" title="@L["common.close"]">✕</button>
+        </div>
+
+        @* ── スクロール可能なボディ ── *@
+        <div class="settings-modal__body">
+
+            @* ────────────────────────────────────
+               🌐 Language
+               ──────────────────────────────────── *@
+            <section class="settings-section">
+                <h3 class="settings-section__title">@L["settings.language"]</h3>
+                <div class="settings-section__body">
+
+                    <div class="settings-row settings-row--vertical">
+                        <span class="settings-label">@L["settings.languageHint"]</span>
+                        <div class="settings-segment">
+                            @foreach (var lang in LocalizationService.SupportedLanguages)
+                            {
+                                var captured = lang;
+                                <button class="settings-segment__btn @(L.CurrentLanguage == lang ? "settings-segment__btn--active" : "")"
+                                        @onclick="() => ChangeLanguageAsync(captured)">
+                                    @LocalizationService.GetDisplayName(lang)
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            @* ────────────────────────────────────
+               🎨 Rendering
+               ──────────────────────────────────── *@
+            <section class="settings-section">
+                <h3 class="settings-section__title">@L["settings.rendering"]</h3>
+                <div class="settings-section__body">
+
+                    <div class="settings-row settings-row--vertical">
+                        <span class="settings-label">@L["settings.renderer"]</span>
+                        <div class="settings-segment">
+                            <button class="settings-segment__btn @(!RenderSettings.UseWebGL ? "settings-segment__btn--active" : "")"
+                                    @onclick="() => RenderSettings.UseWebGL = false">
+                                @L["settings.canvas2d"]
+                            </button>
+                            <button class="settings-segment__btn @(RenderSettings.UseWebGL ? "settings-segment__btn--active" : "")"
+                                    @onclick="() => RenderSettings.UseWebGL = true">
+                                @L["settings.webgl"]
+                            </button>
+                        </div>
+                        <span class="settings-hint">@L["settings.webglHint"]</span>
+                    </div>
+
+                </div>
+            </section>
+
+            @* ────────────────────────────────────
+               ▶ Playback
+               ──────────────────────────────────── *@
+            <section class="settings-section">
+                <h3 class="settings-section__title">@L["settings.playback"]</h3>
+                <div class="settings-section__body">
+
+                    <div class="settings-row">
+                        <span class="settings-label">@L["settings.autoReset"]</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="Playback.AutoReset" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-row">
+                        <span class="settings-label">@L["settings.instantMode"] <span class="settings-hint-inline">@L["settings.noAnimation"]</span></span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="Playback.InstantMode" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+            </section>
+
+            @* ────────────────────────────────────
+               🔊 Sound
+               ──────────────────────────────────── *@
+            <section class="settings-section">
+                <h3 class="settings-section__title">@L["settings.sound"]</h3>
+                <div class="settings-section__body">
+
+                    <div class="settings-row settings-row--vertical">
+                        <div class="settings-row__inline">
+                            <span class="settings-label">@L["settings.volume"]</span>
+                            <span class="settings-value">@((int)(Playback.SoundVolume * 100))%</span>
+                        </div>
+                        <input type="range" min="0" max="1" step="0.05"
+                               @bind="Playback.SoundVolume"
+                               @bind:event="oninput"
+                               @bind:after="HandleVolumeChanged"
+                               class="settings-slider"
+                               style="@RangeTrackStyle(Playback.SoundVolume, 0, 1)" />
+                    </div>
+
+                    <div class="settings-row settings-row--vertical">
+                        <span class="settings-label">@L["settings.soundType"]</span>
+                        <div class="settings-segment">
+                            <button class="settings-segment__btn @(Playback.SoundType == "sine" ? "settings-segment__btn--active" : "")"
+                                    @onclick='() => HandleSoundTypeChanged("sine")'>
+                                @L["settings.soundTypeSine"]
+                            </button>
+                            <button class="settings-segment__btn @(Playback.SoundType == "poko" ? "settings-segment__btn--active" : "")"
+                                    @onclick='() => HandleSoundTypeChanged("poko")'>
+                                @L["settings.soundTypePoko"]
+                            </button>
+                            <button class="settings-segment__btn @(Playback.SoundType == "cutePop" ? "settings-segment__btn--active" : "")"
+                                    @onclick='() => HandleSoundTypeChanged("cutePop")'>
+                                @L["settings.soundTypeCutePop"]
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            @* ────────────────────────────────────
+               🔧 Advanced
+               ──────────────────────────────────── *@
+            <section class="settings-section">
+                <h3 class="settings-section__title">@L["settings.advanced"]</h3>
+                <div class="settings-section__body">
+
+                    <div class="settings-row">
+                        <span class="settings-label">@L["settings.scrollOnGenerate"] <span class="settings-hint-inline">@L["settings.tabletMobile"]</span></span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="RenderSettings.ScrollOnGenerate" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-row">
+                        <span class="settings-label">@L["settings.autoRecommendedSize"]</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox"
+                                   checked="@AutoSwitchToRecommendedSize"
+                                   @onchange="e => AutoSwitchToRecommendedSizeChanged.InvokeAsync((bool)e.Value!)" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-row">
+                        <span class="settings-label">@L["settings.debugLog"]</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox"
+                                   @bind="DebugSettings.IsEnabled"
+                                   @bind:after="HandleDebugToggleChanged" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+            </section>
+
+            @* ────────────────────────────────────
+               ℹ️ About
+               ──────────────────────────────────── *@
+            <section class="settings-section">
+                <h3 class="settings-section__title">@L["settings.about"]</h3>
+                <div class="settings-section__body">
+
+                    <div class="about-content">
+                        <div class="about-item">
+                            <h4 class="about-item__title">@L["settings.aboutBrowserBased"]</h4>
+                            <p class="about-item__text">
+                                @L["settings.aboutBrowserBasedText"]
+                            </p>
+                        </div>
+
+                        <div class="about-item">
+                            <h4 class="about-item__title">@L["settings.aboutPrivacy"]</h4>
+                            <p class="about-item__text">
+                                @L["settings.aboutPrivacyText"]
+                            </p>
+                        </div>
+
+                        <div class="about-item">
+                            <h4 class="about-item__title">@L["settings.aboutBuiltWith"]</h4>
+                            <p class="about-item__text">
+                                @L["settings.aboutBuiltWithText"]
+                            </p>
+                        </div>
+
+                        <div class="about-item">
+                            <h4 class="about-item__title">@L["settings.aboutOpenSource"]</h4>
+                            <p class="about-item__text">
+                                <a href="https://github.com/guitarrapc/SortVivo" target="_blank" rel="noopener noreferrer" class="about-link">
+                                    @L["settings.aboutViewOnGitHub"]
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    [Parameter, EditorRequired] public PlaybackService Playback { get; set; } = default!;
+    [Parameter, EditorRequired] public RenderSettings RenderSettings { get; set; } = default!;
+    [Parameter, EditorRequired] public DebugSettings DebugSettings { get; set; } = default!;
+    [Parameter, EditorRequired] public ComparisonModeService ComparisonMode { get; set; } = default!;
+
+    private bool _isClosing = false;
+
+    [Parameter] public bool AutoSwitchToRecommendedSize { get; set; }
+    [Parameter] public EventCallback<bool> AutoSwitchToRecommendedSizeChanged { get; set; }
+
+    private async Task HandleClose()
+    {
+        if (_isClosing) return;
+        _isClosing = true;
+        await Task.Delay(200);
+        _isClosing = false;
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task ChangeLanguageAsync(string lang)
+    {
+        await L.SetLanguageAsync(lang, JS);
+    }
+
+    private async Task HandleDebugToggleChanged()
+    {
+        await JS.InvokeVoidAsync("debugHelper.setDebugMode", DebugSettings.IsEnabled);
+    }
+
+    private async Task HandleSoundTypeChanged(string soundType)
+    {
+        Playback.SoundType = soundType;
+        await ComparisonMode.SetSoundTypeForAllAsync(soundType);
+    }
+
+    private void HandleVolumeChanged()
+    {
+        ComparisonMode.SetSoundVolumeForAll(Playback.SoundVolume);
+    }
+
+    private static string RangeTrackStyle(double value, double min, double max)
+    {
+        var pct = (value - min) / (max - min) * 100;
+        return $"background:linear-gradient(to right,var(--color-accent) 0%,var(--color-accent) {pct:F1}%,#4A4A4A {pct:F1}%,#4A4A4A 100%)";
+    }
+}

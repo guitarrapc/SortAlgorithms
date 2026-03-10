@@ -1,0 +1,72 @@
+﻿using SortAlgorithm.Contexts;
+using SortVivo.Services;
+
+namespace SortVivo.Models;
+
+/// <summary>
+/// アルゴリズムのメタデータ
+/// </summary>
+public record AlgorithmMetadata
+{
+    /// <summary>アルゴリズムの表示名</summary>
+    public required string Name { get; init; }
+
+    /// <summary>アルゴリズムのカテゴリ</summary>
+    public required string Category { get; init; }
+
+    /// <summary>時間計算量（平均）</summary>
+    public required string TimeComplexity { get; init; }
+
+    /// <summary>最大要素数</summary>
+    public required int MaxElements { get; init; }
+
+    /// <summary>推奨要素数</summary>
+    public required int RecommendedSize { get; init; }
+
+    /// <summary>ソート実行デリゲート</summary>
+    public required Action<Span<int>, ISortContext> SortAction { get; init; }
+
+    /// <summary>説明</summary>
+    public string Description { get; init; } = string.Empty;
+
+    /// <summary>ローカライズ用アルゴリズムID (JSON キー)</summary>
+    public string AlgorithmId { get; init; } = string.Empty;
+
+    /// <summary>ローカライズされたチュートリアル説明文を返す。</summary>
+    public string GetLocalizedTutorial(LocalizationService l)
+    {
+        if (string.IsNullOrEmpty(AlgorithmId)) return string.Empty;
+        var key = $"algorithmDescriptions.{AlgorithmId}.tutorial";
+        var result = l[key];
+        return result == key ? string.Empty : result;
+    }
+
+    /// <summary>
+    /// チュートリアルで使用する初期配列の種類。
+    /// アルゴリズムの特性上デフォルト配列では教育効果が得られない場合に変更する。
+    /// 実際の配列は <see cref="TutorialArrayTypeExtensions.ToArray"/> で取得する。
+    /// </summary>
+    public TutorialArrayType TutorialArrayType { get; init; } = TutorialArrayType.Default;
+
+    /// <summary>
+    /// true の場合、チュートリアルの対象外とする。
+    /// デフォルト配列でも専用配列でも教育的に表示できないアルゴリズムに設定する。
+    /// </summary>
+    public bool ExcludeFromTutorial { get; init; } = false;
+
+    /// <summary>
+    /// チュートリアルで利用可能な追加ビジュアライゼーション。
+    /// ヒープ木表示など、マーブル以外の代替表現を有効化する。
+    /// </summary>
+    public TutorialVisualizationHint TutorialVisualizationHint { get; init; } = TutorialVisualizationHint.None;
+
+    /// <summary>
+    /// LSD Radix sort のバケット基数。
+    /// <see cref="TutorialVisualizationHint"/> が <see cref="TutorialVisualizationHint.DigitBucketLsd"/> のときのみ使用。
+    /// 10 = 十進数 (b=10)、4 = 4 進数 (b=4)。0 = 未設定。
+    /// </summary>
+    public int TutorialLsdRadix { get; init; }
+
+    /// <summary>実装ソースコードへの GitHub URL</summary>
+    public string GitHubSourceUrl { get; init; } = string.Empty;
+}

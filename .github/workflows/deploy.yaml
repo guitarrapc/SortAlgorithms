@@ -27,8 +27,7 @@ jobs:
         with:
           restore-wasm-workload: true
       - name: Publish (Release + AOT)
-        run: |
-          dotnet publish ./src/SortAlgorithm.VisualizationWeb/SortAlgorithm.VisualizationWeb.csproj -c Release -o ./out
+        run: dotnet publish ./src/SortVivo/SortVivo.csproj -c Release -o ./out
       - name: Deploy
         id: deploy
         uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65 # 3.14.1
