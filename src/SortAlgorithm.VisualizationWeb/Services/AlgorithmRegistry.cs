@@ -213,11 +213,11 @@ public class AlgorithmRegistry
             tutorialVisualizationHint: TutorialVisualizationHint.AvlTree);
 
         // Joke Sorts - O(n!) ~ O(∞) - 推奨8（注意: 極めて遅い）
-        // Bogo sort: ランダムシャッフルで非決定的のためチュートリアル対象外。
+        // Bogo sort: 4要素なら 4! = 24 通りなのでチュートリアルでランダム性を示せる。
         // Slow / Stooge: 決定的な再帰アルゴリズムのため、4要素に絞ってチュートリアル可能。
         Add("Bogo sort", "JOKE", "O(n!)", 8, MAX_SIZE_JOKE_BOGO, (arr, ctx) => BogoSort.Sort(arr, ctx), "⚠️ Extremely slow!",
             gitHubSourceUrl: Src("Joke", "BogoSort"),
-            excludeFromTutorial: true);
+            tutorialArrayType: TutorialArrayType.FourElement);
         Add("Slow sort", "JOKE", "O(n^(log n))", MAX_SIZE_JOKE, 16, (arr, ctx) => SlowSort.Sort(arr, ctx), "⚠️ Extremely slow!",
             gitHubSourceUrl: Src("Joke", "SlowSort"),
             tutorialArrayType: TutorialArrayType.FourElement);
