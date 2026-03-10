@@ -1,4 +1,4 @@
-# SortViz - Sort Algorithm Visualization Web App
+# SortVivo - Sort Algorithm Visualization Web App
 
 ソートアルゴリズムの動作をリアルタイムでグラフィカルに可視化するBlazor WebAssemblyアプリケーション。
 
@@ -148,5 +148,5 @@ SortAlgorithm.VisualizationWeb/
 
 ---
 
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2025-01-27

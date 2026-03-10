@@ -11,7 +11,7 @@
     "tutorial": "Tutorial"
   },
   "index": {
-    "title": "SortViz",
+    "title": "SortVivo",
     "addGenerate": "Add & Generate",
     "regenerate": "Regenerate",
     "allCompleted": "All Completed!",
@@ -358,6 +358,6 @@
     "shareToX": "X",
     "shareToThreads": "Threads",
     "shareToReddit": "Reddit",
-    "defaultText": "Visualizing sorting algorithms with SortViz!"
+    "defaultText": "Visualizing sorting algorithms with SortVivo!"
   }
 }

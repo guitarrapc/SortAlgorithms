@@ -11,7 +11,7 @@
     "tutorial": "チュートリアル"
   },
   "index": {
-    "title": "SortViz",
+    "title": "SortVivo",
     "addGenerate": "追加 & 生成",
     "regenerate": "再生成",
     "allCompleted": "すべて完了！",
@@ -644,6 +644,6 @@
     "shareToX": "X",
     "shareToThreads": "Threads",
     "shareToReddit": "Reddit",
-    "defaultText": "SortVizでソートアルゴリズムを可視化！"
+    "defaultText": "SortVivoでソートアルゴリズムを可視化！"
   }
 }

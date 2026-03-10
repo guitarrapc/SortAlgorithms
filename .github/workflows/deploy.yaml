@@ -35,7 +35,7 @@ jobs:
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: pages deploy ./out/wwwroot --project-name=sortviz
+          command: pages deploy ./out/wwwroot --project-name=sortvivo
       - name: Post Preview deployment URL to PR
         if: ${{ github.event_name == 'pull_request' }}
         run: |

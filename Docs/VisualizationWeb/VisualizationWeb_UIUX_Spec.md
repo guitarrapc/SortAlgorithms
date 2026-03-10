@@ -1,4 +1,4 @@
-# SortViz - UI/UX 仕様書
+# SortVivo - UI/UX 仕様書
 
 ## 1. 設計思想
 
@@ -858,4 +858,3 @@ App.razor OnAfterRenderAsync(firstRender)
 ---
 
 **Related Documents**: `VisualizationWeb.md`, `VisualizationWeb_tutorial.md`
-

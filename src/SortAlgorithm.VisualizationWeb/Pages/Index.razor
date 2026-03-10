@@ -16,12 +16,12 @@
 @inject LocalizationService L
 @implements IDisposable
 
-<PageTitle>SortViz</PageTitle>
+<PageTitle>SortVivo</PageTitle>
 
 <div class="visualization-page">
     <div class="header">
         <div class="header__left"></div>
-        <a href="/" class="header__title-link"><h1 class="header__title">SORTVIZ</h1></a>
+        <a href="/" class="header__title-link"><h1 class="header__title">SORTVIVO</h1></a>
         <div class="header__actions">
             <ShareButton />
             <button class="header__icon-btn" @onclick='() => NavigationManager.NavigateTo($"tutorial/{Uri.EscapeDataString(SelectedAlgorithm)}")' title="@L["nav.tutorial"]">

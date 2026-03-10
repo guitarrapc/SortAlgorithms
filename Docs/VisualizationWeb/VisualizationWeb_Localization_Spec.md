@@ -78,7 +78,7 @@ wwwroot/locales/
 
   // ── メインページ (Index.razor) ──
   "index": {
-    "title": "SortViz",
+    "title": "SortVivo",
     "addGenerate": "Add & Generate",
     "regenerate": "Regenerate",
     "allCompleted": "All Completed!",
