@@ -94,6 +94,7 @@
     overflow-y: auto;
     padding: 8px 0 16px;
     flex: 1;
+    overscroll-behavior: contain;
 }
 
 /* Settings セクション */
@@ -326,7 +327,9 @@
         transform: none;
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
         max-height: 100vh;
+        max-height: 100dvh;
         border-radius: 0;
         animation: modalInMobile 0.2s ease forwards;
     }
