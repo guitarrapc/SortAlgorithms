@@ -47,24 +47,24 @@
                     </div>
 
                     <div class="settings-row">
-                        <span class="settings-label">@L["settings.renderer"]</span>
-                        <div class="webgl-control">
+                        <span class="settings-label">
+                            @L["settings.renderer"]
                             <button class="webgl-info-btn @(_showWebGLHint ? "webgl-info-btn--active" : "")"
                                     @onclick="() => _showWebGLHint = !_showWebGLHint"
                                     @onclick:stopPropagation
                                     title="@L["settings.webglHint"]">
                                 ⓘ
                             </button>
-                            <div class="settings-segment settings-segment--fit">
-                                <button class="settings-segment__btn @(!RenderSettings.UseWebGL ? "settings-segment__btn--active" : "")"
-                                        @onclick="() => RenderSettings.UseWebGL = false">
-                                    @L["settings.canvas2d"]
-                                </button>
-                                <button class="settings-segment__btn @(RenderSettings.UseWebGL ? "settings-segment__btn--active" : "")"
-                                        @onclick="() => RenderSettings.UseWebGL = true">
-                                    @L["settings.webgl"]
-                                </button>
-                            </div>
+                        </span>
+                        <div class="settings-segment settings-segment--fit">
+                            <button class="settings-segment__btn @(!RenderSettings.UseWebGL ? "settings-segment__btn--active" : "")"
+                                    @onclick="() => RenderSettings.UseWebGL = false">
+                                @L["settings.canvas2d"]
+                            </button>
+                            <button class="settings-segment__btn @(RenderSettings.UseWebGL ? "settings-segment__btn--active" : "")"
+                                    @onclick="() => RenderSettings.UseWebGL = true">
+                                @L["settings.webgl"]
+                            </button>
                         </div>
                     </div>
                     @if (_showWebGLHint)

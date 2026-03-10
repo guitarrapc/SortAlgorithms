@@ -341,13 +341,15 @@
     color: var(--text-gray);
     font-size: 0.7rem;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    vertical-align: middle;
     transition: border-color 0.15s, color 0.15s;
     padding: 0;
     line-height: 1;
+    margin-left: 6px;
 }
 
     .webgl-info-btn:hover,
