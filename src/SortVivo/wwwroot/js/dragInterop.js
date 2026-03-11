@@ -89,12 +89,21 @@ class DragManager {
         this.dragState.initialOffsetX = offsetX;
         this.dragState.initialOffsetY = offsetY;
 
-        this.dragState.longPressTimer = setTimeout(() => {
-            this._startDrag(card, e.clientX, e.clientY);
-        }, 300);
+        const isDragHandle = !!target.closest('.sort-card__drag-handle');
 
-        // スクロールやテキスト選択を防止
-        e.preventDefault();
+        if (isDragHandle) {
+            // ドラッグハンドル: 遅延なし即座に開始（touch-action: none が CSS で設定済み）
+            e.preventDefault();
+            this._startDrag(card, e.clientX, e.clientY);
+        } else {
+            // 通常領域: 300ms 長押し（デスクトップ用）
+            this.dragState.longPressTimer = setTimeout(() => {
+                this._startDrag(card, e.clientX, e.clientY);
+            }, 300);
+
+            // スクロールやテキスト選択を防止
+            e.preventDefault();
+        }
     }
 
     _startDrag(card, x, y) {

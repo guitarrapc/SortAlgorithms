@@ -28,6 +28,26 @@
     flex-shrink: 0;
 }
 
+.sort-card__drag-handle {
+    touch-action: none;
+    cursor: grab;
+    color: #555;
+    font-size: 1.1em;
+    line-height: 1;
+    padding: 0 6px 0 0;
+    flex-shrink: 0;
+    user-select: none;
+    transition: color 0.15s;
+}
+
+.sort-card__drag-handle:hover {
+    color: #999;
+}
+
+.sort-card__drag-handle:active {
+    cursor: grabbing;
+}
+
 .sort-card__algorithm-name {
     font-size: 1em;
     color: #e0e0e0;
