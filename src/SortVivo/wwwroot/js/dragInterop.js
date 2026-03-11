@@ -120,12 +120,9 @@ class DragManager {
         preview.style.margin = '0';
         preview.style.left = '0';
         preview.style.top = '0';
-        // ボーダーとアニメーションを確実に適用（インラインスタイル）
-        preview.style.border = '3px solid var(--color-accent, #7fa86f)';
-        preview.style.borderRadius = '8px';
-        preview.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)';
-        preview.style.cursor = 'grabbing';
-        preview.style.animation = 'drag-pulse 1.5s ease-in-out infinite';
+        // transform/transitionをクリア（元カードから継承された可能性があるため）
+        preview.style.transform = '';
+        preview.style.transition = '';
         document.body.appendChild(preview);
         this.dragState.preview = preview;
 
@@ -144,6 +141,11 @@ class DragManager {
                 c.style.transition = 'transform 200ms ease-out';
             }
         });
+
+        // ブラウザにリフローを強制（transition が確実に適用されるように）
+        if (cards.length > 0) {
+            void cards[0].offsetHeight;
+        }
     }
 
     _onPointerMove(e) {
@@ -168,7 +170,7 @@ class DragManager {
         // 並び替えシミュレート
         const newIndex = this._calculateDropIndex(e.clientX, e.clientY);
         if (newIndex !== -1 && newIndex !== this.dragState.currentIndex) {
-            this._reorderCards(this.dragState.draggedIndex, this.dragState.currentIndex, newIndex);
+            this._reorderCards(this.dragState.draggedIndex, newIndex);
             this.dragState.currentIndex = newIndex;
         }
     }
@@ -207,21 +209,59 @@ class DragManager {
 
     _calculateDropIndex(x, y) {
         const cards = Array.from(this.grid.querySelectorAll('.sort-card'));
-        const rects = cards.map(c => c.getBoundingClientRect());
+        const currentIndex = this.dragState.currentIndex;
 
-        // プレビュー中心がどのカードの上にあるかチェック
-        for (let i = 0; i < rects.length; i++) {
-            const rect = rects[i];
-            if (x >= rect.left && x <= rect.right &&
-                y >= rect.top && y <= rect.bottom) {
-                return i;
+        // 全カードの元の位置（transform除去後）の中心座標で統一して計算
+        // これにより、currentIndexが変わっても座標系が一貫する
+        const originalCenters = cards.map((card, i) => {
+            const rect = card.getBoundingClientRect();
+            const style = window.getComputedStyle(card);
+            const matrix = new DOMMatrixReadOnly(style.transform);
+            // transform除去後の元の位置の中心（draggedIndex含む全カード統一）
+            const centerX = rect.left + rect.width / 2 - matrix.m41;
+            const centerY = rect.top + rect.height / 2 - matrix.m42;
+            return { index: i, centerX, centerY };
+        });
+
+        // カーソル位置から最も近い「元の位置」のカードを見つける
+        let closestIndex = currentIndex;
+        let minDistance = Infinity;
+
+        for (const center of originalCenters) {
+            const distance = Math.hypot(x - center.centerX, y - center.centerY);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestIndex = center.index;
             }
         }
 
-        return this.dragState.currentIndex; // 該当なしは現在位置を維持
+        // 現在のインデックスと異なる場合、そのカードの元の位置の中心を超えたかチェック
+        if (closestIndex !== currentIndex) {
+            const targetCenter = originalCenters[closestIndex];
+            const currentCenter = originalCenters[currentIndex];
+
+            // 現在の元の位置から対象の元の位置への方向ベクトル
+            const dirX = targetCenter.centerX - currentCenter.centerX;
+            const dirY = targetCenter.centerY - currentCenter.centerY;
+
+            // カーソルの位置ベクトル（現在の元の位置からの相対）
+            const toCursorX = x - currentCenter.centerX;
+            const toCursorY = y - currentCenter.centerY;
+
+            // 内積による投影で、カーソルが対象の中心を超えたかチェック
+            const dotProduct = dirX * toCursorX + dirY * toCursorY;
+            const targetDistanceSq = dirX * dirX + dirY * dirY;
+            const progress = dotProduct / targetDistanceSq;
+
+            if (progress >= 1.0) {
+                return closestIndex;
+            }
+        }
+
+        return currentIndex;
     }
 
-    _reorderCards(draggedIndex, oldIndex, newIndex) {
+    _reorderCards(draggedIndex, newIndex) {
         const cards = Array.from(this.grid.querySelectorAll('.sort-card'));
         const gridCols = this._getGridColumns();
         const cardWidth = cards[0]?.offsetWidth || 0;
@@ -231,17 +271,21 @@ class DragManager {
         cards.forEach((card, i) => {
             if (i === draggedIndex) return; // ドラッグ中カードはスキップ
 
+            // 常に元の配置からの変換を計算（累積変換を避ける）
             let targetIndex = i;
 
-            // 並び替えロジック
-            if (oldIndex < newIndex) {
-                // 右/下へ移動
-                if (i > oldIndex && i <= newIndex) {
+            // draggedIndex のカードが newIndex に移動すると仮定した場合の、
+            // 各カードの最終的な位置を計算
+            if (draggedIndex < newIndex) {
+                // ドラッグ中のカードが右/下へ移動
+                // draggedIndex+1 〜 newIndex の範囲にあるカードは左/上へシフト
+                if (i > draggedIndex && i <= newIndex) {
                     targetIndex = i - 1;
                 }
-            } else if (oldIndex > newIndex) {
-                // 左/上へ移動
-                if (i >= newIndex && i < oldIndex) {
+            } else if (draggedIndex > newIndex) {
+                // ドラッグ中のカードが左/上へ移動
+                // newIndex 〜 draggedIndex-1 の範囲にあるカードは右/下へシフト
+                if (i >= newIndex && i < draggedIndex) {
                     targetIndex = i + 1;
                 }
             }
@@ -267,12 +311,13 @@ class DragManager {
         const fromIndex = this.dragState.draggedIndex;
         const toIndex = this.dragState.currentIndex;
 
-        // プレビューフェードアウト
-        if (this.dragState.preview) {
-            this.dragState.preview.style.transition = 'opacity 100ms linear';
-            this.dragState.preview.style.opacity = '0';
+        // プレビューフェードアウト（参照をキャプチャして確実に削除）
+        const preview = this.dragState.preview;
+        if (preview) {
+            preview.style.transition = 'opacity 100ms linear';
+            preview.style.opacity = '0';
             setTimeout(() => {
-                this.dragState.preview?.remove();
+                preview.remove();
             }, 100);
         }
 
@@ -299,9 +344,10 @@ class DragManager {
     }
 
     _cancelDrag() {
-        // プレビュー削除
-        if (this.dragState.preview) {
-            this.dragState.preview.remove();
+        // プレビュー削除（参照をキャプチャ）
+        const preview = this.dragState.preview;
+        if (preview) {
+            preview.remove();
         }
 
         // 全カードの transform をリセット
