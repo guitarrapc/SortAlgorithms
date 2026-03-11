@@ -61,6 +61,10 @@ class DragManager {
         this._boundOnPointerUp = this._onPointerUp.bind(this);
         this._boundOnKeyDown = this._onKeyDown.bind(this);
 
+        this._rafId = null;
+        this._pendingMoveX = 0;
+        this._pendingMoveY = 0;
+
         this._bindEvents();
     }
 
@@ -91,7 +95,7 @@ class DragManager {
         const offsetX = e.clientX - rect.left;
         const offsetY = e.clientY - rect.top;
 
-        // 長押しタイマー開始（300ms）
+        // ドラッグ開始前の状態を保存
         this.dragState.draggedIndex = index;
         this.dragState.currentIndex = index;
         this.dragState.draggedCard = card;
@@ -116,6 +120,19 @@ class DragManager {
         const rect = card.getBoundingClientRect();
         this.dragState.originalCardWidth = rect.width;
         this.dragState.originalCardHeight = rect.height;
+
+        // ホットパス用キャッシュ（DOM変更前に一括読み取り）
+        // pointermove ごとに querySelectorAll / getComputedStyle / DOMMatrix を呼ばないようにする
+        const cards = Array.from(this.grid.querySelectorAll('.sort-card'));
+        this.dragState.cards = cards;
+        this.dragState.gridCols = this._getGridColumns();
+        this.dragState.cardWidth = rect.width;
+        this.dragState.cardHeight = rect.height;
+        this.dragState.originalCenters = cards.map((c, i) => {
+            const r = c.getBoundingClientRect();
+            // ドラッグ開始時点では transform が未適用なので rect の中心がそのまま元の位置
+            return { index: i, centerX: r.left + r.width / 2, centerY: r.top + r.height / 2 };
+        });
 
         // カードに dragging クラス追加
         card.classList.add('sort-card--dragging');
@@ -147,7 +164,6 @@ class DragManager {
         }
 
         // transition を追加（他のカードのアニメーション用）
-        const cards = Array.from(this.grid.querySelectorAll('.sort-card'));
         cards.forEach(c => {
             if (c !== card) {
                 c.style.transition = 'transform 200ms ease-out';
@@ -165,15 +181,28 @@ class DragManager {
 
         e.preventDefault();
 
-        // プレビュー更新
-        this._updatePreviewPosition(this.dragState.preview, e.clientX, e.clientY);
+        // 最新ポインター座標を保持し、rAF で処理（高頻度イベントを60fps上限にスロットル）
+        this._pendingMoveX = e.clientX;
+        this._pendingMoveY = e.clientY;
 
-        // 並び替えシミュレート
-        const newIndex = this._calculateDropIndex(e.clientX, e.clientY);
-        if (newIndex !== -1 && newIndex !== this.dragState.currentIndex) {
-            this._reorderCards(this.dragState.draggedIndex, newIndex);
-            this.dragState.currentIndex = newIndex;
-        }
+        if (this._rafId !== null) return;
+        this._rafId = requestAnimationFrame(() => {
+            this._rafId = null;
+            if (!this.dragState.isDragging) return;
+
+            const x = this._pendingMoveX;
+            const y = this._pendingMoveY;
+
+            // プレビュー更新
+            this._updatePreviewPosition(this.dragState.preview, x, y);
+
+            // 並び替えシミュレート
+            const newIndex = this._calculateDropIndex(x, y);
+            if (newIndex !== -1 && newIndex !== this.dragState.currentIndex) {
+                this._reorderCards(this.dragState.draggedIndex, newIndex);
+                this.dragState.currentIndex = newIndex;
+            }
+        });
     }
 
     _onPointerUp(e) {
@@ -194,32 +223,13 @@ class DragManager {
 
     _updatePreviewPosition(preview, x, y) {
         if (!preview) return;
-
-        // クリックした位置のオフセットを維持する（等倍表示）
-        const scale = 1.0;
-        const scaledOffsetX = this.dragState.initialOffsetX * scale;
-        const scaledOffsetY = this.dragState.initialOffsetY * scale;
-
-        preview.style.transform = `translate3d(${x - scaledOffsetX}px, ${y - scaledOffsetY}px, 0) scale(${scale})`;
+        preview.style.transform = `translate3d(${x - this.dragState.initialOffsetX}px, ${y - this.dragState.initialOffsetY}px, 0)`;
     }
 
     _calculateDropIndex(x, y) {
-        const cards = Array.from(this.grid.querySelectorAll('.sort-card'));
-        const currentIndex = this.dragState.currentIndex;
+        const { originalCenters, currentIndex } = this.dragState;
 
-        // 全カードの元の位置（transform除去後）の中心座標で統一して計算
-        // これにより、currentIndexが変わっても座標系が一貫する
-        const originalCenters = cards.map((card, i) => {
-            const rect = card.getBoundingClientRect();
-            const style = window.getComputedStyle(card);
-            const matrix = new DOMMatrixReadOnly(style.transform);
-            // transform除去後の元の位置の中心（draggedIndex含む全カード統一）
-            const centerX = rect.left + rect.width / 2 - matrix.m41;
-            const centerY = rect.top + rect.height / 2 - matrix.m42;
-            return { index: i, centerX, centerY };
-        });
-
-        // カーソル位置から最も近い「元の位置」のカードを見つける
+        // キャッシュ済みの元の位置の中心座標で最近傍カードを探す
         let closestIndex = currentIndex;
         let minDistance = Infinity;
 
@@ -236,11 +246,9 @@ class DragManager {
             const targetCenter = originalCenters[closestIndex];
             const currentCenter = originalCenters[currentIndex];
 
-            // 現在の元の位置から対象の元の位置への方向ベクトル
             const dirX = targetCenter.centerX - currentCenter.centerX;
             const dirY = targetCenter.centerY - currentCenter.centerY;
 
-            // カーソルの位置ベクトル（現在の元の位置からの相対）
             const toCursorX = x - currentCenter.centerX;
             const toCursorY = y - currentCenter.centerY;
 
@@ -258,10 +266,7 @@ class DragManager {
     }
 
     _reorderCards(draggedIndex, newIndex) {
-        const cards = Array.from(this.grid.querySelectorAll('.sort-card'));
-        const gridCols = this._getGridColumns();
-        const cardWidth = cards[0]?.offsetWidth || 0;
-        const cardHeight = cards[0]?.offsetHeight || 0;
+        const { cards, gridCols, cardWidth, cardHeight } = this.dragState;
         const gap = 12; // grid gap と一致させる
 
         cards.forEach((card, i) => {
@@ -304,6 +309,12 @@ class DragManager {
     }
 
     _finalizeDrop() {
+        // 保留中の rAF をキャンセル（_resetDragState より前に行う）
+        if (this._rafId !== null) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
+
         const fromIndex = this.dragState.draggedIndex;
         const toIndex = this.dragState.currentIndex;
 
@@ -318,8 +329,7 @@ class DragManager {
         }
 
         // dragging クラス削除と transform リセット
-        const cards = Array.from(this.grid.querySelectorAll('.sort-card'));
-        cards.forEach(card => {
+        this.dragState.cards.forEach(card => {
             card.classList.remove('sort-card--dragging');
             card.style.transform = '';
             card.style.transition = '';
@@ -340,6 +350,12 @@ class DragManager {
     }
 
     _cancelDrag() {
+        // 保留中の rAF をキャンセル
+        if (this._rafId !== null) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
+
         // プレビュー削除（参照をキャプチャ）
         const preview = this.dragState.preview;
         if (preview) {
@@ -347,7 +363,7 @@ class DragManager {
         }
 
         // 全カードの transform をリセット
-        const cards = Array.from(this.grid.querySelectorAll('.sort-card'));
+        const cards = this.dragState.cards ?? Array.from(this.grid.querySelectorAll('.sort-card'));
         cards.forEach(card => {
             card.classList.remove('sort-card--dragging');
             card.style.transform = '';
@@ -363,8 +379,7 @@ class DragManager {
     }
 
     _calculateNewOrder(fromIndex, toIndex) {
-        const cards = Array.from(this.grid.querySelectorAll('.sort-card'));
-        const count = cards.length;
+        const count = this.dragState.cards.length;
         const order = Array.from({ length: count }, (_, i) => i);
         const [moved] = order.splice(fromIndex, 1);
         order.splice(toIndex, 0, moved);
@@ -389,18 +404,23 @@ class DragManager {
             startX: 0,
             startY: 0,
             preview: null,
-            longPressTimer: null,
             draggedCard: null,
             originalCardWidth: 0,
             originalCardHeight: 0,
             initialOffsetX: 0,
-            initialOffsetY: 0
+            initialOffsetY: 0,
+            cards: null,
+            originalCenters: null,
+            cardWidth: 0,
+            cardHeight: 0,
+            gridCols: 0
         };
     }
 
     dispose() {
-        if (this.dragState.longPressTimer) {
-            clearTimeout(this.dragState.longPressTimer);
+        if (this._rafId !== null) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
         }
         this._cancelDrag();
 
