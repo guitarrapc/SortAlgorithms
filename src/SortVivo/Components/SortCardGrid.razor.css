@@ -166,8 +166,14 @@
         visibility: hidden;
     }
 
+    /* スマホ: 並び替えモードの時のみドラッグハンドルを表示 */
+    ::deep .sort-card__drag-handle {
+        display: none;
+    }
+
     /* 編集モード中: ドラッグハンドルを強調表示 */
     .sort-card-grid-wrapper--edit-mode ::deep .sort-card__drag-handle {
+        display: block;
         color: var(--color-accent, #4a9eff);
         font-size: 1.3em;
     }
