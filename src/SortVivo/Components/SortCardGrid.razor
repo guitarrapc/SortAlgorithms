@@ -61,6 +61,9 @@
     [Parameter]
     public EventCallback OnVisualizationClick { get; set; }
 
+    [Parameter]
+    public EventCallback<int[]> OnInstancesReordered { get; set; }
+
     private string _gridId = $"sort-card-grid-{Guid.NewGuid():N}";
     private DotNetObjectReference<SortCardGrid>? _dotNetRef;
     private int _activeCarouselIndex = 0;
@@ -73,6 +76,7 @@
         {
             _dotNetRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("carouselInterop.setup", _gridId, _dotNetRef);
+            await JS.InvokeVoidAsync("dragInterop.setup", _gridId, _dotNetRef);
             _lastSetupCount = Instances.Count;
         }
     }
@@ -84,6 +88,19 @@
         {
             _activeCarouselIndex = index;
             InvokeAsync(StateHasChanged);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnReorder(int[] newOrder)
+    {
+        if (newOrder == null || newOrder.Length != Instances.Count)
+            return;
+
+        // 親コンポーネント（Index.razor）に新しい順序を通知
+        if (OnInstancesReordered.HasDelegate)
+        {
+            await OnInstancesReordered.InvokeAsync(newOrder);
         }
     }
 
@@ -128,6 +145,7 @@
     public async ValueTask DisposeAsync()
     {
         await JS.InvokeVoidAsync("carouselInterop.dispose", _gridId);
+        await JS.InvokeVoidAsync("dragInterop.dispose", _gridId);
         _dotNetRef?.Dispose();
     }
 }
