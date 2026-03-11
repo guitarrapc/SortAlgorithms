@@ -37,7 +37,6 @@ class DragManager {
             startX: 0,
             startY: 0,
             preview: null,
-            longPressTimer: null,
             draggedCard: null,
             originalCardWidth: 0,
             originalCardHeight: 0,
@@ -95,14 +94,6 @@ class DragManager {
             // ドラッグハンドル: 遅延なし即座に開始（touch-action: none が CSS で設定済み）
             e.preventDefault();
             this._startDrag(card, e.clientX, e.clientY);
-        } else {
-            // 通常領域: 300ms 長押し（デスクトップ用）
-            this.dragState.longPressTimer = setTimeout(() => {
-                this._startDrag(card, e.clientX, e.clientY);
-            }, 300);
-
-            // スクロールやテキスト選択を防止
-            e.preventDefault();
         }
     }
 
@@ -158,17 +149,6 @@ class DragManager {
     }
 
     _onPointerMove(e) {
-        // 長押し検出前の移動判定（5px 以上動いたらキャンセル）
-        if (this.dragState.longPressTimer && !this.dragState.isDragging) {
-            const dx = e.clientX - this.dragState.startX;
-            const dy = e.clientY - this.dragState.startY;
-            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-                clearTimeout(this.dragState.longPressTimer);
-                this.dragState.longPressTimer = null;
-            }
-            return;
-        }
-
         if (!this.dragState.isDragging) return;
 
         e.preventDefault();
@@ -185,11 +165,6 @@ class DragManager {
     }
 
     _onPointerUp(e) {
-        if (this.dragState.longPressTimer) {
-            clearTimeout(this.dragState.longPressTimer);
-            this.dragState.longPressTimer = null;
-        }
-
         if (!this.dragState.isDragging) {
             this._resetDragState();
             return;
