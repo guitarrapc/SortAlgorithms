@@ -28,24 +28,38 @@
 
 ### キャプチャ対象
 
+キャプチャ範囲は `.visualization-content`（ソートカード群のみ）。コントロールバーやシークバーは含まない。
+
 | 要素 | セレクター | 描画方法 |
-|------|-----------|---------|
-| 可視化エリア全体 | `#visualization-area` | 背景色 `#0a0a1a` で塗りつぶし |
-| コントロールバー背景 | `.play-control-bar` | 背景色 `#111827` で塗りつぶし |
+|------|-----------|--------|
+| ソートカード背景 | `.sort-card` | 背景色 `#1a1a1a`、ボーダー `#333`（完了時 `#10B981`） |
+| カードヘッダー背景 | `.sort-card__header` | 背景色 `#252525` |
 | ソート canvas | `canvas`（エリア内全て） | `drawImage()` で相対位置に描画 |
-| アルゴリズム名ラベル | `.sort-card__algo-name`, `.sort-card__header-title` | `fillText()` で描画（bold 14px） |
-| 統計値オーバーレイ | `.sort-card__stats-value` | `fillText()` で描画（12px monospace） |
+| アルゴリズム名 | `.sort-card__algorithm-name` / `.sort-card__algo-select` | `fillText()` bold 14px |
+| 計算量バッジ | `.complexity-badge` | `fillText()` 11px `#c8aa6e` |
+| 統計サマリー背景 | `.sort-stats-summary` | 背景色 `#242a27` |
+| 統計カード | `.stat-mini` | 背景 + ボーダー描画 |
+| 統計値 | `.stat-mini .value` | `fillText()` bold 13px monospace |
+| 統計ラベル | `.stat-mini .label` | `fillText()` 10px uppercase `#9ca3af` |
+
+**除外対象:**
+
+| 要素 | 理由 |
+|------|------|
+| `.play-control-bar` | コントロールバーは操作 UI のため録画不要 |
+| `.seek-stats-row` | シークバーは操作 UI のため録画不要 |
 
 ### キャプチャ方式
 
-1. オフスクリーン `<canvas>` を生成（対象要素と同サイズ）
+1. オフスクリーン `<canvas>` を生成（`.visualization-content` と同サイズ）
 2. `setInterval(1000 / fps)` で定期的にフレームをキャプチャ
-3. 各フレームで:
-   - 背景を `#0a0a1a` で塗りつぶし
-   - コントロールバー背景を描画
-   - エリア内の全 `<canvas>` 要素を相対位置で `drawImage()`
-   - アルゴリズム名ラベルを `fillText()` で描画
-   - 統計値を `fillText()` で描画
+3. 各フレームの描画順序:
+   1. 背景を `#0a0a1a` で塗りつぶし
+   2. 各 `.sort-card` のカード背景・ボーダー・ヘッダー背景・統計サマリー背景を描画
+   3. エリア内の全 `<canvas>` 要素を相対位置で `drawImage()`
+   4. アルゴリズム名を `fillText()` で描画（N=1 は `span`、N>1 は `select` から取得）
+   5. 計算量バッジを描画
+   6. 各 `.stat-mini` の背景・ボーダー・値・ラベルを描画
 4. オフスクリーン canvas の `captureStream()` を `MediaRecorder` に渡してエンコード
 
 ---
@@ -152,7 +166,7 @@ sortvivo-{アルゴリズム名}.webm
 
 ### 録画開始の前提条件
 
-- `#visualization-area` 内に `<canvas>` 要素が 1 つ以上存在すること
+- `.visualization-content` 内に `<canvas>` 要素が 1 つ以上存在すること
 - `<canvas>` が存在しない場合、`startRecording` は `false` を返し録画は開始されない
 
 ---

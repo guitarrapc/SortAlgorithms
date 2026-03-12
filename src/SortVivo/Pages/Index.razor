@@ -800,7 +800,7 @@
         else
         {
             // 録画開始
-            var started = await JS.InvokeAsync<bool>("videoRecorder.startRecording", "#visualization-area", 30);
+            var started = await JS.InvokeAsync<bool>("videoRecorder.startRecording", ".visualization-content", 30);
             _isRecording = started;
         }
         StateHasChanged();
