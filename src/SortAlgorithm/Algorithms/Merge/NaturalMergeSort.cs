@@ -5,20 +5,23 @@ using SortAlgorithm.Contexts;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// 入力配列中の自然に発生する昇順の連続部分列（ラン）を検出し、それらを反復的にマージしてソートする適応型マージソートです。
-/// データが部分的にソートされている場合に効率的であり、すでにソート済みのデータに対しては最良ケースO(n)で動作します。
+/// 入力配列中の自然に発生する昇順（非減少）および厳密降順の連続部分列（ラン）を検出し、降順ランを反転して昇順に変換した後、
+/// 隣接ランを反復的にマージしてソートする適応型マージソートです。
+/// データが部分的にソートされている場合に効率的であり、すでにソート済みまたは完全逆順のデータに対しては最良ケースO(n)で動作します。
 /// 安定ソートです。
 /// <br/>
-/// An adaptive merge sort that detects naturally occurring ascending runs in the input,
-/// then iteratively merges adjacent pairs of runs until the entire array is sorted.
-/// Efficient on partially sorted data, achieving O(n) best case on already-sorted input.
+/// An adaptive merge sort that detects naturally occurring ascending (non-decreasing) and strictly descending runs in the input,
+/// reverses descending runs in-place to make them ascending, then iteratively merges adjacent pairs of runs until the entire array is sorted.
+/// Efficient on partially sorted data, achieving O(n) best case on already-sorted or fully-reversed input.
 /// Stable sort.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Natural Merge Sort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Run Detection:</strong> Scan the array to identify maximal non-decreasing subsequences (natural runs).
-/// Each run is a contiguous region [start..end] where s[i] &lt;= s[i+1] for all consecutive pairs.</description></item>
+/// <item><description><strong>Run Detection:</strong> Scan the array to identify maximal runs.
+/// Ascending runs are non-decreasing subsequences where s[i] &lt;= s[i+1].
+/// Strictly descending runs (s[i] &gt; s[i+1]) are detected and reversed in-place.
+/// Using strict descent for detection preserves stability when reversing.</description></item>
 /// <item><description><strong>Pairwise Merging:</strong> In each pass, merge adjacent pairs of runs.
 /// If an odd number of runs exists, the last run is carried forward unmerged.</description></item>
 /// <item><description><strong>Termination:</strong> Repeat passes until only a single run remains, covering the entire array.</description></item>
@@ -30,15 +33,15 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Merge</description></item>
 /// <item><description>Stable      : Yes (equal elements maintain relative order via &lt;= comparison during merge)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for merging)</description></item>
-/// <item><description>Adaptive    : Yes (exploits existing sorted runs in the input)</description></item>
-/// <item><description>Best case   : O(n) - Already sorted data is a single run; only one detection scan needed</description></item>
+/// <item><description>Adaptive    : Yes (exploits existing sorted runs in the input, both ascending and descending)</description></item>
+/// <item><description>Best case   : O(n) - Already sorted or fully reversed data is a single run; only one detection scan needed</description></item>
 /// <item><description>Average case: O(n log n) - Random data has ~n/2 runs, requiring ~log₂(n) merge passes</description></item>
-/// <item><description>Worst case  : O(n log n) - Fully descending data has n runs of size 1, equivalent to bottom-up merge sort</description></item>
+/// <item><description>Worst case  : O(n log n) - Alternating up/down data produces many small runs, requiring full merge passes</description></item>
 /// <item><description>Space       : O(n) - Auxiliary buffer for merging (this implementation uses ArrayPool for efficiency)</description></item>
 /// </list>
 /// <para><strong>Advantages over Standard Merge Sort:</strong></para>
 /// <list type="bullet">
-/// <item><description>Adaptive - O(n) on already-sorted or nearly-sorted data (standard merge sort is always O(n log n))</description></item>
+/// <item><description>Adaptive - O(n) on already-sorted or fully-reversed data (standard merge sort is always O(n log n))</description></item>
 /// <item><description>Non-recursive - Iterative bottom-up approach avoids stack overflow on large inputs</description></item>
 /// <item><description>Fewer merges - Exploits pre-existing order, skipping unnecessary work</description></item>
 /// </list>
