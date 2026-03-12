@@ -28,7 +28,7 @@
 
 ### 解像度選択
 
-プリセットは「長辺のターゲットピクセル数」として動作する。表示領域のアスペクト比に関わらず一貫した品質を保証し、ダウンスケールは行わない。
+プリセットは「長辺のターゲットピクセル数」として動作する。DPR（devicePixelRatio）を考慮し、ソース canvas のダウンサンプルを回避する。
 
 | プリセット | 長辺ターゲット | ビットレート基準 |
 |-----------|-------------|---------------|
@@ -42,19 +42,29 @@
 longSideTargets = { 1080: 1920, 720: 1280, 480: 854 }
 targetLongSide = longSideTargets[preset]
 longerDisplaySide = max(displayWidth, displayHeight)
-scale = max(targetLongSide / longerDisplaySide, 1.0)   ← 常に ≥ 1（ダウンスケール禁止）
+dpr = window.devicePixelRatio
+scale = max(targetLongSide / longerDisplaySide, dpr)   ← DPR 以上を保証
 videoWidth = round(displayWidth × scale / 2) × 2       ← 偶数保証
 videoHeight = round(displayHeight × scale / 2) × 2
 bitrate = 20_000_000 × (videoWidth × videoHeight) / (1920 × 1080)
 ```
 
-**設計意図:**
+**DPR 考慮の意図:**
 
-- 表示領域がターゲットより大きい場合（例: 1422×1683 で 1080p 選択）→ `scale = 1.14` でわずかにアップスケール、ダウンスケールしない
-- 表示領域がターゲットより小さい場合（例: 800×600 で 1080p 選択）→ `scale = 2.4` で高品質アップスケール
-- 長辺基準なのでポートレート/ランドスケープどちらでも一貫した品質
-- ビットレートは出力ピクセル数に比例して動的調整（1080p 基準 20 Mbps）
-- ソート canvas は `imageSmoothingEnabled = false`（最近傍補間）で描画し、離散要素（バー、ドット等）をシャープに維持
+ソース canvas は内部で `displaySize × DPR` ピクセルで描画されている（例: DPR=2 なら 1586px 幅の canvas は内部 3172px）。`scale < DPR` の場合、`drawImage` が 3172→1810 のようにダウンサンプルとなり、どの補間方式でもぼやける。`scale = max(..., dpr)` により、動画の出力ピクセル数がソースの内部ピクセル数と同等になり、1:1 マッピングでシャープな描画が可能。
+
+| ディスプレイ | DPR | 1080p 選択時 | scale | 出力 |
+|------------|-----|------------|-------|------|
+| 1586×1683 | 2 | 1920 | `max(1.14, 2) = 2` | 3172×3366 |
+| 800×600 | 1 | 1920 | `max(2.4, 1) = 2.4` | 1920×1440 |
+| 1920×1080 | 1 | 1920 | `max(1.0, 1) = 1` | 1920×1080 |
+
+**描画方式:**
+
+- `ctx.scale()` は使用しない — 全座標を動画ピクセル空間で直接計算
+- フォントは `Math.round(cssSize × scale)` px でラスタライズ（中間スケールなし）
+- ソート canvas は `imageSmoothingQuality = 'high'`（Lanczos 相当）で描画
+- ビットレートはピクセル数に比例して動的調整（1080p 基準 20 Mbps）
 - 設定値は `localStorage` に永続化（`sortvis.recordingResolution`）
 
 ### キャプチャ対象
