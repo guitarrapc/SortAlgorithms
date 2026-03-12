@@ -121,7 +121,7 @@
         if (State.ActualExecutionTime == TimeSpan.Zero)
             return "-";
 
-        if (IsPlaying && State.EstimatedCurrentExecutionTime < State.ActualExecutionTime)
+        if (State.EstimatedCurrentExecutionTime > TimeSpan.Zero && State.EstimatedCurrentExecutionTime < State.ActualExecutionTime)
         {
             var (currentNum, currentUnit) = SplitTimeAndUnit(State.EstimatedCurrentExecutionTime);
             var (totalNum, totalUnit) = SplitTimeAndUnit(State.ActualExecutionTime);
