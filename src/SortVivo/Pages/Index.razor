@@ -80,12 +80,17 @@
                         ClearAllDisabled="@(ComparisonMode.State.Instances.Count == 0)"
                         SoundEnabled="@GetSoundEnabled()"
                         SoundDisabled="false"
+                        IsRecording="@_isRecording"
+                        RecordDisabled="@(ComparisonMode.State.Instances.Count == 0)"
+                        RecordingResolution="@_recordingResolution"
+                        RecordingResolutionChanged="HandleRecordingResolutionChanged"
                         StatusText="@GetComparisonStatusText()"
                         ArraySize="@GetArraySize()"
                         OnTogglePlayPause="HandleTogglePlayPause"
                         OnStop="HandleReset"
                         OnToggleSound="HandleToggleSound"
-                        OnClearAll="HandleClearAll" />
+                        OnClearAll="HandleClearAll"
+                        OnToggleRecord="HandleToggleRecord" />
 
         <div class="visualization-content">
             @{
@@ -229,6 +234,10 @@
 
     // Settings モーダル
     private bool _settingsOpen = false;
+
+    // 録画状態
+    private bool _isRecording = false;
+    private int _recordingResolution = 720;
 
     // 環境設定ダーティフラグ（OnAfterRenderAsync で localStorage に保存）
     private bool _preferencesDirty = false;
@@ -382,6 +391,8 @@
                 DebugSettings.IsEnabled = dl == "true";
             if (prefs.TryGetValue("sortvis.scrollOnGenerate", out var sog))
                 RenderSettings.ScrollOnGenerate = sog == "true";
+            if (prefs.TryGetValue("sortvis.recordingResolution", out var rr) && int.TryParse(rr, out var rrVal) && (rrVal == 480 || rrVal == 720 || rrVal == 1080))
+                _recordingResolution = rrVal;
 
             StateHasChanged();
         }
@@ -410,6 +421,7 @@
                 ["sortvis.autoRecommendedSize"] = _autoSwitchToRecommendedSize ? "true" : "false",
                 ["sortvis.debugLog"] = DebugSettings.IsEnabled ? "true" : "false",
                 ["sortvis.scrollOnGenerate"] = RenderSettings.ScrollOnGenerate ? "true" : "false",
+                ["sortvis.recordingResolution"] = _recordingResolution.ToString(),
             });
         }
         catch (Exception ex)
@@ -612,8 +624,13 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private void HandleClearAll()
+    private async Task HandleClearAll()
     {
+        if (_isRecording)
+        {
+            await JS.InvokeVoidAsync("videoRecorder.stopRecording", "sortvivo-recording");
+            _isRecording = false;
+        }
         ComparisonMode.ClearAll();
         UpdateContentStateUrl();
         StateHasChanged();
@@ -772,6 +789,32 @@
         {
             Playback.SoundEnabled = !Playback.SoundEnabled;
         }
+        _preferencesDirty = true;
+        StateHasChanged();
+    }
+
+    private async Task HandleToggleRecord()
+    {
+        if (_isRecording)
+        {
+            // 録画停止 → WebM ダウンロード
+            var algorithms = string.Join("-", ComparisonMode.State.Instances.Select(i => i.AlgorithmName));
+            var filename = $"sortvivo-{(string.IsNullOrEmpty(algorithms) ? SelectedAlgorithm : algorithms)}-{_recordingResolution}p";
+            await JS.InvokeVoidAsync("videoRecorder.stopRecording", filename);
+            _isRecording = false;
+        }
+        else
+        {
+            // 録画開始（解像度を渡す）
+            var started = await JS.InvokeAsync<bool>("videoRecorder.startRecording", ".visualization-content", 30, _recordingResolution);
+            _isRecording = started;
+        }
+        StateHasChanged();
+    }
+
+    private void HandleRecordingResolutionChanged(int resolution)
+    {
+        _recordingResolution = resolution;
         _preferencesDirty = true;
         StateHasChanged();
     }
