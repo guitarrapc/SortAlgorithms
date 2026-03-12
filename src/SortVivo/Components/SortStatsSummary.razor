@@ -125,23 +125,26 @@
         {
             var (currentNum, currentUnit) = SplitTimeAndUnit(State.EstimatedCurrentExecutionTime);
             var (totalNum, totalUnit) = SplitTimeAndUnit(State.ActualExecutionTime);
-            return $"<span class=\"time-number\">{currentNum}</span><span class=\"time-sep\">/</span><span class=\"time-number\">{totalNum}</span><span class=\"time-unit\">{totalUnit}</span>";
+            if (currentUnit == totalUnit)
+                return $"<span class=\"time-number\">{currentNum}</span><span class=\"time-sep\">/</span><span class=\"time-number\">{totalNum}</span><span class=\"time-unit\">{totalUnit}</span>";
+            var (currentNumInt, _) = SplitTimeAndUnit(State.EstimatedCurrentExecutionTime, "F0");
+            return $"<span class=\"time-number\">{currentNumInt}</span><span class=\"time-unit\">{currentUnit}</span><span class=\"time-sep\">/</span><span class=\"time-number\">{totalNum}</span><span class=\"time-unit\">{totalUnit}</span>";
         }
 
         var (num, unit) = SplitTimeAndUnit(State.ActualExecutionTime);
         return $"<span class=\"time-number\">{num}</span><span class=\"time-unit\">{unit}</span>";
     }
 
-    private static (string number, string unit) SplitTimeAndUnit(TimeSpan time)
+    private static (string number, string unit) SplitTimeAndUnit(TimeSpan time, string format = "F2")
     {
         if (time.TotalNanoseconds < 1000)
-            return (time.TotalNanoseconds.ToString("F2"), "ns");
+            return (time.TotalNanoseconds.ToString(format), "ns");
         else if (time.TotalMicroseconds < 1000)
-            return (time.TotalMicroseconds.ToString("F2"), "μs");
+            return (time.TotalMicroseconds.ToString(format), "μs");
         else if (time.TotalMilliseconds < 1000)
-            return (time.TotalMilliseconds.ToString("F2"), "ms");
+            return (time.TotalMilliseconds.ToString(format), "ms");
         else
-            return (time.TotalSeconds.ToString("F2"), "s");
+            return (time.TotalSeconds.ToString(format), "s");
     }
 
     private static string FormatCompact(ulong value)
