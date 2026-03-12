@@ -90,7 +90,7 @@ public static class NaturalMergeSort
         {
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var b = new SortSpan<T, TComparer, TContext>(buffer.AsSpan(0, span.Length), context, comparer, BUFFER_MERGE);
-            SortCore(s, b, runsBuffer.AsSpan(), span.Length);
+            SortCore(s, b, runsBuffer.AsSpan());
         }
         finally
         {
@@ -110,10 +110,11 @@ public static class NaturalMergeSort
     /// <param name="b">The SortSpan wrapping the auxiliary buffer for merging</param>
     /// <param name="runs">Buffer to store run boundary indices. runs[i] is the start index of run i; runs[runCount] = length (sentinel).</param>
     /// <param name="length">The number of elements to sort</param>
-    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b, Span<int> runs, int length)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b, Span<int> runs)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var length = s.Length;
         while (true)
         {
             // Phase 1: Detect all natural runs
