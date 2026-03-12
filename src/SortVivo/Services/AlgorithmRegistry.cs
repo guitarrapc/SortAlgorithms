@@ -84,6 +84,9 @@ public class AlgorithmRegistry
         Add("Merge sort", "MERGE", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => MergeSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Merge", "MergeSort"),
             tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
+        Add("Pingpong merge sort", "MERGE", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => PingpongMergeSort.Sort(arr, ctx),
+            gitHubSourceUrl: Src("Merge", "PingpongMergeSort"),
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
         Add("Bottom-up merge sort", "MERGE", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => BottomupMergeSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Merge", "BottomupMergeSort"));
         Add("Rotate merge sort", "MERGE", "O(n log² n)", MAX_SIZE_NLOGN, 1024, (arr, ctx) => RotateMergeSort.Sort(arr, ctx),
