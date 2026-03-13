@@ -11,16 +11,24 @@ public class AdaptiveBenchmark
     public DataPattern Pattern { get; set; }
 
     private int[] _dropMergeArray = default!;
+    private int[] _patienceArray = default!;
 
     [IterationSetup]
     public void Setup()
     {
         _dropMergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _patienceArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark]
     public void DropMergeSort()
     {
         SortAlgorithm.Algorithms.DropMergeSort.Sort(_dropMergeArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void PatienceSort()
+    {
+        SortAlgorithm.Algorithms.PatienceSort.Sort(_patienceArray.AsSpan());
     }
 }

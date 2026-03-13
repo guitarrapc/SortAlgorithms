@@ -139,6 +139,18 @@ public enum SortPhase
     /// </summary>
     LibrarySortPhase,
 
+    /// <summary>
+    /// Patience Sort pile-building (dealing) phase: distributing elements into sorted piles.
+    /// No parameters.
+    /// </summary>
+    PatienceSortDeal,
+
+    /// <summary>
+    /// Patience Sort k-way merge phase: merging all piles using a min-heap.
+    /// param1=pileCount (total number of piles to merge)
+    /// </summary>
+    PatienceSortMerge,
+
     // ── Tree family ─────────────────────────────────────────────────────────
 
     /// <summary>
