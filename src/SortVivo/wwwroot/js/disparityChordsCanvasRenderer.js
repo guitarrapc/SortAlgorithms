@@ -23,10 +23,10 @@ window.disparityChordsCanvasRenderer = {
   // 色定義
   colors: {
     compare: '#A855F7',
-    swap:    '#EF4444',
-    write:   '#F97316',
-    read:    '#FBBF24',
-    sorted:  '#10B981'
+    swap: '#EF4444',
+    write: '#F97316',
+    read: '#FBBF24',
+    sorted: '#10B981'
   },
 
   // 三角関数 LUT（Canvas 2D fallback 用）
@@ -55,19 +55,19 @@ window.disparityChordsCanvasRenderer = {
       return true;
     }
 
-    const dpr  = window.devicePixelRatio || 1;
+    const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     this.cachedSizes.set(canvasId, { width: rect.width, height: rect.height });
 
     // OffscreenCanvas + Worker パス
     if (typeof canvas.transferControlToOffscreen === 'function') {
-      canvas.width  = rect.width  * dpr;
+      canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
 
-      const offscreen  = canvas.transferControlToOffscreen();
+      const offscreen = canvas.transferControlToOffscreen();
       const workerFile = useWebGL ? 'js/disparityChordsWebglWorker.js' : 'js/disparityChordsRenderWorker.js';
-      const workerUrl  = new URL(workerFile, document.baseURI).href;
-      const worker     = new Worker(workerUrl);
+      const workerUrl = new URL(workerFile, document.baseURI).href;
+      const worker = new Worker(workerUrl);
       worker.postMessage({ type: 'init', canvas: offscreen, dpr }, [offscreen]);
 
       this.workers.set(canvasId, { worker, lastWidth: canvas.width, lastHeight: canvas.height });
@@ -82,7 +82,7 @@ window.disparityChordsCanvasRenderer = {
 
     // Canvas 2D フォールバック
     const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
-    canvas.width  = rect.width  * dpr;
+    canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
 
@@ -98,20 +98,20 @@ window.disparityChordsCanvasRenderer = {
     if (this.resizeObserver) return;
     this.resizeObserver = new ResizeObserver(entries => {
       for (const entry of entries) {
-        const canvas   = entry.target;
+        const canvas = entry.target;
         const canvasId = canvas.id;
         const instance = this.instances.get(canvasId);
         if (!instance) continue;
 
-        const dpr      = window.devicePixelRatio || 1;
-        const rect     = canvas.getBoundingClientRect();
-        const newW     = rect.width  * dpr;
-        const newH     = rect.height * dpr;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        const newW = rect.width * dpr;
+        const newH = rect.height * dpr;
 
         const workerInfo = this.workers.get(canvasId);
         if (workerInfo) {
           if (workerInfo.lastWidth !== newW || workerInfo.lastHeight !== newH) {
-            workerInfo.lastWidth  = newW;
+            workerInfo.lastWidth = newW;
             workerInfo.lastHeight = newH;
             this.cachedSizes.set(canvasId, { width: rect.width, height: rect.height });
             workerInfo.worker.postMessage({ type: 'resize', newWidth: newW, newHeight: newH, dpr });
@@ -120,7 +120,7 @@ window.disparityChordsCanvasRenderer = {
         } else {
           const { ctx } = instance;
           if (canvas.width !== newW || canvas.height !== newH) {
-            canvas.width  = newW;
+            canvas.width = newW;
             canvas.height = newH;
             ctx.scale(dpr, dpr);
             this.cachedSizes.set(canvasId, { width: rect.width, height: rect.height });
@@ -289,16 +289,16 @@ window.disparityChordsCanvasRenderer = {
 
     const size = this.cachedSizes.get(canvasId);
     if (!size) return;
-    const width  = size.width;
+    const width = size.width;
     const height = size.height;
 
     ctx.fillStyle = '#1A1A1A';
     ctx.fillRect(0, 0, width, height);
     if (n === 0) return;
 
-    const cx   = width  / 2;
-    const cy   = height / 2;
-    const R    = Math.min(width, height) * 0.44;
+    const cx = width / 2;
+    const cy = height / 2;
+    const R = Math.min(width, height) * 0.44;
     const dotR = n <= 64 ? 4 : n <= 256 ? 3 : 2;
 
     // 背景円リング
@@ -316,14 +316,14 @@ window.disparityChordsCanvasRenderer = {
 
     this._buildTrigLUT(n);
     this._buildColorLUT(maxValue);
-    const cosLUT   = this._cosLUT;
-    const sinLUT   = this._sinLUT;
+    const cosLUT = this._cosLUT;
+    const sinLUT = this._sinLUT;
     const colorLUT = this._colorLUT;
 
     const compareSet = new Set(compareIndices);
-    const swapSet    = new Set(swapIndices);
-    const readSet    = new Set(readIndices);
-    const writeSet   = new Set(writeIndices);
+    const swapSet = new Set(swapIndices);
+    const readSet = new Set(readIndices);
+    const writeSet = new Set(writeIndices);
 
     // 整列後インデックス
     const sortedIdx = new Int32Array(n);
@@ -349,7 +349,7 @@ window.disparityChordsCanvasRenderer = {
       ctx.strokeStyle = colorLUT[array[i]];
       ctx.lineWidth = n <= 64 ? 1.5 : 1;
       ctx.beginPath();
-      ctx.moveTo(cx + cosLUT[i]  * R, cy + sinLUT[i]  * R);
+      ctx.moveTo(cx + cosLUT[i] * R, cy + sinLUT[i] * R);
       ctx.lineTo(cx + cosLUT[si] * R, cy + sinLUT[si] * R);
       ctx.stroke();
     }
@@ -357,9 +357,9 @@ window.disparityChordsCanvasRenderer = {
     // ハイライト弦
     const highlightBuckets = [
       [compareIndices, this.colors.compare],
-      [writeIndices,   this.colors.write],
-      [readIndices,    this.colors.read],
-      [swapIndices,    this.colors.swap],
+      [writeIndices, this.colors.write],
+      [readIndices, this.colors.read],
+      [swapIndices, this.colors.swap],
     ];
     ctx.lineWidth = n <= 64 ? 2.5 : n <= 256 ? 2 : 1.5;
     for (const [indices, color] of highlightBuckets) {
@@ -370,7 +370,7 @@ window.disparityChordsCanvasRenderer = {
         if (i < 0 || i >= n) continue;
         const si = sortedIdx[i];
         if (si === i) continue;
-        ctx.moveTo(cx + cosLUT[i]  * R, cy + sinLUT[i]  * R);
+        ctx.moveTo(cx + cosLUT[i] * R, cy + sinLUT[i] * R);
         ctx.lineTo(cx + cosLUT[si] * R, cy + sinLUT[si] * R);
       }
       ctx.stroke();
@@ -379,7 +379,7 @@ window.disparityChordsCanvasRenderer = {
     // 通常ドット
     for (let i = 0; i < n; i++) {
       if (compareSet.has(i) || swapSet.has(i) || readSet.has(i) || writeSet.has(i)) continue;
-      const v   = array[i];
+      const v = array[i];
       const hue = (v / maxValue) * 360;
       ctx.fillStyle = `hsl(${hue.toFixed(1)}, 70%, 65%)`;
       ctx.beginPath();

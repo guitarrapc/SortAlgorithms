@@ -12,10 +12,10 @@ let isLoopRunning = false;
 
 const colors = {
   compare: '#A855F7',  // 紫
-  swap:    '#EF4444',  // 赤
-  write:   '#F97316',  // 橙
-  read:    '#FBBF24',  // 黄
-  sorted:  '#10B981'   // 緑 - ソート完了
+  swap: '#EF4444',  // 赤
+  write: '#F97316',  // 橙
+  read: '#FBBF24',  // 黄
+  sorted: '#10B981'   // 緑 - ソート完了
 };
 
 // 三角関数ルックアップテーブル（配列長に対応）
@@ -172,7 +172,7 @@ function draw() {
 
   const array = arrays.main;
   const n = array.length;
-  const width  = offscreen.width / dpr;
+  const width = offscreen.width / dpr;
   const height = offscreen.height / dpr;
 
   // 背景
@@ -181,9 +181,9 @@ function draw() {
   if (n === 0) return;
 
   // 中心・半径
-  const cx = width  / 2;
+  const cx = width / 2;
   const cy = height / 2;
-  const R  = Math.min(width, height) * 0.44; // 弦の端点を置く円の半径
+  const R = Math.min(width, height) * 0.44; // 弦の端点を置く円の半径
   const dotR = n <= 64 ? 4 : n <= 256 ? 3 : 2; // 現在位置のドット半径
 
   // 背景円リング（薄い枠）
@@ -205,9 +205,9 @@ function draw() {
 
   // 操作対象インデックスの Set
   const compareSet = new Set(compareIndices);
-  const swapSet    = new Set(swapIndices);
-  const readSet    = new Set(readIndices);
-  const writeSet   = new Set(writeIndices);
+  const swapSet = new Set(swapIndices);
+  const readSet = new Set(readIndices);
+  const writeSet = new Set(writeIndices);
 
   // 整列後インデックスを計算（値を0-based index に正規化）
   // sortedIdx[i] = floor((array[i] / maxValue) * (n - 1) + 0.5)
@@ -237,8 +237,8 @@ function draw() {
     if (compareSet.has(i) || swapSet.has(i) || readSet.has(i) || writeSet.has(i)) continue;
     const si = sortedIdx[i];
     if (si === i) continue; // 正位置にある要素は弦不要
-    const x0 = cx + cosLUT[i]  * R;
-    const y0 = cy + sinLUT[i]  * R;
+    const x0 = cx + cosLUT[i] * R;
+    const y0 = cy + sinLUT[i] * R;
     const x1 = cx + cosLUT[si] * R;
     const y1 = cy + sinLUT[si] * R;
     ctx.strokeStyle = colorLUT[array[i]];
@@ -252,9 +252,9 @@ function draw() {
   // 2. ハイライト弦（compare / write / read / swap の優先度順）
   const highlightBuckets = [
     [compareIndices, colors.compare],
-    [writeIndices,   colors.write],
-    [readIndices,    colors.read],
-    [swapIndices,    colors.swap],
+    [writeIndices, colors.write],
+    [readIndices, colors.read],
+    [swapIndices, colors.swap],
   ];
   ctx.lineWidth = n <= 64 ? 2.5 : n <= 256 ? 2 : 1.5;
   for (const [indices, color] of highlightBuckets) {
@@ -265,8 +265,8 @@ function draw() {
       if (i < 0 || i >= n) continue;
       const si = sortedIdx[i];
       if (si === i) continue;
-      const x0 = cx + cosLUT[i]  * R;
-      const y0 = cy + sinLUT[i]  * R;
+      const x0 = cx + cosLUT[i] * R;
+      const y0 = cy + sinLUT[i] * R;
       const x1 = cx + cosLUT[si] * R;
       const y1 = cy + sinLUT[si] * R;
       ctx.moveTo(x0, y0);

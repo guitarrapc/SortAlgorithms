@@ -295,12 +295,12 @@ window.pictureBlockCanvasRenderer = {
     const blockH = height / rows;
 
     const { compareIndices, swapIndices, readIndices, writeIndices,
-            isSortCompleted, showCompletionHighlight } = params;
+      isSortCompleted, showCompletionHighlight } = params;
 
     const compareSet = new Set(compareIndices);
-    const swapSet    = new Set(swapIndices);
-    const readSet    = new Set(readIndices);
-    const writeSet   = new Set(writeIndices);
+    const swapSet = new Set(swapIndices);
+    const readSet = new Set(readIndices);
+    const writeSet = new Set(writeIndices);
 
     let minVal = array[0];
     for (let i = 1; i < n; i++) { if (array[i] < minVal) minVal = array[i]; }
@@ -320,7 +320,7 @@ window.pictureBlockCanvasRenderer = {
           if (blockIdx < 0 || blockIdx >= numBlocks) continue;
           ctx.drawImage(img,
             (blockIdx % srcCols) * srcBlockW, Math.floor(blockIdx / srcCols) * srcBlockH, srcBlockW, srcBlockH,
-            (i % cols) * blockW,              Math.floor(i / cols) * blockH,              blockW,    blockH);
+            (i % cols) * blockW, Math.floor(i / cols) * blockH, blockW, blockH);
         }
         ctx.fillStyle = 'rgba(16,185,129,0.3)';
         ctx.fillRect(0, 0, width, height);
@@ -335,10 +335,10 @@ window.pictureBlockCanvasRenderer = {
             dstX, dstY, blockW, blockH);
 
           let overlay = null;
-          if (swapSet.has(i))         overlay = 'rgba(239,68,68,0.55)';
+          if (swapSet.has(i)) overlay = 'rgba(239,68,68,0.55)';
           else if (compareSet.has(i)) overlay = 'rgba(168,85,247,0.5)';
-          else if (writeSet.has(i))   overlay = 'rgba(249,115,22,0.45)';
-          else if (readSet.has(i))    overlay = 'rgba(251,191,36,0.35)';
+          else if (writeSet.has(i)) overlay = 'rgba(249,115,22,0.45)';
+          else if (readSet.has(i)) overlay = 'rgba(251,191,36,0.35)';
           if (overlay) { ctx.fillStyle = overlay; ctx.fillRect(dstX, dstY, blockW + 0.5, blockH + 0.5); }
         }
       }
@@ -356,11 +356,11 @@ window.pictureBlockCanvasRenderer = {
       } else {
         for (let i = 0; i < n; i++) {
           let color;
-          if (swapSet.has(i))         color = '#EF4444';
+          if (swapSet.has(i)) color = '#EF4444';
           else if (compareSet.has(i)) color = '#A855F7';
-          else if (writeSet.has(i))   color = '#F97316';
-          else if (readSet.has(i))    color = '#FBBF24';
-          else                        color = colorLUT[array[i]] || '#3B82F6';
+          else if (writeSet.has(i)) color = '#F97316';
+          else if (readSet.has(i)) color = '#FBBF24';
+          else color = colorLUT[array[i]] || '#3B82F6';
           ctx.fillStyle = color;
           ctx.fillRect((i % cols) * blockW, Math.floor(i / cols) * blockH, blockW + 0.5, blockH + 0.5);
         }
@@ -376,7 +376,7 @@ window.pictureBlockCanvasRenderer = {
     this.disposeDropZone(dropZoneId);
     let dragDepth = 0;
     const onDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); dragDepth++; if (dragDepth === 1) dotNetRef.invokeMethodAsync('OnDragStateChanged', true); };
-    const onDragOver  = (e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; };
+    const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; };
     const onDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); dragDepth--; if (dragDepth <= 0) { dragDepth = 0; dotNetRef.invokeMethodAsync('OnDragStateChanged', false); } };
     const onDrop = (e) => {
       e.preventDefault(); e.stopPropagation(); dragDepth = 0;
@@ -385,14 +385,14 @@ window.pictureBlockCanvasRenderer = {
       if (!file) return;
       if (!file.type.startsWith('image/')) { dotNetRef.invokeMethodAsync('OnDropError', 'Only image files are supported.'); return; }
       const reader = new FileReader();
-      reader.onload  = () => dotNetRef.invokeMethodAsync('OnFileDropped', reader.result, file.name, file.size);
+      reader.onload = () => dotNetRef.invokeMethodAsync('OnFileDropped', reader.result, file.name, file.size);
       reader.onerror = () => dotNetRef.invokeMethodAsync('OnDropError', 'Failed to read the dropped file.');
       reader.readAsDataURL(file);
     };
     el.addEventListener('dragenter', onDragEnter);
-    el.addEventListener('dragover',  onDragOver);
+    el.addEventListener('dragover', onDragOver);
     el.addEventListener('dragleave', onDragLeave);
-    el.addEventListener('drop',      onDrop);
+    el.addEventListener('drop', onDrop);
     this.dropZones.set(dropZoneId, { el, onDragEnter, onDragOver, onDragLeave, onDrop });
     window.debugHelper.log('PictureBlock: dropZone registered:', dropZoneId);
   },
@@ -402,9 +402,9 @@ window.pictureBlockCanvasRenderer = {
     if (!entry) return;
     const { el, onDragEnter, onDragOver, onDragLeave, onDrop } = entry;
     el.removeEventListener('dragenter', onDragEnter);
-    el.removeEventListener('dragover',  onDragOver);
+    el.removeEventListener('dragover', onDragOver);
     el.removeEventListener('dragleave', onDragLeave);
-    el.removeEventListener('drop',      onDrop);
+    el.removeEventListener('drop', onDrop);
     this.dropZones.delete(dropZoneId);
     window.debugHelper.log('PictureBlock: dropZone disposed:', dropZoneId);
   },

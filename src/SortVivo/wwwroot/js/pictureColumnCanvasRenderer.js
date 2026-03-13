@@ -311,12 +311,12 @@ window.pictureColumnCanvasRenderer = {
 
     const colW = width / n;
     const { compareIndices, swapIndices, readIndices, writeIndices,
-            isSortCompleted, showCompletionHighlight } = params;
+      isSortCompleted, showCompletionHighlight } = params;
 
     const compareSet = new Set(compareIndices);
-    const swapSet    = new Set(swapIndices);
-    const readSet    = new Set(readIndices);
-    const writeSet   = new Set(writeIndices);
+    const swapSet = new Set(swapIndices);
+    const readSet = new Set(readIndices);
+    const writeSet = new Set(writeIndices);
 
     const imgEntry = this._images.get(canvasId);
     const img = imgEntry?.img;
@@ -343,10 +343,10 @@ window.pictureColumnCanvasRenderer = {
           ctx.drawImage(img, colIdx * srcColW, 0, srcColW, img.naturalHeight, i * colW, 0, colW, height);
 
           let overlay = null;
-          if (swapSet.has(i))         overlay = 'rgba(239,68,68,0.55)';
+          if (swapSet.has(i)) overlay = 'rgba(239,68,68,0.55)';
           else if (compareSet.has(i)) overlay = 'rgba(168,85,247,0.5)';
-          else if (writeSet.has(i))   overlay = 'rgba(249,115,22,0.45)';
-          else if (readSet.has(i))    overlay = 'rgba(251,191,36,0.35)';
+          else if (writeSet.has(i)) overlay = 'rgba(249,115,22,0.45)';
+          else if (readSet.has(i)) overlay = 'rgba(251,191,36,0.35)';
           if (overlay) {
             ctx.fillStyle = overlay;
             ctx.fillRect(i * colW, 0, colW + 0.5, height);
@@ -367,11 +367,11 @@ window.pictureColumnCanvasRenderer = {
       } else {
         for (let i = 0; i < n; i++) {
           let color;
-          if (swapSet.has(i))         color = '#EF4444';
+          if (swapSet.has(i)) color = '#EF4444';
           else if (compareSet.has(i)) color = '#A855F7';
-          else if (writeSet.has(i))   color = '#F97316';
-          else if (readSet.has(i))    color = '#FBBF24';
-          else                        color = colorLUT[array[i]] || '#3B82F6';
+          else if (writeSet.has(i)) color = '#F97316';
+          else if (readSet.has(i)) color = '#FBBF24';
+          else color = colorLUT[array[i]] || '#3B82F6';
           ctx.fillStyle = color;
           ctx.fillRect(i * colW, 0, colW + 0.5, height);
         }
@@ -438,9 +438,9 @@ window.pictureColumnCanvasRenderer = {
     };
 
     el.addEventListener('dragenter', onDragEnter);
-    el.addEventListener('dragover',  onDragOver);
+    el.addEventListener('dragover', onDragOver);
     el.addEventListener('dragleave', onDragLeave);
-    el.addEventListener('drop',      onDrop);
+    el.addEventListener('drop', onDrop);
 
     this.dropZones.set(dropZoneId, { el, onDragEnter, onDragOver, onDragLeave, onDrop });
     window.debugHelper.log('PictureColumn: dropZone registered:', dropZoneId);
@@ -451,9 +451,9 @@ window.pictureColumnCanvasRenderer = {
     if (!entry) return;
     const { el, onDragEnter, onDragOver, onDragLeave, onDrop } = entry;
     el.removeEventListener('dragenter', onDragEnter);
-    el.removeEventListener('dragover',  onDragOver);
+    el.removeEventListener('dragover', onDragOver);
     el.removeEventListener('dragleave', onDragLeave);
-    el.removeEventListener('drop',      onDrop);
+    el.removeEventListener('drop', onDrop);
     this.dropZones.delete(dropZoneId);
     window.debugHelper.log('PictureColumn: dropZone disposed:', dropZoneId);
   },
