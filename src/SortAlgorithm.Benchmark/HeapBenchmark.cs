@@ -15,6 +15,7 @@ public class HeapBenchmark
     private int[] _smoothArray = default!;
     private int[] _ternaryHeapArray = default!;
     private int[] _weakHeapArray = default!;
+    private int[] _tournamentArray = default!;
 
     [IterationSetup]
     public void Setup()
@@ -24,6 +25,7 @@ public class HeapBenchmark
         _smoothArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _ternaryHeapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _weakHeapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _tournamentArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark]
@@ -54,5 +56,11 @@ public class HeapBenchmark
     public void WeakHeapSort()
     {
         SortAlgorithm.Algorithms.WeakHeapSort.Sort(_weakHeapArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void TournamentSort()
+    {
+        SortAlgorithm.Algorithms.TournamentSort.Sort(_tournamentArray.AsSpan());
     }
 }

@@ -14,7 +14,6 @@ public class SelectionBenchmark
     private int[] _doubleSelectionArray = default!;
     private int[] _pancakeArray = default!;
     private int[] _selectionArray = default!;
-    private int[] _tournamentArray = default!;
 
     [IterationSetup]
     public void Setup()
@@ -23,7 +22,6 @@ public class SelectionBenchmark
         _doubleSelectionArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _pancakeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _selectionArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _tournamentArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark]
@@ -48,11 +46,5 @@ public class SelectionBenchmark
     public void SelectionSort()
     {
         SortAlgorithm.Algorithms.SelectionSort.Sort(_selectionArray.AsSpan());
-    }
-
-    [Benchmark]
-    public void TournamentSort()
-    {
-        SortAlgorithm.Algorithms.TournamentSort.Sort(_tournamentArray.AsSpan());
     }
 }

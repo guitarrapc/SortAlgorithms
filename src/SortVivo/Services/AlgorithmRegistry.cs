@@ -47,8 +47,6 @@ public class AlgorithmRegistry
             gitHubSourceUrl: Src("Selection", "CycleSort"));
         Add("Pancake sort", "SELECTION", "O(n²)", MAX_SIZE_N2, 256, (arr, ctx) => PancakeSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Selection", "PancakeSort"));
-        Add("Tournament sort", "SELECTION", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => TournamentSort.Sort(arr, ctx),
-            gitHubSourceUrl: Src("Selection", "TournamentSort"));
 
         // Insertion Sorts
         Add("Insertion sort", "INSERTION", "O(n²)", MAX_SIZE_N2, 256, (arr, ctx) => InsertionSort.Sort(arr, ctx),
@@ -125,6 +123,8 @@ public class AlgorithmRegistry
             tutorialVisualizationHint: TutorialVisualizationHint.WeakHeapTree);
         Add("Smoothsort", "HEAP", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => SmoothSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Heap", "SmoothSort"));
+        Add("Tournament sort", "HEAP", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => TournamentSort.Sort(arr, ctx),
+            gitHubSourceUrl: Src("Selection", "TournamentSort"));
 
         // Partition Sorts - O(n log n) - 推奨2048-4096
         Add("Quicksort", "PARTITION", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => QuickSort.Sort(arr, ctx),
