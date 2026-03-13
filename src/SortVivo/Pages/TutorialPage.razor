@@ -201,19 +201,19 @@
                     </div>
                 </div>
 
-                @* ─── 表示切替トグル（ヒープ木・BST・バケット・ネットワーク対応アルゴリズムのみ） ──────────── *@
+                @* ─── 表示切替トグル（ヒープ木・BST・バケット・ネットワーク・パイル対応アルゴリズムのみ） ──────────── *@
                 @if (HasAlternateView())
                 {
                     <div class="tutorial-view-toggle">
-                        <button class="toggle-btn @(!_showTreeView && !_showBucketView && !_showNetworkView ? "toggle-btn--active" : "")"
-                                @onclick="() => { _showTreeView = false; _showBucketView = false; _showNetworkView = false; }">
+                        <button class="toggle-btn @(!_showTreeView && !_showBucketView && !_showNetworkView && !_showPatienceView ? "toggle-btn--active" : "")"
+                                @onclick="() => { _showTreeView = false; _showBucketView = false; _showNetworkView = false; _showPatienceView = false; }">
                             <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><circle cx="10" cy="10" r="7" /></svg>
                             @L["tutorial.marble"]
                         </button>
                         @if (HasTreeView())
                         {
                             <button class="toggle-btn @(_showTreeView ? "toggle-btn--active" : "")"
-                                    @onclick="() => { _showTreeView = true; _showBucketView = false; _showNetworkView = false; }">
+                                    @onclick="() => { _showTreeView = true; _showBucketView = false; _showNetworkView = false; _showPatienceView = false; }">
                                 <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M10 2 L10 8 M10 8 L4 14 M10 8 L16 14" stroke="currentColor" stroke-width="2" fill="none" /></svg>
                                 @GetTreeToggleLabel()
                             </button>
@@ -221,7 +221,7 @@
                         @if (HasBucketView())
                         {
                             <button class="toggle-btn @(_showBucketView ? "toggle-btn--active" : "")"
-                                    @onclick="() => { _showBucketView = true; _showTreeView = false; _showNetworkView = false; }">
+                                    @onclick="() => { _showBucketView = true; _showTreeView = false; _showNetworkView = false; _showPatienceView = false; }">
                                 <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
                                     <rect x="2" y="8" width="4" height="10" rx="1" />
                                     <rect x="8" y="5" width="4" height="13" rx="1" />
@@ -233,7 +233,7 @@
                         @if (HasNetworkView())
                         {
                             <button class="toggle-btn @(_showNetworkView ? "toggle-btn--active" : "")"
-                                    @onclick="() => { _showNetworkView = true; _showTreeView = false; _showBucketView = false; }">
+                                    @onclick="() => { _showNetworkView = true; _showTreeView = false; _showBucketView = false; _showPatienceView = false; }">
                                 <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
                                     <line x1="2" y1="6" x2="18" y2="6" stroke="currentColor" stroke-width="1.5" />
                                     <line x1="2" y1="14" x2="18" y2="14" stroke="currentColor" stroke-width="1.5" />
@@ -242,6 +242,19 @@
                                     <circle cx="10" cy="14" r="2" />
                                 </svg>
                                 @L["tutorial.network"]
+                            </button>
+                        }
+                        @if (HasPatienceView())
+                        {
+                            <button class="toggle-btn @(_showPatienceView ? "toggle-btn--active" : "")"
+                                    @onclick="() => { _showPatienceView = true; _showTreeView = false; _showBucketView = false; _showNetworkView = false; }">
+                                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                                    <rect x="2" y="6" width="3" height="12" rx="1" />
+                                    <rect x="7" y="9" width="3" height="9" rx="1" />
+                                    <rect x="12" y="4" width="3" height="14" rx="1" />
+                                    <rect x="17" y="11" width="3" height="7" rx="1" />
+                                </svg>
+                                Piles
                             </button>
                         }
                     </div>
@@ -256,6 +269,26 @@
                                                 MaxValue="@_maxValue"
                                                 StepIndex="@_currentStepIndex"
                                                 Label="@L["tutorial.sortingNetwork"]" />
+                    }
+                    else if (_showPatienceView && HasPatienceView())
+                    {
+                        @* Patience Piles view: Main Array マーブル + パイル表示 *@
+                        <MarbleRenderer Values="@GetCurrentMainArray()"
+                                        HighlightIndices="@GetCurrentHighlightIndices()"
+                                        HighlightType="@GetCurrentHighlightType()"
+                                        CompareResult="@GetCurrentCompareResult()"
+                                        WriteSourceIndex="@GetCurrentWriteSourceIndex()"
+                                        WritePreviousValue="@GetCurrentWritePreviousValue()"
+                                        MaxValue="@_maxValue"
+                                        StepIndex="@_currentStepIndex"
+                                        Roles="@GetCurrentRoles()"
+                                        Label="@L["tutorial.mainArray"]" />
+                        <PatiencePilesRenderer Snapshot="@GetCurrentPatienceSnapshot()"
+                                               MergeBuffer="@GetCurrentBufferArray(1)"
+                                               MergeHighlightIndices="@GetCurrentBufferHighlightIndices(1)"
+                                               MaxValue="@_maxValue"
+                                               StepIndex="@_currentStepIndex"
+                                               Label="Patience Piles" />
                     }
                     else if (_showBucketView && HasBucketView())
                     {
@@ -321,7 +354,7 @@
                                         Label="@L["tutorial.mainArray"]" />
                     }
 
-                    @if (!_showBucketView && !_showNetworkView)
+                    @if (!_showBucketView && !_showNetworkView && !_showPatienceView)
                     {
                         @foreach (var bufferId in GetCurrentBufferIds())
                         {
@@ -375,6 +408,7 @@
     private bool _showTreeView = true;  // デフォルトは木表示（ヒープ木対応アルゴリズムのみ）
     private bool _showBucketView = true; // デフォルトはバケット表示（Distribution 対応アルゴリズムのみ）
     private bool _showNetworkView = true; // デフォルトはネットワーク表示（Network 対応アルゴリズムのみ）
+    private bool _showPatienceView = true; // デフォルトはパイル表示（PatiencePiles 対応アルゴリズムのみ）
     private int _windowWidth = 0; // ウィンドウ幅（0 = 未取得1.0）
 
     // ─── ナビゲーション ────────────────────────────────────────────────────
@@ -498,6 +532,7 @@
             _showTreeView = HasTreeView();
             _showBucketView = HasBucketView();
             _showNetworkView = HasNetworkView();
+            _showPatienceView = HasPatienceView();
         }
         finally
         {
@@ -684,7 +719,8 @@
     }
 
     private bool HasAlternateView()
-        => _selectedAlgorithm?.TutorialVisualizationHint != TutorialVisualizationHint.None;
+        => _selectedAlgorithm?.TutorialVisualizationHint != TutorialVisualizationHint.None
+        && _selectedAlgorithm?.TutorialVisualizationHint != TutorialVisualizationHint.ShellGap;
 
     private bool HasTreeView()
         => _selectedAlgorithm?.TutorialVisualizationHint is
@@ -704,6 +740,10 @@
     private bool HasNetworkView()
         => _selectedAlgorithm?.TutorialVisualizationHint is
             TutorialVisualizationHint.SortingNetwork;
+
+    private bool HasPatienceView()
+        => _selectedAlgorithm?.TutorialVisualizationHint is
+            TutorialVisualizationHint.PatiencePiles;
 
     private bool IsBstView()
         => _selectedAlgorithm?.TutorialVisualizationHint is
@@ -753,6 +793,13 @@
         if (_currentStepIndex < 0)
             return BuildInitialNetworkSnapshot();
         return _steps[_currentStepIndex].Network;
+    }
+
+    private PatienceSnapshot? GetCurrentPatienceSnapshot()
+    {
+        if (_currentStepIndex < 0)
+            return BuildInitialPatienceSnapshot();
+        return _steps[_currentStepIndex].Patience;
     }
 
     private int? GetCurrentShellGap()
@@ -841,6 +888,18 @@
             ActiveComparatorIndex = -1,
             ComparatorResults = [],
             WireValues = arr,
+        };
+    }
+
+    private PatienceSnapshot? BuildInitialPatienceSnapshot()
+    {
+        if (_selectedAlgorithm == null || !HasPatienceView()) return null;
+        return new PatienceSnapshot
+        {
+            IsMergePhase = false,
+            PileValues = [],
+            ActivePileIndex = -1,
+            ActiveValue = -1,
         };
     }
 

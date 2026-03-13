@@ -1,0 +1,141 @@
+@using SortVivo.Models
+
+<div class="patience-view">
+    <div class="patience-label-row">
+        @if (!string.IsNullOrEmpty(Label))
+        {
+            <span class="patience-row-label">@Label</span>
+        }
+        @if (Snapshot != null)
+        {
+            <span class="patience-phase-badge patience-phase-@(Snapshot.IsMergePhase ? "merge" : "deal")">
+                @(Snapshot.IsMergePhase ? "Merge" : "Deal")
+            </span>
+            <span class="patience-pile-count">@Snapshot.PileValues.Length pile@(Snapshot.PileValues.Length != 1 ? "s" : "")</span>
+        }
+    </div>
+
+    @if (Snapshot == null || Snapshot.PileValues.Length == 0)
+    {
+        <div class="patience-empty">Waiting for sort to begin…</div>
+    }
+    else
+    {
+        @* ── ディールフェーズ: 配置中の要素を山の上に浮かせて表示 ── *@
+        @if (!Snapshot.IsMergePhase && Snapshot.ActiveValue >= 0)
+        {
+            <div class="patience-dealing-row">
+                <span class="patience-dealing-label">Placing:</span>
+                <div class="patience-dealing-marble"
+                     style="background: @GetValueColor(Snapshot.ActiveValue);">
+                    @Snapshot.ActiveValue
+                </div>
+            </div>
+        }
+
+        @* ── マージフェーズ: 抽出中の要素を表示 ── *@
+        @if (Snapshot.IsMergePhase && Snapshot.ActiveValue >= 0)
+        {
+            <div class="patience-dealing-row">
+                <span class="patience-dealing-label">Extracting:</span>
+                <div class="patience-dealing-marble patience-dealing-marble--extract"
+                     style="background: @GetValueColor(Snapshot.ActiveValue);">
+                    @Snapshot.ActiveValue
+                </div>
+            </div>
+        }
+
+        @* ── パイル列 ── *@
+        <div class="patience-piles">
+            @for (int p = 0; p < Snapshot.PileValues.Length; p++)
+            {
+                var pileIdx = p;
+                bool isActive = Snapshot.ActivePileIndex == pileIdx;
+                var elements = Snapshot.PileValues[pileIdx];
+                string pileClass = isActive
+                    ? $"patience-pile patience-pile--active patience-pile--{(Snapshot.IsMergePhase ? "merge" : "deal")}"
+                    : "patience-pile";
+
+                <div @key="pileIdx" class="@pileClass">
+                    <div class="patience-pile-body">
+                        @* 底→トップの順で積む（最後 = トップが視覚的に一番上） *@
+                        @for (int e = elements.Length - 1; e >= 0; e--)
+                        {
+                            var elemIdx = e;
+                            var value = elements[elemIdx];
+                            bool isTop = elemIdx == elements.Length - 1;
+                            string marbleClass = isTop && isActive
+                                ? $"patience-marble patience-marble--top patience-marble--{(Snapshot.IsMergePhase ? "merge" : "deal")}"
+                                : isTop
+                                    ? "patience-marble patience-marble--top"
+                                    : "patience-marble";
+
+                            <div @key="@($"{StepIndex}-{pileIdx}-{elemIdx}")"
+                                 class="@marbleClass"
+                                 style="background: @GetValueColor(value);">
+                                @value
+                            </div>
+                        }
+                    </div>
+                    <div class="patience-pile-label">P@(pileIdx + 1)</div>
+                </div>
+            }
+        </div>
+
+        @* ── ソート済み出力（マージバッファ）── *@
+        @if (MergeBuffer != null && MergeBuffer.Length > 0)
+        {
+            int filledCount = MergeBuffer.Count(v => v != 0);
+            <div class="patience-sorted-section">
+                <div class="patience-sorted-header">
+                    <span class="patience-sorted-label">Sorted output</span>
+                    <span class="patience-sorted-progress">@filledCount / @MergeBuffer.Length</span>
+                </div>
+                <div class="patience-sorted-marbles">
+                    @for (int i = 0; i < MergeBuffer.Length; i++)
+                    {
+                        var slotIdx = i;
+                        int val = MergeBuffer[slotIdx];
+                        bool isEmpty = val == 0;
+                        bool isHighlighted = MergeHighlightIndices.Contains(slotIdx);
+
+                        <div @key="@($"sorted-{StepIndex}-{slotIdx}")"
+                             class="patience-sorted-marble @(isHighlighted ? "patience-sorted-marble--active" : "") @(isEmpty ? "patience-sorted-marble--empty" : "")"
+                             style="@(isEmpty ? "" : $"background: {GetValueColor(val)};")">
+                            @if (!isEmpty) { @val }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>現在のパイルスナップショット（null = 初期状態）</summary>
+    [Parameter] public PatienceSnapshot? Snapshot { get; set; }
+
+    /// <summary>マージバッファの内容（bufferId=1）。0 = 未記入スロット。null = 非表示。</summary>
+    [Parameter] public int[]? MergeBuffer { get; set; }
+
+    /// <summary>マージバッファ内でハイライトするインデックス（直前に書き込まれた位置）</summary>
+    [Parameter] public int[] MergeHighlightIndices { get; set; } = [];
+
+    /// <summary>配列内の最大値（HSL グラデーション計算に使用）</summary>
+    [Parameter] public int MaxValue { get; set; } = 9;
+
+    /// <summary>現在のステップインデックス（@key 再トリガー用）</summary>
+    [Parameter] public int StepIndex { get; set; } = -1;
+
+    /// <summary>ラベル（例: "Patience Piles"）</summary>
+    [Parameter] public string Label { get; set; } = "Patience Piles";
+
+    /// <summary>値に応じた HSL カラーを返す（MarbleRenderer と同じ計算式）</summary>
+    private string GetValueColor(int value)
+    {
+        if (MaxValue <= 1) return "hsl(210, 75%, 42%)";
+        var ratio = (double)(value - 1) / (MaxValue - 1);
+        var hue = (int)(210 * (1.0 - ratio));
+        return $"hsl({hue}, 75%, 42%)";
+    }
+}

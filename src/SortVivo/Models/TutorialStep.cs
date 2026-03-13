@@ -78,6 +78,12 @@ public record TutorialStep
     /// </summary>
     public int? ShellGap { get; init; }
 
+    /// <summary>
+    /// Patience Sort パイル表示用スナップショット。
+    /// TutorialVisualizationHint が PatiencePiles のとき使用（他は null）。
+    /// </summary>
+    public PatienceSnapshot? Patience { get; init; }
+
     /// <summary>この操作を日本語で説明するナラティブテキスト</summary>
     public string Narrative { get; init; } = string.Empty;
 

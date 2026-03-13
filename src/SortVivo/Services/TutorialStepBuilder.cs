@@ -138,6 +138,7 @@ public static class TutorialStepBuilder
             TutorialVisualizationHint.SortingNetwork => new NetworkTracker(initialArray.Length),
             TutorialVisualizationHint.RecursionTree => new RecursionTracker(initialArray.Length),
             TutorialVisualizationHint.ShellGap => new ShellGapTracker(),
+            TutorialVisualizationHint.PatiencePiles => new PatiencePilesTracker(initialArray),
             _ => NullTracker.Instance,
         };
 

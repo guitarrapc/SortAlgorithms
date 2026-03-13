@@ -68,4 +68,11 @@ public enum TutorialVisualizationHint
     /// Shell sort (Knuth / Sedgewick / Tokuda / Ciura / Lee) に使用。
     /// </summary>
     ShellGap,
+
+    /// <summary>
+    /// Patience Sort パイル表示。
+    /// ディールフェーズでは要素が列（パイル）に積み重なる様子を描画し、
+    /// マージフェーズではパイルのトップが min-heap で抽出される様子を描画する。
+    /// </summary>
+    PatiencePiles,
 }

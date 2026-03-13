@@ -1,0 +1,237 @@
+.patience-view {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--color-surface, #1e1e2e);
+    border-radius: 8px;
+    min-height: 180px;
+}
+
+/* ─── ヘッダー行 ─────────────────────────────────────────────────────── */
+.patience-label-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.patience-row-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-secondary, #888);
+}
+
+.patience-phase-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.patience-phase-deal {
+    background: rgba(100, 180, 255, 0.18);
+    color: #7ec8ff;
+}
+
+.patience-phase-merge {
+    background: rgba(255, 180, 80, 0.18);
+    color: #ffc77a;
+}
+
+.patience-pile-count {
+    font-size: 11px;
+    color: var(--color-text-secondary, #888);
+    margin-left: auto;
+}
+
+/* ─── ディール中・抽出中の要素表示 ──────────────────────────────────── */
+.patience-dealing-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+}
+
+.patience-dealing-label {
+    font-size: 11px;
+    color: var(--color-text-secondary, #888);
+    white-space: nowrap;
+}
+
+.patience-dealing-marble {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    box-shadow: 0 0 0 2px rgba(100, 180, 255, 0.6), 0 2px 6px rgba(0,0,0,0.4);
+    animation: patience-pulse 0.5s ease-out;
+}
+
+.patience-dealing-marble--extract {
+    box-shadow: 0 0 0 2px rgba(255, 180, 80, 0.7), 0 2px 6px rgba(0,0,0,0.4);
+}
+
+/* ─── パイル列コンテナ ─────────────────────────────────────────────── */
+.patience-piles {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-bottom: 4px;
+}
+
+/* ─── 個別パイル ────────────────────────────────────────────────────── */
+.patience-pile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 34px;
+}
+
+.patience-pile-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    border-bottom: 2px solid var(--color-border, #444);
+    padding-bottom: 4px;
+    min-height: 10px;
+}
+
+.patience-pile--active .patience-pile-body {
+    border-bottom-color: #7ec8ff;
+}
+
+.patience-pile--active.patience-pile--merge .patience-pile-body {
+    border-bottom-color: #ffc77a;
+}
+
+.patience-pile-label {
+    font-size: 10px;
+    color: var(--color-text-secondary, #888);
+    margin-top: 2px;
+    font-weight: 600;
+}
+
+.patience-pile--active .patience-pile-label {
+    color: #7ec8ff;
+}
+
+.patience-pile--active.patience-pile--merge .patience-pile-label {
+    color: #ffc77a;
+}
+
+/* ─── パイル内マーブル ─────────────────────────────────────────────── */
+.patience-marble {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.patience-marble--top {
+    outline: 2px solid rgba(255, 255, 255, 0.35);
+    outline-offset: 1px;
+}
+
+.patience-marble--top.patience-marble--deal {
+    outline-color: #7ec8ff;
+    box-shadow: 0 0 6px rgba(100, 180, 255, 0.5);
+}
+
+.patience-marble--top.patience-marble--merge {
+    outline-color: #ffc77a;
+    box-shadow: 0 0 6px rgba(255, 180, 80, 0.5);
+}
+
+/* ─── 空状態 ───────────────────────────────────────────────────────── */
+.patience-empty {
+    font-size: 12px;
+    color: var(--color-text-secondary, #888);
+    padding: 16px 0;
+}
+
+/* ─── ソート済み出力セクション ──────────────────────────────────────── */
+.patience-sorted-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 1px solid var(--color-border, #333);
+    padding-top: 8px;
+    margin-top: 4px;
+}
+
+.patience-sorted-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.patience-sorted-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--color-text-secondary, #888);
+}
+
+.patience-sorted-progress {
+    font-size: 10px;
+    color: var(--color-text-secondary, #888);
+    margin-left: auto;
+}
+
+.patience-sorted-marbles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.patience-sorted-marble {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.patience-sorted-marble--empty {
+    background: var(--color-surface-alt, #2a2a3e) !important;
+    border: 1px dashed var(--color-border, #444);
+    color: transparent;
+}
+
+.patience-sorted-marble--active {
+    outline: 2px solid #ffc77a;
+    outline-offset: 1px;
+    box-shadow: 0 0 8px rgba(255, 180, 80, 0.55);
+    animation: patience-pulse 0.4s ease-out;
+}
+
+/* ─── アニメーション ─────────────────────────────────────────────── */
+@keyframes patience-pulse {
+    0%   { transform: scale(1.15); }
+    100% { transform: scale(1.0); }
+}
