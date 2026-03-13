@@ -173,6 +173,8 @@ public class AlgorithmRegistry
         Add("Patience sort", "ADAPTIVE", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => PatienceSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Adaptive", "PatienceSort"),
             tutorialVisualizationHint: TutorialVisualizationHint.PatiencePiles);
+        Add("Strand sort", "ADAPTIVE", "O(n²)", MAX_SIZE_N2, 512, (arr, ctx) => StrandSort.Sort(arr, ctx),
+            gitHubSourceUrl: Src("Adaptive", "StrandSort"));
 
         // Distribution Sorts - O(n) ~ O(nk) - 推奨4096
         Add("Counting sort", "DISTRIBUTION", "O(n+k)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => CountingSortInteger.Sort(arr, ctx),

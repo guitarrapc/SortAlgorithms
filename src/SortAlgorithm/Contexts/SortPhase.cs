@@ -151,6 +151,18 @@ public enum SortPhase
     /// </summary>
     PatienceSortMerge,
 
+    /// <summary>
+    /// Strand Sort extract phase: scanning remaining elements and pulling out a sorted strand.
+    /// param1=strandPass (1-based pass number), param2=remainingCount (elements before extraction)
+    /// </summary>
+    StrandSortExtract,
+
+    /// <summary>
+    /// Strand Sort merge phase: merging the extracted strand into the accumulated sorted result.
+    /// param1=strandPass (1-based pass number), param2=strandLen, param3=resultLen
+    /// </summary>
+    StrandSortMerge,
+
     // Tree family
 
     /// <summary>
