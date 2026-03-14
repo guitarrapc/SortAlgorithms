@@ -49,15 +49,15 @@ public class InsertionBenchmark
     }
 
     [Benchmark]
-    public void MergeInsertionSort()
-    {
-        SortAlgorithm.Algorithms.MergeInsertionSort.Sort(_mergeinsertionArray.AsSpan());
-    }
-
-    [Benchmark]
     public void LibrarySort()
     {
         SortAlgorithm.Algorithms.LibrarySort.Sort(_insertionArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void MergeInsertionSort()
+    {
+        SortAlgorithm.Algorithms.MergeInsertionSort.Sort(_mergeinsertionArray.AsSpan());
     }
 
     [Benchmark]
