@@ -12,14 +12,12 @@ public class AdaptiveBenchmark
 
     private int[] _dropMergeArray = default!;
     private int[] _patienceArray = default!;
-    private int[] _strandArray = default!;
 
     [IterationSetup]
     public void Setup()
     {
         _dropMergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _patienceArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _strandArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark]
@@ -32,6 +30,25 @@ public class AdaptiveBenchmark
     public void PatienceSort()
     {
         SortAlgorithm.Algorithms.PatienceSort.Sort(_patienceArray.AsSpan());
+    }
+}
+
+[MemoryDiagnoser]
+[RankColumn]
+public class AdaptiveSlowBenchmark
+{
+    [Params(256, 1024)]
+    public int Size { get; set; }
+
+    [Params(DataPattern.Random, DataPattern.Sorted, DataPattern.Reversed, DataPattern.AntiQuicksort)]
+    public DataPattern Pattern { get; set; }
+
+    private int[] _strandArray = default!;
+
+    [IterationSetup]
+    public void Setup()
+    {
+        _strandArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark]
