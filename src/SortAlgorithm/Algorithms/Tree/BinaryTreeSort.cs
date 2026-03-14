@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Buffers;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -7,12 +8,11 @@ namespace SortAlgorithm.Algorithms;
 /// バイナリ検索木(Binary Search Tree, BST)を使用したソートアルゴリズム、二分木ソートとも呼ばれる。
 /// バイナリ検索木では、左の子ノードは親ノードより小さく、右の子ノードは親ノードより大きいことが保証される。
 /// この特性により、木の中間順序走査 (in-order traversal) を行うことで配列がソートされる。
-/// ただし、木が不均衡になると最悪ケースでO(n²)の時間がかかる可能性がある。また、ノードごとにクラスインスタンスを生成するためメモリアロケーションが多く、現実的なソートとしてはQuickSortやMergeSortを用いることが多い。
+/// ただし、木が不均衡になると最悪ケースでO(n²)の時間がかかる可能性がある。
 /// <br/>
-/// Non-optimized version of Binary Tree Sort using class-based nodes.
 /// A sorting algorithm that uses a binary search tree. In a binary search tree, the left child node is guaranteed to be smaller than the parent node, and the right child node is guaranteed to be larger.
 /// This property ensures that performing an in-order traversal of the tree results in a sorted array.
-/// However, an unbalanced tree can lead to O(n²) worst-case time complexity. Additionally, because each node allocates a class instance, memory allocations are high, making QuickSort or MergeSort more practical for real-world sorting.
+/// However, an unbalanced tree can lead to O(n²) worst-case time complexity.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Binary Tree Sort:</strong></para>
@@ -40,15 +40,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Reads : Θ(n) - Each element is read once during tree construction</description></item>
 /// <item><description>Index Writes: Θ(n) - Each element is written once during in-order traversal</description></item>
 /// <item><description>Swaps       : 0 (No swapping; elements are copied to tree nodes and then back to array)</description></item>
-/// <item><description>Space       : O(n) - One node allocated per element (worst case: n allocations of ~24-32 bytes each)</description></item>
+/// <item><description>Space       : O(n) - One struct node per element; allocated via ArrayPool (no per-node GC allocation)</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
 /// <item><description>Uses iterative insertion instead of recursive insertion to reduce call stack overhead</description></item>
-/// <item><description>Tree nodes are implemented as reference types (class) because C# structs cannot contain self-referencing fields</description></item>
+/// <item><description>Tree nodes are struct-based and allocated via <see cref="System.Buffers.ArrayPool{T}"/> (arena); Left/Right are integer indices into the arena (-1 = null)</description></item>
 /// <item><description>Equal elements are inserted to the right subtree (value ≥ current), making the sort unstable</description></item>
 /// <item><description>No tree balancing is performed; for guaranteed O(n log n) performance, consider using AVL or Red-Black tree variants</description></item>
-/// <item><description><strong>Non-Optimized:</strong> This version uses class-based nodes with reference type overhead. See <see cref="BinaryTreeSort"/> for an arena-based optimized version.</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Tree_sort</para>
@@ -58,6 +57,7 @@ public static class BinaryTreeSort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TREE = -1;      // Tree nodes (virtual buffer for visualization, negative to exclude from statistics)
+    private const int NULL_INDEX = -1;       // Represents null reference in arena
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -90,112 +90,159 @@ public static class BinaryTreeSort
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-
-        // The root node of the binary tree (null == the tree is empty).
-        Node<T>? root = null;
-
-        // Node counter for visualization (assigns unique IDs to each node)
-        var nodeCounter = 0;
-
-        for (var i = 0; i < s.Length; i++)
+        var arena = ArrayPool<Node<T>>.Shared.Rent(span.Length);
+        try
         {
-            context.OnPhase(SortPhase.TreeSortInsert, i, s.Length - 1);
-            context.OnRole(i, BUFFER_MAIN, RoleType.RightPointer);
-            var value = s.Read(i);
-            InsertIterative(ref root, value, comparer, context, ref nodeCounter);
-            context.OnRole(i, BUFFER_MAIN, RoleType.None);
-        }
+            var arenaSpan = arena.AsSpan(0, span.Length);
+            var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+            var rootIndex = NULL_INDEX;
+            var nodeCount = 0;
 
-        // Traverse the tree in inorder and write elements back into the array.
-        context.OnPhase(SortPhase.TreeSortExtract);
-        var n = 0;
-        Inorder(s, root, ref n);
+            for (var i = 0; i < s.Length; i++)
+            {
+                context.OnPhase(SortPhase.TreeSortInsert, i, s.Length - 1);
+                context.OnRole(i, BUFFER_MAIN, RoleType.RightPointer);
+                var value = s.Read(i);
+                rootIndex = InsertIterative(arenaSpan, rootIndex, ref nodeCount, value, comparer, context);
+                context.OnRole(i, BUFFER_MAIN, RoleType.None);
+            }
+
+            // Traverse the tree in inorder and write elements back into the array.
+            context.OnPhase(SortPhase.TreeSortExtract);
+            var writeIndex = 0;
+            Inorder(s, arenaSpan, rootIndex, ref writeIndex);
+        }
+        finally
+        {
+            ArrayPool<Node<T>>.Shared.Return(arena, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+        }
     }
 
     /// <summary>
     /// Iterative insertion. Instead of using recursion, it loops to find the child nodes.
+    /// Returns the root index (unchanged unless the tree was empty).
     /// </summary>
-    private static void InsertIterative<T, TComparer, TContext>(ref Node<T>? node, T value, TComparer comparer, TContext context, ref int nodeCounter)
+    private static int InsertIterative<T, TComparer, TContext>(
+        Span<Node<T>> arena, int rootIndex, ref int nodeCount, T value, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // If the tree is empty, create a new root and return.
-        if (node is null)
-        {
-            node = CreateNode(value, ref nodeCounter);
-            return;
-        }
+        if (rootIndex == NULL_INDEX)
+            return CreateNode(arena, value, ref nodeCount, context);
 
         // Iterate left & right node and insert.
         // If there's an existing tree, use 'current' to traverse down the children.
-        Node<T> current = node;
+        var current = rootIndex;
         while (true)
         {
             // If the value is smaller than the current node, go left.
-            if (comparer.Compare(value, current.Item) < 0)
+            if (comparer.Compare(value, arena[current].Value) < 0)
             {
                 // If the left child is null, insert here.
-                if (current.Left is null)
+                if (arena[current].Left == NULL_INDEX)
                 {
-                    current.Left = CreateNode(value, ref nodeCounter);
+                    arena[current].Left = CreateNode(arena, value, ref nodeCount, context);
                     break;
                 }
                 // Otherwise, move further down to the left child.
-                current = current.Left;
+                current = arena[current].Left;
             }
             else
             {
                 // If the value is greater or equal, go right.
-                if (current.Right is null)
+                if (arena[current].Right == NULL_INDEX)
                 {
-                    current.Right = CreateNode(value, ref nodeCounter);
+                    arena[current].Right = CreateNode(arena, value, ref nodeCount, context);
                     break;
                 }
                 // Otherwise, move further down to the right child.
-                current = current.Right;
+                current = arena[current].Right;
             }
         }
+        return rootIndex;
     }
 
-    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Node<T>? node, ref int i)
+    /// <summary>
+    /// Iterative in-order traversal (left → root → right) using an explicit stack.
+    /// Writes sorted elements back into the original span via <paramref name="s"/>.
+    /// </summary>
+    private static void Inorder<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (node is null) return;
+        if (rootIndex == NULL_INDEX) return;
 
-        Inorder(s, node.Left, ref i);
-        s.Write(i++, node.Item);
-        Inorder(s, node.Right, ref i);
+        // Stack depth bounded by tree height; use stackalloc for small trees, ArrayPool for large
+        int[]? rented = null;
+        Span<int> stack = s.Length <= 128
+            ? stackalloc int[s.Length]
+            : (rented = ArrayPool<int>.Shared.Rent(s.Length)).AsSpan(0, s.Length);
+        try
+        {
+            var stackTop = 0;
+            var current = rootIndex;
+
+            while (stackTop > 0 || current != NULL_INDEX)
+            {
+                // Push all left descendants onto the stack
+                while (current != NULL_INDEX)
+                {
+                    stack[stackTop++] = current;
+                    current = arena[current].Left;
+                }
+
+                // Visit the node at the top of the stack
+                current = stack[--stackTop];
+                s.Write(writeIndex++, arena[current].Value);
+
+                // Move to the right subtree
+                current = arena[current].Right;
+            }
+        }
+        finally
+        {
+            if (rented is not null)
+                ArrayPool<int>.Shared.Return(rented);
+        }
     }
 
     // Helper methods for node operations (encapsulates visualization tracking)
 
     /// <summary>
-    /// Creates a new tree node and records its creation for visualization.
+    /// Allocates a new arena node, caches <paramref name="value"/>, and records its creation for visualization.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Node<T> CreateNode<T>(T value, ref int nodeCounter)
+    private static int CreateNode<T, TContext>(Span<Node<T>> arena, T value, ref int nodeCount, TContext context)
+        where TContext : ISortContext
     {
-        var nodeId = nodeCounter++;
-        var node = new Node<T>(value, nodeId);
-        return node;
+        var nodeIndex = nodeCount++;
+        arena[nodeIndex] = new Node<T>(value);
+        context.OnIndexWrite(nodeIndex, BUFFER_TREE, value);
+        return nodeIndex;
     }
 
     /// <summary>
-    /// Represents a node in a binary tree structure that stores a value and references to left and right child nodes.
+    /// Arena-based node structure for binary tree sort.
     /// </summary>
     /// <remarks>
-    /// Class-based node with reference type overhead. Each node allocation incurs GC pressure.
+    /// Struct-based to eliminate GC pressure (allocated via ArrayPool).
+    /// Left and Right are indices into the arena array (-1 represents null).
+    /// Value caches the T instance directly to avoid span indirection on every comparison.
+    /// The node's identity is its position in the arena array, so no separate Id field is needed.
     /// </remarks>
-    /// <typeparam name="T">The type of the value stored in the node.</typeparam>
-    /// <param name="value">The value to store in the node.</param>
-    /// <param name="id">The unique identifier for this node (used for visualization).</param>
-    private class Node<T>(T value, int id)
+    private struct Node<T>
     {
-        public int Id = id;          // Unique node ID for visualization
-        public T Item = value;
-        public Node<T>? Left;
-        public Node<T>? Right;
+        public T Value;     // Cached value for direct comparison
+        public int Left;    // Index in arena, -1 = null
+        public int Right;   // Index in arena, -1 = null
+
+        public Node(T value)
+        {
+            Value = value;
+            Left = NULL_INDEX;
+            Right = NULL_INDEX;
+        }
     }
 }
