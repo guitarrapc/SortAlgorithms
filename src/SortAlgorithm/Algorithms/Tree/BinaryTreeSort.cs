@@ -136,7 +136,8 @@ public static class BinaryTreeSort
         while (true)
         {
             // If the value is smaller than the current node, go left.
-            if (comparer.Compare(value, arena[current].Value) < 0)
+            var cmp = CompareWithNode(arena, current, value, comparer, context);
+            if (cmp < 0)
             {
                 // If the left child is null, insert here.
                 if (arena[current].Left == NULL_INDEX)
@@ -207,6 +208,23 @@ public static class BinaryTreeSort
     }
 
     // Helper methods for node operations (encapsulates visualization tracking)
+
+    /// <summary>
+    /// Compares <paramref name="value"/> against the cached value of the node at <paramref name="nodeIndex"/>.
+    /// Records both the node access and the comparison for visualization and statistics.
+    /// Returns negative if value &lt; node, zero if equal, positive if value &gt; node.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int CompareWithNode<T, TComparer, TContext>(
+        Span<Node<T>> arena, int nodeIndex, T value, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        context.OnIndexRead(nodeIndex, BUFFER_TREE);
+        var cmp = comparer.Compare(value, arena[nodeIndex].Value);
+        context.OnCompare(-1, -1, cmp, 0, 0);
+        return cmp;
+    }
 
     /// <summary>
     /// Allocates a new arena node, caches <paramref name="value"/>, and records its creation for visualization.
