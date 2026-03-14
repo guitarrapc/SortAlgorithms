@@ -114,7 +114,7 @@ public static class BinaryTreeSort
         }
         finally
         {
-            ArrayPool<Node<T>>.Shared.Return(arena, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            ArrayPool<Node<T>>.Shared.Return(arena, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<Node<T>>());
         }
     }
 
