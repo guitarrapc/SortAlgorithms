@@ -78,7 +78,7 @@ public static class BalancedBinaryTreeSort
     // 3. Only the initial Read and final Write operations on the original data array
     //    represent the algorithm's core data access and are tracked via SortSpan
     // 4. Alternative design (storing only span indices in nodes) would require span[index] lookup on every
-    //    comparison, causing significant performance degradation (up to 3x slower than class-based approach)
+    //    comparison, increasing indirection and often reducing performance noticeably. (up to 3x slower than class-based approach in benchmark)
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -258,7 +258,7 @@ public static class BalancedBinaryTreeSort
     /// Uses an explicit stack to track node indices during traversal, avoiding recursion overhead.
     /// Uses ArrayPool to avoid GC pressure.
     /// Stack depth is bounded by the AVL tree height (O(log n)), not n.
-    /// Reads actual data from original span using ItemIndex.
+    /// Reads cached values from tree nodes and writes them back to the original span.
     /// </remarks>
     private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex, int maxStackSize)
         where TComparer : IComparer<T>
