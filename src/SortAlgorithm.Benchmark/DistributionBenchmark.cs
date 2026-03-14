@@ -17,6 +17,7 @@ public class DistributionBenchmark
     private int[] _countingIntegerArray = default!;
     private int[] _pigeonholeArray = default!;
     private int[] _pigeonholeIntegerArray = default!;
+    private int[] _flashArray = default!;
     private int[] _radixLSD4Sort = default!;
     private int[] _radixLSD256Sort = default!;
     private int[] _radixLSD10Sort = default!;
@@ -33,6 +34,7 @@ public class DistributionBenchmark
         _countingIntegerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _pigeonholeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _pigeonholeIntegerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _flashArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _radixLSD4Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
         _radixLSD256Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
         _radixLSD10Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
@@ -80,6 +82,12 @@ public class DistributionBenchmark
     public void PigeonSortInteger()
     {
         SortAlgorithm.Algorithms.PigeonholeSortInteger.Sort(_pigeonholeIntegerArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void FlashSort()
+    {
+        SortAlgorithm.Algorithms.FlashSort.Sort(_flashArray.AsSpan());
     }
 
     [Benchmark]

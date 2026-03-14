@@ -210,8 +210,10 @@ public class AlgorithmRegistry
             tutorialLsdRadix: 10);
         Add("American flag sort", "DISTRIBUTION", "O(nk)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => AmericanFlagSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Distribution", "AmericanFlagSort"));
+        Add("Flash sort", "DISTRIBUTION", "O(n+m)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => FlashSort.Sort(arr, ctx),
+            gitHubSourceUrl: Src("Distribution", "FlashSort"));
 
-        // Network Sorts - O(log²n) - 推奨2048
+        // Network Sorts
         Add("Bitonic sort", "NETWORK", "O(log²n)", MAX_SIZE_N2, 2048, (arr, ctx) => BitonicSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Network", "BitonicSort"),
             tutorialVisualizationHint: TutorialVisualizationHint.SortingNetwork);
