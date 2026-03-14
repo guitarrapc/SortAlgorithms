@@ -108,7 +108,7 @@ public static class SplaySort
             for (var i = 0; i < s.Length; i++)
             {
                 context.OnPhase(SortPhase.TreeSortInsert, i, s.Length - 1);
-                context.OnRole(i, BUFFER_MAIN, RoleType.RightPointer);
+                context.OnRole(i, BUFFER_MAIN, RoleType.Inserting);
                 rootIndex = Insert(arenaSpan, rootIndex, ref nodeCount, i, s);
                 context.OnRole(i, BUFFER_MAIN, RoleType.None);
             }

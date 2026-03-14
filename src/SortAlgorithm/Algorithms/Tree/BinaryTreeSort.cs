@@ -101,7 +101,7 @@ public static class BinaryTreeSort
             for (var i = 0; i < s.Length; i++)
             {
                 context.OnPhase(SortPhase.TreeSortInsert, i, s.Length - 1);
-                context.OnRole(i, BUFFER_MAIN, RoleType.RightPointer);
+                context.OnRole(i, BUFFER_MAIN, RoleType.Inserting);
                 var value = s.Read(i);
                 rootIndex = InsertIterative(arenaSpan, rootIndex, ref nodeCount, value, comparer, context);
                 context.OnRole(i, BUFFER_MAIN, RoleType.None);
