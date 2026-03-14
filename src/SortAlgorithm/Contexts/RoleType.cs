@@ -26,4 +26,13 @@ public enum RoleType
 
     /// <summary>木ソートなどで入力配列から今まさに挿入対象として取り出した要素</summary>
     Inserting,
+
+    /// <summary>Ford-Johnson ペア化フェーズでペア内の大きい方の要素 (a_i)</summary>
+    FjLarger,
+
+    /// <summary>Ford-Johnson ペア化フェーズでペア内の小さい方の要素 (b_i)</summary>
+    FjSmaller,
+
+    /// <summary>Ford-Johnson の奇数余り要素（ペアを持たない 1 要素）</summary>
+    FjStraggler,
 }
