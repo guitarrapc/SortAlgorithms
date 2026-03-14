@@ -128,7 +128,6 @@ public static class BalancedBinaryTreeSort
             : (rentedPathStack = ArrayPool<int>.Shared.Rent(avlMaxHeight)).AsSpan(0, avlMaxHeight);
         try
         {
-            var arenaSpan = arena.AsSpan(0, span.Length);
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var rootIndex = NULL_INDEX;
             var nodeCount = 0;
@@ -145,7 +144,7 @@ public static class BalancedBinaryTreeSort
             // Traverse in order and write back into the array (iterative to avoid stack overflow)
             context.OnPhase(SortPhase.TreeSortExtract);
             var writeIndex = 0;
-            Inorder(s, arena, rootIndex, ref writeIndex);
+            Inorder(s, arena, rootIndex, ref writeIndex, avlMaxHeight);
         }
         finally
         {
@@ -259,17 +258,14 @@ public static class BalancedBinaryTreeSort
     /// <remarks>
     /// Uses an explicit stack to track node indices during traversal, avoiding recursion overhead.
     /// Uses ArrayPool to avoid GC pressure.
+    /// Stack depth is bounded by the AVL tree height (O(log n)), not n.
     /// Reads actual data from original span using ItemIndex.
     /// </remarks>
-    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex)
+    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex, int maxStackSize)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         if (rootIndex == NULL_INDEX) return;
-
-        // Maximum stack size needed for in-order traversal
-        // For AVL tree: height ≤ 1.44 * log₁En+2), but use n for safety and simplicity
-        var maxStackSize = s.Length;
 
         int[]? rented = null;
         Span<int> stack = maxStackSize <= 128
