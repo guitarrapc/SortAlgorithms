@@ -288,6 +288,10 @@ public static class TutorialStepBuilder
             SortAlgorithm.Contexts.SortPhase.GnomePass => $"Gnome at position {p1} / {p2}",
             SortAlgorithm.Contexts.SortPhase.ShellGapPass => $"Gap {p1}: pass {p2}/{p3} (h-insertion sort)",
             SortAlgorithm.Contexts.SortPhase.PairInsertionPass => $"Inserting pair at [{p1}], [{p1 + 1}] into sorted region",
+            SortAlgorithm.Contexts.SortPhase.MergeInsertionPairing => $"Pairing: {p2 + 1} pair{(p2 != 0 ? "s" : "")} — compare each, mark larger/smaller",
+            SortAlgorithm.Contexts.SortPhase.MergeInsertionSortLarger => $"Sort larger: recursively sorting {p2 + 1} larger element{(p2 != 0 ? "s" : "")}",
+            SortAlgorithm.Contexts.SortPhase.MergeInsertionInsertPend => $"Insert pended: {p2 + 1} element{(p2 != 0 ? "s" : "")} in Jacobsthal order",
+            SortAlgorithm.Contexts.SortPhase.MergeInsertionRearrange => $"Rearrange: writing {p2 + 1} element{(p2 != 0 ? "s" : "")} to final positions",
             SortAlgorithm.Contexts.SortPhase.LibrarySortPhase => p1 switch
             {
                 1 => "Phase 1: initial sort (insertion sort on first block)",

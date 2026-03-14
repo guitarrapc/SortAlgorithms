@@ -228,7 +228,15 @@ public static class MergeInsertionSort
                     smaller[i] = b;
                     larger[i] = a;
                 }
+                if (visualize)
+                {
+                    s.Context.OnRole(smaller[i], BUFFER_MAIN, RoleType.FjSmaller);
+                    s.Context.OnRole(larger[i], BUFFER_MAIN, RoleType.FjLarger);
+                }
             }
+
+            if (hasStraggler && visualize)
+                s.Context.OnRole(indices[n - 1], BUFFER_MAIN, RoleType.FjStraggler);
 
             // Step 2: Recursively sort the larger elements
             s.Context.OnPhase(SortPhase.MergeInsertionSortLarger, 0, pairs - 1);
@@ -275,11 +283,22 @@ public static class MergeInsertionSort
             }
 
             // Step 4: Insert pend elements using Jacobsthal sequence order
+            // Clear pairing roles before insertion phase starts
+            if (visualize)
+            {
+                for (var i = 0; i < pairs; i++)
+                {
+                    s.Context.OnRole(smaller[i], BUFFER_MAIN, RoleType.None);
+                    s.Context.OnRole(larger[i], BUFFER_MAIN, RoleType.None);
+                }
+                if (hasStraggler)
+                    s.Context.OnRole(indices[n - 1], BUFFER_MAIN, RoleType.None);
+            }
+
             if (pendCount > 0)
             {
                 s.Context.OnPhase(SortPhase.MergeInsertionInsertPend, 0, pendCount - 1);
-                InsertPendElements(s, outChain, ref chainLen,
-                    pendValues.Slice(0, pendCount), pendPartners.Slice(0, pendCount), chain, isTopLevel);
+                InsertPendElements(s, outChain, ref chainLen, pendValues.Slice(0, pendCount), pendPartners.Slice(0, pendCount), chain, isTopLevel);
             }
         }
         finally
@@ -294,7 +313,7 @@ public static class MergeInsertionSort
     /// <summary>
     /// Insert pended elements into the main chain using Jacobsthal sequence order
     /// and binary insertion.
-    /// For each pend item with a partner, the upper bound is the partner's current position
+    /// For each pend item with a partner, the upper bound is the partner's current position.
     /// Uses manual element shift on <see cref="Span{T}"/> instead of <c>List.Insert</c> to avoid allocation.
     /// </summary>
     private static void InsertPendElements<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> mainChain, ref int chainLen, ReadOnlySpan<int> pendValues, ReadOnlySpan<int> pendPartners, SortSpan<T, TComparer, TContext> chain, bool isTopLevel)
@@ -332,6 +351,9 @@ public static class MergeInsertionSort
                     ? mainChain.Slice(0, chainLen).IndexOf(partnerIdx)
                     : chainLen;
 
+                if (visualize)
+                    s.Context.OnRole(valueIdx, BUFFER_MAIN, RoleType.Inserting);
+
                 var pos = BinarySearchInChain(s, mainChain, valueIdx, 0, upperBound);
 
                 // Manual shift right to make room for insertion (replaces List.Insert)
@@ -342,6 +364,8 @@ public static class MergeInsertionSort
                 }
                 mainChain[pos] = valueIdx;
                 ChainWrite(s, chain, pos, valueIdx, visualize);
+                if (visualize)
+                    s.Context.OnRole(valueIdx, BUFFER_MAIN, RoleType.None);
                 chainLen++;
             }
         }
