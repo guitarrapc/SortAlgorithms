@@ -17,13 +17,13 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="number">
 /// <item><description><strong>Binary Search Tree Property:</strong> For every node, all values in the left subtree must be less than the node's value,
 /// and all values in the right subtree must be greater than or equal to the node's value.
-/// This property is maintained by comparing values during insertion (lines 165-171, 187-193).</description></item>
+/// This property is maintained by comparing values during insertion.</description></item>
 /// <item><description><strong>AVL Balance Property:</strong> For every node, the height difference between left and right subtrees (balance factor) must be at most 1.
 /// Balance factor = height(left subtree) - height(right subtree) ∈ {-1, 0, 1}.
-/// This is enforced by the Balance() method after every insertion (lines 229-261).</description></item>
+/// This is enforced by the Balance() method after every insertion.</description></item>
 /// <item><description><strong>Height Maintenance:</strong> Each node stores its height, which is updated after any structural change.
 /// Height = 1 + max(height(left), height(right)).
-/// This is computed by UpdateHeight() after insertions and rotations (lines 215-223).</description></item>
+/// This is computed by UpdateHeight() after insertions and rotations.</description></item>
 /// <item><description><strong>Rotation Correctness:</strong> When the balance factor violates the AVL property (|balance| > 1), rotations restore balance while preserving BST property:
 /// <list type="bullet">
 /// <item><description>Left-Left case (balance > 1, left child balanced): Single right rotation</description></item>
@@ -31,7 +31,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Right-Right case (balance &lt; -1, right child balanced): Single left rotation</description></item>
 /// <item><description>Right-Left case (balance &lt; -1, right child left-heavy): Right rotation on right child, then left rotation</description></item>
 /// </list>
-/// All rotations preserve the in-order traversal sequence (lines 263-303).</description></item>
+/// All rotations preserve the in-order traversal sequence.</description></item>
 /// <item><description><strong>In-order Traversal Correctness:</strong> Visiting nodes in left-root-right order produces elements in sorted ascending order.
 /// This is guaranteed by the BST property and implemented iteratively to avoid stack overflow.</description></item>
 /// </list>
@@ -75,10 +75,10 @@ public static class BalancedBinaryTreeSort
     // Note: Arena (Node array) operations are not tracked via SortSpan because:
     // 1. Nodes are internal implementation details (tree structure metadata)
     // 2. Nodes cache values (T) directly for performance (avoiding indirection overhead)
-    // 3. Only the initial Read (line ~160) and final Write (line ~254) operations on the original data array
+    // 3. Only the initial Read and final Write operations on the original data array
     //    represent the algorithm's core data access and are tracked via SortSpan
     // 4. Alternative design (storing only span indices in nodes) would require span[index] lookup on every
-    //    comparison, causing significant performance degradation (up to 3x slower than class-based approach)
+    //    comparison, increasing indirection and often reducing performance noticeably. (up to 3x slower than class-based approach in local benchmarks for this project)
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -113,11 +113,10 @@ public static class BalancedBinaryTreeSort
 
         // Allocate path stack for iterative insertion
         // AVL tree theoretical height: h ≤ 1.44 * log₂(n+2) - 0.328
-        // During construction, use conservative estimate to handle temporary imbalance
-        // Use: max(n, 2 * log₂(n+1) + 8) for small n, logarithmic for large n
+        // Add +2 margin to cover any rounding and the -0.328 offset
         var avlMaxHeight = span.Length <= 16
             ? span.Length
-            : Math.Max((int)(2.0 * Math.Log2(span.Length + 1)) + 8, 32);
+            : (int)Math.Ceiling(1.44 * Math.Log2(span.Length + 2)) + 2;
 
         // Use ArrayPool for arena allocation
         // Note: Cannot use stackalloc with Node<T> when T might be a reference type
@@ -128,7 +127,6 @@ public static class BalancedBinaryTreeSort
             : (rentedPathStack = ArrayPool<int>.Shared.Rent(avlMaxHeight)).AsSpan(0, avlMaxHeight);
         try
         {
-            var arenaSpan = arena.AsSpan(0, span.Length);
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var rootIndex = NULL_INDEX;
             var nodeCount = 0;
@@ -145,7 +143,7 @@ public static class BalancedBinaryTreeSort
             // Traverse in order and write back into the array (iterative to avoid stack overflow)
             context.OnPhase(SortPhase.TreeSortExtract);
             var writeIndex = 0;
-            Inorder(s, arena, rootIndex, ref writeIndex);
+            Inorder(s, arena, rootIndex, ref writeIndex, avlMaxHeight);
         }
         finally
         {
@@ -259,17 +257,14 @@ public static class BalancedBinaryTreeSort
     /// <remarks>
     /// Uses an explicit stack to track node indices during traversal, avoiding recursion overhead.
     /// Uses ArrayPool to avoid GC pressure.
-    /// Reads actual data from original span using ItemIndex.
+    /// Stack depth is bounded by the AVL tree height (O(log n)), not n.
+    /// Reads cached values from tree nodes and writes them back to the original span.
     /// </remarks>
-    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex)
+    private static void Inorder<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<Node<T>> arena, int rootIndex, ref int writeIndex, int maxStackSize)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         if (rootIndex == NULL_INDEX) return;
-
-        // Maximum stack size needed for in-order traversal
-        // For AVL tree: height ≤ 1.44 * log₁En+2), but use n for safety and simplicity
-        var maxStackSize = s.Length;
 
         int[]? rented = null;
         Span<int> stack = maxStackSize <= 128
@@ -318,7 +313,7 @@ public static class BalancedBinaryTreeSort
     private static int CreateNode<T, TContext>(Span<Node<T>> arena, T value, ref int nodeCount, TContext context) where TContext : ISortContext
     {
         var nodeId = nodeCount++;
-        arena[nodeId] = new Node<T>(value, nodeId);
+        arena[nodeId] = new Node<T>(value);
         // Record node creation in the tree buffer for visualization
         context.OnIndexWrite(nodeId, BUFFER_TREE, value);
         return nodeId;
@@ -331,7 +326,7 @@ public static class BalancedBinaryTreeSort
     private static T ReadNodeValue<T, TContext>(Span<Node<T>> arena, int nodeIndex, TContext context) where TContext : ISortContext
     {
         // Visualize node access during traversal
-        context.OnIndexRead(arena[nodeIndex].Id, BUFFER_TREE);
+        context.OnIndexRead(nodeIndex, BUFFER_TREE);
         return arena[nodeIndex].Value;
     }
 
@@ -346,14 +341,9 @@ public static class BalancedBinaryTreeSort
         where TContext : ISortContext
     {
         // Visualize node access during tree traversal
-        context.OnIndexRead(arena[nodeIndex].Id, BUFFER_TREE);
-
-        // Compare value with node's item
-        // Note: This comparison is counted as a main array comparison (bufferId 0)
-        // because the values originated from the main array
+        context.OnIndexRead(nodeIndex, BUFFER_TREE);
         var cmp = comparer.Compare(value, arena[nodeIndex].Value);
-        context.OnCompare(-1, -1, cmp, 0, 0);
-
+        context.OnCompare(-1, -1, cmp, BUFFER_TREE, BUFFER_TREE);
         return cmp;
     }
 
@@ -471,26 +461,21 @@ public static class BalancedBinaryTreeSort
     /// Arena-based node structure with value caching for optimal performance.
     /// </summary>
     /// <remarks>
-    /// This struct-based node eliminates GC pressure by using value semantics and ArrayPool.
+    /// Struct-based to eliminate GC pressure (allocated via ArrayPool).
     /// Left and Right are indices into the arena array (-1 represents null).
-    /// Value caches the actual T instance directly to avoid span[index] indirection on every comparison.
+    /// Value caches the T instance directly to avoid span indirection on every comparison.
     /// Height is maintained for AVL balancing.
-    ///
-    /// Design Note: Storing only indices (without Value field) would make Node smaller but requires
-    /// span[index] lookup on every comparison, causing up to 3x performance degradation compared to
-    /// the class-based reference implementation. Value caching trades memory for speed.
+    /// The node's identity is its position in the arena array, so no separate Id field is needed.
     /// </remarks>
     private struct Node<T>
     {
-        public int Id;          // Unique node ID for visualization
         public T Value;         // Cached value for direct comparison (avoids span indirection)
         public int Left;        // Index in arena, -1 = null
         public int Right;       // Index in arena, -1 = null
         public int Height;      // For AVL balancing
 
-        public Node(T value, int id)
+        public Node(T value)
         {
-            Id = id;
             Value = value;
             Left = -1;
             Right = -1;
@@ -511,13 +496,13 @@ public static class BalancedBinaryTreeSort
 /// <list type="number">
 /// <item><description><strong>Binary Search Tree Property:</strong> For every node, all values in the left subtree must be less than the node's value,
 /// and all values in the right subtree must be greater than or equal to the node's value.
-/// This property is maintained by comparing values during insertion (lines 165-171, 187-193).</description></item>
+/// This property is maintained by comparing values during insertion.</description></item>
 /// <item><description><strong>AVL Balance Property:</strong> For every node, the height difference between left and right subtrees (balance factor) must be at most 1.
 /// Balance factor = height(left subtree) - height(right subtree) ∈ {-1, 0, 1}.
-/// This is enforced by the Balance() method after every insertion (lines 229-261).</description></item>
+/// This is enforced by the Balance() method after every insertion.</description></item>
 /// <item><description><strong>Height Maintenance:</strong> Each node stores its height, which is updated after any structural change.
 /// Height = 1 + max(height(left), height(right)).
-/// This is computed by UpdateHeight() after insertions and rotations (lines 215-223).</description></item>
+/// This is computed by UpdateHeight() after insertions and rotations.</description></item>
 /// <item><description><strong>Rotation Correctness:</strong> When the balance factor violates the AVL property (|balance| > 1), rotations restore balance while preserving BST property:
 /// <list type="bullet">
 /// <item><description>Left-Left case (balance > 1, left child balanced): Single right rotation</description></item>
@@ -525,9 +510,9 @@ public static class BalancedBinaryTreeSort
 /// <item><description>Right-Right case (balance &lt; -1, right child balanced): Single left rotation</description></item>
 /// <item><description>Right-Left case (balance &lt; -1, right child left-heavy): Right rotation on right child, then left rotation</description></item>
 /// </list>
-/// All rotations preserve the in-order traversal sequence (lines 263-303).</description></item>
+/// All rotations preserve the in-order traversal sequence.</description></item>
 /// <item><description><strong>In-order Traversal Correctness:</strong> Visiting nodes in left-root-right order produces elements in sorted ascending order.
-/// This is guaranteed by the BST property and implemented recursively (lines 205-211).</description></item>
+/// This is guaranteed by the BST property and implemented recursively.</description></item>
 /// </list>
 /// <para><strong>Mathematical Proof of O(log n) Height:</strong></para>
 /// <list type="bullet">

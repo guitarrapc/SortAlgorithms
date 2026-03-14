@@ -23,4 +23,7 @@ public enum RoleType
 
     /// <summary>2ポインタ系アルゴリズムの右端ポインタ</summary>
     RightPointer,
+
+    /// <summary>木ソートなどで入力配列から今まさに挿入対象として取り出した要素</summary>
+    Inserting,
 }
