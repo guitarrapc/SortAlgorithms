@@ -55,6 +55,7 @@ public static class MergeInsertionSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
+    private const int BUFFER_TEMP = 1;       // Temporary values buffer for write-back
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -118,25 +119,25 @@ public static class MergeInsertionSort
         var rentedIndices = ArrayPool<int>.Shared.Rent(n);
         try
         {
-            var values = rentedValues.AsSpan(0, n);
+            var valuesSpan = new SortSpan<T, TComparer, TContext>(rentedValues.AsSpan(0, n), s.Context, s.Comparer, BUFFER_TEMP);
             var sorted = rentedSorted.AsSpan(0, n);
             var indices = rentedIndices.AsSpan(0, n);
 
-            // Read all values into pooled buffer; build initial identity indices
+            // Copy all values to temp buffer (tracked) and build initial identity indices
+            s.CopyTo(0, valuesSpan, 0, n);
             for (var i = 0; i < n; i++)
             {
-                values[i] = s.Read(i);
                 indices[i] = i;
             }
 
-            // Build the sorted index order using Ford-Johnson on the values
-            FordJohnson(s, values, indices, sorted);
+            // Build the sorted index order using Ford-Johnson directly on the original span
+            FordJohnson(s, indices, sorted);
 
-            // Write back in sorted order
+            // Write back in sorted order (reads from temp buffer, writes to main buffer)
             s.Context.OnPhase(SortPhase.MergeInsertionRearrange, 0, n - 1);
             for (var i = 0; i < n; i++)
             {
-                s.Write(i, values[sorted[i]]);
+                s.Write(i, valuesSpan.Read(sorted[i]));
             }
         }
         finally
@@ -152,7 +153,7 @@ public static class MergeInsertionSort
     /// </summary>
     /// <param name="indices">Input indices to sort (read-only).</param>
     /// <param name="outChain">Pre-allocated output buffer that receives the sorted chain. Must have at least <c>indices.Length</c> elements.</param>
-    private static void FordJohnson<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ReadOnlySpan<T> values, ReadOnlySpan<int> indices, Span<int> outChain)
+    private static void FordJohnson<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ReadOnlySpan<int> indices, Span<int> outChain)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -168,7 +169,7 @@ public static class MergeInsertionSort
         // Base case: two elements
         if (n == 2)
         {
-            if (s.Compare(values[indices[0]], values[indices[1]]) <= 0)
+            if (s.Compare(indices[0], indices[1]) <= 0)
             {
                 outChain[0] = indices[0];
                 outChain[1] = indices[1];
@@ -206,7 +207,7 @@ public static class MergeInsertionSort
                 var a = indices[2 * i];
                 var b = indices[2 * i + 1];
 
-                if (s.Compare(values[a], values[b]) <= 0)
+                if (s.Compare(a, b) <= 0)
                 {
                     smaller[i] = a;
                     larger[i] = b;
@@ -220,7 +221,7 @@ public static class MergeInsertionSort
 
             // Step 2: Recursively sort the larger elements
             s.Context.OnPhase(SortPhase.MergeInsertionSortLarger, 0, pairs - 1);
-            FordJohnson(s, values, larger, sortedLarger);
+            FordJohnson(s, larger, sortedLarger);
 
             // Step 3: Build main chain directly in outChain
             // Main chain starts with b1 (smallest's partner), then all sorted larger elements
@@ -261,7 +262,7 @@ public static class MergeInsertionSort
             if (pendCount > 0)
             {
                 s.Context.OnPhase(SortPhase.MergeInsertionInsertPend, 0, pendCount - 1);
-                InsertPendElements(s, values, outChain, ref chainLen,
+                InsertPendElements(s, outChain, ref chainLen,
                     pendValues.Slice(0, pendCount), pendPartners.Slice(0, pendCount));
             }
         }
@@ -280,7 +281,7 @@ public static class MergeInsertionSort
     /// For each pend item with a partner, the upper bound is the partner's current position
     /// Uses manual element shift on <see cref="Span{T}"/> instead of <c>List.Insert</c> to avoid allocation.
     /// </summary>
-    private static void InsertPendElements<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ReadOnlySpan<T> values, Span<int> mainChain, ref int chainLen, ReadOnlySpan<int> pendValues, ReadOnlySpan<int> pendPartners)
+    private static void InsertPendElements<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> mainChain, ref int chainLen, ReadOnlySpan<int> pendValues, ReadOnlySpan<int> pendPartners)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -314,7 +315,7 @@ public static class MergeInsertionSort
                     ? mainChain.Slice(0, chainLen).IndexOf(partnerIdx)
                     : chainLen;
 
-                var pos = BinarySearchInChain(s, values, mainChain, valueIdx, 0, upperBound);
+                var pos = BinarySearchInChain(s, mainChain, valueIdx, 0, upperBound);
 
                 // Manual shift right to make room for insertion (replaces List.Insert)
                 for (var k = chainLen; k > pos; k--)
@@ -335,15 +336,14 @@ public static class MergeInsertionSort
     /// This binary search returns the upper-bound.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int BinarySearchInChain<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ReadOnlySpan<T> values, ReadOnlySpan<int> mainChain, int valueIdx, int left, int right)
+    private static int BinarySearchInChain<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ReadOnlySpan<int> mainChain, int valueIdx, int left, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var value = values[valueIdx];
         while (left < right)
         {
             var mid = (left + right) >>> 1;
-            if (s.Compare(values[mainChain[mid]], value) <= 0)
+            if (s.Compare(mainChain[mid], valueIdx) <= 0)
             {
                 left = mid + 1;
             }
