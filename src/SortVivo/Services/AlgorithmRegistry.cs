@@ -60,7 +60,8 @@ public class AlgorithmRegistry
         Add("Library sort", "INSERTION", "O(n log n)", MAX_SIZE_NLOGN15, 2048, (arr, ctx) => LibrarySort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Insertion", "LibrarySort"));
         Add("Merge insertion sort", "INSERTION", "O(n log n)", MAX_SIZE_N2, 256, (arr, ctx) => MergeInsertionSort.Sort(arr, ctx),
-            gitHubSourceUrl: Src("Insertion", "MergeInsertionSort"));
+            gitHubSourceUrl: Src("Insertion", "MergeInsertionSort"),
+            tutorialVisualizationHint: TutorialVisualizationHint.MergeInsertionPairs);
         Add("Shell sort (Knuth 1973)", "INSERTION", "O(n^1.5)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => ShellSortKnuth1973.Sort(arr, ctx),
             gitHubSourceUrl: Src("Insertion", "ShellSort"),
             tutorialVisualizationHint: TutorialVisualizationHint.ShellGap,

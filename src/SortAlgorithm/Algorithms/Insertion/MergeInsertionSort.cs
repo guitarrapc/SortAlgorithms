@@ -228,15 +228,7 @@ public static class MergeInsertionSort
                     smaller[i] = b;
                     larger[i] = a;
                 }
-                if (visualize)
-                {
-                    s.Context.OnRole(smaller[i], BUFFER_MAIN, RoleType.FjSmaller);
-                    s.Context.OnRole(larger[i], BUFFER_MAIN, RoleType.FjLarger);
-                }
             }
-
-            if (hasStraggler && visualize)
-                s.Context.OnRole(indices[n - 1], BUFFER_MAIN, RoleType.FjStraggler);
 
             // Step 2: Recursively sort the larger elements
             s.Context.OnPhase(SortPhase.MergeInsertionSortLarger, 0, pairs - 1);
@@ -283,18 +275,6 @@ public static class MergeInsertionSort
             }
 
             // Step 4: Insert pend elements using Jacobsthal sequence order
-            // Clear pairing roles before insertion phase starts
-            if (visualize)
-            {
-                for (var i = 0; i < pairs; i++)
-                {
-                    s.Context.OnRole(smaller[i], BUFFER_MAIN, RoleType.None);
-                    s.Context.OnRole(larger[i], BUFFER_MAIN, RoleType.None);
-                }
-                if (hasStraggler)
-                    s.Context.OnRole(indices[n - 1], BUFFER_MAIN, RoleType.None);
-            }
-
             if (pendCount > 0)
             {
                 s.Context.OnPhase(SortPhase.MergeInsertionInsertPend, 0, pendCount - 1);
@@ -351,8 +331,7 @@ public static class MergeInsertionSort
                     ? mainChain.Slice(0, chainLen).IndexOf(partnerIdx)
                     : chainLen;
 
-                if (visualize)
-                    s.Context.OnRole(valueIdx, BUFFER_MAIN, RoleType.Inserting);
+                s.Context.OnRole(valueIdx, BUFFER_MAIN, RoleType.Inserting);
 
                 var pos = BinarySearchInChain(s, mainChain, valueIdx, 0, upperBound);
 
@@ -364,8 +343,7 @@ public static class MergeInsertionSort
                 }
                 mainChain[pos] = valueIdx;
                 ChainWrite(s, chain, pos, valueIdx, visualize);
-                if (visualize)
-                    s.Context.OnRole(valueIdx, BUFFER_MAIN, RoleType.None);
+                s.Context.OnRole(valueIdx, BUFFER_MAIN, RoleType.None);
                 chainLen++;
             }
         }

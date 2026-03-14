@@ -83,4 +83,11 @@ public enum TutorialVisualizationHint
     /// in-place 置換のためバケットリストは使用しない。
     /// </summary>
     FlashSortClasses,
+
+    /// <summary>
+    /// MergeInsertionSort（Ford-Johnson）ペア役割表示。
+    /// ペアリングフェーズで比較されたペアの大小ロール（FjSmaller / FjLarger）と
+    /// 奇数個の場合のはぐれ要素（FjStraggler）をトラッカー側でハンドリングする。
+    /// </summary>
+    MergeInsertionPairs,
 }

@@ -138,6 +138,7 @@ public static class TutorialStepBuilder
             TutorialVisualizationHint.AvlTree => new BstTracker(initialArray.Length, avl: true),
             TutorialVisualizationHint.ValueBucket => new DistributionTracker(initialArray),
             TutorialVisualizationHint.FlashSortClasses => new FlashSortTracker(initialArray),
+            TutorialVisualizationHint.MergeInsertionPairs => new MergeInsertionTracker(initialArray.Length),
             TutorialVisualizationHint.DigitBucketLsd => new LsdRadixTracker(initialArray, lsdRadix),
             TutorialVisualizationHint.DigitBucketMsd => new MsdRadixTracker(initialArray, lsdRadix),
             TutorialVisualizationHint.SortingNetwork => new NetworkTracker(initialArray.Length),
