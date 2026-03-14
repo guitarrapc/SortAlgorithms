@@ -17,13 +17,13 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="number">
 /// <item><description><strong>Binary Search Tree Property:</strong> For every node, all values in the left subtree must be less than the node's value,
 /// and all values in the right subtree must be greater than or equal to the node's value.
-/// This property is maintained by comparing values during insertion (lines 165-171, 187-193).</description></item>
+/// This property is maintained by comparing values during insertion.</description></item>
 /// <item><description><strong>AVL Balance Property:</strong> For every node, the height difference between left and right subtrees (balance factor) must be at most 1.
 /// Balance factor = height(left subtree) - height(right subtree) ∈ {-1, 0, 1}.
-/// This is enforced by the Balance() method after every insertion (lines 229-261).</description></item>
+/// This is enforced by the Balance() method after every insertion.</description></item>
 /// <item><description><strong>Height Maintenance:</strong> Each node stores its height, which is updated after any structural change.
 /// Height = 1 + max(height(left), height(right)).
-/// This is computed by UpdateHeight() after insertions and rotations (lines 215-223).</description></item>
+/// This is computed by UpdateHeight() after insertions and rotations.</description></item>
 /// <item><description><strong>Rotation Correctness:</strong> When the balance factor violates the AVL property (|balance| > 1), rotations restore balance while preserving BST property:
 /// <list type="bullet">
 /// <item><description>Left-Left case (balance > 1, left child balanced): Single right rotation</description></item>
@@ -31,7 +31,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Right-Right case (balance &lt; -1, right child balanced): Single left rotation</description></item>
 /// <item><description>Right-Left case (balance &lt; -1, right child left-heavy): Right rotation on right child, then left rotation</description></item>
 /// </list>
-/// All rotations preserve the in-order traversal sequence (lines 263-303).</description></item>
+/// All rotations preserve the in-order traversal sequence.</description></item>
 /// <item><description><strong>In-order Traversal Correctness:</strong> Visiting nodes in left-root-right order produces elements in sorted ascending order.
 /// This is guaranteed by the BST property and implemented iteratively to avoid stack overflow.</description></item>
 /// </list>
@@ -75,7 +75,7 @@ public static class BalancedBinaryTreeSort
     // Note: Arena (Node array) operations are not tracked via SortSpan because:
     // 1. Nodes are internal implementation details (tree structure metadata)
     // 2. Nodes cache values (T) directly for performance (avoiding indirection overhead)
-    // 3. Only the initial Read (line ~160) and final Write (line ~254) operations on the original data array
+    // 3. Only the initial Read and final Write operations on the original data array
     //    represent the algorithm's core data access and are tracked via SortSpan
     // 4. Alternative design (storing only span indices in nodes) would require span[index] lookup on every
     //    comparison, causing significant performance degradation (up to 3x slower than class-based approach)
@@ -502,13 +502,13 @@ public static class BalancedBinaryTreeSort
 /// <list type="number">
 /// <item><description><strong>Binary Search Tree Property:</strong> For every node, all values in the left subtree must be less than the node's value,
 /// and all values in the right subtree must be greater than or equal to the node's value.
-/// This property is maintained by comparing values during insertion (lines 165-171, 187-193).</description></item>
+/// This property is maintained by comparing values during insertion.</description></item>
 /// <item><description><strong>AVL Balance Property:</strong> For every node, the height difference between left and right subtrees (balance factor) must be at most 1.
 /// Balance factor = height(left subtree) - height(right subtree) ∈ {-1, 0, 1}.
-/// This is enforced by the Balance() method after every insertion (lines 229-261).</description></item>
+/// This is enforced by the Balance() method after every insertion.</description></item>
 /// <item><description><strong>Height Maintenance:</strong> Each node stores its height, which is updated after any structural change.
 /// Height = 1 + max(height(left), height(right)).
-/// This is computed by UpdateHeight() after insertions and rotations (lines 215-223).</description></item>
+/// This is computed by UpdateHeight() after insertions and rotations.</description></item>
 /// <item><description><strong>Rotation Correctness:</strong> When the balance factor violates the AVL property (|balance| > 1), rotations restore balance while preserving BST property:
 /// <list type="bullet">
 /// <item><description>Left-Left case (balance > 1, left child balanced): Single right rotation</description></item>
@@ -516,9 +516,9 @@ public static class BalancedBinaryTreeSort
 /// <item><description>Right-Right case (balance &lt; -1, right child balanced): Single left rotation</description></item>
 /// <item><description>Right-Left case (balance &lt; -1, right child left-heavy): Right rotation on right child, then left rotation</description></item>
 /// </list>
-/// All rotations preserve the in-order traversal sequence (lines 263-303).</description></item>
+/// All rotations preserve the in-order traversal sequence.</description></item>
 /// <item><description><strong>In-order Traversal Correctness:</strong> Visiting nodes in left-root-right order produces elements in sorted ascending order.
-/// This is guaranteed by the BST property and implemented recursively (lines 205-211).</description></item>
+/// This is guaranteed by the BST property and implemented recursively.</description></item>
 /// </list>
 /// <para><strong>Mathematical Proof of O(log n) Height:</strong></para>
 /// <list type="bullet">
