@@ -1,4 +1,4 @@
-using System.Buffers;
+﻿using System.Buffers;
 using SortAlgorithm.Contexts;
 using System.Runtime.CompilerServices;
 
@@ -342,13 +342,8 @@ public static class BalancedBinaryTreeSort
     {
         // Visualize node access during tree traversal
         context.OnIndexRead(nodeIndex, BUFFER_TREE);
-
-        // Compare value with node's item
-        // Note: This comparison is counted as a main array comparison (bufferId 0)
-        // because the values originated from the main array
         var cmp = comparer.Compare(value, arena[nodeIndex].Value);
-        context.OnCompare(-1, -1, cmp, 0, 0);
-
+        context.OnCompare(-1, -1, cmp, BUFFER_TREE, BUFFER_TREE);
         return cmp;
     }
 

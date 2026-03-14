@@ -371,7 +371,7 @@ public static class SplaySort
     {
         context.OnIndexRead(nodeIndex, BUFFER_TREE);
         var cmp = comparer.Compare(value, arena[nodeIndex].Value);
-        context.OnCompare(-1, -1, cmp, 0, 0);
+        context.OnCompare(-1, -1, cmp, BUFFER_TREE, BUFFER_TREE);
         return cmp;
     }
 
