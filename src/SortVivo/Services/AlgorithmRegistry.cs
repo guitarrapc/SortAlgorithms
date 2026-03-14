@@ -1,4 +1,4 @@
-using SortVivo.Models;
+﻿using SortVivo.Models;
 using SortAlgorithm.Contexts;
 using SortAlgorithm.Algorithms;
 
@@ -227,6 +227,9 @@ public class AlgorithmRegistry
         Add("Binary tree sort (AVL)", "TREE", "O(n log n)", MAX_SIZE_NLOGN15, 2048, (arr, ctx) => BalancedBinaryTreeSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Tree", "BalancedBinaryTreeSort"),
             tutorialVisualizationHint: TutorialVisualizationHint.AvlTree);
+        Add("Splay sort", "TREE", "O(n log n)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => SplaySort.Sort(arr, ctx),
+            gitHubSourceUrl: Src("Tree", "SplaySort"),
+            tutorialVisualizationHint: TutorialVisualizationHint.BstTree);
 
         // Joke Sorts - O(n!) ~ O(∞) - 推奨8（注意: 極めて遅い）
         // Bogo sort: 4要素なら 4! = 24 通りなのでチュートリアルでランダム性を示せる。

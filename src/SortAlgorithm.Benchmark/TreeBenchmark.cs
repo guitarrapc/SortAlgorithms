@@ -12,12 +12,14 @@ public class TreeBenchmark
 
     private int[] _balancedbinarytreeArray = default!;
     private int[] _binarytreeArray = default!;
+    private int[] _splayArray = default!;
 
     [IterationSetup]
     public void Setup()
     {
         _balancedbinarytreeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _binarytreeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _splayArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark]
@@ -30,5 +32,11 @@ public class TreeBenchmark
     public void BinaryTreeSort()
     {
         SortAlgorithm.Algorithms.BinaryTreeSort.Sort(_binarytreeArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void SplaySort()
+    {
+        SortAlgorithm.Algorithms.SplaySort.Sort(_splayArray.AsSpan());
     }
 }
