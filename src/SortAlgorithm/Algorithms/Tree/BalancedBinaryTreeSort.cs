@@ -318,7 +318,7 @@ public static class BalancedBinaryTreeSort
     private static int CreateNode<T, TContext>(Span<Node<T>> arena, T value, ref int nodeCount, TContext context) where TContext : ISortContext
     {
         var nodeId = nodeCount++;
-        arena[nodeId] = new Node<T>(value, nodeId);
+        arena[nodeId] = new Node<T>(value);
         // Record node creation in the tree buffer for visualization
         context.OnIndexWrite(nodeId, BUFFER_TREE, value);
         return nodeId;
@@ -331,7 +331,7 @@ public static class BalancedBinaryTreeSort
     private static T ReadNodeValue<T, TContext>(Span<Node<T>> arena, int nodeIndex, TContext context) where TContext : ISortContext
     {
         // Visualize node access during traversal
-        context.OnIndexRead(arena[nodeIndex].Id, BUFFER_TREE);
+        context.OnIndexRead(nodeIndex, BUFFER_TREE);
         return arena[nodeIndex].Value;
     }
 
@@ -346,7 +346,7 @@ public static class BalancedBinaryTreeSort
         where TContext : ISortContext
     {
         // Visualize node access during tree traversal
-        context.OnIndexRead(arena[nodeIndex].Id, BUFFER_TREE);
+        context.OnIndexRead(nodeIndex, BUFFER_TREE);
 
         // Compare value with node's item
         // Note: This comparison is counted as a main array comparison (bufferId 0)
@@ -471,26 +471,21 @@ public static class BalancedBinaryTreeSort
     /// Arena-based node structure with value caching for optimal performance.
     /// </summary>
     /// <remarks>
-    /// This struct-based node eliminates GC pressure by using value semantics and ArrayPool.
+    /// Struct-based to eliminate GC pressure (allocated via ArrayPool).
     /// Left and Right are indices into the arena array (-1 represents null).
-    /// Value caches the actual T instance directly to avoid span[index] indirection on every comparison.
+    /// Value caches the T instance directly to avoid span indirection on every comparison.
     /// Height is maintained for AVL balancing.
-    ///
-    /// Design Note: Storing only indices (without Value field) would make Node smaller but requires
-    /// span[index] lookup on every comparison, causing up to 3x performance degradation compared to
-    /// the class-based reference implementation. Value caching trades memory for speed.
+    /// The node's identity is its position in the arena array, so no separate Id field is needed.
     /// </remarks>
     private struct Node<T>
     {
-        public int Id;          // Unique node ID for visualization
         public T Value;         // Cached value for direct comparison (avoids span indirection)
         public int Left;        // Index in arena, -1 = null
         public int Right;       // Index in arena, -1 = null
         public int Height;      // For AVL balancing
 
-        public Node(T value, int id)
+        public Node(T value)
         {
-            Id = id;
             Value = value;
             Left = -1;
             Right = -1;
