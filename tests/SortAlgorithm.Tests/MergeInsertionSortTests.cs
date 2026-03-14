@@ -189,10 +189,10 @@ public class MergeInsertionSortTests
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
 
-        // IndexReadCount: n from initial CopyTo (BUFFER_MAIN source) + 2*compareCount from Compare(int,int) + n from write-back reads (BUFFER_TEMP)
-        // IndexWriteCount: n from initial CopyTo (BUFFER_TEMP dest) + n from write-back writes (BUFFER_MAIN) = always 2n
+        // IndexReadCount: n from initial CopyTo (BUFFER_MAIN source) + 2*compareCount from Compare(int,int) + n from write-back reads (BUFFER_TEMP) + chain reads
+        // IndexWriteCount: n from initial CopyTo (BUFFER_TEMP dest) + n from write-back writes (BUFFER_MAIN) + chain writes (BUFFER_CHAIN) >= 2n
         await Assert.That(stats.IndexReadCount).IsGreaterThanOrEqualTo(2 * (ulong)n);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(2 * (ulong)n);
+        await Assert.That(stats.IndexWriteCount).IsGreaterThanOrEqualTo(2 * (ulong)n);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
@@ -207,17 +207,15 @@ public class MergeInsertionSortTests
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         MergeInsertionSort.Sort(reversed.AsSpan(), stats);
 
-        // Ford-Johnson comparison count is input-independent (same near-optimal count for reversed data)
-        // Writes are O(n²) in worst case due to binary insertion shifts, but read/write count via span is exactly n
         ulong minCompares = (ulong)(n - 1);
         ulong maxCompares = (ulong)(n * n);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
 
-        // IndexReadCount: n from initial CopyTo (BUFFER_MAIN source) + 2*compareCount from Compare(int,int) + n from write-back reads (BUFFER_TEMP)
-        // IndexWriteCount: n from initial CopyTo (BUFFER_TEMP dest) + n from write-back writes (BUFFER_MAIN) = always 2n
+        // IndexReadCount: n from initial CopyTo (BUFFER_MAIN source) + 2*compareCount from Compare(int,int) + n from write-back reads (BUFFER_TEMP) + chain reads
+        // IndexWriteCount: n from initial CopyTo (BUFFER_TEMP dest) + n from write-back writes (BUFFER_MAIN) + chain writes (BUFFER_CHAIN) >= 2n
         await Assert.That(stats.IndexReadCount).IsGreaterThanOrEqualTo(2 * (ulong)n);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(2 * (ulong)n);
+        await Assert.That(stats.IndexWriteCount).IsGreaterThanOrEqualTo(2 * (ulong)n);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
@@ -238,10 +236,10 @@ public class MergeInsertionSortTests
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
 
-        // IndexReadCount: n from initial CopyTo (BUFFER_MAIN source) + 2*compareCount from Compare(int,int) + n from write-back reads (BUFFER_TEMP)
-        // IndexWriteCount: n from initial CopyTo (BUFFER_TEMP dest) + n from write-back writes (BUFFER_MAIN) = always 2n
+        // IndexReadCount: n from initial CopyTo (BUFFER_MAIN source) + 2*compareCount from Compare(int,int) + n from write-back reads (BUFFER_TEMP) + chain reads
+        // IndexWriteCount: n from initial CopyTo (BUFFER_TEMP dest) + n from write-back writes (BUFFER_MAIN) + chain writes (BUFFER_CHAIN) >= 2n
         await Assert.That(stats.IndexReadCount).IsGreaterThanOrEqualTo(2 * (ulong)n);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(2 * (ulong)n);
+        await Assert.That(stats.IndexWriteCount).IsGreaterThanOrEqualTo(2 * (ulong)n);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
@@ -265,10 +263,10 @@ public class MergeInsertionSortTests
         // Verify all values remain correct
         foreach (var item in sameValues) await Assert.That(item).IsEqualTo(42);
 
-        // IndexReadCount: n from initial CopyTo (BUFFER_MAIN source) + 2*compareCount from Compare(int,int) + n from write-back reads (BUFFER_TEMP)
-        // IndexWriteCount: n from initial CopyTo (BUFFER_TEMP dest) + n from write-back writes (BUFFER_MAIN) = always 2n
+        // IndexReadCount: n from initial CopyTo (BUFFER_MAIN source) + 2*compareCount from Compare(int,int) + n from write-back reads (BUFFER_TEMP) + chain reads
+        // IndexWriteCount: n from initial CopyTo (BUFFER_TEMP dest) + n from write-back writes (BUFFER_MAIN) + chain writes (BUFFER_CHAIN) >= 2n
         await Assert.That(stats.IndexReadCount).IsGreaterThanOrEqualTo(2 * (ulong)n);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(2 * (ulong)n);
+        await Assert.That(stats.IndexWriteCount).IsGreaterThanOrEqualTo(2 * (ulong)n);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 }

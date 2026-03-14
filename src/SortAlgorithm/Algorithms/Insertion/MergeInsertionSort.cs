@@ -55,7 +55,7 @@ public static class MergeInsertionSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    private const int BUFFER_TEMP = 1;       // Temporary values buffer for write-back
+    private const int BUFFER_CHAIN = 1;      // Evolving sorted chain (Ford-Johnson chain construction)
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -117,32 +117,35 @@ public static class MergeInsertionSort
         var rentedValues = ArrayPool<T>.Shared.Rent(n);
         var rentedSorted = ArrayPool<int>.Shared.Rent(n);
         var rentedIndices = ArrayPool<int>.Shared.Rent(n);
+        var rentedChain = ArrayPool<T>.Shared.Rent(n);
         try
         {
-            var valuesSpan = new SortSpan<T, TComparer, TContext>(rentedValues.AsSpan(0, n), s.Context, s.Comparer, BUFFER_TEMP);
+            var values = rentedValues.AsSpan(0, n);
+            var chainSpan = new SortSpan<T, TComparer, TContext>(rentedChain.AsSpan(0, n), s.Context, s.Comparer, BUFFER_CHAIN);
             var sorted = rentedSorted.AsSpan(0, n);
             var indices = rentedIndices.AsSpan(0, n);
 
-            // Copy all values to temp buffer (tracked) and build initial identity indices
-            s.CopyTo(0, valuesSpan, 0, n);
+            // Copy all values to plain temp buffer (untracked) and build initial identity indices
             for (var i = 0; i < n; i++)
             {
+                values[i] = s.Read(i);
                 indices[i] = i;
             }
 
             // Build the sorted index order using Ford-Johnson directly on the original span
-            FordJohnson(s, indices, sorted);
+            FordJohnson(s, indices, sorted, chainSpan);
 
             // Write back in sorted order (reads from temp buffer, writes to main buffer)
             s.Context.OnPhase(SortPhase.MergeInsertionRearrange, 0, n - 1);
             for (var i = 0; i < n; i++)
             {
-                s.Write(i, valuesSpan.Read(sorted[i]));
+                s.Write(i, values[sorted[i]]);
             }
         }
         finally
         {
             ArrayPool<T>.Shared.Return(rentedValues, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            ArrayPool<T>.Shared.Return(rentedChain, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             ArrayPool<int>.Shared.Return(rentedSorted);
             ArrayPool<int>.Shared.Return(rentedIndices);
         }
@@ -153,7 +156,8 @@ public static class MergeInsertionSort
     /// </summary>
     /// <param name="indices">Input indices to sort (read-only).</param>
     /// <param name="outChain">Pre-allocated output buffer that receives the sorted chain. Must have at least <c>indices.Length</c> elements.</param>
-    private static void FordJohnson<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ReadOnlySpan<int> indices, Span<int> outChain)
+    /// <param name="isTopLevel">When <c>true</c>, chain buffer writes are emitted for visualization. Recursive calls pass <c>false</c> to avoid overwriting the top-level chain state.</param>
+    private static void FordJohnson<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ReadOnlySpan<int> indices, Span<int> outChain, SortSpan<T, TComparer, TContext> chain, bool isTopLevel = true)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -162,7 +166,12 @@ public static class MergeInsertionSort
         // Base case: single element
         if (n <= 1)
         {
-            if (n == 1) outChain[0] = indices[0];
+            if (n == 1)
+            {
+                outChain[0] = indices[0];
+                if (typeof(TContext) != typeof(NullContext) && isTopLevel)
+                    chain.Write(0, s.Read(indices[0]));
+            }
             return;
         }
 
@@ -178,6 +187,11 @@ public static class MergeInsertionSort
             {
                 outChain[0] = indices[1];
                 outChain[1] = indices[0];
+            }
+            if (typeof(TContext) != typeof(NullContext) && isTopLevel)
+            {
+                chain.Write(0, s.Read(outChain[0]));
+                chain.Write(1, s.Read(outChain[1]));
             }
             return;
         }
@@ -221,7 +235,7 @@ public static class MergeInsertionSort
 
             // Step 2: Recursively sort the larger elements
             s.Context.OnPhase(SortPhase.MergeInsertionSortLarger, 0, pairs - 1);
-            FordJohnson(s, larger, sortedLarger);
+            FordJohnson(s, larger, sortedLarger, chain, isTopLevel: false);
 
             // Step 3: Build main chain directly in outChain
             // Main chain starts with b1 (smallest's partner), then all sorted larger elements
@@ -232,6 +246,14 @@ public static class MergeInsertionSort
             outChain[0] = smaller[p];
             sortedLarger.CopyTo(outChain.Slice(1));
             var chainLen = 1 + pairs;
+
+            // Write the initial chain state to the chain buffer for visualization
+            // (b1 at position 0, followed by all sorted-larger elements)
+            if (typeof(TContext) != typeof(NullContext) && isTopLevel)
+            {
+                for (var i = 0; i < chainLen; i++)
+                    chain.Write(i, s.Read(outChain[i]));
+            }
 
             // Pend list: remaining smaller elements paired with their partner (larger element),
             // plus the straggler (no partner) if n is odd.
@@ -263,7 +285,7 @@ public static class MergeInsertionSort
             {
                 s.Context.OnPhase(SortPhase.MergeInsertionInsertPend, 0, pendCount - 1);
                 InsertPendElements(s, outChain, ref chainLen,
-                    pendValues.Slice(0, pendCount), pendPartners.Slice(0, pendCount));
+                    pendValues.Slice(0, pendCount), pendPartners.Slice(0, pendCount), chain, isTopLevel);
             }
         }
         finally
@@ -281,7 +303,7 @@ public static class MergeInsertionSort
     /// For each pend item with a partner, the upper bound is the partner's current position
     /// Uses manual element shift on <see cref="Span{T}"/> instead of <c>List.Insert</c> to avoid allocation.
     /// </summary>
-    private static void InsertPendElements<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> mainChain, ref int chainLen, ReadOnlySpan<int> pendValues, ReadOnlySpan<int> pendPartners)
+    private static void InsertPendElements<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> mainChain, ref int chainLen, ReadOnlySpan<int> pendValues, ReadOnlySpan<int> pendPartners, SortSpan<T, TComparer, TContext> chain, bool isTopLevel)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -319,8 +341,14 @@ public static class MergeInsertionSort
 
                 // Manual shift right to make room for insertion (replaces List.Insert)
                 for (var k = chainLen; k > pos; k--)
+                {
                     mainChain[k] = mainChain[k - 1];
+                    if (typeof(TContext) != typeof(NullContext) && isTopLevel)
+                        chain.Write(k, chain.Read(k - 1));
+                }
                 mainChain[pos] = valueIdx;
+                if (typeof(TContext) != typeof(NullContext) && isTopLevel)
+                    chain.Write(pos, s.Read(valueIdx));
                 chainLen++;
             }
         }
