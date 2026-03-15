@@ -5,55 +5,47 @@ using SortAlgorithm.Contexts;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// スプレー木(Splay tree)を使用したアダプティブなソートアルゴリズム。
-/// スプレー木は自己調整型の二分探索木で、直近にアクセスした要素が「スプレー操作」によって根に移動する。
-/// この特性により、ソート済みや部分的にソートされた入力に対して良好な性能を発揮するアダプティブなソートとなる。
+/// Treap(Tree + Heap)を使用したランダム化ソートアルゴリズム。
+/// Treapはランダム化された二分探索木で、各ノードにランダムな優先度を割り当て、
+/// キーに対してBST順序、優先度に対して最大ヒープ順序を同時に満たす。
+/// ランダム優先度により、入力パターンに関わらず期待計算量 O(n log n) を達成する。
 /// <br/>
-/// Splay tree based adaptive sorting algorithm. A splay tree is a self-adjusting binary search tree
-/// where recently accessed elements are moved to the root via splay rotations (zig, zig-zig, zig-zag).
-/// This makes SplaySort adaptive: inputs with existing order patterns sort faster due to shorter traversal paths.
+/// Treap (tree + heap) based randomized sorting algorithm. A treap is a randomized BST
+/// where each node is assigned a random priority. The tree maintains BST order on keys
+/// and max-heap order on priorities simultaneously. Random priorities ensure expected
+/// O(n log n) performance regardless of input pattern.
 /// </summary>
 /// <remarks>
-/// <para><strong>Theoretical Conditions for Correct Splay Sort:</strong></para>
+/// <para><strong>Theoretical Conditions for Correct Treap Sort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>BST Property:</strong> For every node, all values in the left subtree are less than the node's value,
 /// and all values in the right subtree are greater than or equal to the node's value.
 /// Maintained by comparing values during insertion (go left if value &lt; node, right otherwise).</description></item>
-/// <item><description><strong>Splay Property:</strong> After each insertion, the newly inserted node is splayed to the root.
-/// This is achieved by repeatedly applying zig, zig-zig, or zig-zag rotations until the node reaches the root.</description></item>
-/// <item><description><strong>Rotation Correctness:</strong> All rotations preserve the BST in-order property:
-/// <list type="bullet">
-/// <item><description>Zig: single rotation when the node's parent is the root</description></item>
-/// <item><description>Zig-zig: rotate grandparent first, then parent (same-direction case)</description></item>
-/// <item><description>Zig-zag: rotate parent first, then grandparent (opposite-direction case)</description></item>
-/// </list></description></item>
+/// <item><description><strong>Heap Property:</strong> Each node's priority is greater than or equal to the priorities of its children.
+/// After BST insertion at a leaf, the node is rotated upward until the heap property is restored.</description></item>
+/// <item><description><strong>Rotation Correctness:</strong> All rotations preserve the BST in-order property while restoring
+/// the heap property. Only single rotations (left or right) are needed, applied bottom-up after insertion.</description></item>
 /// <item><description><strong>In-order Traversal:</strong> Iterative left→root→right traversal writes elements in sorted order.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Tree / Adaptive</description></item>
-/// <item><description>Stable      : Yes (equal elements go right during BST insertion; BST rotations preserve in-order traversal, so insertion order is maintained)</description></item>
-/// <item><description>In-place    : No (requires O(n) auxiliary space for tree nodes with parent pointers)</description></item>
-/// <item><description>Best case   : Θ(n log n) amortized - sorted or reverse-sorted inputs benefit from spatial locality</description></item>
-/// <item><description>Average case: Θ(n log n) amortized - guaranteed by splay tree amortized analysis</description></item>
-/// <item><description>Worst case  : O(n²) per-operation worst case, but O(n log n) amortized over all n insertions</description></item>
-/// <item><description>Comparisons : O(n log n) amortized</description></item>
+/// <item><description>Family      : Tree / Randomized</description></item>
+/// <item><description>Stable      : No (random priorities determine tree structure; equal elements may be reordered by rotations)</description></item>
+/// <item><description>In-place    : No (requires O(n) auxiliary space for tree nodes with parent pointers and priorities)</description></item>
+/// <item><description>Best case   : Θ(n log n) expected</description></item>
+/// <item><description>Average case: Θ(n log n) expected - guaranteed by random priority assignment</description></item>
+/// <item><description>Worst case  : O(n²) with astronomically low probability (when random priorities produce degenerate tree)</description></item>
+/// <item><description>Comparisons : O(n log n) expected</description></item>
 /// <item><description>Index Reads : Θ(n) - each element read once from main array during insertion</description></item>
 /// <item><description>Index Writes: Θ(n) - each element written once during in-order traversal</description></item>
 /// <item><description>Swaps       : 0 - no swapping; elements are copied to tree nodes and written back during traversal</description></item>
-/// <item><description>Space       : O(n) - one node per element; each node holds value, left/right/parent indices</description></item>
-/// </list>
-/// <para><strong>Adaptive Behavior:</strong></para>
-/// <list type="bullet">
-/// <item><description>Sorted input: recently inserted nodes remain near root → shorter traversal paths → O(n) amortized</description></item>
-/// <item><description>Reversed input: each insertion reaches the opposite end, but splay moves it to root → O(n log n)</description></item>
-/// <item><description>Random input: O(n log n) amortized, similar to unbalanced BST with self-adjustment benefit</description></item>
+/// <item><description>Space       : O(n) - one node per element; each node holds value, left/right/parent indices, and priority</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
-/// <para>Wiki: https://en.wikipedia.org/wiki/Splay_tree</para>
-/// <para>Original paper: Sleator, D. D.; Tarjan, R. E. (1985). "Self-Adjusting Binary Search Trees"</para>
+/// <para>Wiki: https://en.wikipedia.org/wiki/Treap</para>
+/// <para>Original paper: Aragon, C. R.; Seidel, R. (1989). "Randomized Search Trees"</para>
 /// </remarks>
-public static class SplaySort
+public static class TreapSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -103,17 +95,18 @@ public static class SplaySort
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var rootIndex = NULL_INDEX;
             var nodeCount = 0;
+            var rng = Random.Shared;
 
-            // Insert each element into the splay tree; after each insertion the node is splayed to the root
+            // Insert each element into the treap; after each insertion the node is rotated up to restore heap property
             for (var i = 0; i < s.Length; i++)
             {
                 context.OnPhase(SortPhase.TreeSortInsert, i, s.Length - 1);
                 context.OnRole(i, BUFFER_MAIN, RoleType.Inserting);
-                rootIndex = Insert(arenaSpan, rootIndex, ref nodeCount, i, s);
+                rootIndex = Insert(arenaSpan, rootIndex, ref nodeCount, i, s, rng);
                 context.OnRole(i, BUFFER_MAIN, RoleType.None);
             }
 
-            // Traverse the splay tree in-order and write sorted elements back into the span
+            // Traverse the treap in-order and write sorted elements back into the span
             context.OnPhase(SortPhase.TreeSortExtract);
             var writeIndex = 0;
             Inorder(s, arenaSpan, rootIndex, ref writeIndex);
@@ -125,20 +118,22 @@ public static class SplaySort
     }
 
     /// <summary>
-    /// Inserts the element at <paramref name="itemIndex"/> into the splay tree via standard BST insertion,
-    /// then splays the newly inserted node to the root and returns the new root index.
+    /// Inserts the element at <paramref name="itemIndex"/> into the treap via standard BST insertion,
+    /// assigns a random priority, then rotates the node upward until the max-heap property is restored.
+    /// Returns the (possibly new) root index.
     /// </summary>
     private static int Insert<T, TComparer, TContext>(
         Span<Node<T>> arena, int rootIndex, ref int nodeCount, int itemIndex,
-        SortSpan<T, TComparer, TContext> s)
+        SortSpan<T, TComparer, TContext> s, Random rng)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var value = s.Read(itemIndex);
+        var priority = rng.Next();
 
         // Empty tree: create root directly
         if (rootIndex == NULL_INDEX)
-            return CreateNode(arena, value, ref nodeCount, s.Context);
+            return CreateNode(arena, value, priority, ref nodeCount, s.Context);
 
         // Standard BST traversal to find the insertion point
         var current = rootIndex;
@@ -150,7 +145,7 @@ public static class SplaySort
                 // value < node → go left
                 if (arena[current].Left == NULL_INDEX)
                 {
-                    var newIndex = CreateNode(arena, value, ref nodeCount, s.Context);
+                    var newIndex = CreateNode(arena, value, priority, ref nodeCount, s.Context);
                     arena[current].Left = newIndex;
                     arena[newIndex].Parent = current;
                     current = newIndex;
@@ -161,12 +156,9 @@ public static class SplaySort
             else
             {
                 // value >= node → go right
-                // Equal keys are inserted into the right subtree.
-                // Because rotations preserve in-order order, this keeps equal elements
-                // in insertion order, making the overall sort stable.
                 if (arena[current].Right == NULL_INDEX)
                 {
-                    var newIndex = CreateNode(arena, value, ref nodeCount, s.Context);
+                    var newIndex = CreateNode(arena, value, priority, ref nodeCount, s.Context);
                     arena[current].Right = newIndex;
                     arena[newIndex].Parent = current;
                     current = newIndex;
@@ -176,60 +168,34 @@ public static class SplaySort
             }
         }
 
-        // Splay the newly inserted node to the root
-        return Splay(arena, current);
+        // Rotate the newly inserted node upward to restore max-heap property on priorities
+        return HeapUp(arena, current, ref rootIndex);
     }
 
     /// <summary>
-    /// Brings node <paramref name="x"/> to the root via bottom-up splay rotations.
-    /// <list type="bullet">
-    /// <item><description>Zig: parent is the root → single rotation</description></item>
-    /// <item><description>Zig-zig: x and parent are same-direction children → rotate grandparent first, then parent</description></item>
-    /// <item><description>Zig-zag: x and parent are opposite-direction children → rotate parent first, then grandparent</description></item>
-    /// </list>
-    /// Returns <paramref name="x"/>, which is now the root (Parent == NULL_INDEX).
+    /// Rotates node <paramref name="x"/> upward until its priority is no longer greater than its parent's priority,
+    /// restoring the max-heap property. Returns the (possibly new) root index.
     /// </summary>
-    private static int Splay<T>(Span<Node<T>> arena, int x)
+    private static int HeapUp<T>(Span<Node<T>> arena, int x, ref int rootIndex)
     {
         while (arena[x].Parent != NULL_INDEX)
         {
             var p = arena[x].Parent;
-            var g = arena[p].Parent;
+            if (arena[x].Priority <= arena[p].Priority)
+                break;
 
-            if (g == NULL_INDEX)
-            {
-                // Zig: p is the root, single rotation suffices
-                if (arena[p].Left == x)
-                    RotateRight(arena, p);
-                else
-                    RotateLeft(arena, p);
-            }
-            else if (arena[g].Left == p && arena[p].Left == x)
-            {
-                // Zig-zig left-left: rotate grandparent right first, then parent right
-                RotateRight(arena, g);
+            // x has higher priority than parent → rotate x up
+            if (arena[p].Left == x)
                 RotateRight(arena, p);
-            }
-            else if (arena[g].Right == p && arena[p].Right == x)
-            {
-                // Zig-zig right-right: rotate grandparent left first, then parent left
-                RotateLeft(arena, g);
-                RotateLeft(arena, p);
-            }
-            else if (arena[g].Left == p && arena[p].Right == x)
-            {
-                // Zig-zag left-right: rotate parent left, then grandparent right
-                RotateLeft(arena, p);
-                RotateRight(arena, g);
-            }
             else
-            {
-                // Zig-zag right-left: rotate parent right, then grandparent left
-                RotateRight(arena, p);
-                RotateLeft(arena, g);
-            }
+                RotateLeft(arena, p);
         }
-        return x;
+
+        // If x has no parent, it is the new root
+        if (arena[x].Parent == NULL_INDEX)
+            rootIndex = x;
+
+        return rootIndex;
     }
 
     /// <summary>
@@ -335,14 +301,14 @@ public static class SplaySort
     }
 
     /// <summary>
-    /// Allocates a new arena node, caches <paramref name="value"/>, and records its creation for visualization.
+    /// Allocates a new arena node with the given value and priority, and records its creation for visualization.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CreateNode<T, TContext>(Span<Node<T>> arena, T value, ref int nodeCount, TContext context)
+    private static int CreateNode<T, TContext>(Span<Node<T>> arena, T value, int priority, ref int nodeCount, TContext context)
         where TContext : ISortContext
     {
         var nodeIndex = nodeCount++;
-        arena[nodeIndex] = new Node<T>(value);
+        arena[nodeIndex] = new Node<T>(value, priority);
         context.OnIndexWrite(nodeIndex, BUFFER_TREE, value);
         return nodeIndex;
     }
@@ -376,28 +342,31 @@ public static class SplaySort
     }
 
     /// <summary>
-    /// Arena-based node structure with value caching and parent pointer for splay operations.
+    /// Arena-based node structure with value caching, parent pointer, and random priority for treap operations.
     /// </summary>
     /// <remarks>
     /// Struct-based to eliminate GC pressure (allocated via ArrayPool).
     /// Left, Right, and Parent are indices into the arena array (-1 represents null).
     /// Value caches the T instance directly to avoid span[index] indirection on every comparison.
-    /// Parent pointer enables bottom-up splay without a separate path stack.
+    /// Priority is a random integer used to maintain max-heap order via rotations.
+    /// Parent pointer enables bottom-up heap-up without a separate path stack.
     /// The node's identity is its position in the arena array, so no separate Id field is needed.
     /// </remarks>
     private struct Node<T>
     {
-        public T Value;     // Cached value for direct comparison (avoids span indirection)
-        public int Left;    // Index in arena, -1 = null
-        public int Right;   // Index in arena, -1 = null
-        public int Parent;  // Index in arena, -1 = no parent (root)
+        public T Value;      // Cached value for direct comparison (avoids span indirection)
+        public int Left;     // Index in arena, -1 = null
+        public int Right;    // Index in arena, -1 = null
+        public int Parent;   // Index in arena, -1 = no parent (root)
+        public int Priority; // Random priority for max-heap property
 
-        public Node(T value)
+        public Node(T value, int priority)
         {
             Value = value;
             Left = -1;
             Right = -1;
             Parent = -1;
+            Priority = priority;
         }
     }
 }

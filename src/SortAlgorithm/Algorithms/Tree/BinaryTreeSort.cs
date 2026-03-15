@@ -103,7 +103,7 @@ public static class BinaryTreeSort
                 context.OnPhase(SortPhase.TreeSortInsert, i, s.Length - 1);
                 context.OnRole(i, BUFFER_MAIN, RoleType.Inserting);
                 var value = s.Read(i);
-                rootIndex = InsertIterative(arenaSpan, rootIndex, ref nodeCount, value, comparer, context);
+                rootIndex = InsertIterative(arenaSpan, rootIndex, ref nodeCount, i, value, comparer, context);
                 context.OnRole(i, BUFFER_MAIN, RoleType.None);
             }
 
@@ -122,7 +122,7 @@ public static class BinaryTreeSort
     /// Iterative insertion. Instead of using recursion, it loops to find the child nodes.
     /// Returns the root index (unchanged unless the tree was empty).
     /// </summary>
-    private static int InsertIterative<T, TComparer, TContext>(Span<Node<T>> arena, int rootIndex, ref int nodeCount, T value, TComparer comparer, TContext context)
+    private static int InsertIterative<T, TComparer, TContext>(Span<Node<T>> arena, int rootIndex, ref int nodeCount, int itemIndex, T value, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -136,7 +136,7 @@ public static class BinaryTreeSort
         while (true)
         {
             // If the value is smaller than the current node, go left.
-            var cmp = CompareWithNode(arena, current, value, comparer, context);
+            var cmp = CompareWithNode(arena, current, itemIndex, value, comparer, context);
             if (cmp < 0)
             {
                 // If the left child is null, insert here.
@@ -216,13 +216,13 @@ public static class BinaryTreeSort
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int CompareWithNode<T, TComparer, TContext>(
-        Span<Node<T>> arena, int nodeIndex, T value, TComparer comparer, TContext context)
+        Span<Node<T>> arena, int nodeIndex, int itemIndex, T value, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         context.OnIndexRead(nodeIndex, BUFFER_TREE);
         var cmp = comparer.Compare(value, arena[nodeIndex].Value);
-        context.OnCompare(-1, -1, cmp, BUFFER_TREE, BUFFER_TREE);
+        context.OnCompare(itemIndex, nodeIndex, cmp, BUFFER_MAIN, BUFFER_TREE);
         return cmp;
     }
 

@@ -1,4 +1,4 @@
-﻿using SortVivo.Models;
+using SortVivo.Models;
 using SortAlgorithm.Contexts;
 using SortAlgorithm.Algorithms;
 
@@ -240,6 +240,9 @@ public class AlgorithmRegistry
             tutorialVisualizationHint: TutorialVisualizationHint.AvlTree);
         Add("Splay sort", "TREE", "O(n log n)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => SplaySort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Tree", "SplaySort"),
+            tutorialVisualizationHint: TutorialVisualizationHint.BstTree);
+        Add("Treap sort", "TREE", "O(n log n)", MAX_SIZE_NLOGN15, 1024, (arr, ctx) => TreapSort.Sort(arr, ctx),
+            gitHubSourceUrl: Src("Tree", "TreapSort"),
             tutorialVisualizationHint: TutorialVisualizationHint.BstTree);
 
         // Joke Sorts - O(n!) ~ O(∞) - 推奨8（注意: 極めて遅い）

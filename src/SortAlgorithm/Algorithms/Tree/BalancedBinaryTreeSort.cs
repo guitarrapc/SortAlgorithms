@@ -184,7 +184,7 @@ public static class BalancedBinaryTreeSort
         {
             pathStack[stackTop++] = currentIndex;
             // Compare against cached value (no span indirection needed)
-            var cmp = CompareWithNode(arena, currentIndex, insertValue, s.Comparer, s.Context);
+            var cmp = CompareWithNode(arena, currentIndex, itemIndex, insertValue, s.Comparer, s.Context);
 
             if (cmp < 0)
             {
@@ -336,14 +336,14 @@ public static class BalancedBinaryTreeSort
     /// Returns: value.CompareTo(node.Value)
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CompareWithNode<T, TComparer, TContext>(Span<Node<T>> arena, int nodeIndex, T value, TComparer comparer, TContext context)
+    private static int CompareWithNode<T, TComparer, TContext>(Span<Node<T>> arena, int nodeIndex, int itemIndex, T value, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // Visualize node access during tree traversal
         context.OnIndexRead(nodeIndex, BUFFER_TREE);
         var cmp = comparer.Compare(value, arena[nodeIndex].Value);
-        context.OnCompare(-1, -1, cmp, BUFFER_TREE, BUFFER_TREE);
+        context.OnCompare(itemIndex, nodeIndex, cmp, BUFFER_MAIN, BUFFER_TREE);
         return cmp;
     }
 
