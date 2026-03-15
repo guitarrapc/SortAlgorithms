@@ -252,10 +252,7 @@ public static class SpreadSort
             temp.CopyTo(tempStart, s, start, length);
 
             // Phase 7: Largest-first push optimization
-            // Find the largest bucket (will be processed inline, not pushed).
-            // Push all other non-trivial buckets onto the work stack.
-            // This is analogous to QuickSort's "recurse on smaller, loop on larger"
-            // and keeps peak stack usage proportional to the non-largest portions.
+            // select the largest bucket as the next inline subproblem; trivial sizes are handled by the drain loop. (like QuickSort optimization)
             var largestIdx = 0;
             var largestLen = 0;
             for (var i = 0; i < bucketCount; i++)
