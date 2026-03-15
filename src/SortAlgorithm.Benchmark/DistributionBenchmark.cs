@@ -23,6 +23,7 @@ public class DistributionBenchmark
     private int[] _radixMSD4Sort = default!;
     private int[] _radixMSD10Sort = default!;
     private int[] _americanflagArray = default!;
+    private int[] _spreadArray = default!;
 
     [IterationSetup]
     public void Setup()
@@ -40,6 +41,7 @@ public class DistributionBenchmark
         _radixMSD4Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
         _radixMSD10Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
         _americanflagArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _spreadArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark]
@@ -118,5 +120,11 @@ public class DistributionBenchmark
     public void AmericanFlagSort()
     {
         SortAlgorithm.Algorithms.AmericanFlagSort.Sort(_americanflagArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void SpreadSort()
+    {
+        SortAlgorithm.Algorithms.SpreadSort.Sort(_spreadArray.AsSpan());
     }
 }
