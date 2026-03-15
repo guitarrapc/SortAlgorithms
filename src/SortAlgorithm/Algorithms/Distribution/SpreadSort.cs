@@ -252,7 +252,9 @@ public static class SpreadSort
             temp.CopyTo(tempStart, s, start, length);
 
             // Phase 7: Largest-first push optimization
-            // select the largest bucket as the next inline subproblem; trivial sizes are handled by the drain loop. (like QuickSort optimization)
+            // Select the largest bucket as the next inline subproblem.
+            // Trivial sizes are handled by the drain loop above, similar in spirit
+            // to QuickSort's "recurse on smaller, iterate on larger" optimization.
             var largestIdx = 0;
             var largestLen = 0;
             for (var i = 0; i < bucketCount; i++)
@@ -277,7 +279,8 @@ public static class SpreadSort
 
                 if (bucketLength > 1)
                 {
-                    Debug.Assert(stackTop + 2 <= stack.Length, $"Stack overflow: stackTop={stackTop}, stack.Length={stack.Length}, bucketCount={bucketCount}");
+                    if (stackTop + 2 > stack.Length)
+                        throw new InvalidOperationException("Internal work stack overflow.");
                     stack[stackTop++] = start + bucketStart;
                     stack[stackTop++] = bucketLength;
                 }
