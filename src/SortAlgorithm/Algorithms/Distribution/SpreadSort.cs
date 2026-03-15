@@ -52,8 +52,8 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Supported Types:</strong></para>
 /// <list type="bullet">
-/// <item><description><strong>Supported:</strong> byte, sbyte, short, ushort, int, uint, long, ulong, nint, nuint (up to 64-bit)</description></item>
-/// <item><description><strong>Not Supported:</strong> Int128, UInt128, BigInteger (&gt;64-bit types)</description></item>
+/// <item><description><strong>Supported:</strong> byte, sbyte, short, ushort, int, uint, long, ulong (fixed-width up to 64-bit)</description></item>
+/// <item><description><strong>Not Supported:</strong> nint, nuint (platform-dependent bit width), Int128, UInt128, BigInteger</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Spreadsort</para>
@@ -93,9 +93,9 @@ public static class SpreadSort
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, new ComparableComparer<T>(), BUFFER_MAIN);
+        ThrowIfUnsupportedType<T>();
 
-        var bitSize = GetBitSize<T>();
+        var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, new ComparableComparer<T>(), BUFFER_MAIN);
 
         if (s.Length <= InsertionSortCutoff)
         {
@@ -103,10 +103,10 @@ public static class SpreadSort
             return;
         }
 
-        SortCore(s, bitSize);
+        SortCore(s);
     }
 
-    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int bitSize)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -130,7 +130,7 @@ public static class SpreadSort
         try
         {
             var temp = new SortSpan<T, TComparer, TContext>(rentedTemp.AsSpan(0, s.Length), s.Context, s.Comparer, BUFFER_TEMP);
-            SpreadSortIterative(s, temp, counts, writePos, stack, bitSize);
+            SpreadSortIterative(s, temp, counts, writePos, stack);
         }
         finally
         {
@@ -140,7 +140,7 @@ public static class SpreadSort
         }
     }
 
-    private static void SpreadSortIterative<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> counts, Span<int> writePos, Span<int> stack, int bitSize)
+    private static void SpreadSortIterative<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> counts, Span<int> writePos, Span<int> stack)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -166,12 +166,12 @@ public static class SpreadSort
             }
 
             // Phase 1: Find min and max keys
-            var minKey = GetUnsignedKey(s.Read(start), bitSize);
+            var minKey = GetUnsignedKey(s.Read(start));
             var maxKey = minKey;
 
             for (var i = 1; i < length; i++)
             {
-                var key = GetUnsignedKey(s.Read(start + i), bitSize);
+                var key = GetUnsignedKey(s.Read(start + i));
                 if (key < minKey) minKey = key;
                 if (key > maxKey) maxKey = key;
             }
@@ -202,7 +202,7 @@ public static class SpreadSort
             s.Context.OnPhase(SortPhase.DistributionCount);
             for (var i = 0; i < length; i++)
             {
-                var key = GetUnsignedKey(s.Read(start + i), bitSize);
+                var key = GetUnsignedKey(s.Read(start + i));
                 var bucket = (int)((key - minKey) >> shift);
                 if (bucket >= bucketCount) bucket = bucketCount - 1;
                 bucketCounts[bucket]++;
@@ -241,7 +241,7 @@ public static class SpreadSort
             for (var i = 0; i < length; i++)
             {
                 var value = s.Read(start + i);
-                var key = GetUnsignedKey(value, bitSize);
+                var key = GetUnsignedKey(value);
                 var bucket = (int)((key - minKey) >> shift);
                 if (bucket >= bucketCount) bucket = bucketCount - 1;
 
@@ -271,95 +271,65 @@ public static class SpreadSort
     }
 
     /// <summary>
-    /// Get bit size of the type T.
+    /// Validates that type T is a supported fixed-width integer type.
+    /// Throws <see cref="NotSupportedException"/> for unsupported types.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetBitSize<T>() where T : IBinaryInteger<T>
+    /// <remarks>
+    /// Called once at the Sort entry point, not on the hot path.
+    /// </remarks>
+    private static void ThrowIfUnsupportedType<T>() where T : IBinaryInteger<T>
     {
-        if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte))
-            return 8;
-        else if (typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
-            return 16;
-        else if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
-            return 32;
-        else if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
-            return 64;
-        else if (typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
-            return IntPtr.Size * 8;
-        else if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
+        if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte) ||
+            typeof(T) == typeof(short) || typeof(T) == typeof(ushort) ||
+            typeof(T) == typeof(int) || typeof(T) == typeof(uint) ||
+            typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
+            return;
+
+        if (typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
+            throw new NotSupportedException($"Type {typeof(T).Name} is not supported. Native-sized integers have platform-dependent bit width, which makes distribution sort behavior inconsistent across 32-bit and 64-bit environments.");
+        if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
             throw new NotSupportedException($"Type {typeof(T).Name} with 128-bit size is not supported. Maximum supported bit size is 64.");
-        else
-            throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
+
+        throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
     }
 
     /// <summary>
-    /// Convert a signed or unsigned value to an unsigned key for distribution sorting.
+    /// Converts a value to an unsigned key for distribution sorting.
     /// For signed types, flips the sign bit to ensure correct ordering.
     /// </summary>
+    /// <remarks>
+    /// Uses a flat <c>typeof(T)</c> chain instead of runtime bitSize branching.
+    /// The JIT eliminates all non-matching branches for each value type specialization,
+    /// producing branchless code equivalent to a dedicated <c>SortCoreInt32</c> / <c>SortCoreInt64</c> etc.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong GetUnsignedKey<T>(T value, int bitSize) where T : IBinaryInteger<T>
+    private static ulong GetUnsignedKey<T>(T value) where T : IBinaryInteger<T>
     {
-        if (bitSize <= 8)
-        {
-            if (typeof(T) == typeof(sbyte))
-            {
-                var sbyteValue = sbyte.CreateTruncating(value);
-                return (ulong)((byte)sbyteValue ^ 0x80);
-            }
-            else
-            {
-                return byte.CreateTruncating(value);
-            }
-        }
-        else if (bitSize <= 16)
-        {
-            if (typeof(T) == typeof(short))
-            {
-                var shortValue = short.CreateTruncating(value);
-                return (ulong)((ushort)shortValue ^ 0x8000);
-            }
-            else
-            {
-                return ushort.CreateTruncating(value);
-            }
-        }
-        else if (bitSize <= 32)
-        {
-            if (typeof(T) == typeof(int))
-            {
-                var intValue = int.CreateTruncating(value);
-                return (uint)intValue ^ 0x8000_0000;
-            }
-            else if (typeof(T) == typeof(nint))
-            {
-                var nintValue = nint.CreateTruncating(value);
-                return (uint)nintValue ^ 0x8000_0000;
-            }
-            else
-            {
-                return uint.CreateTruncating(value);
-            }
-        }
-        else if (bitSize <= 64)
-        {
-            if (typeof(T) == typeof(long))
-            {
-                var longValue = long.CreateTruncating(value);
-                return (ulong)longValue ^ 0x8000_0000_0000_0000;
-            }
-            else if (typeof(T) == typeof(nint))
-            {
-                var nintValue = nint.CreateTruncating(value);
-                return (ulong)nintValue ^ 0x8000_0000_0000_0000;
-            }
-            else
-            {
-                return ulong.CreateTruncating(value);
-            }
-        }
-        else
-        {
-            throw new NotSupportedException($"Bit size {bitSize} is not supported");
-        }
+        // 8-bit
+        if (typeof(T) == typeof(byte))
+            return byte.CreateTruncating(value);
+        if (typeof(T) == typeof(sbyte))
+            return (ulong)((byte)sbyte.CreateTruncating(value) ^ 0x80);
+
+        // 16-bit
+        if (typeof(T) == typeof(ushort))
+            return ushort.CreateTruncating(value);
+        if (typeof(T) == typeof(short))
+            return (ulong)((ushort)short.CreateTruncating(value) ^ 0x8000);
+
+        // 32-bit
+        if (typeof(T) == typeof(uint))
+            return uint.CreateTruncating(value);
+        if (typeof(T) == typeof(int))
+            return (uint)int.CreateTruncating(value) ^ 0x8000_0000;
+
+        // 64-bit
+        if (typeof(T) == typeof(ulong))
+            return ulong.CreateTruncating(value);
+        if (typeof(T) == typeof(long))
+            return (ulong)long.CreateTruncating(value) ^ 0x8000_0000_0000_0000;
+
+        // Unreachable when ThrowIfUnsupportedType is called at the entry point
+        throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
     }
 }
