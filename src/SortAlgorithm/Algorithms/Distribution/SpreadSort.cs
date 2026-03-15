@@ -24,10 +24,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Value-Based Distribution:</strong> Each element is mapped to a bucket using:
 /// bucket = ((key - minKey) >> shift), where shift is calculated from the range and bucket count.
 /// This distributes elements proportionally across the available buckets.</description></item>
-/// <item><description><strong>Recursive Processing:</strong> Each non-empty bucket is recursively sorted.
+/// <item><description><strong>Iterative Processing:</strong> Each non-empty bucket is sorted iteratively using an explicit stack of work items.
 /// Base cases: buckets with 0 or 1 elements are already sorted; small buckets fall back to insertion sort.</description></item>
 /// <item><description><strong>Fallback to Comparison Sort:</strong> When all elements map to the same bucket (no progress via distribution),
-/// the algorithm falls back to insertion sort to avoid infinite recursion and ensure O(n log²n) worst case.</description></item>
+/// the algorithm falls back to insertion sort to avoid infinite loops and ensure O(n log²n) worst case.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -40,14 +40,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Memory      : O(n) auxiliary space for bucket arrays and count arrays</description></item>
 /// </list>
 /// <para><strong>Algorithm Overview:</strong></para>
-/// <para>The algorithm consists of these phases per recursion level:</para>
+/// <para>The algorithm consists of these phases per iteration:</para>
 /// <list type="number">
 /// <item><description><strong>Find Range:</strong> Determine min and max unsigned keys in the current range</description></item>
 /// <item><description><strong>Calculate Buckets:</strong> Compute bucket count from the bit width of the range, capped by element count</description></item>
 /// <item><description><strong>Count Phase:</strong> Count occurrences of elements in each bucket</description></item>
 /// <item><description><strong>Offset Phase:</strong> Compute prefix sums to determine bucket boundaries</description></item>
 /// <item><description><strong>Distribute Phase:</strong> Place elements into their correct bucket positions using a temporary buffer</description></item>
-/// <item><description><strong>Recursive Phase:</strong> Recursively sort each bucket that has more than one element</description></item>
+/// <item><description><strong>Iterate Phase:</strong> Push each non-trivial bucket onto an explicit work stack and repeat</description></item>
 /// </list>
 /// <para><strong>Supported Types:</strong></para>
 /// <list type="bullet">
@@ -64,6 +64,7 @@ public static class SpreadSort
     private const int InsertionSortCutoff = 16; // Switch to insertion sort for small ranges
     private const int MaxBucketLogBits = 11;    // Max log2(bucketCount) to avoid excessive memory
     private const int MinBucketLogBits = 1;     // Minimum meaningful bucket split
+    private const int StackAllocThreshold = 128; // Use stackalloc for work stack when element count is at or below this
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -101,74 +102,92 @@ public static class SpreadSort
             return;
         }
 
-        // Allocate temporary buffer for distribution
-        var rentedArray = ArrayPool<T>.Shared.Rent(span.Length);
-        try
-        {
-            var tempSpan = rentedArray.AsSpan(0, span.Length);
-            var temp = new SortSpan<T, ComparableComparer<T>, TContext>(tempSpan, context, new ComparableComparer<T>(), BUFFER_TEMP);
-            SpreadSortRecursive(s, temp, 0, s.Length, bitSize);
-        }
-        finally
-        {
-            ArrayPool<T>.Shared.Return(rentedArray);
-        }
+        SortCore(s, bitSize);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SpreadSortRecursive<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s,
-        SortSpan<T, TComparer, TContext> temp,
-        int start, int length, int bitSize)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int bitSize)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (length <= 1) return;
+        // counts and writePos are bounded by MaxBucketLogBits (2048 ints = 8KB each) - always stackalloc
+        Span<int> counts = stackalloc int[1 << MaxBucketLogBits];
+        Span<int> writePos = stackalloc int[1 << MaxBucketLogBits];
 
-        if (length <= InsertionSortCutoff)
-        {
-            InsertionSort.SortCore(s, start, start + length);
-            return;
-        }
-
-        // Phase 1: Find min and max keys
-        var minKey = GetUnsignedKey(s.Read(start), bitSize);
-        var maxKey = minKey;
-
-        for (var i = 1; i < length; i++)
-        {
-            var key = GetUnsignedKey(s.Read(start + i), bitSize);
-            if (key < minKey) minKey = key;
-            if (key > maxKey) maxKey = key;
-        }
-
-        // All elements have the same key - already sorted
-        if (minKey == maxKey) return;
-
-        // Phase 2: Calculate bucket count
-        var range = maxKey - minKey;
-        var rangeBits = 64 - BitOperations.LeadingZeroCount(range);
-
-        // Use upper bits of range to determine bucket count
-        // logBuckets is the number of bits used for bucket indexing
-        var logBuckets = rangeBits / 2;
-        if (logBuckets < MinBucketLogBits) logBuckets = MinBucketLogBits;
-        if (logBuckets > MaxBucketLogBits) logBuckets = MaxBucketLogBits;
-
-        // Cap bucket count to not exceed element count
-        var logLength = 64 - BitOperations.LeadingZeroCount((ulong)length);
-        if (logBuckets > logLength) logBuckets = logLength;
-
-        var bucketCount = 1 << logBuckets;
-        var shift = (int)(rangeBits - logBuckets);
-        if (shift < 0) shift = 0;
-
-        // Allocate bucket count array
-        var rentedCounts = ArrayPool<int>.Shared.Rent(bucketCount);
+        // temp buffer requires ArrayPool (can't stackalloc generic T without unmanaged constraint)
+        var rentedTemp = ArrayPool<T>.Shared.Rent(s.Length);
+        int[]? rentedStack = null;
+        Span<int> stack = s.Length <= StackAllocThreshold
+            ? stackalloc int[s.Length * 2]                // Small: stackalloc work stack (128 * 2 = 256 ints = 1KB)
+            : (rentedStack = ArrayPool<int>.Shared.Rent(s.Length * 2)).AsSpan(0, s.Length * 2);
         try
         {
-            var bucketCounts = rentedCounts.AsSpan(0, bucketCount);
+            var temp = new SortSpan<T, TComparer, TContext>(rentedTemp.AsSpan(0, s.Length), s.Context, s.Comparer, BUFFER_TEMP);
+            SpreadSortIterative(s, temp, counts, writePos, stack, bitSize);
+        }
+        finally
+        {
+            ArrayPool<T>.Shared.Return(rentedTemp);
+            if (rentedStack != null)
+                ArrayPool<int>.Shared.Return(rentedStack);
+        }
+    }
+
+    private static void SpreadSortIterative<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> counts, Span<int> writePos, Span<int> stack, int bitSize)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        // Push initial work item
+        var stackTop = 0;
+        stack[stackTop++] = 0;         // start
+        stack[stackTop++] = s.Length;   // length
+
+        while (stackTop > 0)
+        {
+            // Pop work item
+            var length = stack[--stackTop];
+            var start = stack[--stackTop];
+
+            if (length <= 1) continue;
+
+            if (length <= InsertionSortCutoff)
+            {
+                InsertionSort.SortCore(s, start, start + length);
+                continue;
+            }
+
+            // Phase 1: Find min and max keys
+            var minKey = GetUnsignedKey(s.Read(start), bitSize);
+            var maxKey = minKey;
+
+            for (var i = 1; i < length; i++)
+            {
+                var key = GetUnsignedKey(s.Read(start + i), bitSize);
+                if (key < minKey) minKey = key;
+                if (key > maxKey) maxKey = key;
+            }
+
+            // All elements have the same key - already sorted
+            if (minKey == maxKey) continue;
+
+            // Phase 2: Calculate bucket count
+            var range = maxKey - minKey;
+            var rangeBits = 64 - BitOperations.LeadingZeroCount(range);
+
+            var logBuckets = rangeBits / 2;
+            if (logBuckets < MinBucketLogBits) logBuckets = MinBucketLogBits;
+            if (logBuckets > MaxBucketLogBits) logBuckets = MaxBucketLogBits;
+
+            // Cap bucket count to not exceed element count
+            var logLength = 64 - BitOperations.LeadingZeroCount((ulong)length);
+            if (logBuckets > logLength) logBuckets = logLength;
+
+            var bucketCount = 1 << logBuckets;
+            var shift = (int)(rangeBits - logBuckets);
+            if (shift < 0) shift = 0;
+
+            var bucketCounts = counts[..bucketCount];
             bucketCounts.Clear();
 
             // Phase 3: Count elements per bucket
@@ -182,24 +201,18 @@ public static class SpreadSort
             }
 
             // Check if all elements fell into one bucket (no progress)
-            // Fall back to insertion sort to avoid infinite recursion
+            // Fall back to insertion sort to avoid infinite loop
             var nonEmptyBuckets = 0;
-            var singleBucket = -1;
             for (var i = 0; i < bucketCount; i++)
             {
-                if (bucketCounts[i] > 0)
-                {
-                    nonEmptyBuckets++;
-                    singleBucket = i;
-                    if (nonEmptyBuckets > 1) break;
-                }
+                if (bucketCounts[i] > 0 && ++nonEmptyBuckets > 1)
+                    break;
             }
 
             if (nonEmptyBuckets <= 1)
             {
-                // Distribution provides no benefit, fall back to comparison sort
                 InsertionSort.SortCore(s, start, start + length);
-                return;
+                continue;
             }
 
             // Phase 4: Compute prefix sums (bucket offsets)
@@ -213,48 +226,36 @@ public static class SpreadSort
             }
 
             // Phase 5: Distribute elements into temp buffer
-            // We need a separate write-position tracker so bucketCounts retains start offsets
-            var rentedWritePos = ArrayPool<int>.Shared.Rent(bucketCount);
-            try
+            var bucketWritePos = writePos[..bucketCount];
+            bucketCounts.CopyTo(bucketWritePos);
+
+            s.Context.OnPhase(SortPhase.DistributionWrite);
+            for (var i = 0; i < length; i++)
             {
-                var writePos = rentedWritePos.AsSpan(0, bucketCount);
-                bucketCounts.CopyTo(writePos);
+                var value = s.Read(start + i);
+                var key = GetUnsignedKey(value, bitSize);
+                var bucket = (int)((key - minKey) >> shift);
+                if (bucket >= bucketCount) bucket = bucketCount - 1;
+                temp.Write(bucketWritePos[bucket], value);
+                bucketWritePos[bucket]++;
+            }
 
-                s.Context.OnPhase(SortPhase.DistributionWrite);
-                for (var i = 0; i < length; i++)
+            // Phase 6: Copy back from temp to main array
+            temp.CopyTo(0, s, start, length);
+
+            // Phase 7: Push each non-trivial bucket onto work stack
+            for (var i = 0; i < bucketCount; i++)
+            {
+                var bucketStart = bucketCounts[i];
+                var bucketEnd = (i + 1 < bucketCount) ? bucketCounts[i + 1] : length;
+                var bucketLength = bucketEnd - bucketStart;
+
+                if (bucketLength > 1)
                 {
-                    var value = s.Read(start + i);
-                    var key = GetUnsignedKey(value, bitSize);
-                    var bucket = (int)((key - minKey) >> shift);
-                    if (bucket >= bucketCount) bucket = bucketCount - 1;
-                    temp.Write(writePos[bucket], value);
-                    writePos[bucket]++;
-                }
-
-                // Phase 6: Copy back from temp to main array
-                temp.CopyTo(0, s, start, length);
-
-                // Phase 7: Recursively sort each bucket
-                for (var i = 0; i < bucketCount; i++)
-                {
-                    var bucketStart = bucketCounts[i];
-                    var bucketEnd = (i + 1 < bucketCount) ? bucketCounts[i + 1] : length;
-                    var bucketLength = bucketEnd - bucketStart;
-
-                    if (bucketLength > 1)
-                    {
-                        SpreadSortRecursive(s, temp, start + bucketStart, bucketLength, bitSize);
-                    }
+                    stack[stackTop++] = start + bucketStart;
+                    stack[stackTop++] = bucketLength;
                 }
             }
-            finally
-            {
-                ArrayPool<int>.Shared.Return(rentedWritePos);
-            }
-        }
-        finally
-        {
-            ArrayPool<int>.Shared.Return(rentedCounts);
         }
     }
 
