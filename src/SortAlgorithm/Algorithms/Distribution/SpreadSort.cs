@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
@@ -235,6 +235,7 @@ public static class SpreadSort
             bucketCounts.CopyTo(bucketWritePos);
 
             s.Context.OnPhase(SortPhase.DistributionWrite);
+            const int tempStart = 0;
             for (var i = 0; i < length; i++)
             {
                 var value = s.Read(start + i);
@@ -243,12 +244,12 @@ public static class SpreadSort
                 if (bucket >= bucketCount) bucket = bucketCount - 1;
 
                 // temp is reused as a scratch buffer at offset 0 for every subproblem
-                temp.Write(bucketWritePos[bucket], value);
+                temp.Write(tempStart + bucketWritePos[bucket], value);
                 bucketWritePos[bucket]++;
             }
 
             // Phase 6: Copy back from temp to main array
-            temp.CopyTo(0, s, start, length);
+            temp.CopyTo(tempStart, s, start, length);
 
             // Phase 7: Largest-first push optimization
             // Find the largest bucket (will be processed inline, not pushed).
@@ -321,8 +322,7 @@ public static class SpreadSort
     /// </summary>
     /// <remarks>
     /// Uses a flat <c>typeof(T)</c> chain instead of runtime bitSize branching.
-    /// The JIT eliminates all non-matching branches for each value type specialization,
-    /// producing branchless code equivalent to a dedicated <c>SortCoreInt32</c> / <c>SortCoreInt64</c> etc.
+    /// The JIT eliminates all non-matching branches for each value type specialization.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ulong GetUnsignedKey<T>(T value) where T : IBinaryInteger<T>
