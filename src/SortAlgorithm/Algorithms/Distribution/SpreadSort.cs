@@ -1,5 +1,6 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -116,10 +117,16 @@ public static class SpreadSort
 
         // temp buffer requires ArrayPool (can't stackalloc generic T without unmanaged constraint)
         var rentedTemp = ArrayPool<T>.Shared.Rent(s.Length);
+
+        // Work stack size bound (n ints):
+        //   Invariant: the sum of lengths across all work items on the stack is always <= n.
+        //   - Pop removes L from the sum; Push adds back at most L (buckets partition the range).
+        //   - Each pushed item has length >= 2 (we skip length <= 1).
+        //   - Therefore max simultaneous items = floor(n/2), needing floor(n/2)*2 = n ints.
         int[]? rentedStack = null;
         Span<int> stack = s.Length <= StackAllocThreshold
-            ? stackalloc int[s.Length * 2]                // Small: stackalloc work stack (128 * 2 = 256 ints = 1KB)
-            : (rentedStack = ArrayPool<int>.Shared.Rent(s.Length * 2)).AsSpan(0, s.Length * 2);
+            ? stackalloc int[s.Length]                     // Small: stackalloc work stack (128 ints = 512B)
+            : (rentedStack = ArrayPool<int>.Shared.Rent(s.Length)).AsSpan(0, s.Length);
         try
         {
             var temp = new SortSpan<T, TComparer, TContext>(rentedTemp.AsSpan(0, s.Length), s.Context, s.Comparer, BUFFER_TEMP);
@@ -140,6 +147,7 @@ public static class SpreadSort
     {
         // Push initial work item
         var stackTop = 0;
+        Debug.Assert(stackTop + 2 <= stack.Length, $"Stack overflow: stackTop={stackTop}, stack.Length={stack.Length}");
         stack[stackTop++] = 0;         // start
         stack[stackTop++] = s.Length;   // length
 
@@ -236,6 +244,8 @@ public static class SpreadSort
                 var key = GetUnsignedKey(value, bitSize);
                 var bucket = (int)((key - minKey) >> shift);
                 if (bucket >= bucketCount) bucket = bucketCount - 1;
+
+                // temp is reused as a scratch buffer at offset 0 for every subproblem
                 temp.Write(bucketWritePos[bucket], value);
                 bucketWritePos[bucket]++;
             }
@@ -252,6 +262,7 @@ public static class SpreadSort
 
                 if (bucketLength > 1)
                 {
+                    Debug.Assert(stackTop + 2 <= stack.Length, $"Stack overflow: stackTop={stackTop}, stack.Length={stack.Length}, bucketCount={bucketCount}");
                     stack[stackTop++] = start + bucketStart;
                     stack[stackTop++] = bucketLength;
                 }
