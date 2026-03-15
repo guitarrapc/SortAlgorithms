@@ -118,16 +118,17 @@ public static class SpreadSort
         // temp buffer requires ArrayPool (can't stackalloc generic T without unmanaged constraint)
         var rentedTemp = ArrayPool<T>.Shared.Rent(s.Length);
 
-        // Work stack: 3 ints per item (start, length, shift).
+        // Work stack size bound (n ints):
         //   Invariant: the sum of lengths across all work items on the stack is always <= n.
         //   - Pop removes L from the sum; Push adds back at most L (buckets partition the range).
         //   - Each pushed item has length >= 2 (we skip length <= 1).
-        //   - Therefore max simultaneous items = floor(n/2), needing floor(n/2) * 3 ints.
-        var workStackSize = 3 * (s.Length / 2 + 1);
+        //   - Therefore max simultaneous items = floor(n/2), needing floor(n/2)*2 = n ints.
+        //   No shift is stored: each subproblem recomputes its own shift from XOR diff,
+        //   which naturally provides adaptive level-skipping for shared upper bits.
         int[]? rentedStack = null;
         Span<int> stack = s.Length <= StackAllocThreshold
-            ? stackalloc int[workStackSize]
-            : (rentedStack = ArrayPool<int>.Shared.Rent(workStackSize)).AsSpan(0, workStackSize);
+            ? stackalloc int[s.Length]                     // Small: stackalloc work stack (128 ints = 512B)
+            : (rentedStack = ArrayPool<int>.Shared.Rent(s.Length)).AsSpan(0, s.Length);
         try
         {
             var temp = new SortSpan<T, TComparer, TContext>(rentedTemp.AsSpan(0, s.Length), s.Context, s.Comparer, BUFFER_TEMP);
@@ -161,10 +162,8 @@ public static class SpreadSort
                 if (length > 1)
                     InsertionSort.SortCore(s, start, start + length);
                 if (stackTop == 0) return;
-                stackTop -= 3;
-                start = stack[stackTop];
-                length = stack[stackTop + 1];
-                // stack[stackTop + 2] is the parent's hint shift (recomputed from data via XOR diff)
+                length = stack[--stackTop];
+                start = stack[--stackTop];
             }
 
             // Phase 1: Find min and max keys, compute XOR diff
@@ -267,12 +266,9 @@ public static class SpreadSort
             // Phase 6: Copy back from temp to main array
             temp.CopyTo(tempStart, s, start, length);
 
-            // Phase 7: Compute next shift and push work items (largest-first optimization)
-            // nextShift = shift - radixBits moves to the next lower bit group.
-            // Each bucket's subproblem will recompute the effective shift from its own
-            // XOR diff, providing automatic level-skipping for shared upper bits.
-            var nextShift = shift - radixBits;
-
+            // Phase 7: Largest-first push optimization
+            // Each bucket's subproblem will recompute its own shift from XOR diff,
+            // which naturally provides adaptive level-skipping for shared upper bits.
             // Select the largest bucket as the next inline subproblem.
             // Trivial sizes are handled by the drain loop above, similar in spirit
             // to QuickSort's "recurse on smaller, iterate on larger" optimization.
@@ -300,12 +296,10 @@ public static class SpreadSort
 
                 if (bucketLength > 1)
                 {
-                    if (stackTop + 3 > stack.Length)
+                    if (stackTop + 2 > stack.Length)
                         throw new InvalidOperationException("Internal work stack overflow.");
-                    stack[stackTop] = start + bucketStart;
-                    stack[stackTop + 1] = bucketLength;
-                    stack[stackTop + 2] = nextShift;
-                    stackTop += 3;
+                    stack[stackTop++] = start + bucketStart;
+                    stack[stackTop++] = bucketLength;
                 }
             }
 
