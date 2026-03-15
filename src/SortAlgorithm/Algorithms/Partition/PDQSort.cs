@@ -401,6 +401,8 @@ public static class PDQSort
     /// <summary>
     /// Partitions [begin, end) around pivot *begin. Elements equal to the pivot are put in the right-hand partition.
     /// Returns the position of the pivot after partitioning and whether the passed sequence already was correctly partitioned.
+    /// Assumes the pivot is a median of at least 3 elements and that [begin, end) is at least
+    /// insertion_sort_threshold long.
     /// </summary>
     private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
         where TComparer : IComparer<T>
@@ -412,36 +414,32 @@ public static class PDQSort
         var first = begin;
         var last = end;
 
-        // Find the first element greater than or equal to the pivot (first can reach end)
-        do
-        {
-            first++;
-            if (first == end) break;
-        } while (s.Compare(first, pivot) < 0);
+        // Find the first element greater than or equal to the pivot (the median of 3 guarantees this exists).
+        do { first++; } while (s.Compare(first, pivot) < 0);
 
-        // Find the first element strictly smaller than the pivot (last can reach begin)
-        do
+        // Find the first element strictly smaller than the pivot. We have to guard this search if
+        // there was no element before *first.
+        if (first - 1 == begin)
         {
-            last--;
-            if (last == begin) break;
-        } while (first < last && s.Compare(last, pivot) >= 0);
+            do { last--; } while (first < last && s.Compare(last, pivot) >= 0);
+        }
+        else
+        {
+            do { last--; } while (s.Compare(last, pivot) >= 0);
+        }
 
         // If the first pair of elements that should be swapped to partition are the same element,
         // the passed in sequence already was correctly partitioned
         var alreadyPartitioned = first >= last;
 
-        // Keep swapping pairs of elements that are on the wrong side of the pivot
+        // Keep swapping pairs of elements that are on the wrong side of the pivot. Previously
+        // swapped pairs guard the searches, which is why the first iteration is special-cased
+        // above.
         while (first < last)
         {
             s.Swap(first, last);
-            do
-            {
-                first++;
-            } while (first < last && s.Compare(first, pivot) < 0);
-            do
-            {
-                last--;
-            } while (first < last && s.Compare(last, pivot) >= 0);
+            do { first++; } while (s.Compare(first, pivot) < 0);
+            do { last--; } while (s.Compare(last, pivot) >= 0);
         }
 
         // Put the pivot in the right place
@@ -455,6 +453,8 @@ public static class PDQSort
     /// <summary>
     /// Partitions [begin, end) around pivot *begin. Elements equal to the pivot are put to the left.
     /// Used when many equal elements are detected.
+    /// Since this is rarely used (the many equal case), and in that case pdqsort already has O(n)
+    /// performance, no block quicksort is applied here for simplicity.
     /// </summary>
     private static int PartitionLeft<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
         where TComparer : IComparer<T>
@@ -464,31 +464,27 @@ public static class PDQSort
         var first = begin;
         var last = end;
 
-        // Find the first element from the right that is greater than or equal to pivot (last can reach begin)
-        do
-        {
-            last--;
-            if (last == begin) break;
-        } while (s.Compare(pivot, s.Read(last)) < 0);
+        // Find the first element less than or equal to pivot from the right.
+        // *begin == pivot, so the scan is guaranteed to terminate at begin at the latest.
+        do { last--; } while (s.Compare(pivot, s.Read(last)) < 0);
 
-        // Find the first element from the left that is less than pivot
-        do
+        // Find the first element strictly greater than pivot from the left. We have to guard
+        // this search if there was no element after *last.
+        if (last + 1 == end)
         {
-            first++;
-            if (first > last) break;
-        } while (first < last && s.Compare(pivot, s.Read(first)) >= 0);
+            do { first++; } while (first < last && s.Compare(pivot, s.Read(first)) >= 0);
+        }
+        else
+        {
+            do { first++; } while (s.Compare(pivot, s.Read(first)) >= 0);
+        }
 
+        // Keep swapping pairs. Previously swapped pairs guard the searches.
         while (first < last)
         {
             s.Swap(first, last);
-            do
-            {
-                last--;
-            } while (first < last && s.Compare(pivot, s.Read(last)) < 0);
-            do
-            {
-                first++;
-            } while (first < last && s.Compare(pivot, s.Read(first)) >= 0);
+            do { last--; } while (s.Compare(pivot, s.Read(last)) < 0);
+            do { first++; } while (s.Compare(pivot, s.Read(first)) >= 0);
         }
 
         var pivotPos = last;
@@ -500,7 +496,8 @@ public static class PDQSort
 
     /// <summary>
     /// Attempts to use insertion sort on [begin, end). Will return false if more than
-    /// PartialInsertionSortLimit elements were moved, and abort sorting.
+    /// PartialInsertionSortLimit elements were moved, and abort sorting. Otherwise it will
+    /// successfully sort and return true.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool PartialInsertionSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
@@ -512,11 +509,10 @@ public static class PDQSort
         var limit = 0;
         for (var cur = begin + 1; cur < end; cur++)
         {
-            if (limit > PartialInsertionSortLimit) return false;
-
             var sift = cur;
             var siftValue = s.Read(cur);
 
+            // Compare first so we can avoid 2 moves for an element already positioned correctly.
             if (s.Compare(sift, sift - 1) < 0)
             {
                 do
@@ -528,11 +524,10 @@ public static class PDQSort
 
                 s.Write(sift, siftValue);
                 limit += cur - sift;
-
-                // Check limit immediately after increment to catch last iteration overflow
-                if (limit > PartialInsertionSortLimit)
-                    return false;
             }
+
+            if (limit > PartialInsertionSortLimit)
+                return false;
         }
 
         return true;
