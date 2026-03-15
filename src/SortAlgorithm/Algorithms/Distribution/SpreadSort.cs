@@ -6,11 +6,11 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// SpreadSort - MSD Radix/ビット抽出ベースのハイブリッド分配ソートアルゴリズムの実装。
+/// MSD Radix/ビット抽出ベースのハイブリッド分配ソートアルゴリズムの実装。
 /// キーの上位ビットからビット抽出によりバケットに分配し、バケット内を再帰的にソートします。
 /// ビット差分と部分問題サイズに基づく3段階フォールバック (InsertionSort / PDQSort / Spread分配) で、最悪ケースでもO(n log²n)を保証します。
 /// <br/>
-/// SpreadSort - An MSD radix/bit-extraction based hybrid distribution sorting algorithm.
+/// An MSD radix/bit-extraction based hybrid distribution sorting algorithm.
 /// Extracts upper bits from unsigned keys to distribute elements into buckets, then recursively sorts each bucket.
 /// Uses a three-tier fallback (InsertionSort / PDQSort / Spread partition) based on bit difference and subproblem size,
 /// guaranteeing O(n log²n) worst case.
@@ -21,9 +21,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Sign-Bit Flipping for Signed Integers:</strong> For signed types, the sign bit is flipped to convert signed values to unsigned keys,
 /// ensuring correct ordering of negative values before positive values without separate processing.</description></item>
 /// <item><description><strong>Adaptive Radix Width:</strong> The radix width (number of bits extracted per level) is determined
-/// by a principled SpreadSort rule: radixBits = diffBits / maxSplits, where maxSplits = log₂(n) − LogMeanBinSize.
-/// This distributes the differing bit range evenly across radix levels, targeting ~2^LogMeanBinSize elements per bin.
-/// The bucket count is capped by the number of elements to avoid excessive empty buckets.</description></item>
+/// by a SpreadSort-derived rule: radixBits = ⌈diffBits / maxSplits⌉, where maxSplits = log₂(n) − LogMeanBinSize.
+/// Ceiling division avoids underallocating bits per level. The result is further capped by diffBits (available bit difference),
+/// logLength (element count), and MaxBucketLogBits (memory), targeting ~2^LogMeanBinSize elements per bin.</description></item>
 /// <item><description><strong>Bit-Extraction Distribution:</strong> Each element is mapped to a bucket using:
 /// bucket = ((key >> shift) &amp; mask), where shift is the lowest bit position of the target group and mask = (1 &lt;&lt; radixBits) - 1.
 /// This extracts a specific bit group from each key, providing MSD radix-style partitioning.</description></item>
@@ -33,7 +33,7 @@ namespace SortAlgorithm.Algorithms;
 /// (1) Tiny subproblems (≤ InsertionSortCutoff) fall back to InsertionSort.
 /// (2) Subproblems too small for effective spreading (maxSplits &lt; 1) fall back to PDQSort.
 /// (3) All other subproblems use spread partition (bit-extraction distribution), with radixBits capped to diffBits.
-/// This decision based on XOR diff and subproblem size is the core SpreadSort principle that distinguishes it from plain MSD radix sort.</description></item>
+/// This decision based on XOR diff and subproblem size is a characteristic SpreadSort feature that differentiates it from plain MSD radix sort.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -53,7 +53,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Count Phase:</strong> Count elements per bucket using bit extraction: bucket = (key >> shift) &amp; mask</description></item>
 /// <item><description><strong>Offset Phase:</strong> Compute prefix sums to determine bucket boundaries</description></item>
 /// <item><description><strong>Distribute Phase:</strong> Place elements into their correct bucket positions using a temporary buffer</description></item>
-/// <item><description><strong>Iterate Phase:</strong> Advance to next lower bit group (nextShift = shift − radixBits); push each non-trivial bucket onto work stack</description></item>
+/// <item><description><strong>Iterate Phase:</strong> Push each non-trivial bucket onto the work stack; each subproblem recomputes its own shift from XOR diff, providing natural level-skipping</description></item>
 /// </list>
 /// <para><strong>Supported Types:</strong></para>
 /// <list type="bullet">
@@ -192,15 +192,18 @@ public static class SpreadSort
 
             // Phase 2: Determine bit range using XOR diff and compute shift
             // XOR reveals exactly which bit positions differ between min and max keys.
-            // This is a key SpreadSort principle: partition by the highest differing bits,
+            // This follows a SpreadSort approach: partition by the highest differing bits,
             // rather than dividing a numeric range into equal-width intervals.
             var diff = minKey ^ maxKey;
             int highestBit = 63 - BitOperations.LeadingZeroCount(diff);
             var diffBits = highestBit + 1; // number of differing bits
 
             // SpreadSort decision: should we spread or comparison-sort?
-            // maxSplits = how many radix levels this subproblem can sustain
-            // (logLength bins per level, each bin targets ~2^LogMeanBinSize elements).
+            // maxSplits = how many radix distribution levels this subproblem can sustain.
+            //   length ≈ 2^logLength elements.
+            //   Each bin targets on average 2^LogMeanBinSize elements.
+            //   Therefore the maximum number of useful distribution levels is
+            //   approximately logLength − LogMeanBinSize.
             // When maxSplits < 1, the subproblem is too small to benefit from spreading
             // and we fall back to comparison sort (PDQSort).
             var logLength = 31 - int.LeadingZeroCount(length);
@@ -214,10 +217,10 @@ public static class SpreadSort
                 continue;
             }
 
-            // Principled radixBits: distribute differing bits evenly across radix levels.
-            // This ensures each level extracts a proportional share of the key space,
-            // keeping average bin size around 2^LogMeanBinSize.
-            var radixBits = diffBits / maxSplits;
+            // Choose a radix width intended to keep average bin size near the target.
+            // Ceiling division helps avoid underallocating bits per level;
+            // e.g., diffBits=9, maxSplits=8 → 2 (not truncated to 1).
+            var radixBits = (diffBits + maxSplits - 1) / maxSplits;
             if (radixBits < MinBucketLogBits) radixBits = MinBucketLogBits;
             if (radixBits > MaxBucketLogBits) radixBits = MaxBucketLogBits;
 
@@ -259,8 +262,8 @@ public static class SpreadSort
 
             // All elements fell into one bucket (no progress).
             // Fall back to comparison sort to avoid infinite loop.
-            // With XOR-based shift this should not occur because min and max always differ
-            // at bit highestBit, guaranteeing at least 2 non-empty buckets. Kept as a safety net.
+            // With XOR-based shift this is unlikely because min and max differ
+            // at bit highestBit, which typically produces at least 2 non-empty buckets. Kept as a safety net.
             if (nonEmptyBuckets <= 1)
             {
                 PDQSort.SortCore(s, start, start + length);
