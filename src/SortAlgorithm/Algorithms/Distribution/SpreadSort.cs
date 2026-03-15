@@ -6,54 +6,42 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// MSD Radix/ビット抽出ベースのハイブリッド分配ソートアルゴリズムの実装。
-/// キーの上位ビットからビット抽出によりバケットに分配し、バケット内を再帰的にソートします。
-/// ビット差分と部分問題サイズに基づく3段階フォールバック (InsertionSort / PDQSort / Spread分配) で、最悪ケースでもO(n log²n)を保証します。
+/// Boost C++ SpreadSort の integer_sort をベースにした整数ソート実装。
+/// Boost.Sort のチューニング定数・アルゴリズム構造を参考に、C# / SortSpan 向けに適応しています。
 /// <br/>
-/// An MSD radix/bit-extraction based hybrid distribution sorting algorithm.
-/// Extracts upper bits from unsigned keys to distribute elements into buckets, then recursively sorts each bucket.
-/// Uses a three-tier fallback (InsertionSort / PDQSort / Spread partition) based on bit difference and subproblem size,
-/// guaranteeing O(n log²n) worst case.
+/// An integer sorting implementation based on the Boost C++ SpreadSort integer_sort algorithm.
+/// Adopts Boost's tuning constants, range-based bucket calculation, in-place 3-way swap distribution,
+/// per-bucket dynamic fallback via <c>get_min_count</c>, and <c>is_sorted_or_find_extremes</c> early detection,
+/// adapted for C# generics and the SortSpan abstraction.
 /// </summary>
 /// <remarks>
-/// <para><strong>Theoretical Conditions for Correct SpreadSort:</strong></para>
-/// <list type="number">
-/// <item><description><strong>Sign-Bit Flipping for Signed Integers:</strong> For signed types, the sign bit is flipped to convert signed values to unsigned keys,
-/// ensuring correct ordering of negative values before positive values without separate processing.</description></item>
-/// <item><description><strong>Adaptive Radix Width:</strong> The radix width (number of bits extracted per level) is determined
-/// by a SpreadSort-derived rule: radixBits = ⌈diffBits / maxSplits⌉, where maxSplits = log₂(n) − LogMeanBinSize.
-/// Ceiling division avoids underallocating bits per level. The result is further capped by diffBits (available bit difference),
-/// logLength (element count), and MaxBucketLogBits (memory), targeting ~2^LogMeanBinSize elements per bin.</description></item>
-/// <item><description><strong>Bit-Extraction Distribution:</strong> Each element is mapped to a bucket using:
-/// bucket = ((key >> shift) &amp; mask), where shift is the lowest bit position of the target group and mask = (1 &lt;&lt; radixBits) - 1.
-/// This extracts a specific bit group from each key, providing MSD radix-style partitioning.</description></item>
-/// <item><description><strong>Iterative Processing:</strong> Each non-empty bucket is sorted iteratively using an explicit stack of work items.
-/// Base cases: buckets with 0 or 1 elements are already sorted; small buckets fall back to insertion sort.</description></item>
-/// <item><description><strong>Three-Tier Fallback:</strong> The algorithm uses three tiers based on subproblem size and bit difference:
-/// (1) Tiny subproblems (≤ InsertionSortCutoff) fall back to InsertionSort.
-/// (2) Subproblems too small for effective spreading (maxSplits &lt; 1) fall back to PDQSort.
-/// (3) All other subproblems use spread partition (bit-extraction distribution), with radixBits capped to diffBits.
-/// This decision based on XOR diff and subproblem size is a characteristic SpreadSort feature that differentiates it from plain MSD radix sort.</description></item>
+/// <para><strong>Design Decisions Based on Boost:</strong></para>
+/// <list type="bullet">
+/// <item><description><strong>min_sort_size = 1000:</strong> Arrays smaller than 1000 elements fall back to PDQSort immediately (Boost: <c>min_sort_size</c>).</description></item>
+/// <item><description><strong>Range-based bucket index:</strong> <c>bucket = (key >> log_divisor) - div_min</c> produces value-proportional bucket counts (Boost: <c>spreadsort_rec</c>).</description></item>
+/// <item><description><strong>In-place 3-way swap:</strong> In-place distribution based on Boost's 3-way swap loop, requiring O(1) auxiliary space (Boost: <c>inner_swap_loop</c>).</description></item>
+/// <item><description><strong>get_min_count per-bucket fallback:</strong> Computes a dynamic threshold from remaining bit range to decide pdqsort fallback per bucket (Boost: <c>get_min_count</c>).</description></item>
+/// <item><description><strong>is_sorted_or_find_extremes:</strong> Combines sorted-detection and min/max search in a single pass (Boost: <c>is_sorted_or_find_extremes</c>).</description></item>
+/// <item><description><strong>get_log_divisor:</strong> Adaptive radix width calculation with <c>max_finishing_splits</c> one-pass completion optimization (Boost: <c>get_log_divisor</c>).</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Distribution (Hybrid: Distribution + Comparison via PDQSort + Insertion)</description></item>
-/// <item><description>Stable      : No (elements are redistributed across buckets)</description></item>
-/// <item><description>In-place    : No (requires O(n) auxiliary space for bucket storage)</description></item>
-/// <item><description>Best case   : O(n) - When distribution is perfectly uniform</description></item>
+/// <item><description>Stable      : No (elements are redistributed across buckets via in-place swaps)</description></item>
+/// <item><description>In-place    : Partially (distribution is in-place, but this implementation uses an auxiliary bin cache).</description></item>
+/// <item><description>Best case   : O(n) - When data is already sorted (early detection)</description></item>
 /// <item><description>Average case: O(n √(log n)) - Hybrid distribution and comparison</description></item>
-/// <item><description>Worst case  : O(n log²n) - When distribution provides no benefit</description></item>
-/// <item><description>Memory      : O(n) auxiliary space for bucket arrays and count arrays</description></item>
+/// <item><description>Worst case  : O(n * (K/S + S)) where K = log₂(range), S = max_splits</description></item>
+/// <item><description>Memory      : O(n) auxiliary metadata in this implementation (bin_sizes on stack, bin_cache via ArrayPool)</description></item>
 /// </list>
-/// <para><strong>Algorithm Overview:</strong></para>
-/// <para>The algorithm consists of these phases per iteration:</para>
-/// <list type="number">
-/// <item><description><strong>Find Diff:</strong> Determine min and max unsigned keys; compute XOR diff to identify differing bit positions</description></item>
-/// <item><description><strong>Calculate Shift:</strong> Adaptively compute radix width from subproblem size; derive shift from highest differing bit (adaptive level-skip)</description></item>
-/// <item><description><strong>Count Phase:</strong> Count elements per bucket using bit extraction: bucket = (key >> shift) &amp; mask</description></item>
-/// <item><description><strong>Offset Phase:</strong> Compute prefix sums to determine bucket boundaries</description></item>
-/// <item><description><strong>Distribute Phase:</strong> Place elements into their correct bucket positions using a temporary buffer</description></item>
-/// <item><description><strong>Iterate Phase:</strong> Push each non-trivial bucket onto the work stack; each subproblem recomputes its own shift from XOR diff, providing natural level-skipping</description></item>
+/// <para><strong>Boost Constants (from constants.hpp):</strong></para>
+/// <list type="bullet">
+/// <item><description>max_splits = 11 — Maximum radix bits per level (cache-tuned)</description></item>
+/// <item><description>max_finishing_splits = 12 — Relaxed limit for single-pass completion</description></item>
+/// <item><description>int_log_mean_bin_size = 2 — Target ~4 elements per bin</description></item>
+/// <item><description>int_log_min_split_count = 9 — Minimum split count for spreading</description></item>
+/// <item><description>int_log_finishing_count = 31 — Threshold for single-pass completion</description></item>
+/// <item><description>min_sort_size = 1000 — Minimum size to use spreadsort</description></item>
 /// </list>
 /// <para><strong>Supported Types:</strong></para>
 /// <list type="bullet">
@@ -61,21 +49,22 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Not Supported:</strong> nint, nuint (platform-dependent bit width), Int128, UInt128, BigInteger</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
-/// <para>Wiki: https://en.wikipedia.org/wiki/Spreadsort</para>
 /// <para>Boost.Sort SpreadSort: https://www.boost.org/doc/libs/release/libs/sort/doc/html/sort/sort_hpp/spreadsort.html</para>
 /// <para>Paper: "Spreadsort: A Cache-Friendly Sorting Algorithm" by Steven Ross (2002)</para>
 /// </remarks>
 public static class SpreadSort
 {
-    private const int InsertionSortCutoff = 16; // Switch to insertion sort for small ranges
-    private const int LogMeanBinSize = 2;       // Target ~4 elements per bin on average (Boost SpreadSort: LOG_MEAN_BIN_SIZE)
-    private const int MaxBucketLogBits = 11;    // Max log2(bucketCount) to avoid excessive memory (Boost SpreadSort: MAX_SPLITS)
-    private const int MinBucketLogBits = 1;     // Minimum meaningful bucket split
-    private const int StackAllocThreshold = 128; // Use stackalloc for work stack when element count is at or below this
+    // Boost constants from constants.hpp
+    const int MaxSplits = 11;                         // max_splits: max log₂(bucketCount) per level
+    const int MaxFinishingSplits = MaxSplits + 1;     // max_finishing_splits: relaxed limit for one-pass completion
+    const int LogMeanBinSize = 2;                     // int_log_mean_bin_size: target ~4 elements per bin
+    const int LogMinSplitCount = 9;                   // int_log_min_split_count: minimum split count for spreading
+    const int LogFinishingCount = 31;                 // int_log_finishing_count: threshold for one-pass completion
+    const int MinSortSize = 1000;                     // min_sort_size: minimum size to use spreadsort
+    const int InsertionSortCutoff = 16;               // Switch to insertion sort for tiny ranges within bins
 
     // Buffer identifiers for visualization
-    private const int BUFFER_MAIN = 0;       // Main input array
-    private const int BUFFER_TEMP = 1;       // Temporary buffer
+    const int BUFFER_MAIN = 0;
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order.
@@ -103,255 +92,308 @@ public static class SpreadSort
 
         var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, new ComparableComparer<T>(), BUFFER_MAIN);
 
-        if (s.Length <= InsertionSortCutoff)
+        // Boost: Don't sort if it's too small to optimize (min_sort_size = 1000)
+        if (s.Length < MinSortSize)
         {
-            InsertionSort.SortCore(s, 0, s.Length);
+            PDQSort.SortCore(s, 0, s.Length);
             return;
         }
 
         SortCore(s);
     }
 
-    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s)
+    static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // counts and writePos are bounded by MaxBucketLogBits (2048 ints = 8KB each) - always stackalloc
-        Span<int> counts = stackalloc int[1 << MaxBucketLogBits];
-        Span<int> writePos = stackalloc int[1 << MaxBucketLogBits];
+        // Boost: bin_sizes array sized to 1 << max_finishing_splits (4096)
+        Span<int> binSizes = stackalloc int[1 << MaxFinishingSplits];
 
-        // temp buffer requires ArrayPool (can't stackalloc generic T without unmanaged constraint)
-        var rentedTemp = ArrayPool<T>.Shared.Rent(s.Length);
-
-        // Work stack size bound (n ints):
-        //   Invariant: the sum of lengths across all work items on the stack is always <= n.
-        //   - Pop removes L from the sum; Push adds back at most L (buckets partition the range).
-        //   - Each pushed item has length >= 2 (we skip length <= 1).
-        //   - Therefore max simultaneous items = floor(n/2), needing floor(n/2)*2 = n ints.
-        //   No shift is stored: each subproblem recomputes its own shift from XOR diff,
-        //   which naturally provides adaptive level-skipping for shared upper bits.
-        int[]? rentedStack = null;
-        Span<int> stack = s.Length <= StackAllocThreshold
-            ? stackalloc int[s.Length]                     // Small: stackalloc work stack (128 ints = 512B)
-            : (rentedStack = ArrayPool<int>.Shared.Rent(s.Length)).AsSpan(0, s.Length);
+        // Boost: bin_cache is a std::vector<RandomAccessIter> shared across recursive levels.
+        // Each level writes its bin boundaries into binCache[cacheOffset..cacheEnd).
+        // Siblings never coexist on the stack — the parent loops sequentially, so each
+        // child reuses the region starting at the parent's cacheEnd. Only the current
+        // ancestor chain's regions are live at any time.
+        //
+        // Worst-case depth is bounded: each bin has >= 2 elements (singletons are skipped),
+        // and the deepest chain of bins partitions n elements, so the sum of binCounts
+        // along any root-to-leaf path is <= n. Pre-allocating s.Length is therefore sufficient.
+        var rentedCache = ArrayPool<int>.Shared.Rent(s.Length);
         try
         {
-            var temp = new SortSpan<T, TComparer, TContext>(rentedTemp.AsSpan(0, s.Length), s.Context, s.Comparer, BUFFER_TEMP);
-            SpreadSortIterative(s, temp, counts, writePos, stack);
+            var binCache = rentedCache.AsSpan(0, s.Length);
+            SpreadSortRec(s, 0, s.Length, binCache, 0, binSizes);
         }
         finally
         {
-            ArrayPool<T>.Shared.Return(rentedTemp);
-            if (rentedStack != null)
-                ArrayPool<int>.Shared.Return(rentedStack);
+            ArrayPool<int>.Shared.Return(rentedCache);
         }
     }
 
-    private static void SpreadSortIterative<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> counts, Span<int> writePos, Span<int> stack)
+    /// <summary>
+    /// Recursive SpreadSort implementation, inspired by Boost's spreadsort_rec.
+    /// </summary>
+    static void SpreadSortRec<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        int first, int last,
+        Span<int> binCache, int cacheOffset,
+        Span<int> binSizes)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Initialize with the full range (no initial push needed)
-        var start = 0;
-        var length = s.Length;
-        var stackTop = 0;
+        var count = last - first;
 
-        while (true)
+        // Boost: is_sorted_or_find_extremes — combined sorted check + min/max finding
+        if (!IsSortedOrFindExtremes(s, first, last, out var minIdx, out var maxIdx))
+            return; // Already sorted
+
+        var minKey = GetUnsignedKey(s.Read(minIdx));
+        var maxKey = GetUnsignedKey(s.Read(maxIdx));
+
+        // Compute log₂ of the value range (Boost: rough_log_2_size(max - min))
+        var range = maxKey - minKey;
+        var logRange = RoughLog2Size(range);
+
+        // Boost: get_log_divisor — adaptive radix width calculation
+        var logDivisor = GetLogDivisor(count, logRange);
+
+        // Boost: bucket boundaries via range-based division
+        var divMin = (long)(minKey >> logDivisor);
+        var divMax = (long)(maxKey >> logDivisor);
+        var binCount = (int)(divMax - divMin) + 1;
+
+        // Boost: size_bins — clear bin_sizes and ensure bin_cache has space
+        var cacheEnd = cacheOffset + binCount;
+
+        var currentBinSizes = binSizes[..binCount];
+        currentBinSizes.Clear();
+        var bins = binCache.Slice(cacheOffset, binCount);
+
+        // Phase 1: Count elements per bin (Boost: ~10% of runtime)
+        s.Context.OnPhase(SortPhase.DistributionCount);
+        for (var i = first; i < last; i++)
         {
-            // Drain: handle trivial/small ranges by consuming or popping from stack.
-            // This is the single exit point - all code paths that finish a subproblem
-            // set length <= InsertionSortCutoff (or 0) and continue here.
-            while (length <= InsertionSortCutoff)
-            {
-                if (length > 1)
-                    InsertionSort.SortCore(s, start, start + length);
-                if (stackTop == 0) return;
-                length = stack[--stackTop];
-                start = stack[--stackTop];
-            }
-
-            // Phase 1: Find min and max keys, compute XOR diff
-            var minKey = GetUnsignedKey(s.Read(start));
-            var maxKey = minKey;
-
-            for (var i = 1; i < length; i++)
-            {
-                var key = GetUnsignedKey(s.Read(start + i));
-                if (key < minKey) minKey = key;
-                if (key > maxKey) maxKey = key;
-            }
-
-            // All elements have the same key - already sorted
-            if (minKey == maxKey)
-            {
-                length = 0;
-                continue;
-            }
-
-            // Phase 2: Determine bit range using XOR diff and compute shift
-            // XOR reveals exactly which bit positions differ between min and max keys.
-            // This follows a SpreadSort approach: partition by the highest differing bits,
-            // rather than dividing a numeric range into equal-width intervals.
-            var diff = minKey ^ maxKey;
-            int highestBit = 63 - BitOperations.LeadingZeroCount(diff);
-            var diffBits = highestBit + 1; // number of differing bits
-
-            // SpreadSort decision: should we spread or comparison-sort?
-            // maxSplits = how many radix distribution levels this subproblem can sustain.
-            //   length ≈ 2^logLength elements.
-            //   Each bin targets on average 2^LogMeanBinSize elements.
-            //   Therefore the maximum number of useful distribution levels is
-            //   approximately logLength − LogMeanBinSize.
-            // When maxSplits < 1, the subproblem is too small to benefit from spreading
-            // and we fall back to comparison sort (PDQSort).
-            var logLength = 31 - int.LeadingZeroCount(length);
-            var maxSplits = logLength - LogMeanBinSize;
-
-            if (maxSplits < 1)
-            {
-                // Comparison sort fallback: subproblem is too small for effective spreading.
-                PDQSort.SortCore(s, start, start + length);
-                length = 0;
-                continue;
-            }
-
-            // Choose a radix width intended to keep average bin size near the target.
-            // Ceiling division helps avoid underallocating bits per level;
-            // e.g., diffBits=9, maxSplits=8 → 2 (not truncated to 1).
-            var radixBits = (diffBits + maxSplits - 1) / maxSplits;
-            if (radixBits < MinBucketLogBits) radixBits = MinBucketLogBits;
-            if (radixBits > MaxBucketLogBits) radixBits = MaxBucketLogBits;
-
-            // Cap so bucketCount = 1 << radixBits does not exceed element count.
-            // floor(log2(n)) guarantees 1 << floor(log2(n)) <= n.
-            if (radixBits > logLength) radixBits = logLength;
-
-            // Cap so we don't try to extract more bits than actually differ.
-            // e.g., diffBits=2 with radixBits=3 would overextract; cap to diffBits
-            // so the split stays within the meaningful bit range.
-            if (radixBits > diffBits) radixBits = diffBits;
-
-            // Compute effective shift: extract radixBits from the highest differing bit downward.
-            // This provides adaptive level-skipping: when a bucket's elements share common upper bits,
-            // the XOR diff reveals the actual differing range, and we jump directly to those bits
-            // instead of stepping through empty radix levels.
-            var shift = highestBit + 1 - radixBits;
-            if (shift < 0) shift = 0;
-
-            var bucketCount = 1 << radixBits;
-            var mask = (ulong)(bucketCount - 1);
-
-            var bucketCounts = counts[..bucketCount];
-            bucketCounts.Clear();
-
-            // Phase 3: Count elements per bucket using bit extraction
-            // bucket = (key >> shift) & mask extracts the target bit group directly,
-            // unlike range-based partitioning which uses (key - minKey) >> shift.
-            // Track non-empty bucket count inline: increment only on 0→1 transition
-            // to avoid a separate counting pass over bucketCounts.
-            var nonEmptyBuckets = 0;
-            s.Context.OnPhase(SortPhase.DistributionCount);
-            for (var i = 0; i < length; i++)
-            {
-                var key = GetUnsignedKey(s.Read(start + i));
-                var bucket = (int)((key >> shift) & mask);
-                if (bucketCounts[bucket]++ == 0) nonEmptyBuckets++;
-            }
-
-            // All elements fell into one bucket (no progress).
-            // Fall back to comparison sort to avoid infinite loop.
-            // With XOR-based shift this is unlikely because min and max differ
-            // at bit highestBit, which typically produces at least 2 non-empty buckets. Kept as a safety net.
-            if (nonEmptyBuckets <= 1)
-            {
-                PDQSort.SortCore(s, start, start + length);
-                length = 0; continue;
-            }
-
-            // Phase 4: Compute prefix sums (bucket offsets)
-            s.Context.OnPhase(SortPhase.DistributionAccumulate);
-            var prefixSum = 0;
-            for (var i = 0; i < bucketCount; i++)
-            {
-                var count = bucketCounts[i];
-                bucketCounts[i] = prefixSum;
-                prefixSum += count;
-            }
-
-            // Phase 5: Distribute elements into temp buffer using bit extraction
-            var bucketWritePos = writePos[..bucketCount];
-            bucketCounts.CopyTo(bucketWritePos);
-
-            s.Context.OnPhase(SortPhase.DistributionWrite);
-            const int tempStart = 0;
-            for (var i = 0; i < length; i++)
-            {
-                var value = s.Read(start + i);
-                var key = GetUnsignedKey(value);
-                var bucket = (int)((key >> shift) & mask);
-
-                // temp is reused as a scratch buffer at offset 0 for every subproblem
-                temp.Write(tempStart + bucketWritePos[bucket], value);
-                bucketWritePos[bucket]++;
-            }
-
-            // Phase 6: Copy back from temp to main array
-            temp.CopyTo(tempStart, s, start, length);
-
-            // Phase 7: Largest-first push optimization
-            // Each bucket's subproblem will recompute its own shift from XOR diff,
-            // which naturally provides adaptive level-skipping for shared upper bits.
-            // Select the largest bucket as the next inline subproblem.
-            // Trivial sizes are handled by the drain loop above, similar in spirit
-            // to QuickSort's "recurse on smaller, iterate on larger" optimization.
-            var largestIdx = 0;
-            var largestLen = 0;
-            for (var i = 0; i < bucketCount; i++)
-            {
-                var bucketStart = bucketCounts[i];
-                var bucketEnd = (i + 1 < bucketCount) ? bucketCounts[i + 1] : length;
-                var bucketLength = bucketEnd - bucketStart;
-                if (bucketLength > largestLen)
-                {
-                    largestLen = bucketLength;
-                    largestIdx = i;
-                }
-            }
-
-            // Push all non-trivial buckets except the largest
-            for (var i = 0; i < bucketCount; i++)
-            {
-                if (i == largestIdx) continue;
-                var bucketStart = bucketCounts[i];
-                var bucketEnd = (i + 1 < bucketCount) ? bucketCounts[i + 1] : length;
-                var bucketLength = bucketEnd - bucketStart;
-
-                if (bucketLength > 1)
-                {
-                    if (stackTop + 2 > stack.Length)
-                        throw new InvalidOperationException("Internal work stack overflow.");
-                    stack[stackTop++] = start + bucketStart;
-                    stack[stackTop++] = bucketLength;
-                }
-            }
-
-            // Process the largest bucket inline (tail-call optimization).
-            // If largestLen <= InsertionSortCutoff, the drain loop at the top handles it.
-            start += bucketCounts[largestIdx];
-            length = largestLen;
+            var key = GetUnsignedKey(s.Read(i));
+            var bin = (int)((long)(key >> logDivisor) - divMin);
+            currentBinSizes[bin]++;
         }
+
+        // Phase 2: Compute bin positions (prefix sum using absolute indices)
+        s.Context.OnPhase(SortPhase.DistributionAccumulate);
+        bins[0] = first;
+        for (var u = 0; u < binCount - 1; u++)
+            bins[u + 1] = bins[u] + currentBinSizes[u];
+
+        // Phase 3: In-place 3-way swap (Boost: dominates runtime)
+        // Each bin position pointer advances as elements are swapped into place.
+        s.Context.OnPhase(SortPhase.DistributionWrite);
+        var nextBinStart = first;
+        for (var u = 0; u < binCount - 1; u++)
+        {
+            var localBinPos = bins[u];
+            nextBinStart += currentBinSizes[u];
+            for (var current = localBinPos; current < nextBinStart; current++)
+            {
+                var targetBin = (int)((long)(GetUnsignedKey(s.Read(current)) >> logDivisor) - divMin);
+                while (targetBin != u)
+                {
+                    // 3-way swap: reduces copies per item (Boost: ~1% faster than 2-way)
+                    var b = bins[targetBin]++;
+                    var bBin = (int)((long)(GetUnsignedKey(s.Read(b)) >> logDivisor) - divMin);
+
+                    T tmp;
+                    if (bBin != u)
+                    {
+                        var c = bins[bBin]++;
+                        tmp = s.Read(c);
+                        s.Write(c, s.Read(b));
+                    }
+                    else
+                    {
+                        tmp = s.Read(b);
+                    }
+                    s.Write(b, s.Read(current));
+                    s.Write(current, tmp);
+
+                    targetBin = (int)((long)(GetUnsignedKey(s.Read(current)) >> logDivisor) - divMin);
+                }
+            }
+            bins[u] = nextBinStart;
+        }
+        bins[binCount - 1] = last;
+
+        // Boost: If we've bucket-sorted (log_divisor == 0), the array is fully sorted
+        if (logDivisor == 0)
+            return;
+
+        // Boost: get_min_count — dynamic threshold for per-bucket pdqsort fallback
+        var maxCount = GetMinCount(logDivisor);
+
+        // Phase 4: Recurse on each bin
+        var lastPos = first;
+        for (var u = cacheOffset; u < cacheEnd; u++)
+        {
+            var binEnd = binCache[u];
+            var binLength = binEnd - lastPos;
+            lastPos = binEnd;
+
+            if (binLength < 2)
+                continue;
+
+            // Boost: use pdqsort if its worst-case is better for this bin
+            if (binLength < maxCount)
+            {
+                if (binLength <= InsertionSortCutoff)
+                    InsertionSort.SortCore(s, binEnd - binLength, binEnd);
+                else
+                    PDQSort.SortCore(s, binEnd - binLength, binEnd);
+            }
+            else
+            {
+                SpreadSortRec(s, binEnd - binLength, binEnd, binCache, cacheEnd, binSizes);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Boost: is_sorted_or_find_extremes — combined sorted check and min/max finding.
+    /// Returns true if NOT sorted (i.e., needs sorting). Returns false if already sorted.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static bool IsSortedOrFindExtremes<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        int first, int last,
+        out int minIdx, out int maxIdx)
+        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        minIdx = first;
+        maxIdx = first;
+
+        var current = first;
+        // Walk sorted prefix: advance while next element >= current
+        while (s.Compare(current + 1, current) >= 0)
+        {
+            if (++current == last - 1)
+                return false; // Entire range is sorted
+        }
+
+        // The maximum so far is the last element of the sorted prefix
+        maxIdx = current;
+
+        // Continue to find true min and max
+        while (++current < last)
+        {
+            if (s.Compare(current, maxIdx) > 0)
+                maxIdx = current;
+            else if (s.Compare(current, minIdx) < 0)
+                minIdx = current;
+        }
+
+        return true; // Not sorted, needs sorting
+    }
+
+    /// <summary>
+    /// Boost: rough_log_2_size — Returns the number of bits required to represent the non-zero range.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static int RoughLog2Size(ulong input)
+    {
+        if (input == 0) return 0;
+        return 64 - BitOperations.LeadingZeroCount(input);
+    }
+
+    /// <summary>
+    /// Boost: get_log_divisor — compute the right-shift amount (bits to discard).
+    /// Radix width = logRange - logDivisor.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static int GetLogDivisor(int count, int logRange)
+    {
+        int logDivisor;
+
+        // Boost: If we can finish in one iteration without exceeding
+        // max_finishing_splits or n bins, do so (log_divisor = 0 means use all bits)
+        logDivisor = logRange - RoughLog2Size((ulong)count);
+        if (logDivisor <= 0 && logRange <= MaxFinishingSplits)
+        {
+            logDivisor = 0;
+        }
+        else
+        {
+            // Otherwise divide the data into an optimized number of pieces
+            if (logDivisor < 0) logDivisor = 0;
+            logDivisor += LogMeanBinSize;
+
+            // Cannot exceed max_splits or cache misses slow down bin lookups
+            if ((logRange - logDivisor) > MaxSplits)
+                logDivisor = logRange - MaxSplits;
+        }
+
+        return logDivisor;
+    }
+
+    /// <summary>
+    /// Boost: get_min_count — compute the minimum element count for spreading to be worthwhile.
+    /// Below this threshold, comparison sort (pdqsort) is used instead.
+    /// This is the core optimization of the SpreadSort algorithm.
+    /// </summary>
+    static int GetMinCount(int logRange)
+    {
+        const int minSize = LogMeanBinSize + LogMinSplitCount; // 2 + 9 = 11
+
+        // Boost: if we can complete in one iteration, do so
+        if (LogFinishingCount < minSize)
+        {
+            if (logRange <= minSize && logRange <= MaxSplits)
+            {
+                if (logRange <= LogFinishingCount)
+                    return 1 << LogFinishingCount;
+                return 1 << logRange;
+            }
+        }
+
+        var baseIterations = MaxSplits - LogMinSplitCount; // 11 - 9 = 2
+        // sum of n to n + x = ((x + 1) * (n + (n + x)))/2 + log_mean_bin_size
+        var baseRange = ((baseIterations + 1) * (MaxSplits + LogMinSplitCount)) / 2
+                        + LogMeanBinSize; // ((2+1)*(11+9))/2 + 2 = 32
+
+        if (logRange < baseRange)
+        {
+            var result = LogMinSplitCount; // 9
+            for (var offset = minSize; offset < logRange; offset += ++result)
+            {
+                // intentionally empty; result is incremented in the loop
+            }
+            // Preventing overflow: Boost uses size_t (unsigned 64-bit) so 1 << 63 is valid,
+            // but C# int is signed 32-bit where 1 << 31 = int.MinValue. Saturate at >= 31.
+            var shift = result + LogMeanBinSize;
+            if (shift >= 31)
+                return int.MaxValue;
+            return 1 << shift;
+        }
+
+        // Quick division for larger ranges
+        var remainder = logRange - baseRange;
+        var bitLength = ((MaxSplits - 1 + remainder) / MaxSplits)
+                        + baseIterations + minSize;
+
+        // Preventing overflow: Boost uses size_t (unsigned 64-bit) so 1 << 63 is valid,
+        // but C# int is signed 32-bit where 1 << 31 = int.MinValue. Saturate at >= 31.
+        if (bitLength >= 31)
+            return int.MaxValue;
+
+        return 1 << bitLength;
     }
 
     /// <summary>
     /// Validates that type T is a supported fixed-width integer type.
     /// Throws <see cref="NotSupportedException"/> for unsupported types.
     /// </summary>
-    /// <remarks>
-    /// Called once at the Sort entry point, not on the hot path.
-    /// </remarks>
-    private static void ThrowIfUnsupportedType<T>() where T : IBinaryInteger<T>
+    static void ThrowIfUnsupportedType<T>() where T : IBinaryInteger<T>
     {
         if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte) ||
             typeof(T) == typeof(short) || typeof(T) == typeof(ushort) ||
@@ -371,12 +413,8 @@ public static class SpreadSort
     /// Converts a value to an unsigned key for distribution sorting.
     /// For signed types, flips the sign bit to ensure correct ordering.
     /// </summary>
-    /// <remarks>
-    /// Uses a flat <c>typeof(T)</c> chain instead of runtime bitSize branching.
-    /// The JIT eliminates all non-matching branches for each value type specialization.
-    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong GetUnsignedKey<T>(T value) where T : IBinaryInteger<T>
+    static ulong GetUnsignedKey<T>(T value) where T : IBinaryInteger<T>
     {
         // 8-bit
         if (typeof(T) == typeof(byte))
@@ -402,7 +440,6 @@ public static class SpreadSort
         if (typeof(T) == typeof(long))
             return (ulong)long.CreateTruncating(value) ^ 0x8000_0000_0000_0000;
 
-        // Unreachable when ThrowIfUnsupportedType is called at the entry point
         throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
     }
 }
