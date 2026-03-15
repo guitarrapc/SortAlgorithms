@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
@@ -187,9 +187,10 @@ public static class SpreadSort
             if (logBuckets > MaxBucketLogBits) logBuckets = MaxBucketLogBits;
 
             // Cap bucket count so that bucketCount = 1 << logBuckets does not exceed length.
-            // Log2 returns floor(log2(length)), guaranteeing 1 << floor(log2(n)) <= n.
-            var maxLogByLength = BitOperations.Log2((uint)length);
-            if (logBuckets > maxLogByLength) logBuckets = (int)maxLogByLength;
+            // floor(log2(n)) guarantees 1 << floor(log2(n)) <= n.
+            // length is int, so use int.LeadingZeroCount directly without type narrowing.
+            var maxLogByLength = 31 - int.LeadingZeroCount(length);
+            if (logBuckets > maxLogByLength) logBuckets = maxLogByLength;
 
             var bucketCount = 1 << logBuckets;
             var shift = (int)(rangeBits - logBuckets);
