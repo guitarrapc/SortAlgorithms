@@ -198,24 +198,20 @@ public static class SpreadSort
             bucketCounts.Clear();
 
             // Phase 3: Count elements per bucket
+            // Track non-empty bucket count inline: increment only on 0→1 transition
+            // to avoid a separate counting pass over bucketCounts.
+            var nonEmptyBuckets = 0;
             s.Context.OnPhase(SortPhase.DistributionCount);
             for (var i = 0; i < length; i++)
             {
                 var key = GetUnsignedKey(s.Read(start + i));
                 var bucket = (int)((key - minKey) >> shift);
                 if (bucket >= bucketCount) bucket = bucketCount - 1;
-                bucketCounts[bucket]++;
+                if (bucketCounts[bucket]++ == 0) nonEmptyBuckets++;
             }
 
-            // Check if all elements fell into one bucket (no progress)
+            // All elements fell into one bucket (no progress)
             // Fall back to insertion sort to avoid infinite loop
-            var nonEmptyBuckets = 0;
-            for (var i = 0; i < bucketCount; i++)
-            {
-                if (bucketCounts[i] > 0 && ++nonEmptyBuckets > 1)
-                    break;
-            }
-
             if (nonEmptyBuckets <= 1)
             {
                 InsertionSort.SortCore(s, start, start + length);
