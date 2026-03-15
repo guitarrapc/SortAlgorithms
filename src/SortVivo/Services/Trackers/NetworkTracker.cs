@@ -14,7 +14,6 @@ sealed class NetworkTracker : IVisualizationTracker
     private readonly bool?[] _comparatorResults;
     private int _currentComparatorIndex = 0;
     private int _activeComparatorIndex = -1;
-    private bool _pendingSwap = false;
     private (int, int)? _pendingCompare = null;
 
     // Decorate() 用キャッシュ
