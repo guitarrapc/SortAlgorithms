@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <InvariantTimezone>true</InvariantTimezone>
+
     <RunAOTCompilation>true</RunAOTCompilation>
   </PropertyGroup>
 
@@ -18,4 +21,3 @@
   </ItemGroup>
 
 </Project>
-
