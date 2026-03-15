@@ -345,16 +345,11 @@ public static class SpreadSort
     {
         const int minSize = LogMeanBinSize + LogMinSplitCount; // 2 + 9 = 11
 
-        // Boost: if we can complete in one iteration, do so
-        if (LogFinishingCount < minSize)
-        {
-            if (logRange <= minSize && logRange <= MaxSplits)
-            {
-                if (logRange <= LogFinishingCount)
-                    return 1 << LogFinishingCount;
-                return 1 << logRange;
-            }
-        }
+        // NOTE: Boost's get_min_count is a template parameterized on log_finishing_count,
+        // and includes a guard "if (log_finishing_count < min_size)" as a compile-time
+        // dead-code elimination hint for the float_sort variant (float_log_finishing_count=4 < 10).
+        // For integer_sort the constants are fixed: LogFinishingCount(31) >= minSize(11),
+        // so that block is always unreachable and is omitted here.
 
         var baseIterations = MaxSplits - LogMinSplitCount; // 11 - 9 = 2
         // sum of n to n + x = ((x + 1) * (n + (n + x)))/2 + log_mean_bin_size
