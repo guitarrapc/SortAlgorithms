@@ -6,32 +6,33 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// Boost C++ SpreadSort に忠実な整数ソート実装。
-/// Boost.Sort の integer_sort のアルゴリズムとチューニング定数をそのまま C# に移植しています。
+/// Boost C++ SpreadSort の integer_sort をベースにした整数ソート実装。
+/// Boost.Sort のチューニング定数・アルゴリズム構造を参考に、C# / SortSpan 向けに適応しています。
 /// <br/>
-/// A faithful C# port of the Boost C++ SpreadSort integer_sort algorithm.
-/// Preserves Boost's tuning constants, range-based bucket calculation, in-place 3-way swap distribution,
-/// per-bucket dynamic fallback via <c>get_min_count</c>, and <c>is_sorted_or_find_extremes</c> early detection.
+/// An integer sorting implementation based on the Boost C++ SpreadSort integer_sort algorithm.
+/// Adopts Boost's tuning constants, range-based bucket calculation, in-place 3-way swap distribution,
+/// per-bucket dynamic fallback via <c>get_min_count</c>, and <c>is_sorted_or_find_extremes</c> early detection,
+/// adapted for C# generics and the SortSpan abstraction.
 /// </summary>
 /// <remarks>
-/// <para><strong>Key Boost-Faithful Design Decisions:</strong></para>
+/// <para><strong>Design Decisions Based on Boost:</strong></para>
 /// <list type="bullet">
-/// <item><description><strong>min_sort_size = 1000:</strong> Arrays smaller than 1000 elements fall back to PDQSort immediately, matching Boost's threshold.</description></item>
-/// <item><description><strong>Range-based bucket index:</strong> <c>bucket = (key >> log_divisor) - div_min</c>, producing value-proportional bucket counts (not fixed power-of-two).</description></item>
-/// <item><description><strong>In-place 3-way swap:</strong> Elements are permuted in-place using Boost's 3-way swap loop, requiring O(1) auxiliary space instead of O(n) temp buffer.</description></item>
-/// <item><description><strong>get_min_count per-bucket fallback:</strong> Each bucket is independently evaluated against a dynamic threshold computed from remaining bit range, not just subproblem size.</description></item>
-/// <item><description><strong>is_sorted_or_find_extremes:</strong> Combined sorted-detection and min/max finding in a single pass, matching Boost's ~10% runtime optimization.</description></item>
-/// <item><description><strong>get_log_divisor:</strong> Boost's adaptive radix width calculation with <c>max_finishing_splits</c> one-pass completion optimization.</description></item>
+/// <item><description><strong>min_sort_size = 1000:</strong> Arrays smaller than 1000 elements fall back to PDQSort immediately (Boost: <c>min_sort_size</c>).</description></item>
+/// <item><description><strong>Range-based bucket index:</strong> <c>bucket = (key >> log_divisor) - div_min</c> produces value-proportional bucket counts (Boost: <c>spreadsort_rec</c>).</description></item>
+/// <item><description><strong>In-place 3-way swap:</strong> In-place distribution based on Boost's 3-way swap loop, requiring O(1) auxiliary space (Boost: <c>inner_swap_loop</c>).</description></item>
+/// <item><description><strong>get_min_count per-bucket fallback:</strong> Computes a dynamic threshold from remaining bit range to decide pdqsort fallback per bucket (Boost: <c>get_min_count</c>).</description></item>
+/// <item><description><strong>is_sorted_or_find_extremes:</strong> Combines sorted-detection and min/max search in a single pass (Boost: <c>is_sorted_or_find_extremes</c>).</description></item>
+/// <item><description><strong>get_log_divisor:</strong> Adaptive radix width calculation with <c>max_finishing_splits</c> one-pass completion optimization (Boost: <c>get_log_divisor</c>).</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Distribution (Hybrid: Distribution + Comparison via PDQSort + Insertion)</description></item>
 /// <item><description>Stable      : No (elements are redistributed across buckets via in-place swaps)</description></item>
-/// <item><description>In-place    : Yes (O(1) auxiliary space for distribution, bin metadata on stack)</description></item>
+/// <item><description>In-place    : Partially (distribution is in-place, but this implementation uses an auxiliary bin cache).</description></item>
 /// <item><description>Best case   : O(n) - When data is already sorted (early detection)</description></item>
 /// <item><description>Average case: O(n √(log n)) - Hybrid distribution and comparison</description></item>
 /// <item><description>Worst case  : O(n * (K/S + S)) where K = log₂(range), S = max_splits</description></item>
-/// <item><description>Memory      : O(1) auxiliary (bin metadata via stackalloc, bin_cache via ArrayPool)</description></item>
+/// <item><description>Memory      : O(n) auxiliary metadata in this implementation (bin_sizes on stack, bin_cache via ArrayPool)</description></item>
 /// </list>
 /// <para><strong>Boost Constants (from constants.hpp):</strong></para>
 /// <list type="bullet">
@@ -110,14 +111,19 @@ public static class SpreadSortBoost
         Span<int> binSizes = stackalloc int[1 << MaxFinishingSplits];
 
         // Boost: bin_cache is a std::vector<RandomAccessIter> shared across recursive levels.
-        // Each level appends its bin boundaries at cache_offset..cache_end.
-        // Use ArrayPool for the cache, preallocated to a reasonable initial size.
+        // Each level writes its bin boundaries into binCache[cacheOffset..cacheEnd).
+        // Siblings never coexist on the stack — the parent loops sequentially, so each
+        // child reuses the region starting at the parent's cacheEnd. Only the current
+        // ancestor chain's regions are live at any time.
+        //
+        // Worst-case depth is bounded: each bin has >= 2 elements (singletons are skipped),
+        // and the deepest chain of bins partitions n elements, so the sum of binCounts
+        // along any root-to-leaf path is <= n. Pre-allocating s.Length is therefore sufficient.
         var rentedCache = ArrayPool<int>.Shared.Rent(s.Length);
         try
         {
             var binCache = rentedCache.AsSpan(0, s.Length);
-            var binCacheLength = 0;
-            SpreadSortRec(s, 0, s.Length, binCache, 0, binSizes, ref binCacheLength);
+            SpreadSortRec(s, 0, s.Length, binCache, 0, binSizes);
         }
         finally
         {
@@ -126,14 +132,13 @@ public static class SpreadSortBoost
     }
 
     /// <summary>
-    /// Recursive SpreadSort implementation, faithfully mirroring Boost's spreadsort_rec.
+    /// Recursive SpreadSort implementation, inspired by Boost's spreadsort_rec.
     /// </summary>
     static void SpreadSortRec<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
         int first, int last,
         Span<int> binCache, int cacheOffset,
-        Span<int> binSizes,
-        ref int binCacheLength)
+        Span<int> binSizes)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -161,8 +166,6 @@ public static class SpreadSortBoost
 
         // Boost: size_bins — clear bin_sizes and ensure bin_cache has space
         var cacheEnd = cacheOffset + binCount;
-        if (cacheEnd > binCacheLength)
-            binCacheLength = cacheEnd;
 
         var currentBinSizes = binSizes[..binCount];
         currentBinSizes.Clear();
@@ -249,7 +252,7 @@ public static class SpreadSortBoost
             }
             else
             {
-                SpreadSortRec(s, binEnd - binLength, binEnd, binCache, cacheEnd, binSizes, ref binCacheLength);
+                SpreadSortRec(s, binEnd - binLength, binEnd, binCache, cacheEnd, binSizes);
             }
         }
     }
@@ -366,10 +369,11 @@ public static class SpreadSortBoost
                 // intentionally empty; result is incremented in the loop
             }
             // Preventing overflow: Boost uses size_t (unsigned 64-bit) so 1 << 63 is valid,
-            // but C# int is signed 32-bit where 1 << 31 = int.MinValue. Saturate to int.MaxValue.
-            if ((result + LogMeanBinSize) >= 8 * sizeof(int))
+            // but C# int is signed 32-bit where 1 << 31 = int.MinValue. Saturate at >= 31.
+            var shift = result + LogMeanBinSize;
+            if (shift >= 31)
                 return int.MaxValue;
-            return 1 << (result + LogMeanBinSize);
+            return 1 << shift;
         }
 
         // Quick division for larger ranges
@@ -378,8 +382,8 @@ public static class SpreadSortBoost
                         + baseIterations + minSize;
 
         // Preventing overflow: Boost uses size_t (unsigned 64-bit) so 1 << 63 is valid,
-        // but C# int is signed 32-bit where 1 << 31 = int.MinValue. Saturate to int.MaxValue.
-        if (bitLength >= 8 * sizeof(int))
+        // but C# int is signed 32-bit where 1 << 31 = int.MinValue. Saturate at >= 31.
+        if (bitLength >= 31)
             return int.MaxValue;
 
         return 1 << bitLength;
