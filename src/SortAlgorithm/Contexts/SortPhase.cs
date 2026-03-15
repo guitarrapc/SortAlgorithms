@@ -350,6 +350,13 @@ public enum SortPhase
     QuickSortPartition,
 
     /// <summary>
+    /// Quick Sort 3-way (Dutch National Flag) partition step: partitioning [left..right] around a pivot value.
+    /// After median-of-3 selection the pivot is moved to <c>left</c>.
+    /// param1=left, param2=right, param3=pivotIndex (== left)
+    /// </summary>
+    QuickSort3wayPartition,
+
+    /// <summary>
     /// Hybrid sort (IntroSort / PDQSort / StdSort / BlockQuickSort) switching to InsertionSort
     /// because the partition size is at or below the threshold.
     /// param1=left (inclusive), param2=right (inclusive), param3=threshold

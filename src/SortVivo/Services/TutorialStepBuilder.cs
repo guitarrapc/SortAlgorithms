@@ -54,7 +54,7 @@ public static class TutorialStepBuilder
                 // (FlashSortClassBoundary 等、表示テキストを持たない内部通知フェーズ向け)
                 if (!string.IsNullOrEmpty(phaseText))
                     currentPhase = phaseText;
-                tracker.ProcessPhase(op.PhaseKind, op.Index1, op.Index2, op.Length);
+                tracker.ProcessPhase(op.PhaseKind, op.Index1, op.Index2, op.Length, mainArray);
                 opIdx++;
                 continue;
             }
@@ -337,6 +337,8 @@ public static class TutorialStepBuilder
             SortAlgorithm.Contexts.SortPhase.QuickSortPartition => p3 >= 0
                 ? $"Partition [{p1}..{p2}] — pivot at [{p3}]"
                 : $"Partition [{p1}..{p2}]",
+            SortAlgorithm.Contexts.SortPhase.QuickSort3wayPartition =>
+                $"3-way partition [{p1}..{p2}] — pivot at [{p3}] (Dutch National Flag)",
             SortAlgorithm.Contexts.SortPhase.HybridToInsertionSort => $"Size {p2 - p1 + 1} ≤ {p3} → switch to InsertionSort [{p1}..{p2}]",
             SortAlgorithm.Contexts.SortPhase.HybridToHeapSort => $"Depth limit exceeded → switch to HeapSort [{p1}..{p2}]",
             SortAlgorithm.Contexts.SortPhase.PDQPartialInsertionSort => $"Already partitioned → try PartialInsertionSort [{p1}..{p2}]",
