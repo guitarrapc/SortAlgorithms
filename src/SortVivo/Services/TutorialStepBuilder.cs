@@ -279,6 +279,8 @@ public static class TutorialStepBuilder
         => phase switch
         {
             SortAlgorithm.Contexts.SortPhase.BubblePass => $"Pass {p1}/{p2}: bubbling max to position {p3}",
+            SortAlgorithm.Contexts.SortPhase.CircleSortPass => $"Pass {p1}: outer sweep (mirror compare/swap)",
+            SortAlgorithm.Contexts.SortPhase.CircleSortInterval => $"Circle [{p1}..{p2}] depth {p3}",
             SortAlgorithm.Contexts.SortPhase.SelectionFindMin => $"Find minimum in [{p1}..{p2}]",
             SortAlgorithm.Contexts.SortPhase.CocktailForwardPass => $"Pass {p1} forward →: bubbling max through [{p2}..{p3}]",
             SortAlgorithm.Contexts.SortPhase.CocktailBackwardPass => $"Pass {p1} backward ←: bubbling min through [{p2}..{p3}]",

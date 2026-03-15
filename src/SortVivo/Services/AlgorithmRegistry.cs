@@ -37,6 +37,8 @@ public class AlgorithmRegistry
         Add("Comb sort", "EXCHANGE", "O(n²)", MAX_SIZE_N2, 512, (arr, ctx) => CombSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Exchange", "CombSort"),
             tutorialVisualizationHint: TutorialVisualizationHint.ShellGap);
+        Add("Circle sort", "EXCHANGE", "O(n log² n)", MAX_SIZE_N2, 256, (arr, ctx) => CircleSort.Sort(arr, ctx),
+            gitHubSourceUrl: Src("Exchange", "CircleSort"));
 
         // Selection Sorts - O(n²) - 推奨256
         Add("Selection sort", "SELECTION", "O(n²)", MAX_SIZE_N2, 256, (arr, ctx) => SelectionSort.Sort(arr, ctx),

@@ -9,6 +9,8 @@
 /// <list type="table">
 ///   <listheader><term>Phase</term><description>param1 / param2 / param3</description></listheader>
 ///   <item><term>BubblePass</term><description>pass (current pass number) / totalPasses (total passes) / boundary (right boundary position)</description></item>
+///   <item><term>CircleSortPass</term><description>pass (current pass number, 1-based)</description></item>
+///   <item><term>CircleSortInterval</term><description>lo (interval start index) / hi (interval end index) / depth (recursion depth, 0-based)</description></item>
 ///   <item><term>SelectionFindMin</term><description>i (sorted boundary) / last (last index)</description></item>
 ///   <item><term>DoubleSelectionFindMinMax</term><description>left (left boundary) / right (right boundary)</description></item>
 ///   <item><term>CycleSortCycle</term><description>cycleStart (cycle start index) / last (last index)</description></item>
@@ -40,6 +42,18 @@ public enum SortPhase
     /// param1=pass (current pass number, 1-based), param2=totalPasses (total passes), param3=boundary (right boundary position)
     /// </summary>
     BubblePass,
+
+    /// <summary>
+    /// Circle Sort pass (outer iteration until no swaps).
+    /// param1=pass (current pass number, 1-based)
+    /// </summary>
+    CircleSortPass,
+
+    /// <summary>
+    /// Circle Sort recursive interval: mirrored compare/swap over [lo, hi].
+    /// param1=lo (interval start index), param2=hi (interval end index), param3=depth (recursion depth, 0-based)
+    /// </summary>
+    CircleSortInterval,
 
     /// <summary>
     /// Cocktail Shaker Sort forward pass (left to right, moving maximum to the right).
