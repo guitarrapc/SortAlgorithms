@@ -31,8 +31,8 @@ namespace SortAlgorithm.Algorithms;
 /// Base cases: buckets with 0 or 1 elements are already sorted; small buckets fall back to insertion sort.</description></item>
 /// <item><description><strong>Three-Tier Fallback:</strong> The algorithm uses three tiers based on subproblem size and bit difference:
 /// (1) Tiny subproblems (≤ InsertionSortCutoff) fall back to InsertionSort.
-/// (2) Medium subproblems or those with narrow bit difference (maxSplits &lt; 1 or diffBits ≤ LogMeanBinSize) fall back to PDQSort.
-/// (3) All other subproblems use spread partition (bit-extraction distribution).
+/// (2) Subproblems too small for effective spreading (maxSplits &lt; 1) fall back to PDQSort.
+/// (3) All other subproblems use spread partition (bit-extraction distribution), with radixBits capped to diffBits.
 /// This decision based on XOR diff and subproblem size is the core SpreadSort principle that distinguishes it from plain MSD radix sort.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -201,22 +201,20 @@ public static class SpreadSort
             // SpreadSort decision: should we spread or comparison-sort?
             // maxSplits = how many radix levels this subproblem can sustain
             // (logLength bins per level, each bin targets ~2^LogMeanBinSize elements).
-            // When maxSplits < 1 or diffBits are too few, spreading is not worthwhile
-            // and we fall back to comparison sort (PDQSort). This is the core SpreadSort
-            // rule that distinguishes it from plain MSD radix sort.
+            // When maxSplits < 1, the subproblem is too small to benefit from spreading
+            // and we fall back to comparison sort (PDQSort).
             var logLength = 31 - int.LeadingZeroCount(length);
             var maxSplits = logLength - LogMeanBinSize;
 
-            if (maxSplits < 1 || diffBits <= LogMeanBinSize)
+            if (maxSplits < 1)
             {
-                // Comparison sort fallback: subproblem is too small for effective spreading,
-                // or the remaining bit difference is too narrow to justify distribution.
+                // Comparison sort fallback: subproblem is too small for effective spreading.
                 PDQSort.SortCore(s, start, start + length);
                 length = 0;
                 continue;
             }
 
-            // Principled radixBits: estimate a radix width from remaining differing bits and the number of sustainable split levels.
+            // Principled radixBits: distribute differing bits evenly across radix levels.
             // This ensures each level extracts a proportional share of the key space,
             // keeping average bin size around 2^LogMeanBinSize.
             var radixBits = diffBits / maxSplits;
@@ -226,6 +224,11 @@ public static class SpreadSort
             // Cap so bucketCount = 1 << radixBits does not exceed element count.
             // floor(log2(n)) guarantees 1 << floor(log2(n)) <= n.
             if (radixBits > logLength) radixBits = logLength;
+
+            // Cap so we don't try to extract more bits than actually differ.
+            // e.g., diffBits=2 with radixBits=3 would overextract; cap to diffBits
+            // so the split stays within the meaningful bit range.
+            if (radixBits > diffBits) radixBits = diffBits;
 
             // Compute effective shift: extract radixBits from the highest differing bit downward.
             // This provides adaptive level-skipping: when a bucket's elements share common upper bits,
