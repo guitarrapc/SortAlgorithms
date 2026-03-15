@@ -1,4 +1,4 @@
-using SortVivo.Models;
+﻿using SortVivo.Models;
 using SortAlgorithm.Contexts;
 using SortAlgorithm.Algorithms;
 
@@ -219,6 +219,8 @@ public class AlgorithmRegistry
             tutorialLsdRadix: 10);
         Add("American flag sort", "DISTRIBUTION", "O(nk)", MAX_SIZE_NLOGN, 4096, (arr, ctx) => AmericanFlagSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Distribution", "AmericanFlagSort"));
+        Add("Spreadsort", "DISTRIBUTION", "O(n√(log n))", MAX_SIZE_NLOGN, 4096, (arr, ctx) => SpreadSort.Sort(arr, ctx),
+            gitHubSourceUrl: Src("Distribution", "SpreadSort"));
 
         // Network Sorts
         Add("Bitonic sort", "NETWORK", "O(log²n)", MAX_SIZE_N2, 2048, (arr, ctx) => BitonicSort.Sort(arr, ctx),

@@ -196,6 +196,19 @@ public static class PDQSort
     }
 
     /// <summary>
+    /// Internal entry point for other algorithms (e.g., SpreadSort) that already hold a <see cref="SortSpan{T,TComparer,TContext}"/>.
+    /// Sorts the subrange [first..last) using PDQSort.
+    /// </summary>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (last - first <= 1) return;
+        var badAllowed = Log2(last - first);
+        PDQSortLoop(s, first, last, badAllowed, true);
+    }
+
+    /// <summary>
     /// Main PDQSort loop with tail recursion elimination.
     /// </summary>
     private static void PDQSortLoop<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end, int badAllowed, bool leftmost)
