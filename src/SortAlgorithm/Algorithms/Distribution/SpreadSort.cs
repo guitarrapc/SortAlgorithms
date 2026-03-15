@@ -186,9 +186,10 @@ public static class SpreadSort
             if (logBuckets < MinBucketLogBits) logBuckets = MinBucketLogBits;
             if (logBuckets > MaxBucketLogBits) logBuckets = MaxBucketLogBits;
 
-            // Cap bucket count to not exceed element count
-            var logLength = 64 - BitOperations.LeadingZeroCount((ulong)length);
-            if (logBuckets > logLength) logBuckets = logLength;
+            // Cap bucket count so that bucketCount = 1 << logBuckets does not exceed length.
+            // Log2 returns floor(log2(length)), guaranteeing 1 << floor(log2(n)) <= n.
+            var maxLogByLength = BitOperations.Log2((uint)length);
+            if (logBuckets > maxLogByLength) logBuckets = (int)maxLogByLength;
 
             var bucketCount = 1 << logBuckets;
             var shift = (int)(rangeBits - logBuckets);
