@@ -748,6 +748,46 @@ a,
     outline: 1px solid red;
 }
 
+/* === Visualization overlay: touch (mobile) flash ===
+   タッチデバイスでグラフをタップしたとき、YouTube風に半透明アイコンが
+   一瞬表示されて自動的にフェードアウトする。
+   JS (visualizationOverlay.js) が .overlay-flash クラスを付与する。    */
+@keyframes viz-overlay-fade {
+    0%   { opacity: 1; }
+    50%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.bar-chart-container.overlay-flash::after,
+.circular-chart-container.overlay-flash::after,
+.disparity-chords-container.overlay-flash::after,
+.dot-plot-container.overlay-flash::after,
+.spiral-chart-container.overlay-flash::after,
+.picture-row-container.overlay-flash::after,
+.picture-column-container.overlay-flash::after,
+.picture-block-container.overlay-flash::after {
+    content: '▶';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    color: rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+    animation: viz-overlay-fade 2.5s ease-out forwards;
+}
+
+.bar-chart-container.playing.overlay-flash::after,
+.circular-chart-container.playing.overlay-flash::after,
+.disparity-chords-container.playing.overlay-flash::after,
+.dot-plot-container.playing.overlay-flash::after,
+.spiral-chart-container.playing.overlay-flash::after,
+.picture-row-container.playing.overlay-flash::after,
+.picture-column-container.playing.overlay-flash::after,
+.picture-block-container.playing.overlay-flash::after {
+    content: '⏸';
+}
+
 .validation-message {
     color: red;
 }

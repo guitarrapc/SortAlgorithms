@@ -10,14 +10,16 @@
     background-color: var(--bg-main);
 }
 
-    .circular-chart-container:hover::after {
-        content: '▶';
-        position: absolute;
-        font-size: 4rem;
-        color: rgba(255, 255, 255, 0.3);
-        pointer-events: none;
-    }
+    @media (pointer: fine) {
+        .circular-chart-container:hover::after {
+            content: '▶';
+            position: absolute;
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+        }
 
-    .circular-chart-container.playing:hover::after {
-        content: '⏸';
+        .circular-chart-container.playing:hover::after {
+            content: '⏸';
+        }
     }
