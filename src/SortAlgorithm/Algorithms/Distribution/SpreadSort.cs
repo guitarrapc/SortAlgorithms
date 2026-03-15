@@ -145,24 +145,23 @@ public static class SpreadSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Push initial work item
+        // Initialize with the full range (no initial push needed)
+        var start = 0;
+        var length = s.Length;
         var stackTop = 0;
-        Debug.Assert(stackTop + 2 <= stack.Length, $"Stack overflow: stackTop={stackTop}, stack.Length={stack.Length}");
-        stack[stackTop++] = 0;         // start
-        stack[stackTop++] = s.Length;   // length
 
-        while (stackTop > 0)
+        while (true)
         {
-            // Pop work item
-            var length = stack[--stackTop];
-            var start = stack[--stackTop];
-
-            if (length <= 1) continue;
-
-            if (length <= InsertionSortCutoff)
+            // Drain: handle trivial/small ranges by consuming or popping from stack.
+            // This is the single exit point - all code paths that finish a subproblem
+            // set length <= InsertionSortCutoff (or 0) and continue here.
+            while (length <= InsertionSortCutoff)
             {
-                InsertionSort.SortCore(s, start, start + length);
-                continue;
+                if (length > 1)
+                    InsertionSort.SortCore(s, start, start + length);
+                if (stackTop == 0) return;
+                length = stack[--stackTop];
+                start = stack[--stackTop];
             }
 
             // Phase 1: Find min and max keys
@@ -177,7 +176,7 @@ public static class SpreadSort
             }
 
             // All elements have the same key - already sorted
-            if (minKey == maxKey) continue;
+            if (minKey == maxKey) { length = 0; continue; }
 
             // Phase 2: Calculate bucket count
             var range = maxKey - minKey;
@@ -220,7 +219,7 @@ public static class SpreadSort
             if (nonEmptyBuckets <= 1)
             {
                 InsertionSort.SortCore(s, start, start + length);
-                continue;
+                length = 0; continue;
             }
 
             // Phase 4: Compute prefix sums (bucket offsets)
@@ -253,9 +252,29 @@ public static class SpreadSort
             // Phase 6: Copy back from temp to main array
             temp.CopyTo(0, s, start, length);
 
-            // Phase 7: Push each non-trivial bucket onto work stack
+            // Phase 7: Largest-first push optimization
+            // Find the largest bucket (will be processed inline, not pushed).
+            // Push all other non-trivial buckets onto the work stack.
+            // This is analogous to QuickSort's "recurse on smaller, loop on larger"
+            // and keeps peak stack usage proportional to the non-largest portions.
+            var largestIdx = 0;
+            var largestLen = 0;
             for (var i = 0; i < bucketCount; i++)
             {
+                var bucketStart = bucketCounts[i];
+                var bucketEnd = (i + 1 < bucketCount) ? bucketCounts[i + 1] : length;
+                var bucketLength = bucketEnd - bucketStart;
+                if (bucketLength > largestLen)
+                {
+                    largestLen = bucketLength;
+                    largestIdx = i;
+                }
+            }
+
+            // Push all non-trivial buckets except the largest
+            for (var i = 0; i < bucketCount; i++)
+            {
+                if (i == largestIdx) continue;
                 var bucketStart = bucketCounts[i];
                 var bucketEnd = (i + 1 < bucketCount) ? bucketCounts[i + 1] : length;
                 var bucketLength = bucketEnd - bucketStart;
@@ -267,6 +286,11 @@ public static class SpreadSort
                     stack[stackTop++] = bucketLength;
                 }
             }
+
+            // Process the largest bucket inline (tail-call optimization).
+            // If largestLen <= InsertionSortCutoff, the drain loop at the top handles it.
+            start += bucketCounts[largestIdx];
+            length = largestLen;
         }
     }
 
