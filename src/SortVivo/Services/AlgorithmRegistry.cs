@@ -221,6 +221,8 @@ public class AlgorithmRegistry
             gitHubSourceUrl: Src("Distribution", "AmericanFlagSort"));
         Add("Spreadsort", "DISTRIBUTION", "O(n√(log n))", MAX_SIZE_NLOGN, 4096, (arr, ctx) => SpreadSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Distribution", "SpreadSort"));
+        Add("Spreadsort (Boost)", "DISTRIBUTION", "O(n√(log n))", MAX_SIZE_NLOGN, 4096, (arr, ctx) => SpreadSortBoost.Sort(arr, ctx),
+            gitHubSourceUrl: Src("Distribution", "SpreadSortBoost"));
 
         // Network Sorts
         Add("Bitonic sort", "NETWORK", "O(log²n)", MAX_SIZE_N2, 2048, (arr, ctx) => BitonicSort.Sort(arr, ctx),
