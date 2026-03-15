@@ -8,31 +8,36 @@ namespace SortAlgorithm.Algorithms;
 /// <summary>
 /// SpreadSort - MSD Radix/ビット抽出ベースのハイブリッド分配ソートアルゴリズムの実装。
 /// キーの上位ビットからビット抽出によりバケットに分配し、バケット内を再帰的にソートします。
-/// 分配が効果的でない場合は比較ベースのソートにフォールバックすることで、最悪ケースでもO(n log²n)を保証します。
+/// ビット差分と部分問題サイズに基づく3段階フォールバック (InsertionSort / PDQSort / Spread分配) で、最悪ケースでもO(n log²n)を保証します。
 /// <br/>
 /// SpreadSort - An MSD radix/bit-extraction based hybrid distribution sorting algorithm.
 /// Extracts upper bits from unsigned keys to distribute elements into buckets, then recursively sorts each bucket.
-/// Falls back to comparison-based sorting when distribution is ineffective, guaranteeing O(n log²n) worst case.
+/// Uses a three-tier fallback (InsertionSort / PDQSort / Spread partition) based on bit difference and subproblem size,
+/// guaranteeing O(n log²n) worst case.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct SpreadSort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Sign-Bit Flipping for Signed Integers:</strong> For signed types, the sign bit is flipped to convert signed values to unsigned keys,
 /// ensuring correct ordering of negative values before positive values without separate processing.</description></item>
-/// <item><description><strong>Adaptive Radix Width:</strong> The radix width (number of bits extracted per level) is adaptively determined
-/// by the subproblem size, with the bit range derived from the XOR of min and max unsigned keys.
+/// <item><description><strong>Adaptive Radix Width:</strong> The radix width (number of bits extracted per level) is determined
+/// by a principled SpreadSort rule: radixBits = diffBits / maxSplits, where maxSplits = log₂(n) − LogMeanBinSize.
+/// This distributes the differing bit range evenly across radix levels, targeting ~2^LogMeanBinSize elements per bin.
 /// The bucket count is capped by the number of elements to avoid excessive empty buckets.</description></item>
 /// <item><description><strong>Bit-Extraction Distribution:</strong> Each element is mapped to a bucket using:
 /// bucket = ((key >> shift) &amp; mask), where shift is the lowest bit position of the target group and mask = (1 &lt;&lt; radixBits) - 1.
 /// This extracts a specific bit group from each key, providing MSD radix-style partitioning.</description></item>
 /// <item><description><strong>Iterative Processing:</strong> Each non-empty bucket is sorted iteratively using an explicit stack of work items.
 /// Base cases: buckets with 0 or 1 elements are already sorted; small buckets fall back to insertion sort.</description></item>
-/// <item><description><strong>Fallback to Comparison Sort:</strong> When all elements map to the same bucket (no progress via distribution),
-/// the algorithm falls back to insertion sort to avoid infinite loops and ensure O(n log²n) worst case.</description></item>
+/// <item><description><strong>Three-Tier Fallback:</strong> The algorithm uses three tiers based on subproblem size and bit difference:
+/// (1) Tiny subproblems (≤ InsertionSortCutoff) fall back to InsertionSort.
+/// (2) Medium subproblems or those with narrow bit difference (maxSplits &lt; 1 or diffBits ≤ LogMeanBinSize) fall back to PDQSort.
+/// (3) All other subproblems use spread partition (bit-extraction distribution).
+/// This decision based on XOR diff and subproblem size is the core SpreadSort principle that distinguishes it from plain MSD radix sort.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Distribution (Hybrid: Distribution + Comparison)</description></item>
+/// <item><description>Family      : Distribution (Hybrid: Distribution + Comparison via PDQSort + Insertion)</description></item>
 /// <item><description>Stable      : No (elements are redistributed across buckets)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for bucket storage)</description></item>
 /// <item><description>Best case   : O(n) - When distribution is perfectly uniform</description></item>
@@ -63,7 +68,8 @@ namespace SortAlgorithm.Algorithms;
 public static class SpreadSort
 {
     private const int InsertionSortCutoff = 16; // Switch to insertion sort for small ranges
-    private const int MaxBucketLogBits = 11;    // Max log2(bucketCount) to avoid excessive memory
+    private const int LogMeanBinSize = 2;       // Target ~4 elements per bin on average (Boost SpreadSort: LOG_MEAN_BIN_SIZE)
+    private const int MaxBucketLogBits = 11;    // Max log2(bucketCount) to avoid excessive memory (Boost SpreadSort: MAX_SPLITS)
     private const int MinBucketLogBits = 1;     // Minimum meaningful bucket split
     private const int StackAllocThreshold = 128; // Use stackalloc for work stack when element count is at or below this
 
@@ -178,20 +184,42 @@ public static class SpreadSort
             }
 
             // All elements have the same key - already sorted
-            if (minKey == maxKey) { length = 0; continue; }
+            if (minKey == maxKey)
+            {
+                length = 0;
+                continue;
+            }
 
             // Phase 2: Determine bit range using XOR diff and compute shift
             // XOR reveals exactly which bit positions differ between min and max keys.
-            // This is a key SpreadSort-style principle: partition by the highest differing bits,
+            // This is a key SpreadSort principle: partition by the highest differing bits,
             // rather than dividing a numeric range into equal-width intervals.
             var diff = minKey ^ maxKey;
             int highestBit = 63 - BitOperations.LeadingZeroCount(diff);
+            var diffBits = highestBit + 1; // number of differing bits
 
-            // Adaptive radix bits based on subproblem size (SpreadSort's "spread" feature).
-            // Larger subproblems use wider radix for faster distribution;
-            // smaller subproblems use narrower radix to avoid excessive empty buckets.
+            // SpreadSort decision: should we spread or comparison-sort?
+            // maxSplits = how many radix levels this subproblem can sustain
+            // (logLength bins per level, each bin targets ~2^LogMeanBinSize elements).
+            // When maxSplits < 1 or diffBits are too few, spreading is not worthwhile
+            // and we fall back to comparison sort (PDQSort). This is the core SpreadSort
+            // rule that distinguishes it from plain MSD radix sort.
             var logLength = 31 - int.LeadingZeroCount(length);
-            var radixBits = logLength / 2;
+            var maxSplits = logLength - LogMeanBinSize;
+
+            if (maxSplits < 1 || diffBits <= LogMeanBinSize)
+            {
+                // Comparison sort fallback: subproblem is too small for effective spreading,
+                // or the remaining bit difference is too narrow to justify distribution.
+                PDQSort.SortCore(s, start, start + length);
+                length = 0;
+                continue;
+            }
+
+            // Principled radixBits: estimate a radix width from remaining differing bits and the number of sustainable split levels.
+            // This ensures each level extracts a proportional share of the key space,
+            // keeping average bin size around 2^LogMeanBinSize.
+            var radixBits = diffBits / maxSplits;
             if (radixBits < MinBucketLogBits) radixBits = MinBucketLogBits;
             if (radixBits > MaxBucketLogBits) radixBits = MaxBucketLogBits;
 
@@ -227,12 +255,12 @@ public static class SpreadSort
             }
 
             // All elements fell into one bucket (no progress).
-            // Fall back to insertion sort to avoid infinite loop.
+            // Fall back to comparison sort to avoid infinite loop.
             // With XOR-based shift this should not occur because min and max always differ
             // at bit highestBit, guaranteeing at least 2 non-empty buckets. Kept as a safety net.
             if (nonEmptyBuckets <= 1)
             {
-                InsertionSort.SortCore(s, start, start + length);
+                PDQSort.SortCore(s, start, start + length);
                 length = 0; continue;
             }
 
