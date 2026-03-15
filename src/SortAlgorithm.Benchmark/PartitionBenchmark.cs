@@ -15,6 +15,7 @@ public class PartitionBenchmark
     private int[] _introDotnetArray = default!;
     private int[] _pdqArray = default!;
     private int[] _quickArray = default!;
+    private int[] _quick3wayArray = default!;
     private int[] _quickDualPivotArray = default!;
     private int[] _quickMedian3Array = default!;
     private int[] _quickMedian9Array = default!;
@@ -30,6 +31,7 @@ public class PartitionBenchmark
         _introDotnetArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _pdqArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _quickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _quick3wayArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _quickDualPivotArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _quickMedian3Array = BenchmarkData.GenerateIntArray(Size, Pattern);
         _quickMedian9Array = BenchmarkData.GenerateIntArray(Size, Pattern);
@@ -38,34 +40,16 @@ public class PartitionBenchmark
         _dotnetArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
-    [Benchmark]
-    public void BlockQuickSort()
-    {
-        SortAlgorithm.Algorithms.BlockQuickSort.Sort(_blockQuickArray.AsSpan());
-    }
-
-    [Benchmark]
-    public void IntroSort()
-    {
-        SortAlgorithm.Algorithms.IntroSort.Sort(_introArray.AsSpan());
-    }
-
-    [Benchmark]
-    public void IntroSortDotnet()
-    {
-        SortAlgorithm.Algorithms.IntroSortDotnet.Sort(_introDotnetArray.AsSpan());
-    }
-
-    [Benchmark]
-    public void PDQSort()
-    {
-        SortAlgorithm.Algorithms.PDQSort.Sort(_pdqArray.AsSpan());
-    }
-
     [Benchmark(Baseline = true)]
     public void QuickSort()
     {
         SortAlgorithm.Algorithms.QuickSort.Sort(_quickArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void QuickSort3way()
+    {
+        SortAlgorithm.Algorithms.QuickSort3way.Sort(_quick3wayArray.AsSpan());
     }
 
     [Benchmark]
@@ -93,9 +77,33 @@ public class PartitionBenchmark
     }
 
     [Benchmark]
+    public void IntroSort()
+    {
+        SortAlgorithm.Algorithms.IntroSort.Sort(_introArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void IntroSortDotnet()
+    {
+        SortAlgorithm.Algorithms.IntroSortDotnet.Sort(_introDotnetArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void PDQSort()
+    {
+        SortAlgorithm.Algorithms.PDQSort.Sort(_pdqArray.AsSpan());
+    }
+
+    [Benchmark]
     public void StdSort()
     {
         SortAlgorithm.Algorithms.StdSort.Sort(_stdArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void BlockQuickSort()
+    {
+        SortAlgorithm.Algorithms.BlockQuickSort.Sort(_blockQuickArray.AsSpan());
     }
 
     [Benchmark]

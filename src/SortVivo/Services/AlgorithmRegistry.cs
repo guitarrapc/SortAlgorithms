@@ -146,6 +146,10 @@ public class AlgorithmRegistry
             gitHubSourceUrl: Src("Partition", "QuickSortDualPivot"),
             tutorialArrayType: TutorialArrayType.PartitionSortHybrid,
             tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
+        Add("Quicksort (3-way)", "PARTITION", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => QuickSort3way.Sort(arr, ctx),
+            gitHubSourceUrl: Src("Partition", "QuickSort3way"),
+            tutorialArrayType: TutorialArrayType.PartitionSort,
+            tutorialVisualizationHint: TutorialVisualizationHint.RecursionTree);
         Add("Quicksort (Stable)", "PARTITION", "O(n log n)", MAX_SIZE_NLOGN, 2048, (arr, ctx) => StableQuickSort.Sort(arr, ctx),
             gitHubSourceUrl: Src("Partition", "StableQuickSort"),
             tutorialArrayType: TutorialArrayType.PartitionSort);
