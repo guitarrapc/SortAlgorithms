@@ -1,18 +1,17 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// SpreadSort - ハイブリッド分配ソートアルゴリズムの実装。
-/// 値の範囲に基づいてバケットに分配し、バケット内を再帰的にソートします。
+/// SpreadSort - MSD Radix/ビット抽出ベースのハイブリッド分配ソートアルゴリズムの実装。
+/// キーの上位ビットからビット抽出によりバケットに分配し、バケット内を再帰的にソートします。
 /// 分配が効果的でない場合は比較ベースのソートにフォールバックすることで、最悪ケースでもO(n log²n)を保証します。
 /// <br/>
-/// SpreadSort - A hybrid distribution sorting algorithm implementation.
-/// Distributes elements into buckets based on their value range, then recursively sorts each bucket.
+/// SpreadSort - An MSD radix/bit-extraction based hybrid distribution sorting algorithm.
+/// Extracts upper bits from unsigned keys to distribute elements into buckets, then recursively sorts each bucket.
 /// Falls back to comparison-based sorting when distribution is ineffective, guaranteeing O(n log²n) worst case.
 /// </summary>
 /// <remarks>
@@ -20,11 +19,12 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="number">
 /// <item><description><strong>Sign-Bit Flipping for Signed Integers:</strong> For signed types, the sign bit is flipped to convert signed values to unsigned keys,
 /// ensuring correct ordering of negative values before positive values without separate processing.</description></item>
-/// <item><description><strong>Bucket Count Based on Range:</strong> The number of buckets is determined by the upper bits of the value range (max - min).
+/// <item><description><strong>Adaptive Radix Width:</strong> The radix width (number of bits extracted per level) is adaptively determined
+/// by the subproblem size, with the bit range derived from the XOR of min and max unsigned keys.
 /// The bucket count is capped by the number of elements to avoid excessive empty buckets.</description></item>
-/// <item><description><strong>Value-Based Distribution:</strong> Each element is mapped to a bucket using:
-/// bucket = ((key - minKey) >> shift), where shift is calculated from the range and bucket count.
-/// This distributes elements proportionally across the available buckets.</description></item>
+/// <item><description><strong>Bit-Extraction Distribution:</strong> Each element is mapped to a bucket using:
+/// bucket = ((key >> shift) &amp; mask), where shift is the lowest bit position of the target group and mask = (1 &lt;&lt; radixBits) - 1.
+/// This extracts a specific bit group from each key, providing MSD radix-style partitioning.</description></item>
 /// <item><description><strong>Iterative Processing:</strong> Each non-empty bucket is sorted iteratively using an explicit stack of work items.
 /// Base cases: buckets with 0 or 1 elements are already sorted; small buckets fall back to insertion sort.</description></item>
 /// <item><description><strong>Fallback to Comparison Sort:</strong> When all elements map to the same bucket (no progress via distribution),
@@ -43,12 +43,12 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Algorithm Overview:</strong></para>
 /// <para>The algorithm consists of these phases per iteration:</para>
 /// <list type="number">
-/// <item><description><strong>Find Range:</strong> Determine min and max unsigned keys in the current range</description></item>
-/// <item><description><strong>Calculate Buckets:</strong> Compute bucket count from the bit width of the range, capped by element count</description></item>
-/// <item><description><strong>Count Phase:</strong> Count occurrences of elements in each bucket</description></item>
+/// <item><description><strong>Find Diff:</strong> Determine min and max unsigned keys; compute XOR diff to identify differing bit positions</description></item>
+/// <item><description><strong>Calculate Shift:</strong> Adaptively compute radix width from subproblem size; derive shift from highest differing bit (adaptive level-skip)</description></item>
+/// <item><description><strong>Count Phase:</strong> Count elements per bucket using bit extraction: bucket = (key >> shift) &amp; mask</description></item>
 /// <item><description><strong>Offset Phase:</strong> Compute prefix sums to determine bucket boundaries</description></item>
 /// <item><description><strong>Distribute Phase:</strong> Place elements into their correct bucket positions using a temporary buffer</description></item>
-/// <item><description><strong>Iterate Phase:</strong> Push each non-trivial bucket onto an explicit work stack and repeat</description></item>
+/// <item><description><strong>Iterate Phase:</strong> Advance to next lower bit group (nextShift = shift − radixBits); push each non-trivial bucket onto work stack</description></item>
 /// </list>
 /// <para><strong>Supported Types:</strong></para>
 /// <list type="bullet">
@@ -118,15 +118,16 @@ public static class SpreadSort
         // temp buffer requires ArrayPool (can't stackalloc generic T without unmanaged constraint)
         var rentedTemp = ArrayPool<T>.Shared.Rent(s.Length);
 
-        // Work stack size bound (n ints):
+        // Work stack: 3 ints per item (start, length, shift).
         //   Invariant: the sum of lengths across all work items on the stack is always <= n.
         //   - Pop removes L from the sum; Push adds back at most L (buckets partition the range).
         //   - Each pushed item has length >= 2 (we skip length <= 1).
-        //   - Therefore max simultaneous items = floor(n/2), needing floor(n/2)*2 = n ints.
+        //   - Therefore max simultaneous items = floor(n/2), needing floor(n/2) * 3 ints.
+        var workStackSize = 3 * (s.Length / 2 + 1);
         int[]? rentedStack = null;
         Span<int> stack = s.Length <= StackAllocThreshold
-            ? stackalloc int[s.Length]                     // Small: stackalloc work stack (128 ints = 512B)
-            : (rentedStack = ArrayPool<int>.Shared.Rent(s.Length)).AsSpan(0, s.Length);
+            ? stackalloc int[workStackSize]
+            : (rentedStack = ArrayPool<int>.Shared.Rent(workStackSize)).AsSpan(0, workStackSize);
         try
         {
             var temp = new SortSpan<T, TComparer, TContext>(rentedTemp.AsSpan(0, s.Length), s.Context, s.Comparer, BUFFER_TEMP);
@@ -160,11 +161,13 @@ public static class SpreadSort
                 if (length > 1)
                     InsertionSort.SortCore(s, start, start + length);
                 if (stackTop == 0) return;
-                length = stack[--stackTop];
-                start = stack[--stackTop];
+                stackTop -= 3;
+                start = stack[stackTop];
+                length = stack[stackTop + 1];
+                // stack[stackTop + 2] is the parent's hint shift (recomputed from data via XOR diff)
             }
 
-            // Phase 1: Find min and max keys
+            // Phase 1: Find min and max keys, compute XOR diff
             var minKey = GetUnsignedKey(s.Read(start));
             var maxKey = minKey;
 
@@ -178,28 +181,41 @@ public static class SpreadSort
             // All elements have the same key - already sorted
             if (minKey == maxKey) { length = 0; continue; }
 
-            // Phase 2: Calculate bucket count
-            var range = maxKey - minKey;
-            var rangeBits = 64 - BitOperations.LeadingZeroCount(range);
+            // Phase 2: Determine bit range using XOR diff and compute shift
+            // XOR reveals exactly which bit positions differ between min and max keys.
+            // This is the core SpreadSort principle: partition by the highest differing bits,
+            // rather than dividing a numeric range into equal-width intervals.
+            var diff = minKey ^ maxKey;
+            var highestBit = 63 - BitOperations.LeadingZeroCount(diff);
 
-            var logBuckets = rangeBits / 2;
-            if (logBuckets < MinBucketLogBits) logBuckets = MinBucketLogBits;
-            if (logBuckets > MaxBucketLogBits) logBuckets = MaxBucketLogBits;
+            // Adaptive radix bits based on subproblem size (SpreadSort's "spread" feature).
+            // Larger subproblems use wider radix for faster distribution;
+            // smaller subproblems use narrower radix to avoid excessive empty buckets.
+            var logLength = 31 - int.LeadingZeroCount(length);
+            var radixBits = logLength / 2;
+            if (radixBits < MinBucketLogBits) radixBits = MinBucketLogBits;
+            if (radixBits > MaxBucketLogBits) radixBits = MaxBucketLogBits;
 
-            // Cap bucket count so that bucketCount = 1 << logBuckets does not exceed length.
+            // Cap so bucketCount = 1 << radixBits does not exceed element count.
             // floor(log2(n)) guarantees 1 << floor(log2(n)) <= n.
-            // length is int, so use int.LeadingZeroCount directly without type narrowing.
-            var maxLogByLength = 31 - int.LeadingZeroCount(length);
-            if (logBuckets > maxLogByLength) logBuckets = maxLogByLength;
+            if (radixBits > logLength) radixBits = logLength;
 
-            var bucketCount = 1 << logBuckets;
-            var shift = (int)(rangeBits - logBuckets);
+            // Compute effective shift: extract radixBits from the highest differing bit downward.
+            // This provides adaptive level-skipping: when a bucket's elements share common upper bits,
+            // the XOR diff reveals the actual differing range, and we jump directly to those bits
+            // instead of stepping through empty radix levels.
+            var shift = highestBit + 1 - radixBits;
             if (shift < 0) shift = 0;
+
+            var bucketCount = 1 << radixBits;
+            var mask = (ulong)(bucketCount - 1);
 
             var bucketCounts = counts[..bucketCount];
             bucketCounts.Clear();
 
-            // Phase 3: Count elements per bucket
+            // Phase 3: Count elements per bucket using bit extraction
+            // bucket = (key >> shift) & mask extracts the target bit group directly,
+            // unlike range-based partitioning which uses (key - minKey) >> shift.
             // Track non-empty bucket count inline: increment only on 0→1 transition
             // to avoid a separate counting pass over bucketCounts.
             var nonEmptyBuckets = 0;
@@ -207,13 +223,14 @@ public static class SpreadSort
             for (var i = 0; i < length; i++)
             {
                 var key = GetUnsignedKey(s.Read(start + i));
-                var bucket = (int)((key - minKey) >> shift);
-                if (bucket >= bucketCount) bucket = bucketCount - 1;
+                var bucket = (int)((key >> shift) & mask);
                 if (bucketCounts[bucket]++ == 0) nonEmptyBuckets++;
             }
 
-            // All elements fell into one bucket (no progress)
-            // Fall back to insertion sort to avoid infinite loop
+            // All elements fell into one bucket (no progress).
+            // Fall back to insertion sort to avoid infinite loop.
+            // With XOR-based shift this should not occur because min and max always differ
+            // at bit highestBit, guaranteeing at least 2 non-empty buckets. Kept as a safety net.
             if (nonEmptyBuckets <= 1)
             {
                 InsertionSort.SortCore(s, start, start + length);
@@ -230,7 +247,7 @@ public static class SpreadSort
                 prefixSum += count;
             }
 
-            // Phase 5: Distribute elements into temp buffer
+            // Phase 5: Distribute elements into temp buffer using bit extraction
             var bucketWritePos = writePos[..bucketCount];
             bucketCounts.CopyTo(bucketWritePos);
 
@@ -240,8 +257,7 @@ public static class SpreadSort
             {
                 var value = s.Read(start + i);
                 var key = GetUnsignedKey(value);
-                var bucket = (int)((key - minKey) >> shift);
-                if (bucket >= bucketCount) bucket = bucketCount - 1;
+                var bucket = (int)((key >> shift) & mask);
 
                 // temp is reused as a scratch buffer at offset 0 for every subproblem
                 temp.Write(tempStart + bucketWritePos[bucket], value);
@@ -251,7 +267,12 @@ public static class SpreadSort
             // Phase 6: Copy back from temp to main array
             temp.CopyTo(tempStart, s, start, length);
 
-            // Phase 7: Largest-first push optimization
+            // Phase 7: Compute next shift and push work items (largest-first optimization)
+            // nextShift = shift - radixBits moves to the next lower bit group.
+            // Each bucket's subproblem will recompute the effective shift from its own
+            // XOR diff, providing automatic level-skipping for shared upper bits.
+            var nextShift = shift - radixBits;
+
             // Select the largest bucket as the next inline subproblem.
             // Trivial sizes are handled by the drain loop above, similar in spirit
             // to QuickSort's "recurse on smaller, iterate on larger" optimization.
@@ -279,10 +300,12 @@ public static class SpreadSort
 
                 if (bucketLength > 1)
                 {
-                    if (stackTop + 2 > stack.Length)
+                    if (stackTop + 3 > stack.Length)
                         throw new InvalidOperationException("Internal work stack overflow.");
-                    stack[stackTop++] = start + bucketStart;
-                    stack[stackTop++] = bucketLength;
+                    stack[stackTop] = start + bucketStart;
+                    stack[stackTop + 1] = bucketLength;
+                    stack[stackTop + 2] = nextShift;
+                    stackTop += 3;
                 }
             }
 
