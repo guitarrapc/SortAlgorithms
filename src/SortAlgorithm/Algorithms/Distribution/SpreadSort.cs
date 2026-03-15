@@ -182,10 +182,10 @@ public static class SpreadSort
 
             // Phase 2: Determine bit range using XOR diff and compute shift
             // XOR reveals exactly which bit positions differ between min and max keys.
-            // This is the core SpreadSort principle: partition by the highest differing bits,
+            // This is a key SpreadSort-style principle: partition by the highest differing bits,
             // rather than dividing a numeric range into equal-width intervals.
             var diff = minKey ^ maxKey;
-            var highestBit = 63 - BitOperations.LeadingZeroCount(diff);
+            int highestBit = 63 - BitOperations.LeadingZeroCount(diff);
 
             // Adaptive radix bits based on subproblem size (SpreadSort's "spread" feature).
             // Larger subproblems use wider radix for faster distribution;
