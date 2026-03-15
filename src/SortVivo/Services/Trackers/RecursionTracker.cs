@@ -173,7 +173,13 @@ sealed class RecursionTracker : IVisualizationTracker
     {
         if (phase == SortAlgorithm.Contexts.SortPhase.QuickSortPartition)
         {
-            ProcessQuickSortPartition(p1, p2, p3, mainArray);
+            ProcessQuickSortPartition(p1, p2, p3, mainArray, isDnf: false);
+            return;
+        }
+
+        if (phase == SortAlgorithm.Contexts.SortPhase.QuickSort3wayPartition)
+        {
+            ProcessQuickSortPartition(p1, p2, p3, mainArray, isDnf: true);
             return;
         }
 
@@ -229,7 +235,7 @@ sealed class RecursionTracker : IVisualizationTracker
     /// フルレンジ [left..right+1) のノードを作成・アクティブ化し、
     /// PivotValue を設定する。pivotIdx == left の場合は DNF ポインタ追跡も開始する。
     /// </summary>
-    private void ProcessQuickSortPartition(int left, int right, int pivotIdx, int[]? mainArray)
+    private void ProcessQuickSortPartition(int left, int right, int pivotIdx, int[]? mainArray, bool isDnf)
     {
         if (mainArray == null || pivotIdx < 0 || pivotIdx >= mainArray.Length) return;
 
@@ -274,7 +280,7 @@ sealed class RecursionTracker : IVisualizationTracker
         _activePartitionLeft = left;
         _activePartitionRight = right;
         _activePartitionNodeId = partNode.Id;
-        _trackDnfPointers = (pivotIdx == left); // 3-way DNF: pivot を left に移動済み
+        _trackDnfPointers = isDnf; // QuickSort3wayPartition のみ true
 
         if (_trackDnfPointers)
         {

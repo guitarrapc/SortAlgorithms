@@ -178,7 +178,7 @@ public static class QuickSort3way
             s.Swap(mid, left);
 
             var pivot = s.Read(left);
-            s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, left);
+            s.Context.OnPhase(SortPhase.QuickSort3wayPartition, left, right, left);
 
             // Dutch National Flag 3-way partition (Dijkstra)
             // Invariant:
