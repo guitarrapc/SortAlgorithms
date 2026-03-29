@@ -128,15 +128,14 @@ public class TreapSortTests
         // BST insertion depth depends on random priorities, giving expected O(n log n) comparisons.
         // - Lower bound: n-1 (each insertion needs at least 1 comparison, except the first element)
         // - Upper bound: n*(n-1)/2 (degenerate case, astronomically unlikely with random priorities)
-        // - Index reads:  n (each element read once from main array during insertion)
-        // - Index writes: n (each element written once during in-order traversal)
+        // - Index reads:  n (main) + CompareCount (tree comparison reads) + n (tree in-order traversal reads)
+        // - Index writes: 2n (n tree CreateNode + n main in-order writes)
         var minCompares = (ulong)(n - 1);
         var maxCompares = (ulong)(n * (n - 1) / 2);
-        var expectedReads = (ulong)n;
-        var expectedWrites = (ulong)n;
+        var expectedWrites = (ulong)(2 * n);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
@@ -154,13 +153,14 @@ public class TreapSortTests
 
         // For reversed input, treap behavior is the same as sorted input because random priorities
         // make the tree shape independent of input order. Expected O(n log n) comparisons.
+        // Reads: n (main) + CompareCount (tree comparison reads) + n (tree in-order traversal reads)
+        // Writes: 2n (n tree CreateNode + n main in-order writes)
         var minCompares = (ulong)(n - 1);
         var maxCompares = (ulong)(n * (n - 1) / 2);
-        var expectedReads = (ulong)n;
-        var expectedWrites = (ulong)n;
+        var expectedWrites = (ulong)(2 * n);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
@@ -178,13 +178,14 @@ public class TreapSortTests
 
         // For random input, treap gives expected O(n log n) comparisons.
         // Random priorities combined with random input order yield the same expected tree depth.
+        // Reads: n (main) + CompareCount (tree comparison reads) + n (tree in-order traversal reads)
+        // Writes: 2n (n tree CreateNode + n main in-order writes)
         var minCompares = (ulong)(n - 1);
         var maxCompares = (ulong)(n * (n - 1) / 2);
-        var expectedReads = (ulong)n;
-        var expectedWrites = (ulong)n;
+        var expectedWrites = (ulong)(2 * n);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }

@@ -177,11 +177,11 @@ public class SplaySortTests
         // - Since each new element is always larger than the root, it inserts to the right in 1 comparison
         // - After splay the new element becomes root, ready for the next insertion
         // - Total comparisons: n-1 (one per insertion after the first)
-        // - Index reads:  n (each element read once from main array during insertion)
-        // - Index writes: n (each element written once during in-order traversal)
+        // - Index reads:  n (main) + (n-1) (tree comparison reads) + n (tree in-order traversal reads) = 3n-1
+        // - Index writes: 2n (n tree CreateNode + n main in-order writes)
         var expectedCompares = (ulong)(n - 1);
-        var expectedReads = (ulong)n;
-        var expectedWrites = (ulong)n;
+        var expectedReads = (ulong)(3 * n - 1);  // n main + (n-1) tree comparisons + n tree inorder
+        var expectedWrites = (ulong)(2 * n);
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -205,9 +205,11 @@ public class SplaySortTests
         // - Since each new element is always smaller than the root, it inserts to the left in 1 comparison
         // - After splay the new element becomes root, ready for the next insertion
         // - Total comparisons: n-1 (one per insertion after the first)
+        // Reads: n (main) + (n-1) (tree comparison reads) + n (tree in-order traversal reads) = 3n-1
+        // Writes: 2n (n tree CreateNode + n main in-order writes)
         var expectedCompares = (ulong)(n - 1);
-        var expectedReads = (ulong)n;
-        var expectedWrites = (ulong)n;
+        var expectedReads = (ulong)(3 * n - 1);
+        var expectedWrites = (ulong)(2 * n);
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -230,13 +232,14 @@ public class SplaySortTests
         // Use a broad range to accommodate variance in random inputs:
         // - Lower bound: n-1 (best case: monotone input collapses to linear)
         // - Upper bound: n*(n-1)/2 (worst case single-operation, but amortized O(n log n))
+        // Reads: n (main) + CompareCount (tree comparison reads) + n (tree in-order traversal reads)
+        // Writes: 2n (n tree CreateNode + n main in-order writes)
         var minCompares = (ulong)(n - 1);
         var maxCompares = (ulong)(n * (n - 1) / 2);
-        var expectedReads = (ulong)n;
-        var expectedWrites = (ulong)n;
+        var expectedWrites = (ulong)(2 * n);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
