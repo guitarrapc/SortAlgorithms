@@ -51,8 +51,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n) - Each of n insertions takes O(log n) comparisons</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by AVL balancing property</description></item>
 /// <item><description>Comparisons : O(n log n) - Each insertion performs at most log₂(n) comparisons</description></item>
-/// <item><description>Index Reads : Θ(n log n) - With ItemIndex implementation, each comparison reads both values (2 reads per comparison) plus n traversal reads</description></item>
-/// <item><description>Index Writes: Θ(n) - Each element is written once during in-order traversal</description></item>
+/// <item><description>Index Reads : Θ(n log n) - With Value caching, each comparison reads both values (2 reads per comparison) plus n traversal reads</description></item>
+/// <item><description>Index Writes: Θ(2n) - Each element is written once to the tree (CreateNode) and once during in-order traversal</description></item>
 /// <item><description>Swaps       : 0 - No swaps performed; only tree node manipulations</description></item>
 /// <item><description>Rotations   : O(n log n) worst case - At most 2 rotations per insertion (amortized O(1))</description></item>
 /// </list>
@@ -69,16 +69,13 @@ public static class BalancedBinaryTreeSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    private const int BUFFER_TREE = -1;      // Tree nodes (virtual buffer for visualization, negative to exclude from statistics)
+    private const int BUFFER_TREE = 1;       // Tree nodes (auxiliary buffer for arena; tracked in statistics like merge sort's auxiliary buffer)
     private const int NULL_INDEX = -1;       // Represents null reference in arena
 
-    // Note: Arena (Node array) operations are not tracked via SortSpan because:
-    // 1. Nodes are internal implementation details (tree structure metadata)
-    // 2. Nodes cache values (T) directly for performance (avoiding indirection overhead)
-    // 3. Only the initial Read and final Write operations on the original data array
-    //    represent the algorithm's core data access and are tracked via SortSpan
-    // 4. Alternative design (storing only span indices in nodes) would require span[index] lookup on every
-    //    comparison, increasing indirection and often reducing performance noticeably. (up to 3x slower than class-based approach in local benchmarks for this project)
+    // Note: Arena (Node array) operations are tracked via context callbacks with BUFFER_TREE.
+    // This ensures tree node reads/writes are reflected in statistics and visualization,
+    // consistent with how merge sort tracks auxiliary buffer operations.
+    // Nodes cache values (T) directly for performance (avoiding indirection overhead).
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.

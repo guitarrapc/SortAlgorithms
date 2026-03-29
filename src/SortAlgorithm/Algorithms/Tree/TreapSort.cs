@@ -36,8 +36,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n) expected - guaranteed by random priority assignment</description></item>
 /// <item><description>Worst case  : O(n²) with astronomically low probability (when random priorities produce degenerate tree)</description></item>
 /// <item><description>Comparisons : O(n log n) expected</description></item>
-/// <item><description>Index Reads : Θ(n) - each element read once from main array during insertion</description></item>
-/// <item><description>Index Writes: Θ(n) - each element written once during in-order traversal</description></item>
+/// <item><description>Index Reads : Θ(n) main + O(comparisons) tree - each element read once from main array; each comparison reads a tree node; n traversal reads</description></item>
+/// <item><description>Index Writes: Θ(2n) - each element written once to the tree (CreateNode) and once during in-order traversal</description></item>
 /// <item><description>Swaps       : 0 - no swapping; elements are copied to tree nodes and written back during traversal</description></item>
 /// <item><description>Space       : O(n) - one node per element; each node holds value, left/right/parent indices, and priority</description></item>
 /// </list>
@@ -49,14 +49,14 @@ public static class TreapSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    private const int BUFFER_TREE = -1;      // Tree nodes (virtual buffer, negative to exclude from main statistics)
+    private const int BUFFER_TREE = 1;       // Tree nodes (auxiliary buffer for arena; tracked in statistics like merge sort's auxiliary buffer)
     private const int NULL_INDEX = -1;       // Represents null reference in arena
     private const uint XORSHIFT_SEED = 0x9E3779B9u; // Golden ratio derived; deterministic seed for reproducible priority generation
 
-    // Note: Arena (Node array) operations are not tracked via SortSpan because:
-    // 1. Nodes are internal implementation details (tree structure metadata)
-    // 2. Nodes cache values (T) directly for performance (avoiding indirection on every comparison)
-    // 3. Only the initial Read and final Write on the original data array represent core data access
+    // Note: Arena (Node array) operations are tracked via context callbacks with BUFFER_TREE.
+    // This ensures tree node reads/writes are reflected in statistics and visualization,
+    // consistent with how merge sort tracks auxiliary buffer operations.
+    // Nodes cache values (T) directly for performance (avoiding indirection on every comparison).
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.

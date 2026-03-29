@@ -128,16 +128,15 @@ public class BalancedBinaryTreeSortTests
         // Expected comparisons for balanced tree:
         // - Each insertion into a tree of i elements takes ~log2(i) comparisons
         // - Total: approximately n*log2(n) comparisons
-        // With Value caching: reads are only for inserts (each element read once)
-        // - Total reads: n (every element is read once during insertion)
+        // Reads: n (main array reads) + CompareCount (tree node reads during comparisons) + n (tree node reads during in-order traversal)
+        // Writes: 2n (n tree writes from CreateNode + n main writes during in-order traversal)
         var avgCompares = (ulong)(n * Math.Log2(Math.Max(n, 2)));
         var minCompares = avgCompares / 2;  // Allow some variance
         var maxCompares = avgCompares * 2;  // Upper bound for balanced insertions
-        var expectedReads = (ulong)n;  // Every element is read once during insertion
-        var expectedWrites = (ulong)n; // Writing during in-order traversal
+        var expectedWrites = (ulong)(2 * n);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
@@ -157,16 +156,15 @@ public class BalancedBinaryTreeSortTests
         // Expected comparisons for balanced tree:
         // - Each insertion into a tree of i elements takes ~log2(i) comparisons
         // - Total: approximately n*log2(n) comparisons
-        // With Value caching: reads are only for inserts (each element read once)
-        // - Total reads: n (every element is read once during insertion)
+        // Reads: n (main) + CompareCount (tree comparisons) + n (tree in-order traversal)
+        // Writes: 2n (n tree CreateNode + n main in-order writes)
         var avgCompares = (ulong)(n * Math.Log2(Math.Max(n, 2)));
         var minCompares = avgCompares / 2;  // Allow some variance
         var maxCompares = avgCompares * 2;  // Upper bound for balanced insertions
-        var expectedReads = (ulong)n;  // Every element is read once during insertion
-        var expectedWrites = (ulong)n; // Writing during in-order traversal
+        var expectedWrites = (ulong)(2 * n);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
@@ -187,16 +185,15 @@ public class BalancedBinaryTreeSortTests
         // - Each insertion into a balanced tree of i elements takes ~log2(i) comparisons
         // - Total: approximately n*log2(n) comparisons
         // - Balanced tree guarantees O(log n) height, so worst case is better than BST
-        // With Value caching: comparisons and traversal use cached values
-        // - Total reads: n (every element is read once during insertion)
+        // Reads: n (main) + CompareCount (tree comparisons) + n (tree in-order traversal)
+        // Writes: 2n (n tree CreateNode + n main in-order writes)
         var avgCompares = (ulong)(n * Math.Log2(Math.Max(n, 2)));
         var minCompares = avgCompares / 2;  // Allow variance for very balanced insertions
         var maxCompares = avgCompares * 2;  // Upper bound (still O(n log n))
-        var expectedReads = (ulong)n;  // Every element is read once during insertion
-        var expectedWrites = (ulong)n; // Writing during in-order traversal
+        var expectedWrites = (ulong)(2 * n);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }

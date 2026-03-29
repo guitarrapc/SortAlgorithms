@@ -32,7 +32,7 @@ public sealed class StatisticsContext : ISortContext
 
     public void OnSwap(int i, int j, int bufferId)
     {
-        // Exclude swaps with negative buffer IDs (used for tree nodes or other non-array structures)
+        // Exclude swaps with negative buffer IDs (reserved for non-array structures excluded from statistics)
         if (bufferId < 0)
             return;
 
@@ -45,7 +45,7 @@ public sealed class StatisticsContext : ISortContext
 
     public void OnIndexRead(int index, int bufferId)
     {
-        // Exclude reads from negative buffer IDs (used for tree nodes or other non-array structures)
+        // Exclude reads from negative buffer IDs (reserved for non-array structures excluded from statistics)
         if (bufferId < 0)
             return;
 
@@ -54,7 +54,7 @@ public sealed class StatisticsContext : ISortContext
 
     public void OnIndexWrite(int index, int bufferId, object? value = null)
     {
-        // Exclude writes to negative buffer IDs (used for tree nodes or other non-array structures)
+        // Exclude writes to negative buffer IDs (reserved for non-array structures excluded from statistics)
         if (bufferId < 0)
             return;
 
@@ -64,7 +64,7 @@ public sealed class StatisticsContext : ISortContext
     public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null)
     {
         // Range copy is counted as: length reads from source + length writes to destination
-        // Exclude operations with negative buffer IDs (used for tree nodes or other non-array structures)
+        // Exclude operations with negative buffer IDs (reserved for non-array structures excluded from statistics)
         if (sourceBufferId >= 0)
             Interlocked.Add(ref _indexReadCount, (ulong)length);
 

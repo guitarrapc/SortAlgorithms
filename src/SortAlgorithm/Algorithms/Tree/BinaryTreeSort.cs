@@ -37,8 +37,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Comparisons : Best Θ(n log n), Average Θ(n log n), Worst Θ(n²)</description></item>
 /// <item><description>  - Sorted input: n(n-1)/2 comparisons (each insertion compares with all previous elements)</description></item>
 /// <item><description>  - Random input: ~1.39n log n comparisons (empirically, for balanced trees)</description></item>
-/// <item><description>Index Reads : Θ(n) - Each element is read once during tree construction</description></item>
-/// <item><description>Index Writes: Θ(n) - Each element is written once during in-order traversal</description></item>
+/// <item><description>Index Reads : Θ(n) main + O(comparisons) tree - Each element is read once during tree construction; each comparison reads a tree node</description></item>
+/// <item><description>Index Writes: Θ(2n) - Each element is written once to the tree (CreateNode) and once during in-order traversal</description></item>
 /// <item><description>Swaps       : 0 (No swapping; elements are copied to tree nodes and then back to array)</description></item>
 /// <item><description>Space       : O(n) - One struct node per element; allocated via ArrayPool (no per-node GC allocation)</description></item>
 /// </list>
@@ -56,7 +56,7 @@ public static class BinaryTreeSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    private const int BUFFER_TREE = -1;      // Tree nodes (virtual buffer for visualization, negative to exclude from statistics)
+    private const int BUFFER_TREE = 1;       // Tree nodes (auxiliary buffer for arena; tracked in statistics like merge sort's auxiliary buffer)
     private const int NULL_INDEX = -1;       // Represents null reference in arena
 
     /// <summary>
