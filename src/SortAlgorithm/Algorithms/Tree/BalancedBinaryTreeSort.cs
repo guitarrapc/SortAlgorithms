@@ -415,6 +415,7 @@ public static class BalancedBinaryTreeSort
     /// Rebalance the node after insertion using AVL rotations (arena-based).
     /// </summary>
     /// <returns>Index of the new root after balancing.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int Balance<T, TContext>(Span<Node<T>> arena, int nodeIndex, TContext context)
         where TContext : ISortContext
     {
@@ -455,6 +456,7 @@ public static class BalancedBinaryTreeSort
     /// Right rotation on the given node using arena indices.
     /// </summary>
     /// <returns>Index of the new root after rotation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RotateRight<T, TContext>(Span<Node<T>> arena, int yIndex, TContext context)
         where TContext : ISortContext
     {
@@ -481,6 +483,7 @@ public static class BalancedBinaryTreeSort
     /// Left rotation on the given node using arena indices.
     /// </summary>
     /// <returns>Index of the new root after rotation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RotateLeft<T, TContext>(Span<Node<T>> arena, int xIndex, TContext context)
         where TContext : ISortContext
     {
