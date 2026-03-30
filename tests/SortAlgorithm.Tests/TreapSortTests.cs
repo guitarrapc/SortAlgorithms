@@ -128,15 +128,24 @@ public class TreapSortTests
         // BST insertion depth depends on random priorities, giving expected O(n log n) comparisons.
         // - Lower bound: n-1 (each insertion needs at least 1 comparison, except the first element)
         // - Upper bound: n*(n-1)/2 (degenerate case, astronomically unlikely with random priorities)
-        // - Index reads:  n (main) + CompareCount (tree comparison reads) + n (tree in-order traversal reads)
-        // - Index writes: 2n (n tree CreateNode + n main in-order writes)
         var minCompares = (ulong)(n - 1);
         var maxCompares = (ulong)(n * (n - 1) / 2);
-        var expectedWrites = (ulong)(2 * n);
-
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+
+        // With full structural tracking, reads include:
+        //   n (main reads) + C (CompareWithNode) + C (Left/Right navigation)
+        //   + 3n (Inorder: Left + Value + Right) + HeapUp reads (Parent, Priority) + rotation reads
+        // Minimum: 4n + 2C (BST baseline). HeapUp/rotations add more.
+        var nLogN = (ulong)(n * Math.Log2(Math.Max(n, 2)));
+        var minReads = (ulong)(4 * n) + 2 * stats.CompareCount + 1;
+        await Assert.That(stats.IndexReadCount).IsBetween(minReads, nLogN * 20);
+
+        // With full structural tracking, writes include:
+        //   n (CreateNode) + (n-1) (parent linking) + n (Inorder writes)
+        //   + HeapUp rotation writes (parent pointer updates, child pointer updates)
+        // Minimum: 4n - 2 (BST baseline: n CreateNode + 2(n-1) linking + n Inorder).
+        await Assert.That(stats.IndexWriteCount).IsBetween((ulong)(3 * n), nLogN * 20);
+
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
@@ -153,15 +162,18 @@ public class TreapSortTests
 
         // For reversed input, treap behavior is the same as sorted input because random priorities
         // make the tree shape independent of input order. Expected O(n log n) comparisons.
-        // Reads: n (main) + CompareCount (tree comparison reads) + n (tree in-order traversal reads)
-        // Writes: 2n (n tree CreateNode + n main in-order writes)
         var minCompares = (ulong)(n - 1);
         var maxCompares = (ulong)(n * (n - 1) / 2);
-        var expectedWrites = (ulong)(2 * n);
-
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+
+        // Reads: BST baseline 4n + 2C plus HeapUp reads (Parent, Priority) and rotation reads
+        var nLogN = (ulong)(n * Math.Log2(Math.Max(n, 2)));
+        var minReads = (ulong)(4 * n) + 2 * stats.CompareCount + 1;
+        await Assert.That(stats.IndexReadCount).IsBetween(minReads, nLogN * 20);
+
+        // Writes: BST baseline 4n - 2 plus HeapUp/rotation writes
+        await Assert.That(stats.IndexWriteCount).IsBetween((ulong)(3 * n), nLogN * 20);
+
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
@@ -178,15 +190,18 @@ public class TreapSortTests
 
         // For random input, treap gives expected O(n log n) comparisons.
         // Random priorities combined with random input order yield the same expected tree depth.
-        // Reads: n (main) + CompareCount (tree comparison reads) + n (tree in-order traversal reads)
-        // Writes: 2n (n tree CreateNode + n main in-order writes)
         var minCompares = (ulong)(n - 1);
         var maxCompares = (ulong)(n * (n - 1) / 2);
-        var expectedWrites = (ulong)(2 * n);
-
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+
+        // Reads: BST baseline 4n + 2C plus HeapUp reads (Parent, Priority) and rotation reads
+        var nLogN = (ulong)(n * Math.Log2(Math.Max(n, 2)));
+        var minReads = (ulong)(4 * n) + 2 * stats.CompareCount + 1;
+        await Assert.That(stats.IndexReadCount).IsBetween(minReads, nLogN * 20);
+
+        // Writes: BST baseline 4n - 2 plus HeapUp/rotation writes
+        await Assert.That(stats.IndexWriteCount).IsBetween((ulong)(3 * n), nLogN * 20);
+
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 }

@@ -139,24 +139,28 @@ public static class BinaryTreeSort
             var cmp = CompareWithNode(arena, current, itemIndex, value, comparer, context);
             if (cmp < 0)
             {
-                // If the left child is null, insert here.
+                // Read current node's Left pointer to check/navigate
+                context.OnIndexRead(current, BUFFER_TREE);
                 if (arena[current].Left == NULL_INDEX)
                 {
+                    // Link new node as left child (structural write to current node)
                     arena[current].Left = CreateNode(arena, value, ref nodeCount, context);
+                    context.OnIndexWrite(current, BUFFER_TREE);
                     break;
                 }
-                // Otherwise, move further down to the left child.
                 current = arena[current].Left;
             }
             else
             {
-                // If the value is greater or equal, go right.
+                // Read current node's Right pointer to check/navigate
+                context.OnIndexRead(current, BUFFER_TREE);
                 if (arena[current].Right == NULL_INDEX)
                 {
+                    // Link new node as right child (structural write to current node)
                     arena[current].Right = CreateNode(arena, value, ref nodeCount, context);
+                    context.OnIndexWrite(current, BUFFER_TREE);
                     break;
                 }
-                // Otherwise, move further down to the right child.
                 current = arena[current].Right;
             }
         }
@@ -189,14 +193,17 @@ public static class BinaryTreeSort
                 while (current != NULL_INDEX)
                 {
                     stack[stackTop++] = current;
+                    s.Context.OnIndexRead(current, BUFFER_TREE); // read Left pointer
                     current = arena[current].Left;
                 }
 
                 // Visit the node at the top of the stack
                 current = stack[--stackTop];
+                s.Context.OnIndexRead(current, BUFFER_TREE); // read Value
                 s.Write(writeIndex++, arena[current].Value);
 
                 // Move to the right subtree
+                s.Context.OnIndexRead(current, BUFFER_TREE); // read Right pointer
                 current = arena[current].Right;
             }
         }

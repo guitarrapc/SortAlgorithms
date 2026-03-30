@@ -124,20 +124,24 @@ public class BalancedBinaryTreeSortTests
         var sorted = Enumerable.Range(0, n).ToArray();
         BalancedBinaryTreeSort.Sort(sorted.AsSpan(), stats);
 
-        // For sorted data [0, 1, 2, ..., n-1], AVL tree maintains balance through rotations
-        // Expected comparisons for balanced tree:
-        // - Each insertion into a tree of i elements takes ~log2(i) comparisons
-        // - Total: approximately n*log2(n) comparisons
-        // Reads: n (main array reads) + CompareCount (tree node reads during comparisons) + n (tree node reads during in-order traversal)
-        // Writes: 2n (n tree writes from CreateNode + n main writes during in-order traversal)
-        var avgCompares = (ulong)(n * Math.Log2(Math.Max(n, 2)));
-        var minCompares = avgCompares / 2;  // Allow some variance
-        var maxCompares = avgCompares * 2;  // Upper bound for balanced insertions
-        var expectedWrites = (ulong)(2 * n);
+        // For sorted data [0, 1, 2, ..., n-1], AVL tree maintains balance through rotations.
+        // Each insertion into a tree of i elements takes ~log2(i) comparisons.
+        var nLogN = (ulong)(n * Math.Log2(Math.Max(n, 2)));
+        await Assert.That(stats.CompareCount).IsBetween(nLogN / 2, nLogN * 2);
 
-        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+        // With full structural tracking, reads include:
+        //   n (main reads) + C (CompareWithNode) + C (Left/Right navigation)
+        //   + 3n (Inorder: Left + Value + Right) + rebalancing reads (UpdateHeight, GetBalance, rotations)
+        // Minimum: 4n + 2C (BST baseline without rebalancing). AVL adds O(n log n) rebalancing reads.
+        var minReads = (ulong)(4 * n) + 2 * stats.CompareCount + 1;
+        await Assert.That(stats.IndexReadCount).IsBetween(minReads, nLogN * 15);
+
+        // With full structural tracking, writes include:
+        //   n (CreateNode) + (n-1) (parent linking) + n (Inorder writes)
+        //   + height update writes + rotation pointer writes
+        // Minimum: 3n - 1 (BST baseline). AVL adds O(n log n) rebalancing writes.
+        await Assert.That(stats.IndexWriteCount).IsBetween((ulong)(3 * n), nLogN * 5);
+
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
@@ -152,20 +156,18 @@ public class BalancedBinaryTreeSortTests
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         BalancedBinaryTreeSort.Sort(reversed.AsSpan(), stats);
 
-        // For reversed data [n-1, n-2, ..., 1, 0], AVL tree maintains balance through rotations
-        // Expected comparisons for balanced tree:
-        // - Each insertion into a tree of i elements takes ~log2(i) comparisons
-        // - Total: approximately n*log2(n) comparisons
-        // Reads: n (main) + CompareCount (tree comparisons) + n (tree in-order traversal)
-        // Writes: 2n (n tree CreateNode + n main in-order writes)
-        var avgCompares = (ulong)(n * Math.Log2(Math.Max(n, 2)));
-        var minCompares = avgCompares / 2;  // Allow some variance
-        var maxCompares = avgCompares * 2;  // Upper bound for balanced insertions
-        var expectedWrites = (ulong)(2 * n);
+        // For reversed data [n-1, n-2, ..., 1, 0], AVL tree maintains balance through rotations.
+        // Same formulas as sorted data (symmetric tree shape).
+        var nLogN = (ulong)(n * Math.Log2(Math.Max(n, 2)));
+        await Assert.That(stats.CompareCount).IsBetween(nLogN / 2, nLogN * 2);
 
-        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+        // Reads: BST baseline 4n + 2C plus rebalancing reads (UpdateHeight, GetBalance, rotations)
+        var minReads = (ulong)(4 * n) + 2 * stats.CompareCount + 1;
+        await Assert.That(stats.IndexReadCount).IsBetween(minReads, nLogN * 15);
+
+        // Writes: BST baseline 3n - 1 plus rebalancing writes (height updates, rotation pointer writes)
+        await Assert.That(stats.IndexWriteCount).IsBetween((ulong)(3 * n), nLogN * 5);
+
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
@@ -180,21 +182,17 @@ public class BalancedBinaryTreeSortTests
         var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
         BalancedBinaryTreeSort.Sort(random.AsSpan(), stats);
 
-        // For random data, AVL tree maintains balance automatically
-        // Expected comparisons:
-        // - Each insertion into a balanced tree of i elements takes ~log2(i) comparisons
-        // - Total: approximately n*log2(n) comparisons
-        // - Balanced tree guarantees O(log n) height, so worst case is better than BST
-        // Reads: n (main) + CompareCount (tree comparisons) + n (tree in-order traversal)
-        // Writes: 2n (n tree CreateNode + n main in-order writes)
-        var avgCompares = (ulong)(n * Math.Log2(Math.Max(n, 2)));
-        var minCompares = avgCompares / 2;  // Allow variance for very balanced insertions
-        var maxCompares = avgCompares * 2;  // Upper bound (still O(n log n))
-        var expectedWrites = (ulong)(2 * n);
+        // For random data, AVL tree guarantees O(n log n) comparisons regardless of input.
+        var nLogN = (ulong)(n * Math.Log2(Math.Max(n, 2)));
+        await Assert.That(stats.CompareCount).IsBetween(nLogN / 2, nLogN * 2);
 
-        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n) + stats.CompareCount);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+        // Reads: BST baseline 4n + 2C plus rebalancing reads (UpdateHeight, GetBalance, rotations)
+        var minReads = (ulong)(4 * n) + 2 * stats.CompareCount + 1;
+        await Assert.That(stats.IndexReadCount).IsBetween(minReads, nLogN * 15);
+
+        // Writes: BST baseline 3n - 1 plus rebalancing writes (height updates, rotation pointer writes)
+        await Assert.That(stats.IndexWriteCount).IsBetween((ulong)(3 * n), nLogN * 5);
+
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 

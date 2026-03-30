@@ -185,13 +185,15 @@ public static class BalancedBinaryTreeSort
 
             if (cmp < 0)
             {
-                // Go left
+                // Read Left pointer to check/navigate
+                s.Context.OnIndexRead(currentIndex, BUFFER_TREE);
                 var leftIndex = arena[currentIndex].Left;
                 if (leftIndex == NULL_INDEX)
                 {
-                    // Insert here
+                    // Insert here and link as left child
                     var newIndex = CreateNode(arena, insertValue, ref nodeCount, s.Context);
                     arena[currentIndex].Left = newIndex;
+                    s.Context.OnIndexWrite(currentIndex, BUFFER_TREE);
                     currentIndex = newIndex;
                     break;
                 }
@@ -199,13 +201,15 @@ public static class BalancedBinaryTreeSort
             }
             else
             {
-                // Go right
+                // Read Right pointer to check/navigate
+                s.Context.OnIndexRead(currentIndex, BUFFER_TREE);
                 var rightIndex = arena[currentIndex].Right;
                 if (rightIndex == NULL_INDEX)
                 {
-                    // Insert here
+                    // Insert here and link as right child
                     var newIndex = CreateNode(arena, insertValue, ref nodeCount, s.Context);
                     arena[currentIndex].Right = newIndex;
+                    s.Context.OnIndexWrite(currentIndex, BUFFER_TREE);
                     currentIndex = newIndex;
                     break;
                 }
@@ -224,20 +228,23 @@ public static class BalancedBinaryTreeSort
             var nodeIndex = pathStack[--stackTop];
 
             // Ensure nodeIndex points to the correct child subtree root (propagate up)
+            s.Context.OnIndexRead(nodeIndex, BUFFER_TREE); // read Left/Right to find which child
             if (arena[nodeIndex].Left == subtreeFrom)
             {
                 arena[nodeIndex].Left = subtreeRoot;
+                s.Context.OnIndexWrite(nodeIndex, BUFFER_TREE);
             }
             else if (arena[nodeIndex].Right == subtreeFrom)
             {
                 arena[nodeIndex].Right = subtreeRoot;
+                s.Context.OnIndexWrite(nodeIndex, BUFFER_TREE);
             }
 
             // Update height of current node
-            UpdateHeight(arena, nodeIndex);
+            UpdateHeight(arena, nodeIndex, s.Context);
 
             // Balance this subtree - may rotate and return a new subtree root
-            var newRoot = Balance(arena, nodeIndex);
+            var newRoot = Balance(arena, nodeIndex, s.Context);
 
             subtreeFrom = nodeIndex;
             subtreeRoot = newRoot;
@@ -279,6 +286,7 @@ public static class BalancedBinaryTreeSort
                 while (currentIndex != NULL_INDEX)
                 {
                     stack[stackTop++] = currentIndex;
+                    s.Context.OnIndexRead(currentIndex, BUFFER_TREE); // read Left pointer
                     currentIndex = arena[currentIndex].Left;
                 }
 
@@ -289,6 +297,7 @@ public static class BalancedBinaryTreeSort
                 s.Write(writeIndex++, value);
 
                 // Move to right subtree
+                s.Context.OnIndexRead(currentIndex, BUFFER_TREE); // read Right pointer
                 currentIndex = arena[currentIndex].Right;
             }
         }
@@ -350,30 +359,55 @@ public static class BalancedBinaryTreeSort
     /// Update the node's height based on the heights of its children using arena indices.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void UpdateHeight<T>(Span<Node<T>> arena, int nodeIndex)
+    private static void UpdateHeight<T, TContext>(Span<Node<T>> arena, int nodeIndex, TContext context)
+        where TContext : ISortContext
     {
+        context.OnIndexRead(nodeIndex, BUFFER_TREE); // read Left/Right pointers
         var leftIndex = arena[nodeIndex].Left;
         var rightIndex = arena[nodeIndex].Right;
 
         // Get the heights of the left and right children.
-        int leftHeight = (leftIndex == NULL_INDEX) ? 0 : arena[leftIndex].Height;
-        int rightHeight = (rightIndex == NULL_INDEX) ? 0 : arena[rightIndex].Height;
+        int leftHeight = 0;
+        if (leftIndex != NULL_INDEX)
+        {
+            context.OnIndexRead(leftIndex, BUFFER_TREE); // read child's Height
+            leftHeight = arena[leftIndex].Height;
+        }
+        int rightHeight = 0;
+        if (rightIndex != NULL_INDEX)
+        {
+            context.OnIndexRead(rightIndex, BUFFER_TREE); // read child's Height
+            rightHeight = arena[rightIndex].Height;
+        }
 
         // node's height = max child's height + 1
         arena[nodeIndex].Height = 1 + Math.Max(leftHeight, rightHeight);
+        context.OnIndexWrite(nodeIndex, BUFFER_TREE); // write Height
     }
 
     /// <summary>
     /// Returns the balance factor (left height - right height) using arena indices.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetBalance<T>(Span<Node<T>> arena, int nodeIndex)
+    private static int GetBalance<T, TContext>(Span<Node<T>> arena, int nodeIndex, TContext context)
+        where TContext : ISortContext
     {
+        context.OnIndexRead(nodeIndex, BUFFER_TREE); // read Left/Right pointers
         var leftIndex = arena[nodeIndex].Left;
         var rightIndex = arena[nodeIndex].Right;
 
-        int leftHeight = (leftIndex == NULL_INDEX) ? 0 : arena[leftIndex].Height;
-        int rightHeight = (rightIndex == NULL_INDEX) ? 0 : arena[rightIndex].Height;
+        int leftHeight = 0;
+        if (leftIndex != NULL_INDEX)
+        {
+            context.OnIndexRead(leftIndex, BUFFER_TREE); // read child's Height
+            leftHeight = arena[leftIndex].Height;
+        }
+        int rightHeight = 0;
+        if (rightIndex != NULL_INDEX)
+        {
+            context.OnIndexRead(rightIndex, BUFFER_TREE); // read child's Height
+            rightHeight = arena[rightIndex].Height;
+        }
         return leftHeight - rightHeight;
     }
 
@@ -381,31 +415,36 @@ public static class BalancedBinaryTreeSort
     /// Rebalance the node after insertion using AVL rotations (arena-based).
     /// </summary>
     /// <returns>Index of the new root after balancing.</returns>
-    private static int Balance<T>(Span<Node<T>> arena, int nodeIndex)
+    private static int Balance<T, TContext>(Span<Node<T>> arena, int nodeIndex, TContext context)
+        where TContext : ISortContext
     {
-        int balance = GetBalance(arena, nodeIndex);
+        int balance = GetBalance(arena, nodeIndex, context);
 
         // Left heavy (balance > 1)
         if (balance > 1)
         {
+            context.OnIndexRead(nodeIndex, BUFFER_TREE); // read Left pointer
             var leftIndex = arena[nodeIndex].Left;
             // Left child is right heavy
-            if (GetBalance(arena, leftIndex) < 0)
+            if (GetBalance(arena, leftIndex, context) < 0)
             {
-                arena[nodeIndex].Left = RotateLeft(arena, leftIndex);
+                arena[nodeIndex].Left = RotateLeft(arena, leftIndex, context);
+                context.OnIndexWrite(nodeIndex, BUFFER_TREE); // write Left pointer
             }
-            return RotateRight(arena, nodeIndex);
+            return RotateRight(arena, nodeIndex, context);
         }
         // Right heavy (balance < -1)
         else if (balance < -1)
         {
+            context.OnIndexRead(nodeIndex, BUFFER_TREE); // read Right pointer
             var rightIndex = arena[nodeIndex].Right;
             // Right child is left heavy
-            if (GetBalance(arena, rightIndex) > 0)
+            if (GetBalance(arena, rightIndex, context) > 0)
             {
-                arena[nodeIndex].Right = RotateRight(arena, rightIndex);
+                arena[nodeIndex].Right = RotateRight(arena, rightIndex, context);
+                context.OnIndexWrite(nodeIndex, BUFFER_TREE); // write Right pointer
             }
-            return RotateLeft(arena, nodeIndex);
+            return RotateLeft(arena, nodeIndex, context);
         }
 
         // Node is balanced, return as is.
@@ -416,18 +455,23 @@ public static class BalancedBinaryTreeSort
     /// Right rotation on the given node using arena indices.
     /// </summary>
     /// <returns>Index of the new root after rotation.</returns>
-    private static int RotateRight<T>(Span<Node<T>> arena, int yIndex)
+    private static int RotateRight<T, TContext>(Span<Node<T>> arena, int yIndex, TContext context)
+        where TContext : ISortContext
     {
+        context.OnIndexRead(yIndex, BUFFER_TREE); // read y's Left
         var xIndex = arena[yIndex].Left;
+        context.OnIndexRead(xIndex, BUFFER_TREE); // read x's Right
         var t2Index = arena[xIndex].Right;
 
         // Perform the rotation
         arena[xIndex].Right = yIndex;
+        context.OnIndexWrite(xIndex, BUFFER_TREE);
         arena[yIndex].Left = t2Index;
+        context.OnIndexWrite(yIndex, BUFFER_TREE);
 
         // Recompute heights
-        UpdateHeight(arena, yIndex);
-        UpdateHeight(arena, xIndex);
+        UpdateHeight(arena, yIndex, context);
+        UpdateHeight(arena, xIndex, context);
 
         // Return the new root
         return xIndex;
@@ -437,18 +481,23 @@ public static class BalancedBinaryTreeSort
     /// Left rotation on the given node using arena indices.
     /// </summary>
     /// <returns>Index of the new root after rotation.</returns>
-    private static int RotateLeft<T>(Span<Node<T>> arena, int xIndex)
+    private static int RotateLeft<T, TContext>(Span<Node<T>> arena, int xIndex, TContext context)
+        where TContext : ISortContext
     {
+        context.OnIndexRead(xIndex, BUFFER_TREE); // read x's Right
         var yIndex = arena[xIndex].Right;
+        context.OnIndexRead(yIndex, BUFFER_TREE); // read y's Left
         var t2Index = arena[yIndex].Left;
 
         // Perform the rotation
         arena[yIndex].Left = xIndex;
+        context.OnIndexWrite(yIndex, BUFFER_TREE);
         arena[xIndex].Right = t2Index;
+        context.OnIndexWrite(xIndex, BUFFER_TREE);
 
         // Recompute heights
-        UpdateHeight(arena, xIndex);
-        UpdateHeight(arena, yIndex);
+        UpdateHeight(arena, xIndex, context);
+        UpdateHeight(arena, yIndex, context);
 
         // Return the new root
         return yIndex;

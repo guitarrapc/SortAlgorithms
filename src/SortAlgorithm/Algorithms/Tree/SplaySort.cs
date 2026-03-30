@@ -148,11 +148,14 @@ public static class SplaySort
             if (cmp < 0)
             {
                 // value < node → go left
+                s.Context.OnIndexRead(current, BUFFER_TREE); // read Left pointer
                 if (arena[current].Left == NULL_INDEX)
                 {
                     var newIndex = CreateNode(arena, value, ref nodeCount, s.Context);
                     arena[current].Left = newIndex;
+                    s.Context.OnIndexWrite(current, BUFFER_TREE); // write Left pointer
                     arena[newIndex].Parent = current;
+                    s.Context.OnIndexWrite(newIndex, BUFFER_TREE); // write Parent pointer
                     current = newIndex;
                     break;
                 }
@@ -164,11 +167,14 @@ public static class SplaySort
                 // Equal keys are inserted into the right subtree.
                 // Because rotations preserve in-order order, this keeps equal elements
                 // in insertion order, making the overall sort stable.
+                s.Context.OnIndexRead(current, BUFFER_TREE); // read Right pointer
                 if (arena[current].Right == NULL_INDEX)
                 {
                     var newIndex = CreateNode(arena, value, ref nodeCount, s.Context);
                     arena[current].Right = newIndex;
+                    s.Context.OnIndexWrite(current, BUFFER_TREE); // write Right pointer
                     arena[newIndex].Parent = current;
+                    s.Context.OnIndexWrite(newIndex, BUFFER_TREE); // write Parent pointer
                     current = newIndex;
                     break;
                 }
@@ -177,7 +183,7 @@ public static class SplaySort
         }
 
         // Splay the newly inserted node to the root
-        return Splay(arena, current);
+        return Splay(arena, current, s.Context);
     }
 
     /// <summary>
@@ -189,45 +195,56 @@ public static class SplaySort
     /// </list>
     /// Returns <paramref name="x"/>, which is now the root (Parent == NULL_INDEX).
     /// </summary>
-    private static int Splay<T>(Span<Node<T>> arena, int x)
+    private static int Splay<T, TContext>(Span<Node<T>> arena, int x, TContext context)
+        where TContext : ISortContext
     {
+        context.OnIndexRead(x, BUFFER_TREE); // read Parent
         while (arena[x].Parent != NULL_INDEX)
         {
             var p = arena[x].Parent;
+            context.OnIndexRead(p, BUFFER_TREE); // read Parent of p (grandparent)
             var g = arena[p].Parent;
 
             if (g == NULL_INDEX)
             {
                 // Zig: p is the root, single rotation suffices
+                context.OnIndexRead(p, BUFFER_TREE); // read Left to check direction
                 if (arena[p].Left == x)
-                    RotateRight(arena, p);
+                    RotateRight(arena, p, context);
                 else
-                    RotateLeft(arena, p);
-            }
-            else if (arena[g].Left == p && arena[p].Left == x)
-            {
-                // Zig-zig left-left: rotate grandparent right first, then parent right
-                RotateRight(arena, g);
-                RotateRight(arena, p);
-            }
-            else if (arena[g].Right == p && arena[p].Right == x)
-            {
-                // Zig-zig right-right: rotate grandparent left first, then parent left
-                RotateLeft(arena, g);
-                RotateLeft(arena, p);
-            }
-            else if (arena[g].Left == p && arena[p].Right == x)
-            {
-                // Zig-zag left-right: rotate parent left, then grandparent right
-                RotateLeft(arena, p);
-                RotateRight(arena, g);
+                    RotateLeft(arena, p, context);
             }
             else
             {
-                // Zig-zag right-left: rotate parent right, then grandparent left
-                RotateRight(arena, p);
-                RotateLeft(arena, g);
+                context.OnIndexRead(g, BUFFER_TREE); // read g's Left/Right
+                context.OnIndexRead(p, BUFFER_TREE); // read p's Left/Right
+                if (arena[g].Left == p && arena[p].Left == x)
+                {
+                    // Zig-zig left-left: rotate grandparent right first, then parent right
+                    RotateRight(arena, g, context);
+                    RotateRight(arena, p, context);
+                }
+                else if (arena[g].Right == p && arena[p].Right == x)
+                {
+                    // Zig-zig right-right: rotate grandparent left first, then parent left
+                    RotateLeft(arena, g, context);
+                    RotateLeft(arena, p, context);
+                }
+                else if (arena[g].Left == p && arena[p].Right == x)
+                {
+                    // Zig-zag left-right: rotate parent left, then grandparent right
+                    RotateLeft(arena, p, context);
+                    RotateRight(arena, g, context);
+                }
+                else
+                {
+                    // Zig-zag right-left: rotate parent right, then grandparent left
+                    RotateRight(arena, p, context);
+                    RotateLeft(arena, g, context);
+                }
             }
+
+            context.OnIndexRead(x, BUFFER_TREE); // read Parent for next iteration
         }
         return x;
     }
@@ -237,27 +254,45 @@ public static class SplaySort
     /// Updates parent pointers for x, y, and y's former left child.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void RotateLeft<T>(Span<Node<T>> arena, int x)
+    private static void RotateLeft<T, TContext>(Span<Node<T>> arena, int x, TContext context)
+        where TContext : ISortContext
     {
+        context.OnIndexRead(x, BUFFER_TREE); // read Right
         var y = arena[x].Right;
 
         // x.Right = y.Left
+        context.OnIndexRead(y, BUFFER_TREE); // read Left
         arena[x].Right = arena[y].Left;
+        context.OnIndexWrite(x, BUFFER_TREE); // write Right
         if (arena[y].Left != NULL_INDEX)
+        {
             arena[arena[y].Left].Parent = x;
+            context.OnIndexWrite(arena[x].Right, BUFFER_TREE); // write Parent
+        }
 
         // y inherits x's parent
+        context.OnIndexRead(x, BUFFER_TREE); // read Parent
         arena[y].Parent = arena[x].Parent;
+        context.OnIndexWrite(y, BUFFER_TREE); // write Parent
         if (arena[x].Parent != NULL_INDEX)
         {
+            context.OnIndexRead(arena[x].Parent, BUFFER_TREE); // read parent's Left
             if (arena[arena[x].Parent].Left == x)
+            {
                 arena[arena[x].Parent].Left = y;
+                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
+            }
             else
+            {
                 arena[arena[x].Parent].Right = y;
+                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
+            }
         }
 
         arena[y].Left = x;
+        context.OnIndexWrite(y, BUFFER_TREE);
         arena[x].Parent = y;
+        context.OnIndexWrite(x, BUFFER_TREE);
     }
 
     /// <summary>
@@ -265,27 +300,45 @@ public static class SplaySort
     /// Updates parent pointers for x, y, and y's former right child.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void RotateRight<T>(Span<Node<T>> arena, int x)
+    private static void RotateRight<T, TContext>(Span<Node<T>> arena, int x, TContext context)
+        where TContext : ISortContext
     {
+        context.OnIndexRead(x, BUFFER_TREE); // read Left
         var y = arena[x].Left;
 
         // x.Left = y.Right
+        context.OnIndexRead(y, BUFFER_TREE); // read Right
         arena[x].Left = arena[y].Right;
+        context.OnIndexWrite(x, BUFFER_TREE); // write Left
         if (arena[y].Right != NULL_INDEX)
+        {
             arena[arena[y].Right].Parent = x;
+            context.OnIndexWrite(arena[x].Left, BUFFER_TREE); // write Parent
+        }
 
         // y inherits x's parent
+        context.OnIndexRead(x, BUFFER_TREE); // read Parent
         arena[y].Parent = arena[x].Parent;
+        context.OnIndexWrite(y, BUFFER_TREE); // write Parent
         if (arena[x].Parent != NULL_INDEX)
         {
+            context.OnIndexRead(arena[x].Parent, BUFFER_TREE); // read parent's Right
             if (arena[arena[x].Parent].Right == x)
+            {
                 arena[arena[x].Parent].Right = y;
+                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
+            }
             else
+            {
                 arena[arena[x].Parent].Left = y;
+                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
+            }
         }
 
         arena[y].Right = x;
+        context.OnIndexWrite(y, BUFFER_TREE);
         arena[x].Parent = y;
+        context.OnIndexWrite(x, BUFFER_TREE);
     }
 
     /// <summary>
@@ -315,6 +368,7 @@ public static class SplaySort
                 while (current != NULL_INDEX)
                 {
                     stack[stackTop++] = current;
+                    s.Context.OnIndexRead(current, BUFFER_TREE); // read Left pointer
                     current = arena[current].Left;
                 }
 
@@ -324,6 +378,7 @@ public static class SplaySort
                 s.Write(writeIndex++, value);
 
                 // Move to the right subtree
+                s.Context.OnIndexRead(current, BUFFER_TREE); // read Right pointer
                 current = arena[current].Right;
             }
         }
