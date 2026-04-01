@@ -132,7 +132,7 @@ public static class BalancedBinaryTreeSort
             for (int i = 0; i < s.Length; i++)
             {
                 context.OnPhase(SortPhase.TreeSortInsert, i, s.Length - 1);
-                context.OnRole(i, BUFFER_MAIN, RoleType.RightPointer);
+                context.OnRole(i, BUFFER_MAIN, RoleType.Inserting);
                 rootIndex = InsertIterative(arena, rootIndex, ref nodeCount, i, s, pathStack);
                 context.OnRole(i, BUFFER_MAIN, RoleType.None);
             }
