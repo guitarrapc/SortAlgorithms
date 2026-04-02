@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -385,7 +385,13 @@ public static class RotateMergeSort
 /// the larger side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
 /// rotates the overlapping region, then recursively merges the two resulting sub-problems.
 /// Picking the larger side guarantees progress (the median index is always ≥ 1).</description></item>
-/// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal with fast paths):</strong> Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems].
+/// <item><description><strong>Already-Sorted Skip:</strong> Before each merge, if
+/// <c>s[mid] ≤ s[mid+1]</c> the two runs are already in order and the merge is skipped.</description></item>
+/// <item><description><strong>Completely-Disjoint Skip:</strong> Before each merge, if
+/// <c>s[left] &gt; s[right]</c> every element of the left run exceeds every element of the right run.
+/// The entire pair is resolved with a single rotation, bypassing all recursive merge work.
+/// Reverse-order inputs produce run pairs exactly in this form, turning O(n log² n) merge work into O(n log n) rotations.</description></item>
+/// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal with fast paths):</strong>
 /// Fast path k==1: move leftmost element to right end (sequential reads/writes, no swap).
 /// Fast path k==n-1: move rightmost element to left end (left rotate n-1 = right rotate 1, sequential reads/writes, no swap).
 /// General case uses 3-reversal: Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).
@@ -491,6 +497,14 @@ public static class RotateMergeSortRecursive
             return; // Already sorted, no merge needed
         }
 
+        // Completely disjoint in reverse order: every left element > every right element → rotate entire run pair.
+        // Reverse-array inputs produce run pairs exactly in this form, so this skips all recursive merge work.
+        if (s.Compare(left, right) > 0)
+        {
+            Rotate(s, left, right, mid - left + 1);
+            return;
+        }
+
         // Merge: Combine two sorted halves in-place using rotation
         MergeInPlace(s, left, mid, right);
     }
@@ -511,6 +525,13 @@ public static class RotateMergeSortRecursive
 
         // Already-sorted skip: left run's max ≤ right run's min → merge is a no-op.
         if (s.Compare(mid, mid + 1) <= 0) return;
+
+        // Completely disjoint in reverse order: every left element > every right element → rotate sub-problem into place.
+        if (s.Compare(left, right) > 0)
+        {
+            Rotate(s, left, right, len1);
+            return;
+        }
 
         if (len1 == 1 && len2 == 1)
         {

@@ -237,11 +237,13 @@ public class RotateMergeSortRecursiveTests
         // Rotate Merge Sort with divide-and-conquer merge for reversed data:
         // Picks median of smaller side, binary search in opposite side, rotate, recurse.
         // Small subarrays (≤16) use insertion sort.
+        // Completely-disjoint skip: when every left element > every right element, a single rotation
+        // resolves the merge, reducing comparisons noticeably on reversed inputs.
         //
         // n≤16: ~4.0n to ~5.5n (insertion sort)
-        // n>16: ~0.9 * n * log₂(n) to ~2.0 * n * log₂(n)
+        // n>16: ~0.8 * n * log₂(n) to ~2.0 * n * log₂(n)
         var logN = Math.Log2(n);
-        var minCompares = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 0.9);
+        var minCompares = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 0.8);
         var maxCompares = n <= 16 ? (ulong)(n * 5.5) : (ulong)(n * logN * 2.0);
 
         // Writes: 3-reversal rotation and merge base case
