@@ -33,10 +33,15 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Stability Preservation:</strong> The binary search uses ≥ comparison
 /// (<c>s[p-c] ≥ s[c]</c> → advance lo), ensuring equal elements from the left run appear before those
 /// from the right run in the merged result.</description></item>
-/// <item><description><strong>Rotation Algorithm (3-Reversal with fast paths):</strong>
+/// <item><description><strong>Boundary Trimming:</strong> At the start of each SymMerge call, binary search
+/// trims elements from the left and right boundaries that are already in their correct merged position,
+/// reducing the effective merge range.</description></item>
+/// <item><description><strong>Single-Element Base Cases:</strong> When one run has exactly 1 element,
+/// a binary search finds its insertion position in the other run and a single shift completes the merge,
+/// avoiding the full SymMerge binary search + rotation + recursion overhead.</description></item>
+/// <item><description><strong>Rotation Algorithm (shift-based fast paths + 3-Reversal fallback):</strong>
 /// Left-rotates s[lo..hi) by (m-lo) positions: [left_part | right_block] → [right_block | left_part].
-/// Fast path leftLen==1: move leftmost element to right end.
-/// Fast path rightLen==1: move rightmost element to left end.
+/// Fast path leftLen≤4 or rightLen≤4: save the small side to local variables, shift, and write back.
 /// General case uses 3-reversal: Reverse(s[lo..m-1]), Reverse(s[m..hi-1]), Reverse(s[lo..hi-1]).</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -63,8 +68,18 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class SymMergeSort
 {
-    // Threshold for using insertion sort instead of SymMerge
+    // Threshold for using insertion sort for initial block seeding (Phase 1)
     private const int InsertionSortThreshold = 16;
+
+    // Threshold for falling back to insertion sort inside SymMerge recursion.
+    // Lower than InsertionSortThreshold because SymMerge sub-problems are already
+    // two sorted runs, so a merge-aware fallback is more efficient at smaller sizes.
+    private const int SymMergeThreshold = 8;
+
+    // Maximum small-side length for the shift-based Rotate fast path.
+    // When the smaller side of the rotation is <= this value, the elements are
+    // saved to local variables and a single shift replaces the 3-reversal.
+    private const int RotateSmallThreshold = 4;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;
@@ -160,8 +175,105 @@ public static class SymMergeSort
         // Base cases: empty halves
         if (a >= m || m >= b) return;
 
+        // Already-sorted skip (Bottleneck 2): left run's max ≤ right run's min.
+        // This fires frequently during recursive sub-problems where the two halves
+        // ended up already in order after the rotation of the parent call.
+        if (s.Compare(m - 1, m) <= 0) return;
+
+        // Boundary trimming (Bottleneck 2): narrow [a..m) and [m..b) by skipping
+        // elements at the edges that are already in their correct merged position.
+        // Left trim: advance 'a' past elements that are ≤ the first element of the right run.
+        // Uses lower_bound semantics to preserve stability (equal left-run elements stay first).
+        {
+            var tlo = a;
+            var thi = m;
+            var rightFirst = s.Read(m);
+            while (tlo < thi)
+            {
+                var c = (int)((uint)(tlo + thi) >> 1);
+                if (s.Compare(c, rightFirst) <= 0)
+                    tlo = c + 1;
+                else
+                    thi = c;
+            }
+            a = tlo;
+        }
+        // Right trim: shrink b to the first element in the right run that is >= leftLast.
+        // Elements in s[b..originalB) are already in final position after all remaining left-run elements,
+        // so they can be excluded from the recursive SymMerge.
+        // This uses lower_bound(right, leftLast) / equivalently the first index where leftLast <= right[i].
+        // Stability is preserved because equal left-run elements must remain before equal right-run elements.
+        {
+            var tlo = m;
+            var thi = b;
+            var leftLast = s.Read(m - 1);
+            while (tlo < thi)
+            {
+                var c = (int)((uint)(tlo + thi) >> 1);
+                if (s.Compare(leftLast, c) <= 0)
+                    thi = c;
+                else
+                    tlo = c + 1;
+            }
+            b = tlo;
+        }
+
+        // Re-check after trimming: runs may have become empty
+        if (a >= m || m >= b) return;
+
+        // Single-element base cases (Bottleneck 4): when one side has exactly 1 element,
+        // binary-search for its insertion position in the other run and shift-insert.
+        // This avoids the full SymMerge machinery (binary search + rotation + 2 recursive calls)
+        // and reduces comparisons to O(log n) + O(n) moves.
+        if (m - a == 1)
+        {
+            // Left run is a single element: binary search in right run for insertion position.
+            // Use lower_bound in the right run: find the first element >= tmp.
+            // Inserting tmp before that position preserves stability because the left-run element
+            // must remain before equal elements from the right run.
+            var tmp = s.Read(a);
+            var ilo = m;
+            var ihi = b;
+            while (ilo < ihi)
+            {
+                var c = (int)((uint)(ilo + ihi) >> 1);
+                if (s.Compare(tmp, c) > 0)
+                    ilo = c + 1;
+                else
+                    ihi = c;
+            }
+            // Shift s[m..ilo) one position to the left, then place tmp at ilo-1.
+            for (var i = a; i < ilo - 1; i++)
+                s.Write(i, s.Read(i + 1));
+            s.Write(ilo - 1, tmp);
+            return;
+        }
+        if (b - m == 1)
+        {
+            // Right run is a single element: binary search in left run for insertion position.
+            // Use upper_bound in the left run: find the first element > tmp.
+            // Inserting tmp there preserves stability because equal elements from the left run
+            // must remain before the right-run element.
+            var tmp = s.Read(m);
+            var ilo = a;
+            var ihi = m;
+            while (ilo < ihi)
+            {
+                var c = (int)((uint)(ilo + ihi) >> 1);
+                if (s.Compare(c, tmp) <= 0)
+                    ilo = c + 1;
+                else
+                    ihi = c;
+            }
+            // Shift s[ilo..m) one position to the right, then place tmp at ilo.
+            for (var i = m; i > ilo; i--)
+                s.Write(i, s.Read(i - 1));
+            s.Write(ilo, tmp);
+            return;
+        }
+
         // For small ranges, fall back to insertion sort (adaptive: O(n) for nearly sorted)
-        if (b - a <= InsertionSortThreshold)
+        if (b - a <= SymMergeThreshold)
         {
             InsertionSort.SortCore(s, a, b);
             return;
@@ -221,8 +333,10 @@ public static class SymMergeSort
 
     /// <summary>
     /// Left-rotates s[lo..hi) by (m - lo) positions: [s[lo..m) | s[m..hi)] → [s[m..hi) | s[lo..m)].
-    /// Fast path leftLen==1: shift right and place the single left element at the end.
-    /// Fast path rightLen==1: shift left and place the single right element at the start.
+    /// Fast paths for small sides (≤ RotateSmallThreshold): save the small side to local variables,
+    /// shift the large side, and write the saved elements back. This replaces the 3-reversal
+    /// (which uses 3×Swap per element) with 1×Read + 1×Write per element, cutting write traffic
+    /// roughly in half for small rotations.
     /// General case uses 3-reversal: Reverse(s[lo..m-1]), Reverse(s[m..hi-1]), Reverse(s[lo..hi-1]).
     /// </summary>
     private static void Rotate<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lo, int m, int hi)
@@ -232,23 +346,42 @@ public static class SymMergeSort
         var leftLen = m - lo;
         var rightLen = hi - m;
 
-        // Fast path: single element from left moves to right end
-        if (leftLen == 1)
+        // Fast path: small left side — save left, shift right leftward, write back saved
+        if (leftLen <= RotateSmallThreshold)
         {
-            var tmp = s.Read(lo);
-            for (var i = lo; i < hi - 1; i++)
-                s.Write(i, s.Read(i + 1));
-            s.Write(hi - 1, tmp);
+            // Save leftLen elements (1-4) to local variables
+            var t0 = s.Read(lo);
+            var t1 = leftLen > 1 ? s.Read(lo + 1) : default!;
+            var t2 = leftLen > 2 ? s.Read(lo + 2) : default!;
+            var t3 = leftLen > 3 ? s.Read(lo + 3) : default!;
+            // Shift right portion to the left
+            for (var i = lo; i < hi - leftLen; i++)
+                s.Write(i, s.Read(i + leftLen));
+            // Write saved elements at the end
+            var dst = hi - leftLen;
+            s.Write(dst, t0);
+            if (leftLen > 1) s.Write(dst + 1, t1);
+            if (leftLen > 2) s.Write(dst + 2, t2);
+            if (leftLen > 3) s.Write(dst + 3, t3);
             return;
         }
 
-        // Fast path: single element from right moves to left end
-        if (rightLen == 1)
+        // Fast path: small right side — save right, shift left rightward, write back saved
+        if (rightLen <= RotateSmallThreshold)
         {
-            var tmp = s.Read(hi - 1);
-            for (var i = hi - 1; i > lo; i--)
-                s.Write(i, s.Read(i - 1));
-            s.Write(lo, tmp);
+            // Save rightLen elements (1-4) to local variables
+            var t0 = s.Read(m);
+            var t1 = rightLen > 1 ? s.Read(m + 1) : default!;
+            var t2 = rightLen > 2 ? s.Read(m + 2) : default!;
+            var t3 = rightLen > 3 ? s.Read(m + 3) : default!;
+            // Shift left portion to the right
+            for (var i = hi - 1; i >= lo + rightLen; i--)
+                s.Write(i, s.Read(i - rightLen));
+            // Write saved elements at the beginning
+            s.Write(lo, t0);
+            if (rightLen > 1) s.Write(lo + 1, t1);
+            if (rightLen > 2) s.Write(lo + 2, t2);
+            if (rightLen > 3) s.Write(lo + 3, t3);
             return;
         }
 
