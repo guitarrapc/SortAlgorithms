@@ -6,12 +6,12 @@ namespace SortAlgorithm.Algorithms;
 /// <summary>
 /// 最適化したイテレーティブな（ボトムアップ）Rotate Merge Sortです。
 /// 再帰を使わず2フェーズで配列を処理します：フェーズ1は各ブロック（≤InsertionSortThreshold要素）をInsertionSortでソートし、フェーズ2はランの幅を毎パス倍増させながら隣接するランのペアをインプレースローテーションでマージします。
-/// マージは分割統治型インプレースマージ（小さい側の中央を取り、反対側をbinary searchし、rotateして左右の部分問題を生成）を明示スタック（stackalloc）で駆動します。
+/// マージは分割統治型インプレースマージ（大きい側の中央を取り、反対側をbinary searchし、rotateして左右の部分問題を生成）を明示スタック（stackalloc）で駆動します。
 /// 安定ソートであり、外部バッファを使用せずに典型的にはO(n log² n)の性能を達成します。
 /// <br/>
 /// Iterative (bottom-up) Rotate Merge Sort.
 /// Eliminates recursion by processing the array in two phases: Phase 1 sorts each block of ≤InsertionSortThreshold elements with insertion sort, Phase 2 merges adjacent run pairs using in-place rotation while doubling the run width each pass.
-/// The merge uses divide-and-conquer in-place merging driven by an explicit stack (stackalloc): pick the median of the smaller side, binary search in the opposite side, rotate, then push both sub-problems onto the worklist.
+/// The merge uses divide-and-conquer in-place merging driven by an explicit stack (stackalloc): pick the median of the larger side, binary search in the opposite side, rotate, then push both sub-problems onto the worklist.
 /// This algorithm is stable and typically achieves O(n log² n) performance without requiring an external buffer.
 /// </summary>
 /// <remarks>
@@ -31,7 +31,7 @@ namespace SortAlgorithm.Algorithms;
 /// <c>s[mid] ≤ s[mid+1]</c> the two runs are already in order and the merge is skipped,
 /// reducing work on nearly-sorted inputs.</description></item>
 /// <item><description><strong>Divide-and-Conquer In-Place Merge (Explicit Stack):</strong> Each merge picks the median of
-/// the smaller side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
+/// the larger side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
 /// rotates the overlapping region, then pushes the two resulting sub-problems onto an explicit worklist (stackalloc).
 /// This replaces recursion with an iterative loop, eliminating O(log n) call-stack frames per merge.</description></item>
 /// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal with fast paths):</strong>
@@ -39,8 +39,8 @@ namespace SortAlgorithm.Algorithms;
 /// Fast path k==1: move leftmost element to right end.
 /// Fast path k==n-1: move rightmost element to left end (left rotate n-1 = right rotate 1).
 /// General case uses 3-reversal: Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).</description></item>
-/// <item><description><strong>Stability Preservation:</strong> Lower bound is used when the left side is smaller
-/// and upper bound when the right side is smaller, ensuring equal elements from the left run appear before
+/// <item><description><strong>Stability Preservation:</strong> Lower bound is used when the left side is larger
+/// and upper bound when the right side is larger, ensuring equal elements from the left run appear before
 /// those from the right run.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -147,7 +147,7 @@ public static class RotateMergeSort
 
     /// <summary>
     /// Merges two sorted subarrays [left..mid] and [mid+1..right] in-place using divide-and-conquer rotation.
-    /// Picks the median of the smaller side, binary searches for its position in the opposite side,
+    /// Picks the median of the larger side, binary searches for its position in the opposite side,
     /// rotates the overlapping region, then iteratively processes both resulting sub-problems via an explicit stack.
     /// Uses stackalloc for the worklist. A fixed-size work stack sized for typical practical inputs, add overflow protection or pooled fallback if strict robustness is required.
     /// </summary>
@@ -193,15 +193,15 @@ public static class RotateMergeSort
 
             int mid1, mid2;
 
-            if (len1 <= len2)
+            if (len1 > len2)
             {
-                // Left side is smaller: pick its median, lower_bound in right side
+                // Left side is larger: pick its median, lower_bound in right side
                 mid1 = l + len1 / 2;
                 mid2 = LowerBound(s, m + 1, r, mid1);
             }
             else
             {
-                // Right side is smaller: pick its median, upper_bound in left side
+                // Right side is larger (or equal): pick its median, upper_bound in left side
                 mid2 = m + 1 + len2 / 2;
                 mid1 = UpperBound(s, l, m, mid2);
             }
@@ -339,13 +339,13 @@ public static class RotateMergeSort
 
 /// <summary>
 /// 最適化した再帰呼び出しなRotate Merge Sortです。
-/// 配列を再帰的に半分に分割し、それぞれをソートした後、分割統治型の再帰的インプレースマージ（小さい側の中央を取り、反対側をbinary searchし、rotateして左右を再帰）でマージします。
+/// 配列を再帰的に半分に分割し、それぞれをソートした後、分割統治型の再帰的インプレースマージ（大きい側の中央を取り、反対側をbinary searchし、rotateして左右を再帰）でマージします。
 /// 安定ソートであり、外部バッファを使用せずに典型的にはO(n log² n)の性能を達成します。
 /// 小さい配列（≤16要素）ではInsertionSortを使用する実用的な最適化を含みます。
 /// <br/>
 /// Optimized recursive Rotate Merge Sort.
 /// Recursively divides the array in half, sorts each part, then merges sorted subarrays in-place using
-/// divide-and-conquer rotation merge: pick the median of the smaller side, binary search in the opposite side,
+/// divide-and-conquer rotation merge: pick the median of the larger side, binary search in the opposite side,
 /// rotate, then recursively merge both halves.
 /// This algorithm is stable and typically achieves O(n log² n) performance without requiring an external buffer.
 /// Includes practical optimization: insertion sort for small subarrays (≤16 elements).
@@ -363,16 +363,16 @@ public static class RotateMergeSort
 /// <item><description><strong>Conquer Step (Recursive Sorting):</strong> Each half must be sorted independently via recursive calls.
 /// The left subarray [left..mid] and right subarray [mid+1..right] are sorted before merging.</description></item>
 /// <item><description><strong>Divide-and-Conquer In-Place Merge:</strong> Each merge picks the median of
-/// the smaller side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
+/// the larger side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
 /// rotates the overlapping region, then recursively merges the two resulting sub-problems.
-/// This is the canonical recursive rotation merge algorithm.</description></item>
+/// Picking the larger side guarantees progress (the median index is always ≥ 1).</description></item>
 /// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal with fast paths):</strong> Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems].
 /// Fast path k==1: move leftmost element to right end (sequential reads/writes, no swap).
 /// Fast path k==n-1: move rightmost element to left end (left rotate n-1 = right rotate 1, sequential reads/writes, no swap).
 /// General case uses 3-reversal: Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).
 /// All three phases are linear scans, enabling hardware prefetching and eliminating GCD/modulo overhead.</description></item>
-/// <item><description><strong>Stability Preservation:</strong> Lower bound is used when the left side is smaller
-/// and upper bound when the right side is smaller, ensuring equal elements from the left run appear before
+/// <item><description><strong>Stability Preservation:</strong> Lower bound is used when the left side is larger
+/// and upper bound when the right side is larger, ensuring equal elements from the left run appear before
 /// those from the right run.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -490,22 +490,26 @@ public static class RotateMergeSortRecursive
 
         if (len1 == 0 || len2 == 0) return;
 
+        // Already-sorted skip: left run's max ≤ right run's min → merge is a no-op.
+        if (s.Compare(mid, mid + 1) <= 0) return;
+
         if (len1 == 1 && len2 == 1)
         {
-            if (s.Compare(left, right) > 0)
-                s.Swap(left, right);
+            s.Swap(left, right);
             return;
         }
 
         int mid1, mid2;
 
-        if (len1 <= len2)
+        if (len1 > len2)
         {
+            // Left side is larger: pick its median, lower_bound in right side
             mid1 = left + len1 / 2;
             mid2 = LowerBound(s, mid + 1, right, mid1);
         }
         else
         {
+            // Right side is larger (or equal): pick its median, upper_bound in left side
             mid2 = mid + 1 + len2 / 2;
             mid1 = UpperBound(s, left, mid, mid2);
         }
@@ -631,13 +635,13 @@ public static class RotateMergeSortRecursive
 
 /// <summary>
 /// 最適化していないRotate Merge Sortです。
-/// 配列を再帰的に半分に分割し、それぞれをソートした後、分割統治型の再帰的インプレースマージ（小さい側の中央を取り、反対側をbinary searchし、rotateして左右を再帰）でマージします。
+/// 配列を再帰的に半分に分割し、それぞれをソートした後、分割統治型の再帰的インプレースマージ（大きい側の中央を取り、反対側をbinary searchし、rotateして左右を再帰）でマージします。
 /// 安定ソートであり、外部バッファを使用せずに典型的にはO(n log² n)の性能を達成します。
 /// 回転にはGCD-cycle（Juggling）アルゴリズムを使用し、swapではなくwriteのみで回転を行います。
 /// <br/>
 /// Non-Optimized Rotate Merge Sort.
 /// Recursively divides the array in half, sorts each part, then merges sorted subarrays in-place using
-/// divide-and-conquer rotation merge: pick the median of the smaller side, binary search in the opposite side,
+/// divide-and-conquer rotation merge: pick the median of the larger side, binary search in the opposite side,
 /// rotate, then recursively merge both halves.
 /// Uses GCD-cycle (Juggling) rotation which performs writes only (no swaps).
 /// This algorithm is stable and typically achieves O(n log² n) performance without requiring an external buffer.
@@ -655,14 +659,14 @@ public static class RotateMergeSortRecursive
 /// <item><description><strong>Conquer Step (Recursive Sorting):</strong> Each half must be sorted independently via recursive calls.
 /// The left subarray [left..mid] and right subarray [mid+1..right] are sorted before merging.</description></item>
 /// <item><description><strong>Divide-and-Conquer In-Place Merge:</strong> Each merge picks the median of
-/// the smaller side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
+/// the larger side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
 /// rotates the overlapping region, then recursively merges the two resulting sub-problems.
-/// This is the canonical recursive rotation merge algorithm.</description></item>
+/// Picking the larger side guarantees progress (the median index is always ≥ 1).</description></item>
 /// <item><description><strong>Rotation Algorithm (Left-Rotate by k, GCD-Cycle / Juggling):</strong> Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems] using GCD-based cycle detection.
 /// To left-rotate array A of length n by k positions: Find GCD(n, k) independent cycles, and for each cycle, move elements using assignments only.
 /// This achieves O(n) time rotation with O(1) space using only writes (no swaps needed).</description></item>
-/// <item><description><strong>Stability Preservation:</strong> Lower bound is used when the left side is smaller
-/// and upper bound when the right side is smaller, ensuring equal elements from the left run appear before
+/// <item><description><strong>Stability Preservation:</strong> Lower bound is used when the left side is larger
+/// and upper bound when the right side is larger, ensuring equal elements from the left run appear before
 /// those from the right run.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -768,7 +772,7 @@ public static class RotateMergeSortNonOptimized
 
     /// <summary>
     /// Merges two sorted subarrays [left..mid] and [mid+1..right] in-place using divide-and-conquer rotation.
-    /// Picks the median of the smaller side, binary searches for its position in the opposite side,
+    /// Picks the median of the larger side, binary searches for its position in the opposite side,
     /// rotates the overlapping region, then recursively merges both resulting sub-problems.
     /// </summary>
     private static void MergeInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int mid, int right)
@@ -780,22 +784,26 @@ public static class RotateMergeSortNonOptimized
 
         if (len1 == 0 || len2 == 0) return;
 
+        // Already-sorted skip: left run's max ≤ right run's min → merge is a no-op.
+        if (s.Compare(mid, mid + 1) <= 0) return;
+
         if (len1 == 1 && len2 == 1)
         {
-            if (s.Compare(left, right) > 0)
-                s.Swap(left, right);
+            s.Swap(left, right);
             return;
         }
 
         int mid1, mid2;
 
-        if (len1 <= len2)
+        if (len1 > len2)
         {
+            // Left side is larger: pick its median, lower_bound in right side
             mid1 = left + len1 / 2;
             mid2 = LowerBound(s, mid + 1, right, mid1);
         }
         else
         {
+            // Right side is larger (or equal): pick its median, upper_bound in left side
             mid2 = mid + 1 + len2 / 2;
             mid1 = UpperBound(s, left, mid, mid2);
         }
