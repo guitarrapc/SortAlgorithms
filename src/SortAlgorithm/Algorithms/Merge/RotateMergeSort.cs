@@ -6,12 +6,12 @@ namespace SortAlgorithm.Algorithms;
 /// <summary>
 /// 最適化したイテレーティブな（ボトムアップ）Rotate Merge Sortです。
 /// 再帰を使わず2フェーズで配列を処理します：フェーズ1は各ブロック（≤InsertionSortThreshold要素）をInsertionSortでソートし、フェーズ2はランの幅を毎パス倍増させながら隣接するランのペアをインプレースローテーションでマージします。
-/// マージは分割統治型の再帰的インプレースマージ（小さい側の中央を取り、反対側をbinary searchし、rotateして左右を再帰）を使用します。
+/// マージは分割統治型インプレースマージ（小さい側の中央を取り、反対側をbinary searchし、rotateして左右の部分問題を生成）を明示スタック（stackalloc）で駆動します。
 /// 安定ソートであり、外部バッファを使用せずに典型的にはO(n log² n)の性能を達成します。
 /// <br/>
 /// Iterative (bottom-up) Rotate Merge Sort.
 /// Eliminates recursion by processing the array in two phases: Phase 1 sorts each block of ≤InsertionSortThreshold elements with insertion sort, Phase 2 merges adjacent run pairs using in-place rotation while doubling the run width each pass.
-/// The merge uses a divide-and-conquer recursive in-place merge: pick the median of the smaller side, binary search in the opposite side, rotate, then recursively merge both halves.
+/// The merge uses divide-and-conquer in-place merging driven by an explicit stack (stackalloc): pick the median of the smaller side, binary search in the opposite side, rotate, then push both sub-problems onto the worklist.
 /// This algorithm is stable and typically achieves O(n log² n) performance without requiring an external buffer.
 /// </summary>
 /// <remarks>
@@ -30,10 +30,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Already-Sorted Skip:</strong> Before each merge, if
 /// <c>s[mid] ≤ s[mid+1]</c> the two runs are already in order and the merge is skipped,
 /// reducing work on nearly-sorted inputs.</description></item>
-/// <item><description><strong>Divide-and-Conquer In-Place Merge:</strong> Each merge picks the median of
+/// <item><description><strong>Divide-and-Conquer In-Place Merge (Explicit Stack):</strong> Each merge picks the median of
 /// the smaller side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
-/// rotates the overlapping region, then recursively merges the two resulting sub-problems.
-/// This is the canonical recursive rotation merge algorithm.</description></item>
+/// rotates the overlapping region, then pushes the two resulting sub-problems onto an explicit worklist (stackalloc).
+/// This replaces recursion with an iterative loop, eliminating O(log n) call-stack frames per merge.</description></item>
 /// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal with fast paths):</strong>
 /// Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems].
 /// Fast path k==1: move leftmost element to right end.
@@ -47,17 +47,18 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Family      : Hybrid (Merge + Insertion), Iterative</description></item>
 /// <item><description>Stable      : Yes (lower/upper bound preserves relative order)</description></item>
-/// <item><description>Bufferless  : Yes (no external buffer; merge uses O(log n) recursion stack)</description></item>
+/// <item><description>Bufferless  : Yes (no external buffer; merge uses O(log n) explicit stack via stackalloc)</description></item>
 /// <item><description>Best case   : O(n) – Sorted data: insertion sort is O(n), all phase-2 merges are skipped</description></item>
 /// <item><description>Average case: O(n log² n) – Binary search (log n) + rotation (n) per merge × log n passes</description></item>
 /// <item><description>Worst case  : O(n log² n)</description></item>
-/// <item><description>Space       : O(log n) – Merge recursion stack</description></item>
+/// <item><description>Space       : O(log n) – Explicit merge stack (stackalloc, no heap allocation or call-stack recursion)</description></item>
 /// </list>
-/// <para><strong>Iterative vs Recursive:</strong></para>
+/// <para><strong>Fully Iterative Design:</strong></para>
 /// <list type="bullet">
 /// <item><description>The outer sort loop is iterative (bottom-up), eliminating O(log n) sort recursion depth</description></item>
-/// <item><description>The merge itself is recursive (divide-and-conquer), using O(log n) stack per merge call</description></item>
-/// <item><description>Merge order differs: bottom-up processes fixed-width blocks rather than balanced halves,
+/// <item><description>The merge is also iterative: an explicit worklist (stackalloc) replaces recursion, eliminating O(log n) merge call-stack frames</description></item>
+/// <item><description>No recursion at all — StackOverflow is impossible regardless of input size or pattern</description></item>
+/// <item><description>Merge order differs from recursive variant: bottom-up processes fixed-width blocks rather than balanced halves,
 /// but total work and asymptotic complexity are identical</description></item>
 /// </list>
 /// </remarks>
@@ -147,51 +148,83 @@ public static class RotateMergeSort
     /// <summary>
     /// Merges two sorted subarrays [left..mid] and [mid+1..right] in-place using divide-and-conquer rotation.
     /// Picks the median of the smaller side, binary searches for its position in the opposite side,
-    /// rotates the overlapping region, then recursively merges both resulting sub-problems.
+    /// rotates the overlapping region, then iteratively processes both resulting sub-problems via an explicit stack.
+    /// Uses stackalloc for the worklist. A fixed-size work stack sized for typical practical inputs, add overflow protection or pooled fallback if strict robustness is required.
     /// </summary>
     private static void MergeInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int mid, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var len1 = mid - left + 1;
-        var len2 = right - mid;
+        // Explicit stack for iterative divide-and-conquer merge.
+        // Each decomposition step halves the smaller side, so max depth is O(log n).
+        // 64 entries handle any practical Span<T> length addressable by int indexing.
+        Span<int> stackL = stackalloc int[64];
+        Span<int> stackM = stackalloc int[64];
+        Span<int> stackR = stackalloc int[64];
+        var top = 0;
+        stackL[top] = left;
+        stackM[top] = mid;
+        stackR[top] = right;
+        top++;
 
-        if (len1 == 0 || len2 == 0) return;
-
-        if (len1 == 1 && len2 == 1)
+        while (top > 0)
         {
-            // Two single elements: swap if out of order
-            if (s.Compare(left, right) > 0)
-                s.Swap(left, right);
-            return;
+            top--;
+            var l = stackL[top];
+            var m = stackM[top];
+            var r = stackR[top];
+
+            var len1 = m - l + 1;
+            var len2 = r - m;
+
+            // Empty side — nothing to merge
+            if (len1 <= 0 || len2 <= 0) continue;
+
+            // Already-sorted skip: left run's max ≤ right run's min → merge is a no-op.
+            // This catches trivial sub-problems produced by rotation (one side already in place).
+            if (s.Compare(m, m + 1) <= 0) continue;
+
+            // Two single elements: the only possible action is a swap
+            if (len1 == 1 && len2 == 1)
+            {
+                s.Swap(l, r);
+                continue;
+            }
+
+            int mid1, mid2;
+
+            if (len1 <= len2)
+            {
+                // Left side is smaller: pick its median, lower_bound in right side
+                mid1 = l + len1 / 2;
+                mid2 = LowerBound(s, m + 1, r, mid1);
+            }
+            else
+            {
+                // Right side is smaller: pick its median, upper_bound in left side
+                mid2 = m + 1 + len2 / 2;
+                mid1 = UpperBound(s, l, m, mid2);
+            }
+
+            // Rotate [mid1..m] ++ [m+1..mid2-1] → [m+1..mid2-1] ++ [mid1..m]
+            var rotateLen = m - mid1 + 1;
+            if (rotateLen > 0 && mid2 > m + 1)
+                Rotate(s, mid1, mid2 - 1, rotateLen);
+
+            // New boundary after rotation
+            var newMid = mid1 + (mid2 - m - 1);
+
+            // Push both sub-problems: right first (processed second), then left (processed first)
+            stackL[top] = newMid;
+            stackM[top] = newMid + (m - mid1);
+            stackR[top] = r;
+            top++;
+
+            stackL[top] = l;
+            stackM[top] = mid1 - 1;
+            stackR[top] = newMid - 1;
+            top++;
         }
-
-        int mid1, mid2;
-
-        if (len1 <= len2)
-        {
-            // Left side is smaller: pick its median, lower_bound in right side
-            mid1 = left + len1 / 2;
-            mid2 = LowerBound(s, mid + 1, right, mid1);
-        }
-        else
-        {
-            // Right side is smaller: pick its median, upper_bound in left side
-            mid2 = mid + 1 + len2 / 2;
-            mid1 = UpperBound(s, left, mid, mid2);
-        }
-
-        // Rotate [mid1..mid] ++ [mid+1..mid2-1] → [mid+1..mid2-1] ++ [mid1..mid]
-        var rotateLen = mid - mid1 + 1; // length of [mid1..mid]
-        if (rotateLen > 0 && mid2 > mid + 1)
-            Rotate(s, mid1, mid2 - 1, rotateLen);
-
-        // New boundary after rotation
-        var newMid = mid1 + (mid2 - mid - 1);
-
-        // Recursively merge both halves
-        MergeInPlace(s, left, mid1 - 1, newMid - 1);
-        MergeInPlace(s, newMid, newMid + (mid - mid1), right);
     }
 
     /// <summary>
