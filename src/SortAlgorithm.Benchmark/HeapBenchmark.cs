@@ -11,6 +11,7 @@ public class HeapBenchmark
     public DataPattern Pattern { get; set; }
 
     private int[] _heapArray = default!;
+    private int[] _minheapArray = default!;
     private int[] _ternaryHeapArray = default!;
     private int[] _bottomupHeapArray = default!;
     private int[] _weakHeapArray = default!;
@@ -21,6 +22,7 @@ public class HeapBenchmark
     public void Setup()
     {
         _heapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _minheapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _ternaryHeapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _bottomupHeapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _weakHeapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
@@ -32,6 +34,12 @@ public class HeapBenchmark
     public void HeapSort()
     {
         SortAlgorithm.Algorithms.HeapSort.Sort(_heapArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void MinHeapSort()
+    {
+        SortAlgorithm.Algorithms.MinHeapSort.Sort(_minheapArray.AsSpan());
     }
 
     [Benchmark]

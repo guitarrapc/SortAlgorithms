@@ -28,6 +28,7 @@
 ///   <item><term>PDQPatternShuffle</term><description>begin (inclusive) / end-1 (inclusive) / badAllowed remaining</description></item>
 ///   <item><term>OddEvenMergeSortPass</term><description>p (merge group size, power of 2) / count</description></item>
 ///   <item><term>OddEvenMergeSortStage</term><description>k (comparison distance within merge) / p (current merge group size) / count</description></item>
+///   <item><term>Reverse</term><description>lo (start index, inclusive) / hi (end index, inclusive)</description></item>
 /// </list>
 /// </remarks>
 public enum SortPhase
@@ -230,6 +231,12 @@ public enum SortPhase
     /// param1=current extraction step (1-based), param2=total extractions (n-1)
     /// </summary>
     HeapExtract,
+
+    /// <summary>
+    /// In-place reversal of a subrange (e.g. MinHeapSort final step).
+    /// param1=lo (start index, inclusive), param2=hi (end index, inclusive)
+    /// </summary>
+    Reverse,
 
     // Merge family
 
