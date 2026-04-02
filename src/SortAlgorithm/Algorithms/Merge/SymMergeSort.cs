@@ -33,16 +33,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Stability Preservation:</strong> The binary search uses ≥ comparison
 /// (<c>s[p-c] ≥ s[c]</c> → advance lo), ensuring equal elements from the left run appear before those
 /// from the right run in the merged result.</description></item>
-/// <item><description><strong>Boundary Trimming:</strong> At the start of each SymMerge call, binary search
-/// trims elements from the left and right boundaries that are already in their correct merged position,
-/// reducing the effective merge range.</description></item>
 /// <item><description><strong>Single-Element Base Cases:</strong> When one run has exactly 1 element,
 /// a binary search finds its insertion position in the other run and a single shift completes the merge,
 /// avoiding the full SymMerge binary search + rotation + recursion overhead.</description></item>
-/// <item><description><strong>Rotation Algorithm (shift-based fast paths + 3-Reversal fallback):</strong>
+/// <item><description><strong>Rotation Algorithm (shift-based fast paths + GCD block-swap fallback):</strong>
 /// Left-rotates s[lo..hi) by (m-lo) positions: [left_part | right_block] → [right_block | left_part].
 /// Fast path leftLen≤4 or rightLen≤4: save the small side to local variables, shift, and write back.
-/// General case uses 3-reversal: Reverse(s[lo..m-1]), Reverse(s[m..hi-1]), Reverse(s[lo..hi-1]).</description></item>
+/// General case uses GCD-based block-swap: repeatedly swaps adjacent blocks of the smaller side
+/// until both sides are equal length, then performs one final block swap.
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -63,13 +61,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Total comparisons: O(n log n) for SymMergeSort vs O(n log² n) for RotateMergeSortIterative</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
-/// <para>Pok-Son Kim and Arne Kutzner, "Stable minimum storage merging by symmetric comparisons" (2004)</para>
-/// <para>Go standard library: sort.symMerge (src/sort/sort.go)</para>
+/// <para>Pok-Son Kim and Arne Kutzner, "Stable minimum storage merging by symmetric comparisons" (2004) https://link.springer.com/chapter/10.1007/978-3-540-30140-0_50</para>
+/// <para>Go standard library: sort.symMerge (src/sort/sort.go) https://github.com/golang/go/blob/go1.25.8/src/sort/zsortinterface.go#L378-L479 </para>
 /// </remarks>
 public static class SymMergeSort
 {
-    // Threshold for using insertion sort for initial block seeding (Phase 1)
-    private const int InsertionSortThreshold = 16;
+    // Threshold for using insertion sort for initial block seeding (Phase 1).
+    // Matches Go's sort.stable blockSize (20).
+    private const int InsertionSortThreshold = 20;
 
     // Threshold for falling back to insertion sort inside SymMerge recursion.
     // Lower than InsertionSortThreshold because SymMerge sub-problems are already
@@ -162,7 +161,7 @@ public static class SymMergeSort
     /// Merges two sorted subarrays s[a..m) and s[m..b) in-place stably using the SymMerge algorithm.
     /// Performs a symmetric binary search to find the optimal split index, then one rotation,
     /// and recursively merges the two resulting subproblems.
-    /// Based on the algorithm by Pok-Son Kim and Arne Kutzner (2004) as implemented in Go's sort.Stable.
+    /// Based on the algorithm by Pok-Son Kim and Arne Kutzner (2004).
     /// </summary>
     /// <param name="s">The SortSpan to operate on</param>
     /// <param name="a">Inclusive start of the left sorted run (half-open: left run is s[a..m))</param>
@@ -180,48 +179,7 @@ public static class SymMergeSort
         // ended up already in order after the rotation of the parent call.
         if (s.Compare(m - 1, m) <= 0) return;
 
-        // Boundary trimming (Bottleneck 2): narrow [a..m) and [m..b) by skipping
-        // elements at the edges that are already in their correct merged position.
-        // Left trim: advance 'a' past elements that are ≤ the first element of the right run.
-        // Uses lower_bound semantics to preserve stability (equal left-run elements stay first).
-        {
-            var tlo = a;
-            var thi = m;
-            var rightFirst = s.Read(m);
-            while (tlo < thi)
-            {
-                var c = (int)((uint)(tlo + thi) >> 1);
-                if (s.Compare(c, rightFirst) <= 0)
-                    tlo = c + 1;
-                else
-                    thi = c;
-            }
-            a = tlo;
-        }
-        // Right trim: shrink b to the first element in the right run that is >= leftLast.
-        // Elements in s[b..originalB) are already in final position after all remaining left-run elements,
-        // so they can be excluded from the recursive SymMerge.
-        // This uses lower_bound(right, leftLast) / equivalently the first index where leftLast <= right[i].
-        // Stability is preserved because equal left-run elements must remain before equal right-run elements.
-        {
-            var tlo = m;
-            var thi = b;
-            var leftLast = s.Read(m - 1);
-            while (tlo < thi)
-            {
-                var c = (int)((uint)(tlo + thi) >> 1);
-                if (s.Compare(leftLast, c) <= 0)
-                    thi = c;
-                else
-                    tlo = c + 1;
-            }
-            b = tlo;
-        }
-
-        // Re-check after trimming: runs may have become empty
-        if (a >= m || m >= b) return;
-
-        // Single-element base cases (Bottleneck 4): when one side has exactly 1 element,
+        // Single-element base cases: when one side has exactly 1 element,
         // binary-search for its insertion position in the other run and shift-insert.
         // This avoids the full SymMerge machinery (binary search + rotation + 2 recursive calls)
         // and reduces comparisons to O(log n) + O(n) moves.
@@ -337,10 +295,11 @@ public static class SymMergeSort
     /// <summary>
     /// Left-rotates s[lo..hi) by (m - lo) positions: [s[lo..m) | s[m..hi)] → [s[m..hi) | s[lo..m)].
     /// Fast paths for small sides (≤ RotateSmallThreshold): save the small side to local variables,
-    /// shift the large side, and write the saved elements back. This replaces the 3-reversal
-    /// (which uses 3×Swap per element) with 1×Read + 1×Write per element, cutting write traffic
-    /// roughly in half for small rotations.
-    /// General case uses 3-reversal: Reverse(s[lo..m-1]), Reverse(s[m..hi-1]), Reverse(s[lo..hi-1]).
+    /// shift the large side, and write the saved elements back. This replaces swap-based rotation
+    /// with 1×Read + 1×Write per element, cutting write traffic roughly in half for small rotations.
+    /// General case uses GCD-based block-swap: repeatedly swaps adjacent blocks of the smaller side
+    /// until both sides are equal, then performs one final block swap. This achieves exactly (hi - lo)
+    /// swaps with good cache locality from contiguous swapRange operations.
     /// </summary>
     private static void Rotate<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lo, int m, int hi)
         where TComparer : IComparer<T>
@@ -388,10 +347,35 @@ public static class SymMergeSort
             return;
         }
 
-        // General case: 3-reversal [A|B] → Reverse(A), Reverse(B), Reverse(AB) → [B|A]
-        Reverse(s, lo, m - 1);
-        Reverse(s, m, hi - 1);
-        Reverse(s, lo, hi - 1);
+        // Generally simple symmerge implementation uses a 3-reversal rotate: reverse the left part, reverse the right part, then reverse the whole.
+        // 3-reversal [A|B] → Reverse(A), Reverse(B), Reverse(AB) → [B|A]
+        // However, this can be slower than necessary for small sides due to the multiple passes and non-sequential access patterns.
+        // So we use the fast paths above for small sides, and fall back to the block-swap rotation method for larger sides, which achieves the rotation with exactly (hi - lo) swaps and good cache locality.
+        //
+        // Reverse(s, lo, m - 1);
+        // Reverse(s, m, hi - 1);
+        // Reverse(s, lo, hi - 1);
+
+
+        // General case uses block-swap rotation.
+        // repeatedly swaps adjacent blocks of the smaller side until both sides are equal,
+        // then performs one final block swap.
+        var i2 = leftLen;
+        var j2 = rightLen;
+        while (i2 != j2)
+        {
+            if (i2 > j2)
+            {
+                SwapRange(s, m - i2, m, j2);
+                i2 -= j2;
+            }
+            else
+            {
+                SwapRange(s, m - i2, m + j2 - i2, i2);
+                j2 -= i2;
+            }
+        }
+        SwapRange(s, m - i2, m, i2);
     }
 
     /// <summary>
@@ -474,18 +458,15 @@ public static class SymMergeSort
     }
 
     /// <summary>
-    /// Reverses a subarray in-place using swaps.
+    /// Swaps n consecutive elements starting at index a with n consecutive elements starting at index b.
+    /// Used by the GCD-based block-swap rotation algorithm.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Reverse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
+    private static void SwapRange<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int a, int b, int n)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        while (left < right)
-        {
-            s.Swap(left, right);
-            left++;
-            right--;
-        }
+        for (var i = 0; i < n; i++)
+            s.Swap(a + i, b + i);
     }
 }
