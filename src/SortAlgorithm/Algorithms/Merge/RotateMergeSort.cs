@@ -30,6 +30,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Already-Sorted Skip:</strong> Before each merge, if
 /// <c>s[mid] ≤ s[mid+1]</c> the two runs are already in order and the merge is skipped,
 /// reducing work on nearly-sorted inputs.</description></item>
+/// <item><description><strong>Completely-Disjoint Skip:</strong> Before each merge, if
+/// <c>s[left] &gt; s[right]</c> every element of the left run exceeds every element of the right run.
+/// The entire pair is resolved with a single rotation, bypassing all divide-and-conquer work.
+/// Reverse-order inputs produce run pairs exactly in this form after Phase 1, turning O(n log² n) merge work into O(n log n) rotations.</description></item>
 /// <item><description><strong>Divide-and-Conquer In-Place Merge (Explicit Stack):</strong> Each merge picks the median of
 /// the larger side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
 /// rotates the overlapping region, then pushes the two resulting sub-problems onto an explicit worklist (stackalloc).
@@ -140,6 +144,14 @@ public static class RotateMergeSort
                 if (s.Compare(mid, mid + 1) <= 0)
                     continue;
 
+                // Completely disjoint in reverse order: every left element > every right element → rotate entire run pair.
+                // Reverse-array inputs produce run pairs exactly in this form after Phase 1, so this skips all recursive merge work.
+                if (s.Compare(left, right) > 0)
+                {
+                    Rotate(s, left, right, mid - left + 1);
+                    continue;
+                }
+
                 MergeInPlace(s, left, mid, right);
             }
         }
@@ -183,6 +195,13 @@ public static class RotateMergeSort
             // Already-sorted skip: left run's max ≤ right run's min → merge is a no-op.
             // This catches trivial sub-problems produced by rotation (one side already in place).
             if (s.Compare(m, m + 1) <= 0) continue;
+
+            // Completely disjoint in reverse order: every left element > every right element → rotate sub-problem into place.
+            if (s.Compare(l, r) > 0)
+            {
+                Rotate(s, l, r, len1);
+                continue;
+            }
 
             // Two single elements: the only possible action is a swap
             if (len1 == 1 && len2 == 1)
