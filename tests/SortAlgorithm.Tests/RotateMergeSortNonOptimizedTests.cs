@@ -236,32 +236,22 @@ public class RotateMergeSortNonOptimizedTests
 
         // Rotate Merge Sort comparisons for reversed data:
         // Reversed data requires all merge operations with binary search + rotation.
-        // Time complexity: O(n log² n) due to binary search (log n) at each merge level (log n).
-        // Block rotation optimization processes consecutive elements together, reducing comparisons.
-        //
-        // Actual observations for reversed data with block rotation optimization:
-        // n=10:  36-57 comparisons    (~1.1-1.7 * n * log₂(n))
-        // n=20:  86-156 comparisons   (~1.0-1.8 * n * log₂(n))
-        // n=50:  252-547 comparisons  (~0.9-1.9 * n * log₂(n))
-        // n=100: 560-1396 comparisons (~0.8-2.1 * n * log₂(n))
-        //
-        // Pattern for reversed with block optimization: approximately 0.8 * n * log₂(n) to 2.5 * n * log₂(n)
-        // (varies based on how effectively consecutive elements can be grouped)
+        // n ≤ 16: entirely handled by InsertionSort
+        // n > 16: divide-and-conquer merge with binary search + GCD-cycle rotation
         var logN = Math.Log2(n);
-        var minCompares = (ulong)(n * logN * 0.8);
-        var maxCompares = (ulong)(n * logN * 2.5);
+        var minCompares = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 0.8);
+        var maxCompares = n <= 16 ? (ulong)(n * 5.5) : (ulong)(n * logN * 2.5);
 
-        // Writes are reduced due to block rotation optimization
-        // n=10:  50-90 writes       (~1.5-2.7 * n * log₂(n))
-        // n=20:  140-380 writes     (~1.6-4.4 * n * log₂(n))
-        // n=50:  482-2450 writes    (~1.7-8.7 * n * log₂(n))
-        // n=100: 1164-9900 writes   (~1.8-14.9 * n * log₂(n))
-        var minWrites = (ulong)(n * logN * 1.4);
-        var maxWrites = (ulong)(n * logN * 20.0);
+        // Writes: GCD-cycle rotation uses Write operations only
+        // n ≤ 16: InsertionSort writes only
+        // n > 16: GCD-cycle rotation adds many writes
+        var minWrites = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 1.4);
+        var maxWrites = n <= 16 ? (ulong)(n * 6.0) : (ulong)(n * logN * 20.0);
 
-        // Swaps: GCD-cycle (Juggling) rotation uses Write operations only, no Swaps
-        // Expected: 0 swaps (the algorithm uses assignments via Write, not Swap)
-        var expectedSwaps = 0UL;
+        // Swaps: GCD-cycle rotation uses Write only, but divide-and-conquer merge
+        // base case (len1==1 && len2==1) uses Swap. For n ≤ 16 InsertionSort does 0 swaps.
+        var minSwaps = 0UL;
+        var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
 
         // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
         // Expected: approximately 1.2x comparisons (down from 2x)
@@ -269,7 +259,7 @@ public class RotateMergeSortNonOptimizedTests
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
-        await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps); // GCD-cycle rotation uses Write, not Swap
+        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
         await Assert.That(stats.IndexReadCount >= minReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minReads}");
     }
 
@@ -285,33 +275,28 @@ public class RotateMergeSortNonOptimizedTests
         RotateMergeSortNonOptimized.Sort(random.AsSpan(), stats);
 
         // Rotate Merge Sort (NonOptimized) for random data:
-        // This version has block optimization (linear search for consecutive elements)
-        // but no insertion sort, no galloping, uses 3-reversal rotation.
+        // This version uses divide-and-conquer merge (median of smaller side + binary search + rotate),
+        // InsertionSort for small subarrays, and GCD-cycle rotation.
         //
-        // Observed range for random data with block optimization only:
-        // n=10:  ~34-51 comparisons   (can vary widely with randomness)
-        // n=20:  ~115-125 comparisons (~1.3-1.5 * n * log₂(n))
-        // n=50:  ~397-447 comparisons (~1.4-1.6 * n * log₂(n))
-        // n=100: ~1040-1119 comparisons (~1.6-1.7 * n * log₂(n))
+        // For n ≤ 16: entirely handled by InsertionSort (no merge occurs)
+        // For n > 16: divide-and-conquer merge with binary search + rotation
         //
-        // Pattern for random: approximately 0.8 * n * log₂(n) to 2.5 * n * log₂(n)
-        // (wider range due to randomness - set lower bound conservatively)
+        // Pattern for random: approximately 0.8 * n * log₂(n) to 2.5 * n * log₂(n) for n > 16
+        // For n ≤ 16: InsertionSort profile applies
         var logN = Math.Log2(n);
-        var minCompares = (ulong)(n * logN * 0.4);
-        var maxCompares = (ulong)(n * logN * 2.5);
+        var minCompares = n <= 16 ? (ulong)(n * 1.0) : (ulong)(n * logN * 0.4);
+        var maxCompares = n <= 16 ? (ulong)(n * 5.0) : (ulong)(n * logN * 2.5);
 
         // Writes vary based on how much rotation is needed
-        // n=10:  ~20-50 writes
-        // n=20:  ~150-250 writes
-        // n=50:  ~800-1200 writes
-        // n=100: ~4000-6500 writes
-        var minWrites = (ulong)(n * logN * 0.5);
-        var maxWrites = (ulong)(n * logN * 15.0);
+        // n ≤ 16: InsertionSort writes only, can be low for partially sorted data
+        // n > 16: GCD-cycle rotation adds many writes
+        var minWrites = n <= 16 ? (ulong)(n * 0.5) : (ulong)(n * logN * 0.5);
+        var maxWrites = n <= 16 ? (ulong)(n * 5.0) : (ulong)(n * logN * 15.0);
 
-        // Swaps occur during Reverse operations (part of rotation)
-        // Range is similar to reversed but generally less
+        // Swaps: GCD-cycle rotation uses Write only; however the divide-and-conquer merge
+        // base case (len1==1 && len2==1) uses Swap. For n ≤ 16 InsertionSort does 0 swaps.
         var minSwaps = 0UL;  // Could be low if data is partially sorted
-        var maxSwaps = (ulong)(n * logN * 8.0);
+        var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 8.0);
 
         // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
         // Expected: approximately 1.2x comparisons (down from 2x)

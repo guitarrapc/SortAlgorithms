@@ -234,35 +234,22 @@ public class RotateMergeSortRecursiveTests
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         RotateMergeSortRecursive.Sort(reversed.AsSpan(), stats);
 
-        // Rotate Merge Sort with galloping optimization for reversed data:
-        // Galloping (exponential search + binary search) efficiently finds consecutive blocks.
+        // Rotate Merge Sort with divide-and-conquer merge for reversed data:
+        // Picks median of smaller side, binary search in opposite side, rotate, recurse.
         // Small subarrays (≤16) use insertion sort.
         //
-        // Actual observations for reversed data with galloping + insertion sort:
-        // n=10:  45 comparisons    (insertion sort, ~4.5n)
-        // n=20:  ~78-86 comparisons
-        // n=50:  ~253-282 comparisons
-        // n=100: ~643 comparisons  (~0.97 * n * log₂(n), reduced by BinarySearch removal)
-        //
-        // Pattern: Galloping improves efficiency, especially for larger sizes
         // n≤16: ~4.0n to ~5.5n (insertion sort)
-        // n>16: ~0.9 * n * log₂(n) to ~2.0 * n * log₂(n) (galloping reduces comparisons)
+        // n>16: ~0.9 * n * log₂(n) to ~2.0 * n * log₂(n)
         var logN = Math.Log2(n);
         var minCompares = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 0.9);
         var maxCompares = n <= 16 ? (ulong)(n * 5.5) : (ulong)(n * logN * 2.0);
 
-        // Writes are reduced due to insertion sort and 3-reversal rotation
-        // n=10:  54 writes
-        // n=20:  128 writes
-        // n=50:  434 writes
-        // n=100: 968 writes
+        // Writes: 3-reversal rotation and merge base case
         var minWrites = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 1.0);
         var maxWrites = n <= 16 ? (ulong)(n * 6.0) : (ulong)(n * logN * 20.0);
 
-        // Swaps: 3-reversal rotation uses swaps in the general case
-        // k==1 / k==n-1 fast paths use sequential writes (no swaps)
-        // n≤16: insertion sort handles everything - 0 swaps (InsertionSort uses Write, not Swap)
-        // n>16: 3-reversal generates O(n log n) swaps total
+        // Swaps: 3-reversal rotation uses swaps; merge base case (len1==1 && len2==1) uses Swap
+        // n≤16: insertion sort handles everything - 0 swaps
         var minSwaps = 0UL;
         var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
 
@@ -287,19 +274,10 @@ public class RotateMergeSortRecursiveTests
         var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
         RotateMergeSortRecursive.Sort(random.AsSpan(), stats);
 
-        // Rotate Merge Sort with galloping optimization for random data:
-        // Galloping efficiently finds consecutive blocks in random data.
+        // Rotate Merge Sort with divide-and-conquer merge for random data:
+        // Picks median of smaller side, binary search in opposite side, rotate, recurse.
         // Small subarrays (≤16) use insertion sort.
         // Performance varies based on initial order.
-        //
-        // Observed range for random data with galloping + insertion sort:
-        // n=10:  ~16-34 comparisons   (varies with randomness, insertion sort)
-        // n=20:  ~95-110 comparisons  (~1.1-1.3 * n * log₂(n))
-        // n=50:  ~356-438 comparisons (~1.3-1.5 * n * log₂(n))
-        // n=100: ~1015-1063 comparisons (~1.5-1.6 * n * log₂(n))
-        //
-        // Pattern: approximately 1.5 * n to 4.0 * n for n ≤ 16 (insertion sort, wide variance)
-        //          approximately 0.8 * n * log₂(n) to 2.0 * n * log₂(n) for n > 16
         var logN = Math.Log2(n);
         var minCompares = n <= 16 ? (ulong)(n * 1.5) : (ulong)(n * logN * 0.7);
         var maxCompares = n <= 16 ? (ulong)(n * 4.0 * 1.2) : (ulong)(n * logN * 2.0);
@@ -308,10 +286,8 @@ public class RotateMergeSortRecursiveTests
         var minWrites = n <= 16 ? (ulong)(n * 1.5 * 0.6) : (ulong)(n * logN * 0.5);
         var maxWrites = n <= 16 ? (ulong)(n * 4.0 * 1.2) : (ulong)(n * logN * 15.0);
 
-        // Swaps: 3-reversal rotation uses swaps in the general case
-        // k==1 / k==n-1 fast paths use sequential writes (no swaps)
-        // n≤16: insertion sort handles everything - 0 swaps (InsertionSort uses Write, not Swap)
-        // n>16: 3-reversal generates swaps; observed n=100 random ~589 swaps
+        // Swaps: 3-reversal rotation uses swaps; merge base case uses Swap
+        // n≤16: insertion sort handles everything - 0 swaps
         var minSwaps = 0UL;
         var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
 

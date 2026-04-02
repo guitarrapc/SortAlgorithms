@@ -6,13 +6,13 @@ namespace SortAlgorithm.Algorithms;
 /// <summary>
 /// 最適化したイテレーティブな（ボトムアップ）Rotate Merge Sortです。
 /// 再帰を使わず2フェーズで配列を処理します：フェーズ1は各ブロック（≤InsertionSortThreshold要素）をInsertionSortでソートし、フェーズ2はランの幅を毎パス倍増させながら隣接するランのペアをインプレースローテーションでマージします。
-/// 安定ソートであり、追加メモリを使用せずにO(n log² n)の性能を保証します。
-/// 再帰版と同等の最適化（InsertionSort・Galloping・3-reversal）を備えつつ、O(log n)のコールスタックを排除してスタックオーバーフローのリスクをなくします。
+/// マージは分割統治型の再帰的インプレースマージ（小さい側の中央を取り、反対側をbinary searchし、rotateして左右を再帰）を使用します。
+/// 安定ソートであり、外部バッファを使用せずに典型的にはO(n log² n)の性能を達成します。
 /// <br/>
 /// Iterative (bottom-up) Rotate Merge Sort.
 /// Eliminates recursion by processing the array in two phases: Phase 1 sorts each block of ≤InsertionSortThreshold elements with insertion sort, Phase 2 merges adjacent run pairs using in-place rotation while doubling the run width each pass.
-/// This algorithm is stable and guarantees O(n log² n) performance without requiring auxiliary space.
-/// Retains the same optimizations as the recursive variant (insertion sort, galloping, 3-reversal) while eliminating the O(log n) call-stack overhead and any risk of stack overflow on large inputs.
+/// The merge uses a divide-and-conquer recursive in-place merge: pick the median of the smaller side, binary search in the opposite side, rotate, then recursively merge both halves.
+/// This algorithm is stable and typically achieves O(n log² n) performance without requiring an external buffer.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Iterative Rotate Merge Sort:</strong></para>
@@ -30,33 +30,35 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Already-Sorted Skip:</strong> Before each merge, if
 /// <c>s[mid] ≤ s[mid+1]</c> the two runs are already in order and the merge is skipped,
 /// reducing work on nearly-sorted inputs.</description></item>
-/// <item><description><strong>Galloping Optimization:</strong> Within each merge, exponential search
-/// (1, 2, 4, 8, …) followed by binary search efficiently finds long runs of consecutive right-partition
-/// elements, similar to TimSort's galloping mode.</description></item>
+/// <item><description><strong>Divide-and-Conquer In-Place Merge:</strong> Each merge picks the median of
+/// the smaller side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
+/// rotates the overlapping region, then recursively merges the two resulting sub-problems.
+/// This is the canonical recursive rotation merge algorithm.</description></item>
 /// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal with fast paths):</strong>
 /// Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems].
 /// Fast path k==1: move leftmost element to right end.
 /// Fast path k==n-1: move rightmost element to left end (left rotate n-1 = right rotate 1).
 /// General case uses 3-reversal: Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).</description></item>
-/// <item><description><strong>Stability Preservation:</strong> Binary search inside the merge uses ≤ comparison,
-/// ensuring equal elements from the left run appear before those from the right run.</description></item>
+/// <item><description><strong>Stability Preservation:</strong> Lower bound is used when the left side is smaller
+/// and upper bound when the right side is smaller, ensuring equal elements from the left run appear before
+/// those from the right run.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Hybrid (Merge + Insertion + Galloping), Iterative</description></item>
-/// <item><description>Stable      : Yes (≤ comparison in merge preserves relative order)</description></item>
-/// <item><description>In-place    : Yes (O(1) auxiliary space)</description></item>
+/// <item><description>Family      : Hybrid (Merge + Insertion), Iterative</description></item>
+/// <item><description>Stable      : Yes (lower/upper bound preserves relative order)</description></item>
+/// <item><description>Bufferless  : Yes (no external buffer; merge uses O(log n) recursion stack)</description></item>
 /// <item><description>Best case   : O(n) – Sorted data: insertion sort is O(n), all phase-2 merges are skipped</description></item>
 /// <item><description>Average case: O(n log² n) – Binary search (log n) + rotation (n) per merge × log n passes</description></item>
 /// <item><description>Worst case  : O(n log² n)</description></item>
-/// <item><description>Space       : O(1) – No recursion stack; only a constant number of loop variables</description></item>
+/// <item><description>Space       : O(log n) – Merge recursion stack</description></item>
 /// </list>
 /// <para><strong>Iterative vs Recursive:</strong></para>
 /// <list type="bullet">
-/// <item><description>Eliminates O(log n) call-stack depth; safe for arbitrarily large arrays</description></item>
+/// <item><description>The outer sort loop is iterative (bottom-up), eliminating O(log n) sort recursion depth</description></item>
+/// <item><description>The merge itself is recursive (divide-and-conquer), using O(log n) stack per merge call</description></item>
 /// <item><description>Merge order differs: bottom-up processes fixed-width blocks rather than balanced halves,
 /// but total work and asymptotic complexity are identical</description></item>
-/// <item><description>Slightly simpler control flow; easier to reason about run boundaries</description></item>
 /// </list>
 /// </remarks>
 public static class RotateMergeSort
@@ -143,75 +145,101 @@ public static class RotateMergeSort
     }
 
     /// <summary>
-    /// Merges two sorted subarrays [left..mid] and [mid+1..right] in-place using rotation.
-    /// Uses galloping (exponential search + binary search) to efficiently find long consecutive blocks.
+    /// Merges two sorted subarrays [left..mid] and [mid+1..right] in-place using divide-and-conquer rotation.
+    /// Picks the median of the smaller side, binary searches for its position in the opposite side,
+    /// rotates the overlapping region, then recursively merges both resulting sub-problems.
     /// </summary>
     private static void MergeInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int mid, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var start1 = left;
-        var start2 = mid + 1;
+        var len1 = mid - left + 1;
+        var len2 = right - mid;
 
-        while (start1 <= mid && start2 <= right)
+        if (len1 == 0 || len2 == 0) return;
+
+        if (len1 == 1 && len2 == 1)
         {
-            if (s.Compare(start1, start2) <= 0)
-            {
-                start1++;
-            }
-            else
-            {
-                // s[start1] > s[start2]: gallop to find how many right-partition elements
-                // are all less than s[start1], then rotate the entire block at once.
-                var start2End = GallopingSearchEnd(s, start1, start2, right);
-
-                var blockSize = start2End - start2 + 1;
-                var rotateDistance = start2 - start1;
-
-                // Left-rotate [start1..start2End] by rotateDistance: [left_part | right_block] → [right_block | left_part]
-                // right_block elements (all < s[start1]) are moved to the front; left_part shifts right.
-                Rotate(s, start1, start2End, rotateDistance);
-
-                start1 += blockSize;
-                mid += blockSize;
-                start2 = start2End + 1;
-            }
+            // Two single elements: swap if out of order
+            if (s.Compare(left, right) > 0)
+                s.Swap(left, right);
+            return;
         }
+
+        int mid1, mid2;
+
+        if (len1 <= len2)
+        {
+            // Left side is smaller: pick its median, lower_bound in right side
+            mid1 = left + len1 / 2;
+            mid2 = LowerBound(s, mid + 1, right, mid1);
+        }
+        else
+        {
+            // Right side is smaller: pick its median, upper_bound in left side
+            mid2 = mid + 1 + len2 / 2;
+            mid1 = UpperBound(s, left, mid, mid2);
+        }
+
+        // Rotate [mid1..mid] ++ [mid+1..mid2-1] → [mid+1..mid2-1] ++ [mid1..mid]
+        var rotateLen = mid - mid1 + 1; // length of [mid1..mid]
+        if (rotateLen > 0 && mid2 > mid + 1)
+            Rotate(s, mid1, mid2 - 1, rotateLen);
+
+        // New boundary after rotation
+        var newMid = mid1 + (mid2 - mid - 1);
+
+        // Recursively merge both halves
+        MergeInPlace(s, left, mid1 - 1, newMid - 1);
+        MergeInPlace(s, newMid, newMid + (mid - mid1), right);
     }
 
     /// <summary>
-    /// Finds the end position of consecutive right-partition elements that are all less than s[leftBoundary].
-    /// Phase 1: exponential search (1, 2, 4, 8, …) to find a rough upper bound.
-    /// Phase 2: binary search to pinpoint the exact boundary.
+    /// Finds the first position in [left..right] where s[pos] >= s[keyIndex] (lower bound).
+    /// Returns right + 1 if all elements are less than s[keyIndex].
+    /// Uses &lt;= comparison so equal elements from the left run stay before the right run (stability).
     /// </summary>
-    /// <returns>The last index in [start..end] where s[i] &lt; s[leftBoundary]</returns>
-    private static int GallopingSearchEnd<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int leftBoundary, int start, int end)
+    private static int LowerBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int keyIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var lastGood = start;
-        var step = 1;
+        var lo = left;
+        var hi = right + 1;
 
-        while (start + step <= end && s.Compare(leftBoundary, start + step) > 0)
+        while (lo < hi)
         {
-            lastGood = start + step;
-            step *= 2;
-        }
-
-        var low = lastGood;
-        var high = Math.Min(start + step, end);
-
-        while (low < high)
-        {
-            var mid = low + (high - low + 1) / 2;
-
-            if (s.Compare(leftBoundary, mid) > 0)
-                low = mid;
+            var m = lo + (hi - lo) / 2;
+            if (s.Compare(m, keyIndex) < 0)
+                lo = m + 1;
             else
-                high = mid - 1;
+                hi = m;
         }
 
-        return low;
+        return lo;
+    }
+
+    /// <summary>
+    /// Finds the first position in [left..right] where s[pos] > s[keyIndex] (upper bound).
+    /// Returns right + 1 if all elements are less than or equal to s[keyIndex].
+    /// Uses strict &gt; so equal elements from the left run stay before the right run (stability).
+    /// </summary>
+    private static int UpperBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int keyIndex)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var lo = left;
+        var hi = right + 1;
+
+        while (lo < hi)
+        {
+            var m = lo + (hi - lo) / 2;
+            if (s.Compare(m, keyIndex) <= 0)
+                lo = m + 1;
+            else
+                hi = m;
+        }
+
+        return lo;
     }
 
     /// <summary>
@@ -278,23 +306,22 @@ public static class RotateMergeSort
 
 /// <summary>
 /// 最適化した再帰呼び出しなRotate Merge Sortです。
-/// 配列を再帰的に半分に分割し、それぞれをソートした後、回転アルゴリズムを使用してインプレースでマージする分割統治アルゴリズムです。
-/// 安定ソートであり、追加メモリを使用せずにO(n log² n)の性能を保証します。
-/// 小さい配列（≤16要素）ではInsertionSortを使用、ローテートにGCD-cycle、連続ブロック検索にGallopingを用いる実用的な最適化を含みます。
+/// 配列を再帰的に半分に分割し、それぞれをソートした後、分割統治型の再帰的インプレースマージ（小さい側の中央を取り、反対側をbinary searchし、rotateして左右を再帰）でマージします。
+/// 安定ソートであり、外部バッファを使用せずに典型的にはO(n log² n)の性能を達成します。
+/// 小さい配列（≤16要素）ではInsertionSortを使用する実用的な最適化を含みます。
 /// <br/>
 /// Optimized recursive Rotate Merge Sort.
-/// Recursively divides the array in half, sorts each part, then merges sorted subarrays in-place using array rotation.
-/// This divide-and-conquer algorithm is stable and guarantees O(n log² n) performance without requiring auxiliary space.
-/// Includes practical optimizations: insertion sort for small subarrays (≤16 elements), GCD-cycle rotation, and galloping for finding consecutive blocks.
+/// Recursively divides the array in half, sorts each part, then merges sorted subarrays in-place using
+/// divide-and-conquer rotation merge: pick the median of the smaller side, binary search in the opposite side,
+/// rotate, then recursively merge both halves.
+/// This algorithm is stable and typically achieves O(n log² n) performance without requiring an external buffer.
+/// Includes practical optimization: insertion sort for small subarrays (≤16 elements).
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Rotate Merge Sort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Hybrid Optimization:</strong> For subarrays with ≤16 elements, insertion sort is used instead of rotation-based merge.
 /// This is a practical optimization similar to TimSort and IntroSort, reducing overhead for small sizes.</description></item>
-/// <item><description><strong>Galloping Optimization:</strong> Uses exponential search (1, 2, 4, 8, ...) followed by binary search to efficiently find
-/// long runs of consecutive elements from the right partition. This is similar to TimSort's galloping mode and reduces comparisons
-/// when merging data with long consecutive blocks.</description></item>
 /// <item><description><strong>Divide Step (Binary Partitioning):</strong> The array must be divided into two roughly equal halves at each recursion level.
 /// The midpoint is calculated as mid = (left + right) / 2, ensuring balanced subdivision.
 /// This guarantees a recursion depth of ⌈log₂(n)⌉.</description></item>
@@ -302,52 +329,31 @@ public static class RotateMergeSort
 /// An array of size 0 or 1 is trivially sorted and requires no further processing.</description></item>
 /// <item><description><strong>Conquer Step (Recursive Sorting):</strong> Each half must be sorted independently via recursive calls.
 /// The left subarray [left..mid] and right subarray [mid+1..right] are sorted before merging.</description></item>
-/// <item><description><strong>In-Place Merge Step:</strong> Two sorted subarrays must be merged without using additional memory.
-/// This is achieved using array rotation, which rearranges elements by shifting blocks of the array.</description></item>
+/// <item><description><strong>Divide-and-Conquer In-Place Merge:</strong> Each merge picks the median of
+/// the smaller side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
+/// rotates the overlapping region, then recursively merges the two resulting sub-problems.
+/// This is the canonical recursive rotation merge algorithm.</description></item>
 /// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal with fast paths):</strong> Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems].
 /// Fast path k==1: move leftmost element to right end (sequential reads/writes, no swap).
 /// Fast path k==n-1: move rightmost element to left end (left rotate n-1 = right rotate 1, sequential reads/writes, no swap).
 /// General case uses 3-reversal: Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).
 /// All three phases are linear scans, enabling hardware prefetching and eliminating GCD/modulo overhead.</description></item>
-/// <item><description><strong>Merge via Rotation:</strong> During merge, find the position where the first element of the right partition
-/// should be inserted in the left partition (using binary search). Rotate elements to place it correctly, then recursively
-/// merge the remaining elements. This maintains sorted order while being in-place.</description></item>
-/// <item><description><strong>Stability Preservation:</strong> Binary search uses &lt;= comparison to find the insertion position,
-/// ensuring equal elements from the left partition appear before equal elements from the right partition.</description></item>
+/// <item><description><strong>Stability Preservation:</strong> Lower bound is used when the left side is smaller
+/// and upper bound when the right side is smaller, ensuring equal elements from the left run appear before
+/// those from the right run.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Hybrid (Merge + Insertion + Galloping)</description></item>
-/// <item><description>Stable      : Yes (binary search with &lt;= comparison preserves relative order)</description></item>
-/// <item><description>In-place    : Yes (O(1) auxiliary space, uses rotation instead of buffer)</description></item>
+/// <item><description>Family      : Hybrid (Merge + Insertion)</description></item>
+/// <item><description>Stable      : Yes (lower/upper bound preserves relative order)</description></item>
+/// <item><description>Bufferless  : Yes (no external buffer, uses rotation for in-place merging)</description></item>
 /// <item><description>Best case   : O(n) - Sorted data with insertion sort optimization for small partitions</description></item>
 /// <item><description>Average case: O(n log² n) - Binary search (log n) + rotation (n) per merge level (log n levels)</description></item>
 /// <item><description>Worst case  : O(n log² n) - Rotation adds O(n) factor to each merge operation</description></item>
-/// <item><description>Comparisons : Best O(n), Average/Worst O(n log² n) - Galloping reduces comparisons for consecutive blocks</description></item>
+/// <item><description>Comparisons : Best O(n), Average/Worst O(n log² n)</description></item>
 /// <item><description>Writes      : Best O(n), Average/Worst O(n log² n) - k==1/k==n-1 fast paths use sequential writes; 3-reversal uses cache-friendly swaps</description></item>
 /// <item><description>Swaps       : 0 for k==1/k==n-1 fast paths; O(n/2) per rotation in general case (3-reversal)</description></item>
-/// <item><description>Space       : O(log n) - Only recursion stack space, no auxiliary buffer needed</description></item>
-/// </list>
-/// <para><strong>Advantages of Rotate Merge Sort:</strong></para>
-/// <list type="bullet">
-/// <item><description>True in-place sorting - O(1) auxiliary space (only recursion stack)</description></item>
-/// <item><description>Stable - Preserves relative order of equal elements</description></item>
-/// <item><description>Hybrid optimization - Insertion sort improves performance for small subarrays</description></item>
-/// <item><description>Galloping search - Efficiently finds consecutive blocks (TimSort-style)</description></item>
-/// <item><description>3-reversal rotation - cache-friendly linear scans, no GCD or modulo overhead</description></item>
-/// <item><description>k==1 / k==n-1 fast paths - zero-swap sequential shift for the most common single-element merge case</description></item>
-/// </list>
-/// <para><strong>Disadvantages:</strong></para>
-/// <list type="bullet">
-/// <item><description>Slower than buffer-based merge sort - Additional log n factor from binary search and rotation overhead</description></item>
-/// <item><description>More writes than standard merge sort - Rotation requires multiple element movements</description></item>
-/// <item><description>Complexity - Multiple optimizations (insertion sort, galloping, 3-reversal fast paths) increase code complexity</description></item>
-/// </list>
-/// <para><strong>Use Cases:</strong></para>
-/// <list type="bullet">
-/// <item><description>When memory is extremely constrained (embedded systems, real-time systems)</description></item>
-/// <item><description>When stability is required but auxiliary memory is not available</description></item>
-/// <item><description>Educational purposes - Understanding in-place merging techniques</description></item>
+/// <item><description>Space       : O(log n) - Recursion stack for sort + merge, no auxiliary buffer needed</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Merge_sort#Variants</para>
@@ -438,97 +444,91 @@ public static class RotateMergeSortRecursive
     }
 
     /// <summary>
-    /// Merges two sorted subarrays [left..mid] and [mid+1..right] in-place using rotation.
-    /// When s[start1] &gt; s[start2], start1 is already the insertion point (no binary search needed).
-    /// Optimization: Uses galloping (exponential search + binary search) to efficiently find
-    /// long runs of consecutive elements from the right partition.
+    /// Merges two sorted subarrays [left..mid] and [mid+1..right] in-place using divide-and-conquer rotation.
+    /// Picks the median of the smaller side, binary searches for its position in the opposite side,
+    /// rotates the overlapping region, then recursively merges both resulting sub-problems.
     /// </summary>
-    /// <param name="s">The SortSpan wrapping the array</param>
-    /// <param name="left">The inclusive start index of the left subarray</param>
-    /// <param name="mid">The inclusive end index of the left subarray</param>
-    /// <param name="right">The inclusive end index of the right subarray</param>
     private static void MergeInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int mid, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var start1 = left;
-        var start2 = mid + 1;
+        var len1 = mid - left + 1;
+        var len2 = right - mid;
 
-        // Main merge loop using rotation algorithm with galloping optimization
-        while (start1 <= mid && start2 <= right)
+        if (len1 == 0 || len2 == 0) return;
+
+        if (len1 == 1 && len2 == 1)
         {
-            // If element at start1 is in correct position
-            if (s.Compare(start1, start2) <= 0)
-            {
-                start1++;
-            }
-            else
-            {
-                // s[start1] > s[start2] and [start1..mid] is sorted, so start1 is already the insertion point.
-                // Galloping: find how many consecutive right-partition elements are all less than s[start1]
-                var start2End = GallopingSearchEnd(s, start1, start2, right);
-
-                var blockSize = start2End - start2 + 1;
-                var rotateDistance = start2 - start1;
-
-                // Left-rotate [start1..start2End] by rotateDistance: [left_part | right_block] → [right_block | left_part]
-                // right_block elements (all < s[start1]) are moved to the front; left_part shifts right.
-                Rotate(s, start1, start2End, rotateDistance);
-
-                // Update pointers after moving the block
-                start1 += blockSize;
-                mid += blockSize;
-                start2 = start2End + 1;
-            }
+            if (s.Compare(left, right) > 0)
+                s.Swap(left, right);
+            return;
         }
+
+        int mid1, mid2;
+
+        if (len1 <= len2)
+        {
+            mid1 = left + len1 / 2;
+            mid2 = LowerBound(s, mid + 1, right, mid1);
+        }
+        else
+        {
+            mid2 = mid + 1 + len2 / 2;
+            mid1 = UpperBound(s, left, mid, mid2);
+        }
+
+        var rotateLen = mid - mid1 + 1;
+        if (rotateLen > 0 && mid2 > mid + 1)
+            Rotate(s, mid1, mid2 - 1, rotateLen);
+
+        var newMid = mid1 + (mid2 - mid - 1);
+
+        MergeInPlace(s, left, mid1 - 1, newMid - 1);
+        MergeInPlace(s, newMid, newMid + (mid - mid1), right);
     }
 
     /// <summary>
-    /// Finds the end position of consecutive elements from the right partition using galloping.
-    /// Scans right partition for elements all less than s[leftBoundary], the left boundary element.
-    /// Uses exponential search followed by binary search for efficiency.
-    /// This is similar to TimSort's galloping mode.
+    /// Finds the first position in [left..right] where s[pos] >= s[keyIndex] (lower bound).
     /// </summary>
-    /// <param name="s">The SortSpan wrapping the array</param>
-    /// <param name="leftBoundary">The index of the left partition boundary element (start1) to compare against</param>
-    /// <param name="start">The start position in the right partition</param>
-    /// <param name="end">The end position in the right partition</param>
-    /// <returns>The last index in the right partition where s[i] &lt; s[leftBoundary]</returns>
-    private static int GallopingSearchEnd<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int leftBoundary, int start, int end)
+    private static int LowerBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int keyIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Phase 1: Exponential search (galloping) - find rough upper bound
-        // Step size: 1, 2, 4, 8, 16, ... (exponentially increasing)
-        var lastGood = start;
-        var step = 1;
+        var lo = left;
+        var hi = right + 1;
 
-        while (start + step <= end && s.Compare(leftBoundary, start + step) > 0)
+        while (lo < hi)
         {
-            lastGood = start + step;
-            step *= 2;  // Exponential growth
-        }
-
-        // Phase 2: Binary search for exact boundary in [lastGood..min(start+step, end)]
-        var low = lastGood;
-        var high = Math.Min(start + step, end);
-
-        // Binary search to find the last element that is less than s[leftBoundary]
-        while (low < high)
-        {
-            var mid = low + (high - low + 1) / 2;
-
-            if (s.Compare(leftBoundary, mid) > 0)
-            {
-                low = mid;
-            }
+            var m = lo + (hi - lo) / 2;
+            if (s.Compare(m, keyIndex) < 0)
+                lo = m + 1;
             else
-            {
-                high = mid - 1;
-            }
+                hi = m;
         }
 
-        return low;
+        return lo;
+    }
+
+    /// <summary>
+    /// Finds the first position in [left..right] where s[pos] > s[keyIndex] (upper bound).
+    /// </summary>
+    private static int UpperBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int keyIndex)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var lo = left;
+        var hi = right + 1;
+
+        while (lo < hi)
+        {
+            var m = lo + (hi - lo) / 2;
+            if (s.Compare(m, keyIndex) <= 0)
+                lo = m + 1;
+            else
+                hi = m;
+        }
+
+        return lo;
     }
 
     /// <summary>
@@ -598,23 +598,22 @@ public static class RotateMergeSortRecursive
 
 /// <summary>
 /// 最適化していないRotate Merge Sortです。
-/// 配列を再帰的に半分に分割し、それぞれをソートした後、回転アルゴリズムを使用してインプレースでマージする分割統治アルゴリズムです。
-/// 安定ソートであり、追加メモリを使用せずにO(n log n)の性能を保証します。
-/// 回転をするため、要素の移動が多くなるため、標準のマージソートよりも遅くなります。
+/// 配列を再帰的に半分に分割し、それぞれをソートした後、分割統治型の再帰的インプレースマージ（小さい側の中央を取り、反対側をbinary searchし、rotateして左右を再帰）でマージします。
+/// 安定ソートであり、外部バッファを使用せずに典型的にはO(n log² n)の性能を達成します。
+/// 回転にはGCD-cycle（Juggling）アルゴリズムを使用し、swapではなくwriteのみで回転を行います。
 /// <br/>
 /// Non-Optimized Rotate Merge Sort.
-/// Recursively divides the array in half, sorts each part, then merges sorted subarrays in-place using array rotation.
-/// This divide-and-conquer algorithm is stable and guarantees O(n log n) performance without requiring auxiliary space.
-/// However, due to the rotations, it involves more element movements and is slower than standard merge sort.
+/// Recursively divides the array in half, sorts each part, then merges sorted subarrays in-place using
+/// divide-and-conquer rotation merge: pick the median of the smaller side, binary search in the opposite side,
+/// rotate, then recursively merge both halves.
+/// Uses GCD-cycle (Juggling) rotation which performs writes only (no swaps).
+/// This algorithm is stable and typically achieves O(n log² n) performance without requiring an external buffer.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Rotate Merge Sort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Hybrid Optimization:</strong> For subarrays with ≤16 elements, insertion sort is used instead of rotation-based merge.
 /// This is a practical optimization similar to TimSort and IntroSort, reducing overhead for small sizes.</description></item>
-/// <item><description><strong>Galloping Optimization:</strong> Uses exponential search (1, 2, 4, 8, ...) followed by binary search to efficiently find
-/// long runs of consecutive elements from the right partition. This is similar to TimSort's galloping mode and reduces comparisons
-/// when merging data with long consecutive blocks.</description></item>
 /// <item><description><strong>Divide Step (Binary Partitioning):</strong> The array must be divided into two roughly equal halves at each recursion level.
 /// The midpoint is calculated as mid = (left + right) / 2, ensuring balanced subdivision.
 /// This guarantees a recursion depth of ⌈log₂(n)⌉.</description></item>
@@ -622,50 +621,29 @@ public static class RotateMergeSortRecursive
 /// An array of size 0 or 1 is trivially sorted and requires no further processing.</description></item>
 /// <item><description><strong>Conquer Step (Recursive Sorting):</strong> Each half must be sorted independently via recursive calls.
 /// The left subarray [left..mid] and right subarray [mid+1..right] are sorted before merging.</description></item>
-/// <item><description><strong>In-Place Merge Step:</strong> Two sorted subarrays must be merged without using additional memory.
-/// This is achieved using array rotation, which rearranges elements by shifting blocks of the array.</description></item>
+/// <item><description><strong>Divide-and-Conquer In-Place Merge:</strong> Each merge picks the median of
+/// the smaller side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
+/// rotates the overlapping region, then recursively merges the two resulting sub-problems.
+/// This is the canonical recursive rotation merge algorithm.</description></item>
 /// <item><description><strong>Rotation Algorithm (Left-Rotate by k, GCD-Cycle / Juggling):</strong> Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems] using GCD-based cycle detection.
 /// To left-rotate array A of length n by k positions: Find GCD(n, k) independent cycles, and for each cycle, move elements using assignments only.
-/// This achieves O(n) time rotation with O(1) space using only writes (no swaps needed).
-/// The algorithm divides rotation into GCD(n,k) independent cycles, rotating elements within each cycle.</description></item>
-/// <item><description><strong>Merge via Rotation:</strong> During merge, find the position where the first element of the right partition
-/// should be inserted in the left partition (using binary search). Rotate elements to place it correctly, then recursively
-/// merge the remaining elements. This maintains sorted order while being in-place.</description></item>
-/// <item><description><strong>Stability Preservation:</strong> Binary search uses &lt;= comparison to find the insertion position,
-/// ensuring equal elements from the left partition appear before equal elements from the right partition.</description></item>
+/// This achieves O(n) time rotation with O(1) space using only writes (no swaps needed).</description></item>
+/// <item><description><strong>Stability Preservation:</strong> Lower bound is used when the left side is smaller
+/// and upper bound when the right side is smaller, ensuring equal elements from the left run appear before
+/// those from the right run.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Hybrid (Merge + Insertion + Galloping)</description></item>
-/// <item><description>Stable      : Yes (binary search with &lt;= comparison preserves relative order)</description></item>
-/// <item><description>In-place    : Yes (O(1) auxiliary space, uses rotation instead of buffer)</description></item>
+/// <item><description>Family      : Hybrid (Merge + Insertion)</description></item>
+/// <item><description>Stable      : Yes (lower/upper bound preserves relative order)</description></item>
+/// <item><description>Bufferless  : Yes (no external buffer, uses rotation for in-place merging)</description></item>
 /// <item><description>Best case   : O(n) - Sorted data with insertion sort optimization for small partitions</description></item>
 /// <item><description>Average case: O(n log² n) - Binary search (log n) + rotation (n) per merge level (log n levels)</description></item>
 /// <item><description>Worst case  : O(n log² n) - Rotation adds O(n) factor to each merge operation</description></item>
-/// <item><description>Comparisons : Best O(n), Average/Worst O(n log² n) - Galloping reduces comparisons for consecutive blocks</description></item>
+/// <item><description>Comparisons : Best O(n), Average/Worst O(n log² n)</description></item>
 /// <item><description>Writes      : Best O(n), Average/Worst O(n² log n) - GCD-cycle rotation uses assignments only (no swaps)</description></item>
 /// <item><description>Swaps       : 0 - GCD-cycle rotation uses only write operations, no swaps needed</description></item>
-/// <item><description>Space       : O(log n) - Only recursion stack space, no auxiliary buffer needed</description></item>
-/// </list>
-/// <para><strong>Advantages of Rotate Merge Sort:</strong></para>
-/// <list type="bullet">
-/// <item><description>True in-place sorting - O(1) auxiliary space (only recursion stack)</description></item>
-/// <item><description>Stable - Preserves relative order of equal elements</description></item>
-/// <item><description>Hybrid optimization - Insertion sort improves performance for small subarrays</description></item>
-/// <item><description>Galloping search - Efficiently finds consecutive blocks (TimSort-style)</description></item>
-/// <item><description>GCD-cycle rotation - Efficient assignment-based rotation without swaps</description></item>
-/// </list>
-/// <para><strong>Disadvantages:</strong></para>
-/// <list type="bullet">
-/// <item><description>Slower than buffer-based merge sort - Additional log n factor from binary search and rotation overhead</description></item>
-/// <item><description>More writes than standard merge sort - Rotation requires multiple element movements</description></item>
-/// <item><description>Complexity - Multiple optimizations (insertion sort, galloping, GCD-cycle) increase code complexity</description></item>
-/// </list>
-/// <para><strong>Use Cases:</strong></para>
-/// <list type="bullet">
-/// <item><description>When memory is extremely constrained (embedded systems, real-time systems)</description></item>
-/// <item><description>When stability is required but auxiliary memory is not available</description></item>
-/// <item><description>Educational purposes - Understanding in-place merging techniques</description></item>
+/// <item><description>Space       : O(log n) - Recursion stack for sort + merge, no auxiliary buffer needed</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Merge_sort#Variants</para>
@@ -756,97 +734,91 @@ public static class RotateMergeSortNonOptimized
     }
 
     /// <summary>
-    /// Merges two sorted subarrays [left..mid] and [mid+1..right] in-place using rotation.
-    /// When s[start1] &gt; s[start2], start1 is already the insertion point (no binary search needed).
-    /// Optimization: Uses galloping (exponential search + binary search) to efficiently find
-    /// long runs of consecutive elements from the right partition.
+    /// Merges two sorted subarrays [left..mid] and [mid+1..right] in-place using divide-and-conquer rotation.
+    /// Picks the median of the smaller side, binary searches for its position in the opposite side,
+    /// rotates the overlapping region, then recursively merges both resulting sub-problems.
     /// </summary>
-    /// <param name="s">The SortSpan wrapping the array</param>
-    /// <param name="left">The inclusive start index of the left subarray</param>
-    /// <param name="mid">The inclusive end index of the left subarray</param>
-    /// <param name="right">The inclusive end index of the right subarray</param>
     private static void MergeInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int mid, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var start1 = left;
-        var start2 = mid + 1;
+        var len1 = mid - left + 1;
+        var len2 = right - mid;
 
-        // Main merge loop using rotation algorithm with galloping optimization
-        while (start1 <= mid && start2 <= right)
+        if (len1 == 0 || len2 == 0) return;
+
+        if (len1 == 1 && len2 == 1)
         {
-            // If element at start1 is in correct position
-            if (s.Compare(start1, start2) <= 0)
-            {
-                start1++;
-            }
-            else
-            {
-                // s[start1] > s[start2] and [start1..mid] is sorted, so start1 is already the insertion point.
-                // Galloping: find how many consecutive right-partition elements are all less than s[start1]
-                var start2End = GallopingSearchEnd(s, start1, start2, right);
-
-                var blockSize = start2End - start2 + 1;
-                var rotateDistance = start2 - start1;
-
-                // Left-rotate [start1..start2End] by rotateDistance: [left_part | right_block] → [right_block | left_part]
-                // right_block elements (all < s[start1]) are moved to the front; left_part shifts right.
-                Rotate(s, start1, start2End, rotateDistance);
-
-                // Update pointers after moving the block
-                start1 += blockSize;
-                mid += blockSize;
-                start2 = start2End + 1;
-            }
+            if (s.Compare(left, right) > 0)
+                s.Swap(left, right);
+            return;
         }
+
+        int mid1, mid2;
+
+        if (len1 <= len2)
+        {
+            mid1 = left + len1 / 2;
+            mid2 = LowerBound(s, mid + 1, right, mid1);
+        }
+        else
+        {
+            mid2 = mid + 1 + len2 / 2;
+            mid1 = UpperBound(s, left, mid, mid2);
+        }
+
+        var rotateLen = mid - mid1 + 1;
+        if (rotateLen > 0 && mid2 > mid + 1)
+            Rotate(s, mid1, mid2 - 1, rotateLen);
+
+        var newMid = mid1 + (mid2 - mid - 1);
+
+        MergeInPlace(s, left, mid1 - 1, newMid - 1);
+        MergeInPlace(s, newMid, newMid + (mid - mid1), right);
     }
 
     /// <summary>
-    /// Finds the end position of consecutive elements from the right partition using galloping.
-    /// Scans right partition for elements all less than s[leftBoundary], the left boundary element.
-    /// Uses exponential search followed by binary search for efficiency.
-    /// This is similar to TimSort's galloping mode.
+    /// Finds the first position in [left..right] where s[pos] >= s[keyIndex] (lower bound).
     /// </summary>
-    /// <param name="s">The SortSpan wrapping the array</param>
-    /// <param name="leftBoundary">The index of the left partition boundary element (start1) to compare against</param>
-    /// <param name="start">The start position in the right partition</param>
-    /// <param name="end">The end position in the right partition</param>
-    /// <returns>The last index in the right partition where s[i] &lt; s[leftBoundary]</returns>
-    private static int GallopingSearchEnd<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int leftBoundary, int start, int end)
+    private static int LowerBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int keyIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Phase 1: Exponential search (galloping) - find rough upper bound
-        // Step size: 1, 2, 4, 8, 16, ... (exponentially increasing)
-        var lastGood = start;
-        var step = 1;
+        var lo = left;
+        var hi = right + 1;
 
-        while (start + step <= end && s.Compare(leftBoundary, start + step) > 0)
+        while (lo < hi)
         {
-            lastGood = start + step;
-            step *= 2;  // Exponential growth
-        }
-
-        // Phase 2: Binary search for exact boundary in [lastGood..min(start+step, end)]
-        var low = lastGood;
-        var high = Math.Min(start + step, end);
-
-        // Binary search to find the last element that is less than s[leftBoundary]
-        while (low < high)
-        {
-            var mid = low + (high - low + 1) / 2;
-
-            if (s.Compare(leftBoundary, mid) > 0)
-            {
-                low = mid;
-            }
+            var m = lo + (hi - lo) / 2;
+            if (s.Compare(m, keyIndex) < 0)
+                lo = m + 1;
             else
-            {
-                high = mid - 1;
-            }
+                hi = m;
         }
 
-        return low;
+        return lo;
+    }
+
+    /// <summary>
+    /// Finds the first position in [left..right] where s[pos] > s[keyIndex] (upper bound).
+    /// </summary>
+    private static int UpperBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int keyIndex)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var lo = left;
+        var hi = right + 1;
+
+        while (lo < hi)
+        {
+            var m = lo + (hi - lo) / 2;
+            if (s.Compare(m, keyIndex) <= 0)
+                lo = m + 1;
+            else
+                hi = m;
+        }
+
+        return lo;
     }
 
     /// <summary>
