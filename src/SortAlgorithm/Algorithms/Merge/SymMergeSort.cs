@@ -272,10 +272,13 @@ public static class SymMergeSort
             return;
         }
 
-        // For small ranges, fall back to insertion sort (adaptive: O(n) for nearly sorted)
+        // For small ranges, use merge-aware insertion that exploits the two-run structure.
+        // Unlike plain InsertionSort (which treats the range as unsorted), this inserts elements
+        // from the shorter side into the merged sequence using binary search, yielding
+        // comparisons: roughly O(min(L,R) * log(L+R)), moves: up to O(min(L,R) * (L+R))
         if (b - a <= SymMergeThreshold)
         {
-            InsertionSort.SortCore(s, a, b);
+            MergeAwareInsertion(s, a, m, b);
             return;
         }
 
@@ -389,6 +392,85 @@ public static class SymMergeSort
         Reverse(s, lo, m - 1);
         Reverse(s, m, hi - 1);
         Reverse(s, lo, hi - 1);
+    }
+
+    /// <summary>
+    /// Merge-aware insertion: merges two sorted runs s[a..m) and s[m..b) by binary-inserting
+    /// elements from the shorter side into the merged sequence. This exploits the known two-run
+    /// structure that the SymMerge fallback receives, unlike plain InsertionSort which treats
+    /// the range as unsorted.
+    /// <para>
+    /// <strong>Left ≤ Right case:</strong> Inserts left elements right-to-left. After each insertion
+    /// the sorted merged region [i+1, b) extends one position to the left. Binary search uses
+    /// lower_bound (strict &lt;) so equal right-run elements stay after the left element (stability).
+    /// </para>
+    /// <para>
+    /// <strong>Right &lt; Left case:</strong> Inserts right elements left-to-right. After each insertion
+    /// the sorted merged region [a, i+1) extends one position to the right. Binary search uses
+    /// upper_bound (≤) so equal left-run elements stay before the right element (stability).
+    /// </para>
+    /// </summary>
+    private static void MergeAwareInsertion<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int a, int m, int b)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var leftLen = m - a;
+        var rightLen = b - m;
+
+        if (leftLen <= rightLen)
+        {
+            // Insert left elements (smaller side) into the merged sequence, right to left.
+            // After each insertion, the sorted merged region [i+1, b) grows leftward.
+            for (var i = m - 1; i >= a; i--)
+            {
+                var tmp = s.Read(i);
+
+                // lower_bound in the merged region [i+1, b):
+                // left element should go before equal right elements (stability).
+                var ilo = i + 1;
+                var ihi = b;
+                while (ilo < ihi)
+                {
+                    var c = (int)((uint)(ilo + ihi) >> 1);
+                    if (s.Compare(c, tmp) < 0)
+                        ilo = c + 1;
+                    else
+                        ihi = c;
+                }
+
+                // Shift s[i+1..ilo) one position to the left, then place tmp at ilo-1.
+                for (var j = i; j < ilo - 1; j++)
+                    s.Write(j, s.Read(j + 1));
+                s.Write(ilo - 1, tmp);
+            }
+        }
+        else
+        {
+            // Insert right elements (smaller side) into the merged sequence, left to right.
+            // After each insertion, the sorted merged region [a, i+1) grows rightward.
+            for (var i = m; i < b; i++)
+            {
+                var tmp = s.Read(i);
+
+                // upper_bound in the merged region [a, i):
+                // right element should go after equal left elements (stability).
+                var ilo = a;
+                var ihi = i;
+                while (ilo < ihi)
+                {
+                    var c = (int)((uint)(ilo + ihi) >> 1);
+                    if (s.Compare(c, tmp) <= 0)
+                        ilo = c + 1;
+                    else
+                        ihi = c;
+                }
+
+                // Shift s[ilo..i) one position to the right, then place tmp at ilo.
+                for (var j = i; j > ilo; j--)
+                    s.Write(j, s.Read(j - 1));
+                s.Write(ilo, tmp);
+            }
+        }
     }
 
     /// <summary>
