@@ -734,6 +734,9 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // Already sorted: left.last ≤ right.first → copy left (t) into gap, right stays in place.
+        if (s.IsLessOrEqual(t.Read(l1Len - 1), s.Read(r1))) { t.CopyTo(0, s, outStart, l1Len); return; }
+
         var c1 = 0;
         var e1 = l1Len;
         var c2 = r1;
@@ -778,6 +781,9 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // Already sorted: left.last ≤ right.first → sequential copy is sufficient.
+        if (s.IsLessOrEqualAt(mid - 1, mid)) { s.CopyTo(leftStart, t, tOffset, rightEnd - leftStart); return; }
+
         var c1 = leftStart;
         var e1 = mid;
         var c2 = mid;
@@ -908,6 +914,9 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // Already sorted: left.last ≤ right.first → left stays in place, copy right (t) into gap.
+        if (s.IsLessOrEqual(s.Read(leftStart + leftLen - 1), t.Read(0))) { t.CopyTo(0, s, outEnd - tLen, tLen); return; }
+
         // Count-based: n1/n2 eliminate signed-comparison bounds (especially c2 >= 0 which
         // requires an integer sign check). Loop condition is a zero-check.
         var n1 = leftLen;
@@ -949,6 +958,9 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // Already sorted: left.last ≤ right.first → sequential copy is sufficient.
+        if (s.IsLessOrEqual(t.Read(leftLen - 1), t.Read(leftLen))) { t.CopyTo(0, s, outStart, totalLen); return; }
+
         var c1 = 0;
         var e1 = leftLen;
         var c2 = leftLen;
@@ -1036,8 +1048,9 @@ public static class Glidesort
     /// Uses the gap trick when possible:
     /// <para><b>Full scratch</b>: merge both pairs into scratch, then merge the two halves back.
     /// Every element moves exactly twice (3 merge passes instead of ~6).</para>
-    /// <para><b>Partial scratch</b>: merge one pair in-place first (freeing t), then merge
-    /// the other into scratch, and finish with a gap merge (4 merge passes).</para>
+    /// <para><b>Partial scratch</b>: try the bigger pair for scratch first (matches the reference).
+    /// Merging the smaller pair in-place first minimizes in-place merge work, then the bigger pair
+    /// goes into scratch and a single gap merge finishes (4 merge passes).</para>
     /// <para><b>Fallback</b>: three sequential PhysicalMerge calls (6 merge passes).</para>
     /// </summary>
     private static void PhysicalQuadMerge<T, TComparer, TContext>(
@@ -1063,28 +1076,53 @@ public static class Glidesort
             return;
         }
 
-        // Partial: merge one pair in-place first (freeing t), then merge
-        // the other into scratch, and finish with a gap merge.
-        if (leftLen <= scratch.Length)
+        // Partial: try the bigger pair for scratch first.
+        // Matches the reference: "try to merge the bigger pair into scratch first. This guarantees
+        // that if the bigger one fits but the smaller one doesn't we can use the old space of
+        // the bigger one as scratch space while merging the smaller one."
+        // Merging the smaller pair in-place first (fewer elements = less work) and putting the
+        // bigger pair into scratch minimizes in-place merge cost.
+        if (leftLen >= rightLen)
         {
-            // Merge right pair in-place first (uses t temporarily, then releases it).
-            PhysicalMerge(s, t, scratch, mid2, mid3, end, comparer, context);
-            // Merge left pair into scratch.
-            MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
-            // Final: forward-merge t[0..leftLen) + s[mid2..end) → s[start..end).
-            MergeLeftGap(s, t, leftLen, mid2, rightLen, start);
-            return;
+            if (leftLen <= scratch.Length)
+            {
+                // Left (bigger) fits in scratch: merge right (smaller) in-place first,
+                // then left into scratch, then forward-merge.
+                PhysicalMerge(s, t, scratch, mid2, mid3, end, comparer, context);
+                MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
+                MergeLeftGap(s, t, leftLen, mid2, rightLen, start);
+                return;
+            }
+            if (rightLen <= scratch.Length)
+            {
+                // Left too big; right fits: merge left (bigger) in-place, right into scratch,
+                // then backward-merge.
+                PhysicalMerge(s, t, scratch, start, mid1, mid2, comparer, context);
+                MergeIntoScratchAt(s, t, mid2, mid3, end, 0);
+                MergeRightGapFromScratch(s, t, start, leftLen, rightLen, end);
+                return;
+            }
         }
-
-        if (rightLen <= scratch.Length)
+        else
         {
-            // Merge left pair in-place first (uses t temporarily, then releases it).
-            PhysicalMerge(s, t, scratch, start, mid1, mid2, comparer, context);
-            // Merge right pair into scratch.
-            MergeIntoScratchAt(s, t, mid2, mid3, end, 0);
-            // Final: backward-merge s[start..mid2) + t[0..rightLen) → s[start..end).
-            MergeRightGapFromScratch(s, t, start, leftLen, rightLen, end);
-            return;
+            if (rightLen <= scratch.Length)
+            {
+                // Right (bigger) fits in scratch: merge left (smaller) in-place first,
+                // then right into scratch, then backward-merge.
+                PhysicalMerge(s, t, scratch, start, mid1, mid2, comparer, context);
+                MergeIntoScratchAt(s, t, mid2, mid3, end, 0);
+                MergeRightGapFromScratch(s, t, start, leftLen, rightLen, end);
+                return;
+            }
+            if (leftLen <= scratch.Length)
+            {
+                // Right too big; left fits: merge right (bigger) in-place, left into scratch,
+                // then forward-merge.
+                PhysicalMerge(s, t, scratch, mid2, mid3, end, comparer, context);
+                MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
+                MergeLeftGap(s, t, leftLen, mid2, rightLen, start);
+                return;
+            }
         }
 
         // Fallback: sequential merges.
@@ -1431,6 +1469,32 @@ public static class Glidesort
             //   less_bwd: t[scrStart+n-lessBwdCount .. scrStart+n)
             //   geq_fwd:  t[scrStart .. scrStart+geqFwdCount)
             //   geq_bwd:  s[destStart+n-geqBwdCount .. destStart+n)
+
+            // --- Both sides small: overlapping small sorts ---
+            // When both halves are below SMALL_SORT, sort them directly on dest instead of
+            // recursing. Rounding each side up to the next multiple of 8 is safe because
+            // n >= SMALL_SORT ensures the rounded range stays within dest[0..n).
+            // The two sorted ranges may overlap in the middle; correctness holds because
+            // all less-side elements < pivot <= all geq-side elements, so sorting either
+            // rounded range leaves the less/geq boundary intact.
+            if (lessTotal < SMALL_SORT && geqTotal < SMALL_SORT)
+            {
+                // Assemble less_bwd from scratch into dest (less_fwd already in dest).
+                if (lessBwdCount > 0)
+                    t.CopyTo(scrStart + n - lessBwdCount, s, destStart + lessFwdCount, lessBwdCount);
+                // Assemble geq_fwd from scratch into dest (geq_bwd already in dest).
+                if (geqFwdCount > 0)
+                    t.CopyTo(scrStart, s, destStart + lessTotal, geqFwdCount);
+
+                var tLocal = t.Slice(scrStart, n, BUFFER_TEMP);
+                // Sort less side, optionally rounded up to the next multiple of 8.
+                var roundLess = (lessTotal <= 32 && (lessTotal & 8) != 0) ? (lessTotal + 7) & ~7 : lessTotal;
+                BlockInsertionSort(s, tLocal, destStart, destStart + roundLess);
+                // Sort geq side, optionally rounded up to the next multiple of 8.
+                var roundGeq = (geqTotal <= 32 && (geqTotal & 8) != 0) ? (geqTotal + 7) & ~7 : geqTotal;
+                BlockInsertionSort(s, tLocal, destStart + n - roundGeq, destStart + n);
+                return;
+            }
 
             // --- PartitionStrategy: all-elements-geq → re-partition with LeftWithPivot ---
             if (lessTotal == 0 && !partitionLeft)
