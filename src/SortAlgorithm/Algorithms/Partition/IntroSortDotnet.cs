@@ -229,13 +229,8 @@ public static class IntroSortDotnet
         // Walk the left and right pointers, swapping elements as necessary, until they cross.
         while (left < right)
         {
-            // Move left pointer forward while elements are less than pivot
-            // Pre-increment: ++left first, then compare
-            while (left < hi - 1 && s.Compare(offset + (++left), pivot) < 0) ;
-
-            // Move right pointer backward while elements are greater than pivot
-            // Pre-decrement: --right first, then compare
-            while (right > 0 && s.Compare(pivot, offset + (--right)) < 0) ;
+            while (s.Compare(offset + (++left), pivot) < 0) ;
+            while (s.Compare(pivot, offset + (--right)) < 0) ;
 
             if (left >= right)
                 break;
