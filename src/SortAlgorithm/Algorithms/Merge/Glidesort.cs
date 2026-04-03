@@ -42,8 +42,8 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description><strong>Scratch allocation:</strong> uses <see cref="System.Buffers.ArrayPool{T}"/> instead of stack allocation
 /// (<c>stackalloc</c> is not available for generic T in C#).</description></item>
-/// <item><description><strong>Sort16 final merge:</strong> uses copy-left-half + forward merge (16 scratch elements),
-/// whereas the reference uses DoubleMerge → SymmetricMerge (32 scratch elements).</description></item>
+/// <item><description><strong>Sort16 final merge:</strong> uses DoubleMerge → CopyTo-16 → SymmetricMerge (16 scratch elements on the narrow path),
+/// whereas the reference uses DoubleMerge(t→t) → SymmetricMerge (32 scratch elements on all paths).</description></item>
 /// </list>
 /// <para><strong>References:</strong></para>
 /// <para>GitHub: https://github.com/orlp/glidesort</para>
@@ -1848,8 +1848,11 @@ public static class Glidesort
     /// </para>
     /// <para>
     /// When t.Length &lt; 32 (quicksort base case where scratch is sliced to n elements),
-    /// bounces through s and finishes with a copy-left-half forward merge.
-    /// The reference avoids this by allocating a separate 64-element stack scratch inside
+    /// bounces through s between the DoubleMerge and SymmetricMerge steps:
+    /// Sort4Into(t[0..16)) → DoubleMerge(t→s) → CopyTo(s[i..i+16)→t[0..16)) → SymmetricMerge(t→s).
+    /// Both paths end with the same SymmetricMerge call structure; the narrow path pays 8 extra
+    /// element copies to reload t[0..16) before the final merge.
+    /// The reference avoids all this by allocating a separate 64-element stack scratch inside
     /// block_insertion_sort (with_stack_scratch(64)), but C# cannot stackalloc generic T.
     /// </para>
     /// </summary>
@@ -1875,23 +1878,18 @@ public static class Glidesort
         }
         else
         {
-            // Narrow scratch path: bounce through s, finish with copy-left + forward merge.
-            // t[0..16) → s: double merge (4 groups of 4 → 2 groups of 8)
+            // Narrow scratch path: bounce through s, then use SymmetricMerge for the final step,
+            // matching the reference path's final merge structure.
+            // t[0..16) → s[i..i+16): double merge (4 groups of 4 → 2 groups of 8)
             DoubleMerge(t, s, 0, i, 4);
 
-            // s → s: merge 2 groups of 8 into 1 group of 16
-            s.CopyTo(i, t, 0, 8);
-            var c1 = 0;
-            var c2 = i + 8;
-            var o = i;
-            while (c1 < 8 && c2 < i + 16)
-            {
-                var v1 = t.Read(c1);
-                var v2 = s.Read(c2);
-                if (s.Compare(v1, v2) <= 0) { s.Write(o++, v1); c1++; }
-                else { s.Write(o++, v2); c2++; }
-            }
-            if (c1 < 8) { t.CopyTo(c1, s, o, 8 - c1); }
+            // t[0..16) was fully consumed as input by DoubleMerge, so it is now free.
+            // Copy both halves back to t[0..16) so SymmetricMerge can read from one span.
+            s.CopyTo(i, t, 0, 16);
+
+            // t[0..16) → s[i..i+16): symmetric merge (2 groups of 8 → 1 group of 16).
+            // Structurally identical to the full path's SymmetricMerge(t, s, 16, 24, i, 8).
+            SymmetricMerge(t, s, 0, 8, i, 8);
         }
     }
 
