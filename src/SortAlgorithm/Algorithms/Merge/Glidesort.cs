@@ -1367,40 +1367,56 @@ public static class Glidesort
             // Backward scan through right (reverse): geq → s[destBack--], less → t[scrBack--]
             //
             // Overlap safety:
-            //   Forward:  destFront ≤ fwdCur (when left is in s, leftOff == destStart)
-            //             scrFront  ≤ fwdCur (when left is in t, leftOff == scrStart)
-            //   Backward: bwdCur    ≤ destBack (when right is in s)
-            //             bwdCur    ≤ scrBack  (when right is in t)
-            //   Cross: forward writes in s end at destStart+lessFwdCount ≤ destStart+leftLen,
-            //          backward reads from s start at rightOff ≥ destStart+leftLen (when contiguous).
+            //   Forward:  destFront ≤ fwdI (when left is in s, leftOff == destStart)
+            //             scrFront  ≤ fwdI (when left is in t, leftOff == scrStart)
+            //   Backward: bwdI      ≥ destBack+1 impossible: destBack decrements by geqBwd ≤ k,
+            //             bwdI decrements by 1 each iter → bwdI ≥ rightOff, destBack ≥ rightOff
+            //   Cross fwd-write vs bwd-read: forward writes to s[destStart..+leftLen);
+            //          backward reads from s[rightOff..+rightLen) with rightOff ≥ destStart+leftLen.
+            //   Cross bwd-write vs fwd-read: backward writes to s[destStart+leftLen..+n);
+            //          forward reads from s[leftOff..+leftLen) ⊆ s[destStart..destStart+leftLen).
+            //   destFront/destBack never collide: lessFwdCount+geqBwdCount ≤ leftLen+rightLen = n.
             var destFront = destStart;
             var destBack = destStart + n - 1;
             var scrFront = scrStart;
             var scrBack = scrStart + n - 1;
 
-            // Forward scan through left
-            for (var i = leftOff; i < leftOff + leftLen; i++)
+            // Interleaved forward+backward scan: one element from each side per iteration.
+            // Reading both values and computing both decisions before any write lets the JIT/CPU
+            // issue the two independent loads and comparisons in parallel (ILP).
+            var fwdI = leftOff;
+            var bwdI = rightOff + rightLen - 1;
+            var minCount = Math.Min(leftLen, rightLen);
+            for (var k = 0; k < minCount; k++)
             {
-                var val = leftInMain ? s.Read(i) : t.Read(i);
-                // Convert isLess to 0/1 for unconditional index updates.
-                // Overlap-safety self-copies (when destFront==i or scrFront==i) are harmless.
-                int goLess = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 1 : 0;
-                if (goLess != 0) s.Write(destFront, val);
-                else t.Write(scrFront, val);
-                destFront += goLess;
-                scrFront += 1 - goLess;
+                var valFwd = leftInMain  ? s.Read(fwdI) : t.Read(fwdI);
+                var valBwd = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
+                int goLess = (partitionLeft ? s.IsLessOrEqual(valFwd, pivot) : s.IsLessThan(valFwd, pivot)) ? 1 : 0;
+                int goGeq  = (partitionLeft ? s.IsLessOrEqual(valBwd, pivot) : s.IsLessThan(valBwd, pivot)) ? 0 : 1;
+                if (goLess != 0) s.Write(destFront, valFwd); else t.Write(scrFront, valFwd);
+                destFront += goLess;  scrFront += 1 - goLess;
+                if (goGeq  != 0) s.Write(destBack,  valBwd); else t.Write(scrBack,  valBwd);
+                destBack  -= goGeq;   scrBack  -= 1 - goGeq;
+                fwdI++;
+                bwdI--;
             }
 
-            // Backward scan through right (reverse order)
-            for (var i = rightOff + rightLen - 1; i >= rightOff; i--)
+            // Forward tail (when leftLen > rightLen).
+            for (; fwdI < leftOff + leftLen; fwdI++)
             {
-                var val = rightInMain ? s.Read(i) : t.Read(i);
-                // goGeq = 1 when !isLess (geq → destBack/s); 0 when isLess (less → scrBack/t).
+                var val = leftInMain ? s.Read(fwdI) : t.Read(fwdI);
+                int goLess = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 1 : 0;
+                if (goLess != 0) s.Write(destFront, val); else t.Write(scrFront, val);
+                destFront += goLess;  scrFront += 1 - goLess;
+            }
+
+            // Backward tail (when rightLen > leftLen).
+            for (; bwdI >= rightOff; bwdI--)
+            {
+                var val = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
                 int goGeq = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 0 : 1;
-                if (goGeq != 0) s.Write(destBack, val);
-                else t.Write(scrBack, val);
-                destBack -= goGeq;
-                scrBack -= 1 - goGeq;
+                if (goGeq != 0) s.Write(destBack, val); else t.Write(scrBack, val);
+                destBack -= goGeq;    scrBack -= 1 - goGeq;
             }
 
             // Count elements in each group.
