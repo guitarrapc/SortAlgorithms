@@ -782,8 +782,128 @@ public static class Glidesort
     }
 
     /// <summary>
+    /// Forward-merges two adjacent sorted runs <c>s[leftStart..mid)</c> and <c>s[mid..rightEnd)</c>
+    /// into scratch at <c>t[tOffset..tOffset+totalLen)</c>.
+    /// Caller must ensure <c>tOffset + totalLen ≤ t.Length</c>.
+    /// </summary>
+    private static void MergeIntoScratchAt<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int leftStart, int mid, int rightEnd, int tOffset)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var c1 = leftStart;
+        var e1 = mid;
+        var c2 = mid;
+        var e2 = rightEnd;
+        var o = tOffset;
+
+        while (c1 < e1 && c2 < e2)
+        {
+            var v1 = s.Read(c1);
+            var v2 = s.Read(c2);
+
+            if (s.Compare(v1, v2) <= 0) // <= for stability
+            {
+                t.Write(o++, v1);
+                c1++;
+            }
+            else
+            {
+                t.Write(o++, v2);
+                c2++;
+            }
+        }
+
+        while (c1 < e1) t.Write(o++, s.Read(c1++));
+        while (c2 < e2) t.Write(o++, s.Read(c2++));
+    }
+
+    /// <summary>
+    /// Backward-merges <c>s[leftStart..leftStart+leftLen)</c> with <c>t[0..tLen)</c>
+    /// into <c>s[leftStart..outEnd)</c>. The gap between the left run and <c>outEnd</c>
+    /// provides the output space.
+    /// Used for triple/quad merge when the right pair was merged into scratch.
+    /// </summary>
+    private static void MergeRightGapFromScratch<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int leftStart, int leftLen, int tLen, int outEnd)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var c1 = leftStart + leftLen - 1;
+        var c2 = tLen - 1;
+        var o = outEnd - 1;
+
+        while (c1 >= leftStart && c2 >= 0)
+        {
+            var v1 = s.Read(c1);
+            var v2 = t.Read(c2);
+
+            if (s.Compare(v1, v2) <= 0) // <= takes v2 for stability
+            {
+                s.Write(o--, v2);
+                c2--;
+            }
+            else
+            {
+                s.Write(o--, v1);
+                c1--;
+            }
+        }
+
+        while (c2 >= 0)
+        {
+            s.Write(o--, t.Read(c2--));
+        }
+    }
+
+    /// <summary>
+    /// Forward-merges two sorted halves <c>t[0..leftLen)</c> and <c>t[leftLen..totalLen)</c>
+    /// from scratch back into <c>s[outStart..outStart+totalLen)</c>.
+    /// Used for quad merge full-scratch path.
+    /// </summary>
+    private static void MergeFromScratch<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int leftLen, int totalLen, int outStart)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var c1 = 0;
+        var e1 = leftLen;
+        var c2 = leftLen;
+        var e2 = totalLen;
+        var o = outStart;
+
+        while (c1 < e1 && c2 < e2)
+        {
+            var v1 = t.Read(c1);
+            var v2 = t.Read(c2);
+
+            if (s.Compare(v1, v2) <= 0) // <= for stability
+            {
+                s.Write(o++, v1);
+                c1++;
+            }
+            else
+            {
+                s.Write(o++, v2);
+                c2++;
+            }
+        }
+
+        while (c1 < e1) s.Write(o++, t.Read(c1++));
+        while (c2 < e2) s.Write(o++, t.Read(c2++));
+    }
+
+    /// <summary>
     /// Merges three adjacent sorted runs: [start..mid1), [mid1..mid2), [mid2..end).
-    /// Merges the smaller pair first for efficiency.
+    /// Uses the gap trick when possible: merge the smaller pair into scratch, then
+    /// merge the result with the remaining run using the vacated gap as output space.
+    /// This saves one full copy compared to two sequential PhysicalMerge calls.
     /// </summary>
     private static void PhysicalTripleMerge<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
@@ -795,25 +915,51 @@ public static class Glidesort
         where TContext : ISortContext
     {
         var len0 = mid1 - start;
+        var len1 = mid2 - mid1;
         var len2 = end - mid2;
 
         if (len0 < len2)
         {
-            // Merge first two, then merge result with third
-            PhysicalMerge(s, t, scratch, start, mid1, mid2, comparer, context);
-            PhysicalMerge(s, t, scratch, start, mid2, end, comparer, context);
+            // Smaller pair is r0+r1. Try to merge into scratch.
+            if (len0 + len1 <= scratch.Length)
+            {
+                // Gap trick: merge r0+r1 → t[0..len0+len1), gap is s[start..mid2).
+                MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
+                // Forward-merge t[0..len0+len1) with s[mid2..end) into s[start..end).
+                MergeLeftGap(s, t, len0 + len1, mid2, len2, start);
+            }
+            else
+            {
+                PhysicalMerge(s, t, scratch, start, mid1, mid2, comparer, context);
+                PhysicalMerge(s, t, scratch, start, mid2, end, comparer, context);
+            }
         }
         else
         {
-            // Merge last two, then merge first with result
-            PhysicalMerge(s, t, scratch, mid1, mid2, end, comparer, context);
-            PhysicalMerge(s, t, scratch, start, mid1, end, comparer, context);
+            // Smaller pair is r1+r2. Try to merge into scratch.
+            if (len1 + len2 <= scratch.Length)
+            {
+                // Gap trick: merge r1+r2 → t[0..len1+len2), gap is s[mid1..end).
+                MergeIntoScratchAt(s, t, mid1, mid2, end, 0);
+                // Backward-merge s[start..mid1) with t[0..len1+len2) into s[start..end).
+                MergeRightGapFromScratch(s, t, start, len0, len1 + len2, end);
+            }
+            else
+            {
+                PhysicalMerge(s, t, scratch, mid1, mid2, end, comparer, context);
+                PhysicalMerge(s, t, scratch, start, mid1, end, comparer, context);
+            }
         }
     }
 
     /// <summary>
     /// Merges four adjacent sorted runs: [start..mid1), [mid1..mid2), [mid2..mid3), [mid3..end).
-    /// Merges pairs first, then merges the results.
+    /// Uses the gap trick when possible:
+    /// <para><b>Full scratch</b>: merge both pairs into scratch, then merge the two halves back.
+    /// Every element moves exactly twice (3 merge passes instead of ~6).</para>
+    /// <para><b>Partial scratch</b>: merge one pair in-place first (freeing t), then merge
+    /// the other into scratch, and finish with a gap merge (4 merge passes).</para>
+    /// <para><b>Fallback</b>: three sequential PhysicalMerge calls (6 merge passes).</para>
     /// </summary>
     private static void PhysicalQuadMerge<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
@@ -824,7 +970,44 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Merge left pair and right pair, then merge results
+        var leftLen = mid2 - start;
+        var rightLen = end - mid2;
+        var totalLen = leftLen + rightLen;
+
+        // Full scratch: merge both pairs into scratch, then merge back.
+        if (totalLen <= scratch.Length)
+        {
+            MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
+            MergeIntoScratchAt(s, t, mid2, mid3, end, leftLen);
+            MergeFromScratch(s, t, leftLen, totalLen, start);
+            return;
+        }
+
+        // Partial: merge one pair in-place first (freeing t), then merge
+        // the other into scratch, and finish with a gap merge.
+        if (leftLen <= scratch.Length)
+        {
+            // Merge right pair in-place first (uses t temporarily, then releases it).
+            PhysicalMerge(s, t, scratch, mid2, mid3, end, comparer, context);
+            // Merge left pair into scratch.
+            MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
+            // Final: forward-merge t[0..leftLen) + s[mid2..end) → s[start..end).
+            MergeLeftGap(s, t, leftLen, mid2, rightLen, start);
+            return;
+        }
+
+        if (rightLen <= scratch.Length)
+        {
+            // Merge left pair in-place first (uses t temporarily, then releases it).
+            PhysicalMerge(s, t, scratch, start, mid1, mid2, comparer, context);
+            // Merge right pair into scratch.
+            MergeIntoScratchAt(s, t, mid2, mid3, end, 0);
+            // Final: backward-merge s[start..mid2) + t[0..rightLen) → s[start..end).
+            MergeRightGapFromScratch(s, t, start, leftLen, rightLen, end);
+            return;
+        }
+
+        // Fallback: sequential merges.
         PhysicalMerge(s, t, scratch, start, mid1, mid2, comparer, context);
         PhysicalMerge(s, t, scratch, mid2, mid3, end, comparer, context);
         PhysicalMerge(s, t, scratch, start, mid2, end, comparer, context);
