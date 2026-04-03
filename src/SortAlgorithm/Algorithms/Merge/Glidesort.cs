@@ -1036,8 +1036,9 @@ public static class Glidesort
     /// Uses the gap trick when possible:
     /// <para><b>Full scratch</b>: merge both pairs into scratch, then merge the two halves back.
     /// Every element moves exactly twice (3 merge passes instead of ~6).</para>
-    /// <para><b>Partial scratch</b>: merge one pair in-place first (freeing t), then merge
-    /// the other into scratch, and finish with a gap merge (4 merge passes).</para>
+    /// <para><b>Partial scratch</b>: try the bigger pair for scratch first (matches the reference).
+    /// Merging the smaller pair in-place first minimizes in-place merge work, then the bigger pair
+    /// goes into scratch and a single gap merge finishes (4 merge passes).</para>
     /// <para><b>Fallback</b>: three sequential PhysicalMerge calls (6 merge passes).</para>
     /// </summary>
     private static void PhysicalQuadMerge<T, TComparer, TContext>(
@@ -1063,28 +1064,53 @@ public static class Glidesort
             return;
         }
 
-        // Partial: merge one pair in-place first (freeing t), then merge
-        // the other into scratch, and finish with a gap merge.
-        if (leftLen <= scratch.Length)
+        // Partial: try the bigger pair for scratch first.
+        // Matches the reference: "try to merge the bigger pair into scratch first. This guarantees
+        // that if the bigger one fits but the smaller one doesn't we can use the old space of
+        // the bigger one as scratch space while merging the smaller one."
+        // Merging the smaller pair in-place first (fewer elements = less work) and putting the
+        // bigger pair into scratch minimizes in-place merge cost.
+        if (leftLen >= rightLen)
         {
-            // Merge right pair in-place first (uses t temporarily, then releases it).
-            PhysicalMerge(s, t, scratch, mid2, mid3, end, comparer, context);
-            // Merge left pair into scratch.
-            MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
-            // Final: forward-merge t[0..leftLen) + s[mid2..end) → s[start..end).
-            MergeLeftGap(s, t, leftLen, mid2, rightLen, start);
-            return;
+            if (leftLen <= scratch.Length)
+            {
+                // Left (bigger) fits in scratch: merge right (smaller) in-place first,
+                // then left into scratch, then forward-merge.
+                PhysicalMerge(s, t, scratch, mid2, mid3, end, comparer, context);
+                MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
+                MergeLeftGap(s, t, leftLen, mid2, rightLen, start);
+                return;
+            }
+            if (rightLen <= scratch.Length)
+            {
+                // Left too big; right fits: merge left (bigger) in-place, right into scratch,
+                // then backward-merge.
+                PhysicalMerge(s, t, scratch, start, mid1, mid2, comparer, context);
+                MergeIntoScratchAt(s, t, mid2, mid3, end, 0);
+                MergeRightGapFromScratch(s, t, start, leftLen, rightLen, end);
+                return;
+            }
         }
-
-        if (rightLen <= scratch.Length)
+        else
         {
-            // Merge left pair in-place first (uses t temporarily, then releases it).
-            PhysicalMerge(s, t, scratch, start, mid1, mid2, comparer, context);
-            // Merge right pair into scratch.
-            MergeIntoScratchAt(s, t, mid2, mid3, end, 0);
-            // Final: backward-merge s[start..mid2) + t[0..rightLen) → s[start..end).
-            MergeRightGapFromScratch(s, t, start, leftLen, rightLen, end);
-            return;
+            if (rightLen <= scratch.Length)
+            {
+                // Right (bigger) fits in scratch: merge left (smaller) in-place first,
+                // then right into scratch, then backward-merge.
+                PhysicalMerge(s, t, scratch, start, mid1, mid2, comparer, context);
+                MergeIntoScratchAt(s, t, mid2, mid3, end, 0);
+                MergeRightGapFromScratch(s, t, start, leftLen, rightLen, end);
+                return;
+            }
+            if (leftLen <= scratch.Length)
+            {
+                // Right too big; left fits: merge right (bigger) in-place, left into scratch,
+                // then forward-merge.
+                PhysicalMerge(s, t, scratch, mid2, mid3, end, comparer, context);
+                MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
+                MergeLeftGap(s, t, leftLen, mid2, rightLen, start);
+                return;
+            }
         }
 
         // Fallback: sequential merges.
