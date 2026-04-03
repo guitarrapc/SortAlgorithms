@@ -914,10 +914,10 @@ public static class Glidesort
 
         if (len0 < len2)
         {
-            // first 2 runs, Try to merge into scratch.
+            // Smaller outer run is run0 (left). Merge run0+run1 into scratch, gap-merge with run2.
             if (len0 + len1 <= scratch.Length)
             {
-                // Gap trick: merge r0+r1 → t[0..len0+len1), gap is s[start..mid2).
+                // Gap trick: merge run0+run1 → t[0..len0+len1), gap is s[start..mid2).
                 MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
                 // Forward-merge t[0..len0+len1) with s[mid2..end) into s[start..end).
                 MergeLeftGap(s, t, len0 + len1, mid2, len2, start);
@@ -930,10 +930,10 @@ public static class Glidesort
         }
         else
         {
-            // Smaller pair is r1+r2. Try to merge into scratch.
+            // Smaller outer run is run2 (right). Merge run1+run2 into scratch, gap-merge with run0.
             if (len1 + len2 <= scratch.Length)
             {
-                // Gap trick: merge r1+r2 → t[0..len1+len2), gap is s[mid1..end).
+                // Gap trick: merge run1+run2 → t[0..len1+len2), gap is s[mid1..end).
                 MergeIntoScratchAt(s, t, mid1, mid2, end, 0);
                 // Backward-merge s[start..mid1) with t[0..len1+len2) into s[start..end).
                 MergeRightGapFromScratch(s, t, start, len0, len1 + len2, end);
@@ -1451,7 +1451,7 @@ public static class Glidesort
 
     /// <summary>
     /// Sorts the range [start..end) using the Glidesort block insertion sort.
-    /// First sorts the first min(n, 32) elements using branchless sorting networks
+    /// First sorts the first min(n, 32) elements using fixed-size small-sort pipeline
     /// (Sort4 → Sort8 → Sort16 → Sort32), then inserts remaining elements into the
     /// sorted prefix in blocks of up to 32 via a backward merge from scratch space.
     /// </summary>
@@ -1471,7 +1471,7 @@ public static class Glidesort
         var n = end - start;
         if (n <= 1) return;
 
-        // Sort the first min(n, 32) elements using branchless sorting networks.
+        // Sort the first min(n, 32) elements using fixed-size small-sort pipeline.
         var numSorted = SmallSortPartial(s, t, start, end);
 
         // Insert remaining elements in blocks of up to 32 at a time.
@@ -1493,7 +1493,7 @@ public static class Glidesort
 
     /// <summary>
     /// Sorts the first min(end-start, 32) elements of [start..end) in place using
-    /// branchless sorting networks. Returns the count sorted: 32, 16, 8, 4, or n (for n&lt;4).
+    /// fixed-size small-sort pipeline. Returns the count sorted: 32, 16, 8, 4, or n (for n&lt;4).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SmallSortPartial<T, TComparer, TContext>(
