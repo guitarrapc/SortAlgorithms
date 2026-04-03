@@ -857,7 +857,10 @@ public static class Glidesort
             }
         }
 
-        // Drain pair0 main: preload; reload only consumed side each iteration.
+        // Complete pair0: merge drain (if both sides still active), then CopyTo remaining tail.
+        // After the main loop at most one drain loop runs (pair0 and pair1 drain are mutually exclusive
+        // because the main loop exits when exactly one side is first exhausted). Grouping each pair's
+        // drain + tail together makes the two pairs structurally identical ("pair symmetric").
         if (p0a < p0ae && p0b < p0be)
         {
             var v0a = s.Read(p0a);
@@ -871,8 +874,10 @@ public static class Glidesort
                 if (take0Left != 0) v0a = s.Read(p0a); else v0b = s.Read(p0b);
             }
         }
+        if (p0a < p0ae) s.CopyTo(p0a, t, out0, p0ae - p0a);
+        else if (p0b < p0be) s.CopyTo(p0b, t, out0, p0be - p0b);
 
-        // Drain pair1 main: preload; reload only consumed side each iteration.
+        // Complete pair1: merge drain (if both sides still active), then CopyTo remaining tail.
         if (p1a < p1ae && p1b < p1be)
         {
             var v1a = s.Read(p1a);
@@ -886,12 +891,6 @@ public static class Glidesort
                 if (take1Left != 0) v1a = s.Read(p1a); else v1b = s.Read(p1b);
             }
         }
-
-        // Drain pair0 tail: at most one side has remaining elements.
-        if (p0a < p0ae) s.CopyTo(p0a, t, out0, p0ae - p0a);
-        else if (p0b < p0be) s.CopyTo(p0b, t, out0, p0be - p0b);
-
-        // Drain pair1 tail: at most one side has remaining elements.
         if (p1a < p1ae) s.CopyTo(p1a, t, out1, p1ae - p1a);
         else if (p1b < p1be) s.CopyTo(p1b, t, out1, p1be - p1b);
     }
