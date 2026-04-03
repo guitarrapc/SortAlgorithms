@@ -66,11 +66,15 @@ public static class Glidesort
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary merge buffer
 
-    // For this many or fewer elements we switch to insertion sort.
-    private const int SMALL_SORT = 32;
+    // For this many or fewer elements we use the block insertion sort (branchless small sort).
+    private const int SMALL_SORT = 48;
 
     // Recursively select a pseudomedian if above this threshold.
     private const int PSEUDO_MEDIAN_REC_THRESHOLD = 64;
+
+    // If the total size of a merge operation is above this threshold, glidesort will
+    // attempt to split it into (instruction-level) parallel merges when applicable.
+    private const int MERGE_SPLIT_THRESHOLD = 32;
 
     // Scratch buffer scaling thresholds (in bytes), matching the reference implementation.
     // When sorting N elements we allocate a buffer of at most size N, N/2 or N/8.
@@ -689,7 +693,7 @@ public static class Glidesort
 
         if (n < SMALL_SORT)
         {
-            InsertionSort.SortCore(s, start, end);
+            BlockInsertionSort(s, t, start, end);
             return;
         }
 
@@ -719,7 +723,7 @@ public static class Glidesort
             var n = end - start;
             if (n < SMALL_SORT)
             {
-                InsertionSort.SortCore(s, start, end);
+                BlockInsertionSort(s, t, start, end);
                 return;
             }
 
@@ -845,7 +849,7 @@ public static class Glidesort
         var n = end - start;
         if (n < SMALL_SORT)
         {
-            InsertionSort.SortCore(s, start, end);
+            BlockInsertionSort(s, t, start, end);
             return;
         }
 
@@ -866,6 +870,179 @@ public static class Glidesort
         {
             MergeHigh(s, t, start, len1, mid, len2);
         }
+    }
+
+    // Branchless Small Sort (Block Insertion Sort)
+
+    /// <summary>
+    /// Sorts the range [start..end) using the Glidesort block insertion sort.
+    /// First sorts the first min(n, 32) elements using branchless sorting networks
+    /// (Sort4 → Sort8 → Sort16 → Sort32), then inserts remaining elements into the
+    /// sorted prefix in blocks of up to 32 via a backward merge from scratch space.
+    /// </summary>
+    /// <remarks>
+    /// Matches the reference <c>block_insertion_sort</c> from the Rust glidesort codebase.
+    /// For SMALL_SORT=48, this is at most two passes: one Sort32 and one 16-element block insert.
+    /// The scratch span <paramref name="t"/> is used for the Sort8/Sort16/Sort32 merge steps
+    /// and for staging each block before insertion. All accesses are sequential and non-overlapping.
+    /// </remarks>
+    private static void BlockInsertionSort<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int start, int end)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n = end - start;
+        if (n <= 1) return;
+
+        // Sort the first min(n, 32) elements using branchless sorting networks.
+        var numSorted = SmallSortPartial(s, t, start, end);
+
+        // Insert remaining elements in blocks of up to 32 at a time.
+        while (start + numSorted < end)
+        {
+            var blockStart = start + numSorted;
+            var blockLen = Math.Min(end - blockStart, 32);
+
+            // Copy block to scratch space and sort it there (in-place via insertion sort;
+            // blockLen ≤ 32 so no extra scratch is needed for the sort itself).
+            s.CopyTo(blockStart, t, 0, blockLen);
+            InsertionSort.SortCore(t, 0, blockLen);
+
+            // Backward-merge sorted scratch into the sorted prefix.
+            BlockInsert(s, t, start, numSorted, blockLen);
+            numSorted += blockLen;
+        }
+    }
+
+    /// <summary>
+    /// Sorts the first min(end-start, 32) elements of [start..end) in place using
+    /// branchless sorting networks. Returns the count sorted: 32, 16, 8, 4, or n (for n&lt;4).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int SmallSortPartial<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int start, int end)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n = end - start;
+        if (n >= 32) { Sort32(s, t, start); return 32; }
+        if (n >= 16) { Sort16(s, t, start); return 16; }
+        if (n >= 8)  { Sort8(s, t, start);  return 8; }
+        if (n >= 4)  { Sort4(s, start);     return 4; }
+        InsertionSort.SortCore(s, start, end);
+        return n;
+    }
+
+    /// <summary>
+    /// Backward-merges the sorted scratch block t[0..blockLen) into the sorted prefix
+    /// s[sStart..sStart+sLen), writing the merged result into s[sStart..sStart+sLen+blockLen).
+    /// Works right-to-left so elements s[sStart+sLen..+blockLen) (the gap that holds the
+    /// original unsorted block) are filled with the correctly ordered merge output.
+    /// </summary>
+    /// <remarks>
+    /// Corresponds to <c>BlockInserter::insert</c> in the Rust reference.
+    /// Stability: equal elements from the left prefix (s) are output before those from the
+    /// right scratch block (t) because we use <see cref="SortSpan{T,TComparer,TContext}.Compare(T,T)"/> &gt; 0
+    /// (strict greater-than) as the condition to drain from s.
+    /// </remarks>
+    private static void BlockInsert<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int sStart, int sLen, int blockLen)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var o  = sStart + sLen + blockLen - 1; // output pointer (right to left)
+        var si = sStart + sLen - 1;            // right end of sorted prefix
+        var ti = blockLen - 1;                 // right end of scratch block
+
+        while (si >= sStart && ti >= 0)
+        {
+            var sv = s.Read(si);
+            var tv = t.Read(ti);
+            // > for stability: drain sv only when it is strictly greater,
+            // so equal elements from the left prefix always come first.
+            if (s.Compare(sv, tv) > 0)
+            {
+                s.Write(o--, sv);
+                si--;
+            }
+            else
+            {
+                s.Write(o--, tv);
+                ti--;
+            }
+        }
+
+        // Drain any remaining scratch elements.
+        // Prefix elements that remain are already in their correct positions.
+        while (ti >= 0)
+        {
+            s.Write(o--, t.Read(ti--));
+        }
+    }
+
+    /// <summary>
+    /// Sorts 4 consecutive elements at [i..i+4) using a stable 5-comparison sorting network.
+    /// Network: (0,2)→(1,3)→(0,1)→(2,3)→(1,2). Always performs exactly 5 comparisons.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Sort4<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (s.Compare(i,     i + 2) > 0) s.Swap(i,     i + 2);
+        if (s.Compare(i + 1, i + 3) > 0) s.Swap(i + 1, i + 3);
+        if (s.Compare(i,     i + 1) > 0) s.Swap(i,     i + 1);
+        if (s.Compare(i + 2, i + 3) > 0) s.Swap(i + 2, i + 3);
+        if (s.Compare(i + 1, i + 2) > 0) s.Swap(i + 1, i + 2);
+    }
+
+    /// <summary>
+    /// Sorts 8 consecutive elements at [i..i+8) by sorting two groups of 4 then merging.
+    /// </summary>
+    private static void Sort8<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t, int i)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        Sort4(s, i);
+        Sort4(s, i + 4);
+        if (s.Compare(i + 3, i + 4) <= 0) return; // Already in order — skip merge.
+        MergeLow(s, t, i, 4, i + 4, 4);
+    }
+
+    /// <summary>
+    /// Sorts 16 consecutive elements at [i..i+16) by sorting two groups of 8 then merging.
+    /// </summary>
+    private static void Sort16<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t, int i)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        Sort8(s, t, i);
+        Sort8(s, t, i + 8);
+        if (s.Compare(i + 7, i + 8) <= 0) return; // Already in order — skip merge.
+        MergeLow(s, t, i, 8, i + 8, 8);
+    }
+
+    /// <summary>
+    /// Sorts 32 consecutive elements at [i..i+32) by sorting two groups of 16 then merging.
+    /// Requires t to have capacity ≥ 16 (used by the final MergeLow call).
+    /// </summary>
+    private static void Sort32<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t, int i)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        Sort16(s, t, i);
+        Sort16(s, t, i + 16);
+        if (s.Compare(i + 15, i + 16) <= 0) return; // Already in order — skip merge.
+        MergeLow(s, t, i, 16, i + 16, 16);
     }
 
     // Pivot Selection

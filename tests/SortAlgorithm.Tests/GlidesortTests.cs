@@ -258,24 +258,25 @@ public class GlidesortTests
         Glidesort.Sort(random.AsSpan(), stats);
 
         // Glidesort for random data:
-        // Small arrays (n < SMALL_SORT=32) use InsertionSort: O(n²) comparisons/writes.
+        // Small arrays (n < SMALL_SORT=48) use InsertionSort at the top-level fast path.
         // Larger arrays use the powersort merge tree + stable quicksort for unsorted blocks.
-        // Unsorted blocks (up to SMALL_SORT=32 elements) are quicksorted into scratch,
-        // then merged using the powersort merge schedule.
+        // Unsorted blocks (up to SMALL_SORT=48 elements) are sorted with BlockInsertionSort,
+        // which uses Sort4/Sort8/Sort16/Sort32 sorting networks, then merged via powersort.
         //
         // Observed range for random data:
-        // n=10:  ~29-37 comparisons, ~28-38 writes, 0 swaps   (InsertionSort)
-        // n=20:  ~113-141 comparisons, ~114-140 writes, 0 swaps (InsertionSort)
-        // n=50:  ~360-406 comparisons, ~408-472 writes, ~0 swaps
-        // n=100: ~785-891 comparisons, ~982-1105 writes, ~0 swaps
+        // n=10:  ~29-37 comparisons, ~28-38 writes, 0 swaps   (InsertionSort top-level fast path)
+        // n=20:  ~113-141 comparisons, ~114-140 writes, 0 swaps (InsertionSort top-level fast path)
+        // n=50:  ~360-406 comparisons, ~408-472 writes, small swaps from Sort4 sorting network
+        // n=100: ~785-891 comparisons, ~982-1105 writes, small swaps from Sort4 sorting network
         //
         // Pattern: approximately 1.0-2.0 * n * log₂(n) comparisons and writes
-        // Swaps only occur when descending runs are detected and reversed, rare in random data
+        // Swaps occur from Sort4 sorting network (up to 5 swaps per 4 elements) and
+        // from reversing descending runs. Total Sort4 swaps ≤ 5*n/4 < 2*n.
         var logN = Math.Log2(n);
         ulong minCompares, maxCompares, minWrites, maxWrites;
-        if (n < 32)
+        if (n < 48)
         {
-            // InsertionSort: O(n) to O(n²)
+            // InsertionSort top-level fast path: O(n) to O(n²)
             minCompares = (ulong)(n - 1);
             maxCompares = (ulong)(n * (n - 1) / 2 + n);
             minWrites = 0UL;
@@ -283,7 +284,7 @@ public class GlidesortTests
         }
         else
         {
-            // Powersort merge tree + stable quicksort
+            // Powersort merge tree + stable quicksort with BlockInsertionSort
             minCompares = (ulong)(n * logN * 0.5);
             maxCompares = (ulong)(n * logN * 2.5);
             minWrites = (ulong)(n * logN * 0.5);
@@ -293,7 +294,8 @@ public class GlidesortTests
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount > 0).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be > 0");
-        // Random data rarely has descending runs that trigger swaps
-        await Assert.That(stats.SwapCount < (ulong)(n / 2)).IsTrue().Because($"SwapCount ({stats.SwapCount}) should be less than n/2 ({n / 2})");
+        // Sort4 sorting network does up to 5 swaps per 4 elements → at most 5n/4 total < 2n.
+        // For n < SMALL_SORT=48 (top-level InsertionSort): 0 swaps.
+        await Assert.That(stats.SwapCount < (ulong)(2 * n)).IsTrue().Because($"SwapCount ({stats.SwapCount}) should be less than 2*n ({2 * n})");
     }
 }
