@@ -1077,8 +1077,7 @@ public static class Glidesort
     }
 
     /// <summary>
-    /// Selects a pivot value from split input using the same pseudo-median-of-3 heuristic
-    /// as <see cref="SelectPivotIndex{T,TComparer,TContext}"/>, but reads from the logical
+    /// Selects a pivot value from split input using the same pseudo-median-of-3 heuristic but reads from the logical
     /// concatenation of left and right which may reside in different buffers.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1832,77 +1831,6 @@ public static class Glidesort
 
         // t → s: symmetric merge (2 groups of 16 → 1 group of 32)
         SymmetricMerge(t, s, 0, 16, i, 16);
-    }
-
-    // Pivot Selection
-
-    /// <summary>
-    /// Selects a pivot index using pseudo-median-of-3 with recursive refinement for large arrays.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int SelectPivotIndex<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s, int start, int end)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var n = end - start;
-        var eighth = n / 8;
-
-        var a = start;
-        var b = start + n / 2 - eighth;
-        var c = end - eighth;
-
-        if (n < PSEUDO_MEDIAN_REC_THRESHOLD)
-        {
-            return Median3Index(s, a, b, c);
-        }
-        else
-        {
-            return Median3RecIndex(s, a, b, c, eighth);
-        }
-    }
-
-    /// <summary>
-    /// Recursively computes an approximate median by sampling from three regions.
-    /// </summary>
-    private static int Median3RecIndex<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s, int a, int b, int c, int n)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var n8 = n / 8;
-        if (n * 8 >= PSEUDO_MEDIAN_REC_THRESHOLD)
-        {
-            a = Median3RecIndex(s, a, a + n8 * 4, a + n8 * 7, n8);
-            b = Median3RecIndex(s, b, b + n8 * 4, b + n8 * 7, n8);
-            c = Median3RecIndex(s, c, c + n8 * 4, c + n8 * 7, n8);
-        }
-        return Median3Index(s, a, b, c);
-    }
-
-    /// <summary>
-    /// Returns the index of the median of three elements.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int Median3Index<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s, int a, int b, int c)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var x = s.Compare(a, b) < 0;
-        var y = s.Compare(a, c) < 0;
-        if (x == y)
-        {
-            // If x=y=false then b,c <= a, return max(b,c)
-            // If x=y=true then a < b,c, return min(b,c)
-            var z = s.Compare(b, c) < 0;
-            return (z ^ x) ? c : b;
-        }
-        else
-        {
-            // Either c <= a < b or b <= a < c, so a is the median
-            return a;
-        }
     }
 
     // Utility
