@@ -66,15 +66,11 @@ public static class Glidesort
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary merge buffer
 
-    // For this many or fewer elements we use the block insertion sort (branchless small sort).
+    // For this many or fewer elements we use the block insertion sort
     private const int SMALL_SORT = 48;
 
     // Recursively select a pseudomedian if above this threshold.
     private const int PSEUDO_MEDIAN_REC_THRESHOLD = 64;
-
-    // If the total size of a merge operation is above this threshold, glidesort will
-    // attempt to split it into (instruction-level) parallel merges when applicable.
-    private const int MERGE_SPLIT_THRESHOLD = 32;
 
     // Scratch buffer scaling thresholds (in bytes), matching the reference implementation.
     // When sorting N elements we allocate a buffer of at most size N, N/2 or N/8.
@@ -1454,7 +1450,7 @@ public static class Glidesort
         }
     }
 
-    // Branchless Small Sort (Block Insertion Sort)
+    // fixed-size small-sort pipeline (Block Insertion Sort)
 
     /// <summary>
     /// Sorts the range [start..end) using the Glidesort block insertion sort.
@@ -1513,8 +1509,8 @@ public static class Glidesort
         var n = end - start;
         if (n >= 32) { Sort32(s, t, start); return 32; }
         if (n >= 16) { Sort16(s, t, start); return 16; }
-        if (n >= 8)  { Sort8(s, t, start);  return 8; }
-        if (n >= 4)  { Sort4(s, start);     return 4; }
+        if (n >= 8) { Sort8(s, t, start); return 8; }
+        if (n >= 4) { Sort4(s, t, start); return 4; }
         InsertionSort.SortCore(s, start, end);
         return n;
     }
@@ -1538,7 +1534,7 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var o  = sStart + sLen + blockLen - 1; // output pointer (right to left)
+        var o = sStart + sLen + blockLen - 1; // output pointer (right to left)
         var si = sStart + sLen - 1;            // right end of sorted prefix
         var ti = blockLen - 1;                 // right end of scratch block
 
@@ -1739,19 +1735,20 @@ public static class Glidesort
     }
 
     /// <summary>
-    /// Sorts 4 consecutive elements at [i..i+4) in-place using a stable 5-comparison sorting network.
-    /// Used when no scratch space is available (SmallSortPartial for n &lt; 8).
+    /// Sorts 4 consecutive elements at [i..i+4) in place using the out-of-place <see cref="Sort4Into"/>
+    /// algorithm with scratch buffer <paramref name="t"/>, then copies the result back.
+    /// Delegates to <see cref="Sort4Into"/> which implements the reference <c>sort4_raw</c> algorithm
+    /// using conditional value selection (not swaps), guaranteeing stability.
+    /// Requires <paramref name="t"/> to have at least 4 elements.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Sort4<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i)
+    private static void Sort4<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t, int i)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (s.Compare(i,     i + 2) > 0) s.Swap(i,     i + 2);
-        if (s.Compare(i + 1, i + 3) > 0) s.Swap(i + 1, i + 3);
-        if (s.Compare(i,     i + 1) > 0) s.Swap(i,     i + 1);
-        if (s.Compare(i + 2, i + 3) > 0) s.Swap(i + 2, i + 3);
-        if (s.Compare(i + 1, i + 2) > 0) s.Swap(i + 1, i + 2);
+        Sort4Into(s, t, i, 0);
+        t.CopyTo(0, s, i, 4);
     }
 
     /// <summary>

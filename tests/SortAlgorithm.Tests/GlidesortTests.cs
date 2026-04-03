@@ -166,6 +166,33 @@ public class GlidesortTests
     }
 
     [Test]
+    [Arguments(4)]
+    [Arguments(5)]
+    [Arguments(6)]
+    [Arguments(7)]
+    public async Task StabilityTestSort4Path(int n)
+    {
+        // The pattern [2a, 2b, 1, 3, ...] specifically targets the Sort4 code path (4 <= n < 8).
+        // The old in-place swap network [0,2],[1,3],[0,1],[2,3],[1,2] was unstable: comparator [0,2]
+        // would swap 2a (position 0) with 1 (position 2), indirectly moving 2a past 2b and
+        // producing [1, 2b, 2a, 3] instead of the stable [1, 2a, 2b, 3].
+        // Sort4Into (matching reference sort4_raw) uses conditional value selection and is stable.
+        var items = new StabilityTestItem[n];
+        items[0] = new StabilityTestItem(2, 0); // value=2, originally at index 0
+        items[1] = new StabilityTestItem(2, 1); // value=2, originally at index 1 (equal to items[0])
+        items[2] = new StabilityTestItem(1, 2); // value=1
+        items[3] = new StabilityTestItem(3, 3); // value=3
+        for (var i = 4; i < n; i++) items[i] = new StabilityTestItem(i + 1, i);
+
+        var stats = new StatisticsContext();
+        Glidesort.Sort(items.AsSpan(), stats);
+
+        // The two equal "2" values must remain in original order: origIdx 0 before 1
+        var twoIndices = items.Where(x => x.Value == 2).Select(x => x.OriginalIndex).ToArray();
+        await Assert.That(twoIndices).IsEquivalentTo(new[] { 0, 1 }, CollectionOrdering.Matching);
+    }
+
+    [Test]
     [Arguments(10)]
     [Arguments(20)]
     [Arguments(50)]
@@ -294,8 +321,9 @@ public class GlidesortTests
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount > 0).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be > 0");
-        // Sort4 sorting network does up to 5 swaps per 4 elements → at most 5n/4 total < 2n.
-        // For n < SMALL_SORT=48 (top-level InsertionSort): 0 swaps.
+        // Swaps only come from Reverse() on strictly descending runs (≤ n/2 swaps per run)
+        // and from the swap-in-place fallback in PhysicalMerge (rare). Sort4/Sort8/Sort16/Sort32
+        // all use Sort4Into (out-of-place writes, no swaps). Total swaps ≪ 2*n for random data.
         await Assert.That(stats.SwapCount < (ulong)(2 * n)).IsTrue().Because($"SwapCount ({stats.SwapCount}) should be less than 2*n ({2 * n})");
     }
 }
