@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -157,7 +157,7 @@ public static class PairInsertionSort
 
             // Ensure a <= b (swap if necessary)
             // This pre-sorting of the pair reduces comparisons later
-            if (s.Compare(a, b) > 0)
+            if (s.IsGreaterThan(a, b))
             {
                 // Swap so that a is smaller
                 (a, b) = (b, a);
@@ -219,11 +219,11 @@ public static class PairInsertionSort
     /// <remarks>
     /// PRECONDITION: first > 0 and s[first-1] <= s[i] for all i in [first, last)
     /// This precondition is guaranteed by partitioning schemes in algorithms like IntroSort.
-    /// 
+    ///
     /// Optimization strategy:
     /// - Element 'a' (smaller): unguarded insertion using s[first-1] as sentinel
     /// - Element 'b' (larger): guarded insertion (j >= first check) using inserted 'a' as sentinel
-    /// 
+    ///
     /// This hybrid approach provides:
     /// - Safety: Prevents memory corruption if precondition is violated
     /// - Performance: Still eliminates boundary check for 'a' insertion (half of insertions)
@@ -245,7 +245,7 @@ public static class PairInsertionSort
             var b = s.Read(i + 1);
 
             // Ensure a <= b
-            if (s.Compare(a, b) > 0)
+            if (s.IsGreaterThan(a, b))
             {
                 (a, b) = (b, a);
             }

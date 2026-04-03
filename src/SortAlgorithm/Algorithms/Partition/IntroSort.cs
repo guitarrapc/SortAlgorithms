@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -214,6 +214,21 @@ public static class IntroSort
         while (right > left)
         {
             var size = right - left + 1;
+
+            // Tiny arrays: use inline sorting networks to avoid function call overhead
+            if (size == 2)
+            {
+                if (s.Compare(left, right) > 0) s.Swap(left, right);
+                return;
+            }
+
+            if (size == 3)
+            {
+                if (s.Compare(left, left + 1) > 0) s.Swap(left, left + 1);
+                if (s.Compare(left, right) > 0) s.Swap(left, right);
+                if (s.Compare(left + 1, right) > 0) s.Swap(left + 1, right);
+                return;
+            }
 
             // Small arrays: use InsertionSort
             // For leftmost partitions, use guarded version (needs boundary checks)
@@ -479,27 +494,27 @@ public static class IntroSort
         // We'll use a simplified approach: sort pairs, then find median
 
         // First, sort pairs: (i1, i2), (i3, i4)
-        if (s.Compare(i1, i2) > 0) (i1, i2) = (i2, i1);
-        if (s.Compare(i3, i4) > 0) (i3, i4) = (i4, i3);
+        if (s.IsGreaterAt(i1, i2)) (i1, i2) = (i2, i1);
+        if (s.IsGreaterAt(i3, i4)) (i3, i4) = (i4, i3);
 
         // Now i1 <= i2 and i3 <= i4
         // Find median of i2, i3, i5 (this will be in the middle range)
-        if (s.Compare(i2, i5) > 0) (i2, i5) = (i5, i2);
-        if (s.Compare(i2, i3) > 0) (i2, i3) = (i3, i2);
+        if (s.IsGreaterAt(i2, i5)) (i2, i5) = (i5, i2);
+        if (s.IsGreaterAt(i2, i3)) (i2, i3) = (i3, i2);
 
         // Now we need the median of the remaining elements
         // We know: i1 <= i2, i3 <= i4, and i2 is constrained
         // The median is the 3rd element when sorted
 
-        if (s.Compare(i1, i3) > 0) (i1, i3) = (i3, i1);
+        if (s.IsGreaterAt(i1, i3)) (i1, i3) = (i3, i1);
         // i1 is now the minimum of {i1, i3}
 
-        if (s.Compare(i2, i3) > 0) (i2, i3) = (i3, i2);
+        if (s.IsGreaterAt(i2, i3)) (i2, i3) = (i3, i2);
         // i2 is now <= i3
 
-        if (s.Compare(i2, i4) > 0)
+        if (s.IsGreaterAt(i2, i4))
         {
-            if (s.Compare(i3, i4) > 0)
+            if (s.IsGreaterAt(i3, i4))
             {
                 return i4;
             }

@@ -178,7 +178,7 @@ public static class MergeInsertionSort
         // Base case: two elements
         if (n == 2)
         {
-            if (s.Compare(indices[0], indices[1]) <= 0)
+            if (s.IsLessOrEqualAt(indices[0], indices[1]))
             {
                 outChain[0] = indices[0];
                 outChain[1] = indices[1];
@@ -218,7 +218,7 @@ public static class MergeInsertionSort
                 var a = indices[2 * i];
                 var b = indices[2 * i + 1];
 
-                if (s.Compare(a, b) <= 0)
+                if (s.IsLessOrEqualAt(a, b))
                 {
                     smaller[i] = a;
                     larger[i] = b;
@@ -393,7 +393,7 @@ public static class MergeInsertionSort
         while (left < right)
         {
             var mid = (left + right) >>> 1;
-            if (s.Compare(mainChain[mid], valueIdx) <= 0)
+            if (s.IsLessOrEqualAt(mainChain[mid], valueIdx))
             {
                 left = mid + 1;
             }

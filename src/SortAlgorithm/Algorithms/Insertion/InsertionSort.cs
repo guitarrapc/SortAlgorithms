@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -180,7 +180,7 @@ public static class InsertionSort
             while (j >= first)
             {
                 var a = s.Read(j);
-                if (s.Compare(a, tmp) > 0)
+                if (s.IsGreaterThan(a, tmp))
                 {
                     s.Write(j + 1, a);
                     j--;
@@ -235,7 +235,7 @@ public static class InsertionSort
             while (true)
             {
                 var a = s.Read(j);
-                if (s.Compare(a, tmp) > 0)
+                if (s.IsGreaterThan(a, tmp))
                 {
                     s.Write(j + 1, a);
                     j--;
@@ -295,7 +295,7 @@ public static class InsertionSort
             case 1:
                 return true;
             case 2:
-                if (s.Compare(first + 1, first) < 0)
+                if (s.IsLessAt(first + 1, first))
                 {
                     s.Swap(first, first + 1);
                 }
@@ -337,7 +337,7 @@ public static class InsertionSort
                     while (j >= first)
                     {
                         var a = s.Read(j);
-                        if (s.Compare(a, tmp) > 0)
+                        if (s.IsGreaterThan(a, tmp))
                         {
                             s.Write(j + 1, a);
                             j--;
@@ -371,7 +371,7 @@ public static class InsertionSort
                     while (true)
                     {
                         var a = s.Read(j);
-                        if (s.Compare(a, tmp) > 0)
+                        if (s.IsGreaterThan(a, tmp))
                         {
                             s.Write(j + 1, a);
                             j--;
@@ -398,11 +398,11 @@ public static class InsertionSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (s.Compare(i1, i0) < 0) s.Swap(i0, i1);
-        if (s.Compare(i2, i1) < 0)
+        if (s.IsLessAt(i1, i0)) s.Swap(i0, i1);
+        if (s.IsLessAt(i2, i1))
         {
             s.Swap(i1, i2);
-            if (s.Compare(i1, i0) < 0) s.Swap(i0, i1);
+            if (s.IsLessAt(i1, i0)) s.Swap(i0, i1);
         }
     }
 
@@ -415,13 +415,13 @@ public static class InsertionSort
         where TContext : ISortContext
     {
         Sort3(s, i0, i1, i2);
-        if (s.Compare(i3, i2) < 0)
+        if (s.IsLessAt(i3, i2))
         {
             s.Swap(i2, i3);
-            if (s.Compare(i2, i1) < 0)
+            if (s.IsLessAt(i2, i1))
             {
                 s.Swap(i1, i2);
-                if (s.Compare(i1, i0) < 0) s.Swap(i0, i1);
+                if (s.IsLessAt(i1, i0)) s.Swap(i0, i1);
             }
         }
     }
@@ -435,16 +435,16 @@ public static class InsertionSort
         where TContext : ISortContext
     {
         Sort4(s, i0, i1, i2, i3);
-        if (s.Compare(i4, i3) < 0)
+        if (s.IsLessAt(i4, i3))
         {
             s.Swap(i3, i4);
-            if (s.Compare(i3, i2) < 0)
+            if (s.IsLessAt(i3, i2))
             {
                 s.Swap(i2, i3);
-                if (s.Compare(i2, i1) < 0)
+                if (s.IsLessAt(i2, i1))
                 {
                     s.Swap(i1, i2);
-                    if (s.Compare(i1, i0) < 0) s.Swap(i0, i1);
+                    if (s.IsLessAt(i1, i0)) s.Swap(i0, i1);
                 }
             }
         }
@@ -602,7 +602,7 @@ public static class InsertionSortNonOptimized
             // Move the element at position i backward until it's in the correct position
             // Use strict inequality (>) to maintain stability - equal elements are not swapped
             var j = i;
-            while (j > first && s.Compare(j - 1, j) > 0)
+            while (j > first && s.IsGreaterAt(j - 1, j))
             {
                 s.Swap(j - 1, j);
                 j--;

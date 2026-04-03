@@ -150,7 +150,7 @@ public static class BinaryInsertionSort
             // Early termination: if element is already in correct position, skip everything
             // Compare indices directly to avoid reading tmp unnecessarily
             // This optimization significantly improves performance on sorted or nearly-sorted data
-            if (i > first && s.Compare(i - 1, i) <= 0)
+            if (i > first && s.IsLessOrEqualAt(i - 1, i))
             {
                 // Element is already in the correct position (greater than or equal to previous element)
                 continue;

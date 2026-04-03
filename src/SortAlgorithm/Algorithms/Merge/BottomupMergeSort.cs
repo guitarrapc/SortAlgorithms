@@ -160,7 +160,7 @@ public static class BottomupMergeSort
                 }
 
                 // Optimization: Skip merge if already sorted (still copy to dst)
-                if (src.Compare(mid - 1, mid) <= 0)
+                if (src.IsLessOrEqualAt(mid - 1, mid))
                 {
                     src.CopyTo(left, dst, left, right - left);
                     continue;
@@ -208,7 +208,7 @@ public static class BottomupMergeSort
             var rightValue = src.Read(r);
 
             // Stability: use <= to take from left when equal
-            if (src.Compare(leftValue, rightValue) <= 0)
+            if (src.IsLessOrEqual(leftValue, rightValue))
             {
                 dst.Write(k, leftValue);
                 l++;

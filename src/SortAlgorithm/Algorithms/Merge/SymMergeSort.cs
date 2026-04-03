@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -149,7 +149,7 @@ public static class SymMergeSort
                 var right = Math.Min(left + width * 2, n);
 
                 // Already-sorted skip: left run's max ≤ right run's min → no merge needed.
-                if (s.Compare(mid - 1, mid) <= 0)
+                if (s.IsLessOrEqualAt(mid - 1, mid))
                     continue;
 
                 SymMerge(s, left, mid, right);
@@ -177,7 +177,7 @@ public static class SymMergeSort
         // Already-sorted skip (Bottleneck 2): left run's max ≤ right run's min.
         // This fires frequently during recursive sub-problems where the two halves
         // ended up already in order after the rotation of the parent call.
-        if (s.Compare(m - 1, m) <= 0) return;
+        if (s.IsLessOrEqualAt(m - 1, m)) return;
 
         // Single-element base cases: when one side has exactly 1 element,
         // binary-search for its insertion position in the other run and shift-insert.
@@ -270,7 +270,7 @@ public static class SymMergeSort
         while (lo < hi)
         {
             var c = (int)((uint)(lo + hi) >> 1);
-            if (s.Compare(p - c, c) >= 0)
+            if (s.IsGreaterOrEqualAt(p - c, c))
                 lo = c + 1;
             else
                 hi = c;

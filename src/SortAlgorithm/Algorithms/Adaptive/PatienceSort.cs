@@ -124,7 +124,7 @@ public static class PatienceSort
                 while (lo < hi)
                 {
                     var mid = lo + (hi - lo) / 2;
-                    if (s.Compare(pileHeads[mid], i) < 0)   // s[pileHeads[mid]] < s[i]
+                    if (s.IsLessAt(pileHeads[mid], i))   // s[pileHeads[mid]] < s[i]
                         lo = mid + 1;
                     else
                         hi = mid;
@@ -210,9 +210,9 @@ public static class PatienceSort
             var left = 2 * i + 1;
             var right = 2 * i + 2;
 
-            if (left < size && s.Compare(pileHeads[heap[left]], pileHeads[heap[smallest]]) < 0)
+            if (left < size && s.IsLessAt(pileHeads[heap[left]], pileHeads[heap[smallest]]))
                 smallest = left;
-            if (right < size && s.Compare(pileHeads[heap[right]], pileHeads[heap[smallest]]) < 0)
+            if (right < size && s.IsLessAt(pileHeads[heap[right]], pileHeads[heap[smallest]]))
                 smallest = right;
 
             if (smallest == i) break;

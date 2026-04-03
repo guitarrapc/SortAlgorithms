@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using SortAlgorithm.Contexts;
 using System.Runtime.CompilerServices;
 
@@ -9,7 +9,7 @@ namespace SortAlgorithm.Algorithms;
 /// 従来のMerge Sortと比較して書き込み操作を削減した安定な適応的ソートアルゴリズムです。
 /// 特にデータが部分的にソート済みの場合、O(n)に近い性能を発揮します。
 /// <br/>
-/// Detects naturally occurring sorted runs (both ascending and descending) within the array 
+/// Detects naturally occurring sorted runs (both ascending and descending) within the array
 /// and efficiently merges them using shift-based operations instead of traditional swaps,
 /// reducing write operations compared to traditional merge sort while maintaining stability.
 /// Achieves near O(n) performance when data is partially sorted.
@@ -178,17 +178,17 @@ public static class ShiftSort
         while (i < s.Length - 1)
         {
             var runStart = i;
-            if (s.Compare(i + 1, i) < 0) // strictly descending run: extend then reverse
+            if (s.IsLessAt(i + 1, i)) // strictly descending run: extend then reverse
             {
                 i++; // consume the outer comparison's pair
-                while (i < s.Length - 1 && s.Compare(i + 1, i) < 0)
+                while (i < s.Length - 1 && s.IsLessAt(i + 1, i))
                     i++;
                 ReverseRun(s, runStart, i);
             }
             else // non-descending run: extend
             {
                 i++; // consume the outer comparison's pair
-                while (i < s.Length - 1 && s.Compare(i + 1, i) >= 0)
+                while (i < s.Length - 1 && s.IsGreaterOrEqualAt(i + 1, i))
                     i++;
             }
 

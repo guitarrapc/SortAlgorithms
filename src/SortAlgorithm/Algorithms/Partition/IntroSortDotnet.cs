@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -184,7 +184,7 @@ public static class IntroSortDotnet
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (s.Compare(i, j) > 0)
+        if (s.IsGreaterAt(i, j))
         {
             s.Swap(i, j);
         }
@@ -229,13 +229,8 @@ public static class IntroSortDotnet
         // Walk the left and right pointers, swapping elements as necessary, until they cross.
         while (left < right)
         {
-            // Move left pointer forward while elements are less than pivot
-            // Pre-increment: ++left first, then compare
-            while (left < hi - 1 && s.Compare(offset + (++left), pivot) < 0) ;
-
-            // Move right pointer backward while elements are greater than pivot
-            // Pre-decrement: --right first, then compare
-            while (right > 0 && s.Compare(pivot, offset + (--right)) < 0) ;
+            while (s.Compare(offset + (++left), pivot) < 0) ;
+            while (s.Compare(pivot, offset + (--right)) < 0) ;
 
             if (left >= right)
                 break;
@@ -341,7 +336,7 @@ public static class IntroSortDotnet
             int child = 2 * i;  // Left child
 
             // If right child exists and is greater than left child, use right child
-            if (child < n && s.Compare(offset + child - 1, offset + child) < 0)
+            if (child < n && s.IsLessAt(offset + child - 1, offset + child))
             {
                 child++;
             }

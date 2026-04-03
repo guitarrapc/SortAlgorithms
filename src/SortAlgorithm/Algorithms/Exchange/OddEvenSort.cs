@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -97,7 +97,7 @@ public static class OddEvenSort
             context.OnPhase(SortPhase.OddEvenOddPhase, pass);
             for (var i = 0; i < s.Length - 1; i += 2)
             {
-                if (s.Compare(i, i + 1) > 0)
+                if (s.IsGreaterAt(i, i + 1))
                 {
                     s.Swap(i, i + 1);
                     sorted = false;
@@ -108,7 +108,7 @@ public static class OddEvenSort
             context.OnPhase(SortPhase.OddEvenEvenPhase, pass);
             for (var i = 1; i < s.Length - 1; i += 2)
             {
-                if (s.Compare(i, i + 1) > 0)
+                if (s.IsGreaterAt(i, i + 1))
                 {
                     s.Swap(i, i + 1);
                     sorted = false;

@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -340,7 +340,7 @@ public static class SpinSort
 
         // Check ascending: scan for sorted prefix
         var sortedEnd = first + 1;
-        while (sortedEnd < last && data.Compare(sortedEnd - 1, sortedEnd) <= 0)
+        while (sortedEnd < last && data.IsLessOrEqualAt(sortedEnd - 1, sortedEnd))
             sortedEnd++;
 
         if (sortedEnd == last) return true; // fully sorted
@@ -357,7 +357,7 @@ public static class SpinSort
 
         // Check strictly descending
         sortedEnd = first + 1;
-        while (sortedEnd < last && data.Compare(sortedEnd, sortedEnd - 1) < 0)
+        while (sortedEnd < last && data.IsLessAt(sortedEnd, sortedEnd - 1))
             sortedEnd++;
 
         if (last - sortedEnd >= minInsertPartial) return false;
@@ -420,7 +420,7 @@ public static class SpinSort
             {
                 var aVal = data.Read(ai);
                 var bVal = aux.Read(auxStart + bi);
-                if (data.Compare(aVal, bVal) > 0)
+                if (data.IsGreaterThan(aVal, bVal))
                 {
                     data.Write(di--, aVal);
                     ai--;
@@ -460,7 +460,7 @@ public static class SpinSort
         {
             var leftVal = src.Read(li);
             var rightVal = src.Read(ri);
-            if (src.Compare(leftVal, rightVal) <= 0)
+            if (src.IsLessOrEqual(leftVal, rightVal))
             {
                 dst.Write(di++, leftVal);
                 li++;
@@ -499,7 +499,7 @@ public static class SpinSort
         {
             var leftVal = buf.Read(li);
             var rightVal = main.Read(ri);
-            if (buf.Compare(leftVal, rightVal) <= 0)
+            if (buf.IsLessOrEqual(leftVal, rightVal))
             {
                 main.Write(di++, leftVal);
                 li++;
@@ -526,7 +526,7 @@ public static class SpinSort
     {
         for (var i = first + 1; i < last; i++)
         {
-            if (s.Compare(i - 1, i) > 0) return false;
+            if (s.IsGreaterAt(i - 1, i)) return false;
         }
         return true;
     }
@@ -542,7 +542,7 @@ public static class SpinSort
     {
         for (var i = first + 1; i < last; i++)
         {
-            if (s.Compare(i, i - 1) >= 0) return false;
+            if (s.IsGreaterOrEqualAt(i, i - 1)) return false;
         }
         return true;
     }

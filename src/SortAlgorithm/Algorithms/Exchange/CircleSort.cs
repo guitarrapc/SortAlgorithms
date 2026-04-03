@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -109,7 +109,7 @@ public static class CircleSort
 
         while (low < high)
         {
-            if (s.Compare(low, high) > 0)
+            if (s.IsGreaterAt(low, high))
             {
                 s.Swap(low, high);
                 swapped = true;
@@ -119,7 +119,7 @@ public static class CircleSort
         }
 
         // When the two pointers meet (odd-length range), compare the middle element with its right neighbor
-        if (low == high && s.Compare(low, high + 1) > 0)
+        if (low == high && s.IsGreaterAt(low, high + 1))
         {
             s.Swap(low, high + 1);
             swapped = true;

@@ -144,7 +144,7 @@ public static class SelectionSort
             // Find the index of the minimum element
             for (var j = i + 1; j < last; j++)
             {
-                if (s.Compare(j, min) < 0)
+                if (s.IsLessAt(j, min))
                 {
                     // Clear old CurrentMin role, set new one
                     s.Context.OnRole(min, BUFFER_MAIN, RoleType.None);

@@ -91,7 +91,7 @@ public static class BubbleSort
             var lastSwapped = 0;
             for (var j = 0; j < n; j++)
             {
-                if (s.Compare(j + 1, j) < 0)
+                if (s.IsLessAt(j + 1, j))
                 {
                     s.Swap(j + 1, j);
                     lastSwapped = j;
@@ -189,7 +189,7 @@ public static class BubbleSortNonOptimized
         {
             for (var j = s.Length - 1; j > i; j--)
             {
-                if (s.Compare(j, j - 1) < 0)
+                if (s.IsLessAt(j, j - 1))
                 {
                     s.Swap(j, j - 1);
                 }

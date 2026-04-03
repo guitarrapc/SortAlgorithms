@@ -205,7 +205,7 @@ public static class TournamentSort
     {
         if (a == sentinel) return b;
         if (b == sentinel) return a;
-        return s.Compare(first + a, first + b) <= 0 ? a : b;
+        return s.IsLessOrEqualAt(first + a, first + b) ? a : b;
     }
 
     /// <summary>

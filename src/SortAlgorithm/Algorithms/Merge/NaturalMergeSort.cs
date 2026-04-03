@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -171,10 +171,10 @@ public static class NaturalMergeSort
 
             if (runEnd < length)
             {
-                if (s.Compare(i, runEnd) > 0)
+                if (s.IsGreaterAt(i, runEnd))
                 {
                     // Strictly descending run
-                    while (runEnd < length && s.Compare(runEnd - 1, runEnd) > 0)
+                    while (runEnd < length && s.IsGreaterAt(runEnd - 1, runEnd))
                     {
                         runEnd++;
                     }
@@ -185,7 +185,7 @@ public static class NaturalMergeSort
                 else
                 {
                     // Ascending run (non-decreasing, allowing equals for stability)
-                    while (runEnd < length && s.Compare(runEnd - 1, runEnd) <= 0)
+                    while (runEnd < length && s.IsLessOrEqualAt(runEnd - 1, runEnd))
                     {
                         runEnd++;
                     }
@@ -247,7 +247,7 @@ public static class NaturalMergeSort
             var rightValue = s.Read(r);
 
             // Stability: use <= to take from left when equal
-            if (s.Compare(leftValue, rightValue) <= 0)
+            if (s.IsLessOrEqual(leftValue, rightValue))
             {
                 s.Write(k, leftValue);
                 l++;

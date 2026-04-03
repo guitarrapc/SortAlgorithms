@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
@@ -404,7 +404,7 @@ public static class Glidesort
         else
         {
             var i = start + 2;
-            while (i < last && !s.IsLessAt(i, i - 1))
+            while (i < last && s.IsGreaterOrEqualAt(i, i - 1))
             {
                 i++;
             }
@@ -1390,7 +1390,7 @@ public static class Glidesort
 
                 if (strategy == STRATEGY_LEFT_IF_EQUAL)
                 {
-                    partitionLeft = !s.IsLessThan(prevPivot, pivot);
+                    partitionLeft = s.IsGreaterOrEqual(prevPivot, pivot);
                 }
                 else
                 {

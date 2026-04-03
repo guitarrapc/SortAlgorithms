@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -119,7 +119,7 @@ public static class CombSort
                 var newN = 0;
                 for (var i = 0; i + 1 < bubbleEnd; i++)
                 {
-                    if (s.Compare(i, i + 1) > 0)
+                    if (s.IsGreaterAt(i, i + 1))
                     {
                         s.Swap(i, i + 1);
                         swapped = true;
@@ -135,7 +135,7 @@ public static class CombSort
                 var end = len - gap;
                 for (var i = 0; i < end; i++)
                 {
-                    if (s.Compare(i, i + gap) > 0)
+                    if (s.IsGreaterAt(i, i + gap))
                     {
                         s.Swap(i, i + gap);
                         swapped = true;

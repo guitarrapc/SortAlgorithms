@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -275,7 +275,7 @@ public static class SpreadSort
 
         var current = first;
         // Walk sorted prefix: advance while next element >= current
-        while (s.Compare(current + 1, current) >= 0)
+        while (s.IsGreaterOrEqualAt(current + 1, current))
         {
             if (++current == last - 1)
                 return false; // Entire range is sorted
@@ -287,9 +287,9 @@ public static class SpreadSort
         // Continue to find true min and max
         while (++current < last)
         {
-            if (s.Compare(current, maxIdx) > 0)
+            if (s.IsGreaterAt(current, maxIdx))
                 maxIdx = current;
-            else if (s.Compare(current, minIdx) < 0)
+            else if (s.IsLessAt(current, minIdx))
                 minIdx = current;
         }
 

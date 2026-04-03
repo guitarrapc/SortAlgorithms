@@ -206,7 +206,7 @@ public static class MinHeapSort
         while (child < offset + size)
         {
             // Find smaller child
-            if (child + 1 < offset + size && s.Compare(child + 1, child) < 0)
+            if (child + 1 < offset + size && s.IsLessAt(child + 1, child))
             {
                 child++;
             }
@@ -219,7 +219,7 @@ public static class MinHeapSort
 
         // Phase 2: Sift up the original root value to its correct position
         var parent = offset + (hole - offset - 1) / 2;
-        while (hole > root && s.Compare(rootValue, s.Read(parent)) < 0)
+        while (hole > root && s.IsLessThan(rootValue, s.Read(parent)))
         {
             s.Write(hole, s.Read(parent));
             hole = parent;
@@ -254,7 +254,7 @@ public static class MinHeapSort
             if (left >= offset + size) break;
 
             // Find smaller child
-            var smallest = (right < offset + size && s.Compare(right, left) < 0) ? right : left;
+            var smallest = (right < offset + size && s.IsLessAt(right, left)) ? right : left;
 
             // If value is already <= smallest child, min-heap property is satisfied
             if (s.Compare(value, smallest) <= 0) break;

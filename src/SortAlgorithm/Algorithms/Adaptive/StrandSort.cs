@@ -133,7 +133,7 @@ public static class StrandSort
                     // Append to strand if >= current tail; otherwise keep in remaining
                     var elem = remaining.Read(i);
                     var tail = strand.Read(strandLen - 1);
-                    if (strand.Compare(tail, elem) <= 0)
+                    if (strand.IsLessOrEqual(tail, elem))
                         strand.Write(strandLen++, elem);
                     else
                         remaining.Write(newRemainingCount++, elem);
@@ -153,7 +153,7 @@ public static class StrandSort
                     var sv = strand.Read(si);
                     var rv = result.Read(ri);
                     // Stable merge: when equal, prefer the existing result element
-                    if (s.Compare(sv, rv) < 0)
+                    if (s.IsLessThan(sv, rv))
                     {
                         s.Write(di++, sv);
                         si++;

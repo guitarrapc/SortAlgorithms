@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -149,7 +149,7 @@ public static class BatcherOddEvenMergeSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (s.Compare(i, j) > 0)
+        if (s.IsGreaterAt(i, j))
         {
             s.Swap(i, j);
         }

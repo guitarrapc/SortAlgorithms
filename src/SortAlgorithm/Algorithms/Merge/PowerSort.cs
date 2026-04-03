@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
@@ -316,10 +316,10 @@ public static class PowerSort
         }
 
         // Check if descending
-        if (s.Compare(start, runEnd) > 0)
+        if (s.IsGreaterAt(start, runEnd))
         {
             // Strictly descending run
-            while (runEnd < last && s.Compare(runEnd - 1, runEnd) > 0)
+            while (runEnd < last && s.IsGreaterAt(runEnd - 1, runEnd))
             {
                 runEnd++;
             }
@@ -329,7 +329,7 @@ public static class PowerSort
         else
         {
             // Ascending run (allowing equals for stability)
-            while (runEnd < last && s.Compare(runEnd - 1, runEnd) <= 0)
+            while (runEnd < last && s.IsLessOrEqualAt(runEnd - 1, runEnd))
             {
                 runEnd++;
             }
@@ -461,7 +461,7 @@ public static class PowerSort
             var val1 = t.Read(c1);
             var val2 = s.Read(c2);
 
-            if (s.Compare(val1, val2) <= 0) // <= for stability (prefer left run on equal)
+            if (s.IsLessOrEqual(val1, val2)) // <= for stability (prefer left run on equal)
             {
                 s.Write(o++, val1);
                 c1++;
@@ -513,7 +513,7 @@ public static class PowerSort
             var val1 = s.Read(c1);
             var val2 = t.Read(c2);
 
-            if (s.Compare(val1, val2) <= 0) // <= means val2 >= val1, take val2 for stability
+            if (s.IsLessOrEqual(val1, val2)) // <= means val2 >= val1, take val2 for stability
             {
                 s.Write(o--, val2);
                 c2--;

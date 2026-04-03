@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -148,7 +148,7 @@ public static class ShellSortKnuth1973
             for (var i = first + h; i < last; i++)
             {
                 // Ensure j >= first + h to stay within the subrange.
-                for (int j = i; j >= first + h && s.Compare(j - h, j) > 0; j -= h)
+                for (int j = i; j >= first + h && s.IsGreaterAt(j - h, j); j -= h)
                 {
                     s.Swap(j, j - h);
                 }
@@ -301,7 +301,7 @@ public static class ShellSortSedgewick1986
             for (var i = first + h; i < last; i++)
             {
                 // Ensure j >= first + h to stay within the subrange.
-                for (var j = i; j >= first + h && s.Compare(j - h, j) > 0; j -= h)
+                for (var j = i; j >= first + h && s.IsGreaterAt(j - h, j); j -= h)
                 {
                     s.Swap(j, j - h);
                 }
@@ -456,7 +456,7 @@ public static class ShellSortTokuda1992
             for (int i = first + h; i < last; i++)
             {
                 // Ensure j >= first + h to stay within the subrange.
-                for (int j = i; j >= first + h && s.Compare(j - h, j) > 0; j -= h)
+                for (int j = i; j >= first + h && s.IsGreaterAt(j - h, j); j -= h)
                 {
                     s.Swap(j, j - h);
                 }
@@ -613,7 +613,7 @@ public static class ShellSortCiura2001
             for (var i = first + h; i < last; i++)
             {
                 // Ensure j >= first + h to stay within the subrange.
-                for (var j = i; j >= first + h && s.Compare(j - h, j) > 0; j -= h)
+                for (var j = i; j >= first + h && s.IsGreaterAt(j - h, j); j -= h)
                 {
                     s.Swap(j, j - h);
                 }
@@ -778,7 +778,7 @@ public static class ShellSortLee2021
             for (var i = first + h; i < last; i++)
             {
                 // Ensure j >= first + h to stay within the subrange.
-                for (var j = i; j >= first + h && s.Compare(j - h, j) > 0; j -= h)
+                for (var j = i; j >= first + h && s.IsGreaterAt(j - h, j); j -= h)
                 {
                     s.Swap(j, j - h);
                 }
