@@ -195,8 +195,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     /// For <see cref="ComparableComparer{T}"/> with primitive <typeparamref name="T"/> and <see cref="NullContext"/>,
     /// uses a direct primitive comparison, avoiding IComparer dispatch.
     /// For non-primitive types or instrumented contexts, delegates to the comparer.
-    /// Note: for <c>float</c> and <c>double</c>, the specialized path uses IEEE 754 <c>&lt;</c>,
-    /// which differs from <see cref="IComparable{T}.CompareTo"/> for NaN values.
+    /// Note: for <c>float</c>, <c>double</c>, and <c>Half</c>, the specialized path uses IEEE 754 <c>&lt;</c>,
+    /// which treats NaN as unordered (always returns false), unlike <see cref="IComparable{T}.CompareTo"/>.
+    /// Callers that may encounter NaN should handle it separately (e.g., with a NaN pre-pass).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsLessThan(T a, T b)
@@ -209,19 +210,22 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         }
         // For value type TComparer the JIT constant-folds this 'is' check at specialization time:
         // true when TComparer is ComparableComparer<T>, false otherwise — no runtime overhead.
+        // The guard is required so that custom comparers (e.g. reverse order) are never bypassed.
         if (_comparer is IComparableComparer)
         {
-            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref a) < Unsafe.As<T, int>(ref b);
-            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref a) < Unsafe.As<T, long>(ref b);
-            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref a) < Unsafe.As<T, uint>(ref b);
-            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref a) < Unsafe.As<T, ulong>(ref b);
-            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref a) < Unsafe.As<T, short>(ref b);
-            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref a) < Unsafe.As<T, ushort>(ref b);
             if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref a) < Unsafe.As<T, byte>(ref b);
             if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref a) < Unsafe.As<T, sbyte>(ref b);
-            if (typeof(T) == typeof(char)) return Unsafe.As<T, char>(ref a) < Unsafe.As<T, char>(ref b);
+            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref a) < Unsafe.As<T, ushort>(ref b);
+            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref a) < Unsafe.As<T, short>(ref b);
+            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref a) < Unsafe.As<T, uint>(ref b);
+            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref a) < Unsafe.As<T, int>(ref b);
+            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref a) < Unsafe.As<T, ulong>(ref b);
+            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref a) < Unsafe.As<T, long>(ref b);
+            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref a) < Unsafe.As<T, nuint>(ref b);
+            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref a) < Unsafe.As<T, nint>(ref b);
             if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) < Unsafe.As<T, float>(ref b);
             if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) < Unsafe.As<T, double>(ref b);
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) < Unsafe.As<T, Half>(ref b);
         }
         return _comparer.Compare(a, b) < 0;
     }
@@ -231,8 +235,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     /// For <see cref="ComparableComparer{T}"/> with primitive <typeparamref name="T"/> and <see cref="NullContext"/>,
     /// uses a direct primitive comparison, avoiding IComparer dispatch.
     /// For non-primitive types or instrumented contexts, delegates to the comparer.
-    /// Note: for <c>float</c> and <c>double</c>, the specialized path uses IEEE 754 <c>&lt;=</c>,
-    /// which differs from <see cref="IComparable{T}.CompareTo"/> for NaN values.
+    /// Note: for <c>float</c>, <c>double</c>, and <c>Half</c>, the specialized path uses IEEE 754 <c>&lt;=</c>,
+    /// which treats NaN as unordered (always returns false), unlike <see cref="IComparable{T}.CompareTo"/>.
+    /// Callers that may encounter NaN should handle it separately (e.g., with a NaN pre-pass).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsLessOrEqual(T a, T b)
@@ -245,19 +250,22 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         }
         // For value type TComparer the JIT constant-folds this 'is' check at specialization time:
         // true when TComparer is ComparableComparer<T>, false otherwise — no runtime overhead.
+        // The guard is required so that custom comparers (e.g. reverse order) are never bypassed.
         if (_comparer is IComparableComparer)
         {
-            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref a) <= Unsafe.As<T, int>(ref b);
-            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref a) <= Unsafe.As<T, long>(ref b);
-            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref a) <= Unsafe.As<T, uint>(ref b);
-            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref a) <= Unsafe.As<T, ulong>(ref b);
-            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref a) <= Unsafe.As<T, short>(ref b);
-            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref a) <= Unsafe.As<T, ushort>(ref b);
             if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref a) <= Unsafe.As<T, byte>(ref b);
             if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref a) <= Unsafe.As<T, sbyte>(ref b);
-            if (typeof(T) == typeof(char)) return Unsafe.As<T, char>(ref a) <= Unsafe.As<T, char>(ref b);
+            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref a) <= Unsafe.As<T, ushort>(ref b);
+            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref a) <= Unsafe.As<T, short>(ref b);
+            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref a) <= Unsafe.As<T, uint>(ref b);
+            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref a) <= Unsafe.As<T, int>(ref b);
+            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref a) <= Unsafe.As<T, ulong>(ref b);
+            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref a) <= Unsafe.As<T, long>(ref b);
+            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref a) <= Unsafe.As<T, nuint>(ref b);
+            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref a) <= Unsafe.As<T, nint>(ref b);
             if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) <= Unsafe.As<T, float>(ref b);
             if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) <= Unsafe.As<T, double>(ref b);
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) <= Unsafe.As<T, Half>(ref b);
         }
         return _comparer.Compare(a, b) <= 0;
     }
@@ -283,17 +291,19 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         }
         if (_comparer is IComparableComparer)
         {
-            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref _span[i]) < Unsafe.As<T, int>(ref _span[j]);
-            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref _span[i]) < Unsafe.As<T, long>(ref _span[j]);
-            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref _span[i]) < Unsafe.As<T, uint>(ref _span[j]);
-            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref _span[i]) < Unsafe.As<T, ulong>(ref _span[j]);
-            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref _span[i]) < Unsafe.As<T, short>(ref _span[j]);
-            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref _span[i]) < Unsafe.As<T, ushort>(ref _span[j]);
             if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref _span[i]) < Unsafe.As<T, byte>(ref _span[j]);
             if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref _span[i]) < Unsafe.As<T, sbyte>(ref _span[j]);
-            if (typeof(T) == typeof(char)) return Unsafe.As<T, char>(ref _span[i]) < Unsafe.As<T, char>(ref _span[j]);
+            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref _span[i]) < Unsafe.As<T, ushort>(ref _span[j]);
+            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref _span[i]) < Unsafe.As<T, short>(ref _span[j]);
+            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref _span[i]) < Unsafe.As<T, uint>(ref _span[j]);
+            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref _span[i]) < Unsafe.As<T, int>(ref _span[j]);
+            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref _span[i]) < Unsafe.As<T, ulong>(ref _span[j]);
+            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref _span[i]) < Unsafe.As<T, long>(ref _span[j]);
+            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref _span[i]) < Unsafe.As<T, nuint>(ref _span[j]);
+            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref _span[i]) < Unsafe.As<T, nint>(ref _span[j]);
             if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref _span[i]) < Unsafe.As<T, float>(ref _span[j]);
             if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref _span[i]) < Unsafe.As<T, double>(ref _span[j]);
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref _span[i]) < Unsafe.As<T, Half>(ref _span[j]);
         }
         return _comparer.Compare(_span[i], _span[j]) < 0;
     }
@@ -319,17 +329,19 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         }
         if (_comparer is IComparableComparer)
         {
-            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref _span[i]) <= Unsafe.As<T, int>(ref _span[j]);
-            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref _span[i]) <= Unsafe.As<T, long>(ref _span[j]);
-            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref _span[i]) <= Unsafe.As<T, uint>(ref _span[j]);
-            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref _span[i]) <= Unsafe.As<T, ulong>(ref _span[j]);
-            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref _span[i]) <= Unsafe.As<T, short>(ref _span[j]);
-            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref _span[i]) <= Unsafe.As<T, ushort>(ref _span[j]);
             if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref _span[i]) <= Unsafe.As<T, byte>(ref _span[j]);
             if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref _span[i]) <= Unsafe.As<T, sbyte>(ref _span[j]);
-            if (typeof(T) == typeof(char)) return Unsafe.As<T, char>(ref _span[i]) <= Unsafe.As<T, char>(ref _span[j]);
+            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref _span[i]) <= Unsafe.As<T, ushort>(ref _span[j]);
+            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref _span[i]) <= Unsafe.As<T, short>(ref _span[j]);
+            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref _span[i]) <= Unsafe.As<T, uint>(ref _span[j]);
+            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref _span[i]) <= Unsafe.As<T, int>(ref _span[j]);
+            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref _span[i]) <= Unsafe.As<T, ulong>(ref _span[j]);
+            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref _span[i]) <= Unsafe.As<T, long>(ref _span[j]);
+            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref _span[i]) <= Unsafe.As<T, nuint>(ref _span[j]);
+            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref _span[i]) <= Unsafe.As<T, nint>(ref _span[j]);
             if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref _span[i]) <= Unsafe.As<T, float>(ref _span[j]);
             if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref _span[i]) <= Unsafe.As<T, double>(ref _span[j]);
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref _span[i]) <= Unsafe.As<T, Half>(ref _span[j]);
         }
         return _comparer.Compare(_span[i], _span[j]) <= 0;
     }
