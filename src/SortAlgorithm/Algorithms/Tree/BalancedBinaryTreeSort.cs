@@ -667,7 +667,7 @@ public static class BalancedBinaryTreeSortNonOptimized
         // Navigate to insertion point
         while (true)
         {
-            bool goLeft = s.Compare(value, current.Item) < 0;
+            bool goLeft = s.IsLessThan(value, current.Item);
 
             if (goLeft)
             {
@@ -729,7 +729,7 @@ public static class BalancedBinaryTreeSortNonOptimized
         }
 
         // Find the correct position to insert.
-        if (s.Compare(value, node.Item) < 0)
+        if (s.IsLessThan(value, node.Item))
         {
             node.Left = InsertRecursive(node.Left, value, s);
         }
