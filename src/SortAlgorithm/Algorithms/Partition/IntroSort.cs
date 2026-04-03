@@ -215,6 +215,21 @@ public static class IntroSort
         {
             var size = right - left + 1;
 
+            // Tiny arrays: use inline sorting networks to avoid function call overhead
+            if (size == 2)
+            {
+                if (s.Compare(left, right) > 0) s.Swap(left, right);
+                return;
+            }
+
+            if (size == 3)
+            {
+                if (s.Compare(left, left + 1) > 0) s.Swap(left, left + 1);
+                if (s.Compare(left, right) > 0) s.Swap(left, right);
+                if (s.Compare(left + 1, right) > 0) s.Swap(left + 1, right);
+                return;
+            }
+
             // Small arrays: use InsertionSort
             // For leftmost partitions, use guarded version (needs boundary checks)
             // For non-leftmost partitions, use unguarded version (pivot acts as sentinel)
