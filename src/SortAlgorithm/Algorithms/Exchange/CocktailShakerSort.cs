@@ -88,7 +88,7 @@ public static class CocktailShakerSort
             var lastSwapIndex = min;
             for (var i = min; i < max; i++)
             {
-                if (s.Compare(i, i + 1) > 0)
+                if (!s.IsLessOrEqualAt(i, i + 1))
                 {
                     s.Swap(i, i + 1);
                     lastSwapIndex = i;
@@ -107,7 +107,7 @@ public static class CocktailShakerSort
             lastSwapIndex = max;
             for (var i = max; i > min; i--)
             {
-                if (s.Compare(i - 1, i) > 0)
+                if (!s.IsLessOrEqualAt(i - 1, i))
                 {
                     s.Swap(i - 1, i);
                     lastSwapIndex = i;
@@ -208,7 +208,7 @@ public static class CocktailShakerSortNonOptimized
             context.OnRole(hi, BUFFER_MAIN, RoleType.RightPointer);
             for (int j = i; j < s.Length - i - 1; j++)
             {
-                if (s.Compare(j, j + 1) > 0)
+                if (!s.IsLessOrEqualAt(j, j + 1))
                 {
                     s.Swap(j, j + 1);
                     swapped = true;
@@ -224,7 +224,7 @@ public static class CocktailShakerSortNonOptimized
             context.OnRole(hi, BUFFER_MAIN, RoleType.RightPointer);
             for (int j = s.Length - 2 - i; j > i; j--)
             {
-                if (s.Compare(j, j - 1) < 0)
+                if (s.IsLessAt(j, j - 1))
                 {
                     s.Swap(j, j - 1);
                     swapped = true;

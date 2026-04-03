@@ -109,7 +109,7 @@ public static class CircleSort
 
         while (low < high)
         {
-            if (s.Compare(low, high) > 0)
+            if (!s.IsLessOrEqualAt(low, high))
             {
                 s.Swap(low, high);
                 swapped = true;
@@ -119,7 +119,7 @@ public static class CircleSort
         }
 
         // When the two pointers meet (odd-length range), compare the middle element with its right neighbor
-        if (low == high && s.Compare(low, high + 1) > 0)
+        if (low == high && !s.IsLessOrEqualAt(low, high + 1))
         {
             s.Swap(low, high + 1);
             swapped = true;
