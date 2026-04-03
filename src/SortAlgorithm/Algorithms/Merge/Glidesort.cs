@@ -1566,7 +1566,7 @@ public static class Glidesort
     // Matches the reference Pow2SmallSort from small_sort.rs:
     // - Sort4Into: out-of-place sort4 using 5 comparisons with conditional value selection
     // - SymmetricMerge: merge two equal-sized sorted runs reading from both begin and end
-    // - DoubleMerge: interleaved symmetric merge of two independent pairs for ILP
+    // - DoubleMerge: interleaved symmetric merge of two independent pairs (preserves the reference's ILP-oriented interleaving)
     //
     // Pipeline data flow:
     //   sort8:  s → t : Sort4Into × 2                                → t → s : SymmetricMerge(k=4)
@@ -1670,9 +1670,9 @@ public static class Glidesort
 
     /// <summary>
     /// Interleaved double merge: merges 4 sorted groups of <paramref name="k"/> elements
-    /// (4k total) into 2 sorted groups of 2k. Two independent symmetric merges run
-    /// simultaneously for instruction-level parallelism.
-    /// Matches the reference <c>double_merge_from_src_to_dst</c>.
+    /// (4k total) into 2 sorted groups of 2k. Interleaves two independent symmetric merges,
+    /// preserving the reference's ILP-oriented data flow from <c>double_merge_from_src_to_dst</c>.
+    /// (C# JIT does not guarantee actual ILP from this interleaving.)
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DoubleMerge<T, TComparer, TContext>(
