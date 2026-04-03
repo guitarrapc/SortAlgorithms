@@ -1117,6 +1117,9 @@ public static class Glidesort
         where TContext : ISortContext
     {
         var n8 = n / 8;
+        // n here is the sub-segment size (= original_n / 8 from the caller).
+        // n * 8 reconstructs the original segment size; recurse only when it meets the threshold.
+        // Equivalent to: original_n >= PSEUDO_MEDIAN_REC_THRESHOLD.
         if (n * 8 >= PSEUDO_MEDIAN_REC_THRESHOLD)
         {
             a = Median3IdxFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, a + n8 * 4, a + n8 * 7);
