@@ -700,7 +700,7 @@ public static class Glidesort
             var val1 = s.Read(c1);
             var val2 = s.Read(c2);
 
-            if (s.Compare(val1, val2) <= 0) // <= takes val2 for stability
+            if (s.IsLessOrEqual(val1, val2)) // IsLessOrEqual (val1 ≤ val2) takes val2 for stability
             {
                 s.Write(o--, val2);
                 c2--;
@@ -745,7 +745,7 @@ public static class Glidesort
             var val1 = t.Read(c1);
             var val2 = s.Read(c2);
 
-            if (s.Compare(val1, val2) <= 0) // <= for stability
+            if (s.IsLessOrEqual(val1, val2)) // IsLessOrEqual (val1 ≤ val2) for stability
             {
                 s.Write(o++, val1);
                 c1++;
@@ -788,7 +788,7 @@ public static class Glidesort
             var v1 = s.Read(c1);
             var v2 = s.Read(c2);
 
-            if (s.Compare(v1, v2) <= 0) // <= for stability
+            if (s.IsLessOrEqual(v1, v2)) // IsLessOrEqual (v1 ≤ v2) for stability
             {
                 t.Write(o++, v1);
                 c1++;
@@ -826,7 +826,7 @@ public static class Glidesort
             var v1 = s.Read(c1);
             var v2 = t.Read(c2);
 
-            if (s.Compare(v1, v2) <= 0) // <= takes v2 for stability
+            if (s.IsLessOrEqual(v1, v2)) // IsLessOrEqual (v1 ≤ v2) takes v2 for stability
             {
                 s.Write(o--, v2);
                 c2--;
@@ -867,7 +867,7 @@ public static class Glidesort
             var v1 = t.Read(c1);
             var v2 = t.Read(c2);
 
-            if (s.Compare(v1, v2) <= 0) // <= for stability
+            if (s.IsLessOrEqual(v1, v2)) // IsLessOrEqual (v1 ≤ v2) for stability
             {
                 s.Write(o++, v1);
                 c1++;
@@ -1136,11 +1136,11 @@ public static class Glidesort
         var vb = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b);
         var vc = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c);
 
-        var x = s.Compare(va, vb) < 0;
-        var y = s.Compare(va, vc) < 0;
+        var x = s.IsLessThan(va, vb);
+        var y = s.IsLessThan(va, vc);
         if (x == y)
         {
-            var z = s.Compare(vb, vc) < 0;
+            var z = s.IsLessThan(vb, vc);
             return (z ^ x) ? c : b;
         }
         return a;
@@ -1163,11 +1163,11 @@ public static class Glidesort
         var vb = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b);
         var vc = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c);
 
-        var x = s.Compare(va, vb) < 0;
-        var y = s.Compare(va, vc) < 0;
+        var x = s.IsLessThan(va, vb);
+        var y = s.IsLessThan(va, vc);
         if (x == y)
         {
-            var z = s.Compare(vb, vc) < 0;
+            var z = s.IsLessThan(vb, vc);
             return (z ^ x) ? vc : vb;
         }
         return va;
@@ -1256,7 +1256,7 @@ public static class Glidesort
 
                 if (strategy == STRATEGY_LEFT_IF_EQUAL)
                 {
-                    partitionLeft = s.Compare(prevPivot, pivot) >= 0;
+                    partitionLeft = !s.IsLessThan(prevPivot, pivot);
                 }
                 else
                 {
@@ -1285,8 +1285,7 @@ public static class Glidesort
             for (var i = leftOff; i < leftOff + leftLen; i++)
             {
                 var val = leftInMain ? s.Read(i) : t.Read(i);
-                var cmp = s.Compare(val, pivot);
-                bool isLess = partitionLeft ? cmp <= 0 : cmp < 0;
+                bool isLess = partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot);
 
                 if (isLess)
                 {
@@ -1304,8 +1303,7 @@ public static class Glidesort
             for (var i = rightOff + rightLen - 1; i >= rightOff; i--)
             {
                 var val = rightInMain ? s.Read(i) : t.Read(i);
-                var cmp = s.Compare(val, pivot);
-                bool isLess = partitionLeft ? cmp <= 0 : cmp < 0;
+                bool isLess = partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot);
 
                 if (!isLess)
                 {
@@ -1532,9 +1530,9 @@ public static class Glidesort
         {
             var sv = s.Read(si);
             var tv = t.Read(ti);
-            // > for stability: drain sv only when it is strictly greater,
+            // IsLessThan(tv, sv): drain sv only when sv is strictly greater (tv < sv),
             // so equal elements from the left prefix always come first.
-            if (s.Compare(sv, tv) > 0)
+            if (s.IsLessThan(tv, sv))
             {
                 s.Write(o--, sv);
                 si--;
@@ -1584,13 +1582,13 @@ public static class Glidesort
 
         // Stably create sorted pairs: a <= b from (v0,v1), c <= d from (v2,v3)
         T a, b;
-        if (src.Compare(v1, v0) < 0) { a = v1; b = v0; } else { a = v0; b = v1; }
+        if (src.IsLessThan(v1, v0)) { a = v1; b = v0; } else { a = v0; b = v1; }
         T c, d;
-        if (src.Compare(v3, v2) < 0) { c = v3; d = v2; } else { c = v2; d = v3; }
+        if (src.IsLessThan(v3, v2)) { c = v3; d = v2; } else { c = v2; d = v3; }
 
         // Compare (a,c) and (b,d) to find overall min/max and the two unknowns.
-        var c3 = src.Compare(c, a) < 0;
-        var c4 = src.Compare(d, b) < 0;
+        var c3 = src.IsLessThan(c, a);
+        var c4 = src.IsLessThan(d, b);
         var min = c3 ? c : a;
         var max = c4 ? b : d;
         var unkLeft = c3 ? a : (c4 ? c : b);
@@ -1598,7 +1596,7 @@ public static class Glidesort
 
         // Sort the two unknowns.
         T lo, hi;
-        if (src.Compare(unkRight, unkLeft) < 0) { lo = unkRight; hi = unkLeft; } else { lo = unkLeft; hi = unkRight; }
+        if (src.IsLessThan(unkRight, unkLeft)) { lo = unkRight; hi = unkLeft; } else { lo = unkLeft; hi = unkRight; }
 
         dst.Write(di, min);
         dst.Write(di + 1, lo);
@@ -1632,7 +1630,7 @@ public static class Glidesort
             // Merge at begin: pick smaller, ties → left (stability)
             var lv = src.Read(lb);
             var rv = src.Read(rb);
-            if (src.Compare(rv, lv) < 0)
+            if (src.IsLessThan(rv, lv))
             {
                 dst.Write(db, rv);
                 rb++;
@@ -1647,7 +1645,7 @@ public static class Glidesort
             // Merge at end: pick larger, ties → right (stability)
             var lv2 = src.Read(le);
             var rv2 = src.Read(re);
-            if (src.Compare(rv2, lv2) < 0)
+            if (src.IsLessThan(rv2, lv2))
             {
                 dst.Write(de, lv2);
                 le--;
@@ -1696,28 +1694,28 @@ public static class Glidesort
             {
                 var lv = src.Read(l0b);
                 var rv = src.Read(r0b);
-                if (src.Compare(rv, lv) < 0) { dst.Write(d0b++, rv); r0b++; }
+                if (src.IsLessThan(rv, lv)) { dst.Write(d0b++, rv); r0b++; }
                 else { dst.Write(d0b++, lv); l0b++; }
             }
             // Pair 1: merge at begin
             {
                 var lv = src.Read(l1b);
                 var rv = src.Read(r1b);
-                if (src.Compare(rv, lv) < 0) { dst.Write(d1b++, rv); r1b++; }
+                if (src.IsLessThan(rv, lv)) { dst.Write(d1b++, rv); r1b++; }
                 else { dst.Write(d1b++, lv); l1b++; }
             }
             // Pair 0: merge at end
             {
                 var lv = src.Read(l0e);
                 var rv = src.Read(r0e);
-                if (src.Compare(rv, lv) < 0) { dst.Write(d0e--, lv); l0e--; }
+                if (src.IsLessThan(rv, lv)) { dst.Write(d0e--, lv); l0e--; }
                 else { dst.Write(d0e--, rv); r0e--; }
             }
             // Pair 1: merge at end
             {
                 var lv = src.Read(l1e);
                 var rv = src.Read(r1e);
-                if (src.Compare(rv, lv) < 0) { dst.Write(d1e--, lv); l1e--; }
+                if (src.IsLessThan(rv, lv)) { dst.Write(d1e--, lv); l1e--; }
                 else { dst.Write(d1e--, rv); r1e--; }
             }
         }

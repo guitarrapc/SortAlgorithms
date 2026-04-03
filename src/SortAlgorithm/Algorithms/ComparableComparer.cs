@@ -4,6 +4,13 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
+/// Marker interface for <see cref="ComparableComparer{T}"/>.
+/// Allows <see cref="SortSpan{T,TComparer,TContext}"/> to detect the comparer type without
+/// referencing <c>ComparableComparer&lt;T&gt;</c> from an unconstrained generic context.
+/// </summary>
+internal interface IComparableComparer { }
+
+/// <summary>
 /// A high-performance struct comparer that uses IComparable&lt;T&gt;.CompareTo for comparison.
 /// This struct is used internally by convenience overloads to achieve maximum performance
 /// through JIT devirtualization and inlining of the constrained CompareTo call.
@@ -26,7 +33,7 @@ namespace SortAlgorithm.Algorithms;
 /// - Using ComparableComparer&lt;int&gt; (struct): ~0ns overhead, same as direct CompareTo
 /// </para>
 /// </remarks>
-internal readonly struct ComparableComparer<T> : IComparer<T> where T : IComparable<T>
+internal readonly struct ComparableComparer<T> : IComparer<T>, IComparableComparer where T : IComparable<T>
 {
     /// <summary>
     /// Compares two objects and returns a value indicating whether one is less than, equal to, or greater than the other.
