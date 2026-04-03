@@ -538,7 +538,15 @@ public static class Glidesort
 
     /// <summary>
     /// Merges two adjacent sorted runs [start..mid) and [mid..end) using scratch space.
-    /// Applies merge reduction (shrinking already-sorted prefix/suffix) before merging.
+    /// Uses an iterative shrink-split loop matching the reference glidesort <c>physical_merge</c>:
+    /// <para>1. <b>Shrink</b>: skip already-in-place prefix of left and suffix of right.</para>
+    /// <para>2. <b>Split</b>: find split points (lsplit, rsplit) via <see cref="MergeSplitPoints{T,TComparer,TContext}"/>
+    ///    such that <c>left1.len == right0.len</c>, partitioning each side into two sub-runs.</para>
+    /// <para>3. <b>Gap trick</b>: copy left1 to scratch, then execute two independent merges that
+    ///    write into the vacated gap regions — one backward (left0 + right0 → left's space)
+    ///    and one forward (left1-from-scratch + right1 → right's space).</para>
+    /// <para>4. When scratch is too small for the gap trick, swap left1 ↔ right0, recursively
+    ///    merge the right half, and loop for the left half.</para>
     /// </summary>
     private static void PhysicalMerge<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
@@ -551,60 +559,202 @@ public static class Glidesort
     {
         if (mid <= start || mid >= end) return;
 
-        // Shrink: skip elements at start of left that are already in place
-        // and elements at end of right that are already in place
-        var left = start;
-        var right = mid;
-        var rightEnd = end;
+        var curLeft = start;
+        var curMid = mid;
+        var curRightEnd = end;
 
-        // If left's last element <= right's first element, already sorted
-        if (s.Compare(mid - 1, mid) <= 0) return;
-
-        // Skip left prefix already in place: find first left element > right's first
-        while (left < mid && s.Compare(left, mid) <= 0)
+        while (ShrinkStableMerge(s, ref curLeft, curMid, ref curRightEnd))
         {
-            left++;
-        }
+            // Find split points for two independent sub-merges.
+            // Guarantees: left1.len == right0.len (= rsplit).
+            var (lsplit, rsplit) = MergeSplitPoints(s, curLeft, curMid, curMid, curRightEnd);
+            var left1Len = curMid - curLeft - lsplit; // == rsplit
+            var left1Start = curLeft + lsplit;
 
-        // Skip right suffix already in place: find last right element < left's last
-        while (rightEnd > mid && s.Compare(mid - 1, rightEnd - 1) <= 0)
-        {
-            rightEnd--;
-        }
+            if (left1Len <= scratch.Length)
+            {
+                // Gap trick: copy left1 to scratch, then two in-place merges.
+                s.CopyTo(left1Start, t, 0, left1Len);
 
-        if (left >= mid || rightEnd <= mid) return;
+                // Merge left0 + right0 backward into [curLeft..curMid).
+                // The gap (left1's former space) is to the right of left0.
+                MergeRightGap(s, curLeft, lsplit, curMid, rsplit);
 
-        var len1 = mid - left;
-        var len2 = rightEnd - mid;
+                // Merge left1 (from scratch) + right1 forward into [curMid..curRightEnd).
+                // The gap (right0's former space) is to the left of right1.
+                var right0End = curMid + rsplit;
+                MergeLeftGap(s, t, left1Len, right0End, curRightEnd - right0End, curMid);
 
-        if (len1 <= len2)
-        {
-            MergeLow(s, t, left, len1, mid, len2);
-        }
-        else
-        {
-            MergeHigh(s, t, left, len1, mid, len2);
+                return;
+            }
+            else
+            {
+                // Scratch too small: swap left1 ↔ right0 (equal length),
+                // recursively merge right half, then loop for left half.
+                for (var i = 0; i < left1Len; i++)
+                    s.Swap(left1Start + i, curMid + i);
+
+                // Right half: [curMid..curRightEnd) now contains [left1_old | right1].
+                PhysicalMerge(s, t, scratch, curMid, curMid + left1Len, curRightEnd, comparer, context);
+
+                // Left half: [curLeft..curMid) now contains [left0 | right0_old].
+                curRightEnd = curMid;
+                curMid = left1Start;
+            }
         }
     }
 
     /// <summary>
-    /// Merges when left run is smaller: copies left to scratch and merges forward.
+    /// Shrinks a stable merge of [left..mid) and [mid..rightEnd) by skipping
+    /// already-in-place prefix of left and suffix of right. Updates <paramref name="left"/>
+    /// and <paramref name="rightEnd"/> to the reduced boundaries. Returns <c>false</c> if
+    /// the merge is unnecessary (already sorted or empty).
     /// </summary>
-    private static void MergeLow<T, TComparer, TContext>(
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ShrinkStableMerge<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
-        SortSpan<T, TComparer, TContext> t,
-        int base1, int len1, int base2, int len2)
+        ref int left, int mid, ref int rightEnd)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Copy left run to scratch
-        s.CopyTo(base1, t, 0, len1);
+        if (left >= mid || mid >= rightEnd) return false;
 
+        // Already completely sorted?
+        if (s.Compare(mid - 1, mid) <= 0) return false;
+
+        // Skip left prefix already in place: find first left element > right's first.
+        var newLeft = left;
+        while (newLeft < mid && s.Compare(newLeft, mid) <= 0)
+            newLeft++;
+
+        // Skip right suffix already in place: find last right element < left's last.
+        var newRightEnd = rightEnd;
+        while (newRightEnd > mid && s.Compare(mid - 1, newRightEnd - 1) <= 0)
+            newRightEnd--;
+
+        if (newLeft >= mid || newRightEnd <= mid) return false;
+
+        left = newLeft;
+        rightEnd = newRightEnd;
+        return true;
+    }
+
+    /// <summary>
+    /// Given sorted left and right of equal size <paramref name="n"/>, finds the smallest
+    /// <c>i</c> such that for all <c>l</c> in <c>left[i..]</c> and <c>r</c> in
+    /// <c>right[..n-i]</c> we have <c>l &gt; r</c>.
+    /// Uses binary search (O(log n) comparisons).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int CrossoverPoint<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        int leftStart, int rightStart, int n)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var lo = 0;
+        var maybe = n;
+        while (maybe > 0)
+        {
+            var step = maybe / 2;
+            var i = lo + step;
+            // Is right[n-1-i] < left[i]? If so, i is a valid crossover point.
+            if (s.Compare(rightStart + n - 1 - i, leftStart + i) < 0)
+            {
+                maybe = step;
+            }
+            else
+            {
+                lo += step + 1;
+                maybe -= step + 1;
+            }
+        }
+        return lo;
+    }
+
+    /// <summary>
+    /// Computes split points <c>(lsplit, rsplit)</c> for two sorted runs
+    /// <c>left=[leftStart..leftEnd)</c> and <c>right=[rightStart..rightEnd)</c> such that
+    /// merging <c>(left[..lsplit], right[..rsplit])</c> followed by
+    /// <c>(left[lsplit..], right[rsplit..])</c> equals merging the full runs.
+    /// Guarantees <c>left[lsplit..].len == right[..rsplit].len</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static (int lsplit, int rsplit) MergeSplitPoints<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        int leftStart, int leftEnd, int rightStart, int rightEnd)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var leftLen = leftEnd - leftStart;
+        var rightLen = rightEnd - rightStart;
+        var minLen = Math.Min(leftLen, rightLen);
+        var leftSkip = leftLen - minLen;
+        var i = CrossoverPoint(s, leftStart + leftSkip, rightStart, minLen);
+        return (leftSkip + i, minLen - i);
+    }
+
+    /// <summary>
+    /// Merges left0 = <c>s[l0..l0+l0Len)</c> and right0 = <c>s[r0..r0+r0Len)</c>
+    /// <b>backward</b> into <c>s[l0..l0+l0Len+r0Len)</c>.
+    /// The gap between <c>l0+l0Len</c> and <c>r0</c> must equal <c>r0Len</c>.
+    /// Used after the gap trick: left1 has been moved to scratch, freeing space
+    /// adjacent to left0 for in-place backward merge output.
+    /// </summary>
+    private static void MergeRightGap<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        int l0, int l0Len, int r0, int r0Len)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var c1 = l0 + l0Len - 1;
+        var c2 = r0 + r0Len - 1;
+        var o = l0 + l0Len + r0Len - 1;
+
+        while (c1 >= l0 && c2 >= r0)
+        {
+            var val1 = s.Read(c1);
+            var val2 = s.Read(c2);
+
+            if (s.Compare(val1, val2) <= 0) // <= takes val2 for stability
+            {
+                s.Write(o--, val2);
+                c2--;
+            }
+            else
+            {
+                s.Write(o--, val1);
+                c1--;
+            }
+        }
+
+        // If right0 has remaining elements, copy them to the front of the output.
+        // (Remaining left0 elements are already in their correct positions.)
+        while (c2 >= r0)
+        {
+            s.Write(o--, s.Read(c2--));
+        }
+    }
+
+    /// <summary>
+    /// Merges left1 = <c>t[0..l1Len)</c> (from scratch) and right1 = <c>s[r1..r1+r1Len)</c>
+    /// <b>forward</b> into <c>s[outStart..outStart+l1Len+r1Len)</c>.
+    /// The gap between <c>outStart</c> and <c>r1</c> must equal <c>l1Len</c>.
+    /// Used after the gap trick: right0's former space provides the gap for
+    /// in-place forward merge output.
+    /// </summary>
+    private static void MergeLeftGap<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int l1Len, int r1, int r1Len, int outStart)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
         var c1 = 0;
-        var e1 = len1;
-        var c2 = base2;
-        var e2 = base2 + len2;
-        var o = base1;
+        var e1 = l1Len;
+        var c2 = r1;
+        var e2 = r1 + r1Len;
+        var o = outStart;
 
         while (c1 < e1 && c2 < e2)
         {
@@ -623,49 +773,11 @@ public static class Glidesort
             }
         }
 
+        // If left1 has remaining elements in scratch, copy them to output.
+        // (Remaining right1 elements are already in their correct positions.)
         if (c1 < e1)
         {
             t.CopyTo(c1, s, o, e1 - c1);
-        }
-    }
-
-    /// <summary>
-    /// Merges when right run is smaller: copies right to scratch and merges backward.
-    /// </summary>
-    private static void MergeHigh<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s,
-        SortSpan<T, TComparer, TContext> t,
-        int base1, int len1, int base2, int len2)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Copy right run to scratch
-        s.CopyTo(base2, t, 0, len2);
-
-        var c1 = base1 + len1 - 1;
-        var c2 = len2 - 1;
-        var o = base2 + len2 - 1;
-
-        while (c1 >= base1 && c2 >= 0)
-        {
-            var val1 = s.Read(c1);
-            var val2 = t.Read(c2);
-
-            if (s.Compare(val1, val2) <= 0) // <= means take val2 for stability
-            {
-                s.Write(o--, val2);
-                c2--;
-            }
-            else
-            {
-                s.Write(o--, val1);
-                c1--;
-            }
-        }
-
-        if (c2 >= 0)
-        {
-            t.CopyTo(0, s, o - c2, c2 + 1);
         }
     }
 
@@ -1073,6 +1185,48 @@ public static class Glidesort
         while (ti >= 0)
         {
             s.Write(o--, t.Read(ti--));
+        }
+    }
+
+    /// <summary>
+    /// Simple forward merge: copies left run to scratch, then merges forward.
+    /// Used by sorting networks (Sort8/Sort16/Sort32) for merging fixed-size halves.
+    /// </summary>
+    private static void MergeLow<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int base1, int len1, int base2, int len2)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        s.CopyTo(base1, t, 0, len1);
+
+        var c1 = 0;
+        var e1 = len1;
+        var c2 = base2;
+        var e2 = base2 + len2;
+        var o = base1;
+
+        while (c1 < e1 && c2 < e2)
+        {
+            var val1 = t.Read(c1);
+            var val2 = s.Read(c2);
+
+            if (s.Compare(val1, val2) <= 0)
+            {
+                s.Write(o++, val1);
+                c1++;
+            }
+            else
+            {
+                s.Write(o++, val2);
+                c2++;
+            }
+        }
+
+        if (c1 < e1)
+        {
+            t.CopyTo(c1, s, o, e1 - c1);
         }
     }
 
