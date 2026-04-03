@@ -22,6 +22,7 @@ public class MergeBenchmark
     private int[] _shiftArray = default!;
     private int[] _spinvariantArray = default!;
     private int[] _spinArray = default!;
+    private int[] _glidesortArray = default!;
 
     [IterationSetup]
     public void Setup()
@@ -38,6 +39,7 @@ public class MergeBenchmark
         _shiftArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _spinvariantArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _spinArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _glidesortArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark(Baseline = true)]
@@ -110,5 +112,11 @@ public class MergeBenchmark
     public void SpinSortVariant()
     {
         SortAlgorithm.Algorithms.SpinSortVariant.Sort(_spinvariantArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void Glidesort()
+    {
+        SortAlgorithm.Algorithms.Glidesort.Sort(_glidesortArray.AsSpan());
     }
 }
