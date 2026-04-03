@@ -691,27 +691,26 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var c1 = l0 + l0Len - 1;
-        var c2 = r0 + r0Len - 1;
-        var o = l0 + l0Len + r0Len - 1;
+        // Count-based: n1/n2 are the remaining lengths; addresses computed as base + n - 1.
+        // Loop condition is a zero-check (simpler than lower-bound comparison).
+        var n1 = l0Len;
+        var n2 = r0Len;
+        var o = l0 + n1 + n2 - 1;
 
-        while (c1 >= l0 && c2 >= r0)
+        while (n1 != 0 && n2 != 0)
         {
-            var val1 = s.Read(c1);
-            var val2 = s.Read(c2);
+            var val1 = s.Read(l0 + n1 - 1);
+            var val2 = s.Read(r0 + n2 - 1);
             // val1 ≤ val2 → take right (val2) first; ties → right for backward-merge stability
             int takeRight = s.IsLessOrEqual(val1, val2) ? 1 : 0;
             s.Write(o--, takeRight != 0 ? val2 : val1);
-            c2 -= takeRight;
-            c1 -= 1 - takeRight;
+            n2 -= takeRight;
+            n1 -= 1 - takeRight;
         }
 
-        // If right0 has remaining elements, copy them to the front of the output.
-        // (Remaining left0 elements are already in their correct positions.)
-        while (c2 >= r0)
-        {
-            s.Write(o--, s.Read(c2--));
-        }
+        // Drain: right side may have remaining elements; copy them into place.
+        // Left side remaining elements are already in their correct positions.
+        while (n2 != 0) { s.Write(o--, s.Read(r0 + n2 - 1)); n2--; }
     }
 
     /// <summary>
@@ -782,8 +781,9 @@ public static class Glidesort
             c2 += 1 - takeLeft;
         }
 
-        while (c1 < e1) t.Write(o++, s.Read(c1++));
-        while (c2 < e2) t.Write(o++, s.Read(c2++));
+        // Drain: at most one side has remaining elements.
+        if (c1 < e1) s.CopyTo(c1, t, o, e1 - c1);
+        else if (c2 < e2) s.CopyTo(c2, t, o, e2 - c2);
     }
 
     /// <summary>
@@ -799,25 +799,26 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var c1 = leftStart + leftLen - 1;
-        var c2 = tLen - 1;
+        // Count-based: n1/n2 eliminate signed-comparison bounds (especially c2 >= 0 which
+        // requires an integer sign check). Loop condition is a zero-check.
+        var n1 = leftLen;
+        var n2 = tLen;
         var o = outEnd - 1;
 
-        while (c1 >= leftStart && c2 >= 0)
+        while (n1 != 0 && n2 != 0)
         {
-            var v1 = s.Read(c1);
-            var v2 = t.Read(c2);
+            var v1 = s.Read(leftStart + n1 - 1);
+            var v2 = t.Read(n2 - 1);
             // v1 ≤ v2 → take right (v2) first; ties → right for backward-merge stability
             int takeRight = s.IsLessOrEqual(v1, v2) ? 1 : 0;
             s.Write(o--, takeRight != 0 ? v2 : v1);
-            c2 -= takeRight;
-            c1 -= 1 - takeRight;
+            n2 -= takeRight;
+            n1 -= 1 - takeRight;
         }
 
-        while (c2 >= 0)
-        {
-            s.Write(o--, t.Read(c2--));
-        }
+        // Drain: right (from scratch) may have remaining elements; copy them into place.
+        // Left side remaining elements are already in their correct positions.
+        while (n2 != 0) { s.Write(o--, t.Read(n2 - 1)); n2--; }
     }
 
     /// <summary>
@@ -849,8 +850,9 @@ public static class Glidesort
             c2 += 1 - takeLeft;
         }
 
-        while (c1 < e1) s.Write(o++, t.Read(c1++));
-        while (c2 < e2) s.Write(o++, t.Read(c2++));
+        // Drain: at most one side has remaining elements.
+        if (c1 < e1) t.CopyTo(c1, s, o, e1 - c1);
+        else if (c2 < e2) t.CopyTo(c2, s, o, e2 - c2);
     }
 
     /// <summary>
