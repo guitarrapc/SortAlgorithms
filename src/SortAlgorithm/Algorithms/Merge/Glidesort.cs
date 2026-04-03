@@ -787,6 +787,79 @@ public static class Glidesort
     }
 
     /// <summary>
+    /// Interleaved double forward-merge into scratch. Merges two independent sorted-run pairs:
+    /// <list type="bullet">
+    /// <item><description>pair0: <c>s[left0Start..left0Mid)</c> + <c>s[left0Mid..left0End)</c> → <c>t[0..left0Len)</c></description></item>
+    /// <item><description>pair1: <c>s[right0Start..right0Mid)</c> + <c>s[right0Mid..right0End)</c> → <c>t[left0Len..left0Len+right0Len)</c></description></item>
+    /// </list>
+    /// The two pairs operate on non-overlapping input and output regions.
+    /// Interleaves their iterations in a single loop to expose independent operations to the JIT,
+    /// analogous to how <see cref="DoubleMerge"/> interleaves two independent SymmetricMerge operations.
+    /// </summary>
+    private static void DoubleMergeIntoScratch<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int left0Start, int left0Mid, int left0End,
+        int right0Start, int right0Mid, int right0End)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        // Pair 0: s[left0Start..left0Mid) + s[left0Mid..left0End) → t[0..left0Len)
+        var p0a = left0Start;  var p0ae = left0Mid;
+        var p0b = left0Mid;    var p0be = left0End;
+        var out0 = 0;
+
+        // Pair 1: s[right0Start..right0Mid) + s[right0Mid..right0End) → t[left0Len..)
+        var p1a = right0Start; var p1ae = right0Mid;
+        var p1b = right0Mid;   var p1be = right0End;
+        var out1 = left0End - left0Start; // = left0Len
+
+        // Interleaved main loop: advance both pairs simultaneously while both have elements on both sides.
+        while (p0a < p0ae && p0b < p0be && p1a < p1ae && p1b < p1be)
+        {
+            var v0a = s.Read(p0a);
+            var v0b = s.Read(p0b);
+            var v1a = s.Read(p1a);
+            var v1b = s.Read(p1b);
+            // v0a ≤ v0b → take left (v0a); ties → left for stability
+            int take0Left = s.IsLessOrEqual(v0a, v0b) ? 1 : 0;
+            int take1Left = s.IsLessOrEqual(v1a, v1b) ? 1 : 0;
+            t.Write(out0++, take0Left != 0 ? v0a : v0b);
+            t.Write(out1++, take1Left != 0 ? v1a : v1b);
+            p0a += take0Left;  p0b += 1 - take0Left;
+            p1a += take1Left;  p1b += 1 - take1Left;
+        }
+
+        // Drain pair0 main: finish if pair0 still has both sides.
+        while (p0a < p0ae && p0b < p0be)
+        {
+            var v0a = s.Read(p0a);
+            var v0b = s.Read(p0b);
+            int take0Left = s.IsLessOrEqual(v0a, v0b) ? 1 : 0;
+            t.Write(out0++, take0Left != 0 ? v0a : v0b);
+            p0a += take0Left;  p0b += 1 - take0Left;
+        }
+
+        // Drain pair1 main: finish if pair1 still has both sides.
+        while (p1a < p1ae && p1b < p1be)
+        {
+            var v1a = s.Read(p1a);
+            var v1b = s.Read(p1b);
+            int take1Left = s.IsLessOrEqual(v1a, v1b) ? 1 : 0;
+            t.Write(out1++, take1Left != 0 ? v1a : v1b);
+            p1a += take1Left;  p1b += 1 - take1Left;
+        }
+
+        // Drain pair0 tail: at most one side has remaining elements.
+        if (p0a < p0ae) s.CopyTo(p0a, t, out0, p0ae - p0a);
+        else if (p0b < p0be) s.CopyTo(p0b, t, out0, p0be - p0b);
+
+        // Drain pair1 tail: at most one side has remaining elements.
+        if (p1a < p1ae) s.CopyTo(p1a, t, out1, p1ae - p1a);
+        else if (p1b < p1be) s.CopyTo(p1b, t, out1, p1be - p1b);
+    }
+
+    /// <summary>
     /// Backward-merges <c>s[leftStart..leftStart+leftLen)</c> with <c>t[0..tLen)</c>
     /// into <c>s[leftStart..outEnd)</c>. The gap between the left run and <c>outEnd</c>
     /// provides the output space.
@@ -930,11 +1003,12 @@ public static class Glidesort
         var rightLen = end - mid2;
         var totalLen = leftLen + rightLen;
 
-        // Full scratch: merge both pairs into scratch, then merge back.
+        // Full scratch: interleave both pair merges into scratch, then merge back.
+        // The two MergeIntoScratch operations are independent (non-overlapping input + output)
+        // so DoubleMergeIntoScratch interleaves their iterations to expose independence to the JIT.
         if (totalLen <= scratch.Length)
         {
-            MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
-            MergeIntoScratchAt(s, t, mid2, mid3, end, leftLen);
+            DoubleMergeIntoScratch(s, t, start, mid1, mid2, mid2, mid3, end);
             MergeFromScratch(s, t, leftLen, totalLen, start);
             return;
         }
