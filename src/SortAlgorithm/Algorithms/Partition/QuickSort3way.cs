@@ -171,9 +171,9 @@ public static class QuickSort3way
 
             // Median-of-3 pivot selection: sort left, mid, right in place
             int mid = left + ((right - left) >> 1);
-            if (s.Compare(left, mid) > 0) s.Swap(left, mid);
-            if (s.Compare(left, right) > 0) s.Swap(left, right);
-            if (s.Compare(mid, right) > 0) s.Swap(mid, right);
+            if (!s.IsLessOrEqualAt(left, mid)) s.Swap(left, mid);
+            if (!s.IsLessOrEqualAt(left, right)) s.Swap(left, right);
+            if (!s.IsLessOrEqualAt(mid, right)) s.Swap(mid, right);
             // Bring median to left as the pivot
             s.Swap(mid, left);
 

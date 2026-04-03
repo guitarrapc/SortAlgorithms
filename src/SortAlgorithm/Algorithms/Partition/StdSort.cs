@@ -157,28 +157,28 @@ public static class StdSort
         where TContext : ISortContext
     {
         // if x <= y
-        if (s.Compare(y, x) >= 0)
+        if (!s.IsLessAt(y, x))
         {
             // if y <= z: x <= y <= z (already sorted)
-            if (s.Compare(z, y) >= 0)
+            if (!s.IsLessAt(z, y))
                 return;
 
             // x <= y && y > z
             s.Swap(y, z);   // x <= z && y < z
-            if (s.Compare(y, x) < 0)  // if x > y
+            if (s.IsLessAt(y, x))  // if x > y
                 s.Swap(x, y); // x < y && y <= z
             return;
         }
 
         // x > y
-        if (s.Compare(z, y) < 0) // if y > z
+        if (s.IsLessAt(z, y)) // if y > z
         {
             s.Swap(x, z); // z < y < x -> swap x,z -> x < y < z
             return;
         }
 
         s.Swap(x, y); // x > y && y <= z -> x < y && x <= z
-        if (s.Compare(z, y) < 0)  // if y > z
+        if (s.IsLessAt(z, y))  // if y > z
             s.Swap(y, z); // x <= y && y < z
     }
 
@@ -191,13 +191,13 @@ public static class StdSort
         where TContext : ISortContext
     {
         Sort3(s, x1, x2, x3);
-        if (s.Compare(x4, x3) < 0)
+        if (s.IsLessAt(x4, x3))
         {
             s.Swap(x3, x4);
-            if (s.Compare(x3, x2) < 0)
+            if (s.IsLessAt(x3, x2))
             {
                 s.Swap(x2, x3);
-                if (s.Compare(x2, x1) < 0)
+                if (s.IsLessAt(x2, x1))
                 {
                     s.Swap(x1, x2);
                 }
@@ -214,16 +214,16 @@ public static class StdSort
         where TContext : ISortContext
     {
         Sort4(s, x1, x2, x3, x4);
-        if (s.Compare(x5, x4) < 0)
+        if (s.IsLessAt(x5, x4))
         {
             s.Swap(x4, x5);
-            if (s.Compare(x4, x3) < 0)
+            if (s.IsLessAt(x4, x3))
             {
                 s.Swap(x3, x4);
-                if (s.Compare(x3, x2) < 0)
+                if (s.IsLessAt(x3, x2))
                 {
                     s.Swap(x2, x3);
-                    if (s.Compare(x2, x1) < 0)
+                    if (s.IsLessAt(x2, x1))
                     {
                         s.Swap(x1, x2);
                     }
@@ -255,7 +255,7 @@ public static class StdSort
                 case 1:
                     return;
                 case 2:
-                    if (s.Compare(last - 1, first) < 0)
+                    if (s.IsLessAt(last - 1, first))
                     {
                         s.Swap(first, last - 1);
                     }
@@ -324,7 +324,7 @@ public static class StdSort
             // that all the elements in [first, pivot] *would be* equal to the pivot,
             // assuming the equal elements are put on the left side when partitioned.
             // This means we do not need to sort the left side of the partition.
-            if (!leftmost && s.Compare(first - 1, first) >= 0)
+            if (!leftmost && !s.IsLessAt(first - 1, first))
             {
                 s.Context.OnPhase(SortPhase.QuickSortPartition, first, last - 1, first);
                 s.Context.OnRole(first, BUFFER_MAIN, RoleType.Pivot);
@@ -394,7 +394,7 @@ public static class StdSort
         for (var i = first + 1; i < last; i++)
         {
             var j = i - 1;
-            if (s.Compare(i, j) < 0)
+            if (s.IsLessAt(i, j))
             {
                 var tmp = s.Read(i);
                 var k = j;
@@ -425,7 +425,7 @@ public static class StdSort
             case 1:
                 return true;
             case 2:
-                if (s.Compare(last - 1, first) < 0)
+                if (s.IsLessAt(last - 1, first))
                 {
                     s.Swap(first, last - 1);
                 }
@@ -450,7 +450,7 @@ public static class StdSort
 
         for (var i = j + 1; i < last; i++)
         {
-            if (s.Compare(i, j) < 0)
+            if (s.IsLessAt(i, j))
             {
                 var tmp = s.Read(i);
                 var k = j;

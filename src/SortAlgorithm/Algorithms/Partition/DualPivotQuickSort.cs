@@ -229,7 +229,7 @@ public static class DualPivotQuickSort
             if (length < PivotThreshold)
             {
                 // Simple pivot selection: use left and right as pivots
-                if (s.Compare(left, right) > 0)
+                if (!s.IsLessOrEqualAt(left, right))
                 {
                     s.Swap(left, right);
                 }
@@ -462,22 +462,22 @@ public static class DualPivotQuickSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (s.Compare(y, x) < 0)
+        if (s.IsLessAt(y, x))
         {
-            if (s.Compare(z, y) < 0)
+            if (s.IsLessAt(z, y))
             {
                 s.Swap(x, z); // z < y < x -> swap x,z -> x < y < z
                 return;
             }
 
             s.Swap(x, y); // x > y && y <= z -> x < y && x <= z
-            if (s.Compare(z, y) < 0)  // if y > z
+            if (s.IsLessAt(z, y))  // if y > z
                 s.Swap(y, z); // x <= y && y < z
         }
-        else if (s.Compare(z, y) < 0)
+        else if (s.IsLessAt(z, y))
         {
             s.Swap(y, z); // x >= y && y > z -> x >= z && y <= z
-            if (s.Compare(y, x) < 0)  // if x > y
+            if (s.IsLessAt(y, x))  // if x > y
                 s.Swap(x, y); // x <= y && y <= z
         }
     }
@@ -491,13 +491,13 @@ public static class DualPivotQuickSort
         where TContext : ISortContext
     {
         Sort3(s, x1, x2, x3);
-        if (s.Compare(x4, x3) < 0)
+        if (s.IsLessAt(x4, x3))
         {
             s.Swap(x3, x4);
-            if (s.Compare(x3, x2) < 0)
+            if (s.IsLessAt(x3, x2))
             {
                 s.Swap(x2, x3);
-                if (s.Compare(x2, x1) < 0)
+                if (s.IsLessAt(x2, x1))
                 {
                     s.Swap(x1, x2);
                 }
@@ -517,16 +517,16 @@ public static class DualPivotQuickSort
         Sort4(s, x1, x2, x3, x4);
 
         // Insert x5 into the sorted sequence
-        if (s.Compare(x5, x4) < 0)
+        if (s.IsLessAt(x5, x4))
         {
             s.Swap(x4, x5);
-            if (s.Compare(x4, x3) < 0)
+            if (s.IsLessAt(x4, x3))
             {
                 s.Swap(x3, x4);
-                if (s.Compare(x3, x2) < 0)
+                if (s.IsLessAt(x3, x2))
                 {
                     s.Swap(x2, x3);
-                    if (s.Compare(x2, x1) < 0)
+                    if (s.IsLessAt(x2, x1))
                     {
                         s.Swap(x1, x2);
                     }

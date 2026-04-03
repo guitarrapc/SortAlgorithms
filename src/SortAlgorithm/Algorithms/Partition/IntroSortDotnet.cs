@@ -184,7 +184,7 @@ public static class IntroSortDotnet
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (s.Compare(i, j) > 0)
+        if (!s.IsLessOrEqualAt(i, j))
         {
             s.Swap(i, j);
         }
@@ -341,7 +341,7 @@ public static class IntroSortDotnet
             int child = 2 * i;  // Left child
 
             // If right child exists and is greater than left child, use right child
-            if (child < n && s.Compare(offset + child - 1, offset + child) < 0)
+            if (child < n && s.IsLessAt(offset + child - 1, offset + child))
             {
                 child++;
             }

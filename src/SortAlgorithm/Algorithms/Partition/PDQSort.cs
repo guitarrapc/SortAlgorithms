@@ -255,7 +255,7 @@ public static class PDQSort
             // If *(begin - 1) is the end of the right partition of a previous partition operation,
             // there is no element in [begin, end) that is smaller than *(begin - 1).
             // Then if our pivot compares equal to *(begin - 1) we change strategy.
-            if (!leftmost && s.Compare(begin - 1, begin) >= 0)
+            if (!leftmost && !s.IsLessAt(begin - 1, begin))
             {
                 s.Context.OnPhase(SortPhase.QuickSortPartition, begin, end - 1, begin);
                 s.Context.OnRole(begin, BUFFER_MAIN, RoleType.Pivot);
@@ -513,7 +513,7 @@ public static class PDQSort
             var siftValue = s.Read(cur);
 
             // Compare first so we can avoid 2 moves for an element already positioned correctly.
-            if (s.Compare(sift, sift - 1) < 0)
+            if (s.IsLessAt(sift, sift - 1))
             {
                 do
                 {
@@ -541,9 +541,9 @@ public static class PDQSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (s.Compare(b, a) < 0) s.Swap(a, b);
-        if (s.Compare(c, b) < 0) s.Swap(b, c);
-        if (s.Compare(b, a) < 0) s.Swap(a, b);
+        if (s.IsLessAt(b, a)) s.Swap(a, b);
+        if (s.IsLessAt(c, b)) s.Swap(b, c);
+        if (s.IsLessAt(b, a)) s.Swap(a, b);
     }
 
     /// <summary>
