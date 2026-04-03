@@ -734,6 +734,9 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // Already sorted: left.last ≤ right.first → copy left (t) into gap, right stays in place.
+        if (s.IsLessOrEqual(t.Read(l1Len - 1), s.Read(r1))) { t.CopyTo(0, s, outStart, l1Len); return; }
+
         var c1 = 0;
         var e1 = l1Len;
         var c2 = r1;
@@ -778,6 +781,9 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // Already sorted: left.last ≤ right.first → sequential copy is sufficient.
+        if (s.IsLessOrEqualAt(mid - 1, mid)) { s.CopyTo(leftStart, t, tOffset, rightEnd - leftStart); return; }
+
         var c1 = leftStart;
         var e1 = mid;
         var c2 = mid;
@@ -908,6 +914,9 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // Already sorted: left.last ≤ right.first → left stays in place, copy right (t) into gap.
+        if (s.IsLessOrEqual(s.Read(leftStart + leftLen - 1), t.Read(0))) { t.CopyTo(0, s, outEnd - tLen, tLen); return; }
+
         // Count-based: n1/n2 eliminate signed-comparison bounds (especially c2 >= 0 which
         // requires an integer sign check). Loop condition is a zero-check.
         var n1 = leftLen;
@@ -949,6 +958,9 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // Already sorted: left.last ≤ right.first → sequential copy is sufficient.
+        if (s.IsLessOrEqual(t.Read(leftLen - 1), t.Read(leftLen))) { t.CopyTo(0, s, outStart, totalLen); return; }
+
         var c1 = 0;
         var e1 = leftLen;
         var c2 = leftLen;
