@@ -1568,51 +1568,179 @@ public static class Glidesort
         }
     }
 
+    // Pow2SmallSort Pipeline
+    //
+    // Matches the reference Pow2SmallSort from small_sort.rs:
+    // - Sort4Into: out-of-place sort4 using 5 comparisons with conditional value selection
+    // - SymmetricMerge: merge two equal-sized sorted runs reading from both begin and end
+    // - DoubleMerge: interleaved symmetric merge of two independent pairs for ILP
+    //
+    // Pipeline data flow (sort32 example):
+    //   s → t : Sort4Into × 8  (8 groups of 4)
+    //   t → s : DoubleMerge × 2 (k=4)  (4 groups of 8)
+    //   s → t : DoubleMerge × 1 (k=8)  (2 groups of 16)
+    //   t → s : SymmetricMerge  (1 group of 32)
+
     /// <summary>
-    /// Simple forward merge: copies left run to scratch, then merges forward.
-    /// Used by sorting networks (Sort8/Sort16/Sort32) for merging fixed-size halves.
+    /// Out-of-place sort of 4 elements: reads src[si..si+4), writes sorted result to dst[di..di+4).
+    /// Uses 5 comparisons with conditional value selection, matching the reference <c>sort4_raw</c>.
     /// </summary>
-    private static void MergeLow<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s,
-        SortSpan<T, TComparer, TContext> t,
-        int base1, int len1, int base2, int len2)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Sort4Into<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> src, SortSpan<T, TComparer, TContext> dst,
+        int si, int di)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        s.CopyTo(base1, t, 0, len1);
+        var v0 = src.Read(si);
+        var v1 = src.Read(si + 1);
+        var v2 = src.Read(si + 2);
+        var v3 = src.Read(si + 3);
 
-        var c1 = 0;
-        var e1 = len1;
-        var c2 = base2;
-        var e2 = base2 + len2;
-        var o = base1;
+        // Stably create sorted pairs: a <= b from (v0,v1), c <= d from (v2,v3)
+        T a, b;
+        if (src.Compare(v1, v0) < 0) { a = v1; b = v0; } else { a = v0; b = v1; }
+        T c, d;
+        if (src.Compare(v3, v2) < 0) { c = v3; d = v2; } else { c = v2; d = v3; }
 
-        while (c1 < e1 && c2 < e2)
+        // Compare (a,c) and (b,d) to find overall min/max and the two unknowns.
+        var c3 = src.Compare(c, a) < 0;
+        var c4 = src.Compare(d, b) < 0;
+        var min = c3 ? c : a;
+        var max = c4 ? b : d;
+        var unkLeft = c3 ? a : (c4 ? c : b);
+        var unkRight = c4 ? d : (c3 ? b : c);
+
+        // Sort the two unknowns.
+        T lo, hi;
+        if (src.Compare(unkRight, unkLeft) < 0) { lo = unkRight; hi = unkLeft; } else { lo = unkLeft; hi = unkRight; }
+
+        dst.Write(di, min);
+        dst.Write(di + 1, lo);
+        dst.Write(di + 2, hi);
+        dst.Write(di + 3, max);
+    }
+
+    /// <summary>
+    /// Symmetric merge of two sorted runs of equal size <paramref name="k"/> from <paramref name="src"/>
+    /// into <paramref name="dst"/>. Reads from both begin and end simultaneously: each iteration
+    /// produces one element at the front and one element at the back of the output.
+    /// Exactly <paramref name="k"/> iterations produce exactly 2k outputs.
+    /// Matches the reference <c>final_merge_from_dst_into</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void SymmetricMerge<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> src, SortSpan<T, TComparer, TContext> dst,
+        int leftOff, int rightOff, int dstOff, int k)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var lb = leftOff;
+        var rb = rightOff;
+        var le = leftOff + k - 1;
+        var re = rightOff + k - 1;
+        var db = dstOff;
+        var de = dstOff + 2 * k - 1;
+
+        for (var i = 0; i < k; i++)
         {
-            var val1 = t.Read(c1);
-            var val2 = s.Read(c2);
-
-            if (s.Compare(val1, val2) <= 0)
+            // Merge at begin: pick smaller, ties → left (stability)
+            var lv = src.Read(lb);
+            var rv = src.Read(rb);
+            if (src.Compare(rv, lv) < 0)
             {
-                s.Write(o++, val1);
-                c1++;
+                dst.Write(db, rv);
+                rb++;
             }
             else
             {
-                s.Write(o++, val2);
-                c2++;
+                dst.Write(db, lv);
+                lb++;
             }
-        }
+            db++;
 
-        if (c1 < e1)
-        {
-            t.CopyTo(c1, s, o, e1 - c1);
+            // Merge at end: pick larger, ties → right (stability)
+            var lv2 = src.Read(le);
+            var rv2 = src.Read(re);
+            if (src.Compare(rv2, lv2) < 0)
+            {
+                dst.Write(de, lv2);
+                le--;
+            }
+            else
+            {
+                dst.Write(de, rv2);
+                re--;
+            }
+            de--;
         }
     }
 
     /// <summary>
-    /// Sorts 4 consecutive elements at [i..i+4) using a stable 5-comparison sorting network.
-    /// Network: (0,2)→(1,3)→(0,1)→(2,3)→(1,2). Always performs exactly 5 comparisons.
+    /// Interleaved double merge: merges 4 sorted groups of <paramref name="k"/> elements
+    /// (4k total) into 2 sorted groups of 2k. Two independent symmetric merges run
+    /// simultaneously for instruction-level parallelism.
+    /// Matches the reference <c>double_merge_from_src_to_dst</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void DoubleMerge<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> src, SortSpan<T, TComparer, TContext> dst,
+        int srcOff, int dstOff, int k)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        // Pair 0: src[srcOff..+k) + src[srcOff+k..+2k) → dst[dstOff..+2k)
+        var l0b = srcOff;
+        var r0b = srcOff + k;
+        var l0e = srcOff + k - 1;
+        var r0e = srcOff + 2 * k - 1;
+        var d0b = dstOff;
+        var d0e = dstOff + 2 * k - 1;
+
+        // Pair 1: src[srcOff+2k..+3k) + src[srcOff+3k..+4k) → dst[dstOff+2k..+4k)
+        var l1b = srcOff + 2 * k;
+        var r1b = srcOff + 3 * k;
+        var l1e = srcOff + 3 * k - 1;
+        var r1e = srcOff + 4 * k - 1;
+        var d1b = dstOff + 2 * k;
+        var d1e = dstOff + 4 * k - 1;
+
+        for (var i = 0; i < k; i++)
+        {
+            // Pair 0: merge at begin
+            {
+                var lv = src.Read(l0b);
+                var rv = src.Read(r0b);
+                if (src.Compare(rv, lv) < 0) { dst.Write(d0b++, rv); r0b++; }
+                else { dst.Write(d0b++, lv); l0b++; }
+            }
+            // Pair 1: merge at begin
+            {
+                var lv = src.Read(l1b);
+                var rv = src.Read(r1b);
+                if (src.Compare(rv, lv) < 0) { dst.Write(d1b++, rv); r1b++; }
+                else { dst.Write(d1b++, lv); l1b++; }
+            }
+            // Pair 0: merge at end
+            {
+                var lv = src.Read(l0e);
+                var rv = src.Read(r0e);
+                if (src.Compare(rv, lv) < 0) { dst.Write(d0e--, lv); l0e--; }
+                else { dst.Write(d0e--, rv); r0e--; }
+            }
+            // Pair 1: merge at end
+            {
+                var lv = src.Read(l1e);
+                var rv = src.Read(r1e);
+                if (src.Compare(rv, lv) < 0) { dst.Write(d1e--, lv); l1e--; }
+                else { dst.Write(d1e--, rv); r1e--; }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sorts 4 consecutive elements at [i..i+4) in-place using a stable 5-comparison sorting network.
+    /// Used when no scratch space is available (SmallSortPartial for n &lt; 8).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort4<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i)
@@ -1627,46 +1755,86 @@ public static class Glidesort
     }
 
     /// <summary>
-    /// Sorts 8 consecutive elements at [i..i+8) by sorting two groups of 4 then merging.
+    /// Sorts 8 consecutive elements at [i..i+8) using the Pow2SmallSort pipeline:
+    /// Sort4Into × 2 from s to t, then SymmetricMerge from t back to s.
+    /// Requires t to have capacity ≥ 8.
     /// </summary>
     private static void Sort8<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t, int i)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        Sort4(s, i);
-        Sort4(s, i + 4);
-        if (s.Compare(i + 3, i + 4) <= 0) return; // Already in order — skip merge.
-        MergeLow(s, t, i, 4, i + 4, 4);
+        // s → t: sort4 × 2 (2 groups of 4)
+        Sort4Into(s, t, i, 0);
+        Sort4Into(s, t, i + 4, 4);
+        // t → s: symmetric merge (1 group of 8)
+        SymmetricMerge(t, s, 0, 4, i, 4);
     }
 
     /// <summary>
-    /// Sorts 16 consecutive elements at [i..i+16) by sorting two groups of 8 then merging.
+    /// Sorts 16 consecutive elements at [i..i+16) using the Pow2SmallSort pipeline:
+    /// Sort4Into × 4, DoubleMerge to produce 2 groups of 8, then final merge back.
+    /// Requires t to have capacity ≥ 16.
     /// </summary>
     private static void Sort16<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t, int i)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        Sort8(s, t, i);
-        Sort8(s, t, i + 8);
-        if (s.Compare(i + 7, i + 8) <= 0) return; // Already in order — skip merge.
-        MergeLow(s, t, i, 8, i + 8, 8);
+        // s → t: sort4 × 4 (4 groups of 4)
+        Sort4Into(s, t, i, 0);
+        Sort4Into(s, t, i + 4, 4);
+        Sort4Into(s, t, i + 8, 8);
+        Sort4Into(s, t, i + 12, 12);
+
+        // t → s: double merge (4 groups of 4 → 2 groups of 8)
+        DoubleMerge(t, s, 0, i, 4);
+
+        // s → s: merge the 2 groups of 8 into 1 group of 16
+        // Copy left half to scratch, then forward merge.
+        s.CopyTo(i, t, 0, 8);
+        var c1 = 0;
+        var c2 = i + 8;
+        var o = i;
+        while (c1 < 8 && c2 < i + 16)
+        {
+            var v1 = t.Read(c1);
+            var v2 = s.Read(c2);
+            if (s.Compare(v1, v2) <= 0) { s.Write(o++, v1); c1++; }
+            else { s.Write(o++, v2); c2++; }
+        }
+        if (c1 < 8) { t.CopyTo(c1, s, o, 8 - c1); }
     }
 
     /// <summary>
-    /// Sorts 32 consecutive elements at [i..i+32) by sorting two groups of 16 then merging.
-    /// Requires t to have capacity ≥ 16 (used by the final MergeLow call).
+    /// Sorts 32 consecutive elements at [i..i+32) using the full Pow2SmallSort pipeline:
+    /// Sort4Into × 8, DoubleMerge × 2 (k=4), DoubleMerge × 1 (k=8), SymmetricMerge (k=16).
+    /// Uses s as a second bounce buffer after the initial out-of-place sort. Requires t capacity ≥ 32.
     /// </summary>
     private static void Sort32<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t, int i)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        Sort16(s, t, i);
-        Sort16(s, t, i + 16);
-        if (s.Compare(i + 15, i + 16) <= 0) return; // Already in order — skip merge.
-        MergeLow(s, t, i, 16, i + 16, 16);
+        // s → t: sort4 × 8 (8 groups of 4)
+        Sort4Into(s, t, i, 0);
+        Sort4Into(s, t, i + 4, 4);
+        Sort4Into(s, t, i + 8, 8);
+        Sort4Into(s, t, i + 12, 12);
+        Sort4Into(s, t, i + 16, 16);
+        Sort4Into(s, t, i + 20, 20);
+        Sort4Into(s, t, i + 24, 24);
+        Sort4Into(s, t, i + 28, 28);
+
+        // t → s: double merge × 2 (8 groups of 4 → 4 groups of 8)
+        DoubleMerge(t, s, 0, i, 4);
+        DoubleMerge(t, s, 16, i + 16, 4);
+
+        // s → t: double merge (4 groups of 8 → 2 groups of 16)
+        DoubleMerge(s, t, i, 0, 8);
+
+        // t → s: symmetric merge (2 groups of 16 → 1 group of 32)
+        SymmetricMerge(t, s, 0, 16, i, 16);
     }
 
     // Pivot Selection
