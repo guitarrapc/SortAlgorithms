@@ -149,7 +149,7 @@ public static class BatcherOddEvenMergeSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (s.Compare(i, j) > 0)
+        if (!s.IsLessOrEqualAt(i, j))
         {
             s.Swap(i, j);
         }

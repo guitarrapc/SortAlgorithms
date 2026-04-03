@@ -201,7 +201,7 @@ public static class BitonicSort
         where TContext : ISortContext
     {
         // Swap if i > j (wrong order for ascending)
-        if (s.Compare(i, j) > 0)
+        if (!s.IsLessOrEqualAt(i, j))
         {
             s.Swap(i, j);
         }
@@ -219,7 +219,7 @@ public static class BitonicSort
         where TContext : ISortContext
     {
         // Swap if i < j (wrong order for descending)
-        if (s.Compare(i, j) < 0)
+        if (s.IsLessAt(i, j))
         {
             s.Swap(i, j);
         }
@@ -428,7 +428,7 @@ public static class BitonicSortNonOptimized
         where TContext : ISortContext
     {
         // Swap if i > j (wrong order for ascending)
-        if (s.Compare(i, j) > 0)
+        if (!s.IsLessOrEqualAt(i, j))
         {
             s.Swap(i, j);
         }
@@ -446,7 +446,7 @@ public static class BitonicSortNonOptimized
         where TContext : ISortContext
     {
         // Swap if i < j (wrong order for descending)
-        if (s.Compare(i, j) < 0)
+        if (s.IsLessAt(i, j))
         {
             s.Swap(i, j);
         }
