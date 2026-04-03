@@ -699,17 +699,11 @@ public static class Glidesort
         {
             var val1 = s.Read(c1);
             var val2 = s.Read(c2);
-
-            if (s.IsLessOrEqual(val1, val2)) // IsLessOrEqual (val1 ≤ val2) takes val2 for stability
-            {
-                s.Write(o--, val2);
-                c2--;
-            }
-            else
-            {
-                s.Write(o--, val1);
-                c1--;
-            }
+            // val1 ≤ val2 → take right (val2) first; ties → right for backward-merge stability
+            int takeRight = s.IsLessOrEqual(val1, val2) ? 1 : 0;
+            s.Write(o--, takeRight != 0 ? val2 : val1);
+            c2 -= takeRight;
+            c1 -= 1 - takeRight;
         }
 
         // If right0 has remaining elements, copy them to the front of the output.
@@ -744,17 +738,11 @@ public static class Glidesort
         {
             var val1 = t.Read(c1);
             var val2 = s.Read(c2);
-
-            if (s.IsLessOrEqual(val1, val2)) // IsLessOrEqual (val1 ≤ val2) for stability
-            {
-                s.Write(o++, val1);
-                c1++;
-            }
-            else
-            {
-                s.Write(o++, val2);
-                c2++;
-            }
+            // val1 ≤ val2 → take left (val1); ties → left for stability
+            int takeLeft = s.IsLessOrEqual(val1, val2) ? 1 : 0;
+            s.Write(o++, takeLeft != 0 ? val1 : val2);
+            c1 += takeLeft;
+            c2 += 1 - takeLeft;
         }
 
         // If left1 has remaining elements in scratch, copy them to output.
@@ -787,17 +775,11 @@ public static class Glidesort
         {
             var v1 = s.Read(c1);
             var v2 = s.Read(c2);
-
-            if (s.IsLessOrEqual(v1, v2)) // IsLessOrEqual (v1 ≤ v2) for stability
-            {
-                t.Write(o++, v1);
-                c1++;
-            }
-            else
-            {
-                t.Write(o++, v2);
-                c2++;
-            }
+            // v1 ≤ v2 → take left (v1); ties → left for stability
+            int takeLeft = s.IsLessOrEqual(v1, v2) ? 1 : 0;
+            t.Write(o++, takeLeft != 0 ? v1 : v2);
+            c1 += takeLeft;
+            c2 += 1 - takeLeft;
         }
 
         while (c1 < e1) t.Write(o++, s.Read(c1++));
@@ -825,17 +807,11 @@ public static class Glidesort
         {
             var v1 = s.Read(c1);
             var v2 = t.Read(c2);
-
-            if (s.IsLessOrEqual(v1, v2)) // IsLessOrEqual (v1 ≤ v2) takes v2 for stability
-            {
-                s.Write(o--, v2);
-                c2--;
-            }
-            else
-            {
-                s.Write(o--, v1);
-                c1--;
-            }
+            // v1 ≤ v2 → take right (v2) first; ties → right for backward-merge stability
+            int takeRight = s.IsLessOrEqual(v1, v2) ? 1 : 0;
+            s.Write(o--, takeRight != 0 ? v2 : v1);
+            c2 -= takeRight;
+            c1 -= 1 - takeRight;
         }
 
         while (c2 >= 0)
@@ -866,17 +842,11 @@ public static class Glidesort
         {
             var v1 = t.Read(c1);
             var v2 = t.Read(c2);
-
-            if (s.IsLessOrEqual(v1, v2)) // IsLessOrEqual (v1 ≤ v2) for stability
-            {
-                s.Write(o++, v1);
-                c1++;
-            }
-            else
-            {
-                s.Write(o++, v2);
-                c2++;
-            }
+            // v1 ≤ v2 → take left (v1); ties → left for stability
+            int takeLeft = s.IsLessOrEqual(v1, v2) ? 1 : 0;
+            s.Write(o++, takeLeft != 0 ? v1 : v2);
+            c1 += takeLeft;
+            c2 += 1 - takeLeft;
         }
 
         while (c1 < e1) s.Write(o++, t.Read(c1++));
@@ -1627,35 +1597,21 @@ public static class Glidesort
 
         for (var i = 0; i < k; i++)
         {
-            // Merge at begin: pick smaller, ties → left (stability)
-            var lv = src.Read(lb);
-            var rv = src.Read(rb);
-            if (src.IsLessThan(rv, lv))
-            {
-                dst.Write(db, rv);
-                rb++;
-            }
-            else
-            {
-                dst.Write(db, lv);
-                lb++;
-            }
-            db++;
+            // Preload front and back values together to expose independent operations to the JIT.
+            var lvF = src.Read(lb);
+            var rvF = src.Read(rb);
+            var lvB = src.Read(le);
+            var rvB = src.Read(re);
 
-            // Merge at end: pick larger, ties → right (stability)
-            var lv2 = src.Read(le);
-            var rv2 = src.Read(re);
-            if (src.IsLessThan(rv2, lv2))
-            {
-                dst.Write(de, lv2);
-                le--;
-            }
-            else
-            {
-                dst.Write(de, rv2);
-                re--;
-            }
-            de--;
+            // Front: rv < lv → take right; otherwise take left (ties → left for stability)
+            int takeLeftF = src.IsLessThan(rvF, lvF) ? 0 : 1;
+            // Back: rv < lv → take left; otherwise take right (ties → right for stability)
+            int takeLeftB = src.IsLessThan(rvB, lvB) ? 1 : 0;
+
+            dst.Write(db++, takeLeftF != 0 ? lvF : rvF);
+            dst.Write(de--, takeLeftB != 0 ? lvB : rvB);
+            lb += takeLeftF;  rb += 1 - takeLeftF;
+            le -= takeLeftB;  re -= 1 - takeLeftB;
         }
     }
 
@@ -1690,34 +1646,31 @@ public static class Glidesort
 
         for (var i = 0; i < k; i++)
         {
-            // Pair 0: merge at begin
-            {
-                var lv = src.Read(l0b);
-                var rv = src.Read(r0b);
-                if (src.IsLessThan(rv, lv)) { dst.Write(d0b++, rv); r0b++; }
-                else { dst.Write(d0b++, lv); l0b++; }
-            }
-            // Pair 1: merge at begin
-            {
-                var lv = src.Read(l1b);
-                var rv = src.Read(r1b);
-                if (src.IsLessThan(rv, lv)) { dst.Write(d1b++, rv); r1b++; }
-                else { dst.Write(d1b++, lv); l1b++; }
-            }
-            // Pair 0: merge at end
-            {
-                var lv = src.Read(l0e);
-                var rv = src.Read(r0e);
-                if (src.IsLessThan(rv, lv)) { dst.Write(d0e--, lv); l0e--; }
-                else { dst.Write(d0e--, rv); r0e--; }
-            }
-            // Pair 1: merge at end
-            {
-                var lv = src.Read(l1e);
-                var rv = src.Read(r1e);
-                if (src.IsLessThan(rv, lv)) { dst.Write(d1e--, lv); l1e--; }
-                else { dst.Write(d1e--, rv); r1e--; }
-            }
+            // Preload all 8 values first to expose the four independent operations to the JIT.
+            var l0fv = src.Read(l0b);
+            var r0fv = src.Read(r0b);
+            var l1fv = src.Read(l1b);
+            var r1fv = src.Read(r1b);
+            var l0ev = src.Read(l0e);
+            var r0ev = src.Read(r0e);
+            var l1ev = src.Read(l1e);
+            var r1ev = src.Read(r1e);
+
+            // Front: rv < lv → take right; otherwise take left (ties → left for stability)
+            int takeL0f = src.IsLessThan(r0fv, l0fv) ? 0 : 1;
+            int takeL1f = src.IsLessThan(r1fv, l1fv) ? 0 : 1;
+            // Back: rv < lv → take left; otherwise take right (ties → right for stability)
+            int takeL0e = src.IsLessThan(r0ev, l0ev) ? 1 : 0;
+            int takeL1e = src.IsLessThan(r1ev, l1ev) ? 1 : 0;
+
+            dst.Write(d0b++, takeL0f != 0 ? l0fv : r0fv);
+            dst.Write(d1b++, takeL1f != 0 ? l1fv : r1fv);
+            dst.Write(d0e--, takeL0e != 0 ? l0ev : r0ev);
+            dst.Write(d1e--, takeL1e != 0 ? l1ev : r1ev);
+            l0b += takeL0f;  r0b += 1 - takeL0f;
+            l1b += takeL1f;  r1b += 1 - takeL1f;
+            l0e -= takeL0e;  r0e -= 1 - takeL0e;
+            l1e -= takeL1e;  r1e -= 1 - takeL1e;
         }
     }
 
