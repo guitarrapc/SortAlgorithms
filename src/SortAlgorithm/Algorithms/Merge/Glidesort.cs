@@ -7,36 +7,26 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// Glidesortは、TimSort系マージソートのプリソートデータに対する最良性能と、
-/// pattern-defeating quicksortの重複データに対する最良性能を組み合わせた安定ソートアルゴリズムです。
-/// 比較ベースのソートで任意の比較演算子をサポートし、パターン付きデータに優れる一方、ランダムデータにも非常に高速です。
+/// Powersort マージ木と安定双方向クイックソートを組み合わせたハイブリッド安定ソートです。
 /// <br/>
-/// Glidesort is a novel stable sorting algorithm that combines the best-case behavior of
-/// Timsort-style merge sorts for pre-sorted data with the best-case behavior of
-/// pattern-defeating quicksort for data with many duplicates.
-/// It is a comparison-based sort supporting arbitrary comparison operators, and while exceptional on data with patterns it is also very fast for random data.
+/// A hybrid stable sort combining a powersort merge tree with stable bidirectional quicksort.
 /// </summary>
 /// <remarks>
-/// <para><strong>Theoretical Conditions for Correct Glidesort:</strong></para>
+/// <para><strong>Algorithm:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Run Detection:</strong> The algorithm scans the input for natural runs (ascending or strictly descending).
-/// A run is considered significant if its length ≥ SMALL_SORT and run² ≥ n/2 (i.e., the run is proportionally large).
-/// Strictly descending runs are reversed in-place for stability. Short or insignificant sequences are treated as unsorted blocks.</description></item>
-/// <item><description><strong>Logical Runs:</strong> The algorithm uses three types of logical runs:
-/// Sorted (a physically sorted run), Unsorted (a block of SMALL_SORT elements not yet sorted),
-/// and DoubleSorted (two adjacent sorted runs that can be merged later).
-/// This deferred merge strategy reduces unnecessary data movement.</description></item>
-/// <item><description><strong>Powersort Merge Tree:</strong> Uses the Powersort heuristic to determine optimal merge order.
-/// For adjacent runs, the merge depth is computed using fixed-point arithmetic and leading-zero count,
-/// ensuring a nearly-optimal merge tree with O(log n) stack depth.</description></item>
-/// <item><description><strong>Logical Merge:</strong> Merges are performed logically before physically:
-/// two unsorted runs are concatenated if they fit in scratch; unsorted runs are quicksorted before merging;
-/// two sorted runs become DoubleSorted; triple and quad merges combine DoubleSorted runs efficiently.</description></item>
-/// <item><description><strong>Stable Quicksort:</strong> Unsorted blocks are sorted using a stable bidirectional quicksort
-/// that partitions into scratch space, maintaining stability. Uses median-of-3 pivot selection
-/// with recursive pseudo-median for large arrays.</description></item>
-/// <item><description><strong>Physical Merge:</strong> Uses merge reduction (shrinking already-sorted prefixes/suffixes)
-/// and split-merge techniques to reduce data movement. The smaller run is copied to scratch and merged back.</description></item>
+/// <item><description><strong>Run Detection:</strong> Scans for ascending or strictly descending runs.
+/// A run is accepted when length ≥ SMALL_SORT and run² ≥ remaining/2.
+/// Descending runs are reversed in-place.</description></item>
+/// <item><description><strong>Logical Runs:</strong> Three states: Sorted, Unsorted (deferred), DoubleSorted (deferred merge).
+/// Unsorted blocks are quicksorted only when they must be physically merged.</description></item>
+/// <item><description><strong>Powersort Merge Tree:</strong> Fixed-point depth comparison produces a near-optimal merge order
+/// with O(log n) stack depth.</description></item>
+/// <item><description><strong>Stable Quicksort:</strong> Stable bidirectional 2-way partition into scratch space.
+/// Pseudo-median-of-3 pivot. Recursion-limit fallback uses eager merge sort.</description></item>
+/// <item><description><strong>Block Insertion Sort:</strong> Branchless Sort4/8/16/32 sorting networks (Pow2SmallSort pipeline),
+/// then backward-merge block insertion for remaining elements.</description></item>
+/// <item><description><strong>Physical Merge:</strong> Iterative shrink-split with gap trick.
+/// Triple/quad merges reduce data movement for adjacent sorted pairs.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -48,17 +38,17 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n) - Guaranteed by powersort merge tree and bounded quicksort recursion</description></item>
 /// <item><description>Space       : O(n) default auxiliary buffer (scales down for very large arrays)</description></item>
 /// </list>
-/// <para><strong>Key Innovations:</strong></para>
+/// <para><strong>Differences from the Reference (Rust) Implementation:</strong></para>
 /// <list type="bullet">
-/// <item><description>Logical runs: defers physical sorting of unsorted blocks, reducing work when they get merged with larger sorted runs</description></item>
-/// <item><description>Powersort merge tree: provably near-optimal merge order for any run distribution</description></item>
-/// <item><description>Triple/quad merges: combines multiple merge operations to reduce data movement</description></item>
-/// <item><description>Duplicate handling: stable quicksort partitioning naturally handles many equal elements in O(n log k)</description></item>
+/// <item><description><strong>Scratch allocation:</strong> uses <see cref="System.Buffers.ArrayPool{T}"/> instead of stack allocation
+/// (<c>stackalloc</c> is not available for generic T in C#).</description></item>
+/// <item><description><strong>Sort16 final merge:</strong> uses copy-left-half + forward merge (16 scratch elements),
+/// whereas the reference uses DoubleMerge → SymmetricMerge (32 scratch elements).</description></item>
 /// </list>
 /// <para><strong>References:</strong></para>
 /// <para>GitHub: https://github.com/orlp/glidesort</para>
-/// <para>FOSDEM 2023 Talk: https://fosdem.org/2023/schedule/event/rust_glidesort/</para>
-/// <para>Powersort Paper: "Nearly-Optimal Mergesorts" by J. Ian Munro and Sebastian Wild (2018)</para>
+/// <para>FOSDEM 2023: https://fosdem.org/2023/schedule/event/rust_glidesort/</para>
+/// <para>Powersort: "Nearly-Optimal Mergesorts" — J. Ian Munro and Sebastian Wild (2018)</para>
 /// </remarks>
 public static class Glidesort
 {
@@ -894,10 +884,10 @@ public static class Glidesort
     }
 
     /// <summary>
-    /// Merges three adjacent sorted runs: [start..mid1), [mid1..mid2), [mid2..end).
-    /// Uses the gap trick when possible: merge the smaller pair into scratch, then
-    /// merge the result with the remaining run using the vacated gap as output space.
-    /// This saves one full copy compared to two sequential PhysicalMerge calls.
+    /// Merges three adjacent sorted runs: run0=[start..mid1), run1=[mid1..mid2), run2=[mid2..end).
+    /// Identifies the shorter outer run (run0 or run2), merges the pair containing it into scratch,
+    /// then uses the vacated gap to complete the final merge with the remaining outer run.
+    /// Falls back to two sequential <see cref="PhysicalMerge"/> calls when scratch is insufficient.
     /// </summary>
     private static void PhysicalTripleMerge<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
