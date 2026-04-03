@@ -209,13 +209,15 @@ public class GlidesortTests
         //
         // Actual observations for sorted data:
         // n=10:  21 comparisons, 20 writes, 0 swaps   (BlockInsertionSort: Sort8(18c,16w) + block[2](3c,4w))
-        // n=20:  51 comparisons, 56 writes, 0 swaps   (BlockInsertionSort: Sort16(44c,48w) + block[4](7c,8w))
+        // n=20:  59 comparisons, 56 writes, 0 swaps   (BlockInsertionSort: Sort16(52c,48w) + block[4](7c,8w))
+        //   Sort16 uses full Pow2SmallSort pipeline: Sort4Into×4 → DoubleMerge(k=4) → SymmetricMerge(k=8).
+        //   SymmetricMerge always performs k iterations × 2 comparisons = 16, regardless of input order.
         // n=50:  49 comparisons, 0 writes, 0 swaps    (Single ascending run detected)
         // n=100: 99 comparisons, 0 writes, 0 swaps    (Single ascending run detected)
         if (n < 48)
         {
             // BlockInsertionSort: branchless Sort4/8/16/32 pipelines write deterministically regardless of input order.
-            var expectedCompares = n == 10 ? 21UL : 51UL;
+            var expectedCompares = n == 10 ? 21UL : 59UL;
             var expectedWrites = n == 10 ? 20UL : 56UL;
             await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
             await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
@@ -250,7 +252,7 @@ public class GlidesortTests
         //
         // Actual observations for reversed data:
         // n=10:  27 comparisons, 30 writes, 0 swaps   (BlockInsertionSort)
-        // n=20:  66 comparisons, 89 writes, 0 swaps   (BlockInsertionSort)
+        // n=20:  74 comparisons, 81 writes, 0 swaps   (BlockInsertionSort: Sort16 SymmetricMerge pipeline)
         // n=50:  49 comparisons, 50 writes, 25 swaps   (Single descending run + reverse)
         // n=100: 99 comparisons, 100 writes, 50 swaps  (Single descending run + reverse)
         //

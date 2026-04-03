@@ -1568,11 +1568,10 @@ public static class Glidesort
     // - SymmetricMerge: merge two equal-sized sorted runs reading from both begin and end
     // - DoubleMerge: interleaved symmetric merge of two independent pairs for ILP
     //
-    // Pipeline data flow (sort32 example):
-    //   s → t : Sort4Into × 8  (8 groups of 4)
-    //   t → s : DoubleMerge × 2 (k=4)  (4 groups of 8)
-    //   s → t : DoubleMerge × 1 (k=8)  (2 groups of 16)
-    //   t → s : SymmetricMerge  (1 group of 32)
+    // Pipeline data flow:
+    //   sort8:  s → t : Sort4Into × 2                                → t → s : SymmetricMerge(k=4)
+    //   sort16: s → t[0..16) : Sort4Into × 4  → t[0..16) → t[16..32) : DoubleMerge(k=4)  → t[16..32) → s : SymmetricMerge(k=8)
+    //   sort32: s → t : Sort4Into × 8  → t → s : DoubleMerge × 2(k=4)  → s → t : DoubleMerge(k=8)  → t → s : SymmetricMerge(k=16)
 
     /// <summary>
     /// Out-of-place sort of 4 elements: reads src[si..si+4), writes sorted result to dst[di..di+4).
@@ -1767,37 +1766,58 @@ public static class Glidesort
 
     /// <summary>
     /// Sorts 16 consecutive elements at [i..i+16) using the Pow2SmallSort pipeline:
-    /// Sort4Into × 4, DoubleMerge to produce 2 groups of 8, then final merge back.
-    /// Requires t to have capacity ≥ 16.
+    /// Sort4Into × 4, DoubleMerge to produce 2 groups of 8, then SymmetricMerge back.
+    /// <para>
+    /// When t.Length ≥ 32, uses t[0..32) as two scratch regions (matching reference scratch0/scratch1):
+    /// Sort4Into → DoubleMerge(t→t) → SymmetricMerge(t→s).
+    /// </para>
+    /// <para>
+    /// When t.Length &lt; 32 (quicksort base case where scratch is sliced to n elements),
+    /// bounces through s and finishes with a copy-left-half forward merge.
+    /// The reference avoids this by allocating a separate 64-element stack scratch inside
+    /// block_insertion_sort (with_stack_scratch(64)), but C# cannot stackalloc generic T.
+    /// </para>
     /// </summary>
     private static void Sort16<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t, int i)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // s → t: sort4 × 4 (4 groups of 4)
+        // s → t[0..16): sort4 × 4 (4 groups of 4)
         Sort4Into(s, t, i, 0);
         Sort4Into(s, t, i + 4, 4);
         Sort4Into(s, t, i + 8, 8);
         Sort4Into(s, t, i + 12, 12);
 
-        // t → s: double merge (4 groups of 4 → 2 groups of 8)
-        DoubleMerge(t, s, 0, i, 4);
-
-        // s → s: merge the 2 groups of 8 into 1 group of 16
-        // Copy left half to scratch, then forward merge.
-        s.CopyTo(i, t, 0, 8);
-        var c1 = 0;
-        var c2 = i + 8;
-        var o = i;
-        while (c1 < 8 && c2 < i + 16)
+        if (t.Length >= 32)
         {
-            var v1 = t.Read(c1);
-            var v2 = s.Read(c2);
-            if (s.Compare(v1, v2) <= 0) { s.Write(o++, v1); c1++; }
-            else { s.Write(o++, v2); c2++; }
+            // Full pipeline (reference path): use t[0..16) and t[16..32) as scratch0/scratch1.
+            // t[0..16) → t[16..32): double merge (4 groups of 4 → 2 groups of 8)
+            DoubleMerge(t, t, 0, 16, 4);
+
+            // t[16..32) → s: symmetric merge (2 groups of 8 → 1 group of 16)
+            SymmetricMerge(t, s, 16, 24, i, 8);
         }
-        if (c1 < 8) { t.CopyTo(c1, s, o, 8 - c1); }
+        else
+        {
+            // Narrow scratch path: bounce through s, finish with copy-left + forward merge.
+            // t[0..16) → s: double merge (4 groups of 4 → 2 groups of 8)
+            DoubleMerge(t, s, 0, i, 4);
+
+            // s → s: merge 2 groups of 8 into 1 group of 16
+            s.CopyTo(i, t, 0, 8);
+            var c1 = 0;
+            var c2 = i + 8;
+            var o = i;
+            while (c1 < 8 && c2 < i + 16)
+            {
+                var v1 = t.Read(c1);
+                var v2 = s.Read(c2);
+                if (s.Compare(v1, v2) <= 0) { s.Write(o++, v1); c1++; }
+                else { s.Write(o++, v2); c2++; }
+            }
+            if (c1 < 8) { t.CopyTo(c1, s, o, 8 - c1); }
+        }
     }
 
     /// <summary>
