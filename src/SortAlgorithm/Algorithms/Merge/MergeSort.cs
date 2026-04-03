@@ -131,7 +131,7 @@ public static class MergeSort
 
         // Optimization: Skip merge if already sorted (left[last] <= right[first])
         // This dramatically improves performance on nearly-sorted data
-        if (s.Compare(mid, mid + 1) <= 0)
+        if (s.IsLessOrEqualAt(mid, mid + 1))
         {
             return; // Already sorted, no merge needed
         }
@@ -173,7 +173,7 @@ public static class MergeSort
             var rightValue = s.Read(r);
 
             // Stability: use <= to take from left when equal
-            if (s.Compare(leftValue, rightValue) <= 0)
+            if (s.IsLessOrEqual(leftValue, rightValue))
             {
                 s.Write(k, leftValue);
                 l++;

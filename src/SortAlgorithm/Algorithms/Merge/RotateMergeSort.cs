@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -141,12 +141,12 @@ public static class RotateMergeSort
                 var right = Math.Min(left + width * 2 - 1, n - 1);
 
                 // Already-sorted skip: left run's max ≤ right run's min → no merge needed.
-                if (s.Compare(mid, mid + 1) <= 0)
+                if (s.IsLessOrEqualAt(mid, mid + 1))
                     continue;
 
                 // Completely disjoint in reverse order: every left element > every right element → rotate entire run pair.
                 // Reverse-array inputs produce run pairs exactly in this form after Phase 1, so this skips all recursive merge work.
-                if (s.Compare(left, right) > 0)
+                if (!s.IsLessOrEqualAt(left, right))
                 {
                     Rotate(s, left, right, mid - left + 1);
                     continue;
@@ -194,10 +194,10 @@ public static class RotateMergeSort
 
             // Already-sorted skip: left run's max ≤ right run's min → merge is a no-op.
             // This catches trivial sub-problems produced by rotation (one side already in place).
-            if (s.Compare(m, m + 1) <= 0) continue;
+            if (s.IsLessOrEqualAt(m, m + 1)) continue;
 
             // Completely disjoint in reverse order: every left element > every right element → rotate sub-problem into place.
-            if (s.Compare(l, r) > 0)
+            if (!s.IsLessOrEqualAt(l, r))
             {
                 Rotate(s, l, r, len1);
                 continue;
@@ -261,7 +261,7 @@ public static class RotateMergeSort
         while (lo < hi)
         {
             var m = lo + (hi - lo) / 2;
-            if (s.Compare(m, keyIndex) < 0)
+            if (s.IsLessAt(m, keyIndex))
                 lo = m + 1;
             else
                 hi = m;
@@ -285,7 +285,7 @@ public static class RotateMergeSort
         while (lo < hi)
         {
             var m = lo + (hi - lo) / 2;
-            if (s.Compare(m, keyIndex) <= 0)
+            if (s.IsLessOrEqualAt(m, keyIndex))
                 lo = m + 1;
             else
                 hi = m;
@@ -492,14 +492,14 @@ public static class RotateMergeSortRecursive
         SortCore(s, mid + 1, right);
 
         // Optimization: Skip merge if already sorted (left[last] <= right[first])
-        if (s.Compare(mid, mid + 1) <= 0)
+        if (s.IsLessOrEqualAt(mid, mid + 1))
         {
             return; // Already sorted, no merge needed
         }
 
         // Completely disjoint in reverse order: every left element > every right element → rotate entire run pair.
         // Reverse-array inputs produce run pairs exactly in this form, so this skips all recursive merge work.
-        if (s.Compare(left, right) > 0)
+        if (!s.IsLessOrEqualAt(left, right))
         {
             Rotate(s, left, right, mid - left + 1);
             return;
@@ -524,10 +524,10 @@ public static class RotateMergeSortRecursive
         if (len1 == 0 || len2 == 0) return;
 
         // Already-sorted skip: left run's max ≤ right run's min → merge is a no-op.
-        if (s.Compare(mid, mid + 1) <= 0) return;
+        if (s.IsLessOrEqualAt(mid, mid + 1)) return;
 
         // Completely disjoint in reverse order: every left element > every right element → rotate sub-problem into place.
-        if (s.Compare(left, right) > 0)
+        if (!s.IsLessOrEqualAt(left, right))
         {
             Rotate(s, left, right, len1);
             return;
@@ -577,7 +577,7 @@ public static class RotateMergeSortRecursive
         while (lo < hi)
         {
             var m = lo + (hi - lo) / 2;
-            if (s.Compare(m, keyIndex) < 0)
+            if (s.IsLessAt(m, keyIndex))
                 lo = m + 1;
             else
                 hi = m;
@@ -599,7 +599,7 @@ public static class RotateMergeSortRecursive
         while (lo < hi)
         {
             var m = lo + (hi - lo) / 2;
-            if (s.Compare(m, keyIndex) <= 0)
+            if (s.IsLessOrEqualAt(m, keyIndex))
                 lo = m + 1;
             else
                 hi = m;
@@ -801,7 +801,7 @@ public static class RotateMergeSortNonOptimized
         SortCore(s, mid + 1, right);
 
         // Optimization: Skip merge if already sorted (left[last] <= right[first])
-        if (s.Compare(mid, mid + 1) <= 0)
+        if (s.IsLessOrEqualAt(mid, mid + 1))
         {
             return; // Already sorted, no merge needed
         }
@@ -825,7 +825,7 @@ public static class RotateMergeSortNonOptimized
         if (len1 == 0 || len2 == 0) return;
 
         // Already-sorted skip: left run's max ≤ right run's min → merge is a no-op.
-        if (s.Compare(mid, mid + 1) <= 0) return;
+        if (s.IsLessOrEqualAt(mid, mid + 1)) return;
 
         if (len1 == 1 && len2 == 1)
         {
@@ -871,7 +871,7 @@ public static class RotateMergeSortNonOptimized
         while (lo < hi)
         {
             var m = lo + (hi - lo) / 2;
-            if (s.Compare(m, keyIndex) < 0)
+            if (s.IsLessAt(m, keyIndex))
                 lo = m + 1;
             else
                 hi = m;
@@ -893,7 +893,7 @@ public static class RotateMergeSortNonOptimized
         while (lo < hi)
         {
             var m = lo + (hi - lo) / 2;
-            if (s.Compare(m, keyIndex) <= 0)
+            if (s.IsLessOrEqualAt(m, keyIndex))
                 lo = m + 1;
             else
                 hi = m;

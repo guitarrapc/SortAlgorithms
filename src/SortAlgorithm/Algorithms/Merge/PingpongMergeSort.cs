@@ -162,7 +162,7 @@ public static class PingpongMergeSort
 
         // Optimization: if src[mid] <= src[mid+1] the range is already sorted.
         // Copy src directly to dst instead of merging (1 comparison, n writes).
-        if (src.Compare(mid, mid + 1) <= 0)
+        if (src.IsLessOrEqualAt(mid, mid + 1))
         {
             src.CopyTo(left, dst, left, right - left + 1);
             return;
@@ -202,7 +202,7 @@ public static class PingpongMergeSort
             var rightValue = src.Read(r);
 
             // Stability: use <= to take from left when equal
-            if (src.Compare(leftValue, rightValue) <= 0)
+            if (src.IsLessOrEqual(leftValue, rightValue))
             {
                 dst.Write(k, leftValue);
                 l++;
