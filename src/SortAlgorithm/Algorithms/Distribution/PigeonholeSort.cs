@@ -292,8 +292,8 @@ public static class PigeonholeSortInteger
         for (var i = 0; i < s.Length; i++)
         {
             var value = s.Read(i);
-            if (s.Compare(value, minValue) < 0) minValue = value;
-            if (s.Compare(value, maxValue) > 0) maxValue = value;
+            if (s.IsLessThan(value, minValue)) minValue = value;
+            if (!s.IsLessOrEqual(value, maxValue)) maxValue = value;
         }
 
         // If all elements are the same, no need to sort
