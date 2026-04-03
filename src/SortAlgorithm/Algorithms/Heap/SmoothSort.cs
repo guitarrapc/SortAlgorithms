@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -243,7 +243,7 @@ public static class SmoothSort
             Debug.Assert(r2 >= 0 && r2 < s.Length, $"Shift: r2={r2} out of bounds [0, {s.Length})");
             Debug.Assert(r1 > 0, $"Shift: r1={r1} must be > 0 for (r1 - 1) comparison");
 
-            if (!s.IsLessOrEqualAt(r1 - 1, r2))
+            if (s.IsGreaterAt(r1 - 1, r2))
             {
                 r2 = r1 - 1;
                 Down(ref b1, ref c1);
@@ -329,7 +329,7 @@ public static class SmoothSort
                         Debug.Assert(r2 >= 0 && r2 < s.Length, $"Trinkle: r2={r2} out of bounds [0, {s.Length})");
                         Debug.Assert(r1 > 0, $"Trinkle: r1={r1} must be > 0 for (r1 - 1) comparison");
 
-                        if (!s.IsLessOrEqualAt(r1 - 1, r2))
+                        if (s.IsGreaterAt(r1 - 1, r2))
                         {
                             r2 = r1 - 1;
                             Down(ref b1, ref c1);
@@ -382,7 +382,7 @@ public static class SmoothSort
         int r1 = r - c;
         Debug.Assert(r1 >= 0 && r1 < s.Length, $"SemiTrinkle: r1={r1} (r - c) out of bounds [0, {s.Length})");
 
-        if (!s.IsLessOrEqualAt(r1, r))
+        if (s.IsGreaterAt(r1, r))
         {
             s.Swap(r, r1);
             Trinkle(s, p, b, c, r1);

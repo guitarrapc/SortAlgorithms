@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 
@@ -288,13 +288,13 @@ public static class TimSort
         if (runHi >= hi)
             return 1;
 
-        if (!s.IsLessOrEqualAt(lo, runHi))
+        if (s.IsGreaterAt(lo, runHi))
         {
             // Strictly descending run
             do
             {
                 runHi++;
-            } while (runHi < hi && !s.IsLessOrEqualAt(runHi - 1, runHi));
+            } while (runHi < hi && s.IsGreaterAt(runHi - 1, runHi));
             // Reverse the descending run to make it ascending
             Reverse(s, lo, runHi - 1);
         }
@@ -780,7 +780,7 @@ public static class TimSort
                 var val1 = s.Read(cursor1);
                 var val2 = t.Read(cursor2);
 
-                if (!s.IsLessThan(val2, val1))
+                if (s.IsGreaterOrEqual(val2, val1))
                 {
                     s.Write(dest--, val2);
                     cursor2--;

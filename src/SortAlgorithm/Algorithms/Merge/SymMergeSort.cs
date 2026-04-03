@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -270,7 +270,7 @@ public static class SymMergeSort
         while (lo < hi)
         {
             var c = (int)((uint)(lo + hi) >> 1);
-            if (!s.IsLessAt(p - c, c))
+            if (s.IsGreaterOrEqualAt(p - c, c))
                 lo = c + 1;
             else
                 hi = c;

@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -157,10 +157,10 @@ public static class StdSort
         where TContext : ISortContext
     {
         // if x <= y
-        if (!s.IsLessAt(y, x))
+        if (s.IsGreaterOrEqualAt(y, x))
         {
             // if y <= z: x <= y <= z (already sorted)
-            if (!s.IsLessAt(z, y))
+            if (s.IsGreaterOrEqualAt(z, y))
                 return;
 
             // x <= y && y > z
@@ -324,7 +324,7 @@ public static class StdSort
             // that all the elements in [first, pivot] *would be* equal to the pivot,
             // assuming the equal elements are put on the left side when partitioned.
             // This means we do not need to sort the left side of the partition.
-            if (!leftmost && !s.IsLessAt(first - 1, first))
+            if (!leftmost && s.IsGreaterOrEqualAt(first - 1, first))
             {
                 s.Context.OnPhase(SortPhase.QuickSortPartition, first, last - 1, first);
                 s.Context.OnRole(first, BUFFER_MAIN, RoleType.Pivot);

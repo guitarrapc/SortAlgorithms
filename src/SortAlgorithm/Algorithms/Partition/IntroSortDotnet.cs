@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -184,7 +184,7 @@ public static class IntroSortDotnet
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (!s.IsLessOrEqualAt(i, j))
+        if (s.IsGreaterAt(i, j))
         {
             s.Swap(i, j);
         }

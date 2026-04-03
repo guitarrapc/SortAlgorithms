@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -159,7 +159,7 @@ public static class DoubleSelectionSort
                     min = i;
                     s.Context.OnRole(min, BUFFER_MAIN, RoleType.CurrentMin);
                 }
-                if (!s.IsLessOrEqualAt(i, max))
+                if (s.IsGreaterAt(i, max))
                 {
                     s.Context.OnRole(max, BUFFER_MAIN, RoleType.None);
                     max = i;

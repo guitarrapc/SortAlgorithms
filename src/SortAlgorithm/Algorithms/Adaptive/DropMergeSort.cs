@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 
@@ -236,7 +236,7 @@ public static class DropMergeSort
                 }
             }
 
-            if (write == 0 || !s.IsLessAt(read, write - 1))
+            if (write == 0 || s.IsGreaterOrEqualAt(read, write - 1))
             {
                 // The element is in order - keep it:
                 if (read != write)
@@ -264,7 +264,7 @@ public static class DropMergeSort
                 if (DoubleComparisons
                     && droppedInRow == 0
                     && 2 <= write
-                    && !s.IsLessAt(read, write - 2))
+                    && s.IsGreaterOrEqualAt(read, write - 2))
                 {
                     // Quick undo: drop previously accepted element, and overwrite with new one:
                     dropped.Write(droppedCount++, s.Read(write - 1));
@@ -371,7 +371,7 @@ public static class DropMergeSort
         for (var i = 1; i < count; i++)
         {
             var current = s.Read(start + i);
-            if (!s.IsLessOrEqual(current, max))
+            if (s.IsGreaterThan(current, max))
             {
                 max = current;
             }

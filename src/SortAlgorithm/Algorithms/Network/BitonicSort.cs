@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -201,7 +201,7 @@ public static class BitonicSort
         where TContext : ISortContext
     {
         // Swap if i > j (wrong order for ascending)
-        if (!s.IsLessOrEqualAt(i, j))
+        if (s.IsGreaterAt(i, j))
         {
             s.Swap(i, j);
         }
@@ -428,7 +428,7 @@ public static class BitonicSortNonOptimized
         where TContext : ISortContext
     {
         // Swap if i > j (wrong order for ascending)
-        if (!s.IsLessOrEqualAt(i, j))
+        if (s.IsGreaterAt(i, j))
         {
             s.Swap(i, j);
         }

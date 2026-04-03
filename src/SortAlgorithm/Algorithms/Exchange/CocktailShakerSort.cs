@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -88,7 +88,7 @@ public static class CocktailShakerSort
             var lastSwapIndex = min;
             for (var i = min; i < max; i++)
             {
-                if (!s.IsLessOrEqualAt(i, i + 1))
+                if (s.IsGreaterAt(i, i + 1))
                 {
                     s.Swap(i, i + 1);
                     lastSwapIndex = i;
@@ -107,7 +107,7 @@ public static class CocktailShakerSort
             lastSwapIndex = max;
             for (var i = max; i > min; i--)
             {
-                if (!s.IsLessOrEqualAt(i - 1, i))
+                if (s.IsGreaterAt(i - 1, i))
                 {
                     s.Swap(i - 1, i);
                     lastSwapIndex = i;
@@ -208,7 +208,7 @@ public static class CocktailShakerSortNonOptimized
             context.OnRole(hi, BUFFER_MAIN, RoleType.RightPointer);
             for (int j = i; j < s.Length - i - 1; j++)
             {
-                if (!s.IsLessOrEqualAt(j, j + 1))
+                if (s.IsGreaterAt(j, j + 1))
                 {
                     s.Swap(j, j + 1);
                     swapped = true;

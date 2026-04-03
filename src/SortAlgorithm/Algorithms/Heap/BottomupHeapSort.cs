@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -244,7 +244,7 @@ public static class BottomupHeapSort
 
             // Select the larger child to continue descent
             var largerChild = left;
-            if (right < offset + size && !s.IsLessOrEqualAt(right, left))
+            if (right < offset + size && s.IsGreaterAt(right, left))
             {
                 largerChild = right;
             }
@@ -306,7 +306,7 @@ public static class BottomupHeapSort
         while (child < offset + size)
         {
             // Find larger child
-            if (child + 1 < offset + size && !s.IsLessOrEqualAt(child + 1, child))
+            if (child + 1 < offset + size && s.IsGreaterAt(child + 1, child))
             {
                 child++;
             }

@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -206,7 +206,7 @@ public static class HeapSort
         while (child < offset + size)
         {
             // Find larger child
-            if (child + 1 < offset + size && !s.IsLessOrEqualAt(child + 1, child))
+            if (child + 1 < offset + size && s.IsGreaterAt(child + 1, child))
             {
                 child++;
             }
@@ -219,7 +219,7 @@ public static class HeapSort
 
         // Phase 2: Sift up the original root value to its correct position
         var parent = offset + (hole - offset - 1) / 2;
-        while (hole > root && !s.IsLessOrEqual(rootValue, s.Read(parent)))
+        while (hole > root && s.IsGreaterThan(rootValue, s.Read(parent)))
         {
             s.Write(hole, s.Read(parent));
             hole = parent;
@@ -252,7 +252,7 @@ public static class HeapSort
             if (left >= offset + size) break;
 
             // Find larger child
-            var largest = (right < offset + size && !s.IsLessOrEqualAt(right, left)) ? right : left;
+            var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
 
             // If value is already >= largest child, heap property is satisfied
             if (s.Compare(value, largest) >= 0) break;
@@ -456,13 +456,13 @@ public static class HeapSortNonOptimized
             var right = 2 * (root - offset) + 2 + offset;
 
             // If left child is larger than root
-            if (left < offset + size && !s.IsLessOrEqualAt(left, largest))
+            if (left < offset + size && s.IsGreaterAt(left, largest))
             {
                 largest = left;
             }
 
             // If right child is larger than largest so far
-            if (right < offset + size && !s.IsLessOrEqualAt(right, largest))
+            if (right < offset + size && s.IsGreaterAt(right, largest))
             {
                 largest = right;
             }

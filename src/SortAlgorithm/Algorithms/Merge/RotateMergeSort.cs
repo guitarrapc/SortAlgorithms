@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -146,7 +146,7 @@ public static class RotateMergeSort
 
                 // Completely disjoint in reverse order: every left element > every right element → rotate entire run pair.
                 // Reverse-array inputs produce run pairs exactly in this form after Phase 1, so this skips all recursive merge work.
-                if (!s.IsLessOrEqualAt(left, right))
+                if (s.IsGreaterAt(left, right))
                 {
                     Rotate(s, left, right, mid - left + 1);
                     continue;
@@ -197,7 +197,7 @@ public static class RotateMergeSort
             if (s.IsLessOrEqualAt(m, m + 1)) continue;
 
             // Completely disjoint in reverse order: every left element > every right element → rotate sub-problem into place.
-            if (!s.IsLessOrEqualAt(l, r))
+            if (s.IsGreaterAt(l, r))
             {
                 Rotate(s, l, r, len1);
                 continue;
@@ -499,7 +499,7 @@ public static class RotateMergeSortRecursive
 
         // Completely disjoint in reverse order: every left element > every right element → rotate entire run pair.
         // Reverse-array inputs produce run pairs exactly in this form, so this skips all recursive merge work.
-        if (!s.IsLessOrEqualAt(left, right))
+        if (s.IsGreaterAt(left, right))
         {
             Rotate(s, left, right, mid - left + 1);
             return;
@@ -527,7 +527,7 @@ public static class RotateMergeSortRecursive
         if (s.IsLessOrEqualAt(mid, mid + 1)) return;
 
         // Completely disjoint in reverse order: every left element > every right element → rotate sub-problem into place.
-        if (!s.IsLessOrEqualAt(left, right))
+        if (s.IsGreaterAt(left, right))
         {
             Rotate(s, left, right, len1);
             return;

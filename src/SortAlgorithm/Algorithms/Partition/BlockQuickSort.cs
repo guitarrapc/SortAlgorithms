@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -408,7 +408,7 @@ public static class BlockQuickSort
                 for (var j = 0; j < BLOCKSIZE; j++)
                 {
                     // Store index only if element >= pivot
-                    if (!s.IsLessAt(begin + j, pivotEnd))
+                    if (s.IsGreaterOrEqualAt(begin + j, pivotEnd))
                     {
                         sIndexL.Write(numLeft, j);
                         numLeft++;
@@ -424,7 +424,7 @@ public static class BlockQuickSort
                 for (var j = 0; j < BLOCKSIZE; j++)
                 {
                     // Store index only if element <= pivot
-                    if (!s.IsLessAt(pivotEnd, end - j))
+                    if (s.IsGreaterOrEqualAt(pivotEnd, end - j))
                     {
                         sIndexR.Write(numRight, j);
                         numRight++;
@@ -464,14 +464,14 @@ public static class BlockQuickSort
             for (var j = 0; j < shiftL; j++)
             {
                 // Left: store index only if element >= pivot
-                if (!s.IsLessAt(begin + j, pivotEnd))
+                if (s.IsGreaterOrEqualAt(begin + j, pivotEnd))
                 {
                     sIndexL.Write(numLeft, j);
                     numLeft++;
                 }
 
                 // Right: store index only if element <= pivot
-                if (!s.IsLessAt(pivotEnd, end - j))
+                if (s.IsGreaterOrEqualAt(pivotEnd, end - j))
                 {
                     sIndexR.Write(numRight, j);
                     numRight++;
@@ -481,7 +481,7 @@ public static class BlockQuickSort
             if (shiftL < shiftR)
             {
                 // Right: store index only if last element <= pivot
-                if (!s.IsLessAt(pivotEnd, end - shiftR + 1))
+                if (s.IsGreaterOrEqualAt(pivotEnd, end - shiftR + 1))
                 {
                     sIndexR.Write(numRight, shiftR - 1);
                     numRight++;
@@ -498,7 +498,7 @@ public static class BlockQuickSort
             for (var j = 0; j < shiftL; j++)
             {
                 // Left: store index only if element >= pivot
-                if (!s.IsLessAt(begin + j, pivotEnd))
+                if (s.IsGreaterOrEqualAt(begin + j, pivotEnd))
                 {
                     sIndexL.Write(numLeft, j);
                     numLeft++;
@@ -515,7 +515,7 @@ public static class BlockQuickSort
             for (var j = 0; j < shiftR; j++)
             {
                 // Right: store index only if element <= pivot
-                if (!s.IsLessAt(pivotEnd, end - j))
+                if (s.IsGreaterOrEqualAt(pivotEnd, end - j))
                 {
                     sIndexR.Write(numRight, j);
                     numRight++;
@@ -615,9 +615,9 @@ public static class BlockQuickSort
     where TContext : ISortContext
     {
         // Sort pairs to find median
-        if (!s.IsLessOrEqualAt(i1, i2)) s.Swap(i1, i2);
-        if (!s.IsLessOrEqualAt(i2, i3)) s.Swap(i2, i3);
-        if (!s.IsLessOrEqualAt(i1, i2)) s.Swap(i1, i2);
+        if (s.IsGreaterAt(i1, i2)) s.Swap(i1, i2);
+        if (s.IsGreaterAt(i2, i3)) s.Swap(i2, i3);
+        if (s.IsGreaterAt(i1, i2)) s.Swap(i1, i2);
 
         return i2;
     }
@@ -636,9 +636,9 @@ public static class BlockQuickSort
         where TContext : ISortContext
     {
         // Sort pairs to find median (i2 will be the pivot)
-        if (!s.IsLessOrEqualAt(i1, i2)) s.Swap(i1, i2);
-        if (!s.IsLessOrEqualAt(i2, i3)) s.Swap(i2, i3);
-        if (!s.IsLessOrEqualAt(i1, i2)) s.Swap(i1, i2);
+        if (s.IsGreaterAt(i1, i2)) s.Swap(i1, i2);
+        if (s.IsGreaterAt(i2, i3)) s.Swap(i2, i3);
+        if (s.IsGreaterAt(i1, i2)) s.Swap(i1, i2);
 
         // After sorting network: i1 <= i2 <= i3, pivot is i2
         // Check if pivot value appears at least twice (exact paper condition)
@@ -847,7 +847,7 @@ public static class BlockQuickSort
             while (i <= j)
             {
                 while (i < right - 1 && s.IsLessAt(i, pivotPos)) i++;
-                while (j > left && !s.IsLessOrEqualAt(j, pivotPos)) j--;
+                while (j > left && s.IsGreaterAt(j, pivotPos)) j--;
 
                 if (i <= j)
                 {

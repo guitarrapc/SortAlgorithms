@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -229,7 +229,7 @@ public static class DualPivotQuickSort
             if (length < PivotThreshold)
             {
                 // Simple pivot selection: use left and right as pivots
-                if (!s.IsLessOrEqualAt(left, right))
+                if (s.IsGreaterAt(left, right))
                 {
                     s.Swap(left, right);
                 }

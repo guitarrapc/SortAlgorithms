@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -240,7 +240,7 @@ public static class WeakHeapSort
         where TContext : ISortContext
     {
         Debug.Assert(j > 0, "j must be > 0 in Merge (FlipBit requires j>0).");
-        if (!s.IsLessOrEqualAt(offset + j, offset + i))
+        if (s.IsGreaterAt(offset + j, offset + i))
         {
             s.Swap(offset + i, offset + j);
             FlipBit(r, j);

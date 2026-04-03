@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
@@ -316,10 +316,10 @@ public static class PowerSort
         }
 
         // Check if descending
-        if (!s.IsLessOrEqualAt(start, runEnd))
+        if (s.IsGreaterAt(start, runEnd))
         {
             // Strictly descending run
-            while (runEnd < last && !s.IsLessOrEqualAt(runEnd - 1, runEnd))
+            while (runEnd < last && s.IsGreaterAt(runEnd - 1, runEnd))
             {
                 runEnd++;
             }

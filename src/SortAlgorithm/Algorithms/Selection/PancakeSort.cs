@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -136,7 +136,7 @@ public static class PancakeSort
             s.Context.OnRole(maxIndex, BUFFER_MAIN, RoleType.CurrentMax);
             for (var i = first + 1; i < currentSize; i++)
             {
-                if (!s.IsLessOrEqualAt(i, maxIndex))
+                if (s.IsGreaterAt(i, maxIndex))
                 {
                     s.Context.OnRole(maxIndex, BUFFER_MAIN, RoleType.None);
                     maxIndex = i;
@@ -170,7 +170,7 @@ public static class PancakeSort
         var maxIndex = first;
         for (var i = first + 1; i < last; i++)
         {
-            if (!s.IsLessOrEqualAt(i, maxIndex))
+            if (s.IsGreaterAt(i, maxIndex))
             {
                 maxIndex = i;
             }

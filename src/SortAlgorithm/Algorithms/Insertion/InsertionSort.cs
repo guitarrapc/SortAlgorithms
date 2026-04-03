@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -180,7 +180,7 @@ public static class InsertionSort
             while (j >= first)
             {
                 var a = s.Read(j);
-                if (!s.IsLessOrEqual(a, tmp))
+                if (s.IsGreaterThan(a, tmp))
                 {
                     s.Write(j + 1, a);
                     j--;
@@ -235,7 +235,7 @@ public static class InsertionSort
             while (true)
             {
                 var a = s.Read(j);
-                if (!s.IsLessOrEqual(a, tmp))
+                if (s.IsGreaterThan(a, tmp))
                 {
                     s.Write(j + 1, a);
                     j--;
@@ -337,7 +337,7 @@ public static class InsertionSort
                     while (j >= first)
                     {
                         var a = s.Read(j);
-                        if (!s.IsLessOrEqual(a, tmp))
+                        if (s.IsGreaterThan(a, tmp))
                         {
                             s.Write(j + 1, a);
                             j--;
@@ -371,7 +371,7 @@ public static class InsertionSort
                     while (true)
                     {
                         var a = s.Read(j);
-                        if (!s.IsLessOrEqual(a, tmp))
+                        if (s.IsGreaterThan(a, tmp))
                         {
                             s.Write(j + 1, a);
                             j--;
@@ -602,7 +602,7 @@ public static class InsertionSortNonOptimized
             // Move the element at position i backward until it's in the correct position
             // Use strict inequality (>) to maintain stability - equal elements are not swapped
             var j = i;
-            while (j > first && !s.IsLessOrEqualAt(j - 1, j))
+            while (j > first && s.IsGreaterAt(j - 1, j))
             {
                 s.Swap(j - 1, j);
                 j--;

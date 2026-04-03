@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -157,7 +157,7 @@ public static class PairInsertionSort
 
             // Ensure a <= b (swap if necessary)
             // This pre-sorting of the pair reduces comparisons later
-            if (!s.IsLessOrEqual(a, b))
+            if (s.IsGreaterThan(a, b))
             {
                 // Swap so that a is smaller
                 (a, b) = (b, a);
@@ -245,7 +245,7 @@ public static class PairInsertionSort
             var b = s.Read(i + 1);
 
             // Ensure a <= b
-            if (!s.IsLessOrEqual(a, b))
+            if (s.IsGreaterThan(a, b))
             {
                 (a, b) = (b, a);
             }

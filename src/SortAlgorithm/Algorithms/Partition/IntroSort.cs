@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -494,27 +494,27 @@ public static class IntroSort
         // We'll use a simplified approach: sort pairs, then find median
 
         // First, sort pairs: (i1, i2), (i3, i4)
-        if (!s.IsLessOrEqualAt(i1, i2)) (i1, i2) = (i2, i1);
-        if (!s.IsLessOrEqualAt(i3, i4)) (i3, i4) = (i4, i3);
+        if (s.IsGreaterAt(i1, i2)) (i1, i2) = (i2, i1);
+        if (s.IsGreaterAt(i3, i4)) (i3, i4) = (i4, i3);
 
         // Now i1 <= i2 and i3 <= i4
         // Find median of i2, i3, i5 (this will be in the middle range)
-        if (!s.IsLessOrEqualAt(i2, i5)) (i2, i5) = (i5, i2);
-        if (!s.IsLessOrEqualAt(i2, i3)) (i2, i3) = (i3, i2);
+        if (s.IsGreaterAt(i2, i5)) (i2, i5) = (i5, i2);
+        if (s.IsGreaterAt(i2, i3)) (i2, i3) = (i3, i2);
 
         // Now we need the median of the remaining elements
         // We know: i1 <= i2, i3 <= i4, and i2 is constrained
         // The median is the 3rd element when sorted
 
-        if (!s.IsLessOrEqualAt(i1, i3)) (i1, i3) = (i3, i1);
+        if (s.IsGreaterAt(i1, i3)) (i1, i3) = (i3, i1);
         // i1 is now the minimum of {i1, i3}
 
-        if (!s.IsLessOrEqualAt(i2, i3)) (i2, i3) = (i3, i2);
+        if (s.IsGreaterAt(i2, i3)) (i2, i3) = (i3, i2);
         // i2 is now <= i3
 
-        if (!s.IsLessOrEqualAt(i2, i4))
+        if (s.IsGreaterAt(i2, i4))
         {
-            if (!s.IsLessOrEqualAt(i3, i4))
+            if (s.IsGreaterAt(i3, i4))
             {
                 return i4;
             }

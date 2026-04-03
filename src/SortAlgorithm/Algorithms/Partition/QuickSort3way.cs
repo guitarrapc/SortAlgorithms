@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -171,9 +171,9 @@ public static class QuickSort3way
 
             // Median-of-3 pivot selection: sort left, mid, right in place
             int mid = left + ((right - left) >> 1);
-            if (!s.IsLessOrEqualAt(left, mid)) s.Swap(left, mid);
-            if (!s.IsLessOrEqualAt(left, right)) s.Swap(left, right);
-            if (!s.IsLessOrEqualAt(mid, right)) s.Swap(mid, right);
+            if (s.IsGreaterAt(left, mid)) s.Swap(left, mid);
+            if (s.IsGreaterAt(left, right)) s.Swap(left, right);
+            if (s.IsGreaterAt(mid, right)) s.Swap(mid, right);
             // Bring median to left as the pivot
             s.Swap(mid, left);
 

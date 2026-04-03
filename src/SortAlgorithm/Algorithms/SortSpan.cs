@@ -347,6 +347,152 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     }
 
     /// <summary>
+    /// Returns true if <paramref name="a"/> is strictly greater than <paramref name="b"/>.
+    /// Equivalent to <c>Compare(a, b) &gt; 0</c> and logically identical to <c>!IsLessOrEqual(a, b)</c>,
+    /// but provided for readability at call sites that naturally express "greater than" semantics.
+    /// For <see cref="ComparableComparer{T}"/> with primitive <typeparamref name="T"/> and <see cref="NullContext"/>,
+    /// uses a direct primitive comparison, avoiding IComparer dispatch.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsGreaterThan(T a, T b)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var result = _comparer.Compare(a, b);
+            _context.OnCompare(-1, -1, result, -1, -1);
+            return result > 0;
+        }
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref a) > Unsafe.As<T, byte>(ref b);
+            if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref a) > Unsafe.As<T, sbyte>(ref b);
+            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref a) > Unsafe.As<T, ushort>(ref b);
+            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref a) > Unsafe.As<T, short>(ref b);
+            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref a) > Unsafe.As<T, uint>(ref b);
+            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref a) > Unsafe.As<T, int>(ref b);
+            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref a) > Unsafe.As<T, ulong>(ref b);
+            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref a) > Unsafe.As<T, long>(ref b);
+            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref a) > Unsafe.As<T, nuint>(ref b);
+            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref a) > Unsafe.As<T, nint>(ref b);
+            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) > Unsafe.As<T, float>(ref b);
+            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) > Unsafe.As<T, double>(ref b);
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) > Unsafe.As<T, Half>(ref b);
+        }
+        return _comparer.Compare(a, b) > 0;
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="a"/> is greater than or equal to <paramref name="b"/>.
+    /// Equivalent to <c>Compare(a, b) &gt;= 0</c> and logically identical to <c>!IsLessThan(a, b)</c>,
+    /// but provided for readability at call sites that naturally express "greater or equal" semantics.
+    /// For <see cref="ComparableComparer{T}"/> with primitive <typeparamref name="T"/> and <see cref="NullContext"/>,
+    /// uses a direct primitive comparison, avoiding IComparer dispatch.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsGreaterOrEqual(T a, T b)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var result = _comparer.Compare(a, b);
+            _context.OnCompare(-1, -1, result, -1, -1);
+            return result >= 0;
+        }
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref a) >= Unsafe.As<T, byte>(ref b);
+            if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref a) >= Unsafe.As<T, sbyte>(ref b);
+            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref a) >= Unsafe.As<T, ushort>(ref b);
+            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref a) >= Unsafe.As<T, short>(ref b);
+            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref a) >= Unsafe.As<T, uint>(ref b);
+            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref a) >= Unsafe.As<T, int>(ref b);
+            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref a) >= Unsafe.As<T, ulong>(ref b);
+            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref a) >= Unsafe.As<T, long>(ref b);
+            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref a) >= Unsafe.As<T, nuint>(ref b);
+            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref a) >= Unsafe.As<T, nint>(ref b);
+            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) >= Unsafe.As<T, float>(ref b);
+            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) >= Unsafe.As<T, double>(ref b);
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) >= Unsafe.As<T, Half>(ref b);
+        }
+        return _comparer.Compare(a, b) >= 0;
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is strictly greater than the element at index <paramref name="j"/>.
+    /// Equivalent to <c>Compare(i, j) &gt; 0</c> and logically identical to <c>!IsLessOrEqualAt(i, j)</c>,
+    /// but provided for readability at call sites that naturally express "greater than" semantics.
+    /// Named "At" to disambiguate from the value-based <see cref="IsGreaterThan"/> overload when <typeparamref name="T"/> is <c>int</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsGreaterAt(int i, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var b = _span[j];
+            var result = _comparer.Compare(a, b);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnIndexRead(_offset + j, _bufferId);
+            _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
+            return result > 0;
+        }
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref _span[i]) > Unsafe.As<T, byte>(ref _span[j]);
+            if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref _span[i]) > Unsafe.As<T, sbyte>(ref _span[j]);
+            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref _span[i]) > Unsafe.As<T, ushort>(ref _span[j]);
+            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref _span[i]) > Unsafe.As<T, short>(ref _span[j]);
+            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref _span[i]) > Unsafe.As<T, uint>(ref _span[j]);
+            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref _span[i]) > Unsafe.As<T, int>(ref _span[j]);
+            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref _span[i]) > Unsafe.As<T, ulong>(ref _span[j]);
+            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref _span[i]) > Unsafe.As<T, long>(ref _span[j]);
+            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref _span[i]) > Unsafe.As<T, nuint>(ref _span[j]);
+            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref _span[i]) > Unsafe.As<T, nint>(ref _span[j]);
+            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref _span[i]) > Unsafe.As<T, float>(ref _span[j]);
+            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref _span[i]) > Unsafe.As<T, double>(ref _span[j]);
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref _span[i]) > Unsafe.As<T, Half>(ref _span[j]);
+        }
+        return _comparer.Compare(_span[i], _span[j]) > 0;
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is greater than or equal to the element at index <paramref name="j"/>.
+    /// Equivalent to <c>Compare(i, j) &gt;= 0</c> and logically identical to <c>!IsLessAt(i, j)</c>,
+    /// but provided for readability at call sites that naturally express "greater or equal" semantics.
+    /// Named "At" to disambiguate from the value-based <see cref="IsGreaterOrEqual"/> overload when <typeparamref name="T"/> is <c>int</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsGreaterOrEqualAt(int i, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var b = _span[j];
+            var result = _comparer.Compare(a, b);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnIndexRead(_offset + j, _bufferId);
+            _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
+            return result >= 0;
+        }
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref _span[i]) >= Unsafe.As<T, byte>(ref _span[j]);
+            if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref _span[i]) >= Unsafe.As<T, sbyte>(ref _span[j]);
+            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref _span[i]) >= Unsafe.As<T, ushort>(ref _span[j]);
+            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref _span[i]) >= Unsafe.As<T, short>(ref _span[j]);
+            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref _span[i]) >= Unsafe.As<T, uint>(ref _span[j]);
+            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref _span[i]) >= Unsafe.As<T, int>(ref _span[j]);
+            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref _span[i]) >= Unsafe.As<T, ulong>(ref _span[j]);
+            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref _span[i]) >= Unsafe.As<T, long>(ref _span[j]);
+            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref _span[i]) >= Unsafe.As<T, nuint>(ref _span[j]);
+            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref _span[i]) >= Unsafe.As<T, nint>(ref _span[j]);
+            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref _span[i]) >= Unsafe.As<T, float>(ref _span[j]);
+            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref _span[i]) >= Unsafe.As<T, double>(ref _span[j]);
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref _span[i]) >= Unsafe.As<T, Half>(ref _span[j]);
+        }
+        return _comparer.Compare(_span[i], _span[j]) >= 0;
+    }
+
+    /// <summary>
     /// Exchanges the values at the specified indices within the collection. (Equivalent to swapping span[i] and span[j].)
     /// </summary>
     /// <remarks>This method notifies the underlying context of the swap operation before updating the values.

@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -420,7 +420,7 @@ public static class SpinSort
             {
                 var aVal = data.Read(ai);
                 var bVal = aux.Read(auxStart + bi);
-                if (!data.IsLessOrEqual(aVal, bVal))
+                if (data.IsGreaterThan(aVal, bVal))
                 {
                     data.Write(di--, aVal);
                     ai--;
@@ -526,7 +526,7 @@ public static class SpinSort
     {
         for (var i = first + 1; i < last; i++)
         {
-            if (!s.IsLessOrEqualAt(i - 1, i)) return false;
+            if (s.IsGreaterAt(i - 1, i)) return false;
         }
         return true;
     }
@@ -542,7 +542,7 @@ public static class SpinSort
     {
         for (var i = first + 1; i < last; i++)
         {
-            if (!s.IsLessAt(i, i - 1)) return false;
+            if (s.IsGreaterOrEqualAt(i, i - 1)) return false;
         }
         return true;
     }

@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -255,7 +255,7 @@ public static class PDQSort
             // If *(begin - 1) is the end of the right partition of a previous partition operation,
             // there is no element in [begin, end) that is smaller than *(begin - 1).
             // Then if our pivot compares equal to *(begin - 1) we change strategy.
-            if (!leftmost && !s.IsLessAt(begin - 1, begin))
+            if (!leftmost && s.IsGreaterOrEqualAt(begin - 1, begin))
             {
                 s.Context.OnPhase(SortPhase.QuickSortPartition, begin, end - 1, begin);
                 s.Context.OnRole(begin, BUFFER_MAIN, RoleType.Pivot);

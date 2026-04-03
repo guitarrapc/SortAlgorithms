@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using SortAlgorithm.Contexts;
 using System.Runtime.CompilerServices;
 
@@ -188,7 +188,7 @@ public static class ShiftSort
             else // non-descending run: extend
             {
                 i++; // consume the outer comparison's pair
-                while (i < s.Length - 1 && !s.IsLessAt(i + 1, i))
+                while (i < s.Length - 1 && s.IsGreaterOrEqualAt(i + 1, i))
                     i++;
             }
 

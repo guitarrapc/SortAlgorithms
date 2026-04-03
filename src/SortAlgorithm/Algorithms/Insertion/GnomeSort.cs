@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -88,7 +88,7 @@ public static class GnomeSort
         for (var i = 0; i < s.Length; i++)
         {
             context.OnPhase(SortPhase.GnomePass, i, s.Length - 1);
-            while (i > 0 && !s.IsLessOrEqualAt(i - 1, i))
+            while (i > 0 && s.IsGreaterAt(i - 1, i))
             {
                 s.Swap(i - 1, i);
                 i--;

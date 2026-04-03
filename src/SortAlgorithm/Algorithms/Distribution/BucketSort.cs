@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -344,7 +344,7 @@ public static class BucketSortInteger
         {
             var value = s.Read(i);
             if (s.IsLessThan(value, minValue)) minValue = value;
-            if (!s.IsLessOrEqual(value, maxValue)) maxValue = value;
+            if (s.IsGreaterThan(value, maxValue)) maxValue = value;
         }
 
         // If all elements are the same, no need to sort
