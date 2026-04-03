@@ -697,15 +697,22 @@ public static class Glidesort
         var n2 = r0Len;
         var o = l0 + n1 + n2 - 1;
 
-        while (n1 != 0 && n2 != 0)
+        // Preload both current values; reload only the consumed side each iteration.
+        if (n1 != 0 && n2 != 0)
         {
             var val1 = s.Read(l0 + n1 - 1);
             var val2 = s.Read(r0 + n2 - 1);
-            // val1 ≤ val2 → take right (val2) first; ties → right for backward-merge stability
-            int takeRight = s.IsLessOrEqual(val1, val2) ? 1 : 0;
-            s.Write(o--, takeRight != 0 ? val2 : val1);
-            n2 -= takeRight;
-            n1 -= 1 - takeRight;
+            while (true)
+            {
+                // val1 ≤ val2 → take right (val2) first; ties → right for backward-merge stability
+                int takeRight = s.IsLessOrEqual(val1, val2) ? 1 : 0;
+                s.Write(o--, takeRight != 0 ? val2 : val1);
+                n2 -= takeRight;
+                n1 -= 1 - takeRight;
+                if (n1 == 0 || n2 == 0) break;
+                if (takeRight != 0) val2 = s.Read(r0 + n2 - 1);
+                else val1 = s.Read(l0 + n1 - 1);
+            }
         }
 
         // Drain: right side may have remaining elements; copy them into place.
@@ -733,15 +740,22 @@ public static class Glidesort
         var e2 = r1 + r1Len;
         var o = outStart;
 
-        while (c1 < e1 && c2 < e2)
+        // Preload both current values; reload only the consumed side each iteration.
+        if (c1 < e1 && c2 < e2)
         {
             var val1 = t.Read(c1);
             var val2 = s.Read(c2);
-            // val1 ≤ val2 → take left (val1); ties → left for stability
-            int takeLeft = s.IsLessOrEqual(val1, val2) ? 1 : 0;
-            s.Write(o++, takeLeft != 0 ? val1 : val2);
-            c1 += takeLeft;
-            c2 += 1 - takeLeft;
+            while (true)
+            {
+                // val1 ≤ val2 → take left (val1); ties → left for stability
+                int takeLeft = s.IsLessOrEqual(val1, val2) ? 1 : 0;
+                s.Write(o++, takeLeft != 0 ? val1 : val2);
+                c1 += takeLeft;
+                c2 += 1 - takeLeft;
+                if (c1 >= e1 || c2 >= e2) break;
+                if (takeLeft != 0) val1 = t.Read(c1);
+                else val2 = s.Read(c2);
+            }
         }
 
         // If left1 has remaining elements in scratch, copy them to output.
@@ -770,15 +784,22 @@ public static class Glidesort
         var e2 = rightEnd;
         var o = tOffset;
 
-        while (c1 < e1 && c2 < e2)
+        // Preload both current values; reload only the consumed side each iteration.
+        if (c1 < e1 && c2 < e2)
         {
             var v1 = s.Read(c1);
             var v2 = s.Read(c2);
-            // v1 ≤ v2 → take left (v1); ties → left for stability
-            int takeLeft = s.IsLessOrEqual(v1, v2) ? 1 : 0;
-            t.Write(o++, takeLeft != 0 ? v1 : v2);
-            c1 += takeLeft;
-            c2 += 1 - takeLeft;
+            while (true)
+            {
+                // v1 ≤ v2 → take left (v1); ties → left for stability
+                int takeLeft = s.IsLessOrEqual(v1, v2) ? 1 : 0;
+                t.Write(o++, takeLeft != 0 ? v1 : v2);
+                c1 += takeLeft;
+                c2 += 1 - takeLeft;
+                if (c1 >= e1 || c2 >= e2) break;
+                if (takeLeft != 0) v1 = s.Read(c1);
+                else v2 = s.Read(c2);
+            }
         }
 
         // Drain: at most one side has remaining elements.
@@ -814,40 +835,56 @@ public static class Glidesort
         var p1b = right0Mid;   var p1be = right0End;
         var out1 = left0End - left0Start; // = left0Len
 
-        // Interleaved main loop: advance both pairs simultaneously while both have elements on both sides.
-        while (p0a < p0ae && p0b < p0be && p1a < p1ae && p1b < p1be)
+        // Interleaved main loop: preload all 4 current values; reload only the 2 consumed per iteration.
+        if (p0a < p0ae && p0b < p0be && p1a < p1ae && p1b < p1be)
         {
             var v0a = s.Read(p0a);
             var v0b = s.Read(p0b);
             var v1a = s.Read(p1a);
             var v1b = s.Read(p1b);
-            // v0a ≤ v0b → take left (v0a); ties → left for stability
-            int take0Left = s.IsLessOrEqual(v0a, v0b) ? 1 : 0;
-            int take1Left = s.IsLessOrEqual(v1a, v1b) ? 1 : 0;
-            t.Write(out0++, take0Left != 0 ? v0a : v0b);
-            t.Write(out1++, take1Left != 0 ? v1a : v1b);
-            p0a += take0Left;  p0b += 1 - take0Left;
-            p1a += take1Left;  p1b += 1 - take1Left;
+            while (true)
+            {
+                // v0a ≤ v0b → take left (v0a); ties → left for stability
+                int take0Left = s.IsLessOrEqual(v0a, v0b) ? 1 : 0;
+                int take1Left = s.IsLessOrEqual(v1a, v1b) ? 1 : 0;
+                t.Write(out0++, take0Left != 0 ? v0a : v0b);
+                t.Write(out1++, take1Left != 0 ? v1a : v1b);
+                p0a += take0Left;  p0b += 1 - take0Left;
+                p1a += take1Left;  p1b += 1 - take1Left;
+                if (p0a >= p0ae || p0b >= p0be || p1a >= p1ae || p1b >= p1be) break;
+                if (take0Left != 0) v0a = s.Read(p0a); else v0b = s.Read(p0b);
+                if (take1Left != 0) v1a = s.Read(p1a); else v1b = s.Read(p1b);
+            }
         }
 
-        // Drain pair0 main: finish if pair0 still has both sides.
-        while (p0a < p0ae && p0b < p0be)
+        // Drain pair0 main: preload; reload only consumed side each iteration.
+        if (p0a < p0ae && p0b < p0be)
         {
             var v0a = s.Read(p0a);
             var v0b = s.Read(p0b);
-            int take0Left = s.IsLessOrEqual(v0a, v0b) ? 1 : 0;
-            t.Write(out0++, take0Left != 0 ? v0a : v0b);
-            p0a += take0Left;  p0b += 1 - take0Left;
+            while (true)
+            {
+                int take0Left = s.IsLessOrEqual(v0a, v0b) ? 1 : 0;
+                t.Write(out0++, take0Left != 0 ? v0a : v0b);
+                p0a += take0Left;  p0b += 1 - take0Left;
+                if (p0a >= p0ae || p0b >= p0be) break;
+                if (take0Left != 0) v0a = s.Read(p0a); else v0b = s.Read(p0b);
+            }
         }
 
-        // Drain pair1 main: finish if pair1 still has both sides.
-        while (p1a < p1ae && p1b < p1be)
+        // Drain pair1 main: preload; reload only consumed side each iteration.
+        if (p1a < p1ae && p1b < p1be)
         {
             var v1a = s.Read(p1a);
             var v1b = s.Read(p1b);
-            int take1Left = s.IsLessOrEqual(v1a, v1b) ? 1 : 0;
-            t.Write(out1++, take1Left != 0 ? v1a : v1b);
-            p1a += take1Left;  p1b += 1 - take1Left;
+            while (true)
+            {
+                int take1Left = s.IsLessOrEqual(v1a, v1b) ? 1 : 0;
+                t.Write(out1++, take1Left != 0 ? v1a : v1b);
+                p1a += take1Left;  p1b += 1 - take1Left;
+                if (p1a >= p1ae || p1b >= p1be) break;
+                if (take1Left != 0) v1a = s.Read(p1a); else v1b = s.Read(p1b);
+            }
         }
 
         // Drain pair0 tail: at most one side has remaining elements.
@@ -878,15 +915,22 @@ public static class Glidesort
         var n2 = tLen;
         var o = outEnd - 1;
 
-        while (n1 != 0 && n2 != 0)
+        // Preload both current values; reload only the consumed side each iteration.
+        if (n1 != 0 && n2 != 0)
         {
             var v1 = s.Read(leftStart + n1 - 1);
             var v2 = t.Read(n2 - 1);
-            // v1 ≤ v2 → take right (v2) first; ties → right for backward-merge stability
-            int takeRight = s.IsLessOrEqual(v1, v2) ? 1 : 0;
-            s.Write(o--, takeRight != 0 ? v2 : v1);
-            n2 -= takeRight;
-            n1 -= 1 - takeRight;
+            while (true)
+            {
+                // v1 ≤ v2 → take right (v2) first; ties → right for backward-merge stability
+                int takeRight = s.IsLessOrEqual(v1, v2) ? 1 : 0;
+                s.Write(o--, takeRight != 0 ? v2 : v1);
+                n2 -= takeRight;
+                n1 -= 1 - takeRight;
+                if (n1 == 0 || n2 == 0) break;
+                if (takeRight != 0) v2 = t.Read(n2 - 1);
+                else v1 = s.Read(leftStart + n1 - 1);
+            }
         }
 
         // Drain: right (from scratch) may have remaining elements; copy them into place.
@@ -912,15 +956,22 @@ public static class Glidesort
         var e2 = totalLen;
         var o = outStart;
 
-        while (c1 < e1 && c2 < e2)
+        // Preload both current values; reload only the consumed side each iteration.
+        if (c1 < e1 && c2 < e2)
         {
             var v1 = t.Read(c1);
             var v2 = t.Read(c2);
-            // v1 ≤ v2 → take left (v1); ties → left for stability
-            int takeLeft = s.IsLessOrEqual(v1, v2) ? 1 : 0;
-            s.Write(o++, takeLeft != 0 ? v1 : v2);
-            c1 += takeLeft;
-            c2 += 1 - takeLeft;
+            while (true)
+            {
+                // v1 ≤ v2 → take left (v1); ties → left for stability
+                int takeLeft = s.IsLessOrEqual(v1, v2) ? 1 : 0;
+                s.Write(o++, takeLeft != 0 ? v1 : v2);
+                c1 += takeLeft;
+                c2 += 1 - takeLeft;
+                if (c1 >= e1 || c2 >= e2) break;
+                if (takeLeft != 0) v1 = t.Read(c1);
+                else v2 = t.Read(c2);
+            }
         }
 
         // Drain: at most one side has remaining elements.
