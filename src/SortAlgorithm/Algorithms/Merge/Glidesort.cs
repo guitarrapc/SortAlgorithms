@@ -181,107 +181,134 @@ public static class Glidesort
             var scratch = scratchBuffer.AsSpan(0, scratchSize);
             var t = new SortSpan<T, TComparer, TContext>(scratch, context, comparer, BUFFER_TEMP);
 
-            context.OnPhase(SortPhase.MergeRunDetect);
+            GlidesortCore(s, t, scratch, first, last, eagerSmallsort: false, comparer, context);
+        }
+        finally
+        {
+            ArrayPool<T>.Shared.Return(scratchBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+        }
+    }
 
-            // Powersort merge tree scale factor
-            var scaleFactor = MergeTreeScaleFactor(n);
+    /// <summary>
+    /// Shared powersort merge-tree loop used by both the top-level sort and the quicksort fallback.
+    /// <para>
+    /// When <paramref name="eagerSmallsort"/> is false (normal path), unsorted blocks are deferred
+    /// as Unsorted logical runs and quicksorted only when they need to be merged.
+    /// </para>
+    /// <para>
+    /// When <paramref name="eagerSmallsort"/> is true (quicksort recursion-limit fallback), unsorted
+    /// blocks are immediately sorted with BlockInsertionSort and become Sorted runs. This matches
+    /// the reference <c>glidesort(eager_smallsort=true)</c>: no quicksort calls are made, so the
+    /// fallback is guaranteed O(n log n) via the powersort merge tree alone.
+    /// </para>
+    /// </summary>
+    private static void GlidesortCore<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        Span<T> scratch,
+        int first, int last, bool eagerSmallsort,
+        TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n = last - first;
 
-            // Merge stack: stores left children and their desired depths.
-            // 64 entries is sufficient because powersort desired depths are strictly ascending
-            // on the stack and each depth is < 64 (since it comes from LeadingZeroCount of a u64).
-            // This guarantees the stack never exceeds 64 entries for any input size.
-            Span<int> stackRunStart = stackalloc int[64];
-            Span<int> stackRunEnd = stackalloc int[64];
-            Span<byte> stackRunType = stackalloc byte[64]; // 0=Unsorted, 1=Sorted, 2=DoubleSorted
-            Span<int> stackRunMid = stackalloc int[64];    // Mid point for DoubleSorted
-            Span<byte> stackDesiredDepth = stackalloc byte[64];
-            var stackLen = 0;
+        context.OnPhase(SortPhase.MergeRunDetect);
 
-            // Create the first logical run
-            var cursor = first;
-            var (prevRunStart, prevRunEnd, prevRunType, prevRunMid) = CreateLogicalRun(s, cursor, last);
-            cursor = prevRunEnd;
+        // Powersort merge tree scale factor
+        var scaleFactor = MergeTreeScaleFactor(n);
 
-            while (cursor < last)
+        // Merge stack: stores left children and their desired depths.
+        // 64 entries is sufficient because powersort desired depths are strictly ascending
+        // on the stack and each depth is < 64 (since it comes from LeadingZeroCount of a u64).
+        // This guarantees the stack never exceeds 64 entries for any input size.
+        Span<int> stackRunStart = stackalloc int[64];
+        Span<int> stackRunEnd = stackalloc int[64];
+        Span<byte> stackRunType = stackalloc byte[64]; // 0=Unsorted, 1=Sorted, 2=DoubleSorted
+        Span<int> stackRunMid = stackalloc int[64];    // Mid point for DoubleSorted
+        Span<byte> stackDesiredDepth = stackalloc byte[64];
+        var stackLen = 0;
+
+        // Create the first logical run
+        var cursor = first;
+        var (prevRunStart, prevRunEnd, prevRunType, prevRunMid) = CreateLogicalRun(s, t, cursor, last, eagerSmallsort);
+        cursor = prevRunEnd;
+
+        while (cursor < last)
+        {
+            var nextRunStartIdx = prevRunStart - first;
+            var nextRunEndIdx = prevRunEnd - first;
+
+            // Create next logical run
+            var (nextStart, nextEnd, nextType, nextMid) = CreateLogicalRun(s, t, cursor, last, eagerSmallsort);
+            cursor = nextEnd;
+
+            var nextNextEndIdx = nextEnd - first;
+
+            var desiredDepth = MergeTreeDepth(nextRunStartIdx, nextRunEndIdx, nextNextEndIdx, scaleFactor);
+
+            // Create the left child and eagerly merge all nodes with deeper desired merge depth
+            var leftStart = prevRunStart;
+            var leftEnd = prevRunEnd;
+            var leftType = prevRunType;
+            var leftMid = prevRunMid;
+
+            while (stackLen > 0 && stackDesiredDepth[stackLen - 1] >= desiredDepth)
             {
-                var nextRunStartIdx = prevRunStart - first;
-                var nextRunEndIdx = prevRunEnd - first;
-
-                // Create next logical run
-                var (nextStart, nextEnd, nextType, nextMid) = CreateLogicalRun(s, cursor, last);
-                cursor = nextEnd;
-
-                var nextNextEndIdx = nextEnd - first;
-
-                var desiredDepth = MergeTreeDepth(nextRunStartIdx, nextRunEndIdx, nextNextEndIdx, scaleFactor);
-
-                // Create the left child and eagerly merge all nodes with deeper desired merge depth
-                var leftStart = prevRunStart;
-                var leftEnd = prevRunEnd;
-                var leftType = prevRunType;
-                var leftMid = prevRunMid;
-
-                while (stackLen > 0 && stackDesiredDepth[stackLen - 1] >= desiredDepth)
-                {
-                    // Pop from stack
-                    stackLen--;
-                    var ancestorStart = stackRunStart[stackLen];
-                    var ancestorEnd = stackRunEnd[stackLen];
-                    var ancestorType = stackRunType[stackLen];
-                    var ancestorMid = stackRunMid[stackLen];
-
-                    // Logical merge: ancestor (left) + leftChild (right)
-                    (leftStart, leftEnd, leftType, leftMid) = LogicalMerge(
-                        s, t, scratch,
-                        ancestorStart, ancestorEnd, ancestorType, ancestorMid,
-                        leftStart, leftEnd, leftType, leftMid,
-                        comparer, context);
-                }
-
-                // Push left child onto stack
-                Debug.Assert(stackLen < 64, $"Merge stack overflow: stackLen={stackLen}. This should never happen with powersort merge tree.");
-                stackRunStart[stackLen] = leftStart;
-                stackRunEnd[stackLen] = leftEnd;
-                stackRunType[stackLen] = leftType;
-                stackRunMid[stackLen] = leftMid;
-                stackDesiredDepth[stackLen] = desiredDepth;
-                stackLen++;
-
-                prevRunStart = nextStart;
-                prevRunEnd = nextEnd;
-                prevRunType = nextType;
-                prevRunMid = nextMid;
-            }
-
-            // Collapse the stack down to a single logical run
-            context.OnPhase(SortPhase.MergeRunCollapse, stackLen + 1);
-            var resultStart = prevRunStart;
-            var resultEnd = prevRunEnd;
-            var resultType = prevRunType;
-            var resultMid = prevRunMid;
-
-            while (stackLen > 0)
-            {
+                // Pop from stack
                 stackLen--;
                 var ancestorStart = stackRunStart[stackLen];
                 var ancestorEnd = stackRunEnd[stackLen];
                 var ancestorType = stackRunType[stackLen];
                 var ancestorMid = stackRunMid[stackLen];
 
-                (resultStart, resultEnd, resultType, resultMid) = LogicalMerge(
+                // Logical merge: ancestor (left) + leftChild (right)
+                (leftStart, leftEnd, leftType, leftMid) = LogicalMerge(
                     s, t, scratch,
                     ancestorStart, ancestorEnd, ancestorType, ancestorMid,
-                    resultStart, resultEnd, resultType, resultMid,
+                    leftStart, leftEnd, leftType, leftMid,
                     comparer, context);
             }
 
-            // Physically sort the final result
-            PhysicalSort(s, t, scratch, resultStart, resultEnd, resultType, resultMid, comparer, context);
+            // Push left child onto stack
+            Debug.Assert(stackLen < 64, $"Merge stack overflow: stackLen={stackLen}. This should never happen with powersort merge tree.");
+            stackRunStart[stackLen] = leftStart;
+            stackRunEnd[stackLen] = leftEnd;
+            stackRunType[stackLen] = leftType;
+            stackRunMid[stackLen] = leftMid;
+            stackDesiredDepth[stackLen] = desiredDepth;
+            stackLen++;
+
+            prevRunStart = nextStart;
+            prevRunEnd = nextEnd;
+            prevRunType = nextType;
+            prevRunMid = nextMid;
         }
-        finally
+
+        // Collapse the stack down to a single logical run
+        context.OnPhase(SortPhase.MergeRunCollapse, stackLen + 1);
+        var resultStart = prevRunStart;
+        var resultEnd = prevRunEnd;
+        var resultType = prevRunType;
+        var resultMid = prevRunMid;
+
+        while (stackLen > 0)
         {
-            ArrayPool<T>.Shared.Return(scratchBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            stackLen--;
+            var ancestorStart = stackRunStart[stackLen];
+            var ancestorEnd = stackRunEnd[stackLen];
+            var ancestorType = stackRunType[stackLen];
+            var ancestorMid = stackRunMid[stackLen];
+
+            (resultStart, resultEnd, resultType, resultMid) = LogicalMerge(
+                s, t, scratch,
+                ancestorStart, ancestorEnd, ancestorType, ancestorMid,
+                resultStart, resultEnd, resultType, resultMid,
+                comparer, context);
         }
+
+        // Physically sort the final result
+        PhysicalSort(s, t, scratch, resultStart, resultEnd, resultType, resultMid, comparer, context);
     }
 
     // Powersort Merge Tree
@@ -325,7 +352,9 @@ public static class Glidesort
     /// the full n were used as the denominator.
     /// </remarks>
     private static (int start, int end, byte type, int mid) CreateLogicalRun<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s, int start, int last)
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int start, int last, bool eagerSmallsort)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -352,7 +381,19 @@ public static class Glidesort
         // Otherwise create a small unsorted run, capped at SMALL_SORT.
         // This cap ensures the run can always be sorted later regardless of scratch size.
         var skip = Math.Min(SMALL_SORT, remaining);
-        return (start, start + skip, 0, 0); // Unsorted
+        var runEnd = start + skip;
+
+        // When eagerSmallsort is true (used by the quicksort fallback), sort unsorted
+        // blocks immediately so they become Sorted runs. This matches the reference
+        // glidesort(eager_smallsort=true) behavior: no Unsorted runs are created, so the
+        // powersort merge tree only performs merges (guaranteed O(n log n)).
+        if (eagerSmallsort)
+        {
+            BlockInsertionSort(s, t, start, runEnd);
+            return (start, runEnd, 1, 0); // Sorted
+        }
+
+        return (start, runEnd, 0, 0); // Unsorted
     }
 
     /// <summary>
@@ -706,7 +747,7 @@ public static class Glidesort
         var logn = 64 - BitOperations.LeadingZeroCount((ulong)n);
         var recursionLimit = 2 * logn;
 
-        StableQuicksortRec(s, t, start, end, recursionLimit, STRATEGY_RIGHT, default!, comparer, context);
+        StableQuicksortRec(s, t, scratch, start, end, recursionLimit, STRATEGY_RIGHT, default!, comparer, context);
     }
 
     /// <summary>
@@ -728,6 +769,7 @@ public static class Glidesort
     private static void StableQuicksortRec<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
         SortSpan<T, TComparer, TContext> t,
+        Span<T> scratch,
         int start, int end, int recursionLimit,
         byte strategy, T prevPivot,
         TComparer comparer, TContext context)
@@ -745,8 +787,10 @@ public static class Glidesort
 
             if (recursionLimit == 0)
             {
-                // Fallback: guaranteed O(n log n) stable merge sort.
-                StableMergeSortFallback(s, t, start, end);
+                // Fallback: guaranteed O(n log n) stable sort using the glidesort merge
+                // tree with eager small sorting. Matches the reference glidesort(eager_smallsort=true):
+                // run detection + powersort merges only, no quicksort recursion.
+                GlidesortCore(s, t, scratch, start, end, eagerSmallsort: true, comparer, context);
                 return;
             }
 
@@ -895,7 +939,7 @@ public static class Glidesort
             {
                 if (lessTotal > 1)
                 {
-                    StableQuicksortRec(s, t, start, start + lessTotal,
+                    StableQuicksortRec(s, t, scratch, start, start + lessTotal,
                         recursionLimit, STRATEGY_RIGHT, default!, comparer, context);
                 }
                 strategy = STRATEGY_LEFT_IF_EQUAL;
@@ -907,7 +951,7 @@ public static class Glidesort
             {
                 if (geqTotal > 1)
                 {
-                    StableQuicksortRec(s, t, start + lessTotal, end,
+                    StableQuicksortRec(s, t, scratch, start + lessTotal, end,
                         recursionLimit, STRATEGY_LEFT_IF_EQUAL, pivot, comparer, context);
                 }
                 strategy = STRATEGY_RIGHT;
@@ -915,43 +959,6 @@ public static class Glidesort
                 end = start + lessTotal;
                 // Continue loop for the < side
             }
-        }
-    }
-
-    /// <summary>
-    /// Fallback stable merge sort for when quicksort recursion budget is exhausted.
-    /// Guarantees O(n log n) worst-case via simple top-down merge sort using scratch buffer.
-    /// </summary>
-    private static void StableMergeSortFallback<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s,
-        SortSpan<T, TComparer, TContext> t,
-        int start, int end)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var n = end - start;
-        if (n < SMALL_SORT)
-        {
-            BlockInsertionSort(s, t, start, end);
-            return;
-        }
-
-        var mid = start + n / 2;
-        StableMergeSortFallback(s, t, start, mid);
-        StableMergeSortFallback(s, t, mid, end);
-
-        // Already sorted across the boundary — no merge needed
-        if (s.Compare(mid - 1, mid) <= 0) return;
-
-        var len1 = mid - start;
-        var len2 = end - mid;
-        if (len1 <= len2)
-        {
-            MergeLow(s, t, start, len1, mid, len2);
-        }
-        else
-        {
-            MergeHigh(s, t, start, len1, mid, len2);
         }
     }
 
