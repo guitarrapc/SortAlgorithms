@@ -81,6 +81,12 @@ public static class Glidesort
     private const int FULL_ALLOC_MAX_BYTES = 1024 * 1024;        // 1 MB
     private const int HALF_ALLOC_MAX_BYTES = 1024 * 1024 * 1024;  // 1 GB
 
+    // Partition strategy constants for the stable bidirectional quicksort.
+    // Matches the reference PartitionStrategy enum.
+    private const byte STRATEGY_RIGHT = 0;           // Select new pivot, partition as (< pivot) vs (>= pivot)
+    private const byte STRATEGY_LEFT_WITH_PIVOT = 1;  // Use previous pivot, partition as (<= pivot) vs (> pivot)
+    private const byte STRATEGY_LEFT_IF_EQUAL = 2;    // Select new pivot; if equal to previous, partition left; else right
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// Uses NullContext for zero-overhead fast path.
@@ -674,9 +680,9 @@ public static class Glidesort
     // Stable Quicksort
 
     /// <summary>
-    /// Sorts the range [start..end) using a stable 3-way quicksort with scratch space.
-    /// Partitions into three groups (&lt; pivot, == pivot, &gt; pivot) so that inputs
-    /// with many duplicates are handled in O(n log k) where k is the number of distinct values.
+    /// Sorts the range [start..end) using a stable bidirectional 2-way quicksort with scratch space.
+    /// Uses PartitionStrategy to handle duplicates: when all elements are ≥ pivot, re-partitions with
+    /// reversed comparison to separate equal elements. This achieves O(n log k) for k distinct values.
     /// Falls back to a guaranteed O(n log n) stable merge sort when the recursion budget is exhausted.
     /// </summary>
     private static void StableQuicksort<T, TComparer, TContext>(
@@ -700,20 +706,30 @@ public static class Glidesort
         var logn = 64 - BitOperations.LeadingZeroCount((ulong)n);
         var recursionLimit = 2 * logn;
 
-        StableQuicksortRec(s, t, scratch, start, end, recursionLimit, comparer, context);
+        StableQuicksortRec(s, t, start, end, recursionLimit, STRATEGY_RIGHT, default!, comparer, context);
     }
 
     /// <summary>
-    /// Recursive stable 3-way quicksort.
-    /// Partitions elements into (less-than, equal-to, greater-than) groups using scratch,
-    /// maintaining stability. Equal elements are excluded from recursion, guaranteeing
-    /// progress even on all-equal inputs.
+    /// Recursive stable bidirectional 2-way quicksort with PartitionStrategy.
+    /// <para>
+    /// Partitions elements into (less, geq) groups using bidirectional scanning:
+    /// forward scan writes less → s[front], geq → t[front]; backward scan writes
+    /// geq → s[back], less → t[back]. Both groups are in stable order and reassembly
+    /// requires only two disjoint copies from t to s.
+    /// </para>
+    /// <para>
+    /// PartitionStrategy handles duplicates without explicit 3-way partitioning:
+    /// STRATEGY_RIGHT partitions as (&lt; pivot) vs (≥ pivot).
+    /// When lessTotal == 0, re-partitions with STRATEGY_LEFT_WITH_PIVOT as (≤ pivot) vs (&gt; pivot).
+    /// Since all elements are ≥ pivot, the ≤ group = elements equal to pivot, which are already sorted.
+    /// STRATEGY_LEFT_IF_EQUAL selects a new pivot and checks equality with the previous one.
+    /// </para>
     /// </summary>
     private static void StableQuicksortRec<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
         SortSpan<T, TComparer, TContext> t,
-        Span<T> scratch,
         int start, int end, int recursionLimit,
+        byte strategy, T prevPivot,
         TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -730,107 +746,174 @@ public static class Glidesort
             if (recursionLimit == 0)
             {
                 // Fallback: guaranteed O(n log n) stable merge sort.
-                // We use a simple top-down merge sort into scratch to avoid
-                // the O(n²) worst-case of insertion sort on large segments.
                 StableMergeSortFallback(s, t, start, end);
                 return;
             }
 
             recursionLimit--;
 
-            // Select pivot using pseudo-median
-            var pivotIdx = SelectPivotIndex(s, start, end);
-            var pivot = s.Read(pivotIdx);
+            // Select pivot and determine partition direction based on strategy.
+            T pivot;
+            bool partitionLeft;
 
-            // 3-way stable partition using non-overlapping zones in scratch.
-            //
-            // Single-pass scan writes to three separate regions:
-            //   less:    t[0..lessCount)         — forward from left (stable order)
-            //   greater: t[n-1..n-gtCount)       — backward from right (reverse stable order)
-            //   equal:   compacted in s[start..)  — in-place at the beginning of the source
-            //
-            // Since eqWriteIdx ≤ i always holds (equal advances slower than the scan),
-            // compacting equal elements never overwrites unread source elements.
-            //
-            // After the scan we reassemble into t[0..n) = [less | equal | greater],
-            // then copy the whole thing back to s.
-            var lessCount = 0;
-            var eqWriteIdx = start;
-            var gtWriteIdx = n - 1;
-
-            for (var i = start; i < end; i++)
+            if (strategy == STRATEGY_LEFT_WITH_PIVOT)
             {
-                var val = s.Read(i);
-                var cmp = s.Compare(val, pivot);
-                if (cmp < 0)
-                {
-                    t.Write(lessCount, val);
-                    lessCount++;
-                }
-                else if (cmp == 0)
-                {
-                    // Compact equal elements to the front of s to preserve them.
-                    // eqWriteIdx ≤ i is always true, so we never overwrite unread data.
-                    if (eqWriteIdx != i)
-                    {
-                        s.Write(eqWriteIdx, val);
-                    }
-                    eqWriteIdx++;
-                }
-                else
-                {
-                    t.Write(gtWriteIdx, val);
-                    gtWriteIdx--;
-                }
-            }
-
-            var eqCount = eqWriteIdx - start;
-            var gtCount = n - 1 - gtWriteIdx;
-
-            // Copy equal elements from s[start..start+eqCount) into the gap in t.
-            // The gap t[lessCount..lessCount+eqCount) sits exactly between less and greater.
-            for (var i = 0; i < eqCount; i++)
-            {
-                t.Write(lessCount + i, s.Read(start + i));
-            }
-
-            // Copy less + equal back to s in one block.
-            if (lessCount + eqCount > 0)
-            {
-                t.CopyTo(0, s, start, lessCount + eqCount);
-            }
-
-            // Copy greater elements back in reverse to restore stable order.
-            // They were written right-to-left (last scanned at lowest index),
-            // so we read from t[n-1] downward.
-            var gtDst = start + lessCount + eqCount;
-            for (var i = 0; i < gtCount; i++)
-            {
-                s.Write(gtDst + i, t.Read(n - 1 - i));
-            }
-
-            // Equal elements are already sorted (they're all equal) — skip them.
-            // Recurse on the smaller of {less, greater}, iterate on the larger.
-            var lessBound = start + lessCount;
-            var gtBound = start + lessCount + eqCount;
-
-            if (lessCount <= gtCount)
-            {
-                if (lessCount > 1)
-                {
-                    StableQuicksortRec(s, t, scratch, start, lessBound, recursionLimit, comparer, context);
-                }
-                start = gtBound;
-                // Continue loop for the > partition
+                // Reuse the previous pivot; partition as (<= pivot) vs (> pivot).
+                pivot = prevPivot;
+                partitionLeft = true;
             }
             else
             {
-                if (gtCount > 1)
+                var pivotIdx = SelectPivotIndex(s, start, end);
+                pivot = s.Read(pivotIdx);
+
+                if (strategy == STRATEGY_LEFT_IF_EQUAL)
                 {
-                    StableQuicksortRec(s, t, scratch, gtBound, end, recursionLimit, comparer, context);
+                    // If prevPivot >= newPivot (i.e., they are equal or new is smaller),
+                    // partition left to strip out equal elements.
+                    partitionLeft = s.Compare(prevPivot, pivot) >= 0;
                 }
-                end = lessBound;
-                // Continue loop for the < partition
+                else
+                {
+                    partitionLeft = false;
+                }
+            }
+
+            // Bidirectional 2-way stable partition.
+            //
+            // Forward scan from s[fwd++]:
+            //   "less" side (< or <=) → s[destFront++]  (safe: destFront ≤ fwd)
+            //   "geq"  side (>= or >) → t[scratchFront++]
+            //
+            // Backward scan from s[bwd--]:
+            //   "geq"  side (>= or >) → s[destBack--]   (safe: destBack ≥ bwd)
+            //   "less" side (< or <=) → t[scratchBack--]
+            //
+            // After partition:
+            //   s[start..destFront)   = less_fwd  (stable order)
+            //   s[destBack+1..end)    = geq_bwd   (stable order)
+            //   t[0..scratchFront)    = geq_fwd   (stable order)
+            //   t[scratchBack+1..n-1] = less_bwd  (stable order)
+            //
+            // Reassembly: less_fwd is already in place, geq_bwd is already in place.
+            // Copy less_bwd and geq_fwd from t into the gap in s.
+            var fwd = start;
+            var bwd = end - 1;
+            var destFront = start;
+            var scratchFront = 0;
+            var destBack = end - 1;
+            var scratchBack = n - 1;
+
+            while (fwd <= bwd)
+            {
+                // Forward scan
+                var fwdVal = s.Read(fwd);
+                var fwdCmp = s.Compare(fwdVal, pivot);
+                bool fwdIsLess = partitionLeft ? fwdCmp <= 0 : fwdCmp < 0;
+
+                if (fwdIsLess)
+                {
+                    if (destFront != fwd) s.Write(destFront, fwdVal);
+                    destFront++;
+                }
+                else
+                {
+                    t.Write(scratchFront, fwdVal);
+                    scratchFront++;
+                }
+                fwd++;
+
+                if (fwd > bwd) break;
+
+                // Backward scan
+                var bwdVal = s.Read(bwd);
+                var bwdCmp = s.Compare(bwdVal, pivot);
+                bool bwdIsLess = partitionLeft ? bwdCmp <= 0 : bwdCmp < 0;
+
+                if (!bwdIsLess)
+                {
+                    if (destBack != bwd) s.Write(destBack, bwdVal);
+                    destBack--;
+                }
+                else
+                {
+                    t.Write(scratchBack, bwdVal);
+                    scratchBack--;
+                }
+                bwd--;
+            }
+
+            // Count elements in each group.
+            var lessFwdCount = destFront - start;
+            var lessBwdCount = n - 1 - scratchBack;
+            var geqFwdCount = scratchFront;
+            var geqBwdCount = end - 1 - destBack;
+            var lessTotal = lessFwdCount + lessBwdCount;
+            var geqTotal = geqFwdCount + geqBwdCount;
+
+            // Reassemble: s = [less_fwd | less_bwd | geq_fwd | geq_bwd]
+            // less_fwd at s[start..start+lessFwdCount) — already in place.
+            // geq_bwd at s[end-geqBwdCount..end) — already in place.
+            // Copy less_bwd from t to fill the gap.
+            if (lessBwdCount > 0)
+            {
+                t.CopyTo(scratchBack + 1, s, start + lessFwdCount, lessBwdCount);
+            }
+            // Copy geq_fwd from t to fill the gap.
+            if (geqFwdCount > 0)
+            {
+                t.CopyTo(0, s, start + lessTotal, geqFwdCount);
+            }
+
+            // PartitionStrategy: handle the all-elements-geq case (duplicate handling).
+            // When lessTotal == 0 and we partitioned right, all elements are >= pivot.
+            // Re-partition with LeftWithPivot to separate == pivot (which don't need sorting)
+            // from > pivot. This is the key mechanism for O(n log k) on many duplicates.
+            if (lessTotal == 0 && !partitionLeft)
+            {
+                strategy = STRATEGY_LEFT_WITH_PIVOT;
+                prevPivot = pivot;
+                continue; // tail-call via loop
+            }
+
+            // When partitionLeft is true, the "less" side contains elements <= pivot.
+            // This only happens after a LeftWithPivot or LeftIfEqual match, where all
+            // elements were >= prevPivot. So (<= pivot) ∩ (>= prevPivot) with matching
+            // pivots means these are all equal to pivot — no need to sort.
+            // Only recurse on the "geq" (> pivot) side.
+            if (partitionLeft)
+            {
+                strategy = STRATEGY_RIGHT;
+                prevPivot = default!;
+                start = start + lessTotal;
+                continue; // tail-call via loop for the > side
+            }
+
+            // Normal (right) partition: recurse on both sides.
+            // Use STRATEGY_LEFT_IF_EQUAL for the geq side to detect duplicate pivots.
+            if (lessTotal <= geqTotal)
+            {
+                if (lessTotal > 1)
+                {
+                    StableQuicksortRec(s, t, start, start + lessTotal,
+                        recursionLimit, STRATEGY_RIGHT, default!, comparer, context);
+                }
+                strategy = STRATEGY_LEFT_IF_EQUAL;
+                prevPivot = pivot;
+                start = start + lessTotal;
+                // Continue loop for the >= side
+            }
+            else
+            {
+                if (geqTotal > 1)
+                {
+                    StableQuicksortRec(s, t, start + lessTotal, end,
+                        recursionLimit, STRATEGY_LEFT_IF_EQUAL, pivot, comparer, context);
+                }
+                strategy = STRATEGY_RIGHT;
+                prevPivot = default!;
+                end = start + lessTotal;
+                // Continue loop for the < side
             }
         }
     }
