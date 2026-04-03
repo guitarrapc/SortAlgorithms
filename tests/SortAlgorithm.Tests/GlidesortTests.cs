@@ -204,23 +204,33 @@ public class GlidesortTests
         Glidesort.Sort(sorted.AsSpan(), stats);
 
         // Glidesort for sorted data:
-        // Small arrays (n < SMALL_SORT=32) use InsertionSort directly,
-        // which detects already-sorted data with n-1 comparisons and 0 writes.
-        // Larger arrays are detected as a single ascending run with n-1 comparisons.
+        // Small arrays (n < SMALL_SORT=48) use BlockInsertionSort (branchless networks: always write regardless of sortedness).
+        // Larger arrays are detected as a single ascending run with n-1 comparisons and 0 writes.
         //
         // Actual observations for sorted data:
-        // n=10:  9 comparisons, 0 writes, 0 swaps   (InsertionSort: already sorted)
-        // n=20:  19 comparisons, 0 writes, 0 swaps   (InsertionSort: already sorted)
-        // n=50:  49 comparisons, 0 writes, 0 swaps   (Single ascending run detected)
-        // n=100: 99 comparisons, 0 writes, 0 swaps   (Single ascending run detected)
-        //
-        // Pattern: Always exactly n-1 comparisons (run detection scan), 0 writes, 0 swaps
-        var expectedCompares = (ulong)(n - 1);
-
-        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
-        await Assert.That(stats.IndexReadCount > 0).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be > 0");
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        // n=10:  21 comparisons, 20 writes, 0 swaps   (BlockInsertionSort: Sort8(18c,16w) + block[2](3c,4w))
+        // n=20:  51 comparisons, 56 writes, 0 swaps   (BlockInsertionSort: Sort16(44c,48w) + block[4](7c,8w))
+        // n=50:  49 comparisons, 0 writes, 0 swaps    (Single ascending run detected)
+        // n=100: 99 comparisons, 0 writes, 0 swaps    (Single ascending run detected)
+        if (n < 48)
+        {
+            // BlockInsertionSort: branchless Sort4/8/16/32 pipelines write deterministically regardless of input order.
+            var expectedCompares = n == 10 ? 21UL : 51UL;
+            var expectedWrites = n == 10 ? 20UL : 56UL;
+            await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
+            await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+            await Assert.That(stats.IndexReadCount > 0).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be > 0");
+            await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        }
+        else
+        {
+            // GlidesortCore: detects single ascending run with n-1 comparisons, 0 writes
+            var expectedCompares = (ulong)(n - 1);
+            await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
+            await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
+            await Assert.That(stats.IndexReadCount > 0).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be > 0");
+            await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        }
     }
 
     [Test]
@@ -235,26 +245,26 @@ public class GlidesortTests
         Glidesort.Sort(reversed.AsSpan(), stats);
 
         // Glidesort for reversed data:
-        // Small arrays (n < SMALL_SORT=32) use InsertionSort: O(n²) comparisons and writes.
+        // Small arrays (n < SMALL_SORT=48) use BlockInsertionSort (branchless, fewer writes than InsertionSort for reversed data).
         // Larger arrays detect single strictly descending run and reverse via swaps: n-1 comparisons, n/2 swaps.
         //
         // Actual observations for reversed data:
-        // n=10:  45 comparisons, 54 writes, 0 swaps   (InsertionSort: reversed causes max shifts)
-        // n=20:  190 comparisons, 209 writes, 0 swaps  (InsertionSort: reversed causes max shifts)
+        // n=10:  27 comparisons, 30 writes, 0 swaps   (BlockInsertionSort)
+        // n=20:  66 comparisons, 89 writes, 0 swaps   (BlockInsertionSort)
         // n=50:  49 comparisons, 50 writes, 25 swaps   (Single descending run + reverse)
         // n=100: 99 comparisons, 100 writes, 50 swaps  (Single descending run + reverse)
         //
-        // Pattern: For n < 32, InsertionSort O(n²); for n >= 32, run detection + reverse with n/2 swaps
+        // Pattern: For n < 48, BlockInsertionSort; for n >= 48, run detection + reverse with n/2 swaps
         ulong minCompares, maxCompares, minWrites, maxWrites, minSwaps, maxSwaps;
-        if (n < 32)
+        if (n < 48)
         {
-            // InsertionSort: reversed data causes each element to shift all the way left
+            // BlockInsertionSort: branchless networks (lower writes than InsertionSort for reversed)
             minCompares = (ulong)n;
             maxCompares = (ulong)(n * (n - 1) / 2 + n);
-            minWrites = (ulong)(n * (n - 1) / 4);
+            minWrites = (ulong)n;
             maxWrites = (ulong)(n * (n + 1) / 2);
             minSwaps = 0UL;
-            maxSwaps = 0UL; // InsertionSort doesn't use swaps
+            maxSwaps = 0UL;
         }
         else
         {

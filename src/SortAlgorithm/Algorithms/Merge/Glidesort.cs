@@ -148,36 +148,34 @@ public static class Glidesort
         if (n <= 1) return;
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-
-        // Fast path for small arrays: use insertion sort directly
-        if (n < SMALL_SORT)
-        {
-            InsertionSort.SortCore(s, first, last);
-            return;
-        }
-
         SortCore(s, first, last, comparer, context);
     }
 
     /// <summary>
-    /// Core Glidesort implementation using powersort merge tree with logical runs.
+    /// Core Glidesort implementation. Handles both paths:
+    /// small arrays (n &lt; SMALL_SORT) use block_insertion_sort, larger arrays use the powersort merge tree.
+    /// Uses ArrayPool scratch (reference uses stack scratch; C# generic T cannot stackalloc).
     /// </summary>
     private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var n = last - first;
-
-        // Allocate scratch buffer
-        var scratchSize = ComputeScratchSize<T>(n);
+        var scratchSize = n < SMALL_SORT ? SMALL_SORT : ComputeScratchSize<T>(n);
         var scratchBuffer = ArrayPool<T>.Shared.Rent(scratchSize);
-
         try
         {
             var scratch = scratchBuffer.AsSpan(0, scratchSize);
             var t = new SortSpan<T, TComparer, TContext>(scratch, context, comparer, BUFFER_TEMP);
 
-            GlidesortCore(s, t, scratch, first, last, eagerSmallsort: false, comparer, context);
+            if (n < SMALL_SORT)
+            {
+                BlockInsertionSort(s, t, first, last);
+            }
+            else
+            {
+                GlidesortCore(s, t, scratch, first, last, eagerSmallsort: false, comparer, context);
+            }
         }
         finally
         {
