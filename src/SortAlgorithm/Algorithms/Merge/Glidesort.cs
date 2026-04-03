@@ -1458,6 +1458,32 @@ public static class Glidesort
             //   geq_fwd:  t[scrStart .. scrStart+geqFwdCount)
             //   geq_bwd:  s[destStart+n-geqBwdCount .. destStart+n)
 
+            // --- Both sides small: overlapping small sorts ---
+            // When both halves are below SMALL_SORT, sort them directly on dest instead of
+            // recursing. Rounding each side up to the next multiple of 8 is safe because
+            // n >= SMALL_SORT ensures the rounded range stays within dest[0..n).
+            // The two sorted ranges may overlap in the middle; correctness holds because
+            // all less-side elements < pivot <= all geq-side elements, so sorting either
+            // rounded range leaves the less/geq boundary intact.
+            if (lessTotal < SMALL_SORT && geqTotal < SMALL_SORT)
+            {
+                // Assemble less_bwd from scratch into dest (less_fwd already in dest).
+                if (lessBwdCount > 0)
+                    t.CopyTo(scrStart + n - lessBwdCount, s, destStart + lessFwdCount, lessBwdCount);
+                // Assemble geq_fwd from scratch into dest (geq_bwd already in dest).
+                if (geqFwdCount > 0)
+                    t.CopyTo(scrStart, s, destStart + lessTotal, geqFwdCount);
+
+                var tLocal = t.Slice(scrStart, n, BUFFER_TEMP);
+                // Sort less side, optionally rounded up to the next multiple of 8.
+                var roundLess = (lessTotal <= 32 && (lessTotal & 8) != 0) ? (lessTotal + 7) & ~7 : lessTotal;
+                BlockInsertionSort(s, tLocal, destStart, destStart + roundLess);
+                // Sort geq side, optionally rounded up to the next multiple of 8.
+                var roundGeq = (geqTotal <= 32 && (geqTotal & 8) != 0) ? (geqTotal + 7) & ~7 : geqTotal;
+                BlockInsertionSort(s, tLocal, destStart + n - roundGeq, destStart + n);
+                return;
+            }
+
             // --- PartitionStrategy: all-elements-geq → re-partition with LeftWithPivot ---
             if (lessTotal == 0 && !partitionLeft)
             {
