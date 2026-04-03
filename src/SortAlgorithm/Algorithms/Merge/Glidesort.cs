@@ -1382,36 +1382,25 @@ public static class Glidesort
             for (var i = leftOff; i < leftOff + leftLen; i++)
             {
                 var val = leftInMain ? s.Read(i) : t.Read(i);
-                bool isLess = partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot);
-
-                if (isLess)
-                {
-                    if (!leftInMain || destFront != i) s.Write(destFront, val);
-                    destFront++;
-                }
-                else
-                {
-                    if (leftInMain || scrFront != i) t.Write(scrFront, val);
-                    scrFront++;
-                }
+                // Convert isLess to 0/1 for unconditional index updates.
+                // Overlap-safety self-copies (when destFront==i or scrFront==i) are harmless.
+                int goLess = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 1 : 0;
+                if (goLess != 0) s.Write(destFront, val);
+                else t.Write(scrFront, val);
+                destFront += goLess;
+                scrFront += 1 - goLess;
             }
 
             // Backward scan through right (reverse order)
             for (var i = rightOff + rightLen - 1; i >= rightOff; i--)
             {
                 var val = rightInMain ? s.Read(i) : t.Read(i);
-                bool isLess = partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot);
-
-                if (!isLess)
-                {
-                    if (!rightInMain || destBack != i) s.Write(destBack, val);
-                    destBack--;
-                }
-                else
-                {
-                    if (rightInMain || scrBack != i) t.Write(scrBack, val);
-                    scrBack--;
-                }
+                // goGeq = 1 when !isLess (geq → destBack/s); 0 when isLess (less → scrBack/t).
+                int goGeq = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 0 : 1;
+                if (goGeq != 0) s.Write(destBack, val);
+                else t.Write(scrBack, val);
+                destBack -= goGeq;
+                scrBack -= 1 - goGeq;
             }
 
             // Count elements in each group.
