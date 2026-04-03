@@ -263,6 +263,78 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     }
 
     /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is strictly less than the element at index <paramref name="j"/>.
+    /// Equivalent to <c>Compare(i, j) &lt; 0</c> but avoids the <c>CompareTo</c> → <c>int</c> → <c>&lt; 0</c> chain
+    /// for primitive types by returning <c>bool</c> directly via the same specialization used by <see cref="IsLessThan"/>.
+    /// Named "At" to disambiguate from the value-based <see cref="IsLessThan"/> overload when <typeparamref name="T"/> is <c>int</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsLessAt(int i, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var b = _span[j];
+            var result = _comparer.Compare(a, b);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnIndexRead(_offset + j, _bufferId);
+            _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
+            return result < 0;
+        }
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref _span[i]) < Unsafe.As<T, int>(ref _span[j]);
+            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref _span[i]) < Unsafe.As<T, long>(ref _span[j]);
+            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref _span[i]) < Unsafe.As<T, uint>(ref _span[j]);
+            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref _span[i]) < Unsafe.As<T, ulong>(ref _span[j]);
+            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref _span[i]) < Unsafe.As<T, short>(ref _span[j]);
+            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref _span[i]) < Unsafe.As<T, ushort>(ref _span[j]);
+            if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref _span[i]) < Unsafe.As<T, byte>(ref _span[j]);
+            if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref _span[i]) < Unsafe.As<T, sbyte>(ref _span[j]);
+            if (typeof(T) == typeof(char)) return Unsafe.As<T, char>(ref _span[i]) < Unsafe.As<T, char>(ref _span[j]);
+            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref _span[i]) < Unsafe.As<T, float>(ref _span[j]);
+            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref _span[i]) < Unsafe.As<T, double>(ref _span[j]);
+        }
+        return _comparer.Compare(_span[i], _span[j]) < 0;
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is less than or equal to the element at index <paramref name="j"/>.
+    /// Equivalent to <c>Compare(i, j) &lt;= 0</c> but avoids the <c>CompareTo</c> → <c>int</c> → <c>&lt;= 0</c> chain
+    /// for primitive types by returning <c>bool</c> directly via the same specialization used by <see cref="IsLessOrEqual"/>.
+    /// Named "At" to disambiguate from the value-based <see cref="IsLessOrEqual"/> overload when <typeparamref name="T"/> is <c>int</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsLessOrEqualAt(int i, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var b = _span[j];
+            var result = _comparer.Compare(a, b);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnIndexRead(_offset + j, _bufferId);
+            _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
+            return result <= 0;
+        }
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref _span[i]) <= Unsafe.As<T, int>(ref _span[j]);
+            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref _span[i]) <= Unsafe.As<T, long>(ref _span[j]);
+            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref _span[i]) <= Unsafe.As<T, uint>(ref _span[j]);
+            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref _span[i]) <= Unsafe.As<T, ulong>(ref _span[j]);
+            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref _span[i]) <= Unsafe.As<T, short>(ref _span[j]);
+            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref _span[i]) <= Unsafe.As<T, ushort>(ref _span[j]);
+            if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref _span[i]) <= Unsafe.As<T, byte>(ref _span[j]);
+            if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref _span[i]) <= Unsafe.As<T, sbyte>(ref _span[j]);
+            if (typeof(T) == typeof(char)) return Unsafe.As<T, char>(ref _span[i]) <= Unsafe.As<T, char>(ref _span[j]);
+            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref _span[i]) <= Unsafe.As<T, float>(ref _span[j]);
+            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref _span[i]) <= Unsafe.As<T, double>(ref _span[j]);
+        }
+        return _comparer.Compare(_span[i], _span[j]) <= 0;
+    }
+
+    /// <summary>
     /// Exchanges the values at the specified indices within the collection. (Equivalent to swapping span[i] and span[j].)
     /// </summary>
     /// <remarks>This method notifies the underlying context of the swap operation before updating the values.

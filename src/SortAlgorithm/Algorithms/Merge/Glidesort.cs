@@ -391,11 +391,11 @@ public static class Glidesort
     {
         if (last - start < 2) return (last - start, false);
 
-        var descending = s.Compare(start + 1, start) < 0;
+        var descending = s.IsLessAt(start + 1, start);
         if (descending)
         {
             var i = start + 2;
-            while (i < last && s.Compare(i, i - 1) < 0)
+            while (i < last && s.IsLessAt(i, i - 1))
             {
                 i++;
             }
@@ -404,7 +404,7 @@ public static class Glidesort
         else
         {
             var i = start + 2;
-            while (i < last && s.Compare(i, i - 1) >= 0)
+            while (i < last && !s.IsLessAt(i, i - 1))
             {
                 i++;
             }
@@ -604,16 +604,16 @@ public static class Glidesort
         if (left >= mid || mid >= rightEnd) return false;
 
         // Already completely sorted?
-        if (s.Compare(mid - 1, mid) <= 0) return false;
+        if (s.IsLessOrEqualAt(mid - 1, mid)) return false;
 
         // Skip left prefix already in place: find first left element > right's first.
         var newLeft = left;
-        while (newLeft < mid && s.Compare(newLeft, mid) <= 0)
+        while (newLeft < mid && s.IsLessOrEqualAt(newLeft, mid))
             newLeft++;
 
         // Skip right suffix already in place: find last right element < left's last.
         var newRightEnd = rightEnd;
-        while (newRightEnd > mid && s.Compare(mid - 1, newRightEnd - 1) <= 0)
+        while (newRightEnd > mid && s.IsLessOrEqualAt(mid - 1, newRightEnd - 1))
             newRightEnd--;
 
         if (newLeft >= mid || newRightEnd <= mid) return false;
@@ -643,7 +643,7 @@ public static class Glidesort
             var step = maybe / 2;
             var i = lo + step;
             // Is right[n-1-i] < left[i]? If so, i is a valid crossover point.
-            if (s.Compare(rightStart + n - 1 - i, leftStart + i) < 0)
+            if (s.IsLessAt(rightStart + n - 1 - i, leftStart + i))
             {
                 maybe = step;
             }
