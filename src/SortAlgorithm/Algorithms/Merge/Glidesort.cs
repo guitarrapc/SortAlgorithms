@@ -916,7 +916,7 @@ public static class Glidesort
 
         if (len0 < len2)
         {
-            // Smaller pair is r0+r1. Try to merge into scratch.
+            // first 2 runs, Try to merge into scratch.
             if (len0 + len1 <= scratch.Length)
             {
                 // Gap trick: merge r0+r1 → t[0..len0+len1), gap is s[start..mid2).
