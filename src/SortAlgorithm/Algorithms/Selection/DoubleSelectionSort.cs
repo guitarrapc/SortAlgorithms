@@ -153,13 +153,13 @@ public static class DoubleSelectionSort
             // Find both minimum and maximum in the unsorted region [left..right]
             for (var i = left + 1; i <= right; i++)
             {
-                if (s.Compare(i, min) < 0)
+                if (s.IsLessAt(i, min))
                 {
                     s.Context.OnRole(min, BUFFER_MAIN, RoleType.None);
                     min = i;
                     s.Context.OnRole(min, BUFFER_MAIN, RoleType.CurrentMin);
                 }
-                if (s.Compare(i, max) > 0)
+                if (!s.IsLessOrEqualAt(i, max))
                 {
                     s.Context.OnRole(max, BUFFER_MAIN, RoleType.None);
                     max = i;
