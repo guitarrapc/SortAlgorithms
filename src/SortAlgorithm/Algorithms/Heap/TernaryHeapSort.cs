@@ -197,11 +197,11 @@ public static class TernaryHeapSort
         {
             // Find largest among three children
             var maxChild = child;
-            if (child + 1 < offset + size && s.Compare(child + 1, maxChild) > 0)
+            if (child + 1 < offset + size && !s.IsLessOrEqualAt(child + 1, maxChild))
             {
                 maxChild = child + 1;
             }
-            if (child + 2 < offset + size && s.Compare(child + 2, maxChild) > 0)
+            if (child + 2 < offset + size && !s.IsLessOrEqualAt(child + 2, maxChild))
             {
                 maxChild = child + 2;
             }
@@ -214,7 +214,7 @@ public static class TernaryHeapSort
 
         // Phase 2: Sift up the original root value to its correct position
         var parent = offset + (hole - offset - 1) / 3;
-        while (hole > root && s.Compare(rootValue, s.Read(parent)) > 0)
+        while (hole > root && !s.IsLessOrEqual(rootValue, s.Read(parent)))
         {
             s.Write(hole, s.Read(parent));
             hole = parent;
@@ -258,11 +258,11 @@ public static class TernaryHeapSort
 
             // Find largest among three children
             var largest = child1;
-            if (child2 < offset + size && s.Compare(child2, largest) > 0)
+            if (child2 < offset + size && !s.IsLessOrEqualAt(child2, largest))
             {
                 largest = child2;
             }
-            if (child3 < offset + size && s.Compare(child3, largest) > 0)
+            if (child3 < offset + size && !s.IsLessOrEqualAt(child3, largest))
             {
                 largest = child3;
             }

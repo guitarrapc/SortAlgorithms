@@ -215,7 +215,7 @@ public static class WeakHeapSort
             }
 
             // Final step: Sort the last two elements (guaranteed n >= 2 here)
-            if (s.Compare(offset + 1, offset) < 0)
+            if (s.IsLessAt(offset + 1, offset))
             {
                 s.Swap(offset, offset + 1);
             }
@@ -240,7 +240,7 @@ public static class WeakHeapSort
         where TContext : ISortContext
     {
         Debug.Assert(j > 0, "j must be > 0 in Merge (FlipBit requires j>0).");
-        if (s.Compare(offset + j, offset + i) > 0)
+        if (!s.IsLessOrEqualAt(offset + j, offset + i))
         {
             s.Swap(offset + i, offset + j);
             FlipBit(r, j);

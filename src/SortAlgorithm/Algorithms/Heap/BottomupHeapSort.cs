@@ -244,7 +244,7 @@ public static class BottomupHeapSort
 
             // Select the larger child to continue descent
             var largerChild = left;
-            if (right < offset + size && s.Compare(right, left) > 0)
+            if (right < offset + size && !s.IsLessOrEqualAt(right, left))
             {
                 largerChild = right;
             }
@@ -306,7 +306,7 @@ public static class BottomupHeapSort
         while (child < offset + size)
         {
             // Find larger child
-            if (child + 1 < offset + size && s.Compare(child + 1, child) > 0)
+            if (child + 1 < offset + size && !s.IsLessOrEqualAt(child + 1, child))
             {
                 child++;
             }
