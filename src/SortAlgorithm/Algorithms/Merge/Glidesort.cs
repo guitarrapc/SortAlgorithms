@@ -42,8 +42,8 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description><strong>Scratch allocation:</strong> uses <see cref="System.Buffers.ArrayPool{T}"/> instead of stack allocation
 /// (<c>stackalloc</c> is not available for generic T in C#).</description></item>
-/// <item><description><strong>Sort16 final merge:</strong> uses copy-left-half + forward merge (16 scratch elements),
-/// whereas the reference uses DoubleMerge → SymmetricMerge (32 scratch elements).</description></item>
+/// <item><description><strong>Sort16 final merge:</strong> uses DoubleMerge → CopyTo-16 → SymmetricMerge (16 scratch elements on the narrow path),
+/// whereas the reference uses DoubleMerge(t→t) → SymmetricMerge (32 scratch elements on all paths).</description></item>
 /// </list>
 /// <para><strong>References:</strong></para>
 /// <para>GitHub: https://github.com/orlp/glidesort</para>
@@ -391,11 +391,11 @@ public static class Glidesort
     {
         if (last - start < 2) return (last - start, false);
 
-        var descending = s.Compare(start + 1, start) < 0;
+        var descending = s.IsLessAt(start + 1, start);
         if (descending)
         {
             var i = start + 2;
-            while (i < last && s.Compare(i, i - 1) < 0)
+            while (i < last && s.IsLessAt(i, i - 1))
             {
                 i++;
             }
@@ -404,7 +404,7 @@ public static class Glidesort
         else
         {
             var i = start + 2;
-            while (i < last && s.Compare(i, i - 1) >= 0)
+            while (i < last && !s.IsLessAt(i, i - 1))
             {
                 i++;
             }
@@ -604,16 +604,16 @@ public static class Glidesort
         if (left >= mid || mid >= rightEnd) return false;
 
         // Already completely sorted?
-        if (s.Compare(mid - 1, mid) <= 0) return false;
+        if (s.IsLessOrEqualAt(mid - 1, mid)) return false;
 
         // Skip left prefix already in place: find first left element > right's first.
         var newLeft = left;
-        while (newLeft < mid && s.Compare(newLeft, mid) <= 0)
+        while (newLeft < mid && s.IsLessOrEqualAt(newLeft, mid))
             newLeft++;
 
         // Skip right suffix already in place: find last right element < left's last.
         var newRightEnd = rightEnd;
-        while (newRightEnd > mid && s.Compare(mid - 1, newRightEnd - 1) <= 0)
+        while (newRightEnd > mid && s.IsLessOrEqualAt(mid - 1, newRightEnd - 1))
             newRightEnd--;
 
         if (newLeft >= mid || newRightEnd <= mid) return false;
@@ -643,7 +643,7 @@ public static class Glidesort
             var step = maybe / 2;
             var i = lo + step;
             // Is right[n-1-i] < left[i]? If so, i is a valid crossover point.
-            if (s.Compare(rightStart + n - 1 - i, leftStart + i) < 0)
+            if (s.IsLessAt(rightStart + n - 1 - i, leftStart + i))
             {
                 maybe = step;
             }
@@ -691,33 +691,33 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var c1 = l0 + l0Len - 1;
-        var c2 = r0 + r0Len - 1;
-        var o = l0 + l0Len + r0Len - 1;
+        // Count-based: n1/n2 are the remaining lengths; addresses computed as base + n - 1.
+        // Loop condition is a zero-check (simpler than lower-bound comparison).
+        var n1 = l0Len;
+        var n2 = r0Len;
+        var o = l0 + n1 + n2 - 1;
 
-        while (c1 >= l0 && c2 >= r0)
+        // Preload both current values; reload only the consumed side each iteration.
+        if (n1 != 0 && n2 != 0)
         {
-            var val1 = s.Read(c1);
-            var val2 = s.Read(c2);
-
-            if (s.Compare(val1, val2) <= 0) // <= takes val2 for stability
+            var val1 = s.Read(l0 + n1 - 1);
+            var val2 = s.Read(r0 + n2 - 1);
+            while (true)
             {
-                s.Write(o--, val2);
-                c2--;
-            }
-            else
-            {
-                s.Write(o--, val1);
-                c1--;
+                // val1 ≤ val2 → take right (val2) first; ties → right for backward-merge stability
+                int takeRight = s.IsLessOrEqual(val1, val2) ? 1 : 0;
+                s.Write(o--, takeRight != 0 ? val2 : val1);
+                n2 -= takeRight;
+                n1 -= 1 - takeRight;
+                if (n1 == 0 || n2 == 0) break;
+                if (takeRight != 0) val2 = s.Read(r0 + n2 - 1);
+                else val1 = s.Read(l0 + n1 - 1);
             }
         }
 
-        // If right0 has remaining elements, copy them to the front of the output.
-        // (Remaining left0 elements are already in their correct positions.)
-        while (c2 >= r0)
-        {
-            s.Write(o--, s.Read(c2--));
-        }
+        // Drain: right side may have remaining elements; copy them into place.
+        // Left side remaining elements are already in their correct positions.
+        while (n2 != 0) { s.Write(o--, s.Read(r0 + n2 - 1)); n2--; }
     }
 
     /// <summary>
@@ -740,20 +740,21 @@ public static class Glidesort
         var e2 = r1 + r1Len;
         var o = outStart;
 
-        while (c1 < e1 && c2 < e2)
+        // Preload both current values; reload only the consumed side each iteration.
+        if (c1 < e1 && c2 < e2)
         {
             var val1 = t.Read(c1);
             var val2 = s.Read(c2);
-
-            if (s.Compare(val1, val2) <= 0) // <= for stability
+            while (true)
             {
-                s.Write(o++, val1);
-                c1++;
-            }
-            else
-            {
-                s.Write(o++, val2);
-                c2++;
+                // val1 ≤ val2 → take left (val1); ties → left for stability
+                int takeLeft = s.IsLessOrEqual(val1, val2) ? 1 : 0;
+                s.Write(o++, takeLeft != 0 ? val1 : val2);
+                c1 += takeLeft;
+                c2 += 1 - takeLeft;
+                if (c1 >= e1 || c2 >= e2) break;
+                if (takeLeft != 0) val1 = t.Read(c1);
+                else val2 = s.Read(c2);
             }
         }
 
@@ -783,25 +784,115 @@ public static class Glidesort
         var e2 = rightEnd;
         var o = tOffset;
 
-        while (c1 < e1 && c2 < e2)
+        // Preload both current values; reload only the consumed side each iteration.
+        if (c1 < e1 && c2 < e2)
         {
             var v1 = s.Read(c1);
             var v2 = s.Read(c2);
-
-            if (s.Compare(v1, v2) <= 0) // <= for stability
+            while (true)
             {
-                t.Write(o++, v1);
-                c1++;
-            }
-            else
-            {
-                t.Write(o++, v2);
-                c2++;
+                // v1 ≤ v2 → take left (v1); ties → left for stability
+                int takeLeft = s.IsLessOrEqual(v1, v2) ? 1 : 0;
+                t.Write(o++, takeLeft != 0 ? v1 : v2);
+                c1 += takeLeft;
+                c2 += 1 - takeLeft;
+                if (c1 >= e1 || c2 >= e2) break;
+                if (takeLeft != 0) v1 = s.Read(c1);
+                else v2 = s.Read(c2);
             }
         }
 
-        while (c1 < e1) t.Write(o++, s.Read(c1++));
-        while (c2 < e2) t.Write(o++, s.Read(c2++));
+        // Drain: at most one side has remaining elements.
+        if (c1 < e1) s.CopyTo(c1, t, o, e1 - c1);
+        else if (c2 < e2) s.CopyTo(c2, t, o, e2 - c2);
+    }
+
+    /// <summary>
+    /// Interleaved double forward-merge into scratch. Merges two independent sorted-run pairs:
+    /// <list type="bullet">
+    /// <item><description>pair0: <c>s[left0Start..left0Mid)</c> + <c>s[left0Mid..left0End)</c> → <c>t[0..left0Len)</c></description></item>
+    /// <item><description>pair1: <c>s[right0Start..right0Mid)</c> + <c>s[right0Mid..right0End)</c> → <c>t[left0Len..left0Len+right0Len)</c></description></item>
+    /// </list>
+    /// The two pairs operate on non-overlapping input and output regions.
+    /// Interleaves their iterations in a single loop to expose independent operations to the JIT,
+    /// analogous to how <see cref="DoubleMerge"/> interleaves two independent SymmetricMerge operations.
+    /// </summary>
+    private static void DoubleMergeIntoScratch<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int left0Start, int left0Mid, int left0End,
+        int right0Start, int right0Mid, int right0End)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        // Pair 0: s[left0Start..left0Mid) + s[left0Mid..left0End) → t[0..left0Len)
+        var p0a = left0Start;  var p0ae = left0Mid;
+        var p0b = left0Mid;    var p0be = left0End;
+        var out0 = 0;
+
+        // Pair 1: s[right0Start..right0Mid) + s[right0Mid..right0End) → t[left0Len..)
+        var p1a = right0Start; var p1ae = right0Mid;
+        var p1b = right0Mid;   var p1be = right0End;
+        var out1 = left0End - left0Start; // = left0Len
+
+        // Interleaved main loop: preload all 4 current values; reload only the 2 consumed per iteration.
+        if (p0a < p0ae && p0b < p0be && p1a < p1ae && p1b < p1be)
+        {
+            var v0a = s.Read(p0a);
+            var v0b = s.Read(p0b);
+            var v1a = s.Read(p1a);
+            var v1b = s.Read(p1b);
+            while (true)
+            {
+                // v0a ≤ v0b → take left (v0a); ties → left for stability
+                int take0Left = s.IsLessOrEqual(v0a, v0b) ? 1 : 0;
+                int take1Left = s.IsLessOrEqual(v1a, v1b) ? 1 : 0;
+                t.Write(out0++, take0Left != 0 ? v0a : v0b);
+                t.Write(out1++, take1Left != 0 ? v1a : v1b);
+                p0a += take0Left;  p0b += 1 - take0Left;
+                p1a += take1Left;  p1b += 1 - take1Left;
+                if (p0a >= p0ae || p0b >= p0be || p1a >= p1ae || p1b >= p1be) break;
+                if (take0Left != 0) v0a = s.Read(p0a); else v0b = s.Read(p0b);
+                if (take1Left != 0) v1a = s.Read(p1a); else v1b = s.Read(p1b);
+            }
+        }
+
+        // Complete pair0: merge drain (if both sides still active), then CopyTo remaining tail.
+        // After the main loop at most one drain loop runs (pair0 and pair1 drain are mutually exclusive
+        // because the main loop exits when exactly one side is first exhausted). Grouping each pair's
+        // drain + tail together makes the two pairs structurally identical ("pair symmetric").
+        if (p0a < p0ae && p0b < p0be)
+        {
+            var v0a = s.Read(p0a);
+            var v0b = s.Read(p0b);
+            while (true)
+            {
+                int take0Left = s.IsLessOrEqual(v0a, v0b) ? 1 : 0;
+                t.Write(out0++, take0Left != 0 ? v0a : v0b);
+                p0a += take0Left;  p0b += 1 - take0Left;
+                if (p0a >= p0ae || p0b >= p0be) break;
+                if (take0Left != 0) v0a = s.Read(p0a); else v0b = s.Read(p0b);
+            }
+        }
+        if (p0a < p0ae) s.CopyTo(p0a, t, out0, p0ae - p0a);
+        else if (p0b < p0be) s.CopyTo(p0b, t, out0, p0be - p0b);
+
+        // Complete pair1: merge drain (if both sides still active), then CopyTo remaining tail.
+        if (p1a < p1ae && p1b < p1be)
+        {
+            var v1a = s.Read(p1a);
+            var v1b = s.Read(p1b);
+            while (true)
+            {
+                int take1Left = s.IsLessOrEqual(v1a, v1b) ? 1 : 0;
+                t.Write(out1++, take1Left != 0 ? v1a : v1b);
+                p1a += take1Left;  p1b += 1 - take1Left;
+                if (p1a >= p1ae || p1b >= p1be) break;
+                if (take1Left != 0) v1a = s.Read(p1a); else v1b = s.Read(p1b);
+            }
+        }
+        if (p1a < p1ae) s.CopyTo(p1a, t, out1, p1ae - p1a);
+        else if (p1b < p1be) s.CopyTo(p1b, t, out1, p1be - p1b);
     }
 
     /// <summary>
@@ -817,31 +908,33 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var c1 = leftStart + leftLen - 1;
-        var c2 = tLen - 1;
+        // Count-based: n1/n2 eliminate signed-comparison bounds (especially c2 >= 0 which
+        // requires an integer sign check). Loop condition is a zero-check.
+        var n1 = leftLen;
+        var n2 = tLen;
         var o = outEnd - 1;
 
-        while (c1 >= leftStart && c2 >= 0)
+        // Preload both current values; reload only the consumed side each iteration.
+        if (n1 != 0 && n2 != 0)
         {
-            var v1 = s.Read(c1);
-            var v2 = t.Read(c2);
-
-            if (s.Compare(v1, v2) <= 0) // <= takes v2 for stability
+            var v1 = s.Read(leftStart + n1 - 1);
+            var v2 = t.Read(n2 - 1);
+            while (true)
             {
-                s.Write(o--, v2);
-                c2--;
-            }
-            else
-            {
-                s.Write(o--, v1);
-                c1--;
+                // v1 ≤ v2 → take right (v2) first; ties → right for backward-merge stability
+                int takeRight = s.IsLessOrEqual(v1, v2) ? 1 : 0;
+                s.Write(o--, takeRight != 0 ? v2 : v1);
+                n2 -= takeRight;
+                n1 -= 1 - takeRight;
+                if (n1 == 0 || n2 == 0) break;
+                if (takeRight != 0) v2 = t.Read(n2 - 1);
+                else v1 = s.Read(leftStart + n1 - 1);
             }
         }
 
-        while (c2 >= 0)
-        {
-            s.Write(o--, t.Read(c2--));
-        }
+        // Drain: right (from scratch) may have remaining elements; copy them into place.
+        // Left side remaining elements are already in their correct positions.
+        while (n2 != 0) { s.Write(o--, t.Read(n2 - 1)); n2--; }
     }
 
     /// <summary>
@@ -862,25 +955,27 @@ public static class Glidesort
         var e2 = totalLen;
         var o = outStart;
 
-        while (c1 < e1 && c2 < e2)
+        // Preload both current values; reload only the consumed side each iteration.
+        if (c1 < e1 && c2 < e2)
         {
             var v1 = t.Read(c1);
             var v2 = t.Read(c2);
-
-            if (s.Compare(v1, v2) <= 0) // <= for stability
+            while (true)
             {
-                s.Write(o++, v1);
-                c1++;
-            }
-            else
-            {
-                s.Write(o++, v2);
-                c2++;
+                // v1 ≤ v2 → take left (v1); ties → left for stability
+                int takeLeft = s.IsLessOrEqual(v1, v2) ? 1 : 0;
+                s.Write(o++, takeLeft != 0 ? v1 : v2);
+                c1 += takeLeft;
+                c2 += 1 - takeLeft;
+                if (c1 >= e1 || c2 >= e2) break;
+                if (takeLeft != 0) v1 = t.Read(c1);
+                else v2 = t.Read(c2);
             }
         }
 
-        while (c1 < e1) s.Write(o++, t.Read(c1++));
-        while (c2 < e2) s.Write(o++, t.Read(c2++));
+        // Drain: at most one side has remaining elements.
+        if (c1 < e1) t.CopyTo(c1, s, o, e1 - c1);
+        else if (c2 < e2) t.CopyTo(c2, s, o, e2 - c2);
     }
 
     /// <summary>
@@ -958,11 +1053,12 @@ public static class Glidesort
         var rightLen = end - mid2;
         var totalLen = leftLen + rightLen;
 
-        // Full scratch: merge both pairs into scratch, then merge back.
+        // Full scratch: interleave both pair merges into scratch, then merge back.
+        // The two MergeIntoScratch operations are independent (non-overlapping input + output)
+        // so DoubleMergeIntoScratch interleaves their iterations to expose independence to the JIT.
         if (totalLen <= scratch.Length)
         {
-            MergeIntoScratchAt(s, t, start, mid1, mid2, 0);
-            MergeIntoScratchAt(s, t, mid2, mid3, end, leftLen);
+            DoubleMergeIntoScratch(s, t, start, mid1, mid2, mid2, mid3, end);
             MergeFromScratch(s, t, leftLen, totalLen, start);
             return;
         }
@@ -1136,11 +1232,11 @@ public static class Glidesort
         var vb = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b);
         var vc = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c);
 
-        var x = s.Compare(va, vb) < 0;
-        var y = s.Compare(va, vc) < 0;
+        var x = s.IsLessThan(va, vb);
+        var y = s.IsLessThan(va, vc);
         if (x == y)
         {
-            var z = s.Compare(vb, vc) < 0;
+            var z = s.IsLessThan(vb, vc);
             return (z ^ x) ? c : b;
         }
         return a;
@@ -1163,11 +1259,11 @@ public static class Glidesort
         var vb = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b);
         var vc = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c);
 
-        var x = s.Compare(va, vb) < 0;
-        var y = s.Compare(va, vc) < 0;
+        var x = s.IsLessThan(va, vb);
+        var y = s.IsLessThan(va, vc);
         if (x == y)
         {
-            var z = s.Compare(vb, vc) < 0;
+            var z = s.IsLessThan(vb, vc);
             return (z ^ x) ? vc : vb;
         }
         return va;
@@ -1256,7 +1352,7 @@ public static class Glidesort
 
                 if (strategy == STRATEGY_LEFT_IF_EQUAL)
                 {
-                    partitionLeft = s.Compare(prevPivot, pivot) >= 0;
+                    partitionLeft = !s.IsLessThan(prevPivot, pivot);
                 }
                 else
                 {
@@ -1270,53 +1366,56 @@ public static class Glidesort
             // Backward scan through right (reverse): geq → s[destBack--], less → t[scrBack--]
             //
             // Overlap safety:
-            //   Forward:  destFront ≤ fwdCur (when left is in s, leftOff == destStart)
-            //             scrFront  ≤ fwdCur (when left is in t, leftOff == scrStart)
-            //   Backward: bwdCur    ≤ destBack (when right is in s)
-            //             bwdCur    ≤ scrBack  (when right is in t)
-            //   Cross: forward writes in s end at destStart+lessFwdCount ≤ destStart+leftLen,
-            //          backward reads from s start at rightOff ≥ destStart+leftLen (when contiguous).
+            //   Forward:  destFront ≤ fwdI (when left is in s, leftOff == destStart)
+            //             scrFront  ≤ fwdI (when left is in t, leftOff == scrStart)
+            //   Backward: bwdI      ≥ destBack+1 impossible: destBack decrements by geqBwd ≤ k,
+            //             bwdI decrements by 1 each iter → bwdI ≥ rightOff, destBack ≥ rightOff
+            //   Cross fwd-write vs bwd-read: forward writes to s[destStart..+leftLen);
+            //          backward reads from s[rightOff..+rightLen) with rightOff ≥ destStart+leftLen.
+            //   Cross bwd-write vs fwd-read: backward writes to s[destStart+leftLen..+n);
+            //          forward reads from s[leftOff..+leftLen) ⊆ s[destStart..destStart+leftLen).
+            //   destFront/destBack never collide: lessFwdCount+geqBwdCount ≤ leftLen+rightLen = n.
             var destFront = destStart;
             var destBack = destStart + n - 1;
             var scrFront = scrStart;
             var scrBack = scrStart + n - 1;
 
-            // Forward scan through left
-            for (var i = leftOff; i < leftOff + leftLen; i++)
+            // Interleaved forward+backward scan: one element from each side per iteration.
+            // Reading both values and computing both decisions before any write lets the JIT/CPU
+            // issue the two independent loads and comparisons in parallel (ILP).
+            var fwdI = leftOff;
+            var bwdI = rightOff + rightLen - 1;
+            var minCount = Math.Min(leftLen, rightLen);
+            for (var k = 0; k < minCount; k++)
             {
-                var val = leftInMain ? s.Read(i) : t.Read(i);
-                var cmp = s.Compare(val, pivot);
-                bool isLess = partitionLeft ? cmp <= 0 : cmp < 0;
-
-                if (isLess)
-                {
-                    if (!leftInMain || destFront != i) s.Write(destFront, val);
-                    destFront++;
-                }
-                else
-                {
-                    if (leftInMain || scrFront != i) t.Write(scrFront, val);
-                    scrFront++;
-                }
+                var valFwd = leftInMain  ? s.Read(fwdI) : t.Read(fwdI);
+                var valBwd = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
+                int goLess = (partitionLeft ? s.IsLessOrEqual(valFwd, pivot) : s.IsLessThan(valFwd, pivot)) ? 1 : 0;
+                int goGeq  = (partitionLeft ? s.IsLessOrEqual(valBwd, pivot) : s.IsLessThan(valBwd, pivot)) ? 0 : 1;
+                if (goLess != 0) s.Write(destFront, valFwd); else t.Write(scrFront, valFwd);
+                destFront += goLess;  scrFront += 1 - goLess;
+                if (goGeq  != 0) s.Write(destBack,  valBwd); else t.Write(scrBack,  valBwd);
+                destBack  -= goGeq;   scrBack  -= 1 - goGeq;
+                fwdI++;
+                bwdI--;
             }
 
-            // Backward scan through right (reverse order)
-            for (var i = rightOff + rightLen - 1; i >= rightOff; i--)
+            // Forward tail (when leftLen > rightLen).
+            for (; fwdI < leftOff + leftLen; fwdI++)
             {
-                var val = rightInMain ? s.Read(i) : t.Read(i);
-                var cmp = s.Compare(val, pivot);
-                bool isLess = partitionLeft ? cmp <= 0 : cmp < 0;
+                var val = leftInMain ? s.Read(fwdI) : t.Read(fwdI);
+                int goLess = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 1 : 0;
+                if (goLess != 0) s.Write(destFront, val); else t.Write(scrFront, val);
+                destFront += goLess;  scrFront += 1 - goLess;
+            }
 
-                if (!isLess)
-                {
-                    if (!rightInMain || destBack != i) s.Write(destBack, val);
-                    destBack--;
-                }
-                else
-                {
-                    if (rightInMain || scrBack != i) t.Write(scrBack, val);
-                    scrBack--;
-                }
+            // Backward tail (when rightLen > leftLen).
+            for (; bwdI >= rightOff; bwdI--)
+            {
+                var val = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
+                int goGeq = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 0 : 1;
+                if (goGeq != 0) s.Write(destBack, val); else t.Write(scrBack, val);
+                destBack -= goGeq;    scrBack -= 1 - goGeq;
             }
 
             // Count elements in each group.
@@ -1532,9 +1631,9 @@ public static class Glidesort
         {
             var sv = s.Read(si);
             var tv = t.Read(ti);
-            // > for stability: drain sv only when it is strictly greater,
+            // IsLessThan(tv, sv): drain sv only when sv is strictly greater (tv < sv),
             // so equal elements from the left prefix always come first.
-            if (s.Compare(sv, tv) > 0)
+            if (s.IsLessThan(tv, sv))
             {
                 s.Write(o--, sv);
                 si--;
@@ -1584,13 +1683,13 @@ public static class Glidesort
 
         // Stably create sorted pairs: a <= b from (v0,v1), c <= d from (v2,v3)
         T a, b;
-        if (src.Compare(v1, v0) < 0) { a = v1; b = v0; } else { a = v0; b = v1; }
+        if (src.IsLessThan(v1, v0)) { a = v1; b = v0; } else { a = v0; b = v1; }
         T c, d;
-        if (src.Compare(v3, v2) < 0) { c = v3; d = v2; } else { c = v2; d = v3; }
+        if (src.IsLessThan(v3, v2)) { c = v3; d = v2; } else { c = v2; d = v3; }
 
         // Compare (a,c) and (b,d) to find overall min/max and the two unknowns.
-        var c3 = src.Compare(c, a) < 0;
-        var c4 = src.Compare(d, b) < 0;
+        var c3 = src.IsLessThan(c, a);
+        var c4 = src.IsLessThan(d, b);
         var min = c3 ? c : a;
         var max = c4 ? b : d;
         var unkLeft = c3 ? a : (c4 ? c : b);
@@ -1598,7 +1697,7 @@ public static class Glidesort
 
         // Sort the two unknowns.
         T lo, hi;
-        if (src.Compare(unkRight, unkLeft) < 0) { lo = unkRight; hi = unkLeft; } else { lo = unkLeft; hi = unkRight; }
+        if (src.IsLessThan(unkRight, unkLeft)) { lo = unkRight; hi = unkLeft; } else { lo = unkLeft; hi = unkRight; }
 
         dst.Write(di, min);
         dst.Write(di + 1, lo);
@@ -1629,35 +1728,21 @@ public static class Glidesort
 
         for (var i = 0; i < k; i++)
         {
-            // Merge at begin: pick smaller, ties → left (stability)
-            var lv = src.Read(lb);
-            var rv = src.Read(rb);
-            if (src.Compare(rv, lv) < 0)
-            {
-                dst.Write(db, rv);
-                rb++;
-            }
-            else
-            {
-                dst.Write(db, lv);
-                lb++;
-            }
-            db++;
+            // Preload front and back values together to expose independent operations to the JIT.
+            var lvF = src.Read(lb);
+            var rvF = src.Read(rb);
+            var lvB = src.Read(le);
+            var rvB = src.Read(re);
 
-            // Merge at end: pick larger, ties → right (stability)
-            var lv2 = src.Read(le);
-            var rv2 = src.Read(re);
-            if (src.Compare(rv2, lv2) < 0)
-            {
-                dst.Write(de, lv2);
-                le--;
-            }
-            else
-            {
-                dst.Write(de, rv2);
-                re--;
-            }
-            de--;
+            // Front: rv < lv → take right; otherwise take left (ties → left for stability)
+            int takeLeftF = src.IsLessThan(rvF, lvF) ? 0 : 1;
+            // Back: rv < lv → take left; otherwise take right (ties → right for stability)
+            int takeLeftB = src.IsLessThan(rvB, lvB) ? 1 : 0;
+
+            dst.Write(db++, takeLeftF != 0 ? lvF : rvF);
+            dst.Write(de--, takeLeftB != 0 ? lvB : rvB);
+            lb += takeLeftF;  rb += 1 - takeLeftF;
+            le -= takeLeftB;  re -= 1 - takeLeftB;
         }
     }
 
@@ -1692,34 +1777,31 @@ public static class Glidesort
 
         for (var i = 0; i < k; i++)
         {
-            // Pair 0: merge at begin
-            {
-                var lv = src.Read(l0b);
-                var rv = src.Read(r0b);
-                if (src.Compare(rv, lv) < 0) { dst.Write(d0b++, rv); r0b++; }
-                else { dst.Write(d0b++, lv); l0b++; }
-            }
-            // Pair 1: merge at begin
-            {
-                var lv = src.Read(l1b);
-                var rv = src.Read(r1b);
-                if (src.Compare(rv, lv) < 0) { dst.Write(d1b++, rv); r1b++; }
-                else { dst.Write(d1b++, lv); l1b++; }
-            }
-            // Pair 0: merge at end
-            {
-                var lv = src.Read(l0e);
-                var rv = src.Read(r0e);
-                if (src.Compare(rv, lv) < 0) { dst.Write(d0e--, lv); l0e--; }
-                else { dst.Write(d0e--, rv); r0e--; }
-            }
-            // Pair 1: merge at end
-            {
-                var lv = src.Read(l1e);
-                var rv = src.Read(r1e);
-                if (src.Compare(rv, lv) < 0) { dst.Write(d1e--, lv); l1e--; }
-                else { dst.Write(d1e--, rv); r1e--; }
-            }
+            // Preload all 8 values first to expose the four independent operations to the JIT.
+            var l0fv = src.Read(l0b);
+            var r0fv = src.Read(r0b);
+            var l1fv = src.Read(l1b);
+            var r1fv = src.Read(r1b);
+            var l0ev = src.Read(l0e);
+            var r0ev = src.Read(r0e);
+            var l1ev = src.Read(l1e);
+            var r1ev = src.Read(r1e);
+
+            // Front: rv < lv → take right; otherwise take left (ties → left for stability)
+            int takeL0f = src.IsLessThan(r0fv, l0fv) ? 0 : 1;
+            int takeL1f = src.IsLessThan(r1fv, l1fv) ? 0 : 1;
+            // Back: rv < lv → take left; otherwise take right (ties → right for stability)
+            int takeL0e = src.IsLessThan(r0ev, l0ev) ? 1 : 0;
+            int takeL1e = src.IsLessThan(r1ev, l1ev) ? 1 : 0;
+
+            dst.Write(d0b++, takeL0f != 0 ? l0fv : r0fv);
+            dst.Write(d1b++, takeL1f != 0 ? l1fv : r1fv);
+            dst.Write(d0e--, takeL0e != 0 ? l0ev : r0ev);
+            dst.Write(d1e--, takeL1e != 0 ? l1ev : r1ev);
+            l0b += takeL0f;  r0b += 1 - takeL0f;
+            l1b += takeL1f;  r1b += 1 - takeL1f;
+            l0e -= takeL0e;  r0e -= 1 - takeL0e;
+            l1e -= takeL1e;  r1e -= 1 - takeL1e;
         }
     }
 
@@ -1766,8 +1848,11 @@ public static class Glidesort
     /// </para>
     /// <para>
     /// When t.Length &lt; 32 (quicksort base case where scratch is sliced to n elements),
-    /// bounces through s and finishes with a copy-left-half forward merge.
-    /// The reference avoids this by allocating a separate 64-element stack scratch inside
+    /// bounces through s between the DoubleMerge and SymmetricMerge steps:
+    /// Sort4Into(t[0..16)) → DoubleMerge(t→s) → CopyTo(s[i..i+16)→t[0..16)) → SymmetricMerge(t→s).
+    /// Both paths end with the same SymmetricMerge call structure; the narrow path pays 8 extra
+    /// element copies to reload t[0..16) before the final merge.
+    /// The reference avoids all this by allocating a separate 64-element stack scratch inside
     /// block_insertion_sort (with_stack_scratch(64)), but C# cannot stackalloc generic T.
     /// </para>
     /// </summary>
@@ -1793,23 +1878,18 @@ public static class Glidesort
         }
         else
         {
-            // Narrow scratch path: bounce through s, finish with copy-left + forward merge.
-            // t[0..16) → s: double merge (4 groups of 4 → 2 groups of 8)
+            // Narrow scratch path: bounce through s, then use SymmetricMerge for the final step,
+            // matching the reference path's final merge structure.
+            // t[0..16) → s[i..i+16): double merge (4 groups of 4 → 2 groups of 8)
             DoubleMerge(t, s, 0, i, 4);
 
-            // s → s: merge 2 groups of 8 into 1 group of 16
-            s.CopyTo(i, t, 0, 8);
-            var c1 = 0;
-            var c2 = i + 8;
-            var o = i;
-            while (c1 < 8 && c2 < i + 16)
-            {
-                var v1 = t.Read(c1);
-                var v2 = s.Read(c2);
-                if (s.Compare(v1, v2) <= 0) { s.Write(o++, v1); c1++; }
-                else { s.Write(o++, v2); c2++; }
-            }
-            if (c1 < 8) { t.CopyTo(c1, s, o, 8 - c1); }
+            // t[0..16) was fully consumed as input by DoubleMerge, so it is now free.
+            // Copy both halves back to t[0..16) so SymmetricMerge can read from one span.
+            s.CopyTo(i, t, 0, 16);
+
+            // t[0..16) → s[i..i+16): symmetric merge (2 groups of 8 → 1 group of 16).
+            // Structurally identical to the full path's SymmetricMerge(t, s, 16, 24, i, 8).
+            SymmetricMerge(t, s, 0, 8, i, 8);
         }
     }
 
