@@ -160,6 +160,7 @@ public static class RadixMSD4Sort
         // Allocate bucket counts on stack (RadixSize+1 = 5 elements = 20 bytes)
         // Each recursive level gets its own bucketCounts, avoiding reuse corruption
         Span<int> bucketCounts = stackalloc int[RadixSize + 1];
+        bucketCounts.Clear(); // Required: [module: SkipLocalsInit] skips zero-initialization
 
         // Count occurrences of each digit in the current range
         for (var i = 0; i < length; i++)
