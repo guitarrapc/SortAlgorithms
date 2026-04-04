@@ -3,168 +3,274 @@
 public static class TimsortAdversaryGenerator
 {
     /// <summary>
-    /// Generate an input that is hostile to TimSort:
-    /// 1. natural run lengths follow an R_tim-like drag pattern
-    /// 2. adjacent runs are value-interleaved, making merges expensive
+    /// Generate an array that causes TimSort to perform poorly by creating many runs that trigger worst-case merging behavior.
     /// </summary>
-    public static int[] Generate(int size, int minRun = 32)
+    /// <param name="size"></param>
+    /// <param name="minRun"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    public static int[] Generate(int size, int minRun)
     {
         if (size < 0) throw new ArgumentOutOfRangeException(nameof(size));
         if (minRun <= 0) throw new ArgumentOutOfRangeException(nameof(minRun));
         if (size == 0) return Array.Empty<int>();
-        if (size == 1) return new[] { 0 };
+        if (size <= minRun) return GenerateTiny(size);
 
-        var runs = GenerateScaledRtimRuns(size, minRun);
-        return MaterializeInterleavedNaturalRuns(runs);
+        var runs = BuildTimSortBadRuns(size, minRun);
+        var tree = BuildExpectedMergeTree(runs);
+        return MaterializeRunsFromTree(runs, tree);
     }
 
-    /// <summary>
-    /// Build run lengths whose sum is exactly size.
-    /// Base pattern is R_tim(k), scaled by minRun.
-    /// The remainder is merged into the last run to avoid tiny tail artifacts.
-    /// </summary>
-    private static int[] GenerateScaledRtimRuns(int size, int minRun)
+    private static int[] GenerateTiny(int size)
     {
-        int k = Math.Max(1, size / minRun);
-        var baseRuns = Rtim(k);
+        var a = new int[size];
+        for (int i = 0; i < size; i++)
+            a[i] = ((i & 1) == 0) ? i : size + i;
+        return a;
+    }
 
-        var runs = new List<int>(baseRuns.Count);
-        foreach (var x in baseRuns)
-            runs.Add(checked(x * minRun));
+    private static int[] BuildTimSortBadRuns(int size, int minRun)
+    {
+        var rev = new List<int>();
+        int sum = 0;
 
-        int covered = runs.Sum();
-        int rem = size - covered;
+        rev.Add(minRun);
+        rev.Add(minRun + 1);
+        sum += rev[0] + rev[1];
 
-        if (rem < 0)
+        while (true)
         {
-            // In practice this should not happen because Sum(Rtim(k)) = k.
-            // Kept defensively.
-            throw new InvalidOperationException("Rtim scaling exceeded target size.");
+            int next = rev[^1] + rev[^2] + 1;
+            if (sum + next > size * 2 / 3) break;
+            rev.Add(next);
+            sum += next;
         }
 
+        while (sum + minRun <= size)
+        {
+            rev.Add(minRun + ((rev.Count & 1) == 0 ? 0 : 1));
+            sum += rev[^1];
+        }
+
+        int rem = size - sum;
         if (rem > 0)
         {
-            if (runs.Count == 0)
+            if (rem < minRun && rev.Count > 0)
+                rev[^1] += rem;
+            else
+                rev.Add(rem);
+        }
+
+        rev.Reverse();
+        NormalizeRuns(rev, minRun, size);
+        return rev.ToArray();
+    }
+
+    private static void NormalizeRuns(List<int> runs, int minRun, int total)
+    {
+        for (int i = runs.Count - 2; i >= 0; i--)
+        {
+            if (runs[i] < minRun)
             {
-                runs.Add(rem);
+                runs[i + 1] += runs[i];
+                runs.RemoveAt(i);
+            }
+        }
+
+        int sum = runs.Sum();
+        if (sum != total)
+            throw new InvalidOperationException($"Run normalization changed total: {sum} != {total}");
+    }
+
+    private sealed class Node
+    {
+        public int StartLeaf;
+        public int EndLeaf; // exclusive
+        public int Length;
+        public Node? Left;
+        public Node? Right;
+        public bool IsLeaf => Left is null && Right is null;
+    }
+
+    private static Node BuildExpectedMergeTree(int[] runs)
+    {
+        var stack = new List<Node>();
+
+        foreach (var (len, idx) in runs.Select((len, idx) => (len, idx)))
+        {
+            stack.Add(new Node
+            {
+                StartLeaf = idx,
+                EndLeaf = idx + 1,
+                Length = len
+            });
+
+            Collapse(stack);
+        }
+
+        ForceCollapse(stack);
+        return stack[0];
+    }
+
+    private static void Collapse(List<Node> stack)
+    {
+        while (stack.Count > 1)
+        {
+            int n = stack.Count - 2;
+
+            int lenNm1 = n - 1 >= 0 ? stack[n - 1].Length : 0;
+            int lenN = stack[n].Length;
+            int lenNp1 = stack[n + 1].Length;
+            int lenNm2 = n - 2 >= 0 ? stack[n - 2].Length : 0;
+
+            if ((n > 0 && lenNm1 <= lenN + lenNp1) ||
+                (n > 1 && lenNm2 <= lenNm1 + lenN))
+            {
+                if (lenNm1 < lenNp1)
+                    n--;
+
+                MergeAt(stack, n);
+            }
+            else if (lenN <= lenNp1)
+            {
+                MergeAt(stack, n);
             }
             else
             {
-                // Fold the tail into the last run rather than appending a tiny run.
-                // Tiny tail runs are often too easy for practical TimSort.
-                runs[^1] += rem;
-            }
-        }
-
-        return runs.ToArray();
-    }
-
-    /// <summary>
-    /// Buss & Knop style recursive run-count structure.
-    /// Sum(Rtim(n)) = n.
-    /// </summary>
-    private static List<int> Rtim(int n)
-    {
-        if (n <= 0) throw new ArgumentOutOfRangeException(nameof(n));
-        if (n <= 3) return new List<int> { n };
-
-        int nPrime = n / 2;
-        var left = Rtim(nPrime);
-        var right = Rtim(nPrime - 1);
-
-        var result = new List<int>(left.Count + right.Count + 1);
-        result.AddRange(left);
-        result.AddRange(right);
-        result.Add((n % 2 == 0) ? 1 : 2);
-        return result;
-    }
-
-    /// <summary>
-    /// Materialize runs so that:
-    /// - each run is strictly increasing
-    /// - each run boundary is descending, so natural runs stay separated
-    /// - values from neighboring runs strongly interleave in final sorted order
-    ///
-    /// Construction:
-    /// run i gets values:
-    ///   perm(i), perm(i)+R, perm(i)+2R, ...
-    /// where R = number of runs.
-    ///
-    /// This makes merge order between adjacent runs comparison-heavy
-    /// instead of trivial "all-left then all-right".
-    /// </summary>
-    private static int[] MaterializeInterleavedNaturalRuns(int[] runLengths)
-    {
-        if (runLengths.Length == 0) return Array.Empty<int>();
-
-        int total = 0;
-        foreach (int len in runLengths)
-        {
-            if (len <= 0) throw new ArgumentException("run length must be positive", nameof(runLengths));
-            total += len;
-        }
-
-        int runCount = runLengths.Length;
-        var result = new int[total];
-
-        // Use a permutation that keeps neighboring runs "close" in sorted order.
-        // Identity is already decent; bit-reversal can also work, but identity is simple and effective.
-        int[] perm = Enumerable.Range(0, runCount).ToArray();
-
-        int index = 0;
-        for (int run = 0; run < runCount; run++)
-        {
-            int len = runLengths[run];
-            int baseRank = perm[run];
-
-            for (int j = 0; j < len; j++)
-            {
-                result[index + j] = baseRank + j * runCount;
-            }
-
-            index += len;
-        }
-
-        // Sanity:
-        // - inside each run: strictly increasing because +runCount each step
-        // - boundary between run i and i+1:
-        //     last_i = perm[i] + (len_i - 1) * runCount
-        //     first_{i+1} = perm[i+1]
-        //   Since len_i >= minRun-sized in practice, boundary is descending.
-        //
-        // If you ever use very tiny runs, add a fix-up pass here.
-        return result;
-    }
-
-    /// <summary>
-    /// Optional helper: extract natural ascending runs as TimSort-style preprocessing would.
-    /// Useful for verifying the generator.
-    /// </summary>
-    public static int[] DetectAscendingRunLengths(ReadOnlySpan<int> a)
-    {
-        if (a.Length == 0) return Array.Empty<int>();
-
-        var runs = new List<int>();
-        int i = 0;
-
-        while (i < a.Length)
-        {
-            int start = i;
-            i++;
-
-            if (i == a.Length)
-            {
-                runs.Add(1);
                 break;
             }
+        }
+    }
 
-            // Ascending
-            while (i < a.Length && a[i - 1] <= a[i])
-                i++;
+    private static void ForceCollapse(List<Node> stack)
+    {
+        while (stack.Count > 1)
+        {
+            int n = stack.Count - 2;
+            if (n > 0 && stack[n - 1].Length < stack[n + 1].Length)
+                n--;
+            MergeAt(stack, n);
+        }
+    }
 
-            runs.Add(i - start);
+    private static void MergeAt(List<Node> stack, int i)
+    {
+        var left = stack[i];
+        var right = stack[i + 1];
+
+        stack[i] = new Node
+        {
+            StartLeaf = left.StartLeaf,
+            EndLeaf = right.EndLeaf,
+            Length = left.Length + right.Length,
+            Left = left,
+            Right = right
+        };
+        stack.RemoveAt(i + 1);
+    }
+
+    private readonly struct Slot
+    {
+        public readonly int Leaf;
+        public readonly int Offset;
+
+        public Slot(int leaf, int offset)
+        {
+            Leaf = leaf;
+            Offset = offset;
+        }
+    }
+
+    private static int[] MaterializeRunsFromTree(int[] runs, Node root)
+    {
+        int total = runs.Sum();
+        var result = new int[total];
+
+        var runOffsets = new int[runs.Length];
+        int pos = 0;
+        for (int i = 0; i < runs.Length; i++)
+        {
+            runOffsets[i] = pos;
+            pos += runs[i];
         }
 
-        return runs.ToArray();
+        // 最終ソート順に相当する「スロット順序」を構築
+        var slots = BuildSlotOrder(root);
+
+        if (slots.Count != total)
+            throw new InvalidOperationException($"Slot count mismatch: {slots.Count} != {total}");
+
+        // その順に rank を割り当てる
+        for (int rank = 0; rank < total; rank++)
+        {
+            var slot = slots[rank];
+            result[runOffsets[slot.Leaf] + slot.Offset] = rank;
+        }
+
+        // 自然 run 境界の確認
+        for (int i = 0, start = 0; i < runs.Length - 1; i++)
+        {
+            int len = runs[i];
+            int nextStart = start + len;
+            if (result[start + len - 1] <= result[nextStart])
+            {
+                // 境界が降下していないと run がつながるので、末尾と先頭を軽く調整
+                int tmp = result[start + len - 1];
+                result[start + len - 1] = result[nextStart];
+                result[nextStart] = tmp;
+            }
+            start = nextStart;
+        }
+
+        return result;
+    }
+
+    private static List<Slot> BuildSlotOrder(Node node)
+    {
+        if (node.IsLeaf)
+        {
+            var list = new List<Slot>(node.Length);
+            for (int i = 0; i < node.Length; i++)
+                list.Add(new Slot(node.StartLeaf, i));
+            return list;
+        }
+
+        var left = BuildSlotOrder(node.Left!);
+        var right = BuildSlotOrder(node.Right!);
+        return WeightedInterleave(left, right);
+    }
+
+    private static List<Slot> WeightedInterleave(List<Slot> left, List<Slot> right)
+    {
+        int a = left.Count;
+        int b = right.Count;
+        int i = 0, j = 0;
+
+        var merged = new List<Slot>(a + b);
+
+        while (i < a || j < b)
+        {
+            if (i >= a)
+            {
+                merged.Add(right[j++]);
+                continue;
+            }
+            if (j >= b)
+            {
+                merged.Add(left[i++]);
+                continue;
+            }
+
+            // それぞれの「次の要素の理想位置」を比較して、小さい方を先に出す
+            long leftKey = ((long)(2 * i + 1)) * b;
+            long rightKey = ((long)(2 * j + 1)) * a;
+
+            if (leftKey <= rightKey)
+                merged.Add(left[i++]);
+            else
+                merged.Add(right[j++]);
+        }
+
+        return merged;
     }
 }

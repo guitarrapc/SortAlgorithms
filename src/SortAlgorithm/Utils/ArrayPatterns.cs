@@ -1,4 +1,6 @@
-﻿namespace SortAlgorithm.Utils;
+﻿using SortAlgorithm.Algorithms;
+
+namespace SortAlgorithm.Utils;
 
 public static class ArrayPatterns
 {
@@ -2569,7 +2571,7 @@ public static class ArrayPatterns
     /// <br/>
     /// ref: Buss & Knop（Strategies for Stable Merge Sorting, arXiv:1801.04641 https://arxiv.org/abs/1801.04641
     /// </summary>
-    public static int[] GenerateTimsortDragAdversary(int size) => TimsortAdversaryGenerator.Generate(size);
+    public static int[] GenerateTimsortDragAdversary(int size) => TimsortAdversaryGenerator.Generate(size, TimSort.ComputeMinRun(size));
 
 
     // Floating-Point with NaN Pattern Generators

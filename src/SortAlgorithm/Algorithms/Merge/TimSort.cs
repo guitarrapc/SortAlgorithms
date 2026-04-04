@@ -246,7 +246,7 @@ public static class TimSort
     /// Returns a value in [32, 64] such that n/minRun is close to or slightly less than a power of 2.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int ComputeMinRun(int n)
+    internal static int ComputeMinRun(int n)
     {
         var r = 0;
         while (n >= 2 * MIN_MERGE)
