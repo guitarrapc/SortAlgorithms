@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using SortAlgorithm.Contexts;
@@ -518,7 +518,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         {
             _context.OnSwap(_offset + i, _offset + j, _bufferId);
         }
-        (_span[i], _span[j]) = (_span[j], _span[i]);
+        ref T si = ref Unsafe.Add(ref _ref, i);
+        ref T sj = ref Unsafe.Add(ref _ref, j);
+        (si, sj) = (sj, si);
     }
 
     /// <summary>
