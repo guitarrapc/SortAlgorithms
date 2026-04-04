@@ -130,7 +130,7 @@ public static class CycleSort
         var pos = start;
         for (var i = start + 1; i < s.Length; i++)
         {
-            if (s.Compare(i, value) < 0)
+            if (s.IsLessThan(s.Read(i), value))
             {
                 pos++;
             }
