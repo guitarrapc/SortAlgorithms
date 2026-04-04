@@ -2569,74 +2569,7 @@ public static class ArrayPatterns
     /// <br/>
     /// ref: Buss & Knop（Strategies for Stable Merge Sorting, arXiv:1801.04641 https://arxiv.org/abs/1801.04641
     /// </summary>
-    public static int[] GenerateTimsortDragAdversary(int size)
-    {
-        var scale = 32;
-        var n = size / scale;
-        var runs = GenerateRtimScaled(n: n, scale: 32);
-        var patternedArray = GenerateFromRunLengths(runs, size);
-        var mod = size % runs[0];
-        if (mod != 0)
-        {
-            for (var i = runs[0]; i < size; i++)
-            {
-                patternedArray[i] = patternedArray[i - 1] + 1;
-            }
-        }
-        return patternedArray;
-
-        // Munro & Wild multiply by 32 to avoid minrun effects in practical Timsort
-        static int[] GenerateRtimScaled(int n, int scale = 32)
-            => Rtim(n).Select(x => checked(x * scale)).ToArray();
-
-        // Buss & Knop: Rtim(n) recursive definition (n >= 1)
-        static List<int> Rtim(int n)
-        {
-            if (n <= 0) throw new ArgumentOutOfRangeException(nameof(n));
-            if (n <= 3) return [n];
-
-            int nPrime = n / 2; // floor
-            var left = Rtim(nPrime);
-            var right = Rtim(nPrime - 1);
-
-            var res = new List<int>(left.Count + right.Count + 1);
-            res.AddRange(left);
-            res.AddRange(right);
-            res.Add((n % 2 == 0) ? 1 : 2);
-            return res;
-        }
-
-        // Each run is strictly increasing,
-        // but between runs the value drops so runs don't merge into a longer increasing run.
-        static int[] GenerateFromRunLengths(int[] runLengths, int expectedSize)
-        {
-            int n = 0;
-            foreach (var l in runLengths)
-            {
-                if (l <= 0) throw new ArgumentException("run length must be positive");
-                n += l;
-            }
-
-            var a = new int[expectedSize];
-            int idx = 0;
-
-            // Make later runs have smaller value ranges so boundary is descending.
-            int baseValue = n * 10; // big enough headroom
-
-            foreach (var len in runLengths)
-            {
-                // Fill ascending within the run: (baseValue-len+1) ... baseValue
-                int start = baseValue - len + 1;
-                for (int i = 0; i < len; i++)
-                    a[idx + i] = start + i;
-
-                idx += len;
-                baseValue -= len; // ensures next run's values are all smaller
-            }
-
-            return a;
-        }
-    }
+    public static int[] GenerateTimsortDragAdversary(int size) => TimsortAdversaryGenerator.Generate(size);
 
 
     // Floating-Point with NaN Pattern Generators
