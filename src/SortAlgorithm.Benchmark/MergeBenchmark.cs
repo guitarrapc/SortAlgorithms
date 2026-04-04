@@ -57,15 +57,15 @@ public class MergeBenchmark
     }
 
     [Benchmark]
-    public void StdStableSort()
-    {
-        SortAlgorithm.Algorithms.StdStableSort.Sort(_stdstableArray.AsSpan());
-    }
-
-    [Benchmark]
     public void BottomupMergeSort()
     {
         SortAlgorithm.Algorithms.BottomupMergeSort.Sort(_bottomupmergeArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void StdStableSort()
+    {
+        SortAlgorithm.Algorithms.StdStableSort.Sort(_stdstableArray.AsSpan());
     }
 
     [Benchmark]
