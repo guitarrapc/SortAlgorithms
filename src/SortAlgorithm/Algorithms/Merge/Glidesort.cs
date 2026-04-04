@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
@@ -543,6 +543,10 @@ public static class Glidesort
     {
         if (mid <= start || mid >= end) return;
 
+        context.OnPhase(SortPhase.GlidesortPhysicalMerge, start, mid - 1, end - 1);
+        context.OnRole(start, BUFFER_MAIN, RoleType.LeftPointer);
+        context.OnRole(mid, BUFFER_MAIN, RoleType.RightPointer);
+
         var curLeft = start;
         var curMid = mid;
         var curRightEnd = end;
@@ -586,6 +590,8 @@ public static class Glidesort
                 curMid = left1Start;
             }
         }
+        context.OnRole(start, BUFFER_MAIN, RoleType.None);
+        context.OnRole(mid, BUFFER_MAIN, RoleType.None);
     }
 
     /// <summary>
@@ -1156,6 +1162,8 @@ public static class Glidesort
             BlockInsertionSort(s, t, start, end);
             return;
         }
+
+        context.OnPhase(SortPhase.GlidesortQuicksort, start, end - 1);
 
         var logn = 64 - BitOperations.LeadingZeroCount((ulong)n);
         var recursionLimit = 2 * logn;

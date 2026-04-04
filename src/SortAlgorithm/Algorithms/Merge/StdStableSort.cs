@@ -102,7 +102,7 @@ public static class StdStableSort
         {
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var b = new SortSpan<T, TComparer, TContext>(buffer.AsSpan(0, span.Length), context, comparer, BUFFER_MERGE);
-            StableSort(s, b);
+            StableSort(s, b, 0);
         }
         finally
         {
@@ -119,7 +119,7 @@ public static class StdStableSort
     /// <item><description>MergeIntoS(b, l2, s) → s sorted</description></item>
     /// </list>
     /// </summary>
-    private static void StableSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b)
+    private static void StableSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b, int offset)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -140,9 +140,14 @@ public static class StdStableSort
         var sRight = s.Slice(l2, len - l2, BUFFER_MAIN);
         var bRight = b.Slice(l2, len - l2, BUFFER_MERGE);
 
-        StableSortMove(sLeft, bLeft);   // bLeft sorted
-        StableSortMove(sRight, bRight); // bRight sorted
+        StableSortMove(sLeft, bLeft, offset);         // bLeft sorted
+        StableSortMove(sRight, bRight, offset + l2);  // bRight sorted
+        s.Context.OnPhase(SortPhase.StdStableSortSort, offset, offset + l2, offset + len - 1);
+        s.Context.OnRole(offset, BUFFER_MERGE, RoleType.LeftPointer);
+        s.Context.OnRole(offset + l2, BUFFER_MERGE, RoleType.RightPointer);
         MergeIntoS(b, l2, s);           // merge b[0..l2) + b[l2..len) → s
+        s.Context.OnRole(offset, BUFFER_MERGE, RoleType.None);
+        s.Context.OnRole(offset + l2, BUFFER_MERGE, RoleType.None);
     }
 
     /// <summary>
@@ -154,7 +159,7 @@ public static class StdStableSort
     ///   then MergeIntoB(s, l2, b) to write sorted result into b.</description></item>
     /// </list>
     /// </summary>
-    private static void StableSortMove<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b)
+    private static void StableSortMove<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b, int offset)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -194,9 +199,14 @@ public static class StdStableSort
         var sRight = s.Slice(l2, len - l2, BUFFER_MAIN);
         var bRight = b.Slice(l2, len - l2, BUFFER_MERGE);
 
-        StableSort(sLeft, bLeft);   // sLeft sorted in-place
-        StableSort(sRight, bRight); // sRight sorted in-place
+        StableSort(sLeft, bLeft, offset);         // sLeft sorted in-place
+        StableSort(sRight, bRight, offset + l2);  // sRight sorted in-place
+        s.Context.OnPhase(SortPhase.StdStableSortMove, offset, offset + l2, offset + len - 1);
+        s.Context.OnRole(offset, BUFFER_MAIN, RoleType.LeftPointer);
+        s.Context.OnRole(offset + l2, BUFFER_MAIN, RoleType.RightPointer);
         MergeIntoB(s, l2, b);       // merge s[0..l2) + s[l2..len) → b
+        s.Context.OnRole(offset, BUFFER_MAIN, RoleType.None);
+        s.Context.OnRole(offset + l2, BUFFER_MAIN, RoleType.None);
     }
 
     /// <summary>

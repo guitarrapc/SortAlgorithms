@@ -29,6 +29,10 @@
 ///   <item><term>OddEvenMergeSortPass</term><description>p (merge group size, power of 2) / count</description></item>
 ///   <item><term>OddEvenMergeSortStage</term><description>k (comparison distance within merge) / p (current merge group size) / count</description></item>
 ///   <item><term>Reverse</term><description>lo (start index, inclusive) / hi (end index, inclusive)</description></item>
+///   <item><term>StdStableSortSort</term><description>left (abs start of buffer's left half) / mid (abs start of buffer's right half) / right (abs end of buffer, inclusive)</description></item>
+///   <item><term>StdStableSortMove</term><description>left (abs start of span's left half) / mid (abs start of span's right half) / right (abs end of span, inclusive)</description></item>
+///   <item><term>GlidesortQuicksort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>GlidesortPhysicalMerge</term><description>start (inclusive) / mid-1 (inclusive end of left half) / end-1 (inclusive end)</description></item>
 /// </list>
 /// </remarks>
 public enum SortPhase
@@ -269,6 +273,30 @@ public enum SortPhase
     /// param1=remaining run count on the stack
     /// </summary>
     MergeRunCollapse,
+
+    /// <summary>
+    /// StdStableSort StableSort merge step: merging two sorted halves of the auxiliary buffer back into the main span (MergeIntoS).
+    /// param1=left (absolute start of buffer's left half, inclusive), param2=mid (absolute start of buffer's right half, inclusive), param3=right (absolute end of buffer, inclusive)
+    /// </summary>
+    StdStableSortSort,
+
+    /// <summary>
+    /// StdStableSort StableSortMove merge step: merging two sorted halves of the main span into the auxiliary buffer (MergeIntoB).
+    /// param1=left (absolute start of main span's left half, inclusive), param2=mid (absolute start of main span's right half, inclusive), param3=right (absolute end of main span, inclusive)
+    /// </summary>
+    StdStableSortMove,
+
+    /// <summary>
+    /// Glidesort stable bidirectional quicksort on an Unsorted logical block.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    GlidesortQuicksort,
+
+    /// <summary>
+    /// Glidesort physical merge of two adjacent sorted runs [start..mid) and [mid..end).
+    /// param1=start (inclusive), param2=mid-1 (inclusive end of left half), param3=end-1 (inclusive end)
+    /// </summary>
+    GlidesortPhysicalMerge,
 
     // Adaptive family
 
