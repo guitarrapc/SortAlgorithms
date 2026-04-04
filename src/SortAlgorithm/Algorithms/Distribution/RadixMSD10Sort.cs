@@ -191,6 +191,7 @@ public static class RadixMSD10Sort
         // counts[d] = number of elements with digit value d
         // offsets[d] = write position for next element with digit value d
         Span<int> counts = stackalloc int[RadixBase];
+        counts.Clear(); // Required: [module: SkipLocalsInit] skips zero-initialization
         Span<int> offsets = stackalloc int[RadixBase];
 
         // Phase 1: Count occurrences of each digit value
