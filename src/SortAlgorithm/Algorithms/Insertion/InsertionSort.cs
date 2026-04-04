@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -326,7 +326,7 @@ public static class InsertionSort
                 var tmp = s.Read(i);
                 var j = i - 1;
 
-                if (s.Compare(j, tmp) > 0)
+                if (s.IsGreaterThan(s.Read(j), tmp))
                 {
                     // Element needs to be inserted (not already in correct position)
                     if (++insertionCount >= insertionLimit)
@@ -360,7 +360,7 @@ public static class InsertionSort
                 var tmp = s.Read(i);
                 var j = i - 1;
 
-                if (s.Compare(j, tmp) > 0)
+                if (s.IsGreaterThan(s.Read(j), tmp))
                 {
                     // Element needs to be inserted
                     if (++insertionCount >= insertionLimit)
