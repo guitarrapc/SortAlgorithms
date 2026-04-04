@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -218,15 +218,15 @@ public static class IntroSort
             // Tiny arrays: use inline sorting networks to avoid function call overhead
             if (size == 2)
             {
-                if (s.Compare(left, right) > 0) s.Swap(left, right);
+                if (s.IsGreaterAt(left, right)) s.Swap(left, right);
                 return;
             }
 
             if (size == 3)
             {
-                if (s.Compare(left, left + 1) > 0) s.Swap(left, left + 1);
-                if (s.Compare(left, right) > 0) s.Swap(left, right);
-                if (s.Compare(left + 1, right) > 0) s.Swap(left + 1, right);
+                if (s.IsGreaterAt(left, left + 1)) s.Swap(left, left + 1);
+                if (s.IsGreaterAt(left, right)) s.Swap(left, right);
+                if (s.IsGreaterAt(left + 1, right)) s.Swap(left + 1, right);
                 return;
             }
 
@@ -292,13 +292,13 @@ public static class IntroSort
             while (l <= r)
             {
                 // Move l forward while elements are less than pivot
-                while (l < right && s.Compare(l, pivot) < 0)
+                while (l < right && s.IsLessThan(s.Read(l), pivot))
                 {
                     l++;
                 }
 
                 // Move r backward while elements are greater than pivot
-                while (r > left && s.Compare(r, pivot) > 0)
+                while (r > left && s.IsGreaterThan(s.Read(r), pivot))
                 {
                     r--;
                 }

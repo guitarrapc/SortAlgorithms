@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -280,17 +280,17 @@ public static class DualPivotQuickSort
                 // Each element is compared against both pivot1 (left) and pivot2 (right)
                 for (int k = less; k <= great; k++)
                 {
-                    if (s.Compare(k, pivot1Value) < 0)
+                    if (s.IsLessThan(s.Read(k), pivot1Value))
                     {
                         // Element < pivot1: move to left region
                         s.Swap(k, less);
                         less++;
                     }
-                    else if (s.Compare(k, pivot2Value) > 0)
+                    else if (s.IsGreaterThan(s.Read(k), pivot2Value))
                     {
                         // Element > pivot2: scan from right to find position
                         // Check k < great first to avoid unnecessary comparisons (short-circuit evaluation)
-                        while (k < great && s.Compare(great, pivot2Value) > 0)
+                        while (k < great && s.IsGreaterThan(s.Read(great), pivot2Value))
                         {
                             great--;
                         }
@@ -298,7 +298,7 @@ public static class DualPivotQuickSort
                         great--;
 
                         // Re-check swapped element (original comparison result no longer valid after swap)
-                        if (s.Compare(k, pivot1Value) < 0)
+                        if (s.IsLessThan(s.Read(k), pivot1Value))
                         {
                             s.Swap(k, less);
                             less++;
@@ -331,16 +331,16 @@ public static class DualPivotQuickSort
                 // avoids O(n²) regression on all-equal inputs.
                 for (int k = less; k <= great; k++)
                 {
-                    if (s.Compare(k, pivot1Value) < 0)
+                    if (s.IsLessThan(s.Read(k), pivot1Value))
                     {
                         // Element < pivot: move to left region
                         s.Swap(k, less);
                         less++;
                     }
-                    else if (s.Compare(k, pivot1Value) > 0)
+                    else if (s.IsGreaterThan(s.Read(k), pivot1Value))
                     {
                         // Element > pivot: scan from right to find position
-                        while (k < great && s.Compare(great, pivot1Value) > 0)
+                        while (k < great && s.IsGreaterThan(s.Read(great), pivot1Value))
                         {
                             great--;
                         }
@@ -348,7 +348,7 @@ public static class DualPivotQuickSort
                         great--;
 
                         // Re-check swapped element
-                        if (s.Compare(k, pivot1Value) < 0)
+                        if (s.IsLessThan(s.Read(k), pivot1Value))
                         {
                             s.Swap(k, less);
                             less++;

@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -229,8 +229,8 @@ public static class IntroSortDotnet
         // Walk the left and right pointers, swapping elements as necessary, until they cross.
         while (left < right)
         {
-            while (s.Compare(offset + (++left), pivot) < 0) ;
-            while (s.Compare(pivot, offset + (--right)) < 0) ;
+            while (s.IsLessThan(s.Read(offset + (++left)), pivot)) ;
+            while (s.IsLessThan(pivot, s.Read(offset + (--right)))) ;
 
             if (left >= right)
                 break;
@@ -270,7 +270,7 @@ public static class IntroSortDotnet
             T t = s.Read(offset + i + 1);
 
             int j = i;
-            while (j >= 0 && s.Compare(offset + j, t) > 0)
+            while (j >= 0 && s.IsGreaterThan(s.Read(offset + j), t))
             {
                 s.Write(offset + j + 1, s.Read(offset + j));
                 j--;
@@ -342,7 +342,7 @@ public static class IntroSortDotnet
             }
 
             // If current value is greater than or equal to the larger child, we're done
-            if (s.Compare(d, s.Read(offset + child - 1)) >= 0)
+            if (s.IsGreaterOrEqual(d, s.Read(offset + child - 1)))
                 break;
 
             // Move the larger child up

@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -403,7 +403,7 @@ public static class StdSort
                 {
                     s.Write(j, s.Read(k));
                     j = k;
-                } while (s.Compare(tmp, --k) < 0);
+                } while (s.IsLessThan(tmp, s.Read(--k)));
                 s.Write(j, tmp);
             }
         }
@@ -459,7 +459,7 @@ public static class StdSort
                 {
                     s.Write(j, s.Read(k));
                     j = k;
-                } while (j != first && s.Compare(tmp, --k) < 0);
+                } while (j != first && s.IsLessThan(tmp, s.Read(--k)));
                 s.Write(j, tmp);
 
                 if (++count == limit)
@@ -488,7 +488,7 @@ public static class StdSort
         do
         {
             i++;
-        } while (i < last && s.Compare(i, pivot) < 0);
+        } while (i < last && s.IsLessThan(s.Read(i), pivot));
 
         // Find last element < pivot
         var j = last - 1;
@@ -499,7 +499,7 @@ public static class StdSort
             if (begin == i - 1)
             {
                 // Unguarded: first only advanced once, median-of-3 guarantees safety
-                while (i < j && s.Compare(j, pivot) >= 0)
+                while (i < j && s.IsGreaterOrEqual(s.Read(j), pivot))
                 {
                     j--;
                 }
@@ -507,7 +507,7 @@ public static class StdSort
             else
             {
                 // Guarded: normal case with bounds check
-                while (j > begin && s.Compare(j, pivot) >= 0)
+                while (j > begin && s.IsGreaterOrEqual(s.Read(j), pivot))
                 {
                     j--;
                 }
@@ -523,8 +523,8 @@ public static class StdSort
 
             // After swap, find next elements to swap
             // These are always guarded by the median-of-3 pivot selection
-            do { i++; } while (s.Compare(i, pivot) < 0);
-            do { j--; } while (s.Compare(j, pivot) >= 0);
+            do { i++; } while (s.IsLessThan(s.Read(i), pivot));
+            do { j--; } while (s.IsGreaterOrEqual(s.Read(j), pivot));
         }
 
         // Place pivot in correct position
@@ -555,18 +555,18 @@ public static class StdSort
         // Find first element > pivot
         var i = first;
         // Optimization from LLVM libc++: check if pivot < last element to determine if guarded scan needed
-        if (s.Compare(pivot, last - 1) < 0)
+        if (s.IsLessThan(pivot, s.Read(last - 1)))
         {
             // Guarded: pivot < last element, so elements > pivot exist
             do
             {
                 i++;
-            } while (s.Compare(pivot, i) >= 0);
+            } while (s.IsGreaterOrEqual(pivot, s.Read(i)));
         }
         else
         {
             // Unguarded: pivot >= last element, no need for bounds check
-            while (++i < last && s.Compare(pivot, i) >= 0)
+            while (++i < last && s.IsGreaterOrEqual(pivot, s.Read(i)))
             {
             }
         }
@@ -576,7 +576,7 @@ public static class StdSort
         if (i < j)
         {
             // Always guarded because median-of-3 ensures begin <= pivot
-            while (j > begin && s.Compare(pivot, j) < 0)
+            while (j > begin && s.IsLessThan(pivot, s.Read(j)))
             {
                 j--;
             }
@@ -589,8 +589,8 @@ public static class StdSort
 
             // After swap, find next elements to swap
             // These are always guarded by the median-of-3 pivot selection
-            do { i++; } while (s.Compare(pivot, i) >= 0);
-            do { j--; } while (s.Compare(pivot, j) < 0);
+            do { i++; } while (s.IsGreaterOrEqual(pivot, s.Read(i)));
+            do { j--; } while (s.IsLessThan(pivot, s.Read(j)));
         }
 
         // Place pivot in correct position

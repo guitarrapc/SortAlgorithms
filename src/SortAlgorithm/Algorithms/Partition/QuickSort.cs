@@ -192,13 +192,13 @@ public static class QuickSort
                 while (i <= j)
                 {
                     // Move i forward while elements are less than pivot
-                    while (s.Compare(i, pivot) < 0)
+                    while (s.IsLessThan(s.Read(i), pivot))
                     {
                         i++;
                     }
 
                     // Move j backward while elements are greater than pivot
-                    while (s.Compare(pivot, j) < 0)
+                    while (s.IsLessThan(pivot, s.Read(j)))
                     {
                         j--;
                     }
