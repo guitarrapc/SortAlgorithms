@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 
@@ -435,11 +435,11 @@ public static class TimSort
         var ofs = 1;
         var p = baseIdx + hint;
 
-        if (s.Compare(key, p) > 0)
+        if (s.IsGreaterThan(key, s.Read(p)))
         {
             // Gallop right until s[base + hint + lastOfs] < key <= s[base + hint + ofs]
             var maxOfs = len - hint;
-            while (ofs < maxOfs && s.Compare(key, p + ofs) > 0)
+            while (ofs < maxOfs && s.IsGreaterThan(key, s.Read(p + ofs)))
             {
                 lastOfs = ofs;
                 ofs = (ofs << 1) + 1;
@@ -460,7 +460,7 @@ public static class TimSort
         {
             // Gallop left until s[base + hint - ofs] < key <= s[base + hint - lastOfs]
             var maxOfs = hint + 1;
-            while (ofs < maxOfs && s.Compare(key, p - ofs) <= 0)
+            while (ofs < maxOfs && s.IsLessOrEqual(key, s.Read(p - ofs)))
             {
                 lastOfs = ofs;
                 ofs = (ofs << 1) + 1;
@@ -484,7 +484,7 @@ public static class TimSort
         while (lastOfs < ofs)
         {
             var m = lastOfs + ((ofs - lastOfs) >> 1);
-            if (s.Compare(key, baseIdx + m) > 0)
+            if (s.IsGreaterThan(key, s.Read(baseIdx + m)))
             {
                 lastOfs = m + 1;
             }
@@ -510,11 +510,11 @@ public static class TimSort
         var ofs = 1;
         var p = baseIdx + hint;
 
-        if (s.Compare(key, p) < 0)
+        if (s.IsLessThan(key, s.Read(p)))
         {
             // Gallop left until s[base + hint - ofs] <= key < s[base + hint - lastOfs]
             var maxOfs = hint + 1;
-            while (ofs < maxOfs && s.Compare(key, p - ofs) < 0)
+            while (ofs < maxOfs && s.IsLessThan(key, s.Read(p - ofs)))
             {
                 lastOfs = ofs;
                 ofs = (ofs << 1) + 1;
@@ -536,7 +536,7 @@ public static class TimSort
         {
             // Gallop right until s[base + hint + lastOfs] <= key < s[base + hint + ofs]
             var maxOfs = len - hint;
-            while (ofs < maxOfs && s.Compare(key, p + ofs) >= 0)
+            while (ofs < maxOfs && s.IsGreaterOrEqual(key, s.Read(p + ofs)))
             {
                 lastOfs = ofs;
                 ofs = (ofs << 1) + 1;
@@ -559,7 +559,7 @@ public static class TimSort
         while (lastOfs < ofs)
         {
             var m = lastOfs + ((ofs - lastOfs) >> 1);
-            if (s.Compare(key, baseIdx + m) >= 0)
+            if (s.IsGreaterOrEqual(key, s.Read(baseIdx + m)))
             {
                 lastOfs = m + 1;
             }

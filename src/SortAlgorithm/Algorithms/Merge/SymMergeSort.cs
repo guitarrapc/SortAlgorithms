@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -195,7 +195,7 @@ public static class SymMergeSort
             while (ilo < ihi)
             {
                 var c = (int)((uint)(ilo + ihi) >> 1);
-                if (s.Compare(tmp, c) > 0)
+                if (s.IsGreaterThan(tmp, s.Read(c)))
                     ilo = c + 1;
                 else
                     ihi = c;
@@ -218,7 +218,7 @@ public static class SymMergeSort
             while (ilo < ihi)
             {
                 var c = (int)((uint)(ilo + ihi) >> 1);
-                if (s.Compare(c, tmp) <= 0)
+                if (s.IsLessOrEqual(s.Read(c), tmp))
                     ilo = c + 1;
                 else
                     ihi = c;
@@ -416,7 +416,7 @@ public static class SymMergeSort
                 while (ilo < ihi)
                 {
                     var c = (int)((uint)(ilo + ihi) >> 1);
-                    if (s.Compare(c, tmp) < 0)
+                    if (s.IsLessThan(s.Read(c), tmp))
                         ilo = c + 1;
                     else
                         ihi = c;
@@ -443,7 +443,7 @@ public static class SymMergeSort
                 while (ilo < ihi)
                 {
                     var c = (int)((uint)(ilo + ihi) >> 1);
-                    if (s.Compare(c, tmp) <= 0)
+                    if (s.IsLessOrEqual(s.Read(c), tmp))
                         ilo = c + 1;
                     else
                         ihi = c;
