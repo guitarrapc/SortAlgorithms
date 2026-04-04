@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -262,7 +262,7 @@ public static class BottomupHeapSort
 
             // If parent is greater than or equal to value, we found the correct position
             // Use Compare(value, parent) which compares value against span[parent]
-            if (s.Compare(value, parent) <= 0)
+            if (s.IsLessOrEqual(value, s.Read(parent)))
             {
                 break;
             }
@@ -321,7 +321,7 @@ public static class BottomupHeapSort
         while (hole > root)
         {
             var parent = offset + (hole - offset - 1) / 2;
-            if (s.Compare(rootValue, parent) <= 0) break;
+            if (s.IsLessOrEqual(rootValue, s.Read(parent))) break;
             s.Write(hole, s.Read(parent));
             hole = parent;
         }

@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -268,7 +268,7 @@ public static class TernaryHeapSort
             }
 
             // If value is already >= largest child, heap property is satisfied
-            if (s.Compare(value, largest) >= 0) break;
+            if (s.IsGreaterOrEqual(value, s.Read(largest))) break;
 
             // Move largest child up to fill the hole
             s.Write(hole, s.Read(largest));

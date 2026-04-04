@@ -257,7 +257,7 @@ public static class MinHeapSort
             var smallest = (right < offset + size && s.IsLessAt(right, left)) ? right : left;
 
             // If value is already <= smallest child, min-heap property is satisfied
-            if (s.Compare(value, smallest) <= 0) break;
+            if (s.IsLessOrEqual(value, s.Read(smallest))) break;
 
             // Move smaller child up to fill the hole
             s.Write(hole, s.Read(smallest));

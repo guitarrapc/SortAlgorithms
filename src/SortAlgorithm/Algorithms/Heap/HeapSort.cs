@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -255,7 +255,7 @@ public static class HeapSort
             var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
 
             // If value is already >= largest child, heap property is satisfied
-            if (s.Compare(value, largest) >= 0) break;
+            if (s.IsGreaterOrEqual(value, s.Read(largest))) break;
 
             // Move larger child up to fill the hole
             s.Write(hole, s.Read(largest));
