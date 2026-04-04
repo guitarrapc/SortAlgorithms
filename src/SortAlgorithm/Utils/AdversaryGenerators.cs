@@ -29,15 +29,21 @@ public static class TimsortAdversaryGenerator
         return a;
     }
 
+    // ----------------------------------------------------------------
+    // Run-length generation
+    // ----------------------------------------------------------------
+
     private static int[] BuildTimSortBadRuns(int size, int minRun)
     {
         var rev = new List<int>();
         int sum = 0;
 
+        // Seed.
         rev.Add(minRun);
         rev.Add(minRun + 1);
         sum += rev[0] + rev[1];
 
+        // Build a reverse-Fibonacci-ish suffix to stress MergeCollapse.
         while (true)
         {
             int next = rev[^1] + rev[^2] + 1;
@@ -48,11 +54,12 @@ public static class TimsortAdversaryGenerator
             sum += next;
         }
 
-        // Consume the rest as many minRun-ish runs.
+        // Spend the rest on many minRun-ish runs.
         while (sum + minRun <= size)
         {
             int len = minRun + ((rev.Count & 1) == 0 ? 0 : 1);
             if (sum + len > size) break;
+
             rev.Add(len);
             sum += len;
         }
@@ -87,10 +94,14 @@ public static class TimsortAdversaryGenerator
             throw new InvalidOperationException($"Run normalization changed total: {sum} != {total}");
     }
 
+    // ----------------------------------------------------------------
+    // Expected merge tree
+    // ----------------------------------------------------------------
+
     private sealed class Node
     {
         public int StartLeaf;
-        public int EndLeaf;
+        public int EndLeaf; // exclusive
         public int Length;
         public Node? Left;
         public Node? Right;
@@ -174,6 +185,10 @@ public static class TimsortAdversaryGenerator
         stack.RemoveAt(i + 1);
     }
 
+    // ----------------------------------------------------------------
+    // Materialization
+    // ----------------------------------------------------------------
+
     private readonly struct Slot
     {
         public readonly int Leaf;
@@ -210,38 +225,7 @@ public static class TimsortAdversaryGenerator
             result[runOffsets[s.Leaf] + s.Offset] = rank;
         }
 
-        // Ensure every physical run boundary is descending.
-        int start = 0;
-        for (int r = 0; r < runs.Length - 1; r++)
-        {
-            int len = runs[r];
-            int leftLast = start + len - 1;
-            int rightFirst = start + len;
-
-            if (result[leftLast] <= result[rightFirst])
-            {
-                // Local repair: move a smaller element to the right boundary.
-                int swap = rightFirst;
-                while (swap + 1 < total && result[leftLast] <= result[swap])
-                    swap++;
-
-                if (result[leftLast] <= result[swap])
-                {
-                    int tmp = result[leftLast];
-                    result[leftLast] = result[rightFirst];
-                    result[rightFirst] = tmp;
-                }
-                else
-                {
-                    int tmp = result[leftLast];
-                    result[leftLast] = result[swap];
-                    result[swap] = tmp;
-                }
-            }
-
-            start += len;
-        }
-
+        EnsureDescendingRunBoundaries(result, runs);
         return result;
     }
 
@@ -249,82 +233,175 @@ public static class TimsortAdversaryGenerator
     {
         if (node.IsLeaf)
         {
-            // Important:
-            // keep each leaf increasing in physical order,
-            // but slightly bias offsets away from trivial monotone alignment
-            // to reduce trimming opportunities in upper merges.
+            // Keep leaf physically ascending by offset.
             var list = new List<Slot>(node.Length);
-            int len = node.Length;
-
-            // First half in order, then second half in order.
-            // Still increasing physically after rank assignment,
-            // but interacts less trivially with ancestors than plain 0..len-1.
-            int mid = len / 2;
-            for (int i = 0; i < mid; i++)
+            for (int i = 0; i < node.Length; i++)
                 list.Add(new Slot(node.StartLeaf, i));
-            for (int i = mid; i < len; i++)
-                list.Add(new Slot(node.StartLeaf, i));
-
             return list;
         }
 
         var left = BuildSlotOrder(node.Left!);
         var right = BuildSlotOrder(node.Right!);
-        return AntiGallopInterleave(left, right);
+        return AntiGallopBoundaryInterleave(left, right);
     }
 
-    private static List<Slot> AntiGallopInterleave(List<Slot> left, List<Slot> right)
+    /// <summary>
+    /// Interleave two sorted slot sequences in a way that:
+    /// 1. strongly alternates winners to suppress galloping,
+    /// 2. places right[0] early in the merged order, so GallopRight trims little,
+    /// 3. places left[last] late in the merged order, so GallopLeft trims little,
+    /// 4. distributes leftovers instead of appending one block.
+    /// </summary>
+    private static List<Slot> AntiGallopBoundaryInterleave(List<Slot> left, List<Slot> right)
     {
         int a = left.Count;
         int b = right.Count;
-        int i = 0;
-        int j = 0;
+
+        if (a == 0) return right;
+        if (b == 0) return left;
 
         var merged = new List<Slot>(a + b);
 
-        // Phase 1:
-        // Alternate as hard as possible to suppress long winning streaks.
-        while (i < a && j < b)
+        int li = 0;
+        int rj = 0;
+
+        // Reserve special boundary elements:
+        // - right first element should appear very early
+        // - left last element should appear very late
+        var rightFirst = right[rj++];
+        Slot? leftLast = null;
+        int leftUsable = a;
+        if (a >= 2)
         {
-            merged.Add(left[i++]);
-            merged.Add(right[j++]);
+            leftLast = left[a - 1];
+            leftUsable = a - 1;
         }
 
-        // Phase 2:
-        // Distribute the remainder instead of appending in one block.
-        // This keeps upper-level merges from becoming too easy.
-        if (i < a)
+        // Put one left element first if possible, then rightFirst immediately.
+        // This keeps right[0] from being too large relative to left[0],
+        // which helps reduce the initial GallopRight trimming.
+        if (li < leftUsable)
+            merged.Add(left[li++]);
+
+        merged.Add(rightFirst);
+
+        // Main phase: near-perfect alternation from the remaining usable ranges.
+        int leftRemain = leftUsable - li;
+        int rightRemain = b - rj;
+
+        while (leftRemain > 0 && rightRemain > 0)
         {
-            SpreadAppend(merged, left, ref i);
+            merged.Add(left[li++]);
+            merged.Add(right[rj++]);
+            leftRemain--;
+            rightRemain--;
         }
-        else if (j < b)
+
+        // Spread leftovers rather than appending them as one easy block.
+        if (leftRemain > 0)
+            SpreadAppendRange(merged, left, li, leftUsable);
+        if (rightRemain > 0)
+            SpreadAppendRange(merged, right, rj, b);
+
+        // Put leftLast very late.
+        if (leftLast.HasValue)
         {
-            SpreadAppend(merged, right, ref j);
+            int pos = merged.Count;
+            // Usually append at end. Occasionally one-before-end gives a tiny bit more disorder.
+            if (merged.Count >= 2 && ((a + b) & 1) == 0)
+                pos = merged.Count - 1;
+
+            merged.Insert(pos, leftLast.Value);
         }
 
         return merged;
     }
 
-    private static void SpreadAppend(List<Slot> merged, List<Slot> src, ref int index)
+    private static void SpreadAppendRange(List<Slot> merged, List<Slot> src, int start, int end)
     {
-        int remain = src.Count - index;
+        int remain = end - start;
         if (remain <= 0) return;
 
-        // Insert leftovers at roughly even intervals in the current merged list.
-        int originalCount = merged.Count;
-        if (originalCount == 0)
+        if (merged.Count == 0)
         {
-            while (index < src.Count)
-                merged.Add(src[index++]);
+            for (int i = start; i < end; i++)
+                merged.Add(src[i]);
             return;
         }
 
-        for (int k = 0; index < src.Count; k++, index++)
+        int inserted = 0;
+        for (int i = start; i < end; i++, inserted++)
         {
-            int pos = (int)(((long)(k + 1) * (merged.Count + 1)) / (remain + 1));
+            int pos = (int)(((long)(inserted + 1) * (merged.Count + 1)) / (remain + 1));
             if (pos < 0) pos = 0;
             if (pos > merged.Count) pos = merged.Count;
-            merged.Insert(pos, src[index]);
+            merged.Insert(pos, src[i]);
+        }
+    }
+
+    private static void EnsureDescendingRunBoundaries(int[] result, int[] runs)
+    {
+        int start = 0;
+
+        for (int r = 0; r < runs.Length - 1; r++)
+        {
+            int len = runs[r];
+            int leftLast = start + len - 1;
+            int rightFirst = start + len;
+
+            if (result[leftLast] > result[rightFirst])
+            {
+                start += len;
+                continue;
+            }
+
+            // Repair boundary with minimal disturbance:
+            // find a later element in the right run smaller than leftLast,
+            // or an earlier element in the left run larger than rightFirst.
+            int rightRunEnd = rightFirst + runs[r + 1];
+
+            int swapWithRight = -1;
+            for (int i = rightFirst + 1; i < rightRunEnd; i++)
+            {
+                if (result[i] < result[leftLast])
+                {
+                    swapWithRight = i;
+                    break;
+                }
+            }
+
+            if (swapWithRight >= 0)
+            {
+                (result[rightFirst], result[swapWithRight]) = (result[swapWithRight], result[rightFirst]);
+                if (result[leftLast] > result[rightFirst])
+                {
+                    start += len;
+                    continue;
+                }
+            }
+
+            int swapWithLeft = -1;
+            for (int i = leftLast - 1; i >= start; i--)
+            {
+                if (result[i] > result[rightFirst])
+                {
+                    swapWithLeft = i;
+                    break;
+                }
+            }
+
+            if (swapWithLeft >= 0)
+            {
+                (result[leftLast], result[swapWithLeft]) = (result[swapWithLeft], result[leftLast]);
+            }
+
+            if (result[leftLast] <= result[rightFirst])
+            {
+                // final small fallback
+                (result[leftLast], result[rightFirst]) = (result[rightFirst], result[leftLast]);
+            }
+
+            start += len;
         }
     }
 }
