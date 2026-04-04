@@ -13,6 +13,7 @@ public class MergeBenchmark
     private int[] _mergeArray = default!;
     private int[] _pingpongmergeArray = default!;
     private int[] _bottomupmergeArray = default!;
+    private int[] _stdstableArray = default!;
     private int[] _rotatemergeArray = default!;
     private int[] _rotatemergeRecursiveArray = default!;
     private int[] _symmergeArray = default!;
@@ -30,6 +31,7 @@ public class MergeBenchmark
         _mergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _pingpongmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _bottomupmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _stdstableArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _rotatemergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _rotatemergeRecursiveArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _symmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
@@ -52,6 +54,12 @@ public class MergeBenchmark
     public void PingpongMergeSort()
     {
         SortAlgorithm.Algorithms.PingpongMergeSort.Sort(_rotatemergeArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void StdStableSort()
+    {
+        SortAlgorithm.Algorithms.StdStableSort.Sort(_stdstableArray.AsSpan());
     }
 
     [Benchmark]
