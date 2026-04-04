@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -415,17 +415,17 @@ public static class PDQSort
         var last = end;
 
         // Find the first element greater than or equal to the pivot (the median of 3 guarantees this exists).
-        do { first++; } while (s.Compare(first, pivot) < 0);
+        do { first++; } while (s.IsLessThan(s.Read(first), pivot));
 
         // Find the first element strictly smaller than the pivot. We have to guard this search if
         // there was no element before *first.
         if (first - 1 == begin)
         {
-            do { last--; } while (first < last && s.Compare(last, pivot) >= 0);
+            do { last--; } while (first < last && s.IsGreaterOrEqual(s.Read(last), pivot));
         }
         else
         {
-            do { last--; } while (s.Compare(last, pivot) >= 0);
+            do { last--; } while (s.IsGreaterOrEqual(s.Read(last), pivot));
         }
 
         // If the first pair of elements that should be swapped to partition are the same element,
@@ -438,8 +438,8 @@ public static class PDQSort
         while (first < last)
         {
             s.Swap(first, last);
-            do { first++; } while (s.Compare(first, pivot) < 0);
-            do { last--; } while (s.Compare(last, pivot) >= 0);
+            do { first++; } while (s.IsLessThan(s.Read(first), pivot));
+            do { last--; } while (s.IsGreaterOrEqual(s.Read(last), pivot));
         }
 
         // Put the pivot in the right place
@@ -466,25 +466,25 @@ public static class PDQSort
 
         // Find the first element less than or equal to pivot from the right.
         // *begin == pivot, so the scan is guaranteed to terminate at begin at the latest.
-        do { last--; } while (s.Compare(pivot, s.Read(last)) < 0);
+        do { last--; } while (s.IsLessThan(pivot, s.Read(last)));
 
         // Find the first element strictly greater than pivot from the left. We have to guard
         // this search if there was no element after *last.
         if (last + 1 == end)
         {
-            do { first++; } while (first < last && s.Compare(pivot, s.Read(first)) >= 0);
+            do { first++; } while (first < last && s.IsGreaterOrEqual(pivot, s.Read(first)));
         }
         else
         {
-            do { first++; } while (s.Compare(pivot, s.Read(first)) >= 0);
+            do { first++; } while (s.IsGreaterOrEqual(pivot, s.Read(first)));
         }
 
         // Keep swapping pairs. Previously swapped pairs guard the searches.
         while (first < last)
         {
             s.Swap(first, last);
-            do { last--; } while (s.Compare(pivot, s.Read(last)) < 0);
-            do { first++; } while (s.Compare(pivot, s.Read(first)) >= 0);
+            do { last--; } while (s.IsLessThan(pivot, s.Read(last)));
+            do { first++; } while (s.IsGreaterOrEqual(pivot, s.Read(first)));
         }
 
         var pivotPos = last;
@@ -520,7 +520,7 @@ public static class PDQSort
                     s.Write(sift, s.Read(sift - 1));
                     sift--;
                 }
-                while (sift != begin && s.Compare(siftValue, s.Read(sift - 1)) < 0);
+                while (sift != begin && s.IsLessThan(siftValue, s.Read(sift - 1)));
 
                 s.Write(sift, siftValue);
                 limit += cur - sift;
