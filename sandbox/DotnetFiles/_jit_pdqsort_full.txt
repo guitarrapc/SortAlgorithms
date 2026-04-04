@@ -5,7 +5,7 @@
 ; rsp based frame
 ; fully interruptible
 ; No PGO data
-; 0 inlinees with PGO data; 38 single block inlinees; 156 inlinees without PGO data
+; 0 inlinees with PGO data; 37 single block inlinees; 103 inlinees without PGO data
 
 G_M000_IG01:                ;; offset=0x0000
        push     r15
@@ -16,263 +16,157 @@ G_M000_IG01:                ;; offset=0x0000
        push     rsi
        push     rbp
        push     rbx
-       sub      rsp, 136
+       sub      rsp, 152
        vxorps   xmm4, xmm4, xmm4
-       vmovdqu  ymmword ptr [rsp+0x50], ymm4
+       vmovdqu  ymmword ptr [rsp+0x40], ymm4
        xor      eax, eax
-       mov      qword ptr [rsp+0x70], rax
+       mov      qword ptr [rsp+0x60], rax
        mov      rdi, rcx
        mov      ebx, edx
        mov      esi, r8d
        mov      ebp, r9d
-       mov      r14d, dword ptr [rsp+0xF0]
+       mov      r14d, dword ptr [rsp+0x100]
  
 G_M000_IG02:                ;; offset=0x0037
        mov      r15, bword ptr [rdi+0x10]
        jmp      SHORT G_M000_IG06
-       align    [8 bytes for IG26]
+       align    [0 bytes for IG32]
  
-G_M000_IG03:                ;; offset=0x0045
+G_M000_IG03:                ;; offset=0x003D
        mov      bword ptr [rdi+0x10], r15
  
-G_M000_IG04:                ;; offset=0x0049
+G_M000_IG04:                ;; offset=0x0041
        vmovdqu  ymm0, ymmword ptr [rdi]
-       vmovdqu  ymmword ptr [rsp+0x50], ymm0
+       vmovdqu  ymmword ptr [rsp+0x40], ymm0
        mov      rcx, qword ptr [rdi+0x20]
-       mov      qword ptr [rsp+0x70], rcx
+       mov      qword ptr [rsp+0x60], rcx
  
-G_M000_IG05:                ;; offset=0x005C
+G_M000_IG05:                ;; offset=0x0054
        xor      ecx, ecx
        mov      dword ptr [rsp+0x20], ecx
-       lea      rcx, [rsp+0x50]
-       mov      edx, r12d
+       lea      rcx, [rsp+0x40]
+       mov      edx, eax
        mov      r8d, esi
        mov      r9d, ebp
        call     [SortAlgorithm.Algorithms.PDQSort:PDQSortLoop[int,SortAlgorithm.Algorithms.ComparableComparer`1[int],SortAlgorithm.Contexts.NullContext](SortAlgorithm.Algorithms.SortSpan`3[int,SortAlgorithm.Algorithms.ComparableComparer`1[int],SortAlgorithm.Contexts.NullContext],int,int,int,bool)]
-       mov      esi, r14d
-       movzx    r14, byte  ptr [rsp+0xF0]
+       mov      esi, r12d
  
-G_M000_IG06:                ;; offset=0x0082
-       mov      ecx, esi
-       sub      ecx, ebx
-       cmp      ecx, 24
-       jl       G_M000_IG93
+G_M000_IG06:                ;; offset=0x0070
+       mov      r13d, esi
+       sub      r13d, ebx
+       cmp      r13d, 24
+       jl       G_M000_IG68
  
-G_M000_IG07:                ;; offset=0x008F
-       mov      eax, ecx
-       shr      eax, 1
-       cmp      ecx, 128
+G_M000_IG07:                ;; offset=0x0080
+       mov      edx, r13d
+       shr      edx, 1
+       cmp      r13d, 128
        jg       G_M000_IG11
  
-G_M000_IG08:                ;; offset=0x009F
-       add      eax, ebx
-       mov      edx, eax
-       lea      r13d, [rsi-0x01]
-       mov      r8d, r13d
-       movsxd   r9, ebx
-       mov      r9d, dword ptr [r15+4*r9]
-       movsxd   r10, edx
-       mov      r10d, dword ptr [r15+4*r10]
-       cmp      r9d, r10d
-       jge      SHORT G_M000_IG09
-       movsxd   r11, edx
-       lea      r11, bword ptr [r15+4*r11]
-       movsxd   r12, ebx
-       lea      r12, bword ptr [r15+4*r12]
-       mov      dword ptr [r11], r9d
-       mov      dword ptr [r12], r10d
- 
-G_M000_IG09:                ;; offset=0x00D2
-       movsxd   r9, r8d
-       mov      r9d, dword ptr [r15+4*r9]
-       movsxd   r10, ebx
-       mov      r10d, dword ptr [r15+4*r10]
-       cmp      r9d, r10d
-       jge      SHORT G_M000_IG10
-       movsxd   r11, ebx
-       lea      r11, bword ptr [r15+4*r11]
-       movsxd   r8, r8d
-       lea      r8, bword ptr [r15+4*r8]
-       mov      dword ptr [r11], r9d
-       mov      dword ptr [r8], r10d
- 
-G_M000_IG10:                ;; offset=0x00F9
+G_M000_IG08:                ;; offset=0x0092
+       add      edx, ebx
+       lea      ecx, [rsi-0x01]
        movsxd   r8, ebx
        mov      r8d, dword ptr [r15+4*r8]
        movsxd   r9, edx
        mov      r9d, dword ptr [r15+4*r9]
        cmp      r8d, r9d
+       jge      SHORT G_M000_IG09
+       movsxd   rax, edx
+       lea      rax, bword ptr [r15+4*rax]
+       movsxd   r10, ebx
+       lea      r10, bword ptr [r15+4*r10]
+       mov      dword ptr [rax], r8d
+       mov      dword ptr [r10], r9d
+ 
+G_M000_IG09:                ;; offset=0x00BE
+       movsxd   r8, ecx
+       mov      r8d, dword ptr [r15+4*r8]
+       movsxd   r9, ebx
+       mov      r9d, dword ptr [r15+4*r9]
+       cmp      r8d, r9d
+       jge      SHORT G_M000_IG10
+       movsxd   rax, ebx
+       lea      rax, bword ptr [r15+4*rax]
+       movsxd   rcx, ecx
+       lea      rcx, bword ptr [r15+4*rcx]
+       mov      dword ptr [rax], r8d
+       mov      dword ptr [rcx], r9d
+ 
+G_M000_IG10:                ;; offset=0x00E5
+       movsxd   rcx, ebx
+       mov      ecx, dword ptr [r15+4*rcx]
+       movsxd   r8, edx
+       mov      r8d, dword ptr [r15+4*r8]
+       cmp      ecx, r8d
        jge      G_M000_IG24
        movsxd   rdx, edx
        lea      rdx, bword ptr [r15+4*rdx]
-       movsxd   r10, ebx
-       lea      r10, bword ptr [r15+4*r10]
-       mov      dword ptr [rdx], r8d
-       mov      dword ptr [r10], r9d
+       movsxd   r9, ebx
+       lea      r9, bword ptr [r15+4*r9]
+       mov      dword ptr [rdx], ecx
+       mov      dword ptr [r9], r8d
        jmp      G_M000_IG24
  
-G_M000_IG11:                ;; offset=0x0129
-       add      eax, ebx
-       mov      edx, eax
-       lea      r13d, [rsi-0x01]
-       mov      r8d, r13d
-       movsxd   r9, edx
-       mov      r10d, dword ptr [r15+4*r9]
-       movsxd   r9, ebx
+G_M000_IG11:                ;; offset=0x0114
+       lea      ecx, [rbx+rdx]
+       lea      r8d, [rsi-0x01]
+       movsxd   r9, ecx
        mov      r9d, dword ptr [r15+4*r9]
-       cmp      r10d, r9d
+       movsxd   rax, ebx
+       mov      eax, dword ptr [r15+4*rax]
+       cmp      r9d, eax
        jge      SHORT G_M000_IG12
-       movsxd   r11, ebx
+       movsxd   r10, ebx
+       lea      r10, bword ptr [r15+4*r10]
+       movsxd   r11, ecx
        lea      r11, bword ptr [r15+4*r11]
-       movsxd   r12, edx
-       lea      r12, bword ptr [r15+4*r12]
-       mov      dword ptr [r11], r10d
-       mov      dword ptr [r12], r9d
+       mov      dword ptr [r10], r9d
+       mov      dword ptr [r11], eax
  
-G_M000_IG12:                ;; offset=0x015C
+G_M000_IG12:                ;; offset=0x0142
        movsxd   r9, r8d
        mov      r9d, dword ptr [r15+4*r9]
-       movsxd   r10, edx
-       mov      r10d, dword ptr [r15+4*r10]
-       cmp      r9d, r10d
+       movsxd   rax, ecx
+       mov      eax, dword ptr [r15+4*rax]
+       cmp      r9d, eax
        jge      SHORT G_M000_IG13
-       movsxd   r11, edx
-       lea      r11, bword ptr [r15+4*r11]
+       movsxd   r10, ecx
+       lea      r10, bword ptr [r15+4*r10]
        movsxd   r8, r8d
        lea      r8, bword ptr [r15+4*r8]
-       mov      dword ptr [r11], r9d
-       mov      dword ptr [r8], r10d
+       mov      dword ptr [r10], r9d
+       mov      dword ptr [r8], eax
  
-G_M000_IG13:                ;; offset=0x0183
-       movsxd   r8, edx
+G_M000_IG13:                ;; offset=0x0169
+       movsxd   r8, ecx
        mov      r8d, dword ptr [r15+4*r8]
        movsxd   r9, ebx
        mov      r9d, dword ptr [r15+4*r9]
        cmp      r8d, r9d
        jge      SHORT G_M000_IG14
-       movsxd   r10, ebx
-       lea      r10, bword ptr [r15+4*r10]
-       movsxd   rdx, edx
-       lea      rdx, bword ptr [r15+4*rdx]
-       mov      dword ptr [r10], r8d
-       mov      dword ptr [rdx], r9d
+       movsxd   rax, ebx
+       lea      rax, bword ptr [r15+4*rax]
+       movsxd   rcx, ecx
+       lea      rcx, bword ptr [r15+4*rcx]
+       mov      dword ptr [rax], r8d
+       mov      dword ptr [rcx], r9d
  
-G_M000_IG14:                ;; offset=0x01AA
-       lea      edx, [rbx+0x01]
-       lea      r8d, [rax-0x01]
-       mov      dword ptr [rsp+0x4C], r8d
+G_M000_IG14:                ;; offset=0x0190
+       lea      ecx, [rbx+0x01]
+       lea      r8d, [rbx+rdx-0x01]
        mov      r9d, r8d
-       lea      r10d, [rsi-0x02]
-       movsxd   r11, r9d
-       mov      r11d, dword ptr [r15+4*r11]
-       movsxd   r12, edx
-       mov      r12d, dword ptr [r15+4*r12]
-       cmp      r11d, r12d
-       jge      SHORT G_M000_IG15
-       movsxd   r8, edx
-       lea      r8, bword ptr [r15+4*r8]
-       mov      bword ptr [rsp+0x40], r8
-       movsxd   r8, r9d
-       lea      r8, bword ptr [r15+4*r8]
-       mov      dword ptr [rsp+0x84], r12d
-       mov      r12, bword ptr [rsp+0x40]
-       mov      dword ptr [r12], r11d
-       mov      r12d, dword ptr [rsp+0x84]
-       mov      dword ptr [r8], r12d
- 
-G_M000_IG15:                ;; offset=0x01FF
-       movsxd   r11, r10d
-       mov      r11d, dword ptr [r15+4*r11]
-       movsxd   r12, r9d
-       mov      r12d, dword ptr [r15+4*r12]
-       cmp      r11d, r12d
-       jge      SHORT G_M000_IG16
-       movsxd   r8, r9d
-       lea      r8, bword ptr [r15+4*r8]
-       movsxd   r10, r10d
-       lea      r10, bword ptr [r15+4*r10]
-       mov      dword ptr [r8], r11d
-       mov      dword ptr [r10], r12d
- 
-G_M000_IG16:                ;; offset=0x0226
+       lea      eax, [rsi-0x02]
        movsxd   r10, r9d
        mov      r10d, dword ptr [r15+4*r10]
-       movsxd   r11, edx
+       movsxd   r11, ecx
        mov      r11d, dword ptr [r15+4*r11]
        cmp      r10d, r11d
-       jge      SHORT G_M000_IG17
-       movsxd   rdx, edx
-       lea      rdx, bword ptr [r15+4*rdx]
-       movsxd   r9, r9d
-       lea      r9, bword ptr [r15+4*r9]
-       mov      dword ptr [rdx], r10d
-       mov      dword ptr [r9], r11d
- 
-G_M000_IG17:                ;; offset=0x024D
-       lea      edx, [rbx+0x02]
-       lea      r9d, [rax+0x01]
-       mov      dword ptr [rsp+0x48], r9d
-       mov      r10d, r9d
-       lea      r11d, [rsi-0x03]
-       movsxd   r12, r10d
-       mov      r12d, dword ptr [r15+4*r12]
-       movsxd   r8, edx
-       mov      r8d, dword ptr [r15+4*r8]
-       cmp      r12d, r8d
-       jge      SHORT G_M000_IG18
-       movsxd   r9, edx
-       lea      r9, bword ptr [r15+4*r9]
-       mov      bword ptr [rsp+0x38], r9
-       movsxd   r9, r10d
-       lea      r9, bword ptr [r15+4*r9]
-       mov      dword ptr [rsp+0x80], r8d
-       mov      r8, bword ptr [rsp+0x38]
-       mov      dword ptr [r8], r12d
-       mov      r8d, dword ptr [rsp+0x80]
-       mov      dword ptr [r9], r8d
- 
-G_M000_IG18:                ;; offset=0x02A1
-       movsxd   r8, r11d
-       mov      r8d, dword ptr [r15+4*r8]
-       movsxd   r12, r10d
-       mov      r12d, dword ptr [r15+4*r12]
-       cmp      r8d, r12d
-       jge      SHORT G_M000_IG19
-       movsxd   r9, r10d
-       lea      r9, bword ptr [r15+4*r9]
-       movsxd   r11, r11d
-       lea      r11, bword ptr [r15+4*r11]
-       mov      dword ptr [r9], r8d
-       mov      dword ptr [r11], r12d
- 
-G_M000_IG19:                ;; offset=0x02C8
-       movsxd   r8, r10d
-       mov      r8d, dword ptr [r15+4*r8]
-       movsxd   r11, edx
-       mov      r11d, dword ptr [r15+4*r11]
-       cmp      r8d, r11d
-       jge      SHORT G_M000_IG20
-       movsxd   rdx, edx
-       lea      rdx, bword ptr [r15+4*rdx]
-       movsxd   r10, r10d
-       lea      r10, bword ptr [r15+4*r10]
-       mov      dword ptr [rdx], r8d
-       mov      dword ptr [r10], r11d
- 
-G_M000_IG20:                ;; offset=0x02EF
-       mov      r8d, dword ptr [rsp+0x4C]
-       mov      edx, eax
-       mov      r9d, dword ptr [rsp+0x48]
-       movsxd   r10, edx
-       mov      r10d, dword ptr [r15+4*r10]
-       movsxd   r11, r8d
-       mov      r11d, dword ptr [r15+4*r11]
-       cmp      r10d, r11d
-       jge      SHORT G_M000_IG21
-       movsxd   r12, r8d
+       jge      SHORT G_M000_IG15
+       movsxd   r12, ecx
        lea      r12, bword ptr [r15+4*r12]
        mov      bword ptr [rsp+0x30], r12
-       movsxd   r12, edx
+       movsxd   r12, r9d
        lea      r12, bword ptr [r15+4*r12]
        mov      dword ptr [rsp+0x7C], r11d
        mov      r11, bword ptr [rsp+0x30]
@@ -280,341 +174,308 @@ G_M000_IG20:                ;; offset=0x02EF
        mov      r11d, dword ptr [rsp+0x7C]
        mov      dword ptr [r12], r11d
  
-G_M000_IG21:                ;; offset=0x0337
-       movsxd   r10, r9d
+G_M000_IG15:                ;; offset=0x01DA
+       movsxd   r10, eax
        mov      r10d, dword ptr [r15+4*r10]
-       movsxd   r11, edx
+       movsxd   r11, r9d
        mov      r11d, dword ptr [r15+4*r11]
        cmp      r10d, r11d
-       jge      SHORT G_M000_IG22
-       movsxd   r12, edx
+       jge      SHORT G_M000_IG16
+       movsxd   r12, r9d
        lea      r12, bword ptr [r15+4*r12]
+       cdqe     
+       lea      rax, bword ptr [r15+4*rax]
+       mov      dword ptr [r12], r10d
+       mov      dword ptr [rax], r11d
+ 
+G_M000_IG16:                ;; offset=0x0201
+       movsxd   rax, r9d
+       mov      eax, dword ptr [r15+4*rax]
+       movsxd   r10, ecx
+       mov      r10d, dword ptr [r15+4*r10]
+       cmp      eax, r10d
+       jge      SHORT G_M000_IG17
+       movsxd   rcx, ecx
+       lea      rcx, bword ptr [r15+4*rcx]
        movsxd   r9, r9d
        lea      r9, bword ptr [r15+4*r9]
-       mov      dword ptr [r12], r10d
-       mov      dword ptr [r9], r11d
+       mov      dword ptr [rcx], eax
+       mov      dword ptr [r9], r10d
  
-G_M000_IG22:                ;; offset=0x035F
-       movsxd   r9, edx
-       mov      r9d, dword ptr [r15+4*r9]
+G_M000_IG17:                ;; offset=0x0227
+       lea      ecx, [rbx+0x02]
+       lea      r9d, [rbx+rdx+0x01]
+       mov      dword ptr [rsp+0x3C], r9d
+       mov      eax, r9d
+       lea      r10d, [rsi-0x03]
+       movsxd   r11, eax
+       mov      r11d, dword ptr [r15+4*r11]
+       movsxd   r12, ecx
+       mov      r12d, dword ptr [r15+4*r12]
+       cmp      r11d, r12d
+       jge      SHORT G_M000_IG18
+       movsxd   r9, ecx
+       lea      r9, bword ptr [r15+4*r9]
+       mov      bword ptr [rsp+0x28], r9
+       movsxd   r9, eax
+       lea      r9, bword ptr [r15+4*r9]
+       mov      dword ptr [rsp+0x78], r12d
+       mov      r12, bword ptr [rsp+0x28]
+       mov      dword ptr [r12], r11d
+       mov      r12d, dword ptr [rsp+0x78]
+       mov      dword ptr [r9], r12d
+ 
+G_M000_IG18:                ;; offset=0x0277
+       movsxd   r11, r10d
+       mov      r11d, dword ptr [r15+4*r11]
+       movsxd   r12, eax
+       mov      r12d, dword ptr [r15+4*r12]
+       cmp      r11d, r12d
+       jge      SHORT G_M000_IG19
+       movsxd   r9, eax
+       lea      r9, bword ptr [r15+4*r9]
+       movsxd   r10, r10d
+       lea      r10, bword ptr [r15+4*r10]
+       mov      dword ptr [r9], r11d
+       mov      dword ptr [r10], r12d
+ 
+G_M000_IG19:                ;; offset=0x029E
+       movsxd   r10, eax
+       mov      r10d, dword ptr [r15+4*r10]
+       movsxd   r11, ecx
+       mov      r11d, dword ptr [r15+4*r11]
+       cmp      r10d, r11d
+       jge      SHORT G_M000_IG20
+       movsxd   rcx, ecx
+       lea      rcx, bword ptr [r15+4*rcx]
+       cdqe     
+       lea      rax, bword ptr [r15+4*rax]
+       mov      dword ptr [rcx], r10d
+       mov      dword ptr [rax], r11d
+ 
+G_M000_IG20:                ;; offset=0x02C4
+       lea      ecx, [rbx+rdx]
+       mov      r9d, dword ptr [rsp+0x3C]
+       movsxd   rax, ecx
+       mov      eax, dword ptr [r15+4*rax]
        movsxd   r10, r8d
        mov      r10d, dword ptr [r15+4*r10]
-       cmp      r9d, r10d
+       cmp      eax, r10d
+       jge      SHORT G_M000_IG21
+       movsxd   r11, r8d
+       lea      r11, bword ptr [r15+4*r11]
+       movsxd   r12, ecx
+       lea      r12, bword ptr [r15+4*r12]
+       mov      dword ptr [r11], eax
+       mov      dword ptr [r12], r10d
+ 
+G_M000_IG21:                ;; offset=0x02F4
+       movsxd   rax, r9d
+       mov      eax, dword ptr [r15+4*rax]
+       movsxd   r10, ecx
+       mov      r10d, dword ptr [r15+4*r10]
+       cmp      eax, r10d
+       jge      SHORT G_M000_IG22
+       movsxd   r11, ecx
+       lea      r11, bword ptr [r15+4*r11]
+       movsxd   r9, r9d
+       lea      r9, bword ptr [r15+4*r9]
+       mov      dword ptr [r11], eax
+       mov      dword ptr [r9], r10d
+ 
+G_M000_IG22:                ;; offset=0x031B
+       movsxd   r9, ecx
+       mov      r9d, dword ptr [r15+4*r9]
+       movsxd   rax, r8d
+       mov      eax, dword ptr [r15+4*rax]
+       cmp      r9d, eax
        jge      SHORT G_M000_IG23
        movsxd   r8, r8d
        lea      r8, bword ptr [r15+4*r8]
+       movsxd   rcx, ecx
+       lea      rcx, bword ptr [r15+4*rcx]
+       mov      dword ptr [r8], r9d
+       mov      dword ptr [rcx], eax
+ 
+G_M000_IG23:                ;; offset=0x0341
+       movsxd   rcx, ebx
+       lea      rcx, bword ptr [r15+4*rcx]
+       add      edx, ebx
        movsxd   rdx, edx
        lea      rdx, bword ptr [r15+4*rdx]
-       mov      dword ptr [r8], r9d
-       mov      dword ptr [rdx], r10d
- 
-G_M000_IG23:                ;; offset=0x0386
-       movsxd   rdx, ebx
-       lea      rdx, bword ptr [r15+4*rdx]
-       movsxd   r8, eax
-       lea      r8, bword ptr [r15+4*r8]
-       mov      r9d, dword ptr [r8]
-       mov      r10d, dword ptr [rdx]
+       mov      r8d, dword ptr [rdx]
+       mov      r9d, dword ptr [rcx]
+       mov      dword ptr [rcx], r8d
        mov      dword ptr [rdx], r9d
-       mov      dword ptr [r8], r10d
  
-G_M000_IG24:                ;; offset=0x03A0
-       mov      dword ptr [rsp+0xF0], r14d
+G_M000_IG24:                ;; offset=0x035D
        test     r14b, r14b
        jne      SHORT G_M000_IG25
        lea      edx, [rbx-0x01]
        movsxd   rdx, edx
        mov      edx, dword ptr [r15+4*rdx]
-       movsxd   r8, ebx
-       mov      r12d, dword ptr [r15+4*r8]
-       cmp      edx, r12d
-       jge      G_M000_IG64
+       movsxd   rcx, ebx
+       cmp      edx, dword ptr [r15+4*rcx]
+       jge      G_M000_IG49
  
-G_M000_IG25:                ;; offset=0x03C7
-       mov      rdx, r15
-       movsxd   r8, ebx
-       mov      r12d, dword ptr [rdx+4*r8]
-       lea      edx, [rbx+0x01]
-       movsxd   r8, edx
-       mov      r8d, dword ptr [r15+4*r8]
-       cmp      r8d, r12d
-       jge      SHORT G_M000_IG27
+G_M000_IG25:                ;; offset=0x0379
+       mov      bword ptr [rdi+0x10], r15
  
-G_M000_IG26:                ;; offset=0x03E0
-       inc      edx
-       movsxd   r8, edx
-       mov      r8d, dword ptr [r15+4*r8]
-       cmp      r8d, r12d
-       jl       SHORT G_M000_IG26
+G_M000_IG26:                ;; offset=0x037D
+       vmovdqu  ymm0, ymmword ptr [rdi]
+       vmovdqu  ymmword ptr [rsp+0x40], ymm0
+       mov      rdx, qword ptr [rdi+0x20]
+       mov      qword ptr [rsp+0x60], rdx
  
-G_M000_IG27:                ;; offset=0x03EE
-       lea      r8d, [rdx-0x01]
-       cmp      r8d, ebx
-       je       SHORT G_M000_IG30
- 
-G_M000_IG28:                ;; offset=0x03F7
-       mov      r8d, r13d
-       movsxd   r9, r8d
-       mov      r9d, dword ptr [r15+4*r9]
-       cmp      r9d, r12d
-       jl       SHORT G_M000_IG32
-       align    [0 bytes for IG29]
- 
-G_M000_IG29:                ;; offset=0x0406
-       dec      r8d
-       movsxd   r9, r8d
-       mov      r9d, dword ptr [r15+4*r9]
-       cmp      r9d, r12d
-       jge      SHORT G_M000_IG29
-       jmp      SHORT G_M000_IG32
- 
-G_M000_IG30:                ;; offset=0x0417
-       mov      r8d, r13d
-       cmp      edx, r8d
-       jge      SHORT G_M000_IG32
-       align    [1 bytes for IG31]
- 
-G_M000_IG31:                ;; offset=0x0420
-       movsxd   r9, r8d
-       mov      r9d, dword ptr [r15+4*r9]
-       cmp      r9d, r12d
-       jl       SHORT G_M000_IG32
-       dec      r8d
-       cmp      edx, r8d
-       jl       SHORT G_M000_IG31
- 
-G_M000_IG32:                ;; offset=0x0434
-       cmp      edx, r8d
-       setge    r9b
-       movzx    r9, r9b
-       mov      dword ptr [rsp+0x78], r9d
-       jge      SHORT G_M000_IG38
- 
-G_M000_IG33:                ;; offset=0x0446
-       movsxd   r10, edx
-       lea      r10, bword ptr [r15+4*r10]
-       movsxd   r11, r8d
-       lea      r11, bword ptr [r15+4*r11]
-       mov      r9d, dword ptr [r11]
-       mov      r14d, dword ptr [r10]
-       mov      dword ptr [r10], r9d
-       mov      dword ptr [r11], r14d
-       inc      edx
-       movsxd   r9, edx
-       mov      r9d, dword ptr [r15+4*r9]
-       cmp      r9d, r12d
-       jge      SHORT G_M000_IG35
-       align    [0 bytes for IG34]
- 
-G_M000_IG34:                ;; offset=0x046E
-       inc      edx
-       movsxd   r9, edx
-       mov      r9d, dword ptr [r15+4*r9]
-       cmp      r9d, r12d
-       jl       SHORT G_M000_IG34
- 
-G_M000_IG35:                ;; offset=0x047C
-       dec      r8d
-       movsxd   r9, r8d
-       mov      r9d, dword ptr [r15+4*r9]
-       cmp      r9d, r12d
-       jl       SHORT G_M000_IG37
-       align    [0 bytes for IG36]
- 
-G_M000_IG36:                ;; offset=0x048B
-       dec      r8d
-       movsxd   r9, r8d
-       mov      r9d, dword ptr [r15+4*r9]
-       cmp      r9d, r12d
-       jge      SHORT G_M000_IG36
- 
-G_M000_IG37:                ;; offset=0x049A
-       cmp      edx, r8d
-       jl       SHORT G_M000_IG33
- 
-G_M000_IG38:                ;; offset=0x049F
-       dec      edx
-       movsxd   r8, edx
-       mov      r8d, dword ptr [r15+4*r8]
-       movsxd   r9, ebx
-       mov      dword ptr [r15+4*r9], r8d
-       movsxd   r8, edx
-       mov      dword ptr [r15+4*r8], r12d
-       mov      r8d, edx
-       cmp      edx, ebx
-       jle      SHORT G_M000_IG40
-       align    [3 bytes for IG39]
- 
-G_M000_IG39:                ;; offset=0x04C0
-       lea      r9d, [r8-0x01]
-       movsxd   r9, r9d
-       mov      r9d, dword ptr [r15+4*r9]
-       cmp      r9d, r12d
-       jl       SHORT G_M000_IG40
-       jg       SHORT G_M000_IG40
-       dec      r8d
-       cmp      r8d, ebx
-       jg       SHORT G_M000_IG39
- 
-G_M000_IG40:                ;; offset=0x04DA
-       inc      edx
-       cmp      edx, esi
-       jge      SHORT G_M000_IG42
-       align    [0 bytes for IG41]
- 
-G_M000_IG41:                ;; offset=0x04E0
-       movsxd   r9, edx
-       mov      r9d, dword ptr [r15+4*r9]
-       cmp      r9d, r12d
-       jl       SHORT G_M000_IG42
-       jg       SHORT G_M000_IG42
-       inc      edx
-       cmp      edx, esi
-       jl       SHORT G_M000_IG41
- 
-G_M000_IG42:                ;; offset=0x04F4
-       mov      r14d, r8d
-       mov      r12d, edx
-       mov      edx, r14d
+G_M000_IG27:                ;; offset=0x0390
+       lea      rdx, [rsp+0x40]
+       lea      rcx, [rsp+0x80]
+       mov      r8d, ebx
+       mov      r9d, esi
+       call     [SortAlgorithm.Algorithms.PDQSort:PartitionRightSkipEquals[int,SortAlgorithm.Algorithms.ComparableComparer`1[int],SortAlgorithm.Contexts.NullContext](SortAlgorithm.Algorithms.SortSpan`3[int,SortAlgorithm.Algorithms.ComparableComparer`1[int],SortAlgorithm.Contexts.NullContext],int,int):System.ValueTuple`3[int,int,bool]]
+       mov      r12d, dword ptr [rsp+0x80]
+       mov      eax, dword ptr [rsp+0x84]
+       mov      dword ptr [rsp+0x94], eax
+       movzx    rcx, byte  ptr [rsp+0x88]
+       mov      edx, r12d
        sub      edx, ebx
        mov      r8d, esi
-       sub      r8d, r12d
-       mov      r9d, r12d
-       sub      r9d, r14d
-       sub      ecx, r9d
+       sub      r8d, eax
+       mov      r9d, eax
+       sub      r9d, r12d
+       sub      r13d, r9d
+       test     r13d, r13d
+       jle      SHORT G_M000_IG29
+ 
+G_M000_IG28:                ;; offset=0x03E0
+       shr      r13d, 3
+       cmp      r13d, edx
+       jg       G_M000_IG42
+       cmp      r13d, r8d
+       jg       G_M000_IG42
+ 
+G_M000_IG29:                ;; offset=0x03F6
        test     ecx, ecx
-       jle      SHORT G_M000_IG44
- 
-G_M000_IG43:                ;; offset=0x0512
-       shr      ecx, 3
-       cmp      ecx, edx
-       jg       G_M000_IG57
-       cmp      ecx, r8d
-       jg       G_M000_IG57
- 
-G_M000_IG44:                ;; offset=0x0526
-       cmp      dword ptr [rsp+0x78], 0
-       je       G_M000_IG61
-       cmp      ebx, r14d
-       je       G_M000_IG50
+       je       G_M000_IG46
+       cmp      ebx, r12d
+       je       G_M000_IG35
        xor      edx, edx
        lea      r8d, [rbx+0x01]
-       cmp      r8d, r14d
-       jge      G_M000_IG50
+       cmp      r8d, r12d
+       jge      G_M000_IG35
  
-G_M000_IG45:                ;; offset=0x0549
+G_M000_IG30:                ;; offset=0x0416
        mov      ecx, r8d
        movsxd   r9, ecx
        mov      r9d, dword ptr [r15+4*r9]
-       movsxd   rax, ecx
-       mov      eax, dword ptr [r15+4*rax]
+       movsxd   r10, ecx
+       mov      r10d, dword ptr [r15+4*r10]
        dec      ecx
        movsxd   rcx, ecx
-       cmp      eax, dword ptr [r15+4*rcx]
-       jge      SHORT G_M000_IG49
+       cmp      r10d, dword ptr [r15+4*rcx]
+       jge      SHORT G_M000_IG34
  
-G_M000_IG46:                ;; offset=0x0565
+G_M000_IG31:                ;; offset=0x0432
        lea      ecx, [r8-0x01]
        movsxd   rcx, ecx
        mov      ecx, dword ptr [r15+4*rcx]
-       movsxd   rax, r8d
-       mov      dword ptr [r15+4*rax], ecx
+       movsxd   r10, r8d
+       mov      dword ptr [r15+4*r10], ecx
        lea      ecx, [r8-0x01]
        cmp      ecx, ebx
-       je       SHORT G_M000_IG48
-       align    [1 bytes for IG47]
+       je       SHORT G_M000_IG33
  
-G_M000_IG47:                ;; offset=0x0580
-       lea      eax, [rcx-0x01]
-       cdqe     
-       mov      eax, dword ptr [r15+4*rax]
-       cmp      r9d, eax
-       jge      SHORT G_M000_IG48
-       lea      eax, [rcx-0x01]
-       cdqe     
-       mov      eax, dword ptr [r15+4*rax]
-       movsxd   r10, ecx
-       mov      dword ptr [r15+4*r10], eax
+G_M000_IG32:                ;; offset=0x044C
+       lea      r10d, [rcx-0x01]
+       movsxd   r10, r10d
+       mov      r10d, dword ptr [r15+4*r10]
+       cmp      r9d, r10d
+       jge      SHORT G_M000_IG33
+       lea      r10d, [rcx-0x01]
+       movsxd   r10, r10d
+       mov      r10d, dword ptr [r15+4*r10]
+       movsxd   r11, ecx
+       mov      dword ptr [r15+4*r11], r10d
        dec      ecx
        cmp      ecx, ebx
-       jne      SHORT G_M000_IG47
+       jne      SHORT G_M000_IG32
  
-G_M000_IG48:                ;; offset=0x05A4
-       movsxd   rax, ecx
-       mov      dword ptr [r15+4*rax], r9d
+G_M000_IG33:                ;; offset=0x0474
+       movsxd   r10, ecx
+       mov      dword ptr [r15+4*r10], r9d
        mov      r9d, r8d
        sub      r9d, ecx
        add      edx, r9d
  
-G_M000_IG49:                ;; offset=0x05B4
+G_M000_IG34:                ;; offset=0x0484
        cmp      edx, 8
-       jg       G_M000_IG61
+       jg       G_M000_IG46
        inc      r8d
-       cmp      r8d, r14d
-       jl       SHORT G_M000_IG45
+       cmp      r8d, r12d
+       jl       SHORT G_M000_IG30
  
-G_M000_IG50:                ;; offset=0x05C9
-       cmp      r12d, esi
-       je       G_M000_IG56
+G_M000_IG35:                ;; offset=0x0495
+       cmp      eax, esi
+       je       G_M000_IG41
        xor      ecx, ecx
-       lea      edx, [r12+0x01]
+       lea      edx, [rax+0x01]
        cmp      edx, esi
-       jge      G_M000_IG56
+       jge      G_M000_IG41
  
-G_M000_IG51:                ;; offset=0x05E1
+G_M000_IG36:                ;; offset=0x04AA
        mov      r8d, edx
        movsxd   r9, r8d
        mov      r9d, dword ptr [r15+4*r9]
-       movsxd   rax, r8d
-       mov      eax, dword ptr [r15+4*rax]
+       movsxd   r10, r8d
+       mov      r10d, dword ptr [r15+4*r10]
        dec      r8d
        movsxd   r8, r8d
-       cmp      eax, dword ptr [r15+4*r8]
-       jge      SHORT G_M000_IG55
+       cmp      r10d, dword ptr [r15+4*r8]
+       jge      SHORT G_M000_IG40
  
-G_M000_IG52:                ;; offset=0x05FE
+G_M000_IG37:                ;; offset=0x04C7
        lea      r8d, [rdx-0x01]
        movsxd   r8, r8d
        mov      r8d, dword ptr [r15+4*r8]
-       movsxd   rax, edx
-       mov      dword ptr [r15+4*rax], r8d
+       movsxd   r10, edx
+       mov      dword ptr [r15+4*r10], r8d
        lea      r8d, [rdx-0x01]
-       cmp      r8d, r12d
-       je       SHORT G_M000_IG54
-       align    [7 bytes for IG53]
+       cmp      r8d, eax
+       je       SHORT G_M000_IG39
+       align    [0 bytes for IG38]
  
-G_M000_IG53:                ;; offset=0x0620
-       lea      eax, [r8-0x01]
-       cdqe     
-       mov      eax, dword ptr [r15+4*rax]
-       cmp      r9d, eax
-       jge      SHORT G_M000_IG54
-       lea      eax, [r8-0x01]
-       cdqe     
-       mov      eax, dword ptr [r15+4*rax]
-       movsxd   r10, r8d
-       mov      dword ptr [r15+4*r10], eax
+G_M000_IG38:                ;; offset=0x04E2
+       lea      r10d, [r8-0x01]
+       movsxd   r10, r10d
+       mov      r10d, dword ptr [r15+4*r10]
+       cmp      r9d, r10d
+       jge      SHORT G_M000_IG39
+       lea      r10d, [r8-0x01]
+       movsxd   r10, r10d
+       mov      r10d, dword ptr [r15+4*r10]
+       movsxd   r11, r8d
+       mov      dword ptr [r15+4*r11], r10d
        dec      r8d
-       cmp      r8d, r12d
-       jne      SHORT G_M000_IG53
+       cmp      r8d, eax
+       jne      SHORT G_M000_IG38
  
-G_M000_IG54:                ;; offset=0x0648
-       movsxd   rax, r8d
-       mov      dword ptr [r15+4*rax], r9d
+G_M000_IG39:                ;; offset=0x050C
+       movsxd   r10, r8d
+       mov      dword ptr [r15+4*r10], r9d
        mov      r9d, edx
        sub      r9d, r8d
        add      ecx, r9d
  
-G_M000_IG55:                ;; offset=0x0658
+G_M000_IG40:                ;; offset=0x051C
        cmp      ecx, 8
-       jg       G_M000_IG61
+       jg       G_M000_IG46
        inc      edx
        cmp      edx, esi
-       jl       G_M000_IG51
+       jl       G_M000_IG36
  
-G_M000_IG56:                ;; offset=0x066B
+G_M000_IG41:                ;; offset=0x052F
        vzeroupper 
-       add      rsp, 136
+       add      rsp, 152
        pop      rbx
        pop      rbp
        pop      rsi
@@ -625,476 +486,383 @@ G_M000_IG56:                ;; offset=0x066B
        pop      r15
        ret      
  
-G_M000_IG57:                ;; offset=0x0682
+G_M000_IG42:                ;; offset=0x0546
        dec      ebp
-       je       G_M000_IG77
+       je       G_M000_IG52
        cmp      edx, 24
-       jl       G_M000_IG59
+       jl       G_M000_IG44
        movsxd   rcx, ebx
        lea      rcx, bword ptr [r15+4*rcx]
        mov      r9d, edx
        shr      r9d, 2
-       add      r9d, ebx
-       movsxd   r9, r9d
-       lea      r9, bword ptr [r15+4*r9]
-       mov      eax, dword ptr [r9]
-       mov      r10d, dword ptr [rcx]
-       mov      dword ptr [rcx], eax
-       mov      dword ptr [r9], r10d
-       lea      ecx, [r14-0x01]
+       lea      r10d, [r9+rbx]
+       movsxd   r11, r10d
+       lea      r11, bword ptr [r15+4*r11]
+       mov      r13d, dword ptr [r11]
+       mov      dword ptr [rsp+0x74], r13d
+       mov      r13d, dword ptr [rcx]
+       mov      dword ptr [rsp+0x70], r13d
+       mov      r13d, dword ptr [rsp+0x74]
+       mov      dword ptr [rcx], r13d
+       mov      r13d, dword ptr [rsp+0x70]
+       mov      dword ptr [r11], r13d
+       lea      ecx, [r12-0x01]
        movsxd   rcx, ecx
        lea      rcx, bword ptr [r15+4*rcx]
-       mov      r9d, edx
-       shr      r9d, 2
-       mov      eax, r14d
-       sub      eax, r9d
-       movsxd   r9, eax
-       lea      r9, bword ptr [r15+4*r9]
-       mov      eax, dword ptr [r9]
-       mov      r10d, dword ptr [rcx]
-       mov      dword ptr [rcx], eax
-       mov      dword ptr [r9], r10d
+       mov      r11d, r12d
+       sub      r11d, r9d
+       movsxd   r11, r11d
+       lea      r11, bword ptr [r15+4*r11]
+       mov      r13d, dword ptr [r11]
+       mov      dword ptr [rsp+0x6C], r13d
+       mov      r13d, dword ptr [rcx]
+       mov      dword ptr [rsp+0x68], r13d
+       mov      r13d, dword ptr [rsp+0x6C]
+       mov      dword ptr [rcx], r13d
+       mov      r13d, dword ptr [rsp+0x68]
+       mov      dword ptr [r11], r13d
        cmp      edx, 128
-       jle      G_M000_IG59
+       jle      G_M000_IG44
        lea      ecx, [rbx+0x01]
        movsxd   rcx, ecx
        lea      rcx, bword ptr [r15+4*rcx]
-       mov      r9d, edx
-       shr      r9d, 2
-       lea      r9d, [r9+rbx+0x01]
-       movsxd   r9, r9d
-       lea      r9, bword ptr [r15+4*r9]
-       mov      eax, dword ptr [r9]
-       mov      r10d, dword ptr [rcx]
-       mov      dword ptr [rcx], eax
-       mov      dword ptr [r9], r10d
+       lea      edx, [r10+0x01]
+       movsxd   rdx, edx
+       lea      rdx, bword ptr [r15+4*rdx]
+       mov      r11d, dword ptr [rdx]
+       mov      r13d, dword ptr [rcx]
+       mov      dword ptr [rcx], r11d
+       mov      dword ptr [rdx], r13d
        lea      ecx, [rbx+0x02]
        movsxd   rcx, ecx
        lea      rcx, bword ptr [r15+4*rcx]
-       mov      r9d, edx
-       shr      r9d, 2
-       lea      r9d, [r9+rbx+0x02]
-       movsxd   r9, r9d
-       lea      r9, bword ptr [r15+4*r9]
-       mov      eax, dword ptr [r9]
-       mov      r10d, dword ptr [rcx]
-       mov      dword ptr [rcx], eax
-       mov      dword ptr [r9], r10d
-       lea      ecx, [r14-0x02]
+       add      r10d, 2
+       movsxd   rdx, r10d
+       lea      rdx, bword ptr [r15+4*rdx]
+       mov      r10d, dword ptr [rdx]
+       mov      r11d, dword ptr [rcx]
+       mov      dword ptr [rcx], r10d
+       mov      dword ptr [rdx], r11d
+       lea      ecx, [r12-0x02]
        movsxd   rcx, ecx
        lea      rcx, bword ptr [r15+4*rcx]
-       mov      r9d, edx
-       shr      r9d, 2
-       inc      r9d
-       mov      eax, r14d
-       sub      eax, r9d
-       movsxd   r9, eax
  
-G_M000_IG58:                ;; offset=0x075A
-       lea      r9, bword ptr [r15+4*r9]
-       mov      eax, dword ptr [r9]
-       mov      r10d, dword ptr [rcx]
-       mov      dword ptr [rcx], eax
-       mov      dword ptr [r9], r10d
-       lea      ecx, [r14-0x03]
+G_M000_IG43:                ;; offset=0x0623
+       lea      edx, [r9+0x01]
+       mov      r10d, r12d
+       sub      r10d, edx
+       movsxd   rdx, r10d
+       lea      rdx, bword ptr [r15+4*rdx]
+       mov      r10d, dword ptr [rdx]
+       mov      r11d, dword ptr [rcx]
+       mov      dword ptr [rcx], r10d
+       mov      dword ptr [rdx], r11d
+       lea      ecx, [r12-0x03]
        movsxd   rcx, ecx
        lea      rcx, bword ptr [r15+4*rcx]
-       shr      edx, 2
-       add      edx, 2
-       mov      r9d, r14d
-       sub      r9d, edx
-       movsxd   rdx, r9d
+       add      r9d, 2
+       mov      edx, r12d
+       sub      edx, r9d
+       movsxd   rdx, edx
        lea      rdx, bword ptr [r15+4*rdx]
        mov      r9d, dword ptr [rdx]
-       mov      eax, dword ptr [rcx]
+       mov      r10d, dword ptr [rcx]
        mov      dword ptr [rcx], r9d
-       mov      dword ptr [rdx], eax
+       mov      dword ptr [rdx], r10d
  
-G_M000_IG59:                ;; offset=0x0791
+G_M000_IG44:                ;; offset=0x0669
        cmp      r8d, 24
-       jl       G_M000_IG61
-       movsxd   rcx, r12d
+       jl       G_M000_IG46
+       movsxd   rcx, eax
        lea      rcx, bword ptr [r15+4*rcx]
        mov      edx, r8d
        shr      edx, 2
-       add      edx, r12d
-       movsxd   rdx, edx
-       lea      rdx, bword ptr [r15+4*rdx]
-       mov      r9d, dword ptr [rdx]
-       mov      eax, dword ptr [rcx]
-       mov      dword ptr [rcx], r9d
-       mov      dword ptr [rdx], eax
-       movsxd   rcx, r13d
+       lea      r9d, [rdx+rax]
+       movsxd   r10, r9d
+       lea      r10, bword ptr [r15+4*r10]
+       mov      r11d, dword ptr [r10]
+       mov      r13d, dword ptr [rcx]
+       mov      dword ptr [rcx], r11d
+       mov      dword ptr [r10], r13d
+       lea      ecx, [rsi-0x01]
+       movsxd   rcx, ecx
        lea      rcx, bword ptr [r15+4*rcx]
-       mov      edx, r8d
-       shr      edx, 2
-       mov      r9d, esi
-       sub      r9d, edx
-       movsxd   rdx, r9d
-       lea      rdx, bword ptr [r15+4*rdx]
-       mov      r9d, dword ptr [rdx]
-       mov      eax, dword ptr [rcx]
-       mov      dword ptr [rcx], r9d
-       mov      dword ptr [rdx], eax
+       mov      r10d, esi
+       sub      r10d, edx
+       movsxd   r10, r10d
+       lea      r10, bword ptr [r15+4*r10]
+       mov      r11d, dword ptr [r10]
+       mov      r13d, dword ptr [rcx]
+       mov      dword ptr [rcx], r11d
+       mov      dword ptr [r10], r13d
        cmp      r8d, 128
-       jle      G_M000_IG61
-       lea      ecx, [r12+0x01]
+       jle      G_M000_IG46
+       lea      ecx, [rax+0x01]
        movsxd   rcx, ecx
        lea      rcx, bword ptr [r15+4*rcx]
-       mov      edx, r8d
-       shr      edx, 2
-       lea      edx, [rdx+r12+0x01]
-       movsxd   rdx, edx
-       lea      rdx, bword ptr [r15+4*rdx]
-       mov      r9d, dword ptr [rdx]
-       mov      eax, dword ptr [rcx]
-       mov      dword ptr [rcx], r9d
-       mov      dword ptr [rdx], eax
-       lea      ecx, [r12+0x02]
+       lea      r8d, [r9+0x01]
+       movsxd   r8, r8d
+       lea      r8, bword ptr [r15+4*r8]
+       mov      r10d, dword ptr [r8]
+       mov      r11d, dword ptr [rcx]
+       mov      dword ptr [rcx], r10d
+       mov      dword ptr [r8], r11d
+       lea      ecx, [rax+0x02]
        movsxd   rcx, ecx
        lea      rcx, bword ptr [r15+4*rcx]
-       mov      edx, r8d
-       shr      edx, 2
-       lea      edx, [rdx+r12+0x02]
-       movsxd   rdx, edx
-       lea      rdx, bword ptr [r15+4*rdx]
-       mov      r9d, dword ptr [rdx]
-       mov      eax, dword ptr [rcx]
+       add      r9d, 2
+       movsxd   r8, r9d
+       lea      r8, bword ptr [r15+4*r8]
+       mov      r9d, dword ptr [r8]
+       mov      r10d, dword ptr [rcx]
        mov      dword ptr [rcx], r9d
-       mov      dword ptr [rdx], eax
+       mov      dword ptr [r8], r10d
        lea      ecx, [rsi-0x02]
        movsxd   rcx, ecx
        lea      rcx, bword ptr [r15+4*rcx]
-       mov      edx, r8d
-       shr      edx, 2
-       inc      edx
+       lea      r8d, [rdx+0x01]
        mov      r9d, esi
-       sub      r9d, edx
-       movsxd   rdx, r9d
-       lea      rdx, bword ptr [r15+4*rdx]
-       mov      r9d, dword ptr [rdx]
-       mov      eax, dword ptr [rcx]
+       sub      r9d, r8d
+       movsxd   r8, r9d
+       lea      r8, bword ptr [r15+4*r8]
+       mov      r9d, dword ptr [r8]
+       mov      r10d, dword ptr [rcx]
        mov      dword ptr [rcx], r9d
- 
-G_M000_IG60:                ;; offset=0x0864
-       mov      dword ptr [rdx], eax
+       mov      dword ptr [r8], r10d
        lea      ecx, [rsi-0x03]
        movsxd   rcx, ecx
        lea      rcx, bword ptr [r15+4*rcx]
-       shr      r8d, 2
-       add      r8d, 2
-       mov      edx, esi
-       sub      edx, r8d
-       movsxd   rdx, edx
+       add      edx, 2
+ 
+G_M000_IG45:                ;; offset=0x073D
+       mov      r8d, esi
+       sub      r8d, edx
+       movsxd   rdx, r8d
        lea      rdx, bword ptr [r15+4*rdx]
        mov      r8d, dword ptr [rdx]
        mov      r9d, dword ptr [rcx]
        mov      dword ptr [rcx], r8d
        mov      dword ptr [rdx], r9d
  
-G_M000_IG61:                ;; offset=0x0890
-       mov      ecx, r14d
+G_M000_IG46:                ;; offset=0x0756
+       mov      ecx, r12d
        sub      ecx, ebx
        mov      edx, esi
-       sub      edx, r12d
+       sub      edx, eax
        cmp      ecx, edx
        jge      G_M000_IG03
        mov      bword ptr [rdi+0x10], r15
  
-G_M000_IG62:                ;; offset=0x08A6
+G_M000_IG47:                ;; offset=0x076B
        vmovdqu  ymm0, ymmword ptr [rdi]
-       vmovdqu  ymmword ptr [rsp+0x50], ymm0
+       vmovdqu  ymmword ptr [rsp+0x40], ymm0
        mov      rcx, qword ptr [rdi+0x20]
-       mov      qword ptr [rsp+0x70], rcx
+       mov      qword ptr [rsp+0x60], rcx
  
-G_M000_IG63:                ;; offset=0x08B9
-       movzx    rcx, byte  ptr [rsp+0xF0]
+G_M000_IG48:                ;; offset=0x077E
+       movzx    rcx, r14b
        mov      dword ptr [rsp+0x20], ecx
-       lea      rcx, [rsp+0x50]
+       lea      rcx, [rsp+0x40]
        mov      edx, ebx
-       mov      r8d, r14d
+       mov      r8d, r12d
        mov      r9d, ebp
        call     [SortAlgorithm.Algorithms.PDQSort:PDQSortLoop[int,SortAlgorithm.Algorithms.ComparableComparer`1[int],SortAlgorithm.Contexts.NullContext](SortAlgorithm.Algorithms.SortSpan`3[int,SortAlgorithm.Algorithms.ComparableComparer`1[int],SortAlgorithm.Contexts.NullContext],int,int,int,bool)]
-       mov      ebx, r12d
+       mov      ebx, dword ptr [rsp+0x94]
        xor      r14d, r14d
        jmp      G_M000_IG06
-       align    [0 bytes for IG65]
  
-G_M000_IG64:                ;; offset=0x08E3
-       mov      eax, r12d
-       movsxd   rcx, r13d
-       mov      ecx, dword ptr [r15+4*rcx]
-       cmp      eax, ecx
-       jge      SHORT G_M000_IG66
+G_M000_IG49:                ;; offset=0x07A8
+       mov      bword ptr [rdi+0x10], r15
  
-G_M000_IG65:                ;; offset=0x08F1
-       dec      r13d
-       movsxd   rcx, r13d
-       mov      ecx, dword ptr [r15+4*rcx]
-       cmp      eax, ecx
-       jl       SHORT G_M000_IG65
+G_M000_IG50:                ;; offset=0x07AC
+       vmovdqu  ymm0, ymmword ptr [rdi]
+       vmovdqu  ymmword ptr [rsp+0x40], ymm0
+       mov      rcx, qword ptr [rdi+0x20]
+       mov      qword ptr [rsp+0x60], rcx
  
-G_M000_IG66:                ;; offset=0x08FF
-       lea      ecx, [r13+0x01]
-       cmp      ecx, esi
-       je       SHORT G_M000_IG69
- 
-G_M000_IG67:                ;; offset=0x0907
-       lea      ecx, [rbx+0x01]
-       movsxd   rdx, ecx
-       mov      edx, dword ptr [r15+4*rdx]
-       cmp      eax, edx
-       jl       G_M000_IG75
-       align    [7 bytes for IG68]
- 
-G_M000_IG68:                ;; offset=0x0920
-       inc      ecx
-       movsxd   rdx, ecx
-       mov      edx, dword ptr [r15+4*rdx]
-       cmp      eax, edx
-       jge      SHORT G_M000_IG68
-       jmp      SHORT G_M000_IG75
- 
-G_M000_IG69:                ;; offset=0x0932
-       lea      ecx, [rbx+0x01]
-       cmp      ecx, r13d
-       jge      SHORT G_M000_IG75
-       align    [2 bytes for IG70]
- 
-G_M000_IG70:                ;; offset=0x0940
-       movsxd   rdx, ecx
-       mov      edx, dword ptr [r15+4*rdx]
-       cmp      eax, edx
-       jl       SHORT G_M000_IG75
-       inc      ecx
-       cmp      ecx, r13d
-       jge      SHORT G_M000_IG75
-       jmp      SHORT G_M000_IG70
- 
-G_M000_IG71:                ;; offset=0x0954
-       movsxd   rdx, ecx
-       lea      rdx, bword ptr [r15+4*rdx]
-       movsxd   r8, r13d
-       lea      r8, bword ptr [r15+4*r8]
-       mov      r10d, dword ptr [r8]
-       mov      r9d, dword ptr [rdx]
-       mov      dword ptr [rdx], r10d
-       mov      dword ptr [r8], r9d
-       dec      r13d
-       movsxd   rdx, r13d
-       mov      edx, dword ptr [r15+4*rdx]
-       cmp      eax, edx
-       jge      SHORT G_M000_IG73
-       align    [4 bytes for IG72]
- 
-G_M000_IG72:                ;; offset=0x0980
-       dec      r13d
-       movsxd   rdx, r13d
-       mov      edx, dword ptr [r15+4*rdx]
-       cmp      eax, edx
-       jl       SHORT G_M000_IG72
- 
-G_M000_IG73:                ;; offset=0x098E
-       inc      ecx
-       movsxd   rdx, ecx
-       mov      edx, dword ptr [r15+4*rdx]
-       cmp      eax, edx
-       jl       SHORT G_M000_IG75
-       align    [5 bytes for IG74]
- 
-G_M000_IG74:                ;; offset=0x09A0
-       inc      ecx
-       movsxd   rdx, ecx
-       mov      edx, dword ptr [r15+4*rdx]
-       cmp      eax, edx
-       jge      SHORT G_M000_IG74
- 
-G_M000_IG75:                ;; offset=0x09AD
-       cmp      ecx, r13d
-       jl       SHORT G_M000_IG71
- 
-G_M000_IG76:                ;; offset=0x09B2
-       movsxd   rcx, r13d
-       mov      ecx, dword ptr [r15+4*rcx]
-       movsxd   rdx, ebx
-       mov      dword ptr [r15+4*rdx], ecx
-       movsxd   rcx, r13d
-       mov      dword ptr [r15+4*rcx], eax
-       lea      ebx, [r13+0x01]
-       movzx    r14, byte  ptr [rsp+0xF0]
+G_M000_IG51:                ;; offset=0x07BF
+       lea      rcx, [rsp+0x40]
+       mov      edx, ebx
+       mov      r8d, esi
+       call     [SortAlgorithm.Algorithms.PDQSort:PartitionLeft[int,SortAlgorithm.Algorithms.ComparableComparer`1[int],SortAlgorithm.Contexts.NullContext](SortAlgorithm.Algorithms.SortSpan`3[int,SortAlgorithm.Algorithms.ComparableComparer`1[int],SortAlgorithm.Contexts.NullContext],int,int):int]
+       lea      ebx, [rax+0x01]
        jmp      G_M000_IG06
  
-G_M000_IG77:                ;; offset=0x09D9
-       sub      esi, ebx
-       jmp      G_M000_IG85
-       align    [1 bytes for IG79]
+G_M000_IG52:                ;; offset=0x07D7
+       mov      eax, esi
+       sub      eax, ebx
+       mov      ecx, eax
+       shr      ecx, 1
+       add      ecx, ebx
+       jmp      G_M000_IG60
+       align    [0 bytes for IG54]
  
-G_M000_IG78:                ;; offset=0x09E1
-       mov      rax, r15
-       movsxd   rdx, ecx
-       mov      eax, dword ptr [rax+4*rdx]
-       mov      edx, ecx
-       mov      r8d, ecx
-       sub      r8d, ebx
-       lea      r8d, [rbx+2*r8+0x01]
-       lea      r10d, [rbx+rsi]
-       cmp      r10d, r8d
-       jle      SHORT G_M000_IG82
- 
-G_M000_IG79:                ;; offset=0x0A00
-       lea      r10d, [rbx+rsi]
-       lea      r9d, [r8+0x01]
-       cmp      r10d, r9d
-       jle      SHORT G_M000_IG81
- 
-G_M000_IG80:                ;; offset=0x0A0D
-       lea      r10d, [r8+0x01]
-       movsxd   r10, r10d
-       mov      r10d, dword ptr [r15+4*r10]
-       movsxd   r9, r8d
-       cmp      r10d, dword ptr [r15+4*r9]
-       jle      SHORT G_M000_IG81
-       inc      r8d
- 
-G_M000_IG81:                ;; offset=0x0A24
-       movsxd   r10, r8d
-       mov      r10d, dword ptr [r15+4*r10]
-       movsxd   rdx, edx
-       mov      dword ptr [r15+4*rdx], r10d
-       mov      edx, r8d
+G_M000_IG53:                ;; offset=0x07E6
+       mov      rcx, r15
+       movsxd   r8, edx
+       mov      ecx, dword ptr [rcx+4*r8]
        mov      r8d, edx
-       sub      r8d, ebx
-       lea      r8d, [rbx+2*r8+0x01]
-       lea      r10d, [rbx+rsi]
-       cmp      r10d, r8d
-       jg       SHORT G_M000_IG79
+       mov      r10d, edx
+       sub      r10d, ebx
+       lea      r10d, [rbx+2*r10+0x01]
+       lea      r9d, [rbx+rax]
+       cmp      r9d, r10d
+       jle      SHORT G_M000_IG57
  
-G_M000_IG82:                ;; offset=0x0A49
-       mov      r8d, edx
-       sub      r8d, ebx
-       dec      r8d
-       mov      r10d, r8d
-       shr      r10d, 31
-       add      r8d, r10d
-       sar      r8d, 1
-       add      r8d, ebx
-       cmp      edx, ecx
-       jle      SHORT G_M000_IG84
-       align    [0 bytes for IG83]
+G_M000_IG54:                ;; offset=0x0807
+       lea      r9d, [rbx+rax]
+       lea      r11d, [r10+0x01]
+       cmp      r9d, r11d
+       jle      SHORT G_M000_IG56
  
-G_M000_IG83:                ;; offset=0x0A66
-       movsxd   r10, r8d
-       cmp      dword ptr [r15+4*r10], eax
-       jge      SHORT G_M000_IG84
-       movsxd   r10, r8d
-       mov      r10d, dword ptr [r15+4*r10]
-       movsxd   rdx, edx
-       mov      dword ptr [r15+4*rdx], r10d
-       mov      edx, r8d
-       mov      r8d, edx
-       sub      r8d, ebx
-       dec      r8d
-       mov      r10d, r8d
-       shr      r10d, 31
-       add      r8d, r10d
-       sar      r8d, 1
-       add      r8d, ebx
-       cmp      edx, ecx
-       jg       SHORT G_M000_IG83
- 
-G_M000_IG84:                ;; offset=0x0A9D
-       movsxd   rdx, edx
-       mov      dword ptr [r15+4*rdx], eax
-       mov      eax, ecx
- 
-G_M000_IG85:                ;; offset=0x0AA6
-       lea      ecx, [rax-0x01]
-       cmp      eax, ebx
-       jg       G_M000_IG78
- 
-G_M000_IG86:                ;; offset=0x0AB1
-       mov      eax, r13d
-       cmp      eax, ebx
-       jg       SHORT G_M000_IG90
-       jmp      G_M000_IG56
-       align    [0 bytes for IG87]
- 
-G_M000_IG87:                ;; offset=0x0ABD
-       mov      r11d, r9d
- 
-G_M000_IG88:                ;; offset=0x0AC0
-       movsxd   r9, r11d
-       mov      r9d, dword ptr [r15+4*r9]
-       cmp      edx, r9d
-       jge      SHORT G_M000_IG89
-       movsxd   r9, r11d
-       mov      r9d, dword ptr [r15+4*r9]
-       movsxd   r10, r10d
-       mov      dword ptr [r15+4*r10], r9d
-       mov      r10d, r11d
-       mov      r9d, r10d
-       sub      r9d, ebx
-       lea      r9d, [rbx+2*r9+0x01]
-       lea      r11d, [r9+0x01]
-       lea      esi, [rbx+r8]
-       cmp      esi, r9d
-       jg       SHORT G_M000_IG91
- 
-G_M000_IG89:                ;; offset=0x0AF5
-       movsxd   r8, r10d
-       mov      dword ptr [r15+4*r8], edx
-       movsxd   rdx, eax
-       mov      dword ptr [r15+4*rdx], ecx
-       dec      eax
-       cmp      eax, ebx
-       jle      G_M000_IG56
- 
-G_M000_IG90:                ;; offset=0x0B0D
-       movsxd   rcx, ebx
-       mov      ecx, dword ptr [r15+4*rcx]
-       movsxd   rdx, eax
-       mov      edx, dword ptr [r15+4*rdx]
-       mov      r8d, eax
-       sub      r8d, ebx
-       mov      r10d, ebx
+G_M000_IG55:                ;; offset=0x0814
        lea      r9d, [r10+0x01]
-       lea      r11d, [r9+0x01]
-       lea      r14d, [r10+r8]
-       cmp      r14d, r9d
-       jle      SHORT G_M000_IG89
+       movsxd   r9, r9d
+       mov      r9d, dword ptr [r15+4*r9]
+       movsxd   r11, r10d
+       cmp      r9d, dword ptr [r15+4*r11]
+       jle      SHORT G_M000_IG56
+       inc      r10d
  
-G_M000_IG91:                ;; offset=0x0B35
-       lea      esi, [rbx+r8]
-       cmp      esi, r11d
-       jle      G_M000_IG87
+G_M000_IG56:                ;; offset=0x082B
+       movsxd   r9, r10d
+       mov      r9d, dword ptr [r15+4*r9]
+       movsxd   r8, r8d
+       mov      dword ptr [r15+4*r8], r9d
+       mov      r8d, r10d
+       mov      r10d, r8d
+       sub      r10d, ebx
+       lea      r10d, [rbx+2*r10+0x01]
+       lea      r9d, [rbx+rax]
+       cmp      r9d, r10d
+       jg       SHORT G_M000_IG54
  
-G_M000_IG92:                ;; offset=0x0B42
-       movsxd   rsi, r11d
-       mov      esi, dword ptr [r15+4*rsi]
-       movsxd   rdi, r9d
-       cmp      esi, dword ptr [r15+4*rdi]
-       jle      G_M000_IG87
-       jmp      G_M000_IG88
+G_M000_IG57:                ;; offset=0x0850
+       mov      r10d, r8d
+       sub      r10d, ebx
+       dec      r10d
+       mov      r9d, r10d
+       shr      r9d, 31
+       add      r10d, r9d
+       sar      r10d, 1
+       add      r10d, ebx
+       cmp      r8d, edx
+       jle      SHORT G_M000_IG59
+       align    [2 bytes for IG58]
  
-G_M000_IG93:                ;; offset=0x0B5B
+G_M000_IG58:                ;; offset=0x0870
+       movsxd   r9, r10d
+       cmp      dword ptr [r15+4*r9], ecx
+       jge      SHORT G_M000_IG59
+       movsxd   r9, r10d
+       mov      r9d, dword ptr [r15+4*r9]
+       movsxd   r8, r8d
+       mov      dword ptr [r15+4*r8], r9d
+       mov      r8d, r10d
+       mov      r10d, r8d
+       sub      r10d, ebx
+       dec      r10d
+       mov      r9d, r10d
+       shr      r9d, 31
+       add      r10d, r9d
+       sar      r10d, 1
+       add      r10d, ebx
+       cmp      r8d, edx
+       jg       SHORT G_M000_IG58
+ 
+G_M000_IG59:                ;; offset=0x08A8
+       movsxd   r8, r8d
+       mov      dword ptr [r15+4*r8], ecx
+       mov      ecx, edx
+ 
+G_M000_IG60:                ;; offset=0x08B1
+       lea      edx, [rcx-0x01]
+       cmp      ecx, ebx
+       jg       G_M000_IG53
+ 
+G_M000_IG61:                ;; offset=0x08BC
+       dec      esi
+       cmp      esi, ebx
+       jg       SHORT G_M000_IG65
+       jmp      G_M000_IG41
+       align    [0 bytes for IG62]
+ 
+G_M000_IG62:                ;; offset=0x08C7
+       mov      r9d, r10d
+ 
+G_M000_IG63:                ;; offset=0x08CA
+       movsxd   r10, r9d
+       mov      r10d, dword ptr [r15+4*r10]
+       cmp      ecx, r10d
+       jge      SHORT G_M000_IG64
+       movsxd   r10, r9d
+       mov      r10d, dword ptr [r15+4*r10]
+       movsxd   r8, r8d
+       mov      dword ptr [r15+4*r8], r10d
+       mov      r8d, r9d
+       mov      r10d, r8d
+       sub      r10d, ebx
+       lea      r10d, [rbx+2*r10+0x01]
+       lea      r9d, [r10+0x01]
+       lea      r11d, [rbx+rdx]
+       cmp      r11d, r10d
+       jg       SHORT G_M000_IG66
+ 
+G_M000_IG64:                ;; offset=0x08FF
+       movsxd   rdx, r8d
+       mov      dword ptr [r15+4*rdx], ecx
+       movsxd   rcx, esi
+       mov      dword ptr [r15+4*rcx], eax
+       dec      esi
+       cmp      esi, ebx
+       jle      G_M000_IG41
+ 
+G_M000_IG65:                ;; offset=0x0917
+       movsxd   rax, ebx
+       mov      eax, dword ptr [r15+4*rax]
+       movsxd   rcx, esi
+       mov      ecx, dword ptr [r15+4*rcx]
+       mov      edx, esi
+       sub      edx, ebx
+       mov      r8d, ebx
+       lea      r10d, [r8+0x01]
+       lea      r9d, [r10+0x01]
+       lea      r11d, [r8+rdx]
+       cmp      r11d, r10d
+       jle      SHORT G_M000_IG64
+ 
+G_M000_IG66:                ;; offset=0x093D
+       lea      r11d, [rbx+rdx]
+       cmp      r11d, r9d
+       jle      SHORT G_M000_IG62
+ 
+G_M000_IG67:                ;; offset=0x0946
+       movsxd   r11, r9d
+       mov      r11d, dword ptr [r15+4*r11]
+       movsxd   r14, r10d
+       cmp      r11d, dword ptr [r15+4*r14]
+       jle      G_M000_IG62
+       jmp      G_M000_IG63
+ 
+G_M000_IG68:                ;; offset=0x095F
        test     r14b, r14b
-       jne      SHORT G_M000_IG99
+       jne      SHORT G_M000_IG74
        mov      rax, r15
        inc      ebx
        cmp      ebx, esi
-       jge      G_M000_IG56
+       jge      G_M000_IG41
  
-G_M000_IG94:                ;; offset=0x0B6D
+G_M000_IG69:                ;; offset=0x0971
        movsxd   rcx, ebx
        mov      ecx, dword ptr [rax+4*rcx]
        lea      edx, [rbx-0x01]
        movsxd   r8, edx
        mov      r8d, dword ptr [rax+4*r8]
        cmp      r8d, ecx
-       jle      SHORT G_M000_IG96
-       align    [0 bytes for IG95]
+       jle      SHORT G_M000_IG71
+       align    [0 bytes for IG70]
  
-G_M000_IG95:                ;; offset=0x0B82
+G_M000_IG70:                ;; offset=0x0986
        lea      r10d, [rdx+0x01]
        movsxd   r10, r10d
        mov      dword ptr [rax+4*r10], r8d
@@ -1102,66 +870,66 @@ G_M000_IG95:                ;; offset=0x0B82
        movsxd   r8, edx
        mov      r8d, dword ptr [rax+4*r8]
        cmp      r8d, ecx
-       jg       SHORT G_M000_IG95
+       jg       SHORT G_M000_IG70
  
-G_M000_IG96:                ;; offset=0x0B9B
+G_M000_IG71:                ;; offset=0x099F
        lea      r8d, [rbx-0x01]
        cmp      edx, r8d
-       je       SHORT G_M000_IG98
+       je       SHORT G_M000_IG73
  
-G_M000_IG97:                ;; offset=0x0BA4
+G_M000_IG72:                ;; offset=0x09A8
        inc      edx
        movsxd   rdx, edx
        mov      dword ptr [rax+4*rdx], ecx
  
-G_M000_IG98:                ;; offset=0x0BAC
+G_M000_IG73:                ;; offset=0x09B0
        inc      ebx
        cmp      ebx, esi
-       jl       SHORT G_M000_IG94
-       jmp      G_M000_IG56
+       jl       SHORT G_M000_IG69
+       jmp      G_M000_IG41
  
-G_M000_IG99:                ;; offset=0x0BB7
+G_M000_IG74:                ;; offset=0x09BB
        mov      rax, r15
        lea      ecx, [rbx+0x01]
        cmp      ecx, esi
-       jge      G_M000_IG56
+       jge      G_M000_IG41
  
-G_M000_IG100:                ;; offset=0x0BC5
+G_M000_IG75:                ;; offset=0x09C9
        movsxd   rdx, ecx
        mov      edx, dword ptr [rax+4*rdx]
        lea      r8d, [rcx-0x01]
        cmp      r8d, ebx
-       jl       SHORT G_M000_IG102
-       align    [12 bytes for IG101]
+       jl       SHORT G_M000_IG77
+       align    [8 bytes for IG76]
  
-G_M000_IG101:                ;; offset=0x0BE0
+G_M000_IG76:                ;; offset=0x09E0
        movsxd   r10, r8d
        mov      r10d, dword ptr [rax+4*r10]
        cmp      r10d, edx
-       jle      SHORT G_M000_IG102
+       jle      SHORT G_M000_IG77
        lea      r9d, [r8+0x01]
        movsxd   r9, r9d
        mov      dword ptr [rax+4*r9], r10d
        dec      r8d
        cmp      r8d, ebx
-       jge      SHORT G_M000_IG101
+       jge      SHORT G_M000_IG76
  
-G_M000_IG102:                ;; offset=0x0BFF
+G_M000_IG77:                ;; offset=0x09FF
        lea      r10d, [rcx-0x01]
        cmp      r8d, r10d
-       je       SHORT G_M000_IG104
+       je       SHORT G_M000_IG79
  
-G_M000_IG103:                ;; offset=0x0C08
+G_M000_IG78:                ;; offset=0x0A08
        inc      r8d
        movsxd   r8, r8d
        mov      dword ptr [rax+4*r8], edx
  
-G_M000_IG104:                ;; offset=0x0C12
+G_M000_IG79:                ;; offset=0x0A12
        inc      ecx
        cmp      ecx, esi
-       jl       SHORT G_M000_IG100
-       jmp      G_M000_IG56
+       jl       SHORT G_M000_IG75
+       jmp      G_M000_IG41
  
-; Total bytes of code 3101
+; Total bytes of code 2589
 
 Done
