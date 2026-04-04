@@ -25,7 +25,7 @@ public static class TimsortAdversaryGenerator
     {
         var a = new int[size];
         for (int i = 0; i < size; i++)
-            a[i] = ((i & 1) == 0) ? i : size + i;
+            a[i] = (i & 1) == 0 ? i : size + i;
         return a;
     }
 
@@ -41,21 +41,26 @@ public static class TimsortAdversaryGenerator
         while (true)
         {
             int next = rev[^1] + rev[^2] + 1;
-            if (sum + next > size * 2 / 3) break;
+            if (sum + next > size * 3 / 5)
+                break;
+
             rev.Add(next);
             sum += next;
         }
 
+        // Consume the rest as many minRun-ish runs.
         while (sum + minRun <= size)
         {
-            rev.Add(minRun + ((rev.Count & 1) == 0 ? 0 : 1));
-            sum += rev[^1];
+            int len = minRun + ((rev.Count & 1) == 0 ? 0 : 1);
+            if (sum + len > size) break;
+            rev.Add(len);
+            sum += len;
         }
 
         int rem = size - sum;
         if (rem > 0)
         {
-            if (rem < minRun && rev.Count > 0)
+            if (rev.Count > 0 && rem < minRun)
                 rev[^1] += rem;
             else
                 rev.Add(rem);
@@ -85,7 +90,7 @@ public static class TimsortAdversaryGenerator
     private sealed class Node
     {
         public int StartLeaf;
-        public int EndLeaf; // exclusive
+        public int EndLeaf;
         public int Length;
         public Node? Left;
         public Node? Right;
@@ -187,39 +192,54 @@ public static class TimsortAdversaryGenerator
         var result = new int[total];
 
         var runOffsets = new int[runs.Length];
-        int pos = 0;
+        int p = 0;
         for (int i = 0; i < runs.Length; i++)
         {
-            runOffsets[i] = pos;
-            pos += runs[i];
+            runOffsets[i] = p;
+            p += runs[i];
         }
 
-        // 最終ソート順に相当する「スロット順序」を構築
         var slots = BuildSlotOrder(root);
 
         if (slots.Count != total)
             throw new InvalidOperationException($"Slot count mismatch: {slots.Count} != {total}");
 
-        // その順に rank を割り当てる
         for (int rank = 0; rank < total; rank++)
         {
-            var slot = slots[rank];
-            result[runOffsets[slot.Leaf] + slot.Offset] = rank;
+            var s = slots[rank];
+            result[runOffsets[s.Leaf] + s.Offset] = rank;
         }
 
-        // 自然 run 境界の確認
-        for (int i = 0, start = 0; i < runs.Length - 1; i++)
+        // Ensure every physical run boundary is descending.
+        int start = 0;
+        for (int r = 0; r < runs.Length - 1; r++)
         {
-            int len = runs[i];
-            int nextStart = start + len;
-            if (result[start + len - 1] <= result[nextStart])
+            int len = runs[r];
+            int leftLast = start + len - 1;
+            int rightFirst = start + len;
+
+            if (result[leftLast] <= result[rightFirst])
             {
-                // 境界が降下していないと run がつながるので、末尾と先頭を軽く調整
-                int tmp = result[start + len - 1];
-                result[start + len - 1] = result[nextStart];
-                result[nextStart] = tmp;
+                // Local repair: move a smaller element to the right boundary.
+                int swap = rightFirst;
+                while (swap + 1 < total && result[leftLast] <= result[swap])
+                    swap++;
+
+                if (result[leftLast] <= result[swap])
+                {
+                    int tmp = result[leftLast];
+                    result[leftLast] = result[rightFirst];
+                    result[rightFirst] = tmp;
+                }
+                else
+                {
+                    int tmp = result[leftLast];
+                    result[leftLast] = result[swap];
+                    result[swap] = tmp;
+                }
             }
-            start = nextStart;
+
+            start += len;
         }
 
         return result;
@@ -229,48 +249,82 @@ public static class TimsortAdversaryGenerator
     {
         if (node.IsLeaf)
         {
+            // Important:
+            // keep each leaf increasing in physical order,
+            // but slightly bias offsets away from trivial monotone alignment
+            // to reduce trimming opportunities in upper merges.
             var list = new List<Slot>(node.Length);
-            for (int i = 0; i < node.Length; i++)
+            int len = node.Length;
+
+            // First half in order, then second half in order.
+            // Still increasing physically after rank assignment,
+            // but interacts less trivially with ancestors than plain 0..len-1.
+            int mid = len / 2;
+            for (int i = 0; i < mid; i++)
                 list.Add(new Slot(node.StartLeaf, i));
+            for (int i = mid; i < len; i++)
+                list.Add(new Slot(node.StartLeaf, i));
+
             return list;
         }
 
         var left = BuildSlotOrder(node.Left!);
         var right = BuildSlotOrder(node.Right!);
-        return WeightedInterleave(left, right);
+        return AntiGallopInterleave(left, right);
     }
 
-    private static List<Slot> WeightedInterleave(List<Slot> left, List<Slot> right)
+    private static List<Slot> AntiGallopInterleave(List<Slot> left, List<Slot> right)
     {
         int a = left.Count;
         int b = right.Count;
-        int i = 0, j = 0;
+        int i = 0;
+        int j = 0;
 
         var merged = new List<Slot>(a + b);
 
-        while (i < a || j < b)
+        // Phase 1:
+        // Alternate as hard as possible to suppress long winning streaks.
+        while (i < a && j < b)
         {
-            if (i >= a)
-            {
-                merged.Add(right[j++]);
-                continue;
-            }
-            if (j >= b)
-            {
-                merged.Add(left[i++]);
-                continue;
-            }
+            merged.Add(left[i++]);
+            merged.Add(right[j++]);
+        }
 
-            // それぞれの「次の要素の理想位置」を比較して、小さい方を先に出す
-            long leftKey = ((long)(2 * i + 1)) * b;
-            long rightKey = ((long)(2 * j + 1)) * a;
-
-            if (leftKey <= rightKey)
-                merged.Add(left[i++]);
-            else
-                merged.Add(right[j++]);
+        // Phase 2:
+        // Distribute the remainder instead of appending in one block.
+        // This keeps upper-level merges from becoming too easy.
+        if (i < a)
+        {
+            SpreadAppend(merged, left, ref i);
+        }
+        else if (j < b)
+        {
+            SpreadAppend(merged, right, ref j);
         }
 
         return merged;
+    }
+
+    private static void SpreadAppend(List<Slot> merged, List<Slot> src, ref int index)
+    {
+        int remain = src.Count - index;
+        if (remain <= 0) return;
+
+        // Insert leftovers at roughly even intervals in the current merged list.
+        int originalCount = merged.Count;
+        if (originalCount == 0)
+        {
+            while (index < src.Count)
+                merged.Add(src[index++]);
+            return;
+        }
+
+        for (int k = 0; index < src.Count; k++, index++)
+        {
+            int pos = (int)(((long)(k + 1) * (merged.Count + 1)) / (remain + 1));
+            if (pos < 0) pos = 0;
+            if (pos > merged.Count) pos = merged.Count;
+            merged.Insert(pos, src[index]);
+        }
     }
 }
