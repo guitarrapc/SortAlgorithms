@@ -10,14 +10,23 @@ public class AdaptiveBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
+    private int[] _template = default!;
     private int[] _dropMergeArray = default!;
     private int[] _patienceArray = default!;
+
+    [GlobalSetup]
+    public void GlobalSetup()
+    {
+        _template = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _dropMergeArray = new int[Size];
+        _patienceArray = new int[Size];
+    }
 
     [IterationSetup]
     public void Setup()
     {
-        _dropMergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _patienceArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _template.CopyTo(_dropMergeArray, 0);
+        _template.CopyTo(_patienceArray, 0);
     }
 
     [Benchmark(Baseline = true)]
@@ -43,12 +52,20 @@ public class AdaptiveSlowBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
+    private int[] _template = default!;
     private int[] _strandArray = default!;
+
+    [GlobalSetup]
+    public void GlobalSetup()
+    {
+        _template = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _strandArray = new int[Size];
+    }
 
     [IterationSetup]
     public void Setup()
     {
-        _strandArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _template.CopyTo(_strandArray, 0);
     }
 
     [Benchmark(Baseline = true)]

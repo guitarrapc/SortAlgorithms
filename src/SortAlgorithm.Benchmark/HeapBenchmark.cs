@@ -10,6 +10,7 @@ public class HeapBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
+    private int[] _template = default!;
     private int[] _heapArray = default!;
     private int[] _minheapArray = default!;
     private int[] _ternaryHeapArray = default!;
@@ -18,16 +19,29 @@ public class HeapBenchmark
     private int[] _smoothArray = default!;
     private int[] _tournamentArray = default!;
 
+    [GlobalSetup]
+    public void GlobalSetup()
+    {
+        _template = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _heapArray = new int[Size];
+        _minheapArray = new int[Size];
+        _ternaryHeapArray = new int[Size];
+        _bottomupHeapArray = new int[Size];
+        _weakHeapArray = new int[Size];
+        _smoothArray = new int[Size];
+        _tournamentArray = new int[Size];
+    }
+
     [IterationSetup]
     public void Setup()
     {
-        _heapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _minheapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _ternaryHeapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _bottomupHeapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _weakHeapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _smoothArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _tournamentArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _template.CopyTo(_heapArray, 0);
+        _template.CopyTo(_minheapArray, 0);
+        _template.CopyTo(_ternaryHeapArray, 0);
+        _template.CopyTo(_bottomupHeapArray, 0);
+        _template.CopyTo(_weakHeapArray, 0);
+        _template.CopyTo(_smoothArray, 0);
+        _template.CopyTo(_tournamentArray, 0);
     }
 
     [Benchmark(Baseline = true)]

@@ -10,6 +10,7 @@ public class InsertionBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
+    private int[] _template = default!;
     private int[] _insertionArray = default!;
     private int[] _pairinsertiontreeArray = default!;
     private int[] _binaryinsertArray = default!;
@@ -22,20 +23,37 @@ public class InsertionBenchmark
     private int[] _shellArraySedgewick1986 = default!;
     private int[] _shellArrayTokuda1992 = default!;
 
+    [GlobalSetup]
+    public void GlobalSetup()
+    {
+        _template = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _insertionArray = new int[Size];
+        _pairinsertiontreeArray = new int[Size];
+        _binaryinsertArray = new int[Size];
+        _gnomeArray = new int[Size];
+        _libraryArray = new int[Size];
+        _mergeinsertionArray = new int[Size];
+        _shellArrayCiura2001 = new int[Size];
+        _shellArrayKnuth1973 = new int[Size];
+        _shellArrayLee2021 = new int[Size];
+        _shellArraySedgewick1986 = new int[Size];
+        _shellArrayTokuda1992 = new int[Size];
+    }
+
     [IterationSetup]
     public void Setup()
     {
-        _insertionArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _pairinsertiontreeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _binaryinsertArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _gnomeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _libraryArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _mergeinsertionArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _shellArrayCiura2001 = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _shellArrayKnuth1973 = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _shellArrayLee2021 = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _shellArraySedgewick1986 = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _shellArrayTokuda1992 = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _template.CopyTo(_insertionArray, 0);
+        _template.CopyTo(_pairinsertiontreeArray, 0);
+        _template.CopyTo(_binaryinsertArray, 0);
+        _template.CopyTo(_gnomeArray, 0);
+        _template.CopyTo(_libraryArray, 0);
+        _template.CopyTo(_mergeinsertionArray, 0);
+        _template.CopyTo(_shellArrayCiura2001, 0);
+        _template.CopyTo(_shellArrayKnuth1973, 0);
+        _template.CopyTo(_shellArrayLee2021, 0);
+        _template.CopyTo(_shellArraySedgewick1986, 0);
+        _template.CopyTo(_shellArrayTokuda1992, 0);
     }
 
     [Benchmark(Baseline = true)]

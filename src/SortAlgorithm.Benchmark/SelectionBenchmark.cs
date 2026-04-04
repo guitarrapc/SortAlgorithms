@@ -10,18 +10,29 @@ public class SelectionBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
+    private int[] _template = default!;
     private int[] _selectionArray = default!;
     private int[] _doubleSelectionArray = default!;
     private int[] _cycleArray = default!;
     private int[] _pancakeArray = default!;
 
+    [GlobalSetup]
+    public void GlobalSetup()
+    {
+        _template = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _selectionArray = new int[Size];
+        _doubleSelectionArray = new int[Size];
+        _cycleArray = new int[Size];
+        _pancakeArray = new int[Size];
+    }
+
     [IterationSetup]
     public void Setup()
     {
-        _selectionArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _doubleSelectionArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _cycleArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _pancakeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _template.CopyTo(_selectionArray, 0);
+        _template.CopyTo(_doubleSelectionArray, 0);
+        _template.CopyTo(_cycleArray, 0);
+        _template.CopyTo(_pancakeArray, 0);
     }
 
     [Benchmark(Baseline = true)]

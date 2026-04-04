@@ -10,6 +10,7 @@ public class PartitionBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
+    private int[] _template = default!;
     private int[] _quickArray = default!;
     private int[] _quick3wayArray = default!;
     private int[] _quickmedian3Array = default!;
@@ -23,21 +24,39 @@ public class PartitionBenchmark
     private int[] _blockquickArray = default!;
     private int[] _dotnetArray = default!;
 
+    [GlobalSetup]
+    public void GlobalSetup()
+    {
+        _template = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _quickArray = new int[Size];
+        _quick3wayArray = new int[Size];
+        _quickmedian3Array = new int[Size];
+        _quickmedian9Array = new int[Size];
+        _dualpivotquickArray = new int[Size];
+        _stablequickArray = new int[Size];
+        _introArray = new int[Size];
+        _introdotnetArray = new int[Size];
+        _pdqArray = new int[Size];
+        _stdArray = new int[Size];
+        _blockquickArray = new int[Size];
+        _dotnetArray = new int[Size];
+    }
+
     [IterationSetup]
     public void Setup()
     {
-        _quickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _quick3wayArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _quickmedian3Array = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _quickmedian9Array = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _dualpivotquickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _stablequickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _introArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _introdotnetArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _pdqArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _stdArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _blockquickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _dotnetArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _template.CopyTo(_quickArray, 0);
+        _template.CopyTo(_quick3wayArray, 0);
+        _template.CopyTo(_quickmedian3Array, 0);
+        _template.CopyTo(_quickmedian9Array, 0);
+        _template.CopyTo(_dualpivotquickArray, 0);
+        _template.CopyTo(_stablequickArray, 0);
+        _template.CopyTo(_introArray, 0);
+        _template.CopyTo(_introdotnetArray, 0);
+        _template.CopyTo(_pdqArray, 0);
+        _template.CopyTo(_stdArray, 0);
+        _template.CopyTo(_blockquickArray, 0);
+        _template.CopyTo(_dotnetArray, 0);
     }
 
     [Benchmark(Baseline = true)]
