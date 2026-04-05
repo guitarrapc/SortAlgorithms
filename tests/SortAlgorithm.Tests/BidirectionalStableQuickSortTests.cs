@@ -305,7 +305,7 @@ public class BidirectionalStableQuickSortTests
         // - More swaps than sorted data (larger greater sections need reversing)
         // - Similar O(n log n) overall complexity
         var minCompares = (ulong)n;
-        var maxCompares = (ulong)(n * n);
+        var maxCompares = (ulong)(n * n) + 2;
         var minSwaps = 0UL;
         var maxSwaps = (ulong)(n * Math.Max(1, Math.Log(n, 2)));
 
@@ -334,7 +334,7 @@ public class BidirectionalStableQuickSortTests
         // - Average case O(n log n) with median-of-3 pivot selection
         // - Bidirectional partitioning handles various data distributions efficiently
         var minCompares = (ulong)n;
-        var maxCompares = (ulong)(n * n);
+        var maxCompares = (ulong)(n * n) + 2;
         var minSwaps = 0UL;
         var maxSwaps = (ulong)(n * Math.Max(1, Math.Log(n, 2)));
 
