@@ -186,7 +186,15 @@ public static class DestswapStableQuickSort
                 }
                 if (n > 1)
                 {
-                    // BottomUp fallback using the paired scratch region t[scrStart..scrStart+n)
+                    // BottomUp fallback — contract satisfied by construction:
+                    //   sLocal : s[destStart..+n)  — input already assembled above; SortCore postcondition
+                    //            guarantees sorted result always lands back in sLocal.
+                    //   tLocal : t[scrStart..+n)   — scrStart + n ≤ t.Length holds throughout recursion
+                    //            because each split assigns (scrStart, geqTotal) to one child and
+                    //            (scrStart+geqTotal, lessTotal) to the other; their n' values always
+                    //            sum to n, keeping the upper bound at the original t.Length.
+                    //   buffer IDs : BUFFER_MAIN=0 / BUFFER_TEMP=1 match BottomupMergeSort's constants;
+                    //                relative offsets are 0-based after Slice, so no offset drift.
                     var sLocal = s.Slice(destStart, n, BUFFER_MAIN);
                     var tLocal = t.Slice(scrStart, n, BUFFER_TEMP);
                     BottomupMergeSort.SortCore(sLocal, tLocal);

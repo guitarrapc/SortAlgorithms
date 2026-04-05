@@ -128,8 +128,19 @@ public static class BottomupMergeSort
     /// Each pass reads from src and writes all elements to dst, then swaps src/dst.
     /// This eliminates the per-merge partial copy, making memory access more regular.
     /// </summary>
-    /// <param name="s">The SortSpan wrapping the span to sort</param>
-    /// <param name="b">The SortSpan wrapping the auxiliary buffer for merging</param>
+    /// <remarks>
+    /// <para><strong>Postcondition:</strong> The sorted result always ends in <paramref name="s"/>.
+    /// Internally the algorithm may use <paramref name="b"/> as the live buffer during passes,
+    /// but if the final pass left data in <paramref name="b"/>, it copies back to <paramref name="s"/>
+    /// before returning. Callers can unconditionally read the result from <paramref name="s"/>.</para>
+    /// <para><strong>Preconditions:</strong>
+    /// <list type="bullet">
+    /// <item><description><paramref name="b"/>.Length must equal <paramref name="s"/>.Length.</description></item>
+    /// <item><description><paramref name="s"/> and <paramref name="b"/> must refer to non-overlapping memory.</description></item>
+    /// </list></para>
+    /// </remarks>
+    /// <param name="s">The SortSpan wrapping the span to sort. Input is read from here; sorted output is always written back here.</param>
+    /// <param name="b">The SortSpan wrapping the auxiliary buffer. Used as ping-pong scratch; must be the same length as <paramref name="s"/>.</param>
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b)
         where TComparer : IComparer<T>
         where TContext : ISortContext
