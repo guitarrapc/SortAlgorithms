@@ -24,6 +24,7 @@
 ///   <item><term>QuickSortPartition</term><description>left / right / pivotIndex</description></item>
 ///   <item><term>HybridToInsertionSort</term><description>left (inclusive) / right (inclusive) / threshold</description></item>
 ///   <item><term>HybridToHeapSort</term><description>left (inclusive) / right (inclusive)</description></item>
+///   <item><term>HybridToMergeSort</term><description>left (inclusive) / right (inclusive) / threshold (SMALL_SORT when small; 0 when recursion budget exhausted)</description></item>
 ///   <item><term>PDQPartialInsertionSort</term><description>begin (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>PDQPatternShuffle</term><description>begin (inclusive) / end-1 (inclusive) / badAllowed remaining</description></item>
 ///   <item><term>OddEvenMergeSortPass</term><description>p (merge group size, power of 2) / count</description></item>
@@ -418,6 +419,13 @@ public enum SortPhase
     /// param1=left (inclusive), param2=right (inclusive)
     /// </summary>
     HybridToHeapSort,
+
+    /// <summary>
+    /// Hybrid sort (DestswapStableQuickSort) switching to MergeSort because the partition is small
+    /// (n &lt; threshold) or the recursion budget has been exhausted, guaranteeing O(n log n) worst-case.
+    /// param1=left (inclusive), param2=right (inclusive), param3=threshold (SMALL_SORT when small; 0 when budget exhausted)
+    /// </summary>
+    HybridToMergeSort,
 
     /// <summary>
     /// PDQSort: the partition appears already sorted; attempting PartialInsertionSort

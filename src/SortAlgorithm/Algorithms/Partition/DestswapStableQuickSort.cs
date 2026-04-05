@@ -172,6 +172,9 @@ public static class DestswapStableQuickSort
             // --- Base case: small partition or recursion budget exhausted ---
             if (n < SMALL_SORT || recursionLimit == 0)
             {
+                if (n > 1)
+                    s.Context.OnPhase(SortPhase.HybridToMergeSort, destStart, destStart + n - 1, n < SMALL_SORT ? SMALL_SORT : 0);
+
                 // Assemble split input into s[destStart..destStart+n)
                 if (leftLen > 0)
                 {
@@ -219,6 +222,8 @@ public static class DestswapStableQuickSort
                 // which indicates the geq side contains a cluster of equal elements.
                 partitionLeft = strategy == STRATEGY_LEFT_IF_EQUAL && s.IsGreaterOrEqual(prevPivot, pivot);
             }
+
+            s.Context.OnPhase(SortPhase.QuickSortPartition, destStart, destStart + n - 1, -1);
 
             // --- Bidirectional 2-way stable partition ---
             // Forward scan (left half) : less → s[destFront++],  geq  → t[scrFront++]
