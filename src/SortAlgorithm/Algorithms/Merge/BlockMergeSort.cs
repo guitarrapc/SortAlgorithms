@@ -129,6 +129,7 @@ public static class BlockMergeSort
 
         // Phase 1: Sort groups of 4-8 elements using sorting networks
         var iterator = new BlockIterator(n, 4);
+        s.Context.OnPhase(SortPhase.BlockMergeSortNetwork, n);
         while (!iterator.Finished())
         {
             Span<byte> order = [0, 1, 2, 3, 4, 5, 6, 7];
@@ -214,10 +215,12 @@ public static class BlockMergeSort
         if (n < 8) return;
 
         // Phase 2 & 3: Bottom-up merge
+        var passNum = 1;
         while (true)
         {
             if (iterator.Length() < CacheSize)
             {
+                s.Context.OnPhase(SortPhase.MergePass, iterator.Length(), passNum);
                 // Small levels: cache-based merging
                 if ((iterator.Length() + 1) * 4 <= CacheSize && iterator.Length() * 4 <= n)
                 {
@@ -293,6 +296,7 @@ public static class BlockMergeSort
 
                     // Merged two levels at once
                     _ = iterator.NextLevel();
+                    passNum++;
                 }
                 else
                 {
@@ -320,10 +324,12 @@ public static class BlockMergeSort
             else
             {
                 // Large levels: in-place block merging
+                s.Context.OnPhase(SortPhase.BlockMergeSortLevel, iterator.Length(), passNum, IntSqrt(iterator.Length()));
                 BlockMergeLevel(s, ref iterator, cache);
             }
 
             if (!iterator.NextLevel()) break;
+            passNum++;
         }
     }
 

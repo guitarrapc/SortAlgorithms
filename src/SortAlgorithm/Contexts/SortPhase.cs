@@ -34,6 +34,8 @@
 ///   <item><term>StdStableSortMove</term><description>left (abs start of span's left half) / mid (abs start of span's right half) / right (abs end of span, inclusive)</description></item>
 ///   <item><term>GlidesortQuicksort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>GlidesortPhysicalMerge</term><description>start (inclusive) / mid-1 (inclusive end of left half) / end-1 (inclusive end)</description></item>
+///   <item><term>BlockMergeSortNetwork</term><description>n (total array length)</description></item>
+///   <item><term>BlockMergeSortLevel</term><description>levelWidth (current merge run size) / passNum (1-based) / blockSize (√levelWidth)</description></item>
 /// </list>
 /// </remarks>
 public enum SortPhase
@@ -298,6 +300,19 @@ public enum SortPhase
     /// param1=start (inclusive), param2=mid-1 (inclusive end of left half), param3=end-1 (inclusive end)
     /// </summary>
     GlidesortPhysicalMerge,
+
+    /// <summary>
+    /// Block Sort (WikiSort) Phase 1: seeding sorted groups of 4–8 elements via sorting networks.
+    /// param1=n (total array length)
+    /// </summary>
+    BlockMergeSortNetwork,
+
+    /// <summary>
+    /// Block Sort (WikiSort) large-level pass: in-place block merging using internal buffers.
+    /// Used when the current merge level exceeds the cache threshold.
+    /// param1=levelWidth (current merge run size), param2=passNum (1-based), param3=blockSize (≈√levelWidth)
+    /// </summary>
+    BlockMergeSortLevel,
 
     // Adaptive family
 
