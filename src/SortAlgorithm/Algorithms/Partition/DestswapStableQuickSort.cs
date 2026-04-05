@@ -367,7 +367,7 @@ public static class DestswapStableQuickSort
     }
 
     /// <summary>
-    /// Selects a pivot value using Glidesort's pseudo-median heuristic.
+    /// Selects a pivot value using Glidesort inspired pseudo-median heuristic.
     /// Samples three positions biased away from the extremes:
     /// <c>a = 0</c>, <c>b = n/2 - n/8</c>, <c>c = n - n/8</c>.
     /// <list type="bullet">
