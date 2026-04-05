@@ -123,7 +123,7 @@ public static class DestswapStableQuickSort
         var logn = 32 - BitOperations.LeadingZeroCount((uint)n);
         var half = n / 2;
         SortInto(s, t,
-            leftInMain: true,  leftOff: left,        leftLen: half,
+            leftInMain: true, leftOff: left, leftLen: half,
             rightInMain: true, rightOff: left + half, rightLen: n - half,
             destStart: left, scrStart: 0,
             recursionLimit: 2 * logn, strategy: STRATEGY_RIGHT, prevPivot: default!);
@@ -229,9 +229,9 @@ public static class DestswapStableQuickSort
             //   Backward with rightInMain=true: bwdI and destBack start at the same index and both
             //     decrement each geq step — always a read-then-write to the same position.
             var destFront = destStart;
-            var destBack  = destStart + n - 1;
-            var scrFront  = scrStart;
-            var scrBack   = scrStart + n - 1;
+            var destBack = destStart + n - 1;
+            var scrFront = scrStart;
+            var scrBack = scrStart + n - 1;
 
             var fwdI = leftOff;
             var bwdI = rightOff + rightLen - 1;
@@ -240,12 +240,12 @@ public static class DestswapStableQuickSort
             // Interleaved forward+backward: load both values first to expose ILP to the JIT.
             for (var k = 0; k < minCount; k++)
             {
-                var valFwd = leftInMain  ? s.Read(fwdI) : t.Read(fwdI);
+                var valFwd = leftInMain ? s.Read(fwdI) : t.Read(fwdI);
                 var valBwd = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
                 bool fwdGoLess = partitionLeft ? s.IsLessOrEqual(valFwd, pivot) : s.IsLessThan(valFwd, pivot);
                 bool bwdGoLess = partitionLeft ? s.IsLessOrEqual(valBwd, pivot) : s.IsLessThan(valBwd, pivot);
                 if (fwdGoLess) s.Write(destFront++, valFwd); else t.Write(scrFront++, valFwd);
-                if (bwdGoLess) t.Write(scrBack--,   valBwd); else s.Write(destBack--, valBwd);
+                if (bwdGoLess) t.Write(scrBack--, valBwd); else s.Write(destBack--, valBwd);
                 fwdI++;
                 bwdI--;
             }
@@ -272,11 +272,11 @@ public static class DestswapStableQuickSort
             //   geq_fwd  : t[scrStart               .. scrStart+geqFwdCount)
             //   less_bwd : t[scrStart+n-lessBwdCount .. scrStart+n)
             var lessFwdCount = destFront - destStart;
-            var geqFwdCount  = scrFront  - scrStart;
-            var geqBwdCount  = destStart + n - 1 - destBack;
-            var lessBwdCount = scrStart  + n - 1 - scrBack;
-            var lessTotal    = lessFwdCount + lessBwdCount;
-            var geqTotal     = geqFwdCount  + geqBwdCount;
+            var geqFwdCount = scrFront - scrStart;
+            var geqBwdCount = destStart + n - 1 - destBack;
+            var lessBwdCount = scrStart + n - 1 - scrBack;
+            var lessTotal = lessFwdCount + lessBwdCount;
+            var geqTotal = geqFwdCount + geqBwdCount;
 
             // --- All elements went to geq (none less) → switch to left strategy with same pivot ---
             // Guarantees progress: with left strategy at least the pivot element goes to less side.
@@ -284,8 +284,8 @@ public static class DestswapStableQuickSort
             {
                 strategy = STRATEGY_LEFT_WITH_PIVOT;
                 prevPivot = pivot;
-                leftInMain  = false; leftOff  = scrStart;                      leftLen  = geqFwdCount;
-                rightInMain = true;  rightOff = destStart + n - geqBwdCount;   rightLen = geqBwdCount;
+                leftInMain = false; leftOff = scrStart; leftLen = geqFwdCount;
+                rightInMain = true; rightOff = destStart + n - geqBwdCount; rightLen = geqBwdCount;
                 continue;
             }
 
@@ -296,11 +296,11 @@ public static class DestswapStableQuickSort
                 if (lessBwdCount > 0)
                     t.CopyTo(scrStart + n - lessBwdCount, s, destStart + lessFwdCount, lessBwdCount);
 
-                strategy    = STRATEGY_RIGHT;
-                prevPivot   = default!;
-                leftInMain  = false; leftOff  = scrStart;                      leftLen  = geqFwdCount;
-                rightInMain = true;  rightOff = destStart + n - geqBwdCount;   rightLen = geqBwdCount;
-                destStart  += lessTotal;
+                strategy = STRATEGY_RIGHT;
+                prevPivot = default!;
+                leftInMain = false; leftOff = scrStart; leftLen = geqFwdCount;
+                rightInMain = true; rightOff = destStart + n - geqBwdCount; rightLen = geqBwdCount;
+                destStart += lessTotal;
                 continue;
             }
 
@@ -314,17 +314,17 @@ public static class DestswapStableQuickSort
                 if (lessTotal > 0)
                 {
                     SortInto(s, t,
-                        true,  destStart,                   lessFwdCount,
+                        true, destStart, lessFwdCount,
                         false, scrStart + n - lessBwdCount, lessBwdCount,
                         destStart, scrStart + geqTotal,
                         recursionLimit, STRATEGY_RIGHT, default!);
                 }
                 // Tail-call on larger (geq) side
-                strategy    = STRATEGY_LEFT_IF_EQUAL;
-                prevPivot   = pivot;
-                leftInMain  = false; leftOff  = scrStart;                      leftLen  = geqFwdCount;
-                rightInMain = true;  rightOff = destStart + n - geqBwdCount;   rightLen = geqBwdCount;
-                destStart  += lessTotal;
+                strategy = STRATEGY_LEFT_IF_EQUAL;
+                prevPivot = pivot;
+                leftInMain = false; leftOff = scrStart; leftLen = geqFwdCount;
+                rightInMain = true; rightOff = destStart + n - geqBwdCount; rightLen = geqBwdCount;
+                destStart += lessTotal;
                 continue;
             }
             else
@@ -332,17 +332,17 @@ public static class DestswapStableQuickSort
                 if (geqTotal > 0)
                 {
                     SortInto(s, t,
-                        false, scrStart,                     geqFwdCount,
-                        true,  destStart + n - geqBwdCount,  geqBwdCount,
+                        false, scrStart, geqFwdCount,
+                        true, destStart + n - geqBwdCount, geqBwdCount,
                         destStart + lessTotal, scrStart,
                         recursionLimit, STRATEGY_LEFT_IF_EQUAL, pivot);
                 }
                 // Tail-call on larger (less) side
-                strategy    = STRATEGY_RIGHT;
-                prevPivot   = default!;
-                leftInMain  = true;  leftOff  = destStart;                       leftLen  = lessFwdCount;
-                rightInMain = false; rightOff = scrStart + n - lessBwdCount;     rightLen = lessBwdCount;
-                scrStart   += geqTotal;
+                strategy = STRATEGY_RIGHT;
+                prevPivot = default!;
+                leftInMain = true; leftOff = destStart; leftLen = lessFwdCount;
+                rightInMain = false; rightOff = scrStart + n - lessBwdCount; rightLen = lessBwdCount;
+                scrStart += geqTotal;
                 continue;
             }
         }
@@ -396,7 +396,7 @@ public static class DestswapStableQuickSort
         var eighth = n / 8;
         var a = 0;
         var b = n / 2 - eighth;  // slightly left of centre
-        var c = n - eighth;       // n/8 before the last element
+        var c = n - 1 - eighth;  // n/8 before the last element
 
         if (n < PSEUDO_MEDIAN_REC_THRESHOLD)
             return Median3Value(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, b, c);
