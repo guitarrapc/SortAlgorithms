@@ -15,6 +15,10 @@ public static class DestswapStableQuickSort
     // BottomUp fallback guarantees O(n log n) worst case for adversarial inputs.
     private const int SMALL_SORT = 16;
 
+    // Recursively select a pseudo-median when n is at or above this threshold.
+    // Below the threshold a plain median-of-3 at the biased sample positions is used.
+    private const int PSEUDO_MEDIAN_REC_THRESHOLD = 64;
+
     // PartitionStrategy constants — control the comparison predicate for the 2-way partition.
     private const byte STRATEGY_RIGHT = 0;           // Normal: less = val < pivot, geq = val >= pivot
     private const byte STRATEGY_LEFT_WITH_PIVOT = 1;  // Duplicate handling: less = val <= prevPivot, geq = val > prevPivot
@@ -355,10 +359,22 @@ public static class DestswapStableQuickSort
     }
 
     /// <summary>
-    /// Selects a pivot value using median-of-3 sampling from the logical concatenation
-    /// of the left and right halves (first, middle, last elements).
-    /// Uses value comparisons (<see cref="SortSpan{T,TComparer,TContext}.IsLessThan(T,T)"/>) so
-    /// that the pivot is a concrete value, not an index — safe when data spans two buffers.
+    /// Selects a pivot value using Glidesort's pseudo-median heuristic.
+    /// Samples three positions biased away from the extremes:
+    /// <c>a = 0</c>, <c>b = n/2 - n/8</c>, <c>c = n - n/8</c>.
+    /// <list type="bullet">
+    /// <item><description>
+    /// n &lt; <see cref="PSEUDO_MEDIAN_REC_THRESHOLD"/>: median-of-3 at those positions
+    /// (3 reads, 2-3 comparisons).
+    /// </description></item>
+    /// <item><description>
+    /// n ≥ threshold: each position is refined to the median of three nearby samples spaced
+    /// n/64 apart, then the median of the three refined positions is returned
+    /// (9 reads, 8-12 comparisons).
+    /// </description></item>
+    /// </list>
+    /// Compared to first/middle/last, the biased positions avoid the extremes that cause
+    /// degenerate pivots on pipeorgan, valley, and partially-sorted patterns.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static T SelectPivot<T, TComparer, TContext>(
@@ -369,21 +385,92 @@ public static class DestswapStableQuickSort
         where TContext : ISortContext
     {
         var n = leftLen + rightLen;
-        var a = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, 0);
-        var b = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, n / 2);
-        var c = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, n - 1);
-        // Standard median-of-3 using 2-3 comparisons
-        if (s.IsLessThan(a, b))
+        var eighth = n / 8;
+        var a = 0;
+        var b = n / 2 - eighth;  // slightly left of centre
+        var c = n - eighth;       // n/8 before the last element
+
+        if (n < PSEUDO_MEDIAN_REC_THRESHOLD)
+            return Median3Value(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, b, c);
+
+        return Median3RecValue(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, b, c, eighth);
+    }
+
+    /// <summary>
+    /// Refines three sample positions using local median-of-3, then returns the median value
+    /// of the three refined positions.
+    /// Each position <c>x</c> is replaced by the median index of
+    /// <c>{ x, x + n8*4, x + n8*7 }</c> where <c>n8 = eighth / 8 = n / 64</c>.
+    /// Bounds: the highest sampled index is <c>(n - n/8) + 7*(n/64) = 63n/64 &lt; n</c>.
+    /// Called only when <c>n ≥ <see cref="PSEUDO_MEDIAN_REC_THRESHOLD"/></c>, so n8 ≥ 1.
+    /// </summary>
+    private static T Median3RecValue<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t,
+        bool leftInMain, int leftOff, int leftLen,
+        bool rightInMain, int rightOff,
+        int a, int b, int c, int eighth)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n8 = eighth / 8;  // = n / 64; ≥ 1 because n ≥ PSEUDO_MEDIAN_REC_THRESHOLD
+        a = Median3Idx(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, a + n8 * 4, a + n8 * 7);
+        b = Median3Idx(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b, b + n8 * 4, b + n8 * 7);
+        c = Median3Idx(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c, c + n8 * 4, c + n8 * 7);
+        return Median3Value(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, b, c);
+    }
+
+    /// <summary>
+    /// Returns the logical index of the median among the values at the three given logical indices.
+    /// Uses 2-3 value comparisons via <see cref="SortSpan{T,TComparer,TContext}.IsLessThan(T,T)"/>.
+    /// The XOR-based selection matches Glidesort's reference implementation.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int Median3Idx<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t,
+        bool leftInMain, int leftOff, int leftLen,
+        bool rightInMain, int rightOff,
+        int a, int b, int c)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var va = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a);
+        var vb = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b);
+        var vc = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c);
+        var x = s.IsLessThan(va, vb);  // va < vb
+        var y = s.IsLessThan(va, vc);  // va < vc
+        if (x == y)
         {
-            if (s.IsLessThan(b, c)) return b;  // a < b < c
-            if (s.IsLessThan(a, c)) return c;  // a < c <= b
-            return a;                           // c <= a < b
+            // va is min (x=y=true) or va is max (x=y=false): median is between vb and vc
+            var z = s.IsLessThan(vb, vc);
+            return (z ^ x) ? c : b;
         }
-        else
+        return a;  // va is median
+    }
+
+    /// <summary>
+    /// Returns the value of the median among the values at the three given logical indices.
+    /// Uses 2-3 value comparisons. The XOR-based selection matches Glidesort's reference.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static T Median3Value<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t,
+        bool leftInMain, int leftOff, int leftLen,
+        bool rightInMain, int rightOff,
+        int a, int b, int c)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var va = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a);
+        var vb = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b);
+        var vc = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c);
+        var x = s.IsLessThan(va, vb);  // va < vb
+        var y = s.IsLessThan(va, vc);  // va < vc
+        if (x == y)
         {
-            if (s.IsLessThan(c, b)) return b;  // c < b <= a
-            if (s.IsLessThan(c, a)) return c;  // b <= c < a
-            return a;                           // b <= a <= c
+            // va is min (x=y=true) or va is max (x=y=false): median is between vb and vc
+            var z = s.IsLessThan(vb, vc);
+            return (z ^ x) ? vc : vb;
         }
+        return va;  // va is median
     }
 }
