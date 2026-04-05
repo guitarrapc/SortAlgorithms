@@ -88,6 +88,7 @@ public static class StableQuickSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
+    private const int BUFFER_TEMP = 1;       // Temporary merge buffer
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -158,10 +159,19 @@ public static class StableQuickSort
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(first, last);
 
-        if (last - first <= 1) return;
+        var n = last - first;
+        if (n <= 1) return;
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        SortCore(s, first, last - 1, context);
+        var scratchBuffer = ArrayPool<T>.Shared.Rent(n);
+        try
+        {
+            SortCore(s, first, last - 1, context, scratchBuffer.AsSpan(0, n));
+        }
+        finally
+        {
+            ArrayPool<T>.Shared.Return(scratchBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+        }
     }
 
     /// <summary>
@@ -176,7 +186,7 @@ public static class StableQuickSort
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The inclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, TContext context)
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, TContext context, Span<T> scratch)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -193,9 +203,9 @@ public static class StableQuickSort
             s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, pivotIndex);
             s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.Pivot);
 
-            // Phase 2. Stable partition using ArrayPool buffer
+            // Phase 2. Stable partition using pre-allocated scratch buffer
             // Use index-based comparison to avoid copying large struct pivot values
-            var (lessEnd, greaterStart) = StablePartition(s, left, right, pivotIndex);
+            var (lessEnd, greaterStart) = StablePartition(s, left, right, pivotIndex, scratch);
 
             // Phase 3. Recursively sort partitions with tail recursion optimization
             s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
@@ -208,7 +218,7 @@ public static class StableQuickSort
                 // Left is smaller: recurse on left, loop on right
                 if (leftLen > 1)
                 {
-                    SortCore(s, left, lessEnd - 1, context);
+                    SortCore(s, left, lessEnd - 1, context, scratch);
                 }
                 // Tail recursion: continue loop with right partition
                 left = greaterStart;
@@ -218,7 +228,7 @@ public static class StableQuickSort
                 // Right is smaller or equal: recurse on right, loop on left
                 if (rightLen > 1)
                 {
-                    SortCore(s, greaterStart, right, context);
+                    SortCore(s, greaterStart, right, context, scratch);
                 }
                 // Tail recursion: continue loop with left partition
                 right = lessEnd - 1;
@@ -232,75 +242,66 @@ public static class StableQuickSort
     /// - [left, lessEnd): elements less than pivot
     /// - [lessEnd, greaterStart): elements equal to pivot
     /// - [greaterStart, right + 1): elements greater than pivot
-    /// Uses O(n) temporary buffer per call; since recursive calls cover disjoint subranges,
-    /// the total auxiliary space across all active stack frames is O(n).
+    /// Uses the caller-provided scratch buffer (size ≥ n, allocated once at the Sort entry point).
+    /// StablePartition completes before any recursion, so the same scratch is safely reused at all recursion depths.
     /// </summary>
-    private static (int lessEnd, int greaterStart) StablePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex)
+    private static (int lessEnd, int greaterStart) StablePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex, Span<T> scratch)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var length = right - left + 1;
-        var tempBuffer = ArrayPool<T>.Shared.Rent(length);
-        var tempSpan = new Span<T>(tempBuffer, 0, length);
-        var tempSortSpan = new SortSpan<T, TComparer, TContext>(tempSpan, s.Context, s.Comparer, 1);
+        var tempSortSpan = new SortSpan<T, TComparer, TContext>(scratch.Slice(0, length), s.Context, s.Comparer, BUFFER_TEMP);
 
-        try
+        var lessIdx = 0;
+        var equalIdx = 0;
+
+        // Phase 1: Count elements in each partition
+        // Use index-based comparison to avoid copying large struct pivot values
+        // Short-circuit when i == pivotIndex: pivot always compares equal to itself
+        for (var i = left; i <= right; i++)
         {
-            var lessIdx = 0;
-            var equalIdx = 0;
-
-            // Phase 1: Count elements in each partition
-            // Use index-based comparison to avoid copying large struct pivot values
-            // Short-circuit when i == pivotIndex: pivot always compares equal to itself
-            for (var i = left; i <= right; i++)
+            var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
+            if (cmp < 0)
             {
-                var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
-                if (cmp < 0)
-                {
-                    lessIdx++;
-                }
-                else if (cmp == 0)
-                {
-                    equalIdx++;
-                }
+                lessIdx++;
             }
-
-            var lessEnd = lessIdx;
-            var equalEnd = lessIdx + equalIdx;
-            lessIdx = 0;
-            equalIdx = lessEnd;
-            var greaterIdx = equalEnd;
-
-            // Phase 2: Distribute elements to buffer maintaining order (SortSpan経由)
-            // Short-circuit when i == pivotIndex: pivot always compares equal to itself
-            for (var i = left; i <= right; i++)
+            else if (cmp == 0)
             {
-                var element = s.Read(i);
-                // Compare once per element to minimize comparison overhead
-                var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
-                if (cmp < 0)
-                {
-                    tempSortSpan.Write(lessIdx++, element);
-                }
-                else if (cmp == 0)
-                {
-                    tempSortSpan.Write(equalIdx++, element);
-                }
-                else
-                {
-                    tempSortSpan.Write(greaterIdx++, element);
-                }
+                equalIdx++;
             }
-
-            // Phase 3: Copy back to original array using CopyTo for efficiency
-            tempSortSpan.CopyTo(0, s, left, length);
-
-            return (left + lessEnd, left + equalEnd);
         }
-        finally
+
+        var lessEnd = lessIdx;
+        var equalEnd = lessIdx + equalIdx;
+        lessIdx = 0;
+        equalIdx = lessEnd;
+        var greaterIdx = equalEnd;
+
+        // Phase 2: Distribute elements to buffer maintaining order (SortSpan経由)
+        // Short-circuit when i == pivotIndex: pivot always compares equal to itself
+        for (var i = left; i <= right; i++)
         {
-            ArrayPool<T>.Shared.Return(tempBuffer);
+            var element = s.Read(i);
+            // Compare once per element to minimize comparison overhead
+            var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
+            if (cmp < 0)
+            {
+                tempSortSpan.Write(lessIdx++, element);
+            }
+            else if (cmp == 0)
+            {
+                tempSortSpan.Write(equalIdx++, element);
+            }
+            else
+            {
+                tempSortSpan.Write(greaterIdx++, element);
+            }
         }
+
+        // Phase 3: Copy back to original array using CopyTo for efficiency
+        tempSortSpan.CopyTo(0, s, left, length);
+
+        return (left + lessEnd, left + equalEnd);
     }
 
     /// <summary>
