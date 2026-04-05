@@ -73,7 +73,11 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         {
             _context.OnIndexRead(_offset + i, _bufferId);
         }
+#if DEBUG
+        return _span[i]; // TEMP: bounds check for debugging OOB
+#else
         return Unsafe.Add(ref _ref, i);
+#endif
     }
 
     /// <summary>
@@ -89,7 +93,11 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         {
             _context.OnIndexWrite(_offset + i, _bufferId, value);
         }
+#if DEBUG
+        _span[i] = value; // TEMP: bounds check for debugging OOB
+#else
         Unsafe.Add(ref _ref, i) = value;
+#endif
     }
 
     /// <summary>
@@ -114,8 +122,13 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         }
         else
         {
+#if DEBUG
+            // TEMP: bounds check for debugging OOB
+            return _comparer.Compare(_span[i], _span[j]);
+#else
             // Fast path: bounds-check-free access without tracking
             return _comparer.Compare(Unsafe.Add(ref _ref, i), Unsafe.Add(ref _ref, j));
+#endif
         }
     }
 
@@ -139,8 +152,13 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         }
         else
         {
+#if DEBUG
+            // TEMP: bounds check for debugging OOB
+            return _comparer.Compare(_span[i], value);
+#else
             // Fast path: bounds-check-free access without tracking
             return _comparer.Compare(Unsafe.Add(ref _ref, i), value);
+#endif
         }
     }
 
@@ -164,8 +182,13 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         }
         else
         {
+#if DEBUG
+            // TEMP: bounds check for debugging OOB
+            return _comparer.Compare(value, _span[i]);
+#else
             // Fast path: bounds-check-free access without tracking
             return _comparer.Compare(value, Unsafe.Add(ref _ref, i));
+#endif
         }
     }
 
@@ -211,6 +234,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             _context.OnCompare(-1, -1, result, -1, -1);
             return result < 0;
         }
+#if DEBUG
+        return _comparer.Compare(a, b) < 0;
+#else
         // For value type TComparer the JIT constant-folds this 'is' check at specialization time:
         // true when TComparer is ComparableComparer<T>, false otherwise — no runtime overhead.
         // The guard is required so that custom comparers (e.g. reverse order) are never bypassed.
@@ -231,6 +257,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) < Unsafe.As<T, Half>(ref b);
         }
         return _comparer.Compare(a, b) < 0;
+#endif
     }
 
     /// <summary>
@@ -251,6 +278,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             _context.OnCompare(-1, -1, result, -1, -1);
             return result <= 0;
         }
+#if DEBUG
+        return _comparer.Compare(a, b) <= 0;
+#else
         // For value type TComparer the JIT constant-folds this 'is' check at specialization time:
         // true when TComparer is ComparableComparer<T>, false otherwise — no runtime overhead.
         // The guard is required so that custom comparers (e.g. reverse order) are never bypassed.
@@ -271,6 +301,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) <= Unsafe.As<T, Half>(ref b);
         }
         return _comparer.Compare(a, b) <= 0;
+#endif
     }
 
     /// <summary>
@@ -292,6 +323,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
             return result < 0;
         }
+#if DEBUG
+        return _comparer.Compare(_span[i], _span[j]) < 0; // TEMP: bounds check for debugging OOB
+#else
         if (_comparer is IComparableComparer)
         {
             ref T ai = ref Unsafe.Add(ref _ref, i);
@@ -311,6 +345,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) < Unsafe.As<T, Half>(ref aj);
         }
         return _comparer.Compare(Unsafe.Add(ref _ref, i), Unsafe.Add(ref _ref, j)) < 0;
+#endif
     }
 
     /// <summary>
@@ -332,6 +367,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
             return result <= 0;
         }
+#if DEBUG
+        return _comparer.Compare(_span[i], _span[j]) <= 0; // TEMP: bounds check for debugging OOB
+#else
         if (_comparer is IComparableComparer)
         {
             ref T ai = ref Unsafe.Add(ref _ref, i);
@@ -351,6 +389,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) <= Unsafe.As<T, Half>(ref aj);
         }
         return _comparer.Compare(Unsafe.Add(ref _ref, i), Unsafe.Add(ref _ref, j)) <= 0;
+#endif
     }
 
     /// <summary>
@@ -369,6 +408,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             _context.OnCompare(-1, -1, result, -1, -1);
             return result > 0;
         }
+#if DEBUG
+        return _comparer.Compare(a, b) > 0; // TEMP: bounds check for debugging OOB
+#else
         if (_comparer is IComparableComparer)
         {
             if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref a) > Unsafe.As<T, byte>(ref b);
@@ -386,6 +428,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) > Unsafe.As<T, Half>(ref b);
         }
         return _comparer.Compare(a, b) > 0;
+#endif
     }
 
     /// <summary>
@@ -404,6 +447,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             _context.OnCompare(-1, -1, result, -1, -1);
             return result >= 0;
         }
+#if DEBUG
+        return _comparer.Compare(a, b) >= 0; // TEMP: bounds check for debugging OOB
+#else
         if (_comparer is IComparableComparer)
         {
             if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref a) >= Unsafe.As<T, byte>(ref b);
@@ -421,6 +467,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) >= Unsafe.As<T, Half>(ref b);
         }
         return _comparer.Compare(a, b) >= 0;
+#endif
     }
 
     /// <summary>
@@ -442,6 +489,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
             return result > 0;
         }
+#if DEBUG
+        return _comparer.Compare(_span[i], _span[j]) > 0; // TEMP: bounds check for debugging OOB
+#else
         if (_comparer is IComparableComparer)
         {
             ref T ai = ref Unsafe.Add(ref _ref, i);
@@ -461,6 +511,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) > Unsafe.As<T, Half>(ref aj);
         }
         return _comparer.Compare(Unsafe.Add(ref _ref, i), Unsafe.Add(ref _ref, j)) > 0;
+#endif
     }
 
     /// <summary>
@@ -482,6 +533,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
             return result >= 0;
         }
+#if DEBUG
+        return _comparer.Compare(_span[i], _span[j]) >= 0; // TEMP: bounds check for debugging OOB
+#else
         if (_comparer is IComparableComparer)
         {
             ref T ai = ref Unsafe.Add(ref _ref, i);
@@ -501,6 +555,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) >= Unsafe.As<T, Half>(ref aj);
         }
         return _comparer.Compare(Unsafe.Add(ref _ref, i), Unsafe.Add(ref _ref, j)) >= 0;
+#endif
     }
 
     /// <summary>
@@ -518,9 +573,13 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         {
             _context.OnSwap(_offset + i, _offset + j, _bufferId);
         }
+#if DEBUG
+        (_span[i], _span[j]) = (_span[j], _span[i]);
+#else
         ref T si = ref Unsafe.Add(ref _ref, i);
         ref T sj = ref Unsafe.Add(ref _ref, j);
         (si, sj) = (sj, si);
+#endif
     }
 
     /// <summary>
