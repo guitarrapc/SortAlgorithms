@@ -10,29 +10,18 @@ public class TreeBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _template = default!;
     private int[] _balancedbinarytreeArray = default!;
     private int[] _binarytreeArray = default!;
     private int[] _splayArray = default!;
     private int[] _treapArray = default!;
 
-    [GlobalSetup]
-    public void GlobalSetup()
-    {
-        _template = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _balancedbinarytreeArray = new int[Size];
-        _binarytreeArray = new int[Size];
-        _splayArray = new int[Size];
-        _treapArray = new int[Size];
-    }
-
     [IterationSetup]
     public void Setup()
     {
-        _template.CopyTo(_balancedbinarytreeArray, 0);
-        _template.CopyTo(_binarytreeArray, 0);
-        _template.CopyTo(_splayArray, 0);
-        _template.CopyTo(_treapArray, 0);
+        _balancedbinarytreeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _binarytreeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _splayArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _treapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark]

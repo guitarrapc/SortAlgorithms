@@ -10,7 +10,6 @@ public class MergeBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _template = default!;
     private int[] _mergeArray = default!;
     private int[] _pingpongmergeArray = default!;
     private int[] _bottomupmergeArray = default!;
@@ -26,43 +25,23 @@ public class MergeBenchmark
     private int[] _spinArray = default!;
     private int[] _glidesortArray = default!;
 
-    [GlobalSetup]
-    public void GlobalSetup()
-    {
-        _template = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _mergeArray = new int[Size];
-        _pingpongmergeArray = new int[Size];
-        _bottomupmergeArray = new int[Size];
-        _stdstableArray = new int[Size];
-        _rotatemergeArray = new int[Size];
-        _rotatemergeRecursiveArray = new int[Size];
-        _symmergeArray = new int[Size];
-        _naturalmergeArray = new int[Size];
-        _timArray = new int[Size];
-        _powerArray = new int[Size];
-        _shiftArray = new int[Size];
-        _spinvariantArray = new int[Size];
-        _spinArray = new int[Size];
-        _glidesortArray = new int[Size];
-    }
-
     [IterationSetup]
     public void Setup()
     {
-        _template.CopyTo(_mergeArray, 0);
-        _template.CopyTo(_pingpongmergeArray, 0);
-        _template.CopyTo(_bottomupmergeArray, 0);
-        _template.CopyTo(_stdstableArray, 0);
-        _template.CopyTo(_rotatemergeArray, 0);
-        _template.CopyTo(_rotatemergeRecursiveArray, 0);
-        _template.CopyTo(_symmergeArray, 0);
-        _template.CopyTo(_naturalmergeArray, 0);
-        _template.CopyTo(_timArray, 0);
-        _template.CopyTo(_powerArray, 0);
-        _template.CopyTo(_shiftArray, 0);
-        _template.CopyTo(_spinvariantArray, 0);
-        _template.CopyTo(_spinArray, 0);
-        _template.CopyTo(_glidesortArray, 0);
+        _mergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pingpongmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _bottomupmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _stdstableArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _rotatemergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _rotatemergeRecursiveArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _symmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _naturalmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _timArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _powerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _shiftArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _spinvariantArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _spinArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _glidesortArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark(Baseline = true)]

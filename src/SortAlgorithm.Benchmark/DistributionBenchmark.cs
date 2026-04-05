@@ -10,7 +10,6 @@ public class DistributionBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _template = default!;
     private int[] _countingArray = default!;
     private int[] _countingIntegerArray = default!;
     private int[] _pigeonholeArray = default!;
@@ -26,43 +25,23 @@ public class DistributionBenchmark
     private int[] _americanflagArray = default!;
     private int[] _spreadArray = default!;
 
-    [GlobalSetup]
-    public void GlobalSetup()
-    {
-        _template = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _countingArray = new int[Size];
-        _countingIntegerArray = new int[Size];
-        _pigeonholeArray = new int[Size];
-        _pigeonholeIntegerArray = new int[Size];
-        _bucketArray = new int[Size];
-        _bucketIntegerArray = new int[Size];
-        _flashArray = new int[Size];
-        _radixLSD4Sort = new int[Size];
-        _radixLSD256Sort = new int[Size];
-        _radixLSD10Sort = new int[Size];
-        _radixMSD4Sort = new int[Size];
-        _radixMSD10Sort = new int[Size];
-        _americanflagArray = new int[Size];
-        _spreadArray = new int[Size];
-    }
-
     [IterationSetup]
     public void Setup()
     {
-        _template.CopyTo(_countingArray, 0);
-        _template.CopyTo(_countingIntegerArray, 0);
-        _template.CopyTo(_pigeonholeArray, 0);
-        _template.CopyTo(_pigeonholeIntegerArray, 0);
-        _template.CopyTo(_bucketArray, 0);
-        _template.CopyTo(_bucketIntegerArray, 0);
-        _template.CopyTo(_flashArray, 0);
-        _template.CopyTo(_radixLSD4Sort, 0);
-        _template.CopyTo(_radixLSD256Sort, 0);
-        _template.CopyTo(_radixLSD10Sort, 0);
-        _template.CopyTo(_radixMSD4Sort, 0);
-        _template.CopyTo(_radixMSD10Sort, 0);
-        _template.CopyTo(_americanflagArray, 0);
-        _template.CopyTo(_spreadArray, 0);
+        _countingArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _countingIntegerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pigeonholeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pigeonholeIntegerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _bucketArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _bucketIntegerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _flashArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _radixLSD4Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _radixLSD256Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _radixLSD10Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _radixMSD4Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _radixMSD10Sort = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _americanflagArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _spreadArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark]

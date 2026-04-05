@@ -10,26 +10,16 @@ public class NetworkBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _template = default!;
     private int[] _batcheroddevenmergeArray = default!;
     private int[] _bionicArray = default!;
     private int[] _bionicRecursiveArray = default!;
 
-    [GlobalSetup]
-    public void GlobalSetup()
-    {
-        _template = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _batcheroddevenmergeArray = new int[Size];
-        _bionicArray = new int[Size];
-        _bionicRecursiveArray = new int[Size];
-    }
-
     [IterationSetup]
     public void Setup()
     {
-        _template.CopyTo(_batcheroddevenmergeArray, 0);
-        _template.CopyTo(_bionicArray, 0);
-        _template.CopyTo(_bionicRecursiveArray, 0);
+        _batcheroddevenmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _bionicArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _bionicRecursiveArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark(Baseline = true)]
