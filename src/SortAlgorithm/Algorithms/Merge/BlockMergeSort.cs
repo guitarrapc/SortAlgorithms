@@ -432,6 +432,13 @@ public static class BlockMergeSort
         public int To;
         public int Count;
         public BlockRange Range;
+
+        // Buffer direction is encoded in From vs To:
+        //   From > To  =>  pulled leftward  => buffer occupies the head of A (placed at A.Start)
+        //   From < To  =>  pulled rightward => buffer occupies the tail of B (placed at B.End)
+        //   From == To =>  no pull was performed (Count == 0)
+        public readonly bool PulledToAStart => From > To;
+        public readonly bool PulledToBEnd => From < To;
     }
 
     // Block merge for large levels (in-place)
@@ -445,7 +452,7 @@ public static class BlockMergeSort
 
         var A = new BlockRange(0, 0);
         var B = new BlockRange(0, 0);
-        int index, last, count, find, start, pullIndex;
+        int index, last, count, find, start, nextPullSlot;
 
         Span<Pull> pull = stackalloc Pull[2];
         pull.Clear();
@@ -467,7 +474,7 @@ public static class BlockMergeSort
             findSeparately = true;
         }
 
-        pullIndex = 0;
+        nextPullSlot = 0;
         iterator.Begin();
         while (!iterator.Finished())
         {
@@ -488,8 +495,8 @@ public static class BlockMergeSort
 
             if (count >= bufferSize)
             {
-                pull[pullIndex] = new Pull { Range = new BlockRange(A.Start, B.End), Count = count, From = index, To = A.Start };
-                pullIndex = 1;
+                pull[nextPullSlot] = new Pull { Range = new BlockRange(A.Start, B.End), Count = count, From = index, To = A.Start };
+                nextPullSlot = 1;
 
                 if (count == bufferSize + bufferSize)
                 {
@@ -518,10 +525,10 @@ public static class BlockMergeSort
                     break;
                 }
             }
-            else if (pullIndex == 0 && count > buffer1.Length())
+            else if (nextPullSlot == 0 && count > buffer1.Length())
             {
                 buffer1 = new BlockRange(A.Start, A.Start + count);
-                pull[pullIndex] = new Pull { Range = new BlockRange(A.Start, B.End), Count = count, From = index, To = A.Start };
+                pull[nextPullSlot] = new Pull { Range = new BlockRange(A.Start, B.End), Count = count, From = index, To = A.Start };
             }
 
             // Check B for unique values
@@ -538,8 +545,8 @@ public static class BlockMergeSort
 
             if (count >= bufferSize)
             {
-                pull[pullIndex] = new Pull { Range = new BlockRange(A.Start, B.End), Count = count, From = index, To = B.End };
-                pullIndex = 1;
+                pull[nextPullSlot] = new Pull { Range = new BlockRange(A.Start, B.End), Count = count, From = index, To = B.End };
+                nextPullSlot = 1;
 
                 if (count == bufferSize + bufferSize)
                 {
@@ -564,53 +571,57 @@ public static class BlockMergeSort
                 }
                 else
                 {
-                    if (pull[0].Range.Start == A.Start) pull[0] = pull[0] with { Range = new BlockRange(pull[0].Range.Start, pull[0].Range.End - pull[1].Count) };
+                    // pull[1] will occupy [B.End - pull[1].Count, B.End), which falls inside pull[0].Range = [A.Start, B.End).
+                    // If pull[0] was extracted from the A-side of this same A+B pair, shrink pull[0].Range.End
+                    // so that redistribution does not trample over buffer2 at the tail of B.
+                    if (pull[0].Range.Start == A.Start)
+                        pull[0] = pull[0] with { Range = new BlockRange(pull[0].Range.Start, pull[0].Range.End - pull[1].Count) };
                     buffer2 = new BlockRange(B.End - count, B.End);
                     break;
                 }
             }
-            else if (pullIndex == 0 && count > buffer1.Length())
+            else if (nextPullSlot == 0 && count > buffer1.Length())
             {
                 buffer1 = new BlockRange(B.End - count, B.End);
-                pull[pullIndex] = new Pull { Range = new BlockRange(A.Start, B.End), Count = count, From = index, To = B.End };
+                pull[nextPullSlot] = new Pull { Range = new BlockRange(A.Start, B.End), Count = count, From = index, To = B.End };
             }
         }
 
         // Pull out the two ranges for internal buffers
-        for (pullIndex = 0; pullIndex < 2; pullIndex++)
+        for (var i = 0; i < 2; i++)
         {
-            var length = pull[pullIndex].Count;
-            if (pull[pullIndex].To < pull[pullIndex].From)
+            var length = pull[i].Count;
+            if (pull[i].PulledToAStart)
             {
-                // Pulling left
-                index = pull[pullIndex].From;
+                // Pulling left: gather unique values toward A.Start
+                index = pull[i].From;
                 count = 1;
                 while (count < length)
                 {
                     // Guard: if index has reached the pull destination, there's no element before it to search for
-                    if (index <= pull[pullIndex].To) break;
-                    index = FindFirstBackward(s, s.Read(index - 1), new BlockRange(pull[pullIndex].To, pull[pullIndex].From - (count - 1)), length - count);
+                    if (index <= pull[i].To) break;
+                    index = FindFirstBackward(s, s.Read(index - 1), new BlockRange(pull[i].To, pull[i].From - (count - 1)), length - count);
                     var rStart = index + 1;
-                    var rEnd = pull[pullIndex].From + 1;
+                    var rEnd = pull[i].From + 1;
                     Rotate(s, rStart, rEnd, rEnd - rStart - count);
-                    pull[pullIndex] = pull[pullIndex] with { From = index + count };
+                    pull[i] = pull[i] with { From = index + count };
                     count++;
                 }
             }
-            else if (pull[pullIndex].To > pull[pullIndex].From)
+            else if (pull[i].PulledToBEnd)
             {
-                // Pulling right
-                index = pull[pullIndex].From + 1;
+                // Pulling right: gather unique values toward B.End
+                index = pull[i].From + 1;
                 count = 1;
                 while (count < length)
                 {
                     // Guard: if index has reached the pull destination, there's no element at that position to search for
-                    if (index >= pull[pullIndex].To) break;
-                    index = FindLastForward(s, s.Read(index), new BlockRange(index, pull[pullIndex].To), length - count);
-                    var rStart = pull[pullIndex].From;
+                    if (index >= pull[i].To) break;
+                    index = FindLastForward(s, s.Read(index), new BlockRange(index, pull[i].To), length - count);
+                    var rStart = pull[i].From;
                     var rEnd = index - 1;
                     Rotate(s, rStart, rEnd, count);
-                    pull[pullIndex] = pull[pullIndex] with { From = index - 1 - count };
+                    pull[i] = pull[i] with { From = index - 1 - count };
                     count++;
                 }
             }
@@ -628,16 +639,18 @@ public static class BlockMergeSort
             A = iterator.NextRange();
             B = iterator.NextRange();
 
-            // Remove parts used by internal buffers
+            // Remove parts used by internal buffers.
+            // pull[i].PulledToAStart => buffer is at head of A => trim A.Start
+            // pull[i].PulledToBEnd   => buffer is at tail of B => trim B.End
             start = A.Start;
             if (start == pull[0].Range.Start)
             {
-                if (pull[0].From > pull[0].To)
+                if (pull[0].PulledToAStart)
                 {
                     A = new BlockRange(A.Start + pull[0].Count, A.End);
                     if (A.Length() == 0) continue;
                 }
-                else if (pull[0].From < pull[0].To)
+                else if (pull[0].PulledToBEnd)
                 {
                     B = new BlockRange(B.Start, B.End - pull[0].Count);
                     if (B.Length() == 0) continue;
@@ -645,12 +658,12 @@ public static class BlockMergeSort
             }
             if (start == pull[1].Range.Start)
             {
-                if (pull[1].From > pull[1].To)
+                if (pull[1].PulledToAStart)
                 {
                     A = new BlockRange(A.Start + pull[1].Count, A.End);
                     if (A.Length() == 0) continue;
                 }
-                else if (pull[1].From < pull[1].To)
+                else if (pull[1].PulledToBEnd)
                 {
                     B = new BlockRange(B.Start, B.End - pull[1].Count);
                     if (B.Length() == 0) continue;
@@ -665,6 +678,13 @@ public static class BlockMergeSort
             else if (s.Compare(B.Start, A.End - 1) < 0)
             {
                 // Need to merge
+                // buffer1 could not be extracted (e.g. all values identical): fall back to in-place merge
+                if (buffer1.Length() == 0)
+                {
+                    MergeInPlace(s, A, B);
+                    continue;
+                }
+
                 var blockA = new BlockRange(A.Start, A.End);
                 var firstA = new BlockRange(A.Start, A.Start + blockA.Length() % blockSize);
 
@@ -801,29 +821,29 @@ public static class BlockMergeSort
             InsertionSort.SortCore(s, buffer2.Start, buffer2.End);
         }
 
-        for (pullIndex = 0; pullIndex < 2; pullIndex++)
+        for (var i = 0; i < 2; i++)
         {
-            var unique = pull[pullIndex].Count * 2;
-            if (pull[pullIndex].From > pull[pullIndex].To)
+            var unique = pull[i].Count * 2;
+            if (pull[i].PulledToAStart)
             {
-                // Redistribute left
-                var buffer = new BlockRange(pull[pullIndex].Range.Start, pull[pullIndex].Range.Start + pull[pullIndex].Count);
+                // Redistribute left: scatter buffer values back into sorted order from the front
+                var buffer = new BlockRange(pull[i].Range.Start, pull[i].Range.Start + pull[i].Count);
                 while (buffer.Length() > 0)
                 {
-                    index = FindFirstForward(s, s.Read(buffer.Start), new BlockRange(buffer.End, pull[pullIndex].Range.End), unique);
+                    index = FindFirstForward(s, s.Read(buffer.Start), new BlockRange(buffer.End, pull[i].Range.End), unique);
                     var amount = index - buffer.End;
                     Rotate(s, buffer.Start, index, buffer.Length());
                     buffer = new BlockRange(buffer.Start + amount + 1, buffer.End + amount);
                     unique -= 2;
                 }
             }
-            else if (pull[pullIndex].From < pull[pullIndex].To)
+            else if (pull[i].PulledToBEnd)
             {
-                // Redistribute right
-                var buffer = new BlockRange(pull[pullIndex].Range.End - pull[pullIndex].Count, pull[pullIndex].Range.End);
+                // Redistribute right: scatter buffer values back into sorted order from the back
+                var buffer = new BlockRange(pull[i].Range.End - pull[i].Count, pull[i].Range.End);
                 while (buffer.Length() > 0)
                 {
-                    index = FindLastBackward(s, s.Read(buffer.End - 1), new BlockRange(pull[pullIndex].Range.Start, buffer.Start), unique);
+                    index = FindLastBackward(s, s.Read(buffer.End - 1), new BlockRange(pull[i].Range.Start, buffer.Start), unique);
                     var amount = buffer.Start - index;
                     Rotate(s, index, buffer.End, amount);
                     buffer = new BlockRange(buffer.Start - amount, buffer.End - amount - 1);
