@@ -17,6 +17,7 @@ public class MergeBenchmark
     private int[] _rotatemergeArray = default!;
     private int[] _rotatemergeRecursiveArray = default!;
     private int[] _symmergeArray = default!;
+    private int[] _blockmergeArray = default!;
     private int[] _naturalmergeArray = default!;
     private int[] _timArray = default!;
     private int[] _powerArray = default!;
@@ -24,7 +25,6 @@ public class MergeBenchmark
     private int[] _spinvariantArray = default!;
     private int[] _spinArray = default!;
     private int[] _glidesortArray = default!;
-    private int[] _blockmergeArray = default!;
 
     [IterationSetup]
     public void Setup()
@@ -36,6 +36,7 @@ public class MergeBenchmark
         _rotatemergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _rotatemergeRecursiveArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _symmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _blockmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _naturalmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _timArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _powerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
@@ -43,7 +44,6 @@ public class MergeBenchmark
         _spinvariantArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _spinArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _glidesortArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _blockmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
     }
 
     [Benchmark(Baseline = true)]
@@ -89,6 +89,12 @@ public class MergeBenchmark
     }
 
     [Benchmark]
+    public void BlockMergeSort()
+    {
+        SortAlgorithm.Algorithms.BlockMergeSort.Sort(_blockmergeArray.AsSpan());
+    }
+
+    [Benchmark]
     public void NaturalMergeSort()
     {
         SortAlgorithm.Algorithms.NaturalMergeSort.Sort(_naturalmergeArray.AsSpan());
@@ -128,11 +134,5 @@ public class MergeBenchmark
     public void Glidesort()
     {
         SortAlgorithm.Algorithms.Glidesort.Sort(_glidesortArray.AsSpan());
-    }
-
-    [Benchmark]
-    public void BlockMergeSort()
-    {
-        SortAlgorithm.Algorithms.BlockMergeSort.Sort(_blockmergeArray.AsSpan());
     }
 }

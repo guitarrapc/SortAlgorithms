@@ -55,7 +55,7 @@ public static class BlockMergeSort
     const int BUFFER_MAIN = 0;
     const int BUFFER_CACHE = 1;
 
-    // Fixed-size cache on the stack (matches Zig reference)
+    // Fixed-size pool (respect Zig reference)
     const int CacheSize = 512;
 
     /// <summary>
@@ -448,6 +448,7 @@ public static class BlockMergeSort
         int index, last, count, find, start, pullIndex;
 
         Span<Pull> pull = stackalloc Pull[2];
+        pull.Clear();
 
         var buffer1 = new BlockRange(0, 0);
         var buffer2 = new BlockRange(0, 0);
@@ -586,6 +587,8 @@ public static class BlockMergeSort
                 count = 1;
                 while (count < length)
                 {
+                    // Guard: if index has reached the pull destination, there's no element before it to search for
+                    if (index <= pull[pullIndex].To) break;
                     index = FindFirstBackward(s, s.Read(index - 1), new BlockRange(pull[pullIndex].To, pull[pullIndex].From - (count - 1)), length - count);
                     var rStart = index + 1;
                     var rEnd = pull[pullIndex].From + 1;
@@ -601,6 +604,8 @@ public static class BlockMergeSort
                 count = 1;
                 while (count < length)
                 {
+                    // Guard: if index has reached the pull destination, there's no element at that position to search for
+                    if (index >= pull[pullIndex].To) break;
                     index = FindLastForward(s, s.Read(index), new BlockRange(index, pull[pullIndex].To), length - count);
                     var rStart = pull[pullIndex].From;
                     var rEnd = index - 1;
@@ -657,7 +662,7 @@ public static class BlockMergeSort
                 // Reverse order: rotate
                 Rotate(s, A.Start, B.End, A.Length());
             }
-            else if (s.Compare(A.End, A.End - 1) < 0)
+            else if (s.Compare(B.Start, A.End - 1) < 0)
             {
                 // Need to merge
                 var blockA = new BlockRange(A.Start, A.End);
@@ -1011,6 +1016,11 @@ public static class BlockMergeSort
     /// <summary>
     /// Merge using an internal buffer. Swaps A into buffer, merges from buffer + B into A's position.
     /// </summary>
+    /// <remarks>
+    /// Precondition:
+    /// buffer[0..A.Length()) already contains the original contents of A,
+    /// moved there by block swap. This method merges buffer + B back into A's destination.
+    /// </remarks>
     static void MergeInternal<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, BlockRange A, BlockRange B, BlockRange buffer)
         where TComparer : IComparer<T>
         where TContext : ISortContext
