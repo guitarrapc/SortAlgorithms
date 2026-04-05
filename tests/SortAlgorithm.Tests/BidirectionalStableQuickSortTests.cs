@@ -254,5 +254,127 @@ public class BidirectionalStableQuickSortTests
         await Assert.That(stats.SwapCount).IsGreaterThanOrEqualTo(0UL);
     }
 
+    [Test]
+    [Arguments(10)]
+    [Arguments(20)]
+    [Arguments(50)]
+    [Arguments(100)]
+    public async Task TheoreticalValuesSortedTest(int n)
+    {
+        var stats = new StatisticsContext();
+        var sorted = Enumerable.Range(0, n).ToArray();
+        BidirectionalStableQuickSort.Sort(sorted.AsSpan(), stats);
+
+        // BidirectionalStableQuickSort on sorted data:
+        // - Median-of-3 pivot at quartile positions provides balanced partitions
+        // - Single forward scan: less to scratch front, greater to scratch back (reversed), then reverse greater section
+        // - Swaps are used to reverse the greater section in scratch buffer
+        // - Uses Read/Write for copying to/from scratch buffer
+        //
+        // For sorted data: O(n log n) comparisons
+        // Less elements cost 1 comparison, greater/equal cost 2 comparisons
+        // Swaps ≈ n*log₂(n)/7 (only for reversing greater section)
+        var minCompares = (ulong)n;
+        var maxCompares = (ulong)(n * n);
+        var minSwaps = 0UL;
+        var maxSwaps = (ulong)(n * Math.Max(1, Math.Log(n, 2)));
+
+        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
+        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
+
+        var minIndexReads = (ulong)n;
+        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+
+        var minIndexWrites = (ulong)n;
+        await Assert.That(stats.IndexWriteCount >= minIndexWrites).IsTrue().Because($"IndexWriteCount ({stats.IndexWriteCount}) should be >= {minIndexWrites}");
+    }
+
+    [Test]
+    [Arguments(10)]
+    [Arguments(20)]
+    [Arguments(50)]
+    [Arguments(100)]
+    public async Task TheoreticalValuesReversedTest(int n)
+    {
+        var stats = new StatisticsContext();
+        var reversed = Enumerable.Range(0, n).Reverse().ToArray();
+        BidirectionalStableQuickSort.Sort(reversed.AsSpan(), stats);
+
+        // BidirectionalStableQuickSort on reversed data:
+        // - Median-of-3 quartile pivot still provides balanced partitions
+        // - More swaps than sorted data (larger greater sections need reversing)
+        // - Similar O(n log n) overall complexity
+        var minCompares = (ulong)n;
+        var maxCompares = (ulong)(n * n);
+        var minSwaps = 0UL;
+        var maxSwaps = (ulong)(n * Math.Max(1, Math.Log(n, 2)));
+
+        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
+        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
+
+        var minIndexReads = (ulong)n;
+        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+
+        var minIndexWrites = (ulong)n;
+        await Assert.That(stats.IndexWriteCount >= minIndexWrites).IsTrue().Because($"IndexWriteCount ({stats.IndexWriteCount}) should be >= {minIndexWrites}");
+    }
+
+    [Test]
+    [Arguments(10)]
+    [Arguments(20)]
+    [Arguments(50)]
+    [Arguments(100)]
+    public async Task TheoreticalValuesRandomTest(int n)
+    {
+        var stats = new StatisticsContext();
+        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        BidirectionalStableQuickSort.Sort(random.AsSpan(), stats);
+
+        // BidirectionalStableQuickSort on random data:
+        // - Average case O(n log n) with median-of-3 pivot selection
+        // - Bidirectional partitioning handles various data distributions efficiently
+        var minCompares = (ulong)n;
+        var maxCompares = (ulong)(n * n);
+        var minSwaps = 0UL;
+        var maxSwaps = (ulong)(n * Math.Max(1, Math.Log(n, 2)));
+
+        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
+        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
+
+        var minIndexReads = (ulong)n;
+        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+
+        var minIndexWrites = (ulong)n;
+        await Assert.That(stats.IndexWriteCount >= minIndexWrites).IsTrue().Because($"IndexWriteCount ({stats.IndexWriteCount}) should be >= {minIndexWrites}");
+    }
+
+    [Test]
+    [Arguments(10, 88, 3)]
+    [Arguments(20, 224, 9)]
+    [Arguments(50, 744, 39)]
+    [Arguments(100, 1776, 101)]
+    public async Task TheoreticalComparisonCountTest(int n, int expectedComparisons, int expectedSwaps)
+    {
+        // Test the exact comparison and swap counts for sorted data.
+        // BidirectionalStableQuickSort on sorted data is fully deterministic:
+        // - Median-of-3 at quartile positions picks a balanced pivot
+        // - Bidirectional partitioning: less to front, greater to back (reversed), then reverse greater section
+        // - Swaps occur during the reversal of the greater section in scratch buffer
+        //
+        // Empirical values for sorted data:
+        // n=10:  Compare=88,   Swap=3
+        // n=20:  Compare=224,  Swap=9
+        // n=50:  Compare=744,  Swap=39
+        // n=100: Compare=1776, Swap=101
+        var stats = new StatisticsContext();
+        var sorted = Enumerable.Range(0, n).ToArray();
+        BidirectionalStableQuickSort.Sort(sorted.AsSpan(), stats);
+
+        await Assert.That(stats.CompareCount).IsEqualTo((ulong)expectedComparisons);
+        await Assert.That(stats.SwapCount).IsEqualTo((ulong)expectedSwaps);
+        await Assert.That(stats.IndexReadCount >= stats.CompareCount).IsTrue()
+            .Because($"IndexReadCount ({stats.IndexReadCount}) should be >= CompareCount ({stats.CompareCount})");
+    }
+
 #endif
 }
