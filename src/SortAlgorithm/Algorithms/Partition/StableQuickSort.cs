@@ -66,21 +66,6 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Comparisons : ~n log₂ n (average) - Single pass per partition with n comparisons per level</description></item>
 /// <item><description>Copies      : ~2n log₂ n (average) - Each element copied to/from temporary storage at each recursion level</description></item>
 /// </list>
-/// <para><strong>Median-of-3 Pivot Selection Benefits:</strong></para>
-/// <list type="bullet">
-/// <item><description>Worst-case probability reduction: From O(1/n) with random pivot to O(1/n³) with median-of-3</description></item>
-/// <item><description>Improved pivot quality: Median-of-3 tends to select pivots closer to the true median of the array</description></item>
-/// <item><description>Minimal overhead: Requires only 2-3 additional comparisons per partitioning step</description></item>
-/// <item><description>Sorted input handling: Efficiently handles sorted, reverse-sorted, and nearly-sorted arrays without degrading to O(n²)</description></item>
-/// <item><description>Cache efficiency: Samples elements from beginning, middle, and end, improving spatial locality</description></item>
-/// </list>
-/// <para><strong>Comparison with Other Sorting Algorithms:</strong></para>
-/// <list type="bullet">
-/// <item><description>vs. In-place QuickSort: This stable version trades O(n) extra space for guaranteed stability</description></item>
-/// <item><description>vs. MergeSort: Similar O(n) space usage and stability, but QuickSort has better cache locality on average</description></item>
-/// <item><description>vs. TimSort: TimSort is also stable and adaptive, but this QuickSort variant is simpler and more predictable</description></item>
-/// <item><description>vs. Dual-Pivot QuickSort: Simpler implementation with guaranteed stability (dual-pivot is faster but unstable)</description></item>
-/// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
 /// </remarks>
