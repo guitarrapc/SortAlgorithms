@@ -166,7 +166,7 @@ public static class StableQuickSort
         var scratchBuffer = ArrayPool<T>.Shared.Rent(n);
         try
         {
-            SortCore(s, first, last - 1, context, scratchBuffer.AsSpan(0, n));
+            SortCore(s, first, last - 1, scratchBuffer.AsSpan(0, n));
         }
         finally
         {
@@ -186,7 +186,7 @@ public static class StableQuickSort
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The inclusive end index of the range to sort.</param>
     /// <param name="context">The sort context for tracking statistics and observations.</param>
-    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, TContext context, Span<T> scratch)
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, Span<T> scratch)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -218,7 +218,7 @@ public static class StableQuickSort
                 // Left is smaller: recurse on left, loop on right
                 if (leftLen > 1)
                 {
-                    SortCore(s, left, lessEnd - 1, context, scratch);
+                    SortCore(s, left, lessEnd - 1, scratch);
                 }
                 // Tail recursion: continue loop with right partition
                 left = greaterStart;
@@ -228,7 +228,7 @@ public static class StableQuickSort
                 // Right is smaller or equal: recurse on right, loop on left
                 if (rightLen > 1)
                 {
-                    SortCore(s, greaterStart, right, context, scratch);
+                    SortCore(s, greaterStart, right, scratch);
                 }
                 // Tail recursion: continue loop with left partition
                 right = lessEnd - 1;
