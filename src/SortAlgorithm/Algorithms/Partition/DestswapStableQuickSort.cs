@@ -120,7 +120,7 @@ public static class DestswapStableQuickSort
     {
         var n = right - left + 1;
         var t = new SortSpan<T, TComparer, TContext>(scratch, s.Context, s.Comparer, BUFFER_TEMP);
-        var logn = 64 - (int)BitOperations.LeadingZeroCount((ulong)(uint)n);
+        var logn = 32 - BitOperations.LeadingZeroCount((uint)n);
         var half = n / 2;
         SortInto(s, t,
             leftInMain: true,  leftOff: left,        leftLen: half,
@@ -143,7 +143,7 @@ public static class DestswapStableQuickSort
     /// <item><description>less_bwd  — t[scrStart+n-lessBwdCount .. scrStart+n)</description></item>
     /// </list>
     /// Recursive calls swap dest/scratch roles so each level writes directly into its destination
-    /// region, reducing total copies from O(n log n) to O(n) over the entire recursion tree.
+    /// region, avoids full copy-back at each level.
     /// </para>
     /// <para>
     /// <see cref="STRATEGY_RIGHT"/> (normal): less = val &lt; pivot.<br/>
