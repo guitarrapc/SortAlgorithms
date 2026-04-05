@@ -130,7 +130,7 @@ public static class BottomupMergeSort
     /// </summary>
     /// <param name="s">The SortSpan wrapping the span to sort</param>
     /// <param name="b">The SortSpan wrapping the auxiliary buffer for merging</param>
-    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b)
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {

@@ -17,6 +17,7 @@ public class PartitionBenchmark
     private int[] _dualpivotquickArray = default!;
     private int[] _stablequickArray = default!;
     private int[] _bidirectionalstablequickArray = default!;
+    private int[] _destswapstableqQuickArray = default!;
     private int[] _introArray = default!;
     private int[] _introdotnetArray = default!;
     private int[] _pdqArray = default!;
@@ -34,6 +35,7 @@ public class PartitionBenchmark
         _dualpivotquickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _stablequickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _bidirectionalstablequickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _destswapstableqQuickArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _introArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _introdotnetArray = BenchmarkData.GenerateIntArray(Size, Pattern);
         _pdqArray = BenchmarkData.GenerateIntArray(Size, Pattern);
@@ -82,6 +84,12 @@ public class PartitionBenchmark
     public void BidirectionalStableQuickSort()
     {
         SortAlgorithm.Algorithms.BidirectionalStableQuickSort.Sort(_bidirectionalstablequickArray.AsSpan());
+    }
+
+    [Benchmark]
+    public void DestswapStableQuickSort()
+    {
+        SortAlgorithm.Algorithms.DestswapStableQuickSort.Sort(_destswapstableqQuickArray.AsSpan());
     }
 
     [Benchmark]

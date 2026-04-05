@@ -1,0 +1,389 @@
+﻿using SortAlgorithm.Contexts;
+using System.Buffers;
+using System.Numerics;
+using System.Runtime.CompilerServices;
+
+namespace SortAlgorithm.Algorithms;
+
+public static class DestswapStableQuickSort
+{
+    // Buffer identifiers for visualization
+    private const int BUFFER_MAIN = 0;       // Main input array
+    private const int BUFFER_TEMP = 1;       // Temporary merge buffer
+
+    // Use BottomUp merge sort for small partitions or when recursion budget is exhausted.
+    // BottomUp fallback guarantees O(n log n) worst case for adversarial inputs.
+    private const int SMALL_SORT = 16;
+
+    // PartitionStrategy constants — control the comparison predicate for the 2-way partition.
+    private const byte STRATEGY_RIGHT = 0;           // Normal: less = val < pivot, geq = val >= pivot
+    private const byte STRATEGY_LEFT_WITH_PIVOT = 1;  // Duplicate handling: less = val <= prevPivot, geq = val > prevPivot
+    private const byte STRATEGY_LEFT_IF_EQUAL = 2;    // Adaptive: select new pivot; if newPivot <= prevPivot, use left strategy
+
+    /// <summary>
+    /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Uses NullContext for zero-overhead fast path.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <param name="span">The span of elements to sort in place.</param>
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), NullContext.Default);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, 0, span.Length, new ComparableComparer<T>(), context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of the comparer</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => Sort(span, 0, span.Length, comparer, context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and sort context.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="TContext">The type of the sort context.</typeparam>
+    /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
+    public static void Sort<T, TContext>(Span<T> span, int first, int last, TContext context)
+        where T : IComparable<T>
+        where TContext : ISortContext
+        => Sort(span, first, last, new ComparableComparer<T>(), context);
+
+    /// <summary>
+    /// Sorts the subrange [first..last) using the provided comparer and context.
+    /// This is the full-control version with explicit TContext type parameter.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
+    /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span">The span containing elements to sort.</param>
+    /// <param name="first">The inclusive start index of the range to sort.</param>
+    /// <param name="last">The exclusive end index of the range to sort.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context for tracking statistics and observations.</param>
+    public static void Sort<T, TComparer, TContext>(Span<T> span, int first, int last, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(first);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(first, last);
+
+        var n = last - first;
+        if (n <= 1) return;
+
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        var scratchBuffer = ArrayPool<T>.Shared.Rent(n);
+        try
+        {
+            SortCore(s, first, last - 1, scratchBuffer.AsSpan(0, n));
+        }
+        finally
+        {
+            ArrayPool<T>.Shared.Return(scratchBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+        }
+    }
+
+    /// <summary>
+    /// Entry point for DestSwap stable quicksort.
+    /// Splits input in half and delegates to <see cref="SortInto"/> which writes output directly
+    /// to <c>s[left..right]</c> using <c>scratch</c> as the complementary buffer — no copy-back per recursion level.
+    /// Recursion limit is 2·log₂(n); exhausted budget falls back to BottomUp merge sort.
+    /// </summary>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, Span<T> scratch)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n = right - left + 1;
+        var t = new SortSpan<T, TComparer, TContext>(scratch, s.Context, s.Comparer, BUFFER_TEMP);
+        var logn = 64 - (int)BitOperations.LeadingZeroCount((ulong)(uint)n);
+        var half = n / 2;
+        SortInto(s, t,
+            leftInMain: true,  leftOff: left,        leftLen: half,
+            rightInMain: true, rightOff: left + half, rightLen: n - half,
+            destStart: left, scrStart: 0,
+            recursionLimit: 2 * logn, strategy: STRATEGY_RIGHT, prevPivot: default!);
+    }
+
+    /// <summary>
+    /// Recursive DestSwap stable 2-way quicksort.
+    /// Input is a logical concatenation of two half-spans that may reside in either <c>s</c> (main)
+    /// or <c>t</c> (scratch). Output is always written to <c>s[destStart..destStart+n)</c> with
+    /// <c>t[scrStart..scrStart+n)</c> as the complementary scratch region.
+    /// <para>
+    /// Partition writes four groups directly without copy-back:
+    /// <list type="bullet">
+    /// <item><description>less_fwd  — s[destStart .. destStart+lessFwdCount)</description></item>
+    /// <item><description>geq_bwd   — s[destStart+n-geqBwdCount .. destStart+n)</description></item>
+    /// <item><description>geq_fwd   — t[scrStart .. scrStart+geqFwdCount)</description></item>
+    /// <item><description>less_bwd  — t[scrStart+n-lessBwdCount .. scrStart+n)</description></item>
+    /// </list>
+    /// Recursive calls swap dest/scratch roles so each level writes directly into its destination
+    /// region, reducing total copies from O(n log n) to O(n) over the entire recursion tree.
+    /// </para>
+    /// <para>
+    /// <see cref="STRATEGY_RIGHT"/> (normal): less = val &lt; pivot.<br/>
+    /// <see cref="STRATEGY_LEFT_WITH_PIVOT"/> (duplicate handling): triggered when all elements ≥ pivot;
+    /// re-partitions the same data with less = val ≤ prevPivot to separate equal elements.<br/>
+    /// <see cref="STRATEGY_LEFT_IF_EQUAL"/> (adaptive): used for the geq-side recursion; selects a
+    /// new pivot and activates left strategy only when newPivot ≤ prevPivot (equal-heavy region).
+    /// </para>
+    /// When recursion budget reaches zero or n &lt; <see cref="SMALL_SORT"/>, assembles the split
+    /// input into dest and applies <see cref="BottomupMergeSort.SortCore"/> as the O(n log n) fallback.
+    /// </summary>
+    private static void SortInto<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        bool leftInMain, int leftOff, int leftLen,
+        bool rightInMain, int rightOff, int rightLen,
+        int destStart, int scrStart,
+        int recursionLimit, byte strategy, T prevPivot)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        while (true)
+        {
+            var n = leftLen + rightLen;
+
+            // --- Base case: small partition or recursion budget exhausted ---
+            if (n < SMALL_SORT || recursionLimit == 0)
+            {
+                // Assemble split input into s[destStart..destStart+n)
+                if (leftLen > 0)
+                {
+                    if (leftInMain) { if (leftOff != destStart) s.CopyTo(leftOff, s, destStart, leftLen); }
+                    else t.CopyTo(leftOff, s, destStart, leftLen);
+                }
+                if (rightLen > 0)
+                {
+                    var rightDest = destStart + leftLen;
+                    if (rightInMain) { if (rightOff != rightDest) s.CopyTo(rightOff, s, rightDest, rightLen); }
+                    else t.CopyTo(rightOff, s, rightDest, rightLen);
+                }
+                if (n > 1)
+                {
+                    // BottomUp fallback using the paired scratch region t[scrStart..scrStart+n)
+                    var sLocal = s.Slice(destStart, n, BUFFER_MAIN);
+                    var tLocal = t.Slice(scrStart, n, BUFFER_TEMP);
+                    BottomupMergeSort.SortCore(sLocal, tLocal);
+                }
+                return;
+            }
+
+            recursionLimit--;
+
+            // --- Pivot selection ---
+            T pivot;
+            bool partitionLeft;
+            if (strategy == STRATEGY_LEFT_WITH_PIVOT)
+            {
+                pivot = prevPivot;
+                partitionLeft = true;
+            }
+            else
+            {
+                pivot = SelectPivot(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, rightLen);
+                // STRATEGY_LEFT_IF_EQUAL: use left (<=) strategy when new pivot <= previous pivot,
+                // which indicates the geq side contains a cluster of equal elements.
+                partitionLeft = strategy == STRATEGY_LEFT_IF_EQUAL && s.IsGreaterOrEqual(prevPivot, pivot);
+            }
+
+            // --- Bidirectional 2-way stable partition ---
+            // Forward scan (left half) : less → s[destFront++],  geq  → t[scrFront++]
+            // Backward scan (right half): geq  → s[destBack--],  less → t[scrBack--]
+            //
+            // Overlap safety:
+            //   Forward: destFront ≤ fwdI because we advance destFront only when writing (≤ 1 per read).
+            //   Backward with rightInMain=true: bwdI and destBack start at the same index and both
+            //     decrement each geq step — always a read-then-write to the same position.
+            var destFront = destStart;
+            var destBack  = destStart + n - 1;
+            var scrFront  = scrStart;
+            var scrBack   = scrStart + n - 1;
+
+            var fwdI = leftOff;
+            var bwdI = rightOff + rightLen - 1;
+            var minCount = Math.Min(leftLen, rightLen);
+
+            // Interleaved forward+backward: load both values first to expose ILP to the JIT.
+            for (var k = 0; k < minCount; k++)
+            {
+                var valFwd = leftInMain  ? s.Read(fwdI) : t.Read(fwdI);
+                var valBwd = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
+                bool fwdGoLess = partitionLeft ? s.IsLessOrEqual(valFwd, pivot) : s.IsLessThan(valFwd, pivot);
+                bool bwdGoLess = partitionLeft ? s.IsLessOrEqual(valBwd, pivot) : s.IsLessThan(valBwd, pivot);
+                if (fwdGoLess) s.Write(destFront++, valFwd); else t.Write(scrFront++, valFwd);
+                if (bwdGoLess) t.Write(scrBack--,   valBwd); else s.Write(destBack--, valBwd);
+                fwdI++;
+                bwdI--;
+            }
+
+            // Forward tail (leftLen > rightLen)
+            for (; fwdI < leftOff + leftLen; fwdI++)
+            {
+                var val = leftInMain ? s.Read(fwdI) : t.Read(fwdI);
+                bool goLess = partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot);
+                if (goLess) s.Write(destFront++, val); else t.Write(scrFront++, val);
+            }
+
+            // Backward tail (rightLen > leftLen)
+            for (; bwdI >= rightOff; bwdI--)
+            {
+                var val = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
+                bool goLess = partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot);
+                if (goLess) t.Write(scrBack--, val); else s.Write(destBack--, val);
+            }
+
+            // Count elements in each group (no copy-back required):
+            //   less_fwd : s[destStart              .. destStart+lessFwdCount)
+            //   geq_bwd  : s[destStart+n-geqBwdCount .. destStart+n)
+            //   geq_fwd  : t[scrStart               .. scrStart+geqFwdCount)
+            //   less_bwd : t[scrStart+n-lessBwdCount .. scrStart+n)
+            var lessFwdCount = destFront - destStart;
+            var geqFwdCount  = scrFront  - scrStart;
+            var geqBwdCount  = destStart + n - 1 - destBack;
+            var lessBwdCount = scrStart  + n - 1 - scrBack;
+            var lessTotal    = lessFwdCount + lessBwdCount;
+            var geqTotal     = geqFwdCount  + geqBwdCount;
+
+            // --- All elements went to geq (none less) → switch to left strategy with same pivot ---
+            // Guarantees progress: with left strategy at least the pivot element goes to less side.
+            if (lessTotal == 0 && !partitionLeft)
+            {
+                strategy = STRATEGY_LEFT_WITH_PIVOT;
+                prevPivot = pivot;
+                leftInMain  = false; leftOff  = scrStart;                      leftLen  = geqFwdCount;
+                rightInMain = true;  rightOff = destStart + n - geqBwdCount;   rightLen = geqBwdCount;
+                continue;
+            }
+
+            // --- PartitionLeft: less side (≤ pivot) is already in dest; recurse only on geq side ---
+            if (partitionLeft)
+            {
+                // Assemble less_bwd from scratch tail into dest (less_fwd already at dest front)
+                if (lessBwdCount > 0)
+                    t.CopyTo(scrStart + n - lessBwdCount, s, destStart + lessFwdCount, lessBwdCount);
+
+                strategy    = STRATEGY_RIGHT;
+                prevPivot   = default!;
+                leftInMain  = false; leftOff  = scrStart;                      leftLen  = geqFwdCount;
+                rightInMain = true;  rightOff = destStart + n - geqBwdCount;   rightLen = geqBwdCount;
+                destStart  += lessTotal;
+                continue;
+            }
+
+            // --- Normal partition: recurse on smaller side, tail-call on larger ---
+            // less side : left=less_fwd(s), right=less_bwd(t),
+            //             dest=s[destStart..+lessTotal],  scratch=t[scrStart+geqTotal..+lessTotal]
+            // geq side  : left=geq_fwd(t),  right=geq_bwd(s),
+            //             dest=s[destStart+lessTotal..+geqTotal], scratch=t[scrStart..+geqTotal]
+            if (lessTotal <= geqTotal)
+            {
+                if (lessTotal > 0)
+                {
+                    SortInto(s, t,
+                        true,  destStart,                   lessFwdCount,
+                        false, scrStart + n - lessBwdCount, lessBwdCount,
+                        destStart, scrStart + geqTotal,
+                        recursionLimit, STRATEGY_RIGHT, default!);
+                }
+                // Tail-call on larger (geq) side
+                strategy    = STRATEGY_LEFT_IF_EQUAL;
+                prevPivot   = pivot;
+                leftInMain  = false; leftOff  = scrStart;                      leftLen  = geqFwdCount;
+                rightInMain = true;  rightOff = destStart + n - geqBwdCount;   rightLen = geqBwdCount;
+                destStart  += lessTotal;
+                continue;
+            }
+            else
+            {
+                if (geqTotal > 0)
+                {
+                    SortInto(s, t,
+                        false, scrStart,                     geqFwdCount,
+                        true,  destStart + n - geqBwdCount,  geqBwdCount,
+                        destStart + lessTotal, scrStart,
+                        recursionLimit, STRATEGY_LEFT_IF_EQUAL, pivot);
+                }
+                // Tail-call on larger (less) side
+                strategy    = STRATEGY_RIGHT;
+                prevPivot   = default!;
+                leftInMain  = true;  leftOff  = destStart;                       leftLen  = lessFwdCount;
+                rightInMain = false; rightOff = scrStart + n - lessBwdCount;     rightLen = lessBwdCount;
+                scrStart   += geqTotal;
+                continue;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads the element at logical index <paramref name="idx"/> from the split input
+    /// (left and right half-spans concatenated logically).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static T ReadSplitInput<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t,
+        bool leftInMain, int leftOff, int leftLen,
+        bool rightInMain, int rightOff,
+        int idx)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (idx < leftLen)
+            return leftInMain ? s.Read(leftOff + idx) : t.Read(leftOff + idx);
+        return rightInMain ? s.Read(rightOff + idx - leftLen) : t.Read(rightOff + idx - leftLen);
+    }
+
+    /// <summary>
+    /// Selects a pivot value using median-of-3 sampling from the logical concatenation
+    /// of the left and right halves (first, middle, last elements).
+    /// Uses value comparisons (<see cref="SortSpan{T,TComparer,TContext}.IsLessThan(T,T)"/>) so
+    /// that the pivot is a concrete value, not an index — safe when data spans two buffers.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static T SelectPivot<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t,
+        bool leftInMain, int leftOff, int leftLen,
+        bool rightInMain, int rightOff, int rightLen)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n = leftLen + rightLen;
+        var a = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, 0);
+        var b = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, n / 2);
+        var c = ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, n - 1);
+        // Standard median-of-3 using 2-3 comparisons
+        if (s.IsLessThan(a, b))
+        {
+            if (s.IsLessThan(b, c)) return b;  // a < b < c
+            if (s.IsLessThan(a, c)) return c;  // a < c <= b
+            return a;                           // c <= a < b
+        }
+        else
+        {
+            if (s.IsLessThan(c, b)) return b;  // c < b <= a
+            if (s.IsLessThan(c, a)) return c;  // b <= c < a
+            return a;                           // b <= a <= c
+        }
+    }
+}
