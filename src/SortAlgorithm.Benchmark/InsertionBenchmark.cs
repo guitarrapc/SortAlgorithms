@@ -75,21 +75,9 @@ public class InsertionBenchmark
     }
 
     [Benchmark]
-    public void ShellSortCiura2001()
-    {
-        SortAlgorithm.Algorithms.ShellSortCiura2001.Sort(_shellArrayCiura2001.AsSpan());
-    }
-
-    [Benchmark]
     public void ShellSortKnuth1973()
     {
         SortAlgorithm.Algorithms.ShellSortKnuth1973.Sort(_shellArrayKnuth1973.AsSpan());
-    }
-
-    [Benchmark]
-    public void ShellSortLee2021()
-    {
-        SortAlgorithm.Algorithms.ShellSortLee2021.Sort(_shellArrayLee2021.AsSpan());
     }
 
     [Benchmark]
@@ -102,5 +90,17 @@ public class InsertionBenchmark
     public void ShellSortTokuda1992()
     {
         SortAlgorithm.Algorithms.ShellSortTokuda1992.Sort(_shellArrayTokuda1992.AsSpan());
+    }
+
+    [Benchmark]
+    public void ShellSortCiura2001()
+    {
+        SortAlgorithm.Algorithms.ShellSortCiura2001.Sort(_shellArrayCiura2001.AsSpan());
+    }
+
+    [Benchmark]
+    public void ShellSortLee2021()
+    {
+        SortAlgorithm.Algorithms.ShellSortLee2021.Sort(_shellArrayLee2021.AsSpan());
     }
 }
