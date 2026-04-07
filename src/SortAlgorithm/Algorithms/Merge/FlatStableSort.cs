@@ -2,17 +2,60 @@
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// Boost.Sort の flat_stable_sort を参考にした、ブロック境界で分割する安定ソートです。
-/// 再帰はブロック群単位で進め、小規模グループは専用の安定ソートへ落とし込みます。
+/// Boost.Sortライブラリのflat_stable_sort実装に構造的に忠実な安定ソートアルゴリズムです。
+/// 配列を固定サイズのブロック群にマッピングしてインデックス上で再帰分割し、ceil(n/2) の補助領域でマージを行います。
 /// <br/>
-/// A stable sort inspired by Boost.Sort's flat_stable_sort.
-/// Recursion progresses on block groups, and small groups fall back to a local stable sort.
+/// A stable sort algorithm structurally faithful to Boost.Sort's flat_stable_sort.
+/// Maps the array onto fixed-size block groups and recursively divides them, merging with O(ceil(n/2)) auxiliary space.
 /// </summary>
+/// <remarks>
+/// <para><strong>Structural Fidelity to Boost flat_stable_sort:</strong></para>
+/// <list type="number">
+/// <item><description><strong>Block Size Selection (GetBlockSize):</strong> The block size is a power-of-two
+/// chosen based on the element type size, mirroring Boost's <c>block_size_fss</c> template:
+/// strings use 2^6 = 64, and other types use 2^sz[BitsSize] where <c>sz[] = {10,10,10,9,8,7,6,6}</c>.
+/// This matches the <c>flat::flat_stable_sort&lt;Iter_t, Compare, Power2&gt;</c> template parameter selection.</description></item>
+/// <item><description><strong>Pre-Sort Detection (SortCore):</strong> Before allocating the auxiliary buffer,
+/// the full array is scanned for the ascending (O(n) early return) and strictly descending (O(n) reverse-and-return)
+/// patterns. This is an extension over the Boost constructor, which delegates directly to <c>divide</c>.</description></item>
+/// <item><description><strong>Divide — Recursive Block-Group Split:</strong> Mirrors Boost's <c>divide(itx_first, itx_last)</c>.
+/// When <c>nblock &lt; 5</c>, falls through to <c>SortSmall</c>.
+/// When <c>nblock &gt; 7</c>, calls <c>IsSortedForward</c> / <c>IsSortedBackward</c> for partial pre-sort detection.
+/// Otherwise splits at <c>(nblock+1)&gt;&gt;1</c>, recurses on both halves, and merges via
+/// <c>MergeAdjacentWithLeftBuffer</c> (corresponding to Boost's <c>merge_range_pos</c>).</description></item>
+/// <item><description><strong>IsSortedForward / IsSortedBackward (Partial Pre-Sort Optimization):</strong>
+/// Counts already-sorted elements from the front or back via <c>NumberStableSortedForward/Backward</c>
+/// (Boost's <c>number_stable_sorted_forward/backward</c> from <c>sort_basic.hpp</c>).
+/// When a large sorted prefix or suffix is found, only the unsorted region is recursively sorted then merged,
+/// avoiding redundant work on already-ordered data.</description></item>
+/// <item><description><strong>SortSmall — Base Case for nblock &lt; 5:</strong> Mirrors Boost's <c>sort_small</c>.
+/// For <c>len ≤ SORT_MIN_INTERNAL (32)</c> uses <c>InsertionSort</c> (equivalent to Boost's <c>insert_sort</c>
+/// with the same threshold of 32). Larger groups delegate to <c>StableSortRange</c>.</description></item>
+/// <item><description><strong>StableSortRange — Recursive Half-Buffer Merge Sort:</strong> A self-contained
+/// O(n log n) stable merge sort that allocates its own temporary buffer, corresponding to Boost's
+/// <c>range_sort_data</c> / <c>range_sort_buffer</c> pair from <c>sort_basic.hpp</c>.</description></item>
+/// <item><description><strong>MergeAdjacentWithLeftBuffer — Half-Buffer Merge:</strong> Copies the shorter half
+/// to the auxiliary buffer and merges forward or backward depending on which side is smaller. Corresponds to
+/// Boost's <c>merge_half</c> / <c>merge_half_backward</c> from <c>range.hpp</c>.</description></item>
+/// </list>
+/// <para><strong>Performance Characteristics:</strong></para>
+/// <list type="bullet">
+/// <item><description>Family      : Merge (Block-based)</description></item>
+/// <item><description>Stable      : Yes (≤ comparison in all merge operations preserves relative order)</description></item>
+/// <item><description>In-place    : No (requires O(ceil(n/2)) auxiliary space for the half buffer)</description></item>
+/// <item><description>Best case   : O(n) — Fully sorted or reverse-sorted data detected by pre-sort scan</description></item>
+/// <item><description>Average case: O(n log n)</description></item>
+/// <item><description>Worst case  : O(n log n) — Guaranteed by balanced binary split at block granularity</description></item>
+/// <item><description>Space       : O(ceil(n/2)) temporary buffer + O(log n) recursion stack</description></item>
+/// </list>
+/// <para><strong>Reference:</strong></para>
+/// <para>Boost.Sort flat_stable_sort: https://github.com/boostorg/sort/blob/develop/include/boost/sort/flat_stable_sort/flat_stable_sort.hpp</para>
+/// <para>Author: Francisco José Tapia (2017), Boost Software License 1.0 https://github.com/boostorg/sort/blob/develop/doc/papers/flat_stable_sort_eng.pdf</para>
+/// </remarks>
 public static class FlatStableSort
 {
     // Buffer identifiers for visualization

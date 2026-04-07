@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -6,11 +6,11 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// SpinSortBoostは、Boost.SortライブラリのSpinSort実装に構造的に忠実な安定ソートアルゴリズムです。
+/// SpinSortBoostは、Boost.Sortライブラリのspin_sort実装に構造的に忠実な安定ソートアルゴリズムです。
 /// レベル駆動の再帰（RangeSort）とレベルパリティに基づくバッファ選択を用いたトップダウンマージソートで、
 /// ceil(n/2) の補助メモリのみを使用します。
 /// <br/>
-/// SpinSortBoost is a stable sort algorithm structurally faithful to Boost.Sort's SpinSort.
+/// SpinSortBoost is a stable sort algorithm structurally faithful to Boost.Sort's spin_sort.
 /// It uses level-driven recursion (RangeSort) with level-parity-based buffer selection,
 /// top-down merge sort with only ceil(n/2) auxiliary memory, and early exit for sorted/reversed data.
 /// </summary>
