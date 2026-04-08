@@ -814,22 +814,78 @@ public static class FlatStableSort
             return firstA == endA;
         }
 
+        /// <summary>
+        /// Shifts elements within a contiguous span of logical blocks rightward (higher address) by
+        /// <paramref name="npos"/> positions to accommodate the shorter tail block at the end.
+        /// Mirrors Boost's <c>move_range_pos_backward</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Called from <see cref="MergeRangePos"/> only when the tail block (<c>_nblock−1</c>, with
+        /// <c>_ntail</c> elements) appears as the last entry in the right-hand index.  At that point the
+        /// tail is appended to the left-hand index and the combined physical region
+        /// <c>blocks[first..last)</c> must be shifted right by <paramref name="npos"/> = <c>_ntail</c>
+        /// positions so that each block slot ends up holding exactly the data that belongs there after
+        /// the merge.
+        /// </para>
+        /// <para><strong>Algorithm (processes blocks right-to-left):</strong></para>
+        /// <list type="number">
+        ///   <item><description>
+        ///     <strong>Last block (the tail, <c>blocks[last−1]</c>):</strong> if it holds more than
+        ///     <paramref name="npos"/> elements, slide the first <c>range.Length − npos</c> elements
+        ///     forward by <paramref name="npos"/> positions within the block
+        ///     (<c>src = range.Start</c>, <c>dst = range.Start + npos</c>).
+        ///     When <c>range.Length == npos</c> (i.e. the tail is exactly <c>_ntail</c> elements) this
+        ///     step is skipped — the slot is already ready to receive incoming data from the left.
+        ///   </description></item>
+        ///   <item><description>
+        ///     <strong>Each preceding full block (right-to-left):</strong>
+        ///     <list type="bullet">
+        ///       <item>Copy the block's last <paramref name="npos"/> elements into the first
+        ///             <paramref name="npos"/> slots of the next (right) block.
+        ///             Source and destination are adjacent — no overlap.</item>
+        ///       <item>Shift the block's remaining <c>range.Length − npos</c> elements forward
+        ///             by <paramref name="npos"/> positions within the same block
+        ///             (<c>dst = src + npos</c>, so dst &gt; src — overlapping forward shift).</item>
+        ///     </list>
+        ///   </description></item>
+        /// </list>
+        /// <para><strong>Overlap safety:</strong>
+        /// The two copies that shift elements forward within a single block have <c>dst &gt; src</c> with
+        /// a potentially overlapping region.  <c>SortSpan.CopyTo</c> delegates to
+        /// <c>Span&lt;T&gt;.CopyTo</c> → <c>Buffer.Memmove</c>, which selects a right-to-left traversal
+        /// automatically when destination is ahead of source — exactly the behaviour of Boost's
+        /// explicit <c>util::move_backward</c> calls.  Forward (left-to-right) copy would corrupt data
+        /// when <c>_blockSize &gt; 2 × npos</c>.
+        /// </para>
+        /// <para><strong>Precondition:</strong> <paramref name="npos"/> ≤ <c>_blockSize</c>;
+        /// <c>blocks[last−1]</c> must have at least <paramref name="npos"/> elements.</para>
+        /// </remarks>
         private void MoveRangePosBackward(Span<int> blocks, int first, int last, int npos)
         {
+            // Step 1 — last block (tail): free the first npos slots by pushing existing
+            // elements forward; skip when Length == npos (tail is full of incoming data).
             var range1 = GetRange(blocks[last - 1]);
             if (range1.Length > npos)
             {
                 var moveCount = range1.Length - npos;
+                // dst > src, potentially overlapping — Buffer.Memmove handles right-to-left traversal.
                 _data.CopyTo(range1.Start, _data, range1.Start + npos, moveCount);
             }
 
+            // Step 2 — remaining blocks right-to-left: spill last npos elems to the next block,
+            // then shift the rest of the current block forward to fill the vacated npos slots.
             for (var it = last - 1; first < it;)
             {
                 it--;
                 var range2 = range1;
                 range1 = GetRange(blocks[it]);
                 var mid1 = range1.End - npos;
+                // Spill: move the last npos elements of range1 into the first npos slots of range2.
+                // Adjacent blocks — no overlap.
                 _data.CopyTo(mid1, _data, range2.Start, npos);
+                // Shift: slide range1's remaining elements forward by npos positions.
+                // dst > src, potentially overlapping — Buffer.Memmove handles right-to-left traversal.
                 _data.CopyTo(range1.Start, _data, range1.Start + npos, range1.Length - npos);
             }
         }
