@@ -644,13 +644,25 @@ public static class FlatStableSort
             var data = _data.Slice(first, len, BUFFER_MAIN);
             var nblock = CeilDiv(len, _blockSize);
 
-            Span<int> subIndex = stackalloc int[nblock];
-            Span<int> subScratch = stackalloc int[(nblock << 1) + 1];
-            for (var i = 0; i < nblock; i++)
-                subIndex[i] = i;
+            // Use ArrayPool (matching Boost's std::vector<size_t> index heap allocation in merge_block)
+            // rather than stackalloc, so this is safe regardless of nblock size.
+            var indexBuffer = ArrayPool<int>.Shared.Rent(nblock);
+            var scratchBuffer = ArrayPool<int>.Shared.Rent((nblock << 1) + 1);
+            try
+            {
+                var subIndex = indexBuffer.AsSpan(0, nblock);
+                var subScratch = scratchBuffer.AsSpan(0, (nblock << 1) + 1);
+                for (var i = 0; i < nblock; i++)
+                    subIndex[i] = i;
 
-            var sub = new MergeBlockState<T, TComparer, TContext>(data, _temp, subIndex, subScratch, _blockSize);
-            sub.Sort();
+                var sub = new MergeBlockState<T, TComparer, TContext>(data, _temp, subIndex, subScratch, _blockSize);
+                sub.Sort();
+            }
+            finally
+            {
+                ArrayPool<int>.Shared.Return(scratchBuffer);
+                ArrayPool<int>.Shared.Return(indexBuffer);
+            }
         }
 
         private void MergeRangePos(int indexFirst, int indexMiddle, int indexLast)
