@@ -6,24 +6,22 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// Boost.Sortライブラリのflat_stable_sort実装に構造的に忠実な安定ソートアルゴリズムです。
-/// 配列を固定サイズのブロック群として扱い、Boost の divide / sort_small / partial sorted fast path を C# の SortSpan 上に写像した安定ソートです。
+/// Boost.Sort の flat_stable_sort を参照とした安定ソートです。配列をブロック単位に分割し、ブロックインデックスの操作と循環バッファを使ってマージします。
 /// <br/>
-/// A stable sort algorithm structurally faithful to Boost.Sort's flat_stable_sort.
-/// Maps the array onto fixed-size block groups and mirrors Boost's divide / sort_small / partial sorted fast paths on top of SortSpan.
+/// A stable sort based on Boost.Sort's flat_stable_sort, processing elements in fixed-size blocks
+/// and merging them via block-index manipulation and a circular scratch buffer.
 /// </summary>
 /// <remarks>
 /// <para><strong>Structural Fidelity to Boost flat_stable_sort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Block Size Selection (GetBlockSize):</strong> The block size is a power-of-two
 /// chosen based on the element type size, mirroring Boost's <c>block_size_fss</c> template:
-/// strings use 2^6 = 64, and other types use 2^sz[BitsSize] where <c>sz[] = {10,10,10,9,8,7,6,6}</c>.
-/// This matches the <c>flat::flat_stable_sort&lt;Iter_t, Compare, Power2&gt;</c> template parameter selection.</description></item>
-/// <item><description><strong>merge_block-style Outer Model:</strong> The implementation now keeps an explicit block index array,
+/// strings use 2^6 = 64, and other types use 2^sz[BitsSize] where <c>sz[] = {10,10,10,9,8,7,6,6}</c>.</description></item>
+/// <item><description><strong>merge_block-style Outer Model:</strong> Keeps an explicit block index array,
 /// merges logical block groups through that index, and applies a final permutation via <c>RearrangeWithIndex</c>, mirroring
 /// Boost's <c>merge_block</c> base class structure.</description></item>
 /// <item><description><strong>Divide — Recursive Block-Group Split:</strong> Mirrors Boost's <c>divide(itx_first, itx_last)</c>.
-/// When <c>nblock &lt; 5</c>, falls through to <c>SortSmall</c>.
+/// When <c>nblock &lt; 5</c>, delegates to <c>SortSmall</c>.
 /// When <c>nblock &gt; 7</c>, calls <c>IsSortedForward</c> / <c>IsSortedBackward</c> for partial pre-sort detection.
 /// Otherwise splits at <c>(nblock+1)&gt;&gt;1</c>, recurses on both halves, and merges via
 /// <c>MergeRangePos</c> over the block index (corresponding to Boost's <c>merge_range_pos</c>).</description></item>
@@ -53,7 +51,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>In-place    : No (requires O(n / BLOCK_SIZE) block-index storage plus O(BLOCK_SIZE) circular scratch)</description></item>
 /// <item><description>Best case   : O(n) to O(n log n), depending on whether the partial-sorted fast paths trigger</description></item>
 /// <item><description>Average case: O(n log n)</description></item>
-/// <item><description>Worst case  : O(n log n) — Guaranteed by balanced binary split at block granularity</description></item>
+/// <item><description>Worst case  : O(n log n) (balanced binary split at block granularity)</description></item>
 /// <item><description>Space       : O(n / BLOCK_SIZE) indices + O(BLOCK_SIZE) temporary elements + O(log n) recursion stack</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
