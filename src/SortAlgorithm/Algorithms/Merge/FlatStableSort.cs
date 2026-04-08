@@ -7,10 +7,10 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// Boost.Sortライブラリのflat_stable_sort実装に構造的に忠実な安定ソートアルゴリズムです。
-/// 配列を固定サイズのブロック群にマッピングしてインデックス上で再帰分割し、ceil(n/2) の補助領域でマージを行います。
+/// 配列を固定サイズのブロック群として扱い、Boost の divide / sort_small / partial sorted fast path を C# の SortSpan 上に写像した安定ソートです。
 /// <br/>
 /// A stable sort algorithm structurally faithful to Boost.Sort's flat_stable_sort.
-/// Maps the array onto fixed-size block groups and recursively divides them, merging with O(ceil(n/2)) auxiliary space.
+/// Maps the array onto fixed-size block groups and mirrors Boost's divide / sort_small / partial sorted fast paths on top of SortSpan.
 /// </summary>
 /// <remarks>
 /// <para><strong>Structural Fidelity to Boost flat_stable_sort:</strong></para>
@@ -19,9 +19,6 @@ namespace SortAlgorithm.Algorithms;
 /// chosen based on the element type size, mirroring Boost's <c>block_size_fss</c> template:
 /// strings use 2^6 = 64, and other types use 2^sz[BitsSize] where <c>sz[] = {10,10,10,9,8,7,6,6}</c>.
 /// This matches the <c>flat::flat_stable_sort&lt;Iter_t, Compare, Power2&gt;</c> template parameter selection.</description></item>
-/// <item><description><strong>Pre-Sort Detection (SortCore):</strong> Before allocating the auxiliary buffer,
-/// the full array is scanned for the ascending (O(n) early return) and strictly descending (O(n) reverse-and-return)
-/// patterns. This is an extension over the Boost constructor, which delegates directly to <c>divide</c>.</description></item>
 /// <item><description><strong>Divide — Recursive Block-Group Split:</strong> Mirrors Boost's <c>divide(itx_first, itx_last)</c>.
 /// When <c>nblock &lt; 5</c>, falls through to <c>SortSmall</c>.
 /// When <c>nblock &gt; 7</c>, calls <c>IsSortedForward</c> / <c>IsSortedBackward</c> for partial pre-sort detection.
@@ -34,10 +31,14 @@ namespace SortAlgorithm.Algorithms;
 /// avoiding redundant work on already-ordered data.</description></item>
 /// <item><description><strong>SortSmall — Base Case for nblock &lt; 5:</strong> Mirrors Boost's <c>sort_small</c>.
 /// For <c>len ≤ SORT_MIN_INTERNAL (32)</c> uses <c>InsertionSort</c> (equivalent to Boost's <c>insert_sort</c>
-/// with the same threshold of 32). Larger groups delegate to <c>StableSortRange</c>.</description></item>
-/// <item><description><strong>StableSortRange — Recursive Half-Buffer Merge Sort:</strong> A self-contained
-/// O(n log n) stable merge sort that allocates its own temporary buffer, corresponding to Boost's
-/// <c>range_sort_data</c> / <c>range_sort_buffer</c> pair from <c>sort_basic.hpp</c>.</description></item>
+/// with the same threshold of 32). For 1-2 blocks it calls <c>RangeSortData</c>; for 3-4 blocks it sorts the
+/// right group via <c>RangeSortData</c>, the left group via <c>RangeSortBuffer</c>, then merges with <c>MergeHalf</c>,
+/// matching Boost's asymmetric small-block path.</description></item>
+/// <item><description><strong>RangeSortData / RangeSortBuffer:</strong> Alternating recursive half-buffer merge sorts,
+/// corresponding to Boost's <c>range_sort_data</c> / <c>range_sort_buffer</c> pair from <c>sort_basic.hpp</c>.</description></item>
+/// <item><description><strong>InsertSorted / InsertSortedBackward:</strong> The partial-sorted fast paths use stable
+/// upper-bound / lower-bound insertion against a copied small side, mirroring Boost's <c>insert_sorted</c> and
+/// <c>insert_sorted_backward</c> helpers instead of falling back to a generic adjacent merge.</description></item>
 /// <item><description><strong>MergeAdjacentWithLeftBuffer — Half-Buffer Merge:</strong> Copies the shorter half
 /// to the auxiliary buffer and merges forward or backward depending on which side is smaller. Corresponds to
 /// Boost's <c>merge_half</c> / <c>merge_half_backward</c> from <c>range.hpp</c>.</description></item>
@@ -46,11 +47,11 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Family      : Merge (Block-based)</description></item>
 /// <item><description>Stable      : Yes (≤ comparison in all merge operations preserves relative order)</description></item>
-/// <item><description>In-place    : No (requires O(ceil(n/2)) auxiliary space for the half buffer)</description></item>
-/// <item><description>Best case   : O(n) — Fully sorted or reverse-sorted data detected by pre-sort scan</description></item>
+/// <item><description>In-place    : No (requires O(n) auxiliary space in the worst case)</description></item>
+/// <item><description>Best case   : O(n) to O(n log n), depending on whether the partial-sorted fast paths trigger</description></item>
 /// <item><description>Average case: O(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n) — Guaranteed by balanced binary split at block granularity</description></item>
-/// <item><description>Space       : O(ceil(n/2)) temporary buffer + O(log n) recursion stack</description></item>
+/// <item><description>Space       : O(n) temporary buffer + O(log n) recursion stack</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Boost.Sort flat_stable_sort: https://github.com/boostorg/sort/blob/develop/include/boost/sort/flat_stable_sort/flat_stable_sort.hpp</para>
@@ -61,9 +62,6 @@ public static class FlatStableSort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;    // Main input array
     private const int BUFFER_TEMP = 1;    // Temporary half buffer
-
-    // Boost's outer Sort_min = 36. Arrays with n <= Sort_min * 2 (72) use insertion sort directly.
-    private const int SORT_MIN = 36;
 
     // Boost's inner sort_min = 32, used in RangeSort base case and CheckStableSort.
     private const int SORT_MIN_INTERNAL = 32;
@@ -112,41 +110,26 @@ public static class FlatStableSort
         var n = last - first;
         if (n <= 1) return;
 
-        // Boost: if (nelem <= (Sort_min << 1)) insert_sort
-        if (n <= SORT_MIN * 2)
-        {
-            BinaryInsertionSort.Sort(span, first, last, comparer, context);
-            return;
-        }
-
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last);
     }
 
     /// <summary>
-    /// Core algorithm, equivalent to Boost's flast_stable_sort constructor.
-    /// Performs pre-sort detection, computes nlevel, splits based on nlevel parity,
-    /// calls RangeSort for each half, and merge_half's the results.
+    /// Core algorithm, equivalent to Boost's flat_stable_sort constructor.
+    /// Allocates the reusable auxiliary storage needed by Boost's sort_small and half-buffer merges,
+    /// then dispatches to Divide.
     /// </summary>
     private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (IsAscending(s, first, last))
-            return;
-
-        if (IsDescending(s, first, last))
-        {
-            Reverse(s, first, last - 1);
-            return;
-        }
-
         var n = last - first;
         var blockSize = GetBlockSize<T>();
-        var mergeBuffer = ArrayPool<T>.Shared.Rent((n + 1) / 2);
+        var auxLength = Math.Max((n + 1) / 2, Math.Min(n, blockSize << 1));
+        var mergeBuffer = ArrayPool<T>.Shared.Rent(auxLength);
         try
         {
-            var aux = new SortSpan<T, TComparer, TContext>(mergeBuffer.AsSpan(0, (n + 1) / 2), s.Context, s.Comparer, BUFFER_TEMP);
+            var aux = new SortSpan<T, TComparer, TContext>(mergeBuffer.AsSpan(0, auxLength), s.Context, s.Comparer, BUFFER_TEMP);
             Divide(s, first, last, blockSize, aux);
         }
         finally
@@ -155,12 +138,7 @@ public static class FlatStableSort
         }
     }
 
-    private static void Divide<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s,
-        int first,
-        int last,
-        int blockSize,
-        SortSpan<T, TComparer, TContext> aux)
+    private static void Divide<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int blockSize, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -171,7 +149,7 @@ public static class FlatStableSort
         var nblock = CeilDiv(len, blockSize);
         if (nblock < 5)
         {
-            SortSmall(s, first, last);
+            SortSmall(s, first, last, blockSize, aux);
             return;
         }
 
@@ -192,7 +170,7 @@ public static class FlatStableSort
         MergeAdjacentWithLeftBuffer(s, first, mid, last, aux);
     }
 
-    private static void SortSmall<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+    private static void SortSmall<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int blockSize, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -200,21 +178,33 @@ public static class FlatStableSort
         if (len <= 1)
             return;
 
+        var data = s.Slice(first, len, BUFFER_MAIN);
+
         if (len <= SORT_MIN_INTERNAL)
         {
-            InsertionSort.SortCore(s, first, last);
+            InsertionSort.SortCore(data, 0, len);
             return;
         }
 
-        StableSortRange(s, first, last);
+        var nblock = CeilDiv(len, blockSize);
+        if (nblock < 3)
+        {
+            RangeSortData(data, aux.Slice(0, len, BUFFER_TEMP));
+            return;
+        }
+
+        var nblock1 = (nblock + 1) >> 1;
+        var splitLen = Math.Min(len, nblock1 * blockSize);
+        var left = data.Slice(0, splitLen, BUFFER_MAIN);
+        var right = data.Slice(splitLen, len - splitLen, BUFFER_MAIN);
+
+        RangeSortData(right, aux.Slice(0, right.Length, BUFFER_TEMP));
+        var leftAux = aux.Slice(0, left.Length, BUFFER_TEMP);
+        RangeSortBuffer(left, leftAux);
+        MergeHalf(leftAux, s, first, left.Length, right.Length);
     }
 
-    private static bool IsSortedForward<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s,
-        int first,
-        int last,
-        int blockSize,
-        SortSpan<T, TComparer, TContext> aux)
+    private static bool IsSortedForward<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int blockSize, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -232,8 +222,8 @@ public static class FlatStableSort
 
         if (nsorted2 <= (blockSize << 1))
         {
-            StableSortRange(s, mid, last);
-            InsertPartialSort(s, first, mid, last, aux, 0);
+            Divide(s, mid, last, blockSize, aux);
+            InsertSorted(s, first, mid, last, aux);
             return true;
         }
 
@@ -243,7 +233,7 @@ public static class FlatStableSort
         return true;
     }
 
-    private static bool IsSortedBackward<T, TComparer, TContext>(
+    private static bool IsSortedBackward<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int blockSize, SortSpan<T, TComparer, TContext> aux)
         SortSpan<T, TComparer, TContext> s,
         int first,
         int last,
@@ -266,8 +256,8 @@ public static class FlatStableSort
 
         if (nsorted1 <= (blockSize << 1))
         {
-            StableSortRange(s, first, mid);
-            MergeAdjacentWithLeftBuffer(s, first, mid, last, aux);
+            Divide(s, first, mid, blockSize, aux);
+            InsertSortedBackward(s, first, mid, last, aux);
             return true;
         }
 
@@ -278,11 +268,7 @@ public static class FlatStableSort
         return true;
     }
 
-    private static int NumberStableSortedForward<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s,
-        int first,
-        int last,
-        int minProcess)
+    private static int NumberStableSortedForward<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int minProcess)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -309,11 +295,7 @@ public static class FlatStableSort
         return nsorted;
     }
 
-    private static int NumberStableSortedBackward<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> s,
-        int first,
-        int last,
-        int minProcess)
+    private static int NumberStableSortedBackward<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int minProcess)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -340,36 +322,7 @@ public static class FlatStableSort
         return nsorted;
     }
 
-    private static void StableSortRange<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var len = last - first;
-        if (len <= 1)
-            return;
-
-        if (len <= SORT_MIN_INTERNAL)
-        {
-            InsertionSort.SortCore(s, first, last);
-            return;
-        }
-
-        var temp = ArrayPool<T>.Shared.Rent(len);
-        try
-        {
-            var data = s.Slice(first, len, BUFFER_MAIN);
-            var aux = new SortSpan<T, TComparer, TContext>(temp.AsSpan(0, len), s.Context, s.Comparer, BUFFER_TEMP);
-            StableSortData(data, aux);
-        }
-        finally
-        {
-            ArrayPool<T>.Shared.Return(temp, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-        }
-    }
-
-    private static void StableSortData<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> data,
-        SortSpan<T, TComparer, TContext> aux)
+    private static void RangeSortData<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -389,14 +342,12 @@ public static class FlatStableSort
         var auxLeft = aux.Slice(0, mid, aux.BufferId);
         var auxRight = aux.Slice(mid, len - mid, aux.BufferId);
 
-        StableSortToBuffer(dataLeft, auxLeft);
-        StableSortToBuffer(dataRight, auxRight);
+        RangeSortBuffer(dataLeft, auxLeft);
+        RangeSortBuffer(dataRight, auxRight);
         MergeFromBufferToData(aux, mid, data);
     }
 
-    private static void StableSortToBuffer<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> data,
-        SortSpan<T, TComparer, TContext> aux)
+    private static void RangeSortBuffer<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -437,16 +388,13 @@ public static class FlatStableSort
         var auxLeft = aux.Slice(0, mid, aux.BufferId);
         var auxRight = aux.Slice(mid, len - mid, aux.BufferId);
 
-        StableSortData(dataLeft, auxLeft);
-        StableSortData(dataRight, auxRight);
+        RangeSortData(dataLeft, auxLeft);
+        RangeSortData(dataRight, auxRight);
         MergeFromDataToBuffer(data, mid, aux);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void MergeFromDataToBuffer<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> data,
-        int mid,
-        SortSpan<T, TComparer, TContext> aux)
+    private static void MergeFromDataToBuffer<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, int mid, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -478,10 +426,7 @@ public static class FlatStableSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void MergeFromBufferToData<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> aux,
-        int mid,
-        SortSpan<T, TComparer, TContext> data)
+    private static void MergeFromBufferToData<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> aux, int mid, SortSpan<T, TComparer, TContext> data)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -512,13 +457,7 @@ public static class FlatStableSort
             aux.CopyTo(right, data, dst, len - right);
     }
 
-    private static void InsertPartialSort<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> data,
-        int first,
-        int mid,
-        int last,
-        SortSpan<T, TComparer, TContext> aux,
-        int auxStart)
+    private static void InsertSorted<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, int first, int mid, int last, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -526,43 +465,55 @@ public static class FlatStableSort
         if (tailLen == 0 || mid == first)
             return;
 
-        data.CopyTo(mid, aux, auxStart, tailLen);
+        data.CopyTo(mid, aux, 0, tailLen);
 
-        var left = mid - 1;
-        var right = tailLen - 1;
-        var dst = last - 1;
-
-        while (right >= 0)
+        var moveFirst = mid;
+        var moveLast = mid;
+        for (var remaining = tailLen; remaining > 0; remaining--)
         {
-            if (left >= first)
+            moveLast = moveFirst;
+            var value = aux.Read(remaining - 1);
+            moveFirst = UpperBound(data, first, moveLast, value);
+
+            if (moveFirst != moveLast)
             {
-                var leftValue = data.Read(left);
-                var rightValue = aux.Read(auxStart + right);
-                if (data.IsGreaterThan(leftValue, rightValue))
-                {
-                    data.Write(dst--, leftValue);
-                    left--;
-                }
-                else
-                {
-                    data.Write(dst--, rightValue);
-                    right--;
-                }
+                var length = moveLast - moveFirst;
+                data.CopyTo(moveFirst, data, moveFirst + remaining, length);
             }
-            else
-            {
-                aux.CopyTo(auxStart, data, first, right + 1);
-                break;
-            }
+
+            data.Write(moveFirst + remaining - 1, value);
         }
     }
 
-    private static void MergeAdjacentWithLeftBuffer<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> data,
-        int first,
-        int mid,
-        int last,
-        SortSpan<T, TComparer, TContext> aux)
+    private static void InsertSortedBackward<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, int first, int mid, int last, SortSpan<T, TComparer, TContext> aux)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var headLen = mid - first;
+        if (headLen == 0 || mid == last)
+            return;
+
+        data.CopyTo(first, aux, 0, headLen);
+
+        var moveFirst = mid;
+        var moveLast = mid;
+        for (var inserted = 0; inserted < headLen; inserted++)
+        {
+            moveFirst = moveLast;
+            var value = aux.Read(inserted);
+            moveLast = LowerBound(data, moveFirst, last, value);
+
+            if (moveFirst != moveLast)
+            {
+                var destStart = moveFirst - (headLen - inserted);
+                data.CopyTo(moveFirst, data, destStart, moveLast - moveFirst);
+            }
+
+            data.Write(moveLast - (headLen - inserted), value);
+        }
+    }
+
+    private static void MergeAdjacentWithLeftBuffer<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, int first, int mid, int last, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -585,12 +536,7 @@ public static class FlatStableSort
         MergeHalfBackward(data, first, leftLen, aux.Slice(0, rightLen, BUFFER_TEMP), rightLen);
     }
 
-    private static void MergeHalf<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> buf,
-        SortSpan<T, TComparer, TContext> main,
-        int mainStart,
-        int leftLen,
-        int rightLen)
+    private static void MergeHalf<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> buf, SortSpan<T, TComparer, TContext> main, int mainStart, int leftLen, int rightLen)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -620,12 +566,7 @@ public static class FlatStableSort
             buf.CopyTo(left, main, dst, leftEnd - left);
     }
 
-    private static void MergeHalfBackward<T, TComparer, TContext>(
-        SortSpan<T, TComparer, TContext> main,
-        int mainStart,
-        int leftLen,
-        SortSpan<T, TComparer, TContext> buf,
-        int rightLen)
+    private static void MergeHalfBackward<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> main, int mainStart, int leftLen, SortSpan<T, TComparer, TContext> buf, int rightLen)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -654,34 +595,6 @@ public static class FlatStableSort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsAscending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        for (var i = first + 1; i < last; i++)
-        {
-            if (s.IsGreaterAt(i - 1, i))
-                return false;
-        }
-
-        return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsDescending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        for (var i = first + 1; i < last; i++)
-        {
-            if (s.IsGreaterOrEqualAt(i, i - 1))
-                return false;
-        }
-
-        return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Reverse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lo, int hi)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -693,6 +606,48 @@ public static class FlatStableSort
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int CeilDiv(int value, int divisor)
         => (value + divisor - 1) / divisor;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int UpperBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, T value)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        while (first < last)
+        {
+            var mid = first + ((last - first) >> 1);
+            if (s.IsLessOrEqual(s.Read(mid), value))
+            {
+                first = mid + 1;
+            }
+            else
+            {
+                last = mid;
+            }
+        }
+
+        return first;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int LowerBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, T value)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        while (first < last)
+        {
+            var mid = first + ((last - first) >> 1);
+            if (s.IsLessThan(s.Read(mid), value))
+            {
+                first = mid + 1;
+            }
+            else
+            {
+                last = mid;
+            }
+        }
+
+        return first;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int GetBlockSize<T>()
