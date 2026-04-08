@@ -132,7 +132,7 @@ public static class FlatStableSort
 
         var blockSize = GetBlockSize<T>();
         var nblock = CeilDiv(n, blockSize);
-        var tempLength = Math.Min(n, blockSize << 1);
+        var tempLength = blockSize << 1; // Always 2*BLOCK_SIZE (power of two), matching Boost's circular_buffer<Value_t, Power2+1>
         var tempBuffer = ArrayPool<T>.Shared.Rent(tempLength);
         var indexBuffer = ArrayPool<int>.Shared.Rent(nblock);
         var scratchBuffer = ArrayPool<int>.Shared.Rent((nblock << 1) + 1);
