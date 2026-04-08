@@ -171,6 +171,7 @@ public static class FlatStableSort
                 return;
         }
 
+        // flast_stable_sort always splits halves with mid = (len+1)/2, favoring the left half when len is odd.
         var mid = (len + 1) / 2;
         var dataLeft = data.Slice(0, mid, data.BufferId);
         var dataRight = data.Slice(mid, len - mid, data.BufferId);
@@ -779,8 +780,46 @@ public static class FlatStableSort
             }
         }
 
+        /// <summary>
+        /// Merges elements from range A (<paramref name="firstA"/>..<paramref name="endA"/>) and range B
+        /// (<paramref name="firstB"/>..<paramref name="endB"/>) into the circular buffer <paramref name="circ"/>,
+        /// stopping as soon as one range is exhausted.
+        /// Returns <c>true</c> if range A was exhausted first (or simultaneously), <c>false</c> if range B was.
+        /// </summary>
+        /// <remarks>
+        /// <para><strong>Stability contract — equal elements always favour A:</strong><br/>
+        /// The element-wise loop uses <c>IsLessThan(B, A)</c> (strict less-than) as the branch condition:
+        /// <list type="bullet">
+        ///   <item><c>B &lt; A</c> → take B</item>
+        ///   <item><c>B ≥ A</c> (including equal) → take A</item>
+        /// </list>
+        /// Equal elements therefore come from A before B, preserving the original relative order.
+        /// </para>
+        /// <para><strong>Fast-path conditions and why their strictness matters for stability:</strong></para>
+        /// <list type="number">
+        ///   <item><description>
+        ///     <c>!IsLessThan(B.first, A.last)</c> — i.e. <c>A.last ≤ B.first</c> (non-strict).<br/>
+        ///     All of A sorts before or equal to all of B, so the entire A range can be pushed to the
+        ///     circular buffer without inspecting B.  Using non-strict here is correct: when
+        ///     <c>A.last == B.first</c> (equal boundary), A still comes entirely before B, which matches
+        ///     the element-wise "equal → take A" rule.  A strict condition (<c>&lt;</c>) would fail to
+        ///     detect this all-A-first case when the boundary values are equal and would fall through to
+        ///     the slow loop unnecessarily — or worse, could take B before A.
+        ///   </description></item>
+        ///   <item><description>
+        ///     <c>IsLessThan(B.last, A.first)</c> — i.e. <c>B.last &lt; A.first</c> (strict).<br/>
+        ///     All of B is strictly less than A.first, so the entire B range can be pushed first.
+        ///     Using strict here is also correct: when <c>B.last == A.first</c> we cannot safely take all
+        ///     of B, because the equal element at <c>B.last</c> must come after the equal element at
+        ///     <c>A.first</c> (stability requires A first).  A non-strict condition (<c>≤</c>) would
+        ///     incorrectly push the equal B element ahead of A, breaking stability.
+        ///   </description></item>
+        /// </list>
+        /// </remarks>
         private bool MergeCircular(ref int firstA, int endA, ref int firstB, int endB, ref CircularSortBuffer<T, TComparer, TContext> circ)
         {
+            // Fast path A: the entire A block is ≤ the start of B (A.last ≤ B.first).
+            // Non-strict: equal boundary is still "A before B" — consistent with the element loop.
             if (!_data.IsLessThan(_data.Read(firstB), _data.Read(endA - 1)))
             {
                 circ.PushMoveBack(_data, firstA, endA - firstA);
@@ -788,6 +827,8 @@ public static class FlatStableSort
                 return true;
             }
 
+            // Fast path B: the entire B block is strictly less than A.first (B.last < A.first).
+            // Strict: if B.last == A.first we must NOT take all of B first — equal means A goes first.
             if (_data.IsLessThan(_data.Read(endB - 1), _data.Read(firstA)))
             {
                 circ.PushMoveBack(_data, firstB, endB - firstB);
@@ -795,6 +836,7 @@ public static class FlatStableSort
                 return false;
             }
 
+            // Element-wise merge: IsLessThan(B, A) is strict, so equal → take A (stability).
             while (firstA < endA && firstB < endB)
             {
                 var valueA = _data.Read(firstA);
@@ -806,6 +848,7 @@ public static class FlatStableSort
                 }
                 else
                 {
+                    // B ≥ A (including equal) — take A to preserve stable order.
                     circ.PushBack(valueA);
                     firstA++;
                 }
