@@ -591,7 +591,7 @@ public static class FlatStableSort
             var mid = rng.Start + nsorted1;
             if (nsorted2 <= (_blockSize << 1))
             {
-                SortPhysicalRange(mid, rng.End);
+                SortSubRange(mid, rng.End);
                 InsertSorted(_data, rng.Start, mid, rng.End, _temp);
                 return true;
             }
@@ -619,7 +619,7 @@ public static class FlatStableSort
             var nsorted1 = rng.Length - nsorted2;
             if (nsorted1 <= (_blockSize << 1))
             {
-                SortPhysicalRange(rng.Start, mid);
+                SortSubRange(rng.Start, mid);
                 InsertSortedBackward(_data, rng.Start, mid, rng.End, _temp);
                 return true;
             }
@@ -630,20 +630,27 @@ public static class FlatStableSort
             return true;
         }
 
-        private void SortPhysicalRange(int first, int last)
+        /// <summary>
+        /// Sorts the physical range [first, last) via a nested MergeBlockState, mirroring Boost's recursive
+        /// <c>flat_stable_sort(sub-range, ptr_circ)</c> call used in the partial-sorted fast path.
+        /// The sub-state reuses the shared <c>_temp</c> scratch buffer.
+        /// </summary>
+        private void SortSubRange(int first, int last)
         {
             var len = last - first;
             if (len <= 1)
                 return;
 
             var data = _data.Slice(first, len, BUFFER_MAIN);
-            if (len <= SORT_MIN_INTERNAL)
-            {
-                InsertionSort.SortCore(data, 0, len);
-                return;
-            }
+            var nblock = CeilDiv(len, _blockSize);
 
-            RangeSortData(data, _temp.Slice(0, len, BUFFER_TEMP));
+            Span<int> subIndex = stackalloc int[nblock];
+            Span<int> subScratch = stackalloc int[(nblock << 1) + 1];
+            for (var i = 0; i < nblock; i++)
+                subIndex[i] = i;
+
+            var sub = new MergeBlockState<T, TComparer, TContext>(data, _temp, subIndex, subScratch, _blockSize);
+            sub.Sort();
         }
 
         private void MergeRangePos(int indexFirst, int indexMiddle, int indexLast)
