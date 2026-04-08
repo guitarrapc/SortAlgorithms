@@ -171,6 +171,58 @@ public class FlatStableSortTests
         await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
     }
 
+    private const int IntBlockSize = 1024;
+
+    [Test]
+    [Arguments(1)]
+    [Arguments(17)]
+    [Arguments(257)]
+    public async Task TailBlockRearrangePreservesStableOrderTest(int tailLength)
+    {
+        var items = CreateTailBlockStressItems(tailLength);
+        var expected = items.OrderBy(x => x.Value).ToArray();
+
+        FlatStableSort.Sort(items.AsSpan(), new StatisticsContext());
+
+        for (var i = 0; i < items.Length; i++)
+        {
+            await Assert.That(items[i].Value).IsEqualTo(expected[i].Value);
+            await Assert.That(items[i].OriginalIndex).IsEqualTo(expected[i].OriginalIndex);
+        }
+
+        for (var i = 1; i < items.Length; i++)
+            await Assert.That(items[i - 1].Value).IsLessThanOrEqualTo(items[i].Value);
+
+        foreach (var group in items.GroupBy(x => x.Value))
+        {
+            var indices = group.Select(x => x.OriginalIndex).ToArray();
+            for (var i = 1; i < indices.Length; i++)
+                await Assert.That(indices[i - 1]).IsLessThan(indices[i]);
+        }
+
+        var firstTailIndex = (2 * IntBlockSize);
+        var lowValueIndices = items.Where(x => x.Value <= 1).Select(x => x.OriginalIndex).ToArray();
+        foreach (var originalIndex in lowValueIndices)
+            await Assert.That(originalIndex).IsGreaterThanOrEqualTo(firstTailIndex);
+    }
+
+    [Test]
+    [Arguments(1)]
+    [Arguments(17)]
+    [Arguments(257)]
+    public async Task TailBlockStatisticsStaySwapFreeTest(int tailLength)
+    {
+        var stats = new StatisticsContext();
+        var items = CreateTailBlockStressItems(tailLength);
+
+        FlatStableSort.Sort(items.AsSpan(), stats);
+
+        await Assert.That(stats.CompareCount).IsGreaterThanOrEqualTo((ulong)(items.Length - 1));
+        await Assert.That(stats.IndexReadCount).IsGreaterThanOrEqualTo((ulong)(2 * tailLength));
+        await Assert.That(stats.IndexWriteCount).IsGreaterThanOrEqualTo((ulong)tailLength);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+    }
+
     [Test]
     [Arguments(10)]
     [Arguments(20)]
@@ -237,5 +289,38 @@ public class FlatStableSortTests
         await Assert.That(stats.IndexWriteCount).IsBetween(1UL, (ulong)(n * n));
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
         await Assert.That(stats.IndexReadCount > 0).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be > 0");
+    }
+
+    private static StabilityTestItem[] CreateTailBlockStressItems(int tailLength)
+    {
+        var totalLength = (2 * IntBlockSize) + tailLength;
+        var items = new StabilityTestItem[totalLength];
+
+        for (var i = 0; i < IntBlockSize; i++)
+        {
+            var value = 6 + ((i / 64) & 1);
+            items[i] = new StabilityTestItem(value, i);
+        }
+
+        for (var i = 0; i < IntBlockSize; i++)
+        {
+            var index = IntBlockSize + i;
+            var value = 2 + ((i / 64) & 1);
+            items[index] = new StabilityTestItem(value, index);
+        }
+
+        for (var i = 0; i < tailLength; i++)
+        {
+            var index = (2 * IntBlockSize) + i;
+            var value = i % 3 switch
+            {
+                0 => 0,
+                1 => 1,
+                _ => 2,
+            };
+            items[index] = new StabilityTestItem(value, index);
+        }
+
+        return items;
     }
 }
