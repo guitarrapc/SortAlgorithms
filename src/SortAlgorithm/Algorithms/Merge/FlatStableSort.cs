@@ -171,7 +171,7 @@ public static class FlatStableSort
                 return;
         }
 
-        var mid = len / 2;
+        var mid = (len + 1) / 2;
         var dataLeft = data.Slice(0, mid, data.BufferId);
         var dataRight = data.Slice(mid, len - mid, data.BufferId);
         var auxLeft = aux.Slice(0, mid, aux.BufferId);
@@ -217,7 +217,7 @@ public static class FlatStableSort
             return;
         }
 
-        var mid = len / 2;
+        var mid = (len + 1) / 2;
         var dataLeft = data.Slice(0, mid, data.BufferId);
         var dataRight = data.Slice(mid, len - mid, data.BufferId);
         var auxLeft = aux.Slice(0, mid, aux.BufferId);
