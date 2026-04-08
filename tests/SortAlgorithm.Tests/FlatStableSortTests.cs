@@ -84,6 +84,145 @@ public class FlatStableSortTests
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
+    // Tail block RearrangeWithIndex edge-case tests
+    // These six scenarios exercise the invariant that RearrangeWithIndex never copies
+    // a shorter tail block (ntail elements) into a full-size block slot.
+    // That invariant requires _index[nblock-1] == nblock-1 after all MergeRangePos calls.
+
+    /// <summary>
+    /// n % blockSize == 1 and n % blockSize == blockSize-1:
+    /// boundary tail sizes with random data and stability check.
+    /// </summary>
+    [Test]
+    [Arguments(1)]
+    [Arguments(IntBlockSize - 1)]
+    public async Task TailBoundarySizeStabilityTest(int tailSize)
+    {
+        var n = (2 * IntBlockSize) + tailSize;
+        var rng = new Random(42);
+        var items = Enumerable.Range(0, n)
+            .Select(i => new StabilityTestItem(rng.Next(0, 50), i))
+            .ToArray();
+        var expected = items.OrderBy(x => x.Value).ToArray();
+
+        FlatStableSort.Sort(items.AsSpan(), new StatisticsContext());
+
+        for (var i = 0; i < items.Length; i++)
+        {
+            await Assert.That(items[i].Value).IsEqualTo(expected[i].Value);
+            await Assert.That(items[i].OriginalIndex).IsEqualTo(expected[i].OriginalIndex);
+        }
+    }
+
+    /// <summary>
+    /// Tail block contains the maximum values: tail data stays at the physical end.
+    /// Exercises the case where the tail block does NOT need to permute across block boundaries.
+    /// </summary>
+    [Test]
+    [Arguments(1)]
+    [Arguments(128)]
+    [Arguments(IntBlockSize - 1)]
+    public async Task TailContainsMaxValuesRearrangeTest(int tailSize)
+    {
+        var totalLength = (2 * IntBlockSize) + tailSize;
+        var items = new StabilityTestItem[totalLength];
+
+        // Block 0: small values [1..10]
+        for (var i = 0; i < IntBlockSize; i++)
+            items[i] = new StabilityTestItem(i / 100 + 1, i);
+
+        // Block 1: medium values [20..30]
+        for (var i = 0; i < IntBlockSize; i++)
+            items[IntBlockSize + i] = new StabilityTestItem(i / 100 + 20, IntBlockSize + i);
+
+        // Tail: large unique values [100..100+tailSize) — always sort to the end
+        var tailStart = 2 * IntBlockSize;
+        for (var i = 0; i < tailSize; i++)
+            items[tailStart + i] = new StabilityTestItem(100 + i, tailStart + i);
+
+        var expected = items.OrderBy(x => x.Value).ToArray();
+        FlatStableSort.Sort(items.AsSpan(), new StatisticsContext());
+
+        for (var i = 0; i < items.Length; i++)
+        {
+            await Assert.That(items[i].Value).IsEqualTo(expected[i].Value);
+            await Assert.That(items[i].OriginalIndex).IsEqualTo(expected[i].OriginalIndex);
+        }
+    }
+
+    /// <summary>
+    /// All elements equal: every block (including the tail) carries the same value.
+    /// Only OriginalIndex order can distinguish correctness; tests full-array stability.
+    /// </summary>
+    [Test]
+    [Arguments(1)]
+    [Arguments(100)]
+    [Arguments(IntBlockSize - 1)]
+    public async Task AllEqualElementsWithTailStabilityTest(int tailSize)
+    {
+        var n = (2 * IntBlockSize) + tailSize;
+        var items = Enumerable.Range(0, n)
+            .Select(i => new StabilityTestItem(42, i))
+            .ToArray();
+
+        FlatStableSort.Sort(items.AsSpan(), new StatisticsContext());
+
+        for (var i = 0; i < items.Length; i++)
+            await Assert.That(items[i].Value).IsEqualTo(42);
+
+        for (var i = 1; i < items.Length; i++)
+            await Assert.That(items[i - 1].OriginalIndex).IsLessThan(items[i].OriginalIndex);
+    }
+
+    /// <summary>
+    /// Equal keys that span the boundary between the last full block and the tail block.
+    /// Verifies that MergeRangePos + RearrangeWithIndex preserve stable order across that boundary.
+    /// </summary>
+    [Test]
+    [Arguments(1)]
+    [Arguments(50)]
+    [Arguments(IntBlockSize - 1)]
+    public async Task EqualKeysCrossingTailBoundaryStabilityTest(int tailSize)
+    {
+        const int equalValue = 5;
+        const int equalInBlock = 100; // how many elements at the end of block 1 get equalValue
+        var totalLength = (2 * IntBlockSize) + tailSize;
+        var items = new StabilityTestItem[totalLength];
+
+        // Block 0: distinct values well above equalValue
+        for (var i = 0; i < IntBlockSize; i++)
+            items[i] = new StabilityTestItem(100 + i, i);
+
+        // Block 1 first part: distinct values
+        for (var i = 0; i < IntBlockSize - equalInBlock; i++)
+            items[IntBlockSize + i] = new StabilityTestItem(200 + i, IntBlockSize + i);
+
+        // Block 1 last part: equalValue (these straddle the block/tail boundary)
+        for (var i = IntBlockSize - equalInBlock; i < IntBlockSize; i++)
+            items[IntBlockSize + i] = new StabilityTestItem(equalValue, IntBlockSize + i);
+
+        // Tail first part: equalValue (continuation of the equal run from block 1)
+        var tailStart = 2 * IntBlockSize;
+        var equalInTail = Math.Min(equalInBlock, tailSize);
+        for (var i = 0; i < equalInTail; i++)
+            items[tailStart + i] = new StabilityTestItem(equalValue, tailStart + i);
+
+        // Tail remainder: distinct values
+        for (var i = equalInTail; i < tailSize; i++)
+            items[tailStart + i] = new StabilityTestItem(300 + i, tailStart + i);
+
+        var expected = items.OrderBy(x => x.Value).ToArray();
+        FlatStableSort.Sort(items.AsSpan(), new StatisticsContext());
+
+        for (var i = 0; i < items.Length; i++)
+        {
+            await Assert.That(items[i].Value).IsEqualTo(expected[i].Value);
+            await Assert.That(items[i].OriginalIndex).IsEqualTo(expected[i].OriginalIndex);
+        }
+    }
+
+    // Stability tests
+
     [Test]
     [MethodDataSource(typeof(MockStabilityData), nameof(MockStabilityData.Generate))]
     public async Task StabilityTest(StabilityTestItem[] items)
@@ -177,6 +316,7 @@ public class FlatStableSortTests
     [Arguments(1)]
     [Arguments(17)]
     [Arguments(257)]
+    [Arguments(IntBlockSize - 1)]
     public async Task TailBlockRearrangePreservesStableOrderTest(int tailLength)
     {
         var items = CreateTailBlockStressItems(tailLength);
@@ -210,6 +350,7 @@ public class FlatStableSortTests
     [Arguments(1)]
     [Arguments(17)]
     [Arguments(257)]
+    [Arguments(IntBlockSize - 1)]
     public async Task TailBlockStatisticsStaySwapFreeTest(int tailLength)
     {
         var stats = new StatisticsContext();
