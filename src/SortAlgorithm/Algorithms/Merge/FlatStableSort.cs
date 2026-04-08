@@ -157,6 +157,15 @@ public static class FlatStableSort
         }
     }
 
+    /// <summary>
+    /// Sorts the elements in <paramref name="data"/> in-place, using <paramref name="aux"/> as scratch space.
+    /// Result is left in <paramref name="data"/>. Mirrors Boost's <c>range_sort_data</c>.
+    /// </summary>
+    /// <remarks>
+    /// Delegates to <see cref="RangeSortBuffer"/> for each half (writing sorted output into
+    /// <paramref name="aux"/>), then <see cref="MergeFromBufferToData"/> combines them back into
+    /// <paramref name="data"/>.
+    /// </remarks>
     private static void RangeSortData<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -171,7 +180,7 @@ public static class FlatStableSort
                 return;
         }
 
-        // flast_stable_sort always splits halves with mid = (len+1)/2, favoring the left half when len is odd.
+        // flat_stable_sort always splits halves with mid = (len+1)/2, favoring the left half when len is odd.
         var mid = (len + 1) / 2;
         var dataLeft = data.Slice(0, mid, data.BufferId);
         var dataRight = data.Slice(mid, len - mid, data.BufferId);
@@ -183,6 +192,16 @@ public static class FlatStableSort
         MergeFromBufferToData(aux, mid, data);
     }
 
+    /// <summary>
+    /// Sorts the elements in <paramref name="data"/> and writes the sorted result into <paramref name="aux"/>.
+    /// Mirrors Boost's <c>range_sort_buffer</c>.
+    /// </summary>
+    /// <remarks>
+    /// The sorted output is placed in <paramref name="aux"/>; <paramref name="data"/> may be modified
+    /// as intermediate scratch. Handles len 0/1/2 as special cases without recursion. For larger
+    /// ranges, delegates to <see cref="RangeSortData"/> for each half (result in <paramref name="data"/>),
+    /// then <see cref="MergeFromDataToBuffer"/> combines them into <paramref name="aux"/>.
+    /// </remarks>
     private static void RangeSortBuffer<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -229,6 +248,13 @@ public static class FlatStableSort
         MergeFromDataToBuffer(data, mid, aux);
     }
 
+    /// <summary>
+    /// Stable merge of <paramref name="data"/>[0..<paramref name="mid"/>) and
+    /// <paramref name="data"/>[<paramref name="mid"/>..len) into <paramref name="aux"/>.
+    /// </summary>
+    /// <remarks>
+    /// <c>IsLessOrEqual</c> favours the left element on equal keys, preserving stable order.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void MergeFromDataToBuffer<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, int mid, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
@@ -261,6 +287,13 @@ public static class FlatStableSort
             data.CopyTo(right, aux, dst, len - right);
     }
 
+    /// <summary>
+    /// Stable merge of <paramref name="aux"/>[0..<paramref name="mid"/>) and
+    /// <paramref name="aux"/>[<paramref name="mid"/>..len) into <paramref name="data"/>.
+    /// </summary>
+    /// <remarks>
+    /// <c>IsLessOrEqual</c> favours the left element on equal keys, preserving stable order.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void MergeFromBufferToData<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> aux, int mid, SortSpan<T, TComparer, TContext> data)
         where TComparer : IComparer<T>
@@ -293,6 +326,15 @@ public static class FlatStableSort
             aux.CopyTo(right, data, dst, len - right);
     }
 
+    /// <summary>
+    /// Stably inserts the sorted range [<paramref name="mid"/>..<paramref name="last"/>) into the sorted
+    /// prefix [<paramref name="first"/>..<paramref name="mid"/>), using <paramref name="aux"/> as scratch.
+    /// Mirrors Boost's <c>insert_sorted</c>.
+    /// </summary>
+    /// <remarks>
+    /// Processes tail elements right-to-left; each insertion point is found with
+    /// <see cref="UpperBound"/> (inserts <em>after</em> equal elements, preserving stability).
+    /// </remarks>
     private static void InsertSorted<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, int first, int mid, int last, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -321,6 +363,15 @@ public static class FlatStableSort
         }
     }
 
+    /// <summary>
+    /// Stably inserts the sorted range [<paramref name="first"/>..<paramref name="mid"/>) into the sorted
+    /// suffix [<paramref name="mid"/>..<paramref name="last"/>), using <paramref name="aux"/> as scratch.
+    /// Mirrors Boost's <c>insert_sorted_backward</c>.
+    /// </summary>
+    /// <remarks>
+    /// Processes head elements left-to-right; each insertion point is found with
+    /// <see cref="LowerBound"/> (inserts <em>before</em> equal elements, preserving stability).
+    /// </remarks>
     private static void InsertSortedBackward<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, int first, int mid, int last, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -349,6 +400,17 @@ public static class FlatStableSort
         }
     }
 
+    /// <summary>
+    /// Stable merge where the left half is in <paramref name="buf"/>[0..<paramref name="leftLen"/>)
+    /// and the right half is already in <paramref name="main"/> at
+    /// [<paramref name="mainStart"/>+<paramref name="leftLen"/>..+<paramref name="rightLen"/>).
+    /// Writes the merged result into <paramref name="main"/> starting at <paramref name="mainStart"/>.
+    /// </summary>
+    /// <remarks>
+    /// Used by <see cref="SortSmall"/> for 3–4 block groups after sorting the left half into
+    /// <c>_temp</c>. <c>IsLessOrEqual</c> favours the left (<paramref name="buf"/>) element on equal
+    /// keys. Remaining right elements are already in place; only a remaining-left flush is needed.
+    /// </remarks>
     private static void MergeHalf<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> buf, SortSpan<T, TComparer, TContext> main, int mainStart, int leftLen, int rightLen)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -379,6 +441,16 @@ public static class FlatStableSort
             buf.CopyTo(left, main, dst, leftEnd - left);
     }
 
+    /// <summary>
+    /// Reverse stable merge where the right half is in <paramref name="buf"/>[0..<paramref name="rightLen"/>)
+    /// and the left half is in <paramref name="main"/>[<paramref name="mainStart"/>..+<paramref name="leftLen"/>).
+    /// Fills <paramref name="main"/> from the high end downward.
+    /// </summary>
+    /// <remarks>
+    /// Takes from the left when <c>IsGreaterThan(left, right)</c>, otherwise from
+    /// <paramref name="buf"/>. Remaining right elements in <paramref name="buf"/> are flushed into
+    /// the front of the merged region; remaining left elements are already in place.
+    /// </remarks>
     private static void MergeHalfBackward<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> main, int mainStart, int leftLen, SortSpan<T, TComparer, TContext> buf, int rightLen)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -407,6 +479,7 @@ public static class FlatStableSort
             buf.CopyTo(0, main, mainStart, right + 1);
     }
 
+    /// <summary>Reverses elements in <paramref name="s"/>[<paramref name="lo"/>..<paramref name="hi"/>] in-place.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Reverse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lo, int hi)
         where TComparer : IComparer<T>
@@ -416,10 +489,19 @@ public static class FlatStableSort
             s.Swap(lo++, hi--);
     }
 
+    /// <summary>Returns ⌈<paramref name="value"/> / <paramref name="divisor"/>⌉ using integer arithmetic.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int CeilDiv(int value, int divisor)
         => (value + divisor - 1) / divisor;
 
+    /// <summary>
+    /// Binary search returning the first index in [<paramref name="first"/>..<paramref name="last"/>)
+    /// where <c>s[i] &gt; <paramref name="value"/></c> (strict upper bound).
+    /// </summary>
+    /// <remarks>
+    /// Uses <c>IsLessOrEqual(s[mid], value)</c>: advances past equal elements,
+    /// so the insertion point is <em>after</em> any equal values.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int UpperBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, T value)
         where TComparer : IComparer<T>
@@ -441,6 +523,14 @@ public static class FlatStableSort
         return first;
     }
 
+    /// <summary>
+    /// Binary search returning the first index in [<paramref name="first"/>..<paramref name="last"/>)
+    /// where <c>s[i] ≥ <paramref name="value"/></c> (strict lower bound).
+    /// </summary>
+    /// <remarks>
+    /// Uses <c>IsLessThan(s[mid], value)</c>: does not advance past equal elements,
+    /// so the insertion point is <em>before</em> any equal values.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int LowerBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, T value)
         where TComparer : IComparer<T>
@@ -462,6 +552,15 @@ public static class FlatStableSort
         return first;
     }
 
+    /// <summary>
+    /// Returns the block size for type <typeparamref name="T"/>, mirroring Boost's <c>block_size_fss</c>.
+    /// </summary>
+    /// <remarks>
+    /// Block size is a power of two selected by element size in bytes via a lookup table:
+    /// <c>powers = [10, 10, 10, 9, 8, 7, 6, 6]</c> (index = log₂(sizeof−1), clamped to 0–7).
+    /// <c>string</c> is always treated as 64 (1&lt;&lt;6) regardless of its reference size.
+    /// Example: <c>int</c> (4 bytes) → bitSize = log₂(3) = 1 → powers[1] = 10 → blockSize = 1024.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int GetBlockSize<T>()
     {
@@ -481,6 +580,19 @@ public static class FlatStableSort
 
     }
 
+    /// <summary>
+    /// Holds all state for a block-level stable merge pass over <see cref="_data"/>.
+    /// Mirrors Boost's <c>merge_block</c> class.
+    /// </summary>
+    /// <remarks>
+    /// Uses a <em>deferred-permutation</em> model: the recursive <see cref="Divide"/>/<see cref="MergeRangePos"/>
+    /// pipeline maintains a logical permutation in <see cref="_index"/> without physically moving blocks.
+    /// <see cref="RearrangeWithIndex"/> materialises the permutation in a single cycle-following pass at the end.
+    /// <para>
+    /// <see cref="_temp"/> is the shared circular-buffer scratch of capacity 2×<see cref="_blockSize"/>.
+    /// <see cref="_scratch"/> (length 2×<see cref="_nblock"/>+1) is scratch for <see cref="MergeRangePos"/>.
+    /// </para>
+    /// </remarks>
     private readonly ref struct MergeBlockState<T, TComparer, TContext>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -509,6 +621,10 @@ public static class FlatStableSort
             _ntail = data.Length % blockSize;
         }
 
+        /// <summary>
+        /// Executes the block-level stable sort: recursively divides and merges block-index ranges,
+        /// then materialises the permutation with <see cref="RearrangeWithIndex"/>.
+        /// </summary>
         public void Sort()
         {
             if (_data.Length <= 1)
@@ -518,6 +634,16 @@ public static class FlatStableSort
             RearrangeWithIndex();
         }
 
+        /// <summary>
+        /// Recursively splits the block index range [<paramref name="indexFirst"/>..<paramref name="indexLast"/>)
+        /// in half, sorts each half, then merges with <see cref="MergeRangePos"/>.
+        /// Mirrors Boost's <c>divide</c>.
+        /// </summary>
+        /// <remarks>
+        /// nblock &lt; 5 → <see cref="SortSmall"/> (no recursion).
+        /// nblock &gt; 7 → attempts <see cref="IsSortedForward"/> / <see cref="IsSortedBackward"/> fast paths first.
+        /// Otherwise splits at <c>(nblock+1)/2</c>, recurses on each half, then merges.
+        /// </remarks>
         private void Divide(int indexFirst, int indexLast)
         {
             var nblock = indexLast - indexFirst;
@@ -543,6 +669,16 @@ public static class FlatStableSort
             MergeRangePos(indexFirst, middle, indexLast);
         }
 
+        /// <summary>
+        /// Sorts a small contiguous group of blocks (nblock &lt; 5) without further recursion.
+        /// Mirrors Boost's <c>sort_small</c>.
+        /// </summary>
+        /// <remarks>
+        /// nblock ≤ 0 → no-op. data.Length ≤ SORT_MIN_INTERNAL → <see cref="InsertionSort.SortCore"/> directly.
+        /// nblock &lt; 3 → <see cref="RangeSortData"/> (result stays in <c>_data</c>).
+        /// nblock 3–4 → sort right half with <see cref="RangeSortData"/>, sort left half with
+        /// <see cref="RangeSortBuffer"/> (result into <c>_temp</c>), merge with <see cref="MergeHalf"/>.
+        /// </remarks>
         private void SortSmall(int indexFirst, int indexLast)
         {
             var nblock = indexLast - indexFirst;
@@ -576,6 +712,18 @@ public static class FlatStableSort
             MergeHalf(leftAux, _data, left.Start, left.Length, right.Length);
         }
 
+        /// <summary>
+        /// Fast path: detects that the leading portion of the block range is already ascending,
+        /// sorts any unsorted tail, merges, then returns <c>true</c> to skip recursive splitting.
+        /// Returns <c>false</c> when no useful sorted prefix exists.
+        /// Mirrors Boost's forward fast path inside <c>divide</c>.
+        /// </summary>
+        /// <remarks>
+        /// Uses <see cref="NumberStableSortedForward"/> with <c>minProcess = max(blockSize, len/8)</c>.
+        /// When <c>nsorted2 ≤ 2×blockSize</c> the unsorted tail is handled via <see cref="SortSubRange"/> +
+        /// <see cref="InsertSorted"/>; otherwise the unsorted blocks recurse through <see cref="Divide"/>
+        /// before merging.
+        /// </remarks>
         private bool IsSortedForward(int indexFirst, int indexLast)
         {
             var nblock = indexLast - indexFirst;
@@ -604,6 +752,18 @@ public static class FlatStableSort
             return true;
         }
 
+        /// <summary>
+        /// Fast path: detects that the trailing portion of the block range is already ascending,
+        /// sorts any unsorted prefix, merges, then returns <c>true</c> to skip recursive splitting.
+        /// Returns <c>false</c> when no useful sorted suffix exists.
+        /// Mirrors Boost's backward fast path inside <c>divide</c>.
+        /// </summary>
+        /// <remarks>
+        /// Uses <see cref="NumberStableSortedBackward"/> with <c>minProcess = max(blockSize, len/8)</c>.
+        /// When <c>nsorted1 ≤ 2×blockSize</c> the unsorted prefix is handled via <see cref="SortSubRange"/> +
+        /// <see cref="InsertSortedBackward"/>; otherwise the unsorted blocks recurse through <see cref="Divide"/>
+        /// before merging.
+        /// </remarks>
         private bool IsSortedBackward(int indexFirst, int indexLast)
         {
             var nblock = indexLast - indexFirst;
@@ -666,6 +826,24 @@ public static class FlatStableSort
             }
         }
 
+        /// <summary>
+        /// Stably merges two sorted block-index ranges
+        /// [<paramref name="indexFirst"/>..<paramref name="indexMiddle"/>) and
+        /// [<paramref name="indexMiddle"/>..<paramref name="indexLast"/>) by updating <see cref="_index"/>
+        /// with the merged order. Mirrors Boost's <c>merge_range_pos</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Block positions are only written into <see cref="_index"/>; physical data movement is deferred
+        /// to <see cref="RearrangeWithIndex"/>. A <see cref="CircularSortBuffer{T,TComparer,TContext}"/> backed
+        /// by <see cref="_temp"/> buffers elements during the merge via <see cref="MergeCircular"/>.
+        /// </para>
+        /// <para>
+        /// Tail-block handling: when the last right block is the tail block (<c>_ntail ≠ 0</c>), its
+        /// elements are pushed into the circular buffer and the tail index is appended to the left group;
+        /// <see cref="MoveRangePosBackward"/> then shifts the combined physical region to its correct layout.
+        /// </para>
+        /// </remarks>
         private void MergeRangePos(int indexFirst, int indexMiddle, int indexLast)
         {
             var leftCount = indexMiddle - indexFirst;
@@ -933,6 +1111,18 @@ public static class FlatStableSort
             }
         }
 
+        /// <summary>
+        /// Materialises the deferred block permutation in <see cref="_index"/> by following each cycle
+        /// and physically moving blocks into their correct positions.
+        /// Mirrors Boost's <c>rearrange_with_index</c>.
+        /// </summary>
+        /// <remarks>
+        /// For each out-of-place position, saves the initial block in <see cref="_temp"/> and follows
+        /// the permutation cycle — copying each block one step forward — until the cycle closes back
+        /// at the starting position. Each visited entry in <see cref="_index"/> is reset to itself as
+        /// it is placed. <see cref="_temp"/> must hold at least one full block (guaranteed by the
+        /// 2×blockSize allocation in <see cref="SortCore"/>).
+        /// </remarks>
         private void RearrangeWithIndex()
         {
             var pos = 0;
@@ -967,10 +1157,12 @@ public static class FlatStableSort
             }
         }
 
+        /// <summary>Returns <c>true</c> when <paramref name="position"/> is the last block and the tail is shorter than a full block.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsTail(int position)
             => position == (_nblock - 1) && _ntail != 0;
 
+        /// <summary>Returns the physical element range [start, start+length) for the block at <paramref name="position"/>.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ElementRange GetRange(int position)
         {
@@ -979,6 +1171,7 @@ public static class FlatStableSort
             return new ElementRange(start, end - start);
         }
 
+        /// <summary>Returns the physical element range covering <paramref name="count"/> consecutive blocks starting at <paramref name="position"/>.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ElementRange GetGroupRange(int position, int count)
         {
@@ -1009,19 +1202,19 @@ public static class FlatStableSort
 
         public CircularSortBuffer(SortSpan<T, TComparer, TContext> buffer)
         {
-            _buffer   = buffer;
+            _buffer = buffer;
             _capacity = buffer.Length;
-            _mask     = _capacity - 1;   // valid only when _capacity is a power of two
-            _nelem    = 0;
-            _first    = 0;
+            _mask = _capacity - 1;   // valid only when _capacity is a power of two
+            _nelem = 0;
+            _first = 0;
         }
 
         // --- State properties (mirrors Boost's size() / capacity() / empty() / full() / free_size()) ---
-        public int  Size     => _nelem;
-        public int  Capacity => _capacity;
-        public int  FreeSize => _capacity - _nelem;
-        public bool Empty    => _nelem == 0;
-        public bool Full     => _nelem == _capacity;
+        public int Size => _nelem;
+        public int Capacity => _capacity;
+        public int FreeSize => _capacity - _nelem;
+        public bool Empty => _nelem == 0;
+        public bool Full => _nelem == _capacity;
 
         /// <summary>Clears the buffer without touching the backing storage (mirrors Boost's <c>clear()</c>).</summary>
         public void Clear() { _nelem = 0; _first = 0; }
@@ -1114,11 +1307,17 @@ public static class FlatStableSort
         }
     }
 
+    /// <summary>A half-open element range [<see cref="Start"/>, <see cref="Start"/>+<see cref="Length"/>) within the data span.</summary>
     private readonly record struct ElementRange(int Start, int Length)
     {
         public int End => Start + Length;
     }
 
+    /// <summary>
+    /// Scans forward from <paramref name="first"/> to find the longest already-sorted prefix
+    /// (ascending or descending). Reverses a descending prefix in-place.
+    /// Returns its length if ≥ <paramref name="minProcess"/>, otherwise 0.
+    /// </summary>
     private static int NumberStableSortedForward<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int minProcess)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -1146,6 +1345,11 @@ public static class FlatStableSort
         return nsorted;
     }
 
+    /// <summary>
+    /// Scans backward from <paramref name="last"/> to find the longest already-sorted suffix
+    /// (ascending or descending). Reverses a descending suffix in-place.
+    /// Returns its length if ≥ <paramref name="minProcess"/>, otherwise 0.
+    /// </summary>
     private static int NumberStableSortedBackward<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int minProcess)
         where TComparer : IComparer<T>
         where TContext : ISortContext
