@@ -692,7 +692,7 @@ public static class FlatStableSort
                     hasRight = true;
                 }
 
-                if (circ.Count == 0)
+                if (circ.Size == 0)
                 {
                     if (!_data.IsLessThan(_data.Read(rangeB.Start), _data.Read(rangeA.End - 1)))
                     {
@@ -741,7 +741,7 @@ public static class FlatStableSort
             if (leftPos == leftCount)
             {
                 var tailRange = GetRange(rightScratch[rightPos]);
-                circ.PopMoveFront(_data, tailRange.Start, circ.Count);
+                circ.PopMoveFront(_data, tailRange.Start, circ.Size);
                 while (rightPos < rightCount)
                 {
                     _index[outIndex++] = rightScratch[rightPos++];
@@ -760,7 +760,7 @@ public static class FlatStableSort
                 leftCount++;
             }
 
-            circ.PopMoveFront(_data, remainingRange.Start, circ.Count);
+            circ.PopMoveFront(_data, remainingRange.Start, circ.Size);
             while (leftPos < leftCount)
             {
                 _index[outIndex++] = leftScratch[leftPos++];
@@ -878,54 +878,128 @@ public static class FlatStableSort
         }
     }
 
+    /// <summary>
+    /// Circular buffer backed by a <see cref="SortSpan{T,TComparer,TContext}"/>.
+    /// Mirrors the API and state model of Boost's <c>circular_buffer&lt;Value_t, Power2&gt;</c>:
+    /// capacity is always a power of two, so all index wrap-around uses a bitmask
+    /// (<c>_mask = _capacity - 1</c>) instead of modulo division.
+    /// </summary>
     private ref struct CircularSortBuffer<T, TComparer, TContext>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // --- Storage (mirrors Boost's ptr / NMAX / MASK) ---
         private readonly SortSpan<T, TComparer, TContext> _buffer;
-        private readonly int _capacity;
-        private int _count;
+        private readonly int _capacity;  // NMAX — must be a power of two
+        private readonly int _mask;      // MASK = NMAX - 1  (enables & instead of %)
+        // --- Mutable state (mirrors Boost's nelem / first_pos) ---
+        private int _nelem;
         private int _first;
 
         public CircularSortBuffer(SortSpan<T, TComparer, TContext> buffer)
         {
-            _buffer = buffer;
+            _buffer   = buffer;
             _capacity = buffer.Length;
-            _count = 0;
-            _first = 0;
+            _mask     = _capacity - 1;   // valid only when _capacity is a power of two
+            _nelem    = 0;
+            _first    = 0;
         }
 
-        public int Count => _count;
+        // --- State properties (mirrors Boost's size() / capacity() / empty() / full() / free_size()) ---
+        public int  Size     => _nelem;
+        public int  Capacity => _capacity;
+        public int  FreeSize => _capacity - _nelem;
+        public bool Empty    => _nelem == 0;
+        public bool Full     => _nelem == _capacity;
 
+        /// <summary>Clears the buffer without touching the backing storage (mirrors Boost's <c>clear()</c>).</summary>
+        public void Clear() { _nelem = 0; _first = 0; }
+
+        // --- Element access (mirrors Boost's front() / back() / operator[]) ---
+        /// <summary>Returns the first element (mirrors Boost's <c>front()</c>).</summary>
+        public T Front() => _buffer.Read(_first);
+
+        /// <summary>Returns the last element (mirrors Boost's <c>back()</c>).</summary>
+        public T Back() => _buffer.Read((_first + _nelem - 1) & _mask);
+
+        /// <summary>Returns the element at logical position <paramref name="pos"/> (mirrors Boost's <c>operator[]</c>).</summary>
+        public T this[int pos] => _buffer.Read((_first + pos) & _mask);
+
+        // --- Single-element mutations (mirrors Boost's push_back / push_front / pop_front / pop_back) ---
+        /// <summary>Appends a value at the back (mirrors Boost's <c>push_back(val)</c>).</summary>
         public void PushBack(T value)
         {
-            _buffer.Write((_first + _count) % _capacity, value);
-            _count++;
+            _buffer.Write((_first + _nelem) & _mask, value);
+            _nelem++;
         }
 
+        /// <summary>Prepends a value at the front (mirrors Boost's <c>push_front(val)</c>).</summary>
+        public void PushFront(T value)
+        {
+            _first = (_first + _mask) & _mask;   // (_first - 1 + NMAX) & MASK
+            _buffer.Write(_first, value);
+            _nelem++;
+        }
+
+        /// <summary>Removes the front element (mirrors Boost's <c>pop_front()</c>).</summary>
+        public void PopFront()
+        {
+            _nelem--;
+            _first = (_first + 1) & _mask;
+        }
+
+        /// <summary>Removes the back element (mirrors Boost's <c>pop_back()</c>).</summary>
+        public void PopBack() => _nelem--;
+
+        // --- Bulk move operations (mirrors Boost's push_move_back / push_move_front / pop_move_front / pop_move_back) ---
+        /// <summary>
+        /// Moves <paramref name="length"/> elements from <paramref name="source"/> into the back
+        /// (mirrors Boost's <c>push_move_back(iter, num)</c>).
+        /// </summary>
         public void PushMoveBack(SortSpan<T, TComparer, TContext> source, int start, int length)
         {
+            var pos = _first + _nelem;
+            _nelem += length;
             for (var i = 0; i < length; i++)
-                PushBack(source.Read(start + i));
+                _buffer.Write(pos++ & _mask, source.Read(start + i));
         }
 
+        /// <summary>
+        /// Moves <paramref name="length"/> elements from <paramref name="source"/> into the front
+        /// (mirrors Boost's <c>push_copy_front</c> semantics — decrements <c>first_pos</c> before writing).
+        /// </summary>
+        public void PushMoveFront(SortSpan<T, TComparer, TContext> source, int start, int length)
+        {
+            _first = (_first + _capacity - length) & _mask;
+            _nelem += length;
+            var pos = _first;
+            for (var i = 0; i < length; i++)
+                _buffer.Write(pos++ & _mask, source.Read(start + i));
+        }
+
+        /// <summary>
+        /// Moves <paramref name="length"/> elements from the front into <paramref name="destination"/>
+        /// (mirrors Boost's <c>pop_move_front(iter, num)</c>).
+        /// </summary>
         public void PopMoveFront(SortSpan<T, TComparer, TContext> destination, int start, int length)
         {
+            _nelem -= length;
+            var pos = _first;
+            _first = (_first + length) & _mask;
             for (var i = 0; i < length; i++)
-            {
-                destination.Write(start + i, _buffer.Read(_first));
-                _first = (_first + 1) % _capacity;
-            }
-
-            _count -= length;
+                destination.Write(start + i, _buffer.Read(pos++ & _mask));
         }
 
+        /// <summary>
+        /// Moves <paramref name="length"/> elements from the back into <paramref name="destination"/>
+        /// (mirrors Boost's <c>pop_move_back(iter, num)</c>).
+        /// </summary>
         public void PopMoveBack(SortSpan<T, TComparer, TContext> destination, int start, int length)
         {
-            _count -= length;
-            var pos = (_first + _count) % _capacity;
+            _nelem -= length;
+            var pos = (_first + _nelem) & _mask;
             for (var i = 0; i < length; i++)
-                destination.Write(start + i, _buffer.Read((pos + i) % _capacity));
+                destination.Write(start + i, _buffer.Read(pos++ & _mask));
         }
     }
 
