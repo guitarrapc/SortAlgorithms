@@ -12,6 +12,8 @@
 ///   <item><term>CircleSortPass</term><description>pass (current pass number, 1-based)</description></item>
 ///   <item><term>CircleSortInterval</term><description>lo (interval start index) / hi (interval end index) / depth (recursion depth, 0-based)</description></item>
 ///   <item><term>SelectionFindMin</term><description>i (sorted boundary) / last (last index)</description></item>
+///   <item><term>TournamentBuild</term><description>n (element count) / size (leaf count = next power of 2 ≥ n)</description></item>
+///   <item><term>TournamentExtract</term><description>sortedCount+1 (1-based extraction step) / n (total elements)</description></item>
 ///   <item><term>DoubleSelectionFindMinMax</term><description>left (left boundary) / right (right boundary)</description></item>
 ///   <item><term>CycleSortCycle</term><description>cycleStart (cycle start index) / last (last index)</description></item>
 ///   <item><term>PancakeFindMax</term><description>first (head index) / currentSize (current subarray last index, inclusive)</description></item>
@@ -238,6 +240,18 @@ public enum SortPhase
     /// param1=current extraction step (1-based), param2=total extractions (n-1)
     /// </summary>
     HeapExtract,
+
+    /// <summary>
+    /// Tournament Sort build phase: constructing the winner tree from the input array.
+    /// param1=n (element count), param2=size (leaf count = next power of 2 ≥ n)
+    /// </summary>
+    TournamentBuild,
+
+    /// <summary>
+    /// Tournament Sort extract phase: extracting the current minimum and replaying the tournament.
+    /// param1=sortedCount+1 (1-based extraction step), param2=n (total elements)
+    /// </summary>
+    TournamentExtract,
 
     /// <summary>
     /// In-place reversal of a subrange (e.g. MinHeapSort final step).

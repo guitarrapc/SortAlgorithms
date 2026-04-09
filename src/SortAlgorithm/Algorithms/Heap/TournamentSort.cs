@@ -56,6 +56,7 @@ public static class TournamentSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
+    private const int BUFFER_TREE = 1;       // Winner tree (stores span indices, not values)
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -152,21 +153,25 @@ public static class TournamentSort
             var tree = (rentedArray = ArrayPool<int>.Shared.Rent(treeSize)).AsSpan(0, treeSize);
 
             // Build
+            s.Context.OnPhase(SortPhase.TournamentBuild, n, size);
+
             // Leaves: tree[size + i] = i (span-relative index) for i in [0, n),
             //         tree[size + i] = Sentinel for i in [n, size).
             for (var i = 0; i < n; i++)
-                tree[size + i] = i;
+                WriteTree(s, tree, size + i, i);
             for (var i = n; i < size; i++)
-                tree[size + i] = Sentinel;
+                WriteTree(s, tree, size + i, Sentinel);
 
             // Internal nodes built bottom-up (index size-1 down to 1).
             for (var i = size - 1; i >= 1; i--)
-                tree[i] = TournamentWinner(s, first, tree[i << 1], tree[(i << 1) | 1], Sentinel);
+                WriteTree(s, tree, i, TournamentWinner(s, first, tree[i << 1], tree[(i << 1) | 1], Sentinel));
 
             // Extract
             // Repeat n-1 times: extract min → place at sorted position → replay two paths.
             for (var sortedCount = 0; sortedCount < n - 1; sortedCount++)
             {
+                s.Context.OnPhase(SortPhase.TournamentExtract, sortedCount + 1, n);
+
                 var winner = tree[1]; // root = index of current global minimum
                 s.Context.OnRole(first + winner, BUFFER_MAIN, RoleType.CurrentMin);
 
@@ -179,7 +184,7 @@ public static class TournamentSort
                     s.Context.OnRole(first + sortedCount, BUFFER_MAIN, RoleType.None);
 
                 // Retire the sorted leaf and restore the tournament tree.
-                tree[size + sortedCount] = Sentinel;
+                WriteTree(s, tree, size + sortedCount, Sentinel);
                 ReplayPath(s, first, tree, size + sortedCount, Sentinel);
 
                 // When winner ≠ sortedCount the swap changed span[winner]; replay its path too.
@@ -219,7 +224,19 @@ public static class TournamentSort
     {
         for (var node = leaf >> 1; node >= 1; node >>= 1)
         {
-            tree[node] = TournamentWinner(s, first, tree[node << 1], tree[(node << 1) | 1], sentinel);
+            WriteTree(s, tree, node, TournamentWinner(s, first, tree[node << 1], tree[(node << 1) | 1], sentinel));
         }
+    }
+
+    /// <summary>
+    /// Writes a value to the winner tree and notifies the context (for visualization tracking).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void WriteTree<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> tree, int index, int value)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        tree[index] = value;
+        s.Context.OnIndexWrite(index, BUFFER_TREE, value);
     }
 }
