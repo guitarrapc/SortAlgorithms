@@ -314,6 +314,36 @@ public enum SortPhase
     /// </summary>
     BlockMergeSortLevel,
 
+    /// <summary>
+    /// FlatStableSort small-group sort: directly sorting a group of fewer than 5 blocks.
+    /// param1=start (absolute, inclusive), param2=end (absolute, inclusive), param3=nblock
+    /// </summary>
+    FlatStableSortSmall,
+
+    /// <summary>
+    /// FlatStableSort block-index merge: merging two sorted block groups via circular scratch buffer.
+    /// param1=leftCount (number of blocks in left group), param2=rightCount (number of blocks in right group), param3=total blocks
+    /// </summary>
+    FlatStableSortMergeBlocks,
+
+    /// <summary>
+    /// FlatStableSort rearrange: materializing the deferred block permutation in-place (cycle-following).
+    /// param1=start (absolute, inclusive), param2=end (absolute, inclusive), param3=nblock
+    /// </summary>
+    FlatStableSortRearrange,
+
+    /// <summary>
+    /// FlatStableSort pre-sorted forward fast path: sorted prefix detected, only unsorted tail processed.
+    /// param1=start (absolute, inclusive), param2=end (absolute, inclusive), param3=nsorted (leading sorted element count)
+    /// </summary>
+    FlatStableSortPreSortedForward,
+
+    /// <summary>
+    /// FlatStableSort pre-sorted backward fast path: sorted suffix detected, only unsorted prefix processed.
+    /// param1=start (absolute, inclusive), param2=end (absolute, inclusive), param3=nsorted (trailing sorted element count)
+    /// </summary>
+    FlatStableSortPreSortedBackward,
+
     // Adaptive family
 
     /// <summary>

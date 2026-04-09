@@ -686,6 +686,8 @@ public static class FlatStableSort
             var dataRange = GetGroupRange(_index[indexFirst], nblock);
             var data = _data.Slice(dataRange.Start, dataRange.Length, BUFFER_MAIN);
 
+            _data.Context.OnPhase(SortPhase.FlatStableSortSmall, _data.Offset + dataRange.Start, _data.Offset + dataRange.End - 1, nblock);
+
             if (data.Length <= SORT_MIN_INTERNAL)
             {
                 InsertionSort.SortCore(data, 0, data.Length);
@@ -729,11 +731,15 @@ public static class FlatStableSort
             var minProcess = Math.Max(_blockSize, rng.Length >> 3);
             var nsorted1 = NumberStableSortedForward(_data, rng.Start, rng.End, minProcess);
             if (nsorted1 == rng.Length)
+            {
+                _data.Context.OnPhase(SortPhase.FlatStableSortPreSortedForward, _data.Offset + rng.Start, _data.Offset + rng.End - 1, nsorted1);
                 return true;
+            }
 
             if (nsorted1 == 0)
                 return false;
 
+            _data.Context.OnPhase(SortPhase.FlatStableSortPreSortedForward, _data.Offset + rng.Start, _data.Offset + rng.End - 1, nsorted1);
             var nsorted2 = rng.Length - nsorted1;
             var mid = rng.Start + nsorted1;
             if (nsorted2 <= (_blockSize << 1))
@@ -769,11 +775,15 @@ public static class FlatStableSort
             var minProcess = Math.Max(_blockSize, rng.Length >> 3);
             var nsorted2 = NumberStableSortedBackward(_data, rng.Start, rng.End, minProcess);
             if (nsorted2 == rng.Length)
+            {
+                _data.Context.OnPhase(SortPhase.FlatStableSortPreSortedBackward, _data.Offset + rng.Start, _data.Offset + rng.End - 1, nsorted2);
                 return true;
+            }
 
             if (nsorted2 == 0)
                 return false;
 
+            _data.Context.OnPhase(SortPhase.FlatStableSortPreSortedBackward, _data.Offset + rng.Start, _data.Offset + rng.End - 1, nsorted2);
             var mid = rng.End - nsorted2;
             var nsorted1 = rng.Length - nsorted2;
             if (nsorted1 <= (_blockSize << 1))
@@ -848,6 +858,12 @@ public static class FlatStableSort
             var rightCount = indexLast - indexMiddle;
             if (leftCount == 0 || rightCount == 0)
                 return;
+
+            _data.Context.OnPhase(SortPhase.FlatStableSortMergeBlocks, leftCount, rightCount, leftCount + rightCount);
+            var leftRoleIdx = _data.Offset + _index[indexFirst] * _blockSize;
+            var rightRoleIdx = _data.Offset + _index[indexMiddle] * _blockSize;
+            _data.Context.OnRole(leftRoleIdx, BUFFER_MAIN, RoleType.LeftPointer);
+            _data.Context.OnRole(rightRoleIdx, BUFFER_MAIN, RoleType.RightPointer);
 
             var leftScratch = _scratch[..(leftCount + 1)];
             var rightScratch = _scratch.Slice(leftCount + 1, rightCount);
@@ -936,6 +952,8 @@ public static class FlatStableSort
                     _index[outIndex++] = rightScratch[rightPos++];
                 }
 
+                _data.Context.OnRole(leftRoleIdx, BUFFER_MAIN, RoleType.None);
+                _data.Context.OnRole(rightRoleIdx, BUFFER_MAIN, RoleType.None);
                 return;
             }
 
@@ -954,10 +972,13 @@ public static class FlatStableSort
             {
                 _index[outIndex++] = leftScratch[leftPos++];
             }
+
+            _data.Context.OnRole(leftRoleIdx, BUFFER_MAIN, RoleType.None);
+            _data.Context.OnRole(rightRoleIdx, BUFFER_MAIN, RoleType.None);
         }
 
         /// <summary>
-        /// Merges elements from range A (<paramref name="firstA"/>..<paramref name="endA"/>) and range B
+        /// Merges elements from range A
         /// (<paramref name="firstB"/>..<paramref name="endB"/>) into the circular buffer <paramref name="circ"/>,
         /// stopping as soon as one range is exhausted.
         /// Returns <c>true</c> if range A was exhausted first (or simultaneously), <c>false</c> if range B was.
@@ -1123,6 +1144,8 @@ public static class FlatStableSort
         /// </remarks>
         private void RearrangeWithIndex()
         {
+            _data.Context.OnPhase(SortPhase.FlatStableSortRearrange, _data.Offset, _data.Offset + _data.Length - 1, _nblock);
+
             var pos = 0;
             while (pos < _index.Length)
             {
@@ -1133,6 +1156,7 @@ public static class FlatStableSort
                     return;
 
                 var initialRange = GetRange(pos);
+                _data.Context.OnRole(_data.Offset + initialRange.Start, BUFFER_MAIN, RoleType.Pivot);
                 _data.CopyTo(initialRange.Start, _temp, 0, initialRange.Length);
                 var auxLength = initialRange.Length;
 
@@ -1151,6 +1175,7 @@ public static class FlatStableSort
                 var finalRange = GetRange(dest);
                 _temp.CopyTo(0, _data, finalRange.Start, auxLength);
                 _index[dest] = dest;
+                _data.Context.OnRole(_data.Offset + initialRange.Start, BUFFER_MAIN, RoleType.None);
                 pos++;
             }
         }

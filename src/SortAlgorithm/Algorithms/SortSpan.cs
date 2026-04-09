@@ -46,6 +46,12 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     public int Length => _span.Length;
 
     /// <summary>
+    /// Gets the absolute offset of this span in the original buffer.
+    /// Used by algorithms to compute absolute indices for OnPhase/OnRole calls.
+    /// </summary>
+    public int Offset => _offset;
+
+    /// <summary>
     /// Gets the buffer identifier for this span.
     /// </summary>
     public int BufferId => _bufferId;
