@@ -26,8 +26,11 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
+      - uses: guitarrapc/actions/.github/actions/setup-dotnet@main
+        with:
+          dotnet-version: 10.0.x
       - name: Update algorithm list
-        run: python3 scripts/update-readme-algorithms.py
+        run: dotnet run scripts/UpdateReadmeAlgorithms.cs
       - name: Commit and push if changed
         run: |
           if git diff --quiet README.md; then
