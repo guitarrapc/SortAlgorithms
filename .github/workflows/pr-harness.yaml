@@ -1,0 +1,11 @@
+name: PR Harness
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  harness:
+    permissions:
+      contents: read
+    uses: guitarrapc/actions/.github/workflows/pr-harness.yaml@69151d5f1403d1dd204aebc6dde522d9e61a91f3 # v1.0.0
