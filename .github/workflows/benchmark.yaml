@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
-      - uses: guitarrapc/actions/.github/actions/setup-dotnet@69151d5f1403d1dd204aebc6dde522d9e61a91f3 # v1.0.0
+      - uses: guitarrapc/actions/.github/actions/setup-dotnet@9122a18b0dea07585a242b9eb6ed7886f8587c49 # v1.0.1
         with:
           dotnet-version: 10.0.x
       - name: dotnet build
