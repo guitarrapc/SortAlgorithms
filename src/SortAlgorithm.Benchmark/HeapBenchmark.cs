@@ -1,4 +1,4 @@
-﻿namespace SortAlgorithm.Benchmark;
+namespace SortAlgorithm.Benchmark;
 
 [MemoryDiagnoser]
 [RankColumn]
@@ -10,65 +10,65 @@ public class HeapBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _heapArray = default!;
-    private int[] _minheapArray = default!;
-    private int[] _ternaryHeapArray = default!;
-    private int[] _bottomupHeapArray = default!;
-    private int[] _weakHeapArray = default!;
-    private int[] _smoothArray = default!;
-    private int[] _tournamentArray = default!;
+    private int[] _pristine = default!;
+    private int[] _work = default!;
 
-    [IterationSetup]
+    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
+    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
+    // identical for every benchmark method, so relative comparisons are unaffected.
+    [GlobalSetup]
     public void Setup()
     {
-        _heapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _minheapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _ternaryHeapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _bottomupHeapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _weakHeapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _smoothArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _tournamentArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pristine = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _work = new int[Size];
     }
 
     [Benchmark(Baseline = true)]
     public void HeapSort()
     {
-        SortAlgorithm.Algorithms.HeapSort.Sort(_heapArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.HeapSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void MinHeapSort()
     {
-        SortAlgorithm.Algorithms.MinHeapSort.Sort(_minheapArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.MinHeapSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void TernaryHeapSort()
     {
-        SortAlgorithm.Algorithms.TernaryHeapSort.Sort(_ternaryHeapArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.TernaryHeapSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void BottomupHeapSort()
     {
-        SortAlgorithm.Algorithms.BottomupHeapSort.Sort(_bottomupHeapArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.BottomupHeapSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void WeakHeapSort()
     {
-        SortAlgorithm.Algorithms.WeakHeapSort.Sort(_weakHeapArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.WeakHeapSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void SmoothSort()
     {
-        SortAlgorithm.Algorithms.SmoothSort.Sort(_smoothArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.SmoothSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void TournamentSort()
     {
-        SortAlgorithm.Algorithms.TournamentSort.Sort(_tournamentArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.TournamentSort.Sort(_work.AsSpan());
     }
 }

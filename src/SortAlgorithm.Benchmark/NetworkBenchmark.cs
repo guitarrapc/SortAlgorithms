@@ -1,4 +1,4 @@
-﻿namespace SortAlgorithm.Benchmark;
+namespace SortAlgorithm.Benchmark;
 
 [MemoryDiagnoser]
 [RankColumn]
@@ -10,33 +10,37 @@ public class NetworkBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _batcheroddevenmergeArray = default!;
-    private int[] _bionicArray = default!;
-    private int[] _bionicRecursiveArray = default!;
+    private int[] _pristine = default!;
+    private int[] _work = default!;
 
-    [IterationSetup]
+    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
+    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
+    // identical for every benchmark method, so relative comparisons are unaffected.
+    [GlobalSetup]
     public void Setup()
     {
-        _batcheroddevenmergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _bionicArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _bionicRecursiveArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pristine = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _work = new int[Size];
     }
 
     [Benchmark(Baseline = true)]
     public void BitonicSort()
     {
-        SortAlgorithm.Algorithms.BitonicSort.Sort(_bionicArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.BitonicSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void BitonicRecursiveSort()
     {
-        SortAlgorithm.Algorithms.BitonicSortNonOptimized.Sort(_bionicRecursiveArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.BitonicSortNonOptimized.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void BatcherOddEvenMergeSort()
     {
-        SortAlgorithm.Algorithms.BatcherOddEvenMergeSort.Sort(_bionicRecursiveArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.BatcherOddEvenMergeSort.Sort(_work.AsSpan());
     }
 }

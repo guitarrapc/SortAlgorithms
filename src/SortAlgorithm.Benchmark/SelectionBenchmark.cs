@@ -1,4 +1,4 @@
-﻿namespace SortAlgorithm.Benchmark;
+namespace SortAlgorithm.Benchmark;
 
 [MemoryDiagnoser]
 [RankColumn]
@@ -10,41 +10,44 @@ public class SelectionBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _selectionArray = default!;
-    private int[] _doubleSelectionArray = default!;
-    private int[] _cycleArray = default!;
-    private int[] _pancakeArray = default!;
+    private int[] _pristine = default!;
+    private int[] _work = default!;
 
-    [IterationSetup]
+    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
+    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
+    // identical for every benchmark method, so relative comparisons are unaffected.
+    [GlobalSetup]
     public void Setup()
     {
-        _selectionArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _doubleSelectionArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _cycleArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _pancakeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pristine = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _work = new int[Size];
     }
 
     [Benchmark(Baseline = true)]
     public void SelectionSort()
     {
-        SortAlgorithm.Algorithms.SelectionSort.Sort(_selectionArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.SelectionSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void DoubleSelectionSort()
     {
-        SortAlgorithm.Algorithms.DoubleSelectionSort.Sort(_cycleArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.DoubleSelectionSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void CycleSort()
     {
-        SortAlgorithm.Algorithms.CycleSort.Sort(_cycleArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.CycleSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void PancakeSort()
     {
-        SortAlgorithm.Algorithms.PancakeSort.Sort(_pancakeArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.PancakeSort.Sort(_work.AsSpan());
     }
 }

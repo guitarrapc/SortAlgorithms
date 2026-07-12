@@ -1,4 +1,4 @@
-﻿namespace SortAlgorithm.Benchmark;
+namespace SortAlgorithm.Benchmark;
 
 [MemoryDiagnoser]
 [RankColumn]
@@ -10,41 +10,44 @@ public class TreeBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _balancedbinarytreeArray = default!;
-    private int[] _binarytreeArray = default!;
-    private int[] _splayArray = default!;
-    private int[] _treapArray = default!;
+    private int[] _pristine = default!;
+    private int[] _work = default!;
 
-    [IterationSetup]
+    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
+    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
+    // identical for every benchmark method, so relative comparisons are unaffected.
+    [GlobalSetup]
     public void Setup()
     {
-        _balancedbinarytreeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _binarytreeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _splayArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _treapArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pristine = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _work = new int[Size];
     }
 
     [Benchmark]
     public void BalancedBinaryTreeSort()
     {
-        SortAlgorithm.Algorithms.BalancedBinaryTreeSort.Sort(_balancedbinarytreeArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.BalancedBinaryTreeSort.Sort(_work.AsSpan());
     }
 
     [Benchmark(Baseline = true)]
     public void BinaryTreeSort()
     {
-        SortAlgorithm.Algorithms.BinaryTreeSort.Sort(_binarytreeArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.BinaryTreeSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void SplaySort()
     {
-        SortAlgorithm.Algorithms.SplaySort.Sort(_splayArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.SplaySort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void TreapSort()
     {
-        SortAlgorithm.Algorithms.TreapSort.Sort(_treapArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.TreapSort.Sort(_work.AsSpan());
     }
 }

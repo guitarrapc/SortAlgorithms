@@ -1,4 +1,4 @@
-﻿namespace SortAlgorithm.Benchmark;
+namespace SortAlgorithm.Benchmark;
 
 [MemoryDiagnoser]
 [RankColumn]
@@ -10,26 +10,31 @@ public class AdaptiveBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _dropMergeArray = default!;
-    private int[] _patienceArray = default!;
+    private int[] _pristine = default!;
+    private int[] _work = default!;
 
-    [IterationSetup]
+    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
+    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
+    // identical for every benchmark method, so relative comparisons are unaffected.
+    [GlobalSetup]
     public void Setup()
     {
-        _dropMergeArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _patienceArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pristine = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _work = new int[Size];
     }
 
     [Benchmark(Baseline = true)]
     public void DropMergeSort()
     {
-        SortAlgorithm.Algorithms.DropMergeSort.Sort(_dropMergeArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.DropMergeSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void PatienceSort()
     {
-        SortAlgorithm.Algorithms.PatienceSort.Sort(_patienceArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.PatienceSort.Sort(_work.AsSpan());
     }
 }
 
@@ -43,17 +48,23 @@ public class AdaptiveSlowBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _strandArray = default!;
+    private int[] _pristine = default!;
+    private int[] _work = default!;
 
-    [IterationSetup]
+    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
+    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
+    // identical for every benchmark method, so relative comparisons are unaffected.
+    [GlobalSetup]
     public void Setup()
     {
-        _strandArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pristine = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _work = new int[Size];
     }
 
     [Benchmark(Baseline = true)]
     public void StrandSort()
     {
-        SortAlgorithm.Algorithms.StrandSort.Sort(_strandArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.StrandSort.Sort(_work.AsSpan());
     }
 }
