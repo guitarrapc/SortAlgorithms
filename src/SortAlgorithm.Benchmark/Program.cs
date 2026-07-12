@@ -4,14 +4,6 @@ using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using System.Reflection;
 
-// --verify: run the PDQSort variant correctness gate without benchmarking, then exit.
-if (Array.IndexOf(args, "--verify") >= 0)
-{
-    SortAlgorithm.Benchmark.PDQVariants.VerifyAllVariantsOnce();
-    Console.WriteLine("Correctness gate PASSED: all PDQSort variants match Array.Sort.");
-    return;
-}
-
 // --micro: micro-optimization loop mode. Meaningful statistics (3 warmups / 15 iterations)
 // plus JIT disassembly export. The default ShortRun (3 iterations, InvocationCount=1) is
 // too noisy for accept/refute decisions at the μs scale.

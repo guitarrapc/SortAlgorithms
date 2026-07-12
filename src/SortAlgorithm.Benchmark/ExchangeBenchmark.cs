@@ -1,4 +1,4 @@
-﻿namespace SortAlgorithm.Benchmark;
+namespace SortAlgorithm.Benchmark;
 
 [MemoryDiagnoser]
 [RankColumn]
@@ -10,49 +10,51 @@ public class ExchangeBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _bubbleArray = default!;
-    private int[] _cocktailShakerArray = default!;
-    private int[] _oddEvenArray = default!;
-    private int[] _combArray = default!;
-    private int[] _circleArray = default!;
+    private int[] _pristine = default!;
+    private int[] _work = default!;
 
-    [IterationSetup]
+    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
+    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
+    // identical for every benchmark method, so relative comparisons are unaffected.
+    [GlobalSetup]
     public void Setup()
     {
-        _bubbleArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _cocktailShakerArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _oddEvenArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _combArray = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _circleArray = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _pristine = BenchmarkData.GenerateIntArray(Size, Pattern);
+        _work = new int[Size];
     }
 
     [Benchmark(Baseline = true)]
     public void BubbleSort()
     {
-        SortAlgorithm.Algorithms.BubbleSort.Sort(_bubbleArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.BubbleSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void CocktailShakerSort()
     {
-        SortAlgorithm.Algorithms.CocktailShakerSort.Sort(_cocktailShakerArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.CocktailShakerSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void OddEvenSort()
     {
-        SortAlgorithm.Algorithms.OddEvenSort.Sort(_oddEvenArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.OddEvenSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void CombSort()
     {
-        SortAlgorithm.Algorithms.CombSort.Sort(_combArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.CombSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void CircleSort()
     {
-        SortAlgorithm.Algorithms.CircleSort.Sort(_circleArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.CircleSort.Sort(_work.AsSpan());
     }
 }

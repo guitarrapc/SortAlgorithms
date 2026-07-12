@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Utils;
+using SortAlgorithm.Utils;
 
 namespace SortAlgorithm.Benchmark;
 
@@ -12,105 +12,100 @@ public class IntKeyBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private IntKey[] _quickArray = default!;
-    private IntKey[] _quick3wayArray = default!;
-    private IntKey[] _quickmedian3Array = default!;
-    private IntKey[] _quickmedian9Array = default!;
-    private IntKey[] _dualpivotquickArray = default!;
-    private IntKey[] _stablequickArray = default!;
-    private IntKey[] _introArray = default!;
-    private IntKey[] _introdotnetArray = default!;
-    private IntKey[] _pdqArray = default!;
-    private IntKey[] _stdArray = default!;
-    private IntKey[] _blockquickArray = default!;
-    private IntKey[] _dotnetArray = default!;
+    private IntKey[] _pristine = default!;
+    private IntKey[] _work = default!;
 
-    [IterationSetup]
+    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
+    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
+    // identical for every benchmark method, so relative comparisons are unaffected.
+    [GlobalSetup]
     public void Setup()
     {
-        _quickArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _quick3wayArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _quickmedian3Array = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _quickmedian9Array = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _dualpivotquickArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _stablequickArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _introArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _introdotnetArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _pdqArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _stdArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _blockquickArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
-        _dotnetArray = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
+        _pristine = BenchmarkData.GenerateIntKeyArray(Size, Pattern);
+        _work = new IntKey[Size];
     }
 
     [Benchmark(Baseline = true)]
     public void QuickSort()
     {
-        SortAlgorithm.Algorithms.QuickSort.Sort(_quickArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.QuickSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void QuickSort3way()
     {
-        SortAlgorithm.Algorithms.QuickSort3way.Sort(_quick3wayArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.QuickSort3way.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void QuickSortMedian3()
     {
-        SortAlgorithm.Algorithms.QuickSortMedian3.Sort(_quickmedian3Array.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.QuickSortMedian3.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void QuickSortMedian9()
     {
-        SortAlgorithm.Algorithms.QuickSortMedian9.Sort(_quickmedian9Array.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.QuickSortMedian9.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void DualPivotQuickSort()
     {
-        SortAlgorithm.Algorithms.DualPivotQuickSort.Sort(_dualpivotquickArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.DualPivotQuickSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void StableQuickSort()
     {
-        SortAlgorithm.Algorithms.StableQuickSort.Sort(_stablequickArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.StableQuickSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void IntroSort()
     {
-        SortAlgorithm.Algorithms.IntroSort.Sort(_introArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.IntroSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void IntroSortDotnet()
     {
-        SortAlgorithm.Algorithms.IntroSortDotnet.Sort(_introdotnetArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.IntroSortDotnet.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void PDQSort()
     {
-        SortAlgorithm.Algorithms.PDQSort.Sort(_pdqArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.PDQSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void StdSort()
     {
-        SortAlgorithm.Algorithms.StdSort.Sort(_stdArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.StdSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void BlockQuickSort()
     {
-        SortAlgorithm.Algorithms.BlockQuickSort.Sort(_blockquickArray.AsSpan());
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.BlockQuickSort.Sort(_work.AsSpan());
     }
 
     [Benchmark]
     public void DotnetSort()
     {
-        _dotnetArray.AsSpan().Sort();
+        Array.Copy(_pristine, _work, Size);
+        _work.AsSpan().Sort();
     }
 }
