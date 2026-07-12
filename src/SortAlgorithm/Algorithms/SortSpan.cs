@@ -82,7 +82,10 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #if DEBUG
         return _span[i]; // TEMP: bounds check for debugging OOB
 #else
-        return Unsafe.Add(ref _ref, i);
+        // (nint)(uint) zero-extends the index (non-negative by contract).
+        // Unsafe.Add(ref, int) sign-extends, emitting a movsxd per access; the unsigned cast
+        // lets the JIT reuse the implicitly zero-extended 32-bit register in the address mode.
+        return Unsafe.Add(ref _ref, (nint)(uint)i);
 #endif
     }
 
@@ -102,7 +105,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #if DEBUG
         _span[i] = value; // TEMP: bounds check for debugging OOB
 #else
-        Unsafe.Add(ref _ref, i) = value;
+        Unsafe.Add(ref _ref, (nint)(uint)i) = value;
 #endif
     }
 
@@ -133,7 +136,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             return _comparer.Compare(_span[i], _span[j]);
 #else
             // Fast path: bounds-check-free access without tracking
-            return _comparer.Compare(Unsafe.Add(ref _ref, i), Unsafe.Add(ref _ref, j));
+            return _comparer.Compare(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref _ref, (nint)(uint)j));
 #endif
         }
     }
@@ -163,7 +166,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             return _comparer.Compare(_span[i], value);
 #else
             // Fast path: bounds-check-free access without tracking
-            return _comparer.Compare(Unsafe.Add(ref _ref, i), value);
+            return _comparer.Compare(Unsafe.Add(ref _ref, (nint)(uint)i), value);
 #endif
         }
     }
@@ -193,7 +196,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             return _comparer.Compare(value, _span[i]);
 #else
             // Fast path: bounds-check-free access without tracking
-            return _comparer.Compare(value, Unsafe.Add(ref _ref, i));
+            return _comparer.Compare(value, Unsafe.Add(ref _ref, (nint)(uint)i));
 #endif
         }
     }
@@ -334,8 +337,8 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #else
         if (_comparer is IComparableComparer)
         {
-            ref T ai = ref Unsafe.Add(ref _ref, i);
-            ref T aj = ref Unsafe.Add(ref _ref, j);
+            ref T ai = ref Unsafe.Add(ref _ref, (nint)(uint)i);
+            ref T aj = ref Unsafe.Add(ref _ref, (nint)(uint)j);
             if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref ai) < Unsafe.As<T, byte>(ref aj);
             if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref ai) < Unsafe.As<T, sbyte>(ref aj);
             if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref ai) < Unsafe.As<T, ushort>(ref aj);
@@ -350,7 +353,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref ai) < Unsafe.As<T, double>(ref aj);
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) < Unsafe.As<T, Half>(ref aj);
         }
-        return _comparer.Compare(Unsafe.Add(ref _ref, i), Unsafe.Add(ref _ref, j)) < 0;
+        return _comparer.Compare(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref _ref, (nint)(uint)j)) < 0;
 #endif
     }
 
@@ -378,8 +381,8 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #else
         if (_comparer is IComparableComparer)
         {
-            ref T ai = ref Unsafe.Add(ref _ref, i);
-            ref T aj = ref Unsafe.Add(ref _ref, j);
+            ref T ai = ref Unsafe.Add(ref _ref, (nint)(uint)i);
+            ref T aj = ref Unsafe.Add(ref _ref, (nint)(uint)j);
             if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref ai) <= Unsafe.As<T, byte>(ref aj);
             if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref ai) <= Unsafe.As<T, sbyte>(ref aj);
             if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref ai) <= Unsafe.As<T, ushort>(ref aj);
@@ -394,7 +397,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref ai) <= Unsafe.As<T, double>(ref aj);
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) <= Unsafe.As<T, Half>(ref aj);
         }
-        return _comparer.Compare(Unsafe.Add(ref _ref, i), Unsafe.Add(ref _ref, j)) <= 0;
+        return _comparer.Compare(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref _ref, (nint)(uint)j)) <= 0;
 #endif
     }
 
@@ -500,8 +503,8 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #else
         if (_comparer is IComparableComparer)
         {
-            ref T ai = ref Unsafe.Add(ref _ref, i);
-            ref T aj = ref Unsafe.Add(ref _ref, j);
+            ref T ai = ref Unsafe.Add(ref _ref, (nint)(uint)i);
+            ref T aj = ref Unsafe.Add(ref _ref, (nint)(uint)j);
             if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref ai) > Unsafe.As<T, byte>(ref aj);
             if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref ai) > Unsafe.As<T, sbyte>(ref aj);
             if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref ai) > Unsafe.As<T, ushort>(ref aj);
@@ -516,7 +519,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref ai) > Unsafe.As<T, double>(ref aj);
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) > Unsafe.As<T, Half>(ref aj);
         }
-        return _comparer.Compare(Unsafe.Add(ref _ref, i), Unsafe.Add(ref _ref, j)) > 0;
+        return _comparer.Compare(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref _ref, (nint)(uint)j)) > 0;
 #endif
     }
 
@@ -544,8 +547,8 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #else
         if (_comparer is IComparableComparer)
         {
-            ref T ai = ref Unsafe.Add(ref _ref, i);
-            ref T aj = ref Unsafe.Add(ref _ref, j);
+            ref T ai = ref Unsafe.Add(ref _ref, (nint)(uint)i);
+            ref T aj = ref Unsafe.Add(ref _ref, (nint)(uint)j);
             if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref ai) >= Unsafe.As<T, byte>(ref aj);
             if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref ai) >= Unsafe.As<T, sbyte>(ref aj);
             if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref ai) >= Unsafe.As<T, ushort>(ref aj);
@@ -560,7 +563,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref ai) >= Unsafe.As<T, double>(ref aj);
             if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) >= Unsafe.As<T, Half>(ref aj);
         }
-        return _comparer.Compare(Unsafe.Add(ref _ref, i), Unsafe.Add(ref _ref, j)) >= 0;
+        return _comparer.Compare(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref _ref, (nint)(uint)j)) >= 0;
 #endif
     }
 
@@ -582,8 +585,8 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #if DEBUG
         (_span[i], _span[j]) = (_span[j], _span[i]);
 #else
-        ref T si = ref Unsafe.Add(ref _ref, i);
-        ref T sj = ref Unsafe.Add(ref _ref, j);
+        ref T si = ref Unsafe.Add(ref _ref, (nint)(uint)i);
+        ref T sj = ref Unsafe.Add(ref _ref, (nint)(uint)j);
         (si, sj) = (sj, si);
 #endif
     }
