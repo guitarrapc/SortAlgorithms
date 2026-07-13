@@ -21,7 +21,7 @@ on:
           - "*TreeBenchmark*"
           - "*IntKeyBenchmark*"
           - "*StringBenchmark*"
-      allow_any_cpu:
+      allow-any-cpu:
         type: boolean
         description: Skip the AMD EPYC 7763 CPU check (single-benchmark runs only; "*" always skips).
         default: false
@@ -86,11 +86,11 @@ jobs:
       - name: benchmark
         id: benchmark
         run: |
-          dotnet run -c Release --no-build --no-launch-profile --project ./src/SortAlgorithm.Benchmark/SortAlgorithm.Benchmark.csproj -- --filter "${FILTER}" ${ALLOW_ANY_CPU}
+          dotnet run -c Release --no-build --no-launch-profile --project ./src/SortAlgorithm.Benchmark/SortAlgorithm.Benchmark.csproj -- --filter "${FILTER}" ${allow-any-cpu}
           echo "result=success" >> $GITHUB_OUTPUT
         env:
           FILTER: ${{ matrix.filter }}
-          ALLOW_ANY_CPU: ${{ needs.plan.outputs.parallel == 'true' && '--allow-any-cpu' || (inputs.allow_any_cpu && '--allow-any-cpu' || '') }}
+          allow-any-cpu: ${{ needs.plan.outputs.parallel == 'true' && '--allow-any-cpu' || (inputs.allow-any-cpu && '--allow-any-cpu' || '') }}
       - name: Check benchmark result
         if: ${{ steps.benchmark.outputs.result != 'success' }}
         run: exit 1
