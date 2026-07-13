@@ -101,6 +101,13 @@ public class PartitionBenchmark
     }
 
     [Benchmark]
+    public void PDQSortBranchless()
+    {
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.PDQSortBranchless.Sort(_work.AsSpan());
+    }
+
+    [Benchmark]
     public void StdSort()
     {
         Array.Copy(_pristine, _work, Size);
