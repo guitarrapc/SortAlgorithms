@@ -1,4 +1,4 @@
-# SortAlgorithms
+﻿# SortAlgorithms
 
 This repository shows implementation for the Major Sort Algorithm.
 Aim not to use LINQ or similar ease to use, but memory unefficient technique.
@@ -71,6 +71,7 @@ You can check various benchmark patterns at [GitHub Actions/Benchmark](https://g
 - [Intro Sort](./src/SortAlgorithm/Algorithms/Partition/IntroSort.cs)
 - [Intro Sort (Dotnet)](./src/SortAlgorithm/Algorithms/Partition/IntroSortDotnet.cs)
 - [Pattern-Defeating Quick Sort](./src/SortAlgorithm/Algorithms/Partition/PDQSort.cs)
+- [PDQ Sort Branchless](./src/SortAlgorithm/Algorithms/Partition/PDQSortBranchless.cs)
 - [Quick Sort](./src/SortAlgorithm/Algorithms/Partition/QuickSort.cs)
 - [Quick Sort (3-Way)](./src/SortAlgorithm/Algorithms/Partition/QuickSort3way.cs)
 - [Quick Sort (Median of 3)](./src/SortAlgorithm/Algorithms/Partition/QuickSortMedian3.cs)
