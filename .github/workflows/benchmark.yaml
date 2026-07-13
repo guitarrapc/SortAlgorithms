@@ -41,20 +41,8 @@ jobs:
         shell: bash
         run: |
           if [ "${BENCHMARK}" = "*" ]; then
-            echo 'matrix={"include":[
-              {"filter":"*AdaptiveBenchmark*|*AdaptiveSlowBenchmark*","slug":"Adaptive"},
-              {"filter":"*DistributionBenchmark*","slug":"Distribution"},
-              {"filter":"*ExchangeBenchmark*","slug":"Exchange"},
-              {"filter":"*HeapBenchmark*","slug":"Heap"},
-              {"filter":"*InsertionBenchmark*","slug":"Insertion"},
-              {"filter":"*MergeBenchmark*","slug":"Merge"},
-              {"filter":"*NetworkBenchmark*","slug":"Network"},
-              {"filter":"*PartitionBenchmark*","slug":"Partition"},
-              {"filter":"*SelectionBenchmark*","slug":"Selection"},
-              {"filter":"*TreeBenchmark*","slug":"Tree"},
-              {"filter":"*IntKeyBenchmark*","slug":"IntKey"},
-              {"filter":"*StringBenchmark*","slug":"String"}
-            ]}' >> "$GITHUB_OUTPUT"
+            MATRIX='{"include":[{"filter":"*AdaptiveBenchmark*|*AdaptiveSlowBenchmark*","slug":"Adaptive"},{"filter":"*DistributionBenchmark*","slug":"Distribution"},{"filter":"*ExchangeBenchmark*","slug":"Exchange"},{"filter":"*HeapBenchmark*","slug":"Heap"},{"filter":"*InsertionBenchmark*","slug":"Insertion"},{"filter":"*MergeBenchmark*","slug":"Merge"},{"filter":"*NetworkBenchmark*","slug":"Network"},{"filter":"*PartitionBenchmark*","slug":"Partition"},{"filter":"*SelectionBenchmark*","slug":"Selection"},{"filter":"*TreeBenchmark*","slug":"Tree"},{"filter":"*IntKeyBenchmark*","slug":"IntKey"},{"filter":"*StringBenchmark*","slug":"String"}]}'
+            echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
             echo "parallel=true" >> "$GITHUB_OUTPUT"
           else
             FILTER="${BENCHMARK}"
@@ -86,11 +74,11 @@ jobs:
       - name: benchmark
         id: benchmark
         run: |
-          dotnet run -c Release --no-build --no-launch-profile --project ./src/SortAlgorithm.Benchmark/SortAlgorithm.Benchmark.csproj -- --filter "${FILTER}" ${allow-any-cpu}
+          dotnet run -c Release --no-build --no-launch-profile --project ./src/SortAlgorithm.Benchmark/SortAlgorithm.Benchmark.csproj -- --filter "${FILTER}" ${ALLOW_ANY_CPU}
           echo "result=success" >> $GITHUB_OUTPUT
         env:
           FILTER: ${{ matrix.filter }}
-          allow-any-cpu: ${{ needs.plan.outputs.parallel == 'true' && '--allow-any-cpu' || (inputs.allow-any-cpu && '--allow-any-cpu' || '') }}
+          ALLOW_ANY_CPU: ${{ needs.plan.outputs.parallel == 'true' && '--allow-any-cpu' || (inputs.allow-any-cpu && '--allow-any-cpu' || '') }}
       - name: Check benchmark result
         if: ${{ steps.benchmark.outputs.result != 'success' }}
         run: exit 1
