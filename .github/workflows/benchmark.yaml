@@ -27,7 +27,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-24.04
-    timeout-minutes: 120 # "*" runs ~1,400 benchmark cases at roughly 2-4s each (process spawn + measurement)
+    timeout-minutes: 60 # "*" runs ~1,400 benchmark cases at roughly 1s each (in-process, 6 iterations x 48ms)
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
