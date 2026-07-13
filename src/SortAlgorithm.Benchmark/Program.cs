@@ -4,38 +4,20 @@ using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using System.Reflection;
 
-// --micro: micro-optimization loop mode. Meaningful statistics (3 warmups / 15 iterations)
-// plus JIT disassembly export. The default ShortRun (3 iterations, InvocationCount=1) is
-// too noisy for accept/refute decisions at the μs scale.
-var micro = Array.IndexOf(args, "--micro") >= 0;
-args = Array.FindAll(args, static a => a != "--micro");
+var config = ManualConfig.CreateMinimumViable()
+    .AddDiagnoser(MemoryDiagnoser.Default)
+    //.AddExporter(DefaultExporters.Plain)
+    .AddExporter(MarkdownExporter.Default);
 
-ManualConfig config;
-if (micro)
+// In Local environment, run the short benchmark.
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
 {
-    config = ManualConfig.CreateMinimumViable()
-        .AddDiagnoser(MemoryDiagnoser.Default)
-        .AddDiagnoser(new DisassemblyDiagnoser(new DisassemblyDiagnoserConfig(
-            maxDepth: 3,
-            printSource: true,
-            exportGithubMarkdown: true,
-            exportCombinedDisassemblyReport: true)))
-        .AddExporter(MarkdownExporter.GitHub)
-        .AddJob(Job.Default.WithWarmupCount(3).WithIterationCount(15));
-}
-else
-{
-    config = ManualConfig.CreateMinimumViable()
-        .AddDiagnoser(MemoryDiagnoser.Default)
-        //.AddExporter(DefaultExporters.Plain)
-        .AddExporter(MarkdownExporter.Default);
-
-    // In Local environment, run the short benchmark.
-    if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
-    {
-        config.AddJob(Job.ShortRun);
-    }
+    config.AddJob(Job.ShortRun);
 }
 
+if (args.Length == 0)
+{
+    args = ["--filter", "*Benchmark*"];
+}
 
 BenchmarkSwitcher.FromAssembly(Assembly.GetEntryAssembly()!).Run(args, config);
