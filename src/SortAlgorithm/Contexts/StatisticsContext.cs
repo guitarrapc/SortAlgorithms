@@ -5,8 +5,11 @@
 /// </summary>
 /// <remarks>
 /// Use this context to gather statistics when implementing or analyzing sorting algorithms. The
-/// collected counts can be used to evaluate algorithm efficiency or compare different sorting strategies. This class is
-/// thread-safe for incrementing statistics.
+/// collected counts can be used to evaluate algorithm efficiency or compare different sorting strategies.
+/// Counters use plain (non-atomic) increments: every sort in this library is single-threaded, and
+/// Interlocked operations cost 10-20x a plain increment (lock-prefixed RMW + full memory barrier),
+/// which dominated instrumented-run time. Do not share one instance across concurrently running sorts;
+/// use one instance per sort (or per thread) instead.
 /// </remarks>
 public sealed class StatisticsContext : ISortContext
 {
@@ -27,7 +30,7 @@ public sealed class StatisticsContext : ISortContext
         // Always count comparisons (even with negative buffer IDs)
         // Negative buffer IDs in comparisons typically indicate index-less value comparisons,
         // which are still logically part of the sorting algorithm
-        Interlocked.Increment(ref _compareCount);
+        _compareCount++;
     }
 
     public void OnSwap(int i, int j, int bufferId)
@@ -36,11 +39,11 @@ public sealed class StatisticsContext : ISortContext
         if (bufferId < 0)
             return;
 
-        Interlocked.Increment(ref _swapCount);
+        _swapCount++;
         // Swap操作は内部的にRead×2 + Write×2を含む
         // temp = array[i] (Read), value = array[j] (Read), array[i] = value (Write), array[j] = temp (Write)
-        Interlocked.Add(ref _indexReadCount, 2);
-        Interlocked.Add(ref _indexWriteCount, 2);
+        _indexReadCount += 2;
+        _indexWriteCount += 2;
     }
 
     public void OnIndexRead(int index, int bufferId)
@@ -49,7 +52,7 @@ public sealed class StatisticsContext : ISortContext
         if (bufferId < 0)
             return;
 
-        Interlocked.Increment(ref _indexReadCount);
+        _indexReadCount++;
     }
 
     public void OnIndexWrite(int index, int bufferId, object? value = null)
@@ -58,7 +61,7 @@ public sealed class StatisticsContext : ISortContext
         if (bufferId < 0)
             return;
 
-        Interlocked.Increment(ref _indexWriteCount);
+        _indexWriteCount++;
     }
 
     public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null)
@@ -66,10 +69,10 @@ public sealed class StatisticsContext : ISortContext
         // Range copy is counted as: length reads from source + length writes to destination
         // Exclude operations with negative buffer IDs (reserved for non-array structures excluded from statistics)
         if (sourceBufferId >= 0)
-            Interlocked.Add(ref _indexReadCount, (ulong)length);
+            _indexReadCount += (ulong)length;
 
         if (destinationBufferId >= 0)
-            Interlocked.Add(ref _indexWriteCount, (ulong)length);
+            _indexWriteCount += (ulong)length;
     }
 
     public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0) { }
