@@ -11,7 +11,7 @@ const string RequiredCpu = "EPYC 7763";
 var allowAnyCpu = Array.IndexOf(args, "--allow-any-cpu") >= 0;
 args = Array.FindAll(args, static a => a != "--allow-any-cpu");
 
-if (!allowAnyCpu && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
+if (!allowAnyCpu && IsCiEnvironment())
 {
     var processorName = CpuDetector.Cpu?.ProcessorName;
     if (processorName is null || !processorName.Contains(RequiredCpu, StringComparison.OrdinalIgnoreCase))
@@ -22,6 +22,10 @@ if (!allowAnyCpu && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI
         Environment.Exit(1);
     }
 }
+
+static bool IsCiEnvironment() =>
+    !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")) ||
+    string.Equals(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"), "true", StringComparison.OrdinalIgnoreCase);
 
 var config = ManualConfig.CreateMinimumViable()
     .AddDiagnoser(MemoryDiagnoser.Default)
@@ -34,7 +38,7 @@ var config = ManualConfig.CreateMinimumViable()
 // the Array.Copy restore cost in [IterationSetup] — outside the timed region. A pinned
 // invocation count also skips the pilot stage, so per-case time stays bounded.
 // In Local environment, run the short benchmark.
-if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
+if (!IsCiEnvironment())
 {
     config.AddJob(Job.ShortRun
         .WithInvocationCount(SortBuffers.InvocationsPerIteration)
