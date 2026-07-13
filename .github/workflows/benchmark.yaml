@@ -117,8 +117,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://github-actions:${GITHUB_TOKEN}@github.com/${{ github.repository }}"
-          git fetch origin "${GITHUB_REF_NAME}"
-          git rebase FETCH_HEAD
+
+          if git diff --quiet README.md; then
+            echo "README unchanged, skipping commit"
+            exit 0
+          fi
 
           git add README.md
           git commit -m 'docs: update README benchmark results' -m "updated in run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
