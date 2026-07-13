@@ -626,7 +626,7 @@ stopwatch.Stop();
 **タスク:**
 1. `.github/agent_docs/sortspan_usage.md` の更新
 2. `.github/agent_docs/implementation_template.md` の更新
-3. `.github/copilot-instructions.md` の更新
+3. `AGENTS.md` の更新
 4. このドキュメント（`Release_ButStatistics.md`）の完成版作成
 
 ---
