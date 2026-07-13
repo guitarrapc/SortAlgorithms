@@ -5,7 +5,7 @@ on:
     inputs:
       benchmark:
         type: choice
-        description: Specify benchmark name to run. Use "*" to run all benchmarks in parallel.
+        description: Specify benchmark name to run. Use "*" to run all benchmarks.
         default: "*"
         options:
           - "*"
@@ -23,45 +23,15 @@ on:
           - "*StringBenchmark*"
       allow-any-cpu:
         type: boolean
-        description: Skip the AMD EPYC 7763 CPU check (single-benchmark runs only; "*" always skips).
+        description: Skip the AMD EPYC 7763 CPU requirement check.
         default: false
 
 jobs:
-  plan:
-    permissions:
-      contents: read
-    runs-on: ubuntu-24.04
-    timeout-minutes: 1
-    outputs:
-      matrix: ${{ steps.plan.outputs.matrix }}
-      parallel: ${{ steps.plan.outputs.parallel }}
-    steps:
-      - name: Plan benchmark matrix
-        id: plan
-        shell: bash
-        run: |
-          if [ "${BENCHMARK}" = "*" ]; then
-            MATRIX='{"include":[{"filter":"*Adaptive*","slug":"Adaptive"},{"filter":"*DistributionBenchmark*","slug":"Distribution"},{"filter":"*ExchangeBenchmark*","slug":"Exchange"},{"filter":"*HeapBenchmark*","slug":"Heap"},{"filter":"*InsertionBenchmark*","slug":"Insertion"},{"filter":"*MergeBenchmark*","slug":"Merge"},{"filter":"*NetworkBenchmark*","slug":"Network"},{"filter":"*PartitionBenchmark*","slug":"Partition"},{"filter":"*SelectionBenchmark*","slug":"Selection"},{"filter":"*TreeBenchmark*","slug":"Tree"},{"filter":"*IntKeyBenchmark*","slug":"IntKey"},{"filter":"*StringBenchmark*","slug":"String"}]}'
-            echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
-            echo "parallel=true" >> "$GITHUB_OUTPUT"
-          else
-            FILTER="${BENCHMARK}"
-            SLUG=$(echo "$FILTER" | sed 's/^\*//;s/\*$//')
-            echo "matrix={\"include\":[{\"filter\":\"$FILTER\",\"slug\":\"$SLUG\"}]}" >> "$GITHUB_OUTPUT"
-            echo "parallel=false" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          BENCHMARK: ${{ inputs.benchmark }}
-
   benchmark:
-    needs: [plan]
     permissions:
       contents: read
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -77,8 +47,8 @@ jobs:
           dotnet run -c Release --no-build --no-launch-profile --project ./src/SortAlgorithm.Benchmark/SortAlgorithm.Benchmark.csproj -- --filter "${FILTER}" ${ALLOW_ANY_CPU}
           echo "result=success" >> $GITHUB_OUTPUT
         env:
-          FILTER: ${{ matrix.filter }}
-          ALLOW_ANY_CPU: ${{ needs.plan.outputs.parallel == 'true' && '--allow-any-cpu' || (inputs.allow-any-cpu && '--allow-any-cpu' || '') }}
+          FILTER: ${{ inputs.benchmark == '*' && '*Benchmark*' || inputs.benchmark }}
+          ALLOW_ANY_CPU: ${{ inputs.allow-any-cpu && '--allow-any-cpu' || '' }}
       - name: Check benchmark result
         if: ${{ steps.benchmark.outputs.result != 'success' }}
         run: exit 1
@@ -86,14 +56,12 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
         with:
-          name: BenchmarkDotNet.Artifacts-${{ matrix.slug }}
+          name: BenchmarkDotNet.Artifacts
           path: BenchmarkDotNet.Artifacts/
           if-no-files-found: error
 
       - name: Output results to JobSummary
         run: |
-          echo "## ${{ matrix.slug }}" >> $GITHUB_STEP_SUMMARY
-
           for file in $(find BenchmarkDotNet.Artifacts/results -name "*.md" | head -n 1); do
             machine_info=$(sed -n 's/^[[:space:]]*//; /^\|/p' "$file" | grep -v "|")
             echo "$machine_info" >> $GITHUB_STEP_SUMMARY
@@ -101,9 +69,9 @@ jobs:
           done
 
           for file in $(find BenchmarkDotNet.Artifacts/results -name "*.md" | sort); do
-            title=$(basename "$file" .md | sed 's/-report-default//g')
+            title=$(basename "$file" .md | sed 's/-report-default//; s/-report-github//')
             content=$(sed -n 's/^[[:space:]]*//; /^\|/p' "$file" | grep "|")
-            echo "### $title" >> $GITHUB_STEP_SUMMARY
+            echo "## $title" >> $GITHUB_STEP_SUMMARY
             echo "$content" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           done
@@ -130,9 +98,8 @@ jobs:
       - name: Download benchmark artifacts
         uses: actions/download-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
+          name: BenchmarkDotNet.Artifacts
           path: artifacts
-          pattern: BenchmarkDotNet.Artifacts-*
-          merge-multiple: true
       - name: Update README benchmark section
         run: |
           dotnet run --file .github/scripts/UpdateBenchmarkReadme.cs -- \

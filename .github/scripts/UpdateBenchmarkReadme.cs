@@ -36,8 +36,6 @@ static string BuildBenchmarkSection(string artifactsDir, string runUrl)
     builder.AppendLine();
     builder.AppendLine($"Workflow run: {runUrl}");
     builder.AppendLine();
-    builder.AppendLine("> Parallel jobs may run on different CPUs (`allow-any-cpu` mode).");
-    builder.AppendLine();
 
     if (reportFiles.Count == 0)
     {
