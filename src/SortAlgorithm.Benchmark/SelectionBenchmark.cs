@@ -10,44 +10,41 @@ public class SelectionBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _pristine = default!;
-    private int[] _work = default!;
+    private SortBuffers<int> _buffers = default!;
 
-    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
-    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
-    // identical for every benchmark method, so relative comparisons are unaffected.
+    // Restore cost stays out of the timed region: [IterationSetup] refreshes a pool of
+    // pre-copied buffers and each invocation sorts a fresh one (see SortBuffers<T>).
+    // Program.cs pins the job's InvocationCount to the pool size.
     [GlobalSetup]
     public void Setup()
     {
-        _pristine = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _work = new int[Size];
+        _buffers = new SortBuffers<int>(BenchmarkData.GenerateIntArray(Size, Pattern));
     }
+
+    [IterationSetup]
+    public void IterationSetup() => _buffers.Reset();
 
     [Benchmark(Baseline = true)]
     public void SelectionSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.SelectionSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.SelectionSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void DoubleSelectionSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.DoubleSelectionSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.DoubleSelectionSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void CycleSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.CycleSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.CycleSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void PancakeSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.PancakeSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.PancakeSort.Sort(_buffers.Next().AsSpan());
     }
 }

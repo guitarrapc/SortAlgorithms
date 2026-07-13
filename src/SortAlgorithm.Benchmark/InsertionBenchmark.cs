@@ -10,93 +10,83 @@ public class InsertionBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _pristine = default!;
-    private int[] _work = default!;
+    private SortBuffers<int> _buffers = default!;
 
-    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
-    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
-    // identical for every benchmark method, so relative comparisons are unaffected.
+    // Restore cost stays out of the timed region: [IterationSetup] refreshes a pool of
+    // pre-copied buffers and each invocation sorts a fresh one (see SortBuffers<T>).
+    // Program.cs pins the job's InvocationCount to the pool size.
     [GlobalSetup]
     public void Setup()
     {
-        _pristine = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _work = new int[Size];
+        _buffers = new SortBuffers<int>(BenchmarkData.GenerateIntArray(Size, Pattern));
     }
+
+    [IterationSetup]
+    public void IterationSetup() => _buffers.Reset();
 
     [Benchmark(Baseline = true)]
     public void InsertionSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.InsertionSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.InsertionSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void PairInsertionSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.PairInsertionSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.PairInsertionSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void BinaryInsertSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.BinaryInsertionSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.BinaryInsertionSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void GnomeSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.GnomeSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.GnomeSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void LibrarySort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.LibrarySort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.LibrarySort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void MergeInsertionSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.MergeInsertionSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.MergeInsertionSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void ShellSortKnuth1973()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.ShellSortKnuth1973.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.ShellSortKnuth1973.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void ShellSortSedgewick1986()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.ShellSortSedgewick1986.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.ShellSortSedgewick1986.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void ShellSortTokuda1992()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.ShellSortTokuda1992.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.ShellSortTokuda1992.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void ShellSortCiura2001()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.ShellSortCiura2001.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.ShellSortCiura2001.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void ShellSortLee2021()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.ShellSortLee2021.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.ShellSortLee2021.Sort(_buffers.Next().AsSpan());
     }
 }

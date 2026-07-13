@@ -10,128 +10,113 @@ public class MergeBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _pristine = default!;
-    private int[] _work = default!;
+    private SortBuffers<int> _buffers = default!;
 
-    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
-    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
-    // identical for every benchmark method, so relative comparisons are unaffected.
+    // Restore cost stays out of the timed region: [IterationSetup] refreshes a pool of
+    // pre-copied buffers and each invocation sorts a fresh one (see SortBuffers<T>).
+    // Program.cs pins the job's InvocationCount to the pool size.
     [GlobalSetup]
     public void Setup()
     {
-        _pristine = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _work = new int[Size];
+        _buffers = new SortBuffers<int>(BenchmarkData.GenerateIntArray(Size, Pattern));
     }
+
+    [IterationSetup]
+    public void IterationSetup() => _buffers.Reset();
 
     [Benchmark(Baseline = true)]
     public void MergeSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.MergeSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.MergeSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void PingpongMergeSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.PingpongMergeSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.PingpongMergeSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void BottomupMergeSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.BottomupMergeSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.BottomupMergeSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void StdStableSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.StdStableSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.StdStableSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void RotateMergeSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.RotateMergeSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.RotateMergeSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void RotateMergeSortRecursive()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.RotateMergeSortRecursive.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.RotateMergeSortRecursive.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void SymMergeSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.SymMergeSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.SymMergeSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void BlockMergeSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.BlockMergeSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.BlockMergeSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void NaturalMergeSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.NaturalMergeSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.NaturalMergeSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void TimSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.TimSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.TimSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void PowerSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.PowerSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.PowerSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void ShiftSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.ShiftSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.ShiftSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void SpinSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.SpinSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.SpinSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void SpinSortVariant()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.SpinSortVariant.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.SpinSortVariant.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void Glidesort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.Glidesort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.Glidesort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void FlatStableSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.FlatStableSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.FlatStableSort.Sort(_buffers.Next().AsSpan());
     }
 }

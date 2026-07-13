@@ -1,4 +1,4 @@
-﻿namespace SortAlgorithm.Benchmark;
+namespace SortAlgorithm.Benchmark;
 
 [MemoryDiagnoser]
 [RankColumn]
@@ -10,107 +10,95 @@ public class StringBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private string[] _pristine = default!;
-    private string[] _work = default!;
+    private SortBuffers<string> _buffers = default!;
 
-    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
-    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
-    // identical for every benchmark method, so relative comparisons are unaffected.
+    // Restore cost stays out of the timed region: [IterationSetup] refreshes a pool of
+    // pre-copied buffers and each invocation sorts a fresh one (see SortBuffers<T>).
+    // Program.cs pins the job's InvocationCount to the pool size.
     [GlobalSetup]
     public void Setup()
     {
-        _pristine = BenchmarkData.GenerateStringArray(Size, Pattern);
-        _work = new string[Size];
+        _buffers = new SortBuffers<string>(BenchmarkData.GenerateStringArray(Size, Pattern));
     }
+
+    [IterationSetup]
+    public void IterationSetup() => _buffers.Reset();
 
     [Benchmark(Baseline = true)]
     public void QuickSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.QuickSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.QuickSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void QuickSort3way()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.QuickSort3way.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.QuickSort3way.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void QuickSortMedian3()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.QuickSortMedian3.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.QuickSortMedian3.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void QuickSortMedian9()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.QuickSortMedian9.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.QuickSortMedian9.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void DualPivotQuickSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.DualPivotQuickSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.DualPivotQuickSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void StableQuickSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.StableQuickSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.StableQuickSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void IntroSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.IntroSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.IntroSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void IntroSortDotnet()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.IntroSortDotnet.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.IntroSortDotnet.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void PDQSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.PDQSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.PDQSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void PDQSortBranchless()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.PDQSortBranchless.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.PDQSortBranchless.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void StdSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.StdSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.StdSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void BlockQuickSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.BlockQuickSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.BlockQuickSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void DotnetSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        _work.AsSpan().Sort();
+        _buffers.Next().AsSpan().Sort();
     }
 }

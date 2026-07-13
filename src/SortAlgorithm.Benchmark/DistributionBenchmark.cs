@@ -10,114 +10,101 @@ public class DistributionBenchmark
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan)]
     public DataPattern Pattern { get; set; }
 
-    private int[] _pristine = default!;
-    private int[] _work = default!;
+    private SortBuffers<int> _buffers = default!;
 
-    // GlobalSetup + per-invocation copy instead of IterationSetup: IterationSetup forces
-    // InvocationCount=1, losing precision for µs-scale workloads. The copy cost is
-    // identical for every benchmark method, so relative comparisons are unaffected.
+    // Restore cost stays out of the timed region: [IterationSetup] refreshes a pool of
+    // pre-copied buffers and each invocation sorts a fresh one (see SortBuffers<T>).
+    // Program.cs pins the job's InvocationCount to the pool size.
     [GlobalSetup]
     public void Setup()
     {
-        _pristine = BenchmarkData.GenerateIntArray(Size, Pattern);
-        _work = new int[Size];
+        _buffers = new SortBuffers<int>(BenchmarkData.GenerateIntArray(Size, Pattern));
     }
+
+    [IterationSetup]
+    public void IterationSetup() => _buffers.Reset();
 
     [Benchmark]
     public void CountingSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.CountingSort.Sort(_work.AsSpan(), x => x);
+        SortAlgorithm.Algorithms.CountingSort.Sort(_buffers.Next().AsSpan(), x => x);
     }
 
     [Benchmark(Baseline = true)]
     public void CountingSortInteger()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.CountingSortInteger.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.CountingSortInteger.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void PigeonSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.PigeonholeSort.Sort(_work.AsSpan(), x => x);
+        SortAlgorithm.Algorithms.PigeonholeSort.Sort(_buffers.Next().AsSpan(), x => x);
     }
 
     [Benchmark]
     public void PigeonSortInteger()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.PigeonholeSortInteger.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.PigeonholeSortInteger.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void BucketSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.BucketSort.Sort(_work.AsSpan(), x => x);
+        SortAlgorithm.Algorithms.BucketSort.Sort(_buffers.Next().AsSpan(), x => x);
     }
 
     [Benchmark]
     public void BucketSortInteger()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.BucketSortInteger.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.BucketSortInteger.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void FlashSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.FlashSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.FlashSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void RadixLSD4Sort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.RadixLSD4Sort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.RadixLSD4Sort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void RadixLSD256Sort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.RadixLSD256Sort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.RadixLSD256Sort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void RadixLSD10Sort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.RadixLSD10Sort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.RadixLSD10Sort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void RadixMSD4Sort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.RadixMSD4Sort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.RadixMSD4Sort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void RadixMSD10Sort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.RadixMSD10Sort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.RadixMSD10Sort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void AmericanFlagSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.AmericanFlagSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.AmericanFlagSort.Sort(_buffers.Next().AsSpan());
     }
 
     [Benchmark]
     public void SpreadSort()
     {
-        Array.Copy(_pristine, _work, Size);
-        SortAlgorithm.Algorithms.SpreadSort.Sort(_work.AsSpan());
+        SortAlgorithm.Algorithms.SpreadSort.Sort(_buffers.Next().AsSpan());
     }
 }
