@@ -67,14 +67,14 @@ jobs:
 
       - name: Output results to JobSummary
         run: |
-          for file in $(find BenchmarkDotNet.Artifacts/results -name "*.md" | head -n 1); do
+          for file in $(find BenchmarkDotNet.Artifacts/results -name "*-report-github.md" | sort | head -n 1); do
             machine_info=$(sed -n 's/^[[:space:]]*//; /^\|/p' "$file" | grep -v "|")
             echo "$machine_info" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           done
 
-          for file in $(find BenchmarkDotNet.Artifacts/results -name "*.md" | sort); do
-            title=$(basename "$file" .md | sed 's/-report-default//; s/-report-github//')
+          for file in $(find BenchmarkDotNet.Artifacts/results -name "*-report-github.md" | sort); do
+            title=$(basename "$file" .md | sed 's/-report-github//')
             content=$(sed -n 's/^[[:space:]]*//; /^\|/p' "$file" | grep "|")
             echo "## $title" >> $GITHUB_STEP_SUMMARY
             echo "$content" >> $GITHUB_STEP_SUMMARY
