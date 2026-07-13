@@ -3,15 +3,6 @@
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
   </Folder>
-  <Folder Name="/docs/">
-    <File Path="Docs/SortArchitecture_architecture.md" />
-  </Folder>
-  <Folder Name="/docs/SortAlgorithm/">
-    <File Path="Docs/SortAlgorithm/BlockQuickSort_DuplicateCheck.md" />
-    <File Path="Docs/SortAlgorithm/PDQSort_Go_Implementation_Guide.md" />
-    <File Path="Docs/SortAlgorithm/PDQSort_Implementation_Comparison.md" />
-    <File Path="Docs/SortAlgorithm/SortArchitecture_Release_ButStatistics.md" />
-  </Folder>
   <Folder Name="/sandbox/">
     <Project Path="sandbox/AntiQuickSortDemo/AntiQuickSortDemo.csproj" />
   </Folder>
