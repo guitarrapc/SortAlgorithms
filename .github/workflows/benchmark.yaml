@@ -41,7 +41,7 @@ jobs:
         shell: bash
         run: |
           if [ "${BENCHMARK}" = "*" ]; then
-            MATRIX='{"include":[{"filter":"*AdaptiveBenchmark*|*AdaptiveSlowBenchmark*","slug":"Adaptive"},{"filter":"*DistributionBenchmark*","slug":"Distribution"},{"filter":"*ExchangeBenchmark*","slug":"Exchange"},{"filter":"*HeapBenchmark*","slug":"Heap"},{"filter":"*InsertionBenchmark*","slug":"Insertion"},{"filter":"*MergeBenchmark*","slug":"Merge"},{"filter":"*NetworkBenchmark*","slug":"Network"},{"filter":"*PartitionBenchmark*","slug":"Partition"},{"filter":"*SelectionBenchmark*","slug":"Selection"},{"filter":"*TreeBenchmark*","slug":"Tree"},{"filter":"*IntKeyBenchmark*","slug":"IntKey"},{"filter":"*StringBenchmark*","slug":"String"}]}'
+            MATRIX='{"include":[{"filter":"*Adaptive*","slug":"Adaptive"},{"filter":"*DistributionBenchmark*","slug":"Distribution"},{"filter":"*ExchangeBenchmark*","slug":"Exchange"},{"filter":"*HeapBenchmark*","slug":"Heap"},{"filter":"*InsertionBenchmark*","slug":"Insertion"},{"filter":"*MergeBenchmark*","slug":"Merge"},{"filter":"*NetworkBenchmark*","slug":"Network"},{"filter":"*PartitionBenchmark*","slug":"Partition"},{"filter":"*SelectionBenchmark*","slug":"Selection"},{"filter":"*TreeBenchmark*","slug":"Tree"},{"filter":"*IntKeyBenchmark*","slug":"IntKey"},{"filter":"*StringBenchmark*","slug":"String"}]}'
             echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
             echo "parallel=true" >> "$GITHUB_OUTPUT"
           else
