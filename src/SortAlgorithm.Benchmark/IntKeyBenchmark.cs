@@ -1,4 +1,4 @@
-using SortAlgorithm.Utils;
+﻿using SortAlgorithm.Utils;
 
 namespace SortAlgorithm.Benchmark;
 
@@ -86,6 +86,13 @@ public class IntKeyBenchmark
     {
         Array.Copy(_pristine, _work, Size);
         SortAlgorithm.Algorithms.PDQSort.Sort(_work.AsSpan());
+    }
+
+    [Benchmark]
+    public void PDQSortBranchless()
+    {
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.PDQSortBranchless.Sort(_work.AsSpan());
     }
 
     [Benchmark]

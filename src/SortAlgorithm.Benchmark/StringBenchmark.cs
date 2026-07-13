@@ -1,4 +1,4 @@
-namespace SortAlgorithm.Benchmark;
+﻿namespace SortAlgorithm.Benchmark;
 
 [MemoryDiagnoser]
 [RankColumn]
@@ -84,6 +84,13 @@ public class StringBenchmark
     {
         Array.Copy(_pristine, _work, Size);
         SortAlgorithm.Algorithms.PDQSort.Sort(_work.AsSpan());
+    }
+
+    [Benchmark]
+    public void PDQSortBranchless()
+    {
+        Array.Copy(_pristine, _work, Size);
+        SortAlgorithm.Algorithms.PDQSortBranchless.Sort(_work.AsSpan());
     }
 
     [Benchmark]
