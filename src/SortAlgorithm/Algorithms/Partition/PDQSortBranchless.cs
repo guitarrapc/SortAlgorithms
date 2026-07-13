@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SortAlgorithm.Contexts;
@@ -61,6 +61,7 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Paper: https://arxiv.org/abs/2106.05123 (pdqsort), https://arxiv.org/abs/1604.06697 (BlockQuicksort)</para>
+/// <para>YouTube: https://www.youtube.com/watch?v=jz-PBiWwNjc</para>
 /// <para>Other implementation: https://github.com/orlp/pdqsort (partition_right_branchless)</para>
 /// </remarks>
 public static class PDQSortBranchless
