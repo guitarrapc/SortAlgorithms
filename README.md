@@ -3,9 +3,18 @@
 This repository shows implementation for the Major Sort Algorithm.
 Aim not to use LINQ or similar ease to use, but memory unefficient technique.
 
-## Implemented Sort Algorithm
+## Benchmark
 
-You can check various benchmark patterns at [GitHub Actions/Benchmark](https://github.com/guitarrapc/SortAlgorithms/actions/runs/29221814037).
+<!-- BENCHMARK_START -->
+<details>
+<summary>Benchmark results (not yet generated)</summary>
+
+Run the [Benchmark workflow](https://github.com/guitarrapc/SortAlgorithms/actions/workflows/benchmark.yaml) with `*` to populate this section.
+
+</details>
+<!-- BENCHMARK_END -->
+
+## Implemented Sort Algorithm
 
 <!-- ALGORITHMS_START -->
 ### Exchange
