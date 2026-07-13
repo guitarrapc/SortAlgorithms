@@ -3,6 +3,7 @@ using BenchmarkDotNet.Detectors;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Reports;
 using SortAlgorithm.Benchmark;
 using System.Reflection;
 
@@ -49,7 +50,8 @@ if (!IsCiEnvironment())
     config.AddJob(Job.ShortRun
         .WithInvocationCount(SortBuffers.InvocationsPerIteration)
         .WithUnrollFactor(1)
-        .WithEnvironmentVariable("DOTNET_TieredCompilation", "0"));
+        .WithEnvironmentVariable("DOTNET_TieredCompilation", "0"))
+        .WithSummaryStyle(SummaryStyle.Default.WithTimeUnit(Perfolizer.Horology.TimeUnit.Nanosecond));
 }
 else
 {
@@ -60,7 +62,8 @@ else
         .WithIterationCount(8)
         .WithInvocationCount(SortBuffers.InvocationsPerIteration)
         .WithUnrollFactor(1)
-        .WithEnvironmentVariable("DOTNET_TieredCompilation", "0"));
+        .WithEnvironmentVariable("DOTNET_TieredCompilation", "0"))
+        .WithSummaryStyle(SummaryStyle.Default.WithTimeUnit(Perfolizer.Horology.TimeUnit.Nanosecond));
 }
 
 if (args.Length == 0)
