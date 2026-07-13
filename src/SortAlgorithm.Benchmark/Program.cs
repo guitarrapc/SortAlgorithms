@@ -37,12 +37,19 @@ var config = ManualConfig.CreateMinimumViable()
 // each measured iteration consumes exactly one pre-copied buffer per invocation, keeping
 // the Array.Copy restore cost in [IterationSetup] — outside the timed region. A pinned
 // invocation count also skips the pilot stage, so per-case time stays bounded.
+//
+// DOTNET_TieredCompilation=0: with the short fixed warmup, tier-1 background compilation
+// can land in the middle of the measured iterations (observed as a sharp 10-15x drop,
+// e.g. PDQSort 8192/SingleElementMoved: iterations 1-6 at ~350us, iteration 8 at ~25us),
+// producing bimodal rows where Median << Mean. Disabling tiering makes the first
+// invocation run fully optimized code, so every iteration measures steady state.
 // In Local environment, run the short benchmark.
 if (!IsCiEnvironment())
 {
     config.AddJob(Job.ShortRun
         .WithInvocationCount(SortBuffers.InvocationsPerIteration)
-        .WithUnrollFactor(1));
+        .WithUnrollFactor(1)
+        .WithEnvironmentVariable("DOTNET_TieredCompilation", "0"));
 }
 else
 {
@@ -52,7 +59,8 @@ else
         .WithWarmupCount(2)
         .WithIterationCount(8)
         .WithInvocationCount(SortBuffers.InvocationsPerIteration)
-        .WithUnrollFactor(1));
+        .WithUnrollFactor(1)
+        .WithEnvironmentVariable("DOTNET_TieredCompilation", "0"));
 }
 
 if (args.Length == 0)
