@@ -1,9 +1,27 @@
 ﻿using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Detectors;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using Perfolizer.Horology;
 using System.Reflection;
+
+const string RequiredCpu = "EPYC 7763";
+
+var allowAnyCpu = Array.IndexOf(args, "--allow-any-cpu") >= 0;
+args = Array.FindAll(args, static a => a != "--allow-any-cpu");
+
+if (!allowAnyCpu && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
+{
+    var processorName = CpuDetector.Cpu?.ProcessorName;
+    if (processorName is null || !processorName.Contains(RequiredCpu, StringComparison.OrdinalIgnoreCase))
+    {
+        Console.Error.WriteLine($"Benchmark CI requires CPU containing '{RequiredCpu}'.");
+        Console.Error.WriteLine($"Detected: {processorName ?? "(unknown)"}");
+        Console.Error.WriteLine("Pass --allow-any-cpu to override.");
+        Environment.Exit(1);
+    }
+}
 
 var config = ManualConfig.CreateMinimumViable()
     .AddDiagnoser(MemoryDiagnoser.Default)

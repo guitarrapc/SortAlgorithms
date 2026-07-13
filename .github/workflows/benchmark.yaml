@@ -21,6 +21,10 @@ on:
           - "*TreeBenchmark*"
           - "*IntKeyBenchmark*"
           - "*StringBenchmark*"
+      allow_any_cpu:
+        type: boolean
+        description: Skip the AMD EPYC 7763 CPU requirement check.
+        default: false
 
 jobs:
   benchmark:
@@ -40,10 +44,11 @@ jobs:
       - name: benchmark
         id: benchmark
         run: |
-          dotnet run -c Release --no-build --no-launch-profile --project ./src/SortAlgorithm.Benchmark/SortAlgorithm.Benchmark.csproj -- --filter "${FILTER}"
+          dotnet run -c Release --no-build --no-launch-profile --project ./src/SortAlgorithm.Benchmark/SortAlgorithm.Benchmark.csproj -- --filter "${FILTER}" ${ALLOW_ANY_CPU}
           echo "result=success" >> $GITHUB_OUTPUT
         env:
           FILTER: ${{ inputs.benchmark }}
+          ALLOW_ANY_CPU: ${{ inputs.allow_any_cpu && '--allow-any-cpu' || '' }}
       - name: Check benchmark result
         if: ${{ steps.benchmark.outputs.result != 'success' }}
         run: exit 1
