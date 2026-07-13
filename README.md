@@ -3,6 +3,35 @@
 This repository shows implementation for the Major Sort Algorithm.
 Aim not to use LINQ or similar ease to use, but memory unefficient technique.
 
+## Table of Contents
+
+- [Benchmark](#benchmark)
+  - [AdaptiveBenchmark](#adaptivebenchmark)
+  - [AdaptiveSlowBenchmark](#adaptiveslowbenchmark)
+  - [DistributionBenchmark](#distributionbenchmark)
+  - [ExchangeBenchmark](#exchangebenchmark)
+  - [HeapBenchmark](#heapbenchmark)
+  - [InsertionBenchmark](#insertionbenchmark)
+  - [IntKeyBenchmark](#intkeybenchmark)
+  - [MergeBenchmark](#mergebenchmark)
+  - [NetworkBenchmark](#networkbenchmark)
+  - [PartitionBenchmark](#partitionbenchmark)
+  - [SelectionBenchmark](#selectionbenchmark)
+  - [StringBenchmark](#stringbenchmark)
+  - [TreeBenchmark](#treebenchmark)
+- [Implemented Sort Algorithm](#implemented-sort-algorithm)
+  - [Exchange](#exchange)
+  - [Selection](#selection)
+  - [Insertion](#insertion)
+  - [Merge](#merge)
+  - [Heap](#heap)
+  - [Partition](#partition)
+  - [Adaptive](#adaptive)
+  - [Distribution](#distribution)
+  - [Network](#network)
+  - [Tree](#tree)
+  - [Joke](#joke)
+
 ## Benchmark
 
 <!-- BENCHMARK_START -->
@@ -1859,7 +1888,7 @@ UnrollFactor=1  WarmupCount=2
 | TreapSort              | 1024 | PipeOrgan          |    34.138 μs | 1.5990 μs | 0.8363 μs |  0.06 |    0.00 |    2 |         - |          NA |
 
 </details>
-
+<!-- BENCHMARK_END -->
 
 ## Implemented Sort Algorithm
 
