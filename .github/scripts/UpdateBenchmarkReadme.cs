@@ -107,10 +107,9 @@ static string ReplaceMarkedSection(string readme, string startMarker, string end
         throw new InvalidOperationException($"README markers not found: {startMarker} ... {endMarker}");
     }
 
-    end += endMarker.Length;
     var before = readme[..(start + startMarker.Length)];
     var after = readme[end..];
-    return before + Environment.NewLine + section + after;
+    return before + Environment.NewLine + section + Environment.NewLine + after;
 }
 
 internal sealed partial class ReportFile(string filePath)

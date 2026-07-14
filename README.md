@@ -1888,6 +1888,7 @@ UnrollFactor=1  WarmupCount=2
 | TreapSort              | 1024 | PipeOrgan          |    34,182.4 ns |   938.83 ns |   491.03 ns |  0.06 |    0.00 |    2 |         - |          NA |
 
 </details>
+<!-- BENCHMARK_END -->
 
 
 ## Implemented Sort Algorithm
