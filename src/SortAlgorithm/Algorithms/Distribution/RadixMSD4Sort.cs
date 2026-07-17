@@ -54,6 +54,7 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description><strong>Supported:</strong> byte, sbyte, short, ushort, int, uint, long, ulong, nint, nuint (up to 64-bit)</description></item>
 /// <item><description><strong>Not Supported:</strong> Int128, UInt128, BigInteger (&gt;64-bit types)</description></item>
+/// <item><description><strong>Key selector:</strong> arbitrary element types can be sorted by an extracted <c>int</c> key via the <c>Sort(span, keySelector)</c> overloads; equal keys retain input order, making stability observable</description></item>
 /// </list>
 /// <para><strong>Why 128-bit Types Are Not Supported:</strong></para>
 /// <list type="bullet">
@@ -135,6 +136,148 @@ public static class RadixMSD4Sort
             ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
+
+    /// <summary>
+    /// Sorts the elements in the specified span by an integer key extracted with <paramref name="keySelector"/>.
+    /// Elements with equal keys retain their relative input order (stable).
+    /// Uses NullContext for zero-overhead fast path.
+    /// </summary>
+    /// <typeparam name="T">The type of elements to sort.</typeparam>
+    /// <param name="span">The span of elements to sort.</param>
+    /// <param name="keySelector">Extracts the integer sort key from an element. Must be pure and consistent per element.</param>
+    public static void Sort<T>(Span<T> span, Func<T, int> keySelector)
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        SortCore(span, new FuncKeySelector<T>(keySelector), NullContext.Default);
+    }
+
+    /// <summary>
+    /// Sorts the elements in the specified span by an integer key extracted with <paramref name="keySelector"/>.
+    /// Elements with equal keys retain their relative input order (stable).
+    /// </summary>
+    /// <typeparam name="T">The type of elements to sort.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span">The span of elements to sort.</param>
+    /// <param name="keySelector">Extracts the integer sort key from an element. Must be pure and consistent per element.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
+    public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
+        where TContext : ISortContext
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        SortCore(span, new FuncKeySelector<T>(keySelector), context);
+    }
+
+    private static void SortCore<T, TKeySelector, TContext>(Span<T> span, TKeySelector keySelector, TContext context)
+        where TKeySelector : struct, IKeySelector<T>
+        where TContext : ISortContext
+    {
+        if (span.Length <= 1) return;
+
+        // Rent temporary buffer from ArrayPool for element redistribution
+        var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
+
+        try
+        {
+            var tempBuffer = tempArray.AsSpan(0, span.Length);
+
+            // The insertion-sort cutoff compares by the extracted key, matching the
+            // digit passes and preserving stability for equal keys.
+            var comparer = new KeySelectorComparer<T, TKeySelector>(keySelector);
+            var s = new SortSpan<T, KeySelectorComparer<T, TKeySelector>, TContext>(span, context, comparer, BUFFER_MAIN);
+            var temp = new SortSpan<T, KeySelectorComparer<T, TKeySelector>, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
+
+            // Keys are int (32-bit) after sign-bit flipping
+            const int keyBitSize = 32;
+            var digitCount = (keyBitSize + RadixBits - 1) / RadixBits;
+
+            MSDSortByKey(s, temp, keySelector, 0, s.Length, digitCount - 1);
+        }
+        finally
+        {
+            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+        }
+    }
+
+    private static void MSDSortByKey<T, TKeySelector, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TKeySelector keySelector, int start, int length, int digit)
+        where TKeySelector : struct, IKeySelector<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        // Base case: if length is small, use insertion sort (key-based comparer keeps it stable)
+        if (length <= InsertionSortCutoff)
+        {
+            InsertionSort.SortCore(s, start, start + length);
+            return;
+        }
+
+        // Base case: if we've processed all digits, we're done
+        if (digit < 0)
+        {
+            return;
+        }
+
+        s.Context.OnPhase(SortPhase.RadixPass, digit, digit);
+        var shift = digit * RadixBits;
+
+        Span<int> bucketCounts = stackalloc int[RadixSize + 1];
+        bucketCounts.Clear(); // Required: [module: SkipLocalsInit] skips zero-initialization
+
+        // Count occurrences of each digit in the current range
+        for (var i = 0; i < length; i++)
+        {
+            var key = GetUnsignedKey(keySelector.GetKey(s.Read(start + i)));
+            var digitValue = (int)((key >> shift) & 0b11);
+            bucketCounts[digitValue + 1]++;
+        }
+
+        // Calculate prefix sum and save bucket start positions in one pass
+        Span<int> bucketStarts = stackalloc int[RadixSize];
+        bucketStarts[0] = 0;
+        for (var i = 1; i <= RadixSize; i++)
+        {
+            bucketCounts[i] += bucketCounts[i - 1];
+            if (i < RadixSize)
+            {
+                bucketStarts[i] = bucketCounts[i];
+            }
+        }
+
+        // Distribute elements into temp buffer based on current digit (forward scan keeps stability)
+        Span<int> bucketOffsets = stackalloc int[RadixSize + 1];
+        bucketCounts.CopyTo(bucketOffsets);
+
+        for (var i = 0; i < length; i++)
+        {
+            var value = s.Read(start + i);
+            var key = GetUnsignedKey(keySelector.GetKey(value));
+            var digitValue = (int)((key >> shift) & 0b11);
+            var destIndex = bucketOffsets[digitValue]++;
+            temp.Write(start + destIndex, value);
+        }
+
+        // Copy back from temp to source
+        temp.CopyTo(start, s, start, length);
+
+        // Recursively sort each bucket for the next digit
+        for (var i = 0; i < RadixSize; i++)
+        {
+            var bucketStart = bucketStarts[i];
+            var bucketEnd = (i == RadixSize - 1) ? length : bucketStarts[i + 1];
+            var bucketLength = bucketEnd - bucketStart;
+
+            if (bucketLength > 1)
+            {
+                MSDSortByKey(s, temp, keySelector, start + bucketStart, bucketLength, digit - 1);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Convert an int key to an unsigned key by flipping the sign bit,
+    /// so that negative keys order before non-negative keys.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint GetUnsignedKey(int key) => (uint)key ^ 0x8000_0000;
 
     private static void MSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, int start, int length, int digit, int bitSize)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
