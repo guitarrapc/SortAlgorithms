@@ -63,7 +63,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>IntroSort Fallback for Worst-Case Protection:</strong> To guarantee O(n log n) worst-case performance,
 /// the algorithm implements the IntroSort pattern (based on Musser's Introspective Sort):
 /// <list type="bullet">
-/// <item><description>Depth limit: 2⌊log₂(n)⌋ + 2 (calculated using BitOperations.Log2)</description></item>
+/// <item><description>Depth limit: 2⌊log₂(n)⌋ + 1 (calculated using BitOperations.Log2)</description></item>
 /// <item><description>When recursion depth exceeds this limit, the algorithm switches to HeapSort for the current partition</description></item>
 /// <item><description>HeapSort guarantees O(n log n) regardless of input distribution, preventing O(n²) on adversarial patterns</description></item>
 /// <item><description>This matches the BlockQuickSort paper's reference implementation (depth_limit = 2 * ilogb(n) + 3)</description></item>
@@ -81,7 +81,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack + O(1) for index buffers via stackalloc)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Balanced partitions from high-quality pivot selection</description></item>
 /// <item><description>Average case: Θ(n log n) - Expected ~1.2-1.4n log₂ n comparisons (better than standard QuickSort's 1.39n log₂ n due to improved pivot quality)</description></item>
-/// <item><description>Worst case  : O(n log n) - Guaranteed by IntroSort fallback to HeapSort when recursion depth exceeds 2⌊log₂(n)⌋+2 (prevents QuickSort's O(n²) on adversarial inputs)</description></item>
+/// <item><description>Worst case  : O(n log n) - Guaranteed by IntroSort fallback to HeapSort when recursion depth exceeds 2⌊log₂(n)⌋+1 (prevents QuickSort's O(n²) on adversarial inputs)</description></item>
 /// <item><description>Comparisons : ~1.2-1.4n log₂ n (average) - Block partitioning performs same logical comparisons but with better cache locality</description></item>
 /// <item><description>Swaps       : ~0.33n log₂ n (average) - Hoare scheme swaps fewer elements than Lomuto; block buffering reduces swap overhead via sequential memory access</description></item>
 /// </list>
@@ -206,7 +206,20 @@ public static class BlockQuickSort
         if (last - first <= 1) return;
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        SortCore(s, first, last - 1);
+
+        // For floating-point types, move NaN values to the front.
+        // Required because SortSpan's NullContext fast path compares primitives with IEEE operators,
+        // which treat NaN as unordered and would break the partitioning invariants.
+        // Same approach as IntroSort/PDQSort and dotnet/runtime's ArraySortHelper.
+        var nanEnd = FloatingPointUtils.MoveNaNsToFront(s, first, last);
+
+        if (nanEnd >= last)
+        {
+            // All values are NaN, already "sorted"
+            return;
+        }
+
+        SortCore(s, nanEnd, last - 1);
     }
 
     /// <summary>
@@ -304,7 +317,6 @@ public static class BlockQuickSort
     /// <param name="s">The SortSpan to partition.</param>
     /// <param name="left">The inclusive start index.</param>
     /// <param name="right">The inclusive end index.</param>
-    /// <param name="context">The sort context.</param>
     /// <returns>The range of elements equal to the pivot.</returns>
     static PartitionResult HoareBlockPartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
         where TComparer : IComparer<T>

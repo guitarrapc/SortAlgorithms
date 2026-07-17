@@ -76,6 +76,47 @@ public class BlockQuickSortTests
     }
 
     [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
+    public async Task SortHalfNullContextResultOrderTest(IInputSample<Half> inputSample)
+    {
+        var array = inputSample.Samples.ToArray();
+
+        // Default overload uses NullContext, whose Release fast path compares primitives with
+        // IEEE operators (NaN unordered). Verifies the NaN pre-pass keeps the result ordered.
+        BlockQuickSort.Sort(array.AsSpan());
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
+    public async Task SortFloatNullContextResultOrderTest(IInputSample<float> inputSample)
+    {
+        var array = inputSample.Samples.ToArray();
+
+        BlockQuickSort.Sort(array.AsSpan());
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
+    public async Task SortDoubleNullContextResultOrderTest(IInputSample<double> inputSample)
+    {
+        var array = inputSample.Samples.ToArray();
+
+        BlockQuickSort.Sort(array.AsSpan());
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
     [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
     public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
     {
@@ -208,6 +249,34 @@ public class BlockQuickSortTests
         var stats = new StatisticsContext();
         var random = new Random(42);
         var large = Enumerable.Range(0, 10000).OrderBy(_ => random.Next()).ToArray();
+        var expected = large.OrderBy(x => x).ToArray();
+
+        BlockQuickSort.Sort(large.AsSpan(), stats);
+
+        await Assert.That(large).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task VeryLargeArrayMedianOfSqrtPathTest()
+    {
+        // n > 20000 exercises the median-of-sqrt(n) pivot selection (MedianOfK + PartialSort)
+        var stats = new StatisticsContext();
+        var random = new Random(42);
+        var large = Enumerable.Range(0, 25000).OrderBy(_ => random.Next()).ToArray();
+        var expected = large.OrderBy(x => x).ToArray();
+
+        BlockQuickSort.Sort(large.AsSpan(), stats);
+
+        await Assert.That(large).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task VeryLargeArrayWithDuplicatesTest()
+    {
+        // n > 20000 with heavy duplicates: median-of-sqrt(n) path combined with duplicate-dense input
+        var stats = new StatisticsContext();
+        var random = new Random(42);
+        var large = Enumerable.Range(0, 25000).Select(_ => random.Next(0, 16)).ToArray();
         var expected = large.OrderBy(x => x).ToArray();
 
         BlockQuickSort.Sort(large.AsSpan(), stats);
