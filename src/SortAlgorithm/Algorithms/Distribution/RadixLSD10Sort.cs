@@ -25,8 +25,10 @@ namespace SortAlgorithm.Algorithms;
 /// This ensures that lower-order digits are already sorted when processing higher-order digits.</description></item>
 /// <item><description><strong>Complete Pass Coverage:</strong> Must perform d passes where d = ⌈log₁₀(max)⌉ + 1 (number of decimal digits in the maximum value).
 /// Incomplete passes result in partially sorted arrays.</description></item>
-/// <item><description><strong>Negative Number Handling:</strong> For signed integers, uses sign-bit flipping to convert all values to unsigned representation.
-/// This ensures negative values sort before positive values without requiring absolute value calculation (avoiding int.MinValue overflow).</description></item>
+/// <item><description><strong>Order-Preserving Key Mapping:</strong> Elements are mapped to fixed-width unsigned keys through
+/// <see cref="IRadixKeySelector{T}"/>. Signed integers flip the sign bit (e.g. 32-bit: key = (uint)value ^ 0x8000_0000),
+/// floating-point values use the IEEE 754 total-order bit transform, and key-selector overloads extract an int key from arbitrary elements.
+/// This ensures ordering correctness without separate sign handling and avoids the MinValue overflow issue with Abs().</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -43,23 +45,20 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Note:</strong> Uses decimal arithmetic (division and modulo), which may be slower than binary-based radix sorts (e.g., RadixLSD4Sort with bit shifts).
 /// However, it is more intuitive for understanding and debugging.</para>
-/// <para><strong>Supported Types:</strong></para>
+/// <para><strong>Supported Key Mappings (via <see cref="IRadixKeySelector{T}"/>):</strong></para>
 /// <list type="bullet">
-/// <item><description><strong>Supported:</strong> byte, sbyte, short, ushort, int, uint, long, ulong, nint, nuint (up to 64-bit)</description></item>
-/// <item><description><strong>Not Supported:</strong> Int128, UInt128, BigInteger (&gt;64-bit types)</description></item>
+/// <item><description><strong>Integers:</strong> byte, sbyte, short, ushort, int, uint, long, ulong, nint, nuint (up to 64-bit); Int128/UInt128/BigInteger are rejected (64-bit key ceiling, see below)</description></item>
+/// <item><description><strong>Floating point:</strong> Half, float, double via IEEE 754 total-order key transform (all NaN values sort first, matching <see cref="IComparable{T}"/> semantics)</description></item>
+/// <item><description><strong>Key selector:</strong> arbitrary element types via an extracted <c>int</c> key; equal keys retain input order, making stability observable</description></item>
 /// </list>
 /// <para><strong>Why 128-bit Types Are Not Supported:</strong></para>
 /// <list type="bullet">
-/// <item><description><strong>Key Storage Limitation:</strong> This implementation uses <c>ulong</c> (64-bit) to store radix keys.
+/// <item><description><strong>Key Storage Limitation:</strong> Keys are stored as <c>ulong</c> (64-bit).
 /// Supporting 128-bit would require <c>UInt128</c> keys, significantly increasing memory usage and complexity.</description></item>
-/// <item><description><strong>Stack Allocation Constraints:</strong> Larger keys increase stack pressure for bucket arrays,
-/// potentially causing stack overflow in deep recursion scenarios.</description></item>
 /// <item><description><strong>Performance Trade-offs:</strong> 128-bit operations are significantly slower than 64-bit on most architectures,
 /// negating the performance benefits of radix sort.</description></item>
 /// <item><description><strong>Practical Rarity:</strong> Sorting 128-bit integers is uncommon in typical applications.
 /// For such cases, comparison-based sorts (e.g., QuickSort, MergeSort) remain practical alternatives.</description></item>
-/// <item><description><strong>Implementation Complexity:</strong> Adding 128-bit support would require substantial code duplication
-/// and conditional logic, reducing maintainability without significant real-world benefit.</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Radix_sort#Least_significant_digit</para>
@@ -87,7 +86,7 @@ public static class RadixLSD10Sort
     /// <typeparam name="T"> The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span"> The span of elements to sort.</param>
-    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
     /// <exception cref="NotSupportedException">
     /// Thrown when <typeparamref name="T"/> is a 128-bit type (<see cref="Int128"/> or <see cref="UInt128"/>).
     /// This implementation only supports integer types up to 64-bit due to key storage and performance constraints.
@@ -96,8 +95,82 @@ public static class RadixLSD10Sort
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TContext : ISortContext
+        => SortCore(span, default(BinaryIntegerRadixKey<T>), new ComparableComparer<T>(), context);
+
+    /// <summary>
+    /// Sorts the elements in the specified span by an integer key extracted with <paramref name="keySelector"/>.
+    /// Elements with equal keys retain their relative input order (stable).
+    /// Uses NullContext for zero-overhead fast path.
+    /// </summary>
+    /// <typeparam name="T">The type of elements to sort.</typeparam>
+    /// <param name="span">The span of elements to sort.</param>
+    /// <param name="keySelector">Extracts the integer sort key from an element. Must be pure and consistent per element.</param>
+    public static void Sort<T>(Span<T> span, Func<T, int> keySelector)
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        var selector = new FuncRadixKeySelector<T>(keySelector);
+        SortCore(span, selector, new RadixKeyComparer<T, FuncRadixKeySelector<T>>(selector), NullContext.Default);
+    }
+
+    /// <summary>
+    /// Sorts the elements in the specified span by an integer key extracted with <paramref name="keySelector"/>.
+    /// Elements with equal keys retain their relative input order (stable).
+    /// </summary>
+    /// <typeparam name="T">The type of elements to sort.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span">The span of elements to sort.</param>
+    /// <param name="keySelector">Extracts the integer sort key from an element. Must be pure and consistent per element.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
+    public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
+        where TContext : ISortContext
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        var selector = new FuncRadixKeySelector<T>(keySelector);
+        SortCore(span, selector, new RadixKeyComparer<T, FuncRadixKeySelector<T>>(selector), context);
+    }
+
+    /// <summary>
+    /// Sorts <see cref="Half"/> values via the IEEE 754 total-order key transform.
+    /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
+    /// </summary>
+    public static void Sort(Span<Half> span)
+        => SortCore(span, default(HalfRadixKey), new ComparableComparer<Half>(), NullContext.Default);
+
+    /// <inheritdoc cref="Sort(Span{Half})"/>
+    public static void Sort<TContext>(Span<Half> span, TContext context) where TContext : ISortContext
+        => SortCore(span, default(HalfRadixKey), new ComparableComparer<Half>(), context);
+
+    /// <summary>
+    /// Sorts <see cref="float"/> values via the IEEE 754 total-order key transform.
+    /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
+    /// </summary>
+    public static void Sort(Span<float> span)
+        => SortCore(span, default(SingleRadixKey), new ComparableComparer<float>(), NullContext.Default);
+
+    /// <inheritdoc cref="Sort(Span{float})"/>
+    public static void Sort<TContext>(Span<float> span, TContext context) where TContext : ISortContext
+        => SortCore(span, default(SingleRadixKey), new ComparableComparer<float>(), context);
+
+    /// <summary>
+    /// Sorts <see cref="double"/> values via the IEEE 754 total-order key transform.
+    /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
+    /// </summary>
+    public static void Sort(Span<double> span)
+        => SortCore(span, default(DoubleRadixKey), new ComparableComparer<double>(), NullContext.Default);
+
+    /// <inheritdoc cref="Sort(Span{double})"/>
+    public static void Sort<TContext>(Span<double> span, TContext context) where TContext : ISortContext
+        => SortCore(span, default(DoubleRadixKey), new ComparableComparer<double>(), context);
+
+    private static void SortCore<T, TRadixKey, TComparer, TContext>(Span<T> span, TRadixKey radixKey, TComparer comparer, TContext context)
+        where TRadixKey : struct, IRadixKeySelector<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         if (span.Length <= 1) return;
+
+        // Validate the key width up front (BinaryIntegerRadixKey throws NotSupportedException for >64-bit types)
+        _ = TRadixKey.KeyBits;
 
         // Rent buffers from ArrayPool
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
@@ -108,12 +181,8 @@ public static class RadixLSD10Sort
 
             // Use stackalloc for small fixed-size bucket counts (10 ints = 40 bytes)
             Span<int> bucketCounts = stackalloc int[RadixBase];
-
-            var s = new SortSpan<T, NullComparer<T>, TContext>(span, context, default, BUFFER_MAIN);
-            var temp = new SortSpan<T, NullComparer<T>, TContext>(tempBuffer, context, default, BUFFER_TEMP);
-
-            // Determine bit size for sign-bit flipping
-            var bitSize = GetBitSize<T>();
+            var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+            var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
 
             // Find min and max unsigned keys to determine required digit count
             var minKey = ulong.MaxValue;
@@ -122,7 +191,7 @@ public static class RadixLSD10Sort
             for (var i = 0; i < s.Length; i++)
             {
                 var value = s.Read(i);
-                var key = GetUnsignedKey(value, bitSize);
+                var key = radixKey.GetKey(value);
                 if (key < minKey) minKey = key;
                 if (key > maxKey) maxKey = key;
             }
@@ -163,7 +232,7 @@ public static class RadixLSD10Sort
             var digitCount = GetDigitCountFromUlong(range, pow10);
 
             // Start LSD radix sort from the least significant digit
-            LSDSort(s, temp, digitCount, bitSize, minKey, bucketCounts, pow10);
+            LSDSort(s, temp, radixKey, digitCount, minKey, bucketCounts, pow10);
         }
         finally
         {
@@ -172,8 +241,8 @@ public static class RadixLSD10Sort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void LSDSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, int digitCount, int bitSize, ulong minKey, Span<int> bucketCounts, ReadOnlySpan<ulong> pow10)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
+    private static void LSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int digitCount, ulong minKey, Span<int> bucketCounts, ReadOnlySpan<ulong> pow10)
+        where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -193,7 +262,7 @@ public static class RadixLSD10Sort
             for (var i = 0; i < source.Length; i++)
             {
                 var value = source.Read(i);
-                var key = GetUnsignedKey(value, bitSize);
+                var key = radixKey.GetKey(value);
                 var normalizedKey = key - minKey;
                 var digit = (int)((normalizedKey / divisor) % 10);
                 bucketCounts[digit]++;
@@ -210,7 +279,7 @@ public static class RadixLSD10Sort
             for (var i = 0; i < source.Length; i++)
             {
                 var value = source.Read(i);
-                var key = GetUnsignedKey(value, bitSize);
+                var key = radixKey.GetKey(value);
                 var normalizedKey = key - minKey;
                 var digit = (int)((normalizedKey / divisor) % 10);
                 var pos = bucketStarts[digit]++;
@@ -219,102 +288,6 @@ public static class RadixLSD10Sort
 
             // Copy back from temp buffer
             temp.CopyTo(0, source, 0, source.Length);
-        }
-    }
-
-    /// <summary>
-    /// Get the bit size of the type T.
-    /// </summary>
-    /// <typeparam name="T">The binary integer type to check. Must be a standard .NET integer type.</typeparam>
-    /// <returns>The bit size of the type (8, 16, 32, or 64).</returns>
-    /// <exception cref="NotSupportedException">
-    /// Thrown when <typeparamref name="T"/> is a 128-bit type (<see cref="Int128"/> or <see cref="UInt128"/>),
-    /// or any other non-standard integer type.
-    /// <para>
-    /// <strong>Rationale for 128-bit exclusion:</strong>
-    /// This implementation uses <c>ulong</c> (64-bit) for radix key storage in <see cref="GetUnsignedKey{T}"/>.
-    /// Supporting 128-bit types would require <c>UInt128</c> keys, doubling memory usage for bucket operations
-    /// and degrading performance due to slower 128-bit arithmetic on most architectures.
-    /// Additionally, 128-bit integer sorting is rare in practice; comparison-based sorts suffice for such cases.
-    /// </para>
-    /// </exception>
-    /// <remarks>
-    /// Supported types: byte, sbyte, short, ushort, int, uint, long, ulong, nint, nuint (up to 64-bit).
-    /// </remarks>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetBitSize<T>() where T : IBinaryInteger<T>
-    {
-        if (typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte))
-            return 8;
-        else if (typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
-            return 16;
-        else if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
-            return 32;
-        else if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
-            return 64;
-        else if (typeof(T) == typeof(nint) || typeof(T) == typeof(nuint))
-            return IntPtr.Size * 8; // 32-bit or 64-bit depending on platform
-        else if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
-            throw new NotSupportedException($"Type {typeof(T).Name} with 128-bit size is not supported. Maximum supported bit size is 64.");
-        else
-            throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
-    }
-
-    /// <summary>
-    /// Convert a signed or unsigned value to an unsigned key for radix sorting.
-    /// For signed types, flips the sign bit to ensure correct ordering (negative values sort before positive).
-    /// For unsigned types, returns the value as-is.
-    /// </summary>
-    /// <remarks>
-    /// Sign-bit flipping technique:
-    /// - 32-bit signed: key = (uint)value ^ 0x8000_0000
-    /// - 64-bit signed: key = (ulong)value ^ 0x8000_0000_0000_0000
-    ///
-    /// This ensures:
-    /// - int.MinValue (-2147483648) → 0x0000_0000 (sorts first)
-    /// - -1 → 0x7FFF_FFFF (sorts before 0)
-    /// - 0 → 0x8000_0000 (sorts after negatives)
-    /// - int.MaxValue (2147483647) → 0xFFFF_FFFF (sorts last)
-    ///
-    /// Advantages:
-    /// - No Abs() needed, avoids MinValue overflow
-    /// - Single unified pass for all values
-    /// - Maintains stability
-    /// </remarks>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong GetUnsignedKey<T>(T value, int bitSize) where T : IBinaryInteger<T>
-    {
-        if (bitSize <= 8)
-        {
-            var byteValue = byte.CreateTruncating(value);
-            if (typeof(T) == typeof(sbyte))
-                return (byte)(byteValue ^ 0x80); // Flip sign bit for signed byte
-            return byteValue;
-        }
-        else if (bitSize <= 16)
-        {
-            var ushortValue = ushort.CreateTruncating(value);
-            if (typeof(T) == typeof(short))
-                return (ushort)(ushortValue ^ 0x8000); // Flip sign bit for signed short
-            return ushortValue;
-        }
-        else if (bitSize <= 32)
-        {
-            var uintValue = uint.CreateTruncating(value);
-            // Signed types (int, nint on 32-bit) need sign-bit flip
-            if (typeof(T) == typeof(int) || (typeof(T) == typeof(nint) && IntPtr.Size == 4))
-                return uintValue ^ 0x8000_0000;
-            // Unsigned types (uint, nuint on 32-bit): no flip needed
-            return uintValue;
-        }
-        else // 64-bit
-        {
-            var ulongValue = ulong.CreateTruncating(value);
-            // Signed types (long, nint on 64-bit) need sign-bit flip
-            if (typeof(T) == typeof(long) || (typeof(T) == typeof(nint) && IntPtr.Size == 8))
-                return ulongValue ^ 0x8000_0000_0000_0000;
-            // Unsigned types (ulong, nuint on 64-bit): no flip needed
-            return ulongValue;
         }
     }
 

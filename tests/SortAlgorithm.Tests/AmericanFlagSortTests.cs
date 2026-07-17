@@ -13,6 +13,79 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
     // No knob overrides: in-place permutation on sorted input may skip writes/swaps,
     // and per-bucket insertion sort makes compares data-dependent.
 
+    // AmericanFlagSort is UNSTABLE: the in-place permutation may reorder equal keys,
+    // so keySelector tests assert key order and permutation integrity only.
+
+    [Test]
+    public async Task KeySelectorSortsByKeyTest()
+    {
+        // Unstable sort: assert key order only, not tie order
+        var random = new Random(42);
+        var records = Enumerable.Range(0, 2000).Select(i => (Key: random.Next(-10000, 10000), Index: i)).ToArray();
+
+        AmericanFlagSort.Sort(records.AsSpan(), x => x.Key);
+
+        var keys = records.Select(x => x.Key).ToArray();
+        var expectedKeys = keys.OrderBy(x => x).ToArray();
+        await Assert.That(keys).IsEquivalentTo(expectedKeys, CollectionOrdering.Matching);
+        // All 2000 original records must still be present exactly once
+        await Assert.That(records.Select(x => x.Index).OrderBy(x => x).ToArray())
+            .IsEquivalentTo(Enumerable.Range(0, 2000).ToArray(), CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task KeySelectorNegativeKeysTest()
+    {
+        // Keys spanning negative/zero/positive; unstable sort, so assert key order only
+        var records = new (int Key, string Name)[] { (3, "c"), (-5, "a"), (0, "b"), (-5, "a2"), (3, "c2"), (int.MinValue, "min"), (int.MaxValue, "max") };
+        AmericanFlagSort.Sort(records.AsSpan(), x => x.Key);
+
+        await Assert.That(records.Select(x => x.Key).ToArray())
+            .IsEquivalentTo([int.MinValue, -5, -5, 0, 3, 3, int.MaxValue], CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
+    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        AmericanFlagSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted (NaN-first total order, same as Array.Sort)
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
+    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        AmericanFlagSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted (NaN-first total order, same as Array.Sort)
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
+    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        AmericanFlagSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted (NaN-first total order, same as Array.Sort)
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
     [Test]
     public async Task DecimalDigitBoundaryTest()
     {

@@ -24,6 +24,26 @@ Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
 
 Some algorithms provide additional range, key-selector, seed, or variant overloads. Those extensions must preserve the same ordering and observation semantics for the elements they cover.
 
+## Radix Key Mapping
+
+The radix-sort family (LSD/MSD radix, American Flag, Spread) is constrained by an order-preserving
+key mapping rather than by element type: `IRadixKeySelector<T>` maps an element to a fixed-width
+unsigned key (at most 64 bits), and all digit extraction and bucket math operates on that key.
+Integer overloads, `Func<T, int>` key-selector overloads, and Half/float/double overloads
+(IEEE 754 total-order transform, all NaN values first, matching `IComparable<T>` semantics)
+are sugar over the same core. The 64-bit key width is the abstraction's ceiling by design —
+wider keys (Int128, BigInteger) are rejected rather than degraded.
+
+Comparison fallbacks inside these algorithms (insertion-sort cutoffs, pdqsort fallback) receive a
+comparer from the public overload that must order consistently with the key mapping: built-in
+element overloads pass the element's natural comparer, key-selector overloads pass a comparer over
+the extracted key.
+
+Lesson learned: routing the fallback comparer through the key mapping unconditionally regressed
+SpreadSort's sorted-input early detection by ~67% (key transform on every comparison); passing the
+natural comparer for built-in element types recovered baseline performance while the key-selector
+path keeps its by-construction consistency.
+
 ## Stability
 
 Stability is an algorithm property, not a library-wide guarantee. An algorithm documented as stable preserves the original relative order of elements that compare equal. An unstable algorithm may reorder equal elements.

@@ -43,10 +43,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>int_log_finishing_count = 31 — Threshold for single-pass completion</description></item>
 /// <item><description>min_sort_size = 1000 — Minimum size to use spreadsort</description></item>
 /// </list>
-/// <para><strong>Supported Types:</strong></para>
+/// <para><strong>Supported Key Mappings (via <see cref="IRadixKeySelector{T}"/>):</strong></para>
 /// <list type="bullet">
-/// <item><description><strong>Supported:</strong> byte, sbyte, short, ushort, int, uint, long, ulong (fixed-width up to 64-bit)</description></item>
-/// <item><description><strong>Not Supported:</strong> nint, nuint (platform-dependent bit width), Int128, UInt128, BigInteger</description></item>
+/// <item><description><strong>Integers:</strong> byte, sbyte, short, ushort, int, uint, long, ulong (fixed-width up to 64-bit);
+/// nint/nuint are rejected (platform-dependent bit width makes distribution behavior inconsistent across environments); Int128/UInt128/BigInteger are rejected (64-bit key ceiling)</description></item>
+/// <item><description><strong>Floating point:</strong> Half, float, double via IEEE 754 total-order key transform (all NaN values sort first, matching <see cref="IComparable{T}"/> semantics)</description></item>
+/// <item><description><strong>Key selector:</strong> arbitrary element types via an extracted <c>int</c> key; NOTE: SpreadSort is unstable, so elements with equal keys may be reordered</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Boost.Sort SpreadSort: https://www.boost.org/doc/libs/release/libs/sort/doc/html/sort/sort_hpp/spreadsort.html</para>
@@ -90,7 +92,81 @@ public static class SpreadSort
 
         ThrowIfUnsupportedType<T>();
 
-        var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, new ComparableComparer<T>(), BUFFER_MAIN);
+        SortCore(span, default(BinaryIntegerRadixKey<T>), new ComparableComparer<T>(), context);
+    }
+
+    /// <summary>
+    /// Sorts the elements in the specified span by an integer key extracted with <paramref name="keySelector"/>.
+    /// NOTE: SpreadSort is unstable — elements with equal keys may be reordered.
+    /// Uses NullContext for zero-overhead fast path.
+    /// </summary>
+    /// <typeparam name="T">The type of elements to sort.</typeparam>
+    /// <param name="span">The span of elements to sort.</param>
+    /// <param name="keySelector">Extracts the integer sort key from an element. Must be pure and consistent per element.</param>
+    public static void Sort<T>(Span<T> span, Func<T, int> keySelector)
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        var selector = new FuncRadixKeySelector<T>(keySelector);
+        SortCore(span, selector, new RadixKeyComparer<T, FuncRadixKeySelector<T>>(selector), NullContext.Default);
+    }
+
+    /// <summary>
+    /// Sorts the elements in the specified span by an integer key extracted with <paramref name="keySelector"/>.
+    /// NOTE: SpreadSort is unstable — elements with equal keys may be reordered.
+    /// </summary>
+    /// <typeparam name="T">The type of elements to sort.</typeparam>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="span">The span of elements to sort.</param>
+    /// <param name="keySelector">Extracts the integer sort key from an element. Must be pure and consistent per element.</param>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
+    public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
+        where TContext : ISortContext
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        var selector = new FuncRadixKeySelector<T>(keySelector);
+        SortCore(span, selector, new RadixKeyComparer<T, FuncRadixKeySelector<T>>(selector), context);
+    }
+
+    /// <summary>
+    /// Sorts <see cref="Half"/> values via the IEEE 754 total-order key transform.
+    /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
+    /// </summary>
+    public static void Sort(Span<Half> span)
+        => SortCore(span, default(HalfRadixKey), new ComparableComparer<Half>(), NullContext.Default);
+
+    /// <inheritdoc cref="Sort(Span{Half})"/>
+    public static void Sort<TContext>(Span<Half> span, TContext context) where TContext : ISortContext
+        => SortCore(span, default(HalfRadixKey), new ComparableComparer<Half>(), context);
+
+    /// <summary>
+    /// Sorts <see cref="float"/> values via the IEEE 754 total-order key transform.
+    /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
+    /// </summary>
+    public static void Sort(Span<float> span)
+        => SortCore(span, default(SingleRadixKey), new ComparableComparer<float>(), NullContext.Default);
+
+    /// <inheritdoc cref="Sort(Span{float})"/>
+    public static void Sort<TContext>(Span<float> span, TContext context) where TContext : ISortContext
+        => SortCore(span, default(SingleRadixKey), new ComparableComparer<float>(), context);
+
+    /// <summary>
+    /// Sorts <see cref="double"/> values via the IEEE 754 total-order key transform.
+    /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
+    /// </summary>
+    public static void Sort(Span<double> span)
+        => SortCore(span, default(DoubleRadixKey), new ComparableComparer<double>(), NullContext.Default);
+
+    /// <inheritdoc cref="Sort(Span{double})"/>
+    public static void Sort<TContext>(Span<double> span, TContext context) where TContext : ISortContext
+        => SortCore(span, default(DoubleRadixKey), new ComparableComparer<double>(), context);
+
+    static void SortCore<T, TRadixKey, TComparer, TContext>(Span<T> span, TRadixKey radixKey, TComparer comparer, TContext context)
+        where TRadixKey : struct, IRadixKeySelector<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (span.Length <= 1) return;
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Boost: Don't sort if it's too small to optimize (min_sort_size = 1000)
         if (s.Length < MinSortSize)
@@ -99,11 +175,11 @@ public static class SpreadSort
             return;
         }
 
-        SortCore(s);
+        SpreadCore(s, radixKey);
     }
 
-    static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
+    static void SpreadCore<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey)
+        where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -123,7 +199,7 @@ public static class SpreadSort
         try
         {
             var binCache = rentedCache.AsSpan(0, s.Length);
-            SpreadSortRec(s, 0, s.Length, binCache, 0, binSizes);
+            SpreadSortRec(s, radixKey, 0, s.Length, binCache, 0, binSizes);
         }
         finally
         {
@@ -134,12 +210,13 @@ public static class SpreadSort
     /// <summary>
     /// Recursive SpreadSort implementation, inspired by Boost's spreadsort_rec.
     /// </summary>
-    static void SpreadSortRec<T, TComparer, TContext>(
+    static void SpreadSortRec<T, TRadixKey, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
+        TRadixKey radixKey,
         int first, int last,
         Span<int> binCache, int cacheOffset,
         Span<int> binSizes)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -149,8 +226,8 @@ public static class SpreadSort
         if (!IsSortedOrFindExtremes(s, first, last, out var minIdx, out var maxIdx))
             return; // Already sorted
 
-        var minKey = GetUnsignedKey(s.Read(minIdx));
-        var maxKey = GetUnsignedKey(s.Read(maxIdx));
+        var minKey = radixKey.GetKey(s.Read(minIdx));
+        var maxKey = radixKey.GetKey(s.Read(maxIdx));
 
         // Compute log₂ of the value range (Boost: rough_log_2_size(max - min))
         var range = maxKey - minKey;
@@ -175,7 +252,7 @@ public static class SpreadSort
         s.Context.OnPhase(SortPhase.DistributionCount);
         for (var i = first; i < last; i++)
         {
-            var key = GetUnsignedKey(s.Read(i));
+            var key = radixKey.GetKey(s.Read(i));
             var bin = (int)((long)(key >> logDivisor) - divMin);
             currentBinSizes[bin]++;
         }
@@ -196,12 +273,12 @@ public static class SpreadSort
             nextBinStart += currentBinSizes[u];
             for (var current = localBinPos; current < nextBinStart; current++)
             {
-                var targetBin = (int)((long)(GetUnsignedKey(s.Read(current)) >> logDivisor) - divMin);
+                var targetBin = (int)((long)(radixKey.GetKey(s.Read(current)) >> logDivisor) - divMin);
                 while (targetBin != u)
                 {
                     // 3-way swap: reduces copies per item (Boost: ~1% faster than 2-way)
                     var b = bins[targetBin]++;
-                    var bBin = (int)((long)(GetUnsignedKey(s.Read(b)) >> logDivisor) - divMin);
+                    var bBin = (int)((long)(radixKey.GetKey(s.Read(b)) >> logDivisor) - divMin);
 
                     T tmp;
                     if (bBin != u)
@@ -217,7 +294,7 @@ public static class SpreadSort
                     s.Write(b, s.Read(current));
                     s.Write(current, tmp);
 
-                    targetBin = (int)((long)(GetUnsignedKey(s.Read(current)) >> logDivisor) - divMin);
+                    targetBin = (int)((long)(radixKey.GetKey(s.Read(current)) >> logDivisor) - divMin);
                 }
             }
             bins[u] = nextBinStart;
@@ -252,7 +329,7 @@ public static class SpreadSort
             }
             else
             {
-                SpreadSortRec(s, binEnd - binLength, binEnd, binCache, cacheEnd, binSizes);
+                SpreadSortRec(s, radixKey, binEnd - binLength, binEnd, binCache, cacheEnd, binSizes);
             }
         }
     }
@@ -266,7 +343,6 @@ public static class SpreadSort
         SortSpan<T, TComparer, TContext> s,
         int first, int last,
         out int minIdx, out int maxIdx)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -400,40 +476,6 @@ public static class SpreadSort
             throw new NotSupportedException($"Type {typeof(T).Name} is not supported. Native-sized integers have platform-dependent bit width, which makes distribution sort behavior inconsistent across 32-bit and 64-bit environments.");
         if (typeof(T) == typeof(Int128) || typeof(T) == typeof(UInt128))
             throw new NotSupportedException($"Type {typeof(T).Name} with 128-bit size is not supported. Maximum supported bit size is 64.");
-
-        throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
-    }
-
-    /// <summary>
-    /// Converts a value to an unsigned key for distribution sorting.
-    /// For signed types, flips the sign bit to ensure correct ordering.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static ulong GetUnsignedKey<T>(T value) where T : IBinaryInteger<T>
-    {
-        // 8-bit
-        if (typeof(T) == typeof(byte))
-            return byte.CreateTruncating(value);
-        if (typeof(T) == typeof(sbyte))
-            return (ulong)((byte)sbyte.CreateTruncating(value) ^ 0x80);
-
-        // 16-bit
-        if (typeof(T) == typeof(ushort))
-            return ushort.CreateTruncating(value);
-        if (typeof(T) == typeof(short))
-            return (ulong)((ushort)short.CreateTruncating(value) ^ 0x8000);
-
-        // 32-bit
-        if (typeof(T) == typeof(uint))
-            return uint.CreateTruncating(value);
-        if (typeof(T) == typeof(int))
-            return (uint)int.CreateTruncating(value) ^ 0x8000_0000;
-
-        // 64-bit
-        if (typeof(T) == typeof(ulong))
-            return ulong.CreateTruncating(value);
-        if (typeof(T) == typeof(long))
-            return (ulong)long.CreateTruncating(value) ^ 0x8000_0000_0000_0000;
 
         throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
     }

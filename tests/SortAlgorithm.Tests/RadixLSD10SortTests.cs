@@ -15,6 +15,131 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
     protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
     protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
+    // The KeySelector overload carries satellite data, which makes stability observable:
+    // these are the canonical stability tests, driven through Sort(span, keySelector, context).
+
+    [Test]
+    [MethodDataSource(typeof(MockStabilityData), nameof(MockStabilityData.Generate))]
+    public async Task StabilityTest(StabilityTestItem[] items)
+    {
+        // Test stability: equal keys should maintain relative order
+        var stats = new StatisticsContext();
+
+        RadixLSD10Sort.Sort(items.AsSpan(), x => x.Value, stats);
+
+        // Verify sorting correctness - values should be in ascending order
+        await Assert.That(items.Select(x => x.Value).ToArray()).IsEquivalentTo(MockStabilityData.Sorted, CollectionOrdering.Matching);
+
+        // Verify stability: for each group of equal values, original order is preserved
+        var value1Indices = items.Where(x => x.Value == 1).Select(x => x.OriginalIndex).ToArray();
+        var value2Indices = items.Where(x => x.Value == 2).Select(x => x.OriginalIndex).ToArray();
+        var value3Indices = items.Where(x => x.Value == 3).Select(x => x.OriginalIndex).ToArray();
+
+        await Assert.That(value1Indices).IsEquivalentTo(MockStabilityData.Sorted1, CollectionOrdering.Matching);
+        await Assert.That(value2Indices).IsEquivalentTo(MockStabilityData.Sorted2, CollectionOrdering.Matching);
+        await Assert.That(value3Indices).IsEquivalentTo(MockStabilityData.Sorted3, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockStabilityWithIdData), nameof(MockStabilityWithIdData.Generate))]
+    public async Task StabilityTestWithComplex(StabilityTestItemWithId[] items)
+    {
+        // Test stability with more complex scenario - multiple equal keys
+        var stats = new StatisticsContext();
+
+        RadixLSD10Sort.Sort(items.AsSpan(), x => x.Key, stats);
+
+        // Keys are sorted, and elements with the same key maintain original order
+        for (var i = 0; i < items.Length; i++)
+        {
+            await Assert.That(items[i].Key).IsEqualTo(MockStabilityWithIdData.Sorted[i].Key);
+            await Assert.That(items[i].Id).IsEqualTo(MockStabilityWithIdData.Sorted[i].Id);
+        }
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockStabilityAllEqualsData), nameof(MockStabilityAllEqualsData.Generate))]
+    public async Task StabilityTestWithAllEqual(StabilityTestItem[] items)
+    {
+        // All keys equal: original order must be fully preserved
+        var stats = new StatisticsContext();
+
+        RadixLSD10Sort.Sort(items.AsSpan(), x => x.Value, stats);
+
+        foreach (var item in items) await Assert.That(item.Value).IsEqualTo(1);
+        await Assert.That(items.Select(x => x.OriginalIndex).ToArray()).IsEquivalentTo(MockStabilityAllEqualsData.Sorted, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task KeySelectorNegativeKeysTest()
+    {
+        // Keys spanning negative/zero/positive, ordered strictly by key
+        var records = new (int Key, string Name)[] { (3, "c"), (-5, "a"), (0, "b"), (-5, "a2"), (3, "c2"), (int.MinValue, "min"), (int.MaxValue, "max") };
+        RadixLSD10Sort.Sort(records.AsSpan(), x => x.Key);
+
+        await Assert.That(records.Select(x => x.Key).ToArray())
+            .IsEquivalentTo([int.MinValue, -5, -5, 0, 3, 3, int.MaxValue], CollectionOrdering.Matching);
+        // Equal keys keep input order (stability)
+        await Assert.That(records.Select(x => x.Name).ToArray())
+            .IsEquivalentTo(["min", "a", "a2", "b", "c", "c2", "max"], CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task KeySelectorLargeInputTest()
+    {
+        // Large input exercises the full LSD digit passes
+        var random = new Random(42);
+        var records = Enumerable.Range(0, 1000).Select(i => (Key: random.Next(-10000, 10000), Index: i)).ToArray();
+        var expected = records.OrderBy(x => x.Key).ThenBy(x => x.Index).ToArray();
+
+        RadixLSD10Sort.Sort(records.AsSpan(), x => x.Key);
+
+        // OrderBy+ThenBy(Index) is exactly what a stable key sort must produce
+        await Assert.That(records).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
+    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        RadixLSD10Sort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted (NaN-first total order, same as Array.Sort)
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
+    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        RadixLSD10Sort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted (NaN-first total order, same as Array.Sort)
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
+    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        RadixLSD10Sort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted (NaN-first total order, same as Array.Sort)
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
     [Test]
     public async Task SortNativeIntegerTypesTest()
     {
