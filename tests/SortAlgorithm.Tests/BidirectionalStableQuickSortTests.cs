@@ -329,14 +329,20 @@ public class BidirectionalStableQuickSortTests
     public async Task TheoreticalValuesRandomTest(int n)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var rng = new Random(42 + n);
+        var random = Enumerable.Range(0, n).OrderBy(_ => rng.Next()).ToArray();
         BidirectionalStableQuickSort.Sort(random.AsSpan(), stats);
 
         // BidirectionalStableQuickSort on random data:
         // - Average case O(n log n) with median-of-3 pivot selection
         // - Bidirectional partitioning handles various data distributions efficiently
+        //
+        // Upper bound derived from StablePartition: a partition of length m costs at most
+        // 3 comparisons (median-of-3) + 2m (main scan) + 2m (equal-fill scan) = 4m + 3.
+        // In the worst case each partition removes only the pivot, so the total over the
+        // chain m = n, n-1, ..., 2 is below 2n^2 + 5n.
         var minCompares = (ulong)n;
-        var maxCompares = (ulong)(n * n) + 2;
+        var maxCompares = (ulong)(2 * n * n + 5 * n);
         var minSwaps = 0UL;
         var maxSwaps = (ulong)(n * Math.Max(1, Math.Log(n, 2)));
 
