@@ -19,7 +19,7 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Theoretical Conditions for Correct Stable QuickSort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Median-of-3 Pivot Selection:</strong> The pivot value is selected as the median of three sampled elements
-/// at quartile positions: array[q1], array[mid], and array[q3], where q1 = left + length/4, mid = left + length/2, q3 = left + 3*length/4.
+/// at quartile positions: array[q1], array[mid], and array[q3], where q1 = left + length/4, mid = left + length/2, q3 = right - length/4.
 /// This selection method is computed using 2-3 comparisons and ensures better pivot quality than random selection or simple left/mid/right sampling.
 /// The quartile-based median-of-3 strategy provides robust performance across various data patterns including mountain-shaped, valley-shaped,
 /// and partially sorted arrays, while maintaining the O(1/n³) probability of worst-case partitioning.</description></item>
@@ -63,7 +63,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Θ(n log n) - Occurs when pivot consistently divides array into balanced partitions</description></item>
 /// <item><description>Average case: Θ(n log n) - Expected ~n log₂ n comparisons with median-of-3 pivot selection</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability ~1/n³ with median-of-3)</description></item>
-/// <item><description>Comparisons : ~n log₂ n (average) - Single pass per partition with n comparisons per level</description></item>
+/// <item><description>Comparisons : ~2n log₂ n (average) - Two comparison passes per partition (count, then distribute), ~2n comparisons per level</description></item>
 /// <item><description>Copies      : ~2n log₂ n (average) - Each element copied to/from temporary storage at each recursion level</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
@@ -73,7 +73,7 @@ public static class StableQuickSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
-    private const int BUFFER_TEMP = 1;       // Temporary merge buffer
+    private const int BUFFER_TEMP = 1;       // Temporary partition buffer
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -160,7 +160,7 @@ public static class StableQuickSort
     }
 
     /// <summary>
-    /// Sorts the subrange [first..last) using the provided sort context.
+    /// Sorts the inclusive subrange [left..right].
     /// This overload accepts a SortSpan directly for use by other algorithms that already have a SortSpan instance.
     /// Uses tail recursion optimization to limit stack depth to O(log n) by recursing on the smaller partition.
     /// </summary>
@@ -170,7 +170,7 @@ public static class StableQuickSort
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="left">The inclusive start index of the range to sort.</param>
     /// <param name="right">The inclusive end index of the range to sort.</param>
-    /// <param name="context">The sort context for tracking statistics and observations.</param>
+    /// <param name="scratch">Scratch buffer for stable partitioning; must be at least as long as the range being sorted.</param>
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, Span<T> scratch)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -183,7 +183,7 @@ public static class StableQuickSort
             var length = right - left + 1;
             var q1 = left + length / 4;
             var mid = left + length / 2;
-            var q3 = right - length / 4;   // overflow-safe: equivalent to left + length*3/4
+            var q3 = right - length / 4;   // upper-quartile sample (≈ left + length*3/4) without the int overflow of 3*length
             var pivotIndex = MedianOf3Index(s, q1, mid, q3);
             s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, pivotIndex);
             s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.Pivot);
@@ -267,7 +267,8 @@ public static class StableQuickSort
         for (var i = left; i <= right; i++)
         {
             var element = s.Read(i);
-            // Compare once per element to minimize comparison overhead
+            // Re-compares against the pivot (second comparison per element after Phase 1);
+            // results match Phase 1 because the range is not modified until Phase 3
             var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
             if (cmp < 0)
             {
