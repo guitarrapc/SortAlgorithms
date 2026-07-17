@@ -40,6 +40,18 @@ that key. Two method names split the API by what defines the order:
   `SortBy<T, TRadixKey>(Span<T>, TRadixKey)` overload named `Sort` would collide with
   `Sort<T, TContext>(Span<T>, TContext)` — C# does not distinguish signatures by constraints.
 
+The same rule applies to the key-selector distribution sorts: `CountingSort.SortBy` /
+`PigeonholeSort.SortBy` / `BucketSort.SortBy` order strictly by the extracted key (stable, no
+`IComparable<T>` requirement). The exception that proves the rule is
+`BucketSort.Sort(span, keySelector, comparer, context)`: there the explicit comparer defines the
+final order and the key selector is only a bucket-distribution accelerator, so the method keeps
+the `Sort` name — the order source is visible in the signature. That overload's precondition is
+that the key is order-consistent with the comparer (`comparer.Compare(x, y) <= 0` implies
+`key(x) <= key(y)`); an inconsistent hint produces unsorted output.
+
+In short: the method name states what defines the order; a parameter that does not define the
+order (a bucketing hint) never changes the name.
+
 The 64-bit key width is the abstraction's ceiling by design — wider keys (Int128, BigInteger) and
 selectors declaring `KeyBits` outside 1..64 are rejected rather than degraded.
 

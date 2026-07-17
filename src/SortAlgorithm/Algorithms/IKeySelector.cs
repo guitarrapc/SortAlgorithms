@@ -55,3 +55,15 @@ internal readonly struct FuncKeySelector<T>(Func<T, int> func) : IKeySelector<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int GetKey(T value) => func(value);
 }
+
+/// <summary>
+/// Compares elements by their extracted integer key.
+/// Used by key-ordered (<c>SortBy</c>) distribution sorts so that comparison fallbacks
+/// order by exactly the same key as the distribution passes and stay stable.
+/// </summary>
+internal readonly struct KeySelectorComparer<T, TKeySelector>(TKeySelector keySelector) : IComparer<T>
+    where TKeySelector : struct, IKeySelector<T>
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int Compare(T? x, T? y) => keySelector.GetKey(x!).CompareTo(keySelector.GetKey(y!));
+}

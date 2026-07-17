@@ -58,40 +58,49 @@ public static class BucketSort
     private const int BUFFER_BUCKET_BASE = 100; // Base ID for individual buckets (100, 101, 102, ...)
 
     /// <summary>
-    /// Sorts the elements in the specified span in ascending order using the default comparer.
+    /// Sorts the elements in the specified span by an integer key extracted with <paramref name="keySelector"/>.
+    /// The key alone defines the order; elements with equal keys retain their relative input order (stable).
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector) where T : IComparable<T>
+    /// <param name="keySelector">Extracts the integer sort key from an element. Must be pure and consistent per element.</param>
+    public static void SortBy<T>(Span<T> span, Func<T, int> keySelector)
     {
         ArgumentNullException.ThrowIfNull(keySelector);
-        SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), NullContext.Default);
+        var selector = new FuncKeySelector<T>(keySelector);
+        SortCore(span, selector, new KeySelectorComparer<T, FuncKeySelector<T>>(selector), NullContext.Default);
     }
 
     /// <summary>
-    /// Sorts the elements in the specified span using the provided sort context.
+    /// Sorts the elements in the specified span by an integer key extracted with <paramref name="keySelector"/>.
+    /// The key alone defines the order; elements with equal keys retain their relative input order (stable).
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="keySelector">Extracts the integer sort key from an element. Must be pure and consistent per element.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
-        where T : IComparable<T>
+    public static void SortBy<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
         where TContext : ISortContext
     {
         ArgumentNullException.ThrowIfNull(keySelector);
-        SortCore(span, new FuncKeySelector<T>(keySelector), new ComparableComparer<T>(), context);
+        var selector = new FuncKeySelector<T>(keySelector);
+        SortCore(span, selector, new KeySelectorComparer<T, FuncKeySelector<T>>(selector), context);
     }
 
     /// <summary>
     /// Sorts the elements in the specified span using the provided comparer and sort context.
+    /// The comparer defines the final order; <paramref name="keySelector"/> is only a bucket-distribution
+    /// accelerator and MUST be order-consistent with the comparer
+    /// (comparer.Compare(x, y) &lt;= 0 implies keySelector(x) &lt;= keySelector(y)), otherwise the result is not sorted.
     /// This is the full-control version with explicit TContext type parameter.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use for element comparisons.</typeparam>
     /// <typeparam name="TContext">The type of sort context.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
+    /// <param name="keySelector">Extracts the bucket-distribution key. Must be order-consistent with <paramref name="comparer"/>.</param>
     /// <param name="comparer">The comparer to use for element comparisons.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
     public static void Sort<T, TComparer, TContext>(Span<T> span, Func<T, int> keySelector, TComparer comparer, TContext context)

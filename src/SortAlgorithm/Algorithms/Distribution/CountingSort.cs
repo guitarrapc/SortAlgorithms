@@ -61,7 +61,7 @@ public static class CountingSort
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <param name="span">The span of elements to sort in place.</param>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector)
+    public static void SortBy<T>(Span<T> span, Func<T, int> keySelector)
     {
         ArgumentNullException.ThrowIfNull(keySelector);
         SortCore(span, new FuncKeySelector<T>(keySelector), NullContext.Default);
@@ -74,7 +74,7 @@ public static class CountingSort
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort. The elements within this span will be reordered in place.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation. Cannot be null.</param>
-    public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
+    public static void SortBy<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
         where TContext : ISortContext
     {
         ArgumentNullException.ThrowIfNull(keySelector);
