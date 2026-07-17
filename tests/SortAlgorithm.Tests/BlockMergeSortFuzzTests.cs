@@ -29,6 +29,7 @@ public class BlockMergeSortFuzzTests
     ///   <item>511–513 : CacheSize (512) 境界</item>
     ///   <item>1023–1027 : BlockMergeLevel が初めて起動するサイズ境界</item>
     ///   <item>2048, 4096 : ブロックマージの複数ラウンドを含む大きいサイズ</item>
+    ///   <item>600000 : 最終マージレベルが 513^2 = 263169 要素を超え blockSize > CacheSize となり、buffer2 / MergeInternal / MergeInPlace 経路が発動するサイズ</item>
     /// </list>
     /// </summary>
     public static IEnumerable<Func<FuzzCase>> FuzzCases()
@@ -43,10 +44,13 @@ public class BlockMergeSortFuzzTests
             1023, 1024, 1025, 1027,
             // Multiple block-merge rounds
             2048, 4096,
+            // blockSize > CacheSize: final merge level is 300000 elements (blockSize ~547),
+            // activating the buffer2 / MergeInternal / MergeInPlace paths
+            600_000,
         ];
 
         // Patterns chosen to stress different BlockMergeSort internal paths:
-        //   allSame        : leaves buffer1 empty → tests the MergeInPlace fallback
+        //   allSame        : every pair is already in order → tests the skip checks
         //   twoValues      : extreme duplicates  → stresses buffer extraction
         //   highDuplicates : values in [0, √size) → partial buffer extraction
         //   random         : general case

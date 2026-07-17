@@ -37,11 +37,11 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Family      : Merge (Block / WikiSort), Bottom-Up</description></item>
 /// <item><description>Stable      : Yes</description></item>
-/// <item><description>In-place    : Yes (O(1) auxiliary space — fixed 512-element cache on stack)</description></item>
+/// <item><description>In-place    : Yes (O(1) auxiliary space — fixed 512-element cache rented from ArrayPool)</description></item>
 /// <item><description>Best case   : O(n) — Already sorted data: all merge-level skips fire</description></item>
 /// <item><description>Average case: O(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n)</description></item>
-/// <item><description>Space       : O(1) — 512-element stack cache, no heap allocation</description></item>
+/// <item><description>Space       : O(1) — fixed 512-element cache rented from ArrayPool (no per-call allocation once the pool is warm)</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Block_sort</para>
@@ -604,8 +604,6 @@ public static class BlockMergeSort
                 count = 1;
                 while (count < length)
                 {
-                    // Guard: if index has reached the pull destination, there's no element before it to search for
-                    if (index <= pull[i].To) break;
                     index = FindFirstBackward(s, s.Read(index - 1), new BlockRange(pull[i].To, pull[i].From - (count - 1)), length - count);
                     var rStart = index + 1;
                     var rEnd = pull[i].From + 1;
@@ -621,8 +619,6 @@ public static class BlockMergeSort
                 count = 1;
                 while (count < length)
                 {
-                    // Guard: if index has reached the pull destination, there's no element at that position to search for
-                    if (index >= pull[i].To) break;
                     index = FindLastForward(s, s.Read(index), new BlockRange(index, pull[i].To), length - count);
                     var rStart = pull[i].From;
                     var rEnd = index - 1;
@@ -633,10 +629,11 @@ public static class BlockMergeSort
             }
         }
 
-        // Adjust block_size and buffer_size
+        // Adjust block_size and buffer_size based on the values we were able to pull out.
+        // buffer1 always holds at least one element here: the scan loop records the largest
+        // run found, and even all-identical input yields count == 1 on the first A subarray.
         bufferSize = buffer1.Length();
-        if (bufferSize > 0)
-            blockSize = iterator.Length() / bufferSize + 1;
+        blockSize = iterator.Length() / bufferSize + 1;
 
         // Now merge each A+B combination
         iterator.Begin();
@@ -684,13 +681,6 @@ public static class BlockMergeSort
             else if (s.Compare(B.Start, A.End - 1) < 0)
             {
                 // Need to merge
-                // buffer1 could not be extracted (e.g. all values identical): fall back to in-place merge
-                if (buffer1.Length() == 0)
-                {
-                    MergeInPlace(s, A, B);
-                    continue;
-                }
-
                 var blockA = new BlockRange(A.Start, A.End);
                 var firstA = new BlockRange(A.Start, A.Start + blockA.Length() % blockSize);
 
