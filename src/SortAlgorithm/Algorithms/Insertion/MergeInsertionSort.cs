@@ -34,7 +34,7 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Insertion</description></item>
-/// <item><description>Stable      : Yes (when implemented with stable binary insertion)</description></item>
+/// <item><description>Stable      : No (the Jacobsthal insertion order can place a later equal key before an earlier one)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for pended elements and indices)</description></item>
 /// <item><description>Best case   : O(n log n) - Optimal comparison count, approaches ceiling(log₂(n!)) comparisons</description></item>
 /// <item><description>Average case: O(n log n) - Comparisons remain near-optimal, but data movement is O(n²)</description></item>
