@@ -16,7 +16,7 @@ public class RadixLSD4SortTests : IntegerSortTestsBase
     protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     // The KeySelector overload carries satellite data, which makes stability observable:
-    // these are the canonical stability tests, driven through Sort(span, keySelector, context).
+    // these are the canonical stability tests, driven through SortBy(span, keySelector, context).
 
     [Test]
     [MethodDataSource(typeof(MockStabilityData), nameof(MockStabilityData.Generate))]
