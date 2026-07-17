@@ -25,7 +25,7 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         // Test stability: equal keys should maintain relative order
         var stats = new StatisticsContext();
 
-        RadixLSD10Sort.Sort(items.AsSpan(), x => x.Value, stats);
+        RadixLSD10Sort.SortBy(items.AsSpan(), x => x.Value, stats);
 
         // Verify sorting correctness - values should be in ascending order
         await Assert.That(items.Select(x => x.Value).ToArray()).IsEquivalentTo(MockStabilityData.Sorted, CollectionOrdering.Matching);
@@ -47,7 +47,7 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         // Test stability with more complex scenario - multiple equal keys
         var stats = new StatisticsContext();
 
-        RadixLSD10Sort.Sort(items.AsSpan(), x => x.Key, stats);
+        RadixLSD10Sort.SortBy(items.AsSpan(), x => x.Key, stats);
 
         // Keys are sorted, and elements with the same key maintain original order
         for (var i = 0; i < items.Length; i++)
@@ -64,7 +64,7 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         // All keys equal: original order must be fully preserved
         var stats = new StatisticsContext();
 
-        RadixLSD10Sort.Sort(items.AsSpan(), x => x.Value, stats);
+        RadixLSD10Sort.SortBy(items.AsSpan(), x => x.Value, stats);
 
         foreach (var item in items) await Assert.That(item.Value).IsEqualTo(1);
         await Assert.That(items.Select(x => x.OriginalIndex).ToArray()).IsEquivalentTo(MockStabilityAllEqualsData.Sorted, CollectionOrdering.Matching);
@@ -75,7 +75,7 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
     {
         // Keys spanning negative/zero/positive, ordered strictly by key
         var records = new (int Key, string Name)[] { (3, "c"), (-5, "a"), (0, "b"), (-5, "a2"), (3, "c2"), (int.MinValue, "min"), (int.MaxValue, "max") };
-        RadixLSD10Sort.Sort(records.AsSpan(), x => x.Key);
+        RadixLSD10Sort.SortBy(records.AsSpan(), x => x.Key);
 
         await Assert.That(records.Select(x => x.Key).ToArray())
             .IsEquivalentTo([int.MinValue, -5, -5, 0, 3, 3, int.MaxValue], CollectionOrdering.Matching);
@@ -92,7 +92,7 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         var records = Enumerable.Range(0, 1000).Select(i => (Key: random.Next(-10000, 10000), Index: i)).ToArray();
         var expected = records.OrderBy(x => x.Key).ThenBy(x => x.Index).ToArray();
 
-        RadixLSD10Sort.Sort(records.AsSpan(), x => x.Key);
+        RadixLSD10Sort.SortBy(records.AsSpan(), x => x.Key);
 
         // OrderBy+ThenBy(Index) is exactly what a stable key sort must produce
         await Assert.That(records).IsEquivalentTo(expected, CollectionOrdering.Matching);

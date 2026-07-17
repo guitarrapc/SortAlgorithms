@@ -72,20 +72,20 @@ public static class SpreadSort
     /// Sorts the elements in the specified span in ascending order.
     /// Uses NullContext for zero-overhead fast path.
     /// </summary>
-    /// <typeparam name="T">The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <typeparam name="T">The type of elements to sort. Must be a binary integer type (up to 64-bit).</typeparam>
     /// <param name="span">The span of elements to sort.</param>
-    public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>, IMinMaxValue<T>
+    public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>
         => Sort(span, NullContext.Default);
 
     /// <summary>
     /// Sorts the elements in the specified span using the specified context.
     /// </summary>
-    /// <typeparam name="T">The type of elements to sort. Must be a binary integer type with defined min/max values.</typeparam>
+    /// <typeparam name="T">The type of elements to sort. Must be a binary integer type (up to 64-bit).</typeparam>
     /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
     /// <param name="span">The span of elements to sort.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
     public static void Sort<T, TContext>(Span<T> span, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where T : IBinaryInteger<T>
         where TContext : ISortContext
     {
         if (span.Length <= 1) return;
@@ -103,7 +103,7 @@ public static class SpreadSort
     /// <typeparam name="T">The type of elements to sort.</typeparam>
     /// <param name="span">The span of elements to sort.</param>
     /// <param name="keySelector">Extracts the integer sort key from an element. Must be pure and consistent per element.</param>
-    public static void Sort<T>(Span<T> span, Func<T, int> keySelector)
+    public static void SortBy<T>(Span<T> span, Func<T, int> keySelector)
     {
         ArgumentNullException.ThrowIfNull(keySelector);
         var selector = new FuncRadixKeySelector<T>(keySelector);
@@ -119,13 +119,36 @@ public static class SpreadSort
     /// <param name="span">The span of elements to sort.</param>
     /// <param name="keySelector">Extracts the integer sort key from an element. Must be pure and consistent per element.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
-    public static void Sort<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
+    public static void SortBy<T, TContext>(Span<T> span, Func<T, int> keySelector, TContext context)
         where TContext : ISortContext
     {
         ArgumentNullException.ThrowIfNull(keySelector);
         var selector = new FuncRadixKeySelector<T>(keySelector);
         SortCore(span, selector, new RadixKeyComparer<T, FuncRadixKeySelector<T>>(selector), context);
     }
+
+    /// <summary>
+    /// Sorts the elements in the specified span by keys produced with a custom
+    /// <see cref="IRadixKeySelector{T}"/> implementation (full-control overload, up to 64-bit keys).
+    /// Implement the selector as a readonly struct for JIT devirtualization and inlining.
+    /// NOTE: this algorithm is unstable - elements with equal keys may be reordered.
+    /// Uses NullContext for zero-overhead fast path.
+    /// </summary>
+    /// <typeparam name="T">The type of elements to sort.</typeparam>
+    /// <typeparam name="TRadixKey">The radix key selector type. Must be a struct implementing <see cref="IRadixKeySelector{T}"/>.</typeparam>
+    /// <param name="span">The span of elements to sort.</param>
+    /// <param name="radixKey">Maps an element to its order-preserving unsigned key.</param>
+    public static void SortBy<T, TRadixKey>(Span<T> span, TRadixKey radixKey)
+        where TRadixKey : struct, IRadixKeySelector<T>
+        => SortCore(span, radixKey, new RadixKeyComparer<T, TRadixKey>(radixKey), NullContext.Default);
+
+    /// <inheritdoc cref="SortBy{T, TRadixKey}(Span{T}, TRadixKey)"/>
+    /// <typeparam name="TContext">The type of context for tracking operations.</typeparam>
+    /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
+    public static void SortBy<T, TRadixKey, TContext>(Span<T> span, TRadixKey radixKey, TContext context)
+        where TRadixKey : struct, IRadixKeySelector<T>
+        where TContext : ISortContext
+        => SortCore(span, radixKey, new RadixKeyComparer<T, TRadixKey>(radixKey), context);
 
     /// <summary>
     /// Sorts <see cref="Half"/> values via the IEEE 754 total-order key transform.
@@ -166,6 +189,8 @@ public static class SpreadSort
         where TContext : ISortContext
     {
         if (span.Length <= 1) return;
+
+        RadixKeyGuard.ValidateKeyBits<T, TRadixKey>();
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Boost: Don't sort if it's too small to optimize (min_sort_size = 1000)

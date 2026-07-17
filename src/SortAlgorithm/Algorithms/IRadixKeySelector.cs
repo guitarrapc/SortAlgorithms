@@ -31,6 +31,22 @@ public interface IRadixKeySelector<T>
 }
 
 /// <summary>
+/// Validates a selector's declared key width at sort entry.
+/// For the built-in selectors the check constant-folds away; for user selectors it rejects
+/// widths the ulong key storage cannot represent before any digit math runs on them.
+/// </summary>
+internal static class RadixKeyGuard
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void ValidateKeyBits<T, TRadixKey>() where TRadixKey : struct, IRadixKeySelector<T>
+    {
+        var keyBits = TRadixKey.KeyBits;
+        if (keyBits is < 1 or > 64)
+            throw new NotSupportedException($"{typeof(TRadixKey).Name}.KeyBits ({keyBits}) must be between 1 and 64: radix keys are stored as ulong.");
+    }
+}
+
+/// <summary>
 /// Compares elements by their radix key.
 /// Used by radix sorts for small-range fallbacks (insertion sort cutoff, comparison-sort fallback)
 /// so the fallback orders by exactly the same key as the digit passes — consistency holds by
@@ -59,7 +75,7 @@ internal readonly struct RadixKeyComparer<T, TRadixKey>(TRadixKey radixKey) : IC
 /// <para><see cref="KeyBits"/> throws <see cref="NotSupportedException"/> for 128-bit and other
 /// non-standard integer types: the abstraction stores keys in <see cref="ulong"/>, so 64 bits is the ceiling.</para>
 /// </remarks>
-internal readonly struct BinaryIntegerRadixKey<T> : IRadixKeySelector<T> where T : IBinaryInteger<T>
+public readonly struct BinaryIntegerRadixKey<T> : IRadixKeySelector<T> where T : IBinaryInteger<T>
 {
     public static int KeyBits
     {
@@ -161,7 +177,7 @@ internal readonly struct FuncRadixKeySelector<T>(Func<T, int> func) : IRadixKeyS
 /// NaN (any payload or sign) is normalized to key 0 so it sorts first like <c>Half.CompareTo</c>;
 /// no non-NaN value maps to 0 (the smallest non-NaN key is ~0xFC00 for -∞).
 /// </remarks>
-internal readonly struct HalfRadixKey : IRadixKeySelector<Half>
+public readonly struct HalfRadixKey : IRadixKeySelector<Half>
 {
     public static int KeyBits => 16;
 
@@ -178,7 +194,7 @@ internal readonly struct HalfRadixKey : IRadixKeySelector<Half>
 /// Order-preserving radix key for <see cref="float"/>, matching the <see cref="IComparable{T}"/> total order
 /// (all NaN values first, then -∞ .. -0 &lt; +0 .. +∞). See <see cref="HalfRadixKey"/> remarks for the transform.
 /// </summary>
-internal readonly struct SingleRadixKey : IRadixKeySelector<float>
+public readonly struct SingleRadixKey : IRadixKeySelector<float>
 {
     public static int KeyBits => 32;
 
@@ -195,7 +211,7 @@ internal readonly struct SingleRadixKey : IRadixKeySelector<float>
 /// Order-preserving radix key for <see cref="double"/>, matching the <see cref="IComparable{T}"/> total order
 /// (all NaN values first, then -∞ .. -0 &lt; +0 .. +∞). See <see cref="HalfRadixKey"/> remarks for the transform.
 /// </summary>
-internal readonly struct DoubleRadixKey : IRadixKeySelector<double>
+public readonly struct DoubleRadixKey : IRadixKeySelector<double>
 {
     public static int KeyBits => 64;
 

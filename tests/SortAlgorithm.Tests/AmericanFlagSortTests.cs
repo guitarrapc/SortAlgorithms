@@ -23,7 +23,7 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
         var random = new Random(42);
         var records = Enumerable.Range(0, 2000).Select(i => (Key: random.Next(-10000, 10000), Index: i)).ToArray();
 
-        AmericanFlagSort.Sort(records.AsSpan(), x => x.Key);
+        AmericanFlagSort.SortBy(records.AsSpan(), x => x.Key);
 
         var keys = records.Select(x => x.Key).ToArray();
         var expectedKeys = keys.OrderBy(x => x).ToArray();
@@ -38,7 +38,7 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
     {
         // Keys spanning negative/zero/positive; unstable sort, so assert key order only
         var records = new (int Key, string Name)[] { (3, "c"), (-5, "a"), (0, "b"), (-5, "a2"), (3, "c2"), (int.MinValue, "min"), (int.MaxValue, "max") };
-        AmericanFlagSort.Sort(records.AsSpan(), x => x.Key);
+        AmericanFlagSort.SortBy(records.AsSpan(), x => x.Key);
 
         await Assert.That(records.Select(x => x.Key).ToArray())
             .IsEquivalentTo([int.MinValue, -5, -5, 0, 3, 3, int.MaxValue], CollectionOrdering.Matching);

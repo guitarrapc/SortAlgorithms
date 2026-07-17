@@ -27,12 +27,21 @@ Some algorithms provide additional range, key-selector, seed, or variant overloa
 ## Radix Key Mapping
 
 The radix-sort family (LSD/MSD radix, American Flag, Spread) is constrained by an order-preserving
-key mapping rather than by element type: `IRadixKeySelector<T>` maps an element to a fixed-width
-unsigned key (at most 64 bits), and all digit extraction and bucket math operates on that key.
-Integer overloads, `Func<T, int>` key-selector overloads, and Half/float/double overloads
-(IEEE 754 total-order transform, all NaN values first, matching `IComparable<T>` semantics)
-are sugar over the same core. The 64-bit key width is the abstraction's ceiling by design —
-wider keys (Int128, BigInteger) are rejected rather than degraded.
+key mapping rather than by element type: the public `IRadixKeySelector<T>` maps an element to a
+fixed-width unsigned key (at most 64 bits), and all digit extraction and bucket math operates on
+that key. Two method names split the API by what defines the order:
+
+- `Sort(...)` — the element itself is the key: integer overloads (`T : IBinaryInteger<T>`) and
+  Half/float/double overloads (IEEE 754 total-order transform, all NaN values first, matching
+  `IComparable<T>` semantics).
+- `SortBy(...)` — an extracted key defines the order: `Func<T, int>` convenience overloads, and
+  full-control overloads taking any `struct` `IRadixKeySelector<T>` (user-defined keys up to
+  64 bits, JIT-devirtualized). The two names are required because a
+  `SortBy<T, TRadixKey>(Span<T>, TRadixKey)` overload named `Sort` would collide with
+  `Sort<T, TContext>(Span<T>, TContext)` — C# does not distinguish signatures by constraints.
+
+The 64-bit key width is the abstraction's ceiling by design — wider keys (Int128, BigInteger) and
+selectors declaring `KeyBits` outside 1..64 are rejected rather than degraded.
 
 Comparison fallbacks inside these algorithms (insertion-sort cutoffs, pdqsort fallback) receive a
 comparer from the public overload that must order consistently with the key mapping: built-in
