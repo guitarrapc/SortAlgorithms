@@ -13,8 +13,11 @@ namespace SortAlgorithm.Algorithms;
 /// <remarks>
 /// <para><strong>Contract:</strong></para>
 /// <list type="bullet">
-/// <item><description><strong>Order preservation:</strong> for the intended element order, x precedes y ⇔ GetKey(x) &lt;= GetKey(y).
-/// Elements with equal keys are considered equal by the sort; stable radix implementations keep their input order.</description></item>
+/// <item><description><strong>Order definition:</strong> the sort orders elements by the returned key in ascending unsigned order.
+/// Elements with equal keys are ties; stable radix implementations keep their input order for ties.</description></item>
+/// <item><description><strong>Monotonicity:</strong> a selector that mirrors an existing element order (e.g. the built-in
+/// integer and IEEE 754 selectors) must be strictly monotonic with respect to it:
+/// if x orders strictly before y, then GetKey(x) &lt; GetKey(y), and equal elements map to equal keys.</description></item>
 /// <item><description><strong>Fixed width:</strong> only the low <see cref="KeyBits"/> bits of the key may be non-zero.
 /// <see cref="KeyBits"/> must not exceed 64; wider keys are outside this abstraction by design
 /// (see the 128-bit rationale in the radix sort class docs).</description></item>
