@@ -4,100 +4,18 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class DoubleSelectionSortTests
+[InheritsTests]
+public class DoubleSelectionSortTests : SortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => DoubleSelectionSort.Sort(span, context);
 
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    // O(n^2) comparisons: skip large inputs in data-driven tests.
+    protected override int MaxOrderTestSize => 512;
 
-        DoubleSelectionSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
-    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        DoubleSelectionSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
-    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        DoubleSelectionSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
-    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        DoubleSelectionSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
-    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        DoubleSelectionSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
+    // Sorted input keeps min at left and max at right each pass: no writes, no swaps.
+    protected override CountExpectation SortedInputWrites => CountExpectation.Zero;
+    protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     [Test]
     public async Task RangeSortTest()
@@ -205,47 +123,6 @@ public class DoubleSelectionSortTests
         DoubleSelectionSort.Sort(array.AsSpan(), stats);
 
         await Assert.That(array).IsEquivalentTo([5, 5, 5, 5, 5], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task EdgeCaseTwoElementsTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 2, 1 };
-
-        DoubleSelectionSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo([1, 2], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task EdgeCaseAlreadySortedTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 1, 2, 3, 4, 5 };
-
-        DoubleSelectionSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo([1, 2, 3, 4, 5], CollectionOrdering.Matching);
-    }
-
-
-    [Test]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        if (inputSample.Samples.Length > 1024)
-            return;
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        DoubleSelectionSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
     [Test]
@@ -384,5 +261,4 @@ public class DoubleSelectionSortTests
         await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
-
 }

@@ -1,107 +1,26 @@
 ﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
-using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class PatienceSortTests
+[InheritsTests]
+public class PatienceSortTests : SortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => PatienceSort.Sort(span, context);
 
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    // Sorted input creates n piles (worst case for PatienceSort), slowing large inputs.
+    protected override int MaxOrderTestSize => 1024;
 
-        PatienceSort.Sort(array.AsSpan(), stats);
+    // Every input performs 2n writes: n to the merge buffer + n back via CopyTo.
+    protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
+    // PatienceSort moves elements via buffer writes, never swaps.
+    protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
-    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        PatienceSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
-    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        PatienceSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
-    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        PatienceSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
-    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        PatienceSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
+    // Exact operation-count invariants for sorted input (beyond the base zero/non-zero checks).
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
+    public async Task StatisticsSortedExactCountsTest(IInputSample<int> inputSample)
     {
         Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
 

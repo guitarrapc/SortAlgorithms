@@ -5,90 +5,15 @@ using TUnit.Assertions.Enums;
 namespace SortAlgorithm.Tests;
 
 // Tests using Knuth1973 - the classic and most well-known gap sequence
-public class ShellSortKnuth1973Tests
+[InheritsTests]
+public class ShellSortKnuth1973Tests : SortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => ShellSortKnuth1973.Sort(span, context);
 
-        ShellSortKnuth1973.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
-    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        ShellSortKnuth1973.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
-    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        ShellSortKnuth1973.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
-    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        ShellSortKnuth1973.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
-    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        ShellSortKnuth1973.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
+    // Sorted input needs no element movement in any gap pass: no writes, no swaps.
+    protected override CountExpectation SortedInputWrites => CountExpectation.Zero;
+    protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     [Test]
     public async Task RangeSortTest()
@@ -152,22 +77,6 @@ public class ShellSortKnuth1973Tests
 
         // Expected: first 5 unchanged, last 4 sorted
         await Assert.That(array).IsEquivalentTo([1, 3, 5, 7, 9, 2, 4, 6, 8], CollectionOrdering.Matching);
-    }
-
-
-    [Test]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        ShellSortKnuth1973.Sort(array.AsSpan(), stats);
-
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
     [Test]
@@ -268,5 +177,4 @@ public class ShellSortKnuth1973Tests
         var expectedReads = stats.CompareCount * 2 + stats.SwapCount * 2;
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
     }
-
 }

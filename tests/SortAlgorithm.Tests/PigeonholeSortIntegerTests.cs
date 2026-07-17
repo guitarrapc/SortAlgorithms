@@ -4,35 +4,19 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class PigeonholeSortIntegerTests
+[InheritsTests]
+public class PigeonholeSortIntegerTests : IntegerSortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => PigeonholeSortInteger.Sort(span, context);
 
+    // Throws ArgumentException on excessive key ranges (see RangeLimitTest), so full-integer-range inputs are rejected by contract.
+    protected override bool SupportsFullIntegerRange => false;
 
-        PigeonholeSortInteger.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
+    // Min/max scan uses tracked comparisons (exact 2n+1 asserted in TheoreticalValues tests); distribute/place always write; no swaps.
+    protected override CountExpectation SortedInputCompares => CountExpectation.NonZero;
+    protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
+    protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     [Test]
     [Arguments(10_000_001)]
@@ -73,59 +57,6 @@ public class PigeonholeSortIntegerTests
         PigeonholeSortInteger.Sort(array.AsSpan(), stats);
 
         await Assert.That(array).IsEquivalentTo(new uint[] { uint.MaxValue - 4, uint.MaxValue - 2, uint.MaxValue - 1, uint.MaxValue }, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task EmptyArrayTest()
-    {
-        var stats = new StatisticsContext();
-        var array = Array.Empty<int>();
-        PigeonholeSortInteger.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEmpty();
-    }
-
-    [Test]
-    public async Task SingleElementTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 42 };
-        PigeonholeSortInteger.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsSingleElement();
-        await Assert.That(array[0]).IsEqualTo(42);
-    }
-
-    [Test]
-    [Arguments(2)]
-    [Arguments(5)]
-    [Arguments(10)]
-    public async Task DuplicateValuesTest(int duplicateCount)
-    {
-        var stats = new StatisticsContext();
-        var array = Enumerable.Repeat(5, duplicateCount).Concat(Enumerable.Repeat(3, duplicateCount)).ToArray();
-        PigeonholeSortInteger.Sort(array.AsSpan(), stats);
-
-        var expected = Enumerable.Repeat(3, duplicateCount).Concat(Enumerable.Repeat(5, duplicateCount)).ToArray();
-        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
-    }
-
-
-    [Test]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        PigeonholeSortInteger.Sort(array.AsSpan(), stats);
-
-        var expectedCompare = (ulong)inputSample.Samples.Length * 2 + 1;
-
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompare);
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
     [Test]
@@ -226,5 +157,4 @@ public class PigeonholeSortIntegerTests
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
     }
-
 }

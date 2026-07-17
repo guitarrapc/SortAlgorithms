@@ -1,118 +1,20 @@
 ﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
-using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class CircleSortTests
+[InheritsTests]
+public class CircleSortTests : SortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => CircleSort.Sort(span, context);
 
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    // Repeated O(n log n) passes until swap-free make large inputs slow.
+    protected override int MaxOrderTestSize => 1024;
 
-        CircleSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
-    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        CircleSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
-    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        CircleSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
-    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        CircleSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
-    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        CircleSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        CircleSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
-    }
+    // On sorted input the first pass finds no out-of-order pair, so no swaps (and no writes) occur.
+    protected override CountExpectation SortedInputWrites => CountExpectation.Zero;
+    protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     [Test]
     [Arguments(10)]

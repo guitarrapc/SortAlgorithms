@@ -4,35 +4,19 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class CountingSortIntegerTests
+[InheritsTests]
+public class CountingSortIntegerTests : IntegerSortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => CountingSortInteger.Sort(span, context);
 
+    // Throws ArgumentException on excessive key ranges (see RangeLimitTest), so full-integer-range inputs are rejected by contract.
+    protected override bool SupportsFullIntegerRange => false;
 
-        CountingSortInteger.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
+    // Counting sort: no comparisons or swaps; distribute/copy-back passes always write.
+    protected override CountExpectation SortedInputCompares => CountExpectation.Zero;
+    protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
+    protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     [Test]
     [Arguments(10_000_001)]
@@ -59,173 +43,9 @@ public class CountingSortIntegerTests
     {
         var stats = new StatisticsContext();
         var array = new[] { -5, -1, -10, 3, 0, -3 };
-        var n = array.Length;
         CountingSortInteger.Sort(array.AsSpan(), stats);
 
         await Assert.That(array).IsEquivalentTo([-10, -5, -3, -1, 0, 3], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task EmptyArrayTest()
-    {
-        var stats = new StatisticsContext();
-        var array = Array.Empty<int>();
-        CountingSortInteger.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEmpty();
-    }
-
-    [Test]
-    public async Task SingleElementTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 42 };
-        CountingSortInteger.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsSingleElement();
-        await Assert.That(array[0]).IsEqualTo(42);
-    }
-
-    [Test]
-    [Arguments(2)]
-    [Arguments(5)]
-    [Arguments(10)]
-    public async Task DuplicateValuesTest(int duplicateCount)
-    {
-        var stats = new StatisticsContext();
-        var array = Enumerable.Repeat(5, duplicateCount).Concat(Enumerable.Repeat(3, duplicateCount)).ToArray();
-        var n = array.Length;
-        CountingSortInteger.Sort(array.AsSpan(), stats);
-
-        var expected = Enumerable.Repeat(3, duplicateCount).Concat(Enumerable.Repeat(5, duplicateCount)).ToArray();
-        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
-    }
-
-
-    [Test]
-    public async Task SortIdempotencyTest()
-    {
-        // NOTE: stability is not observable through the integer-only API - equal keys
-        // are indistinguishable, so no test can detect equal-key reordering here.
-        // This only verifies that re-sorting already-sorted data leaves it unchanged.
-        var firstSort = new[] { 5, 3, 5, 3, 5 };
-        CountingSortInteger.Sort(firstSort.AsSpan());
-
-        var secondSort = firstSort.ToArray();
-        CountingSortInteger.Sort(secondSort.AsSpan());
-
-        await Assert.That(secondSort).IsEquivalentTo(firstSort, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortWithNegativeNumbers()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { -5, 3, -1, 0, 2, -3, 1 };
-        var expected = new[] { -5, -3, -1, 0, 1, 2, 3 };
-        CountingSortInteger.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortWithAllSameValues()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 5, 5, 5, 5, 5 };
-        CountingSortInteger.Sort(array.AsSpan(), stats);
-
-        foreach (var item in array) await Assert.That(item).IsEqualTo(5);
-    }
-
-    [Test]
-    [Arguments(typeof(byte))]
-    [Arguments(typeof(sbyte))]
-    [Arguments(typeof(short))]
-    [Arguments(typeof(ushort))]
-    [Arguments(typeof(int))]
-    [Arguments(typeof(uint))]
-    [Arguments(typeof(long))]
-    [Arguments(typeof(ulong))]
-    public async Task SortDifferentIntegerTypes(Type type)
-    {
-        var stats = new StatisticsContext();
-
-        if (type == typeof(byte))
-        {
-            var array = new byte[] { 5, 2, 8, 1, 9 };
-            CountingSortInteger.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(sbyte))
-        {
-            var array = new sbyte[] { -5, 2, -8, 1, 9 };
-            CountingSortInteger.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(short))
-        {
-            var array = new short[] { -5, 2, -8, 1, 9 };
-            CountingSortInteger.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(ushort))
-        {
-            var array = new ushort[] { 5, 2, 8, 1, 9 };
-            CountingSortInteger.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(int))
-        {
-            var array = new int[] { -5, 2, -8, 1, 9 };
-            CountingSortInteger.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(uint))
-        {
-            var array = new uint[] { 5, 2, 8, 1, 9 };
-            CountingSortInteger.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(long))
-        {
-            var array = new long[] { -5, 2, -8, 1, 9 };
-            CountingSortInteger.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(ulong))
-        {
-            var array = new ulong[] { 5, 2, 8, 1, 9 };
-            CountingSortInteger.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-    }
-
-    private static bool IsSorted<T>(T[] array) where T : IComparable<T>
-    {
-        for (int i = 1; i < array.Length; i++)
-        {
-            if (new ComparableComparer<T>().Compare(array[i - 1], array[i]) > 0)
-                return false;
-        }
-        return true;
-    }
-
-
-    [Test]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        CountingSortInteger.Sort(array.AsSpan(), stats);
-        var expectCompare = 0UL;
-
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsEqualTo(expectCompare);
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
     [Test]
@@ -324,5 +144,4 @@ public class CountingSortIntegerTests
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
     }
-
 }

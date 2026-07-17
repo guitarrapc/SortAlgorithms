@@ -4,65 +4,15 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class SpreadSortTests
+[InheritsTests]
+public class SpreadSortTests : IntegerSortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => SpreadSort.Sort(span, context);
 
-        SpreadSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task MinValueHandlingTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { int.MinValue, -1, 0, 1, int.MaxValue };
-        SpreadSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo([int.MinValue, -1, 0, 1, int.MaxValue], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortWithNegativeNumbers()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { -5, 3, -1, 0, 2, -3, 1 };
-        var expected = new[] { -5, -3, -1, 0, 1, 2, 3 };
-        SpreadSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortWithAllSameValues()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 5, 5, 5, 5, 5 };
-        SpreadSort.Sort(array.AsSpan(), stats);
-
-        foreach (var item in array) await Assert.That(item).IsEqualTo(5);
-    }
+    // Delegates to PDQSort below MinSortSize (comparison-based), so compares occur even on sorted input;
+    // writes/swaps vary with pattern detection.
+    protected override CountExpectation SortedInputCompares => CountExpectation.NonZero;
 
     [Test]
     [Arguments(typeof(byte))]
@@ -73,8 +23,10 @@ public class SpreadSortTests
     [Arguments(typeof(uint))]
     [Arguments(typeof(long))]
     [Arguments(typeof(ulong))]
-    public async Task SortDifferentIntegerTypes(Type type)
+    public async Task IntegerTypeBoundaryValuesTest(Type type)
     {
+        // Kept in addition to the base SortDifferentIntegerTypes: exercises per-type
+        // min/max boundary values, which stress SpreadSort's radix-shift key handling.
         var stats = new StatisticsContext();
 
         if (type == typeof(byte))
@@ -125,21 +77,6 @@ public class SpreadSortTests
             SpreadSort.Sort(array.AsSpan(), stats);
             await Assert.That(array).IsEquivalentTo((ulong[])[0, 1, 100, 200, 300000, 500000, ulong.MaxValue], CollectionOrdering.Matching);
         }
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        SpreadSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
-        // Sorted input is detected early by IsSortedOrFindExtremes (n >= MinSortSize)
-        // or PDQSort's pattern detection (n < MinSortSize), so swaps should be minimal
     }
 
     [Test]

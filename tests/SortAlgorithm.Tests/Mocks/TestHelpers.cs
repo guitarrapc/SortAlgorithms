@@ -1,4 +1,4 @@
-namespace SortAlgorithm.Tests;
+﻿namespace SortAlgorithm.Tests;
 
 /// <summary>
 /// Deterministic input generators for statistics-oriented tests.

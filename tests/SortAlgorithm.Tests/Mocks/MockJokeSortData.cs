@@ -1,4 +1,4 @@
-using SortAlgorithm.Utils;
+﻿using SortAlgorithm.Utils;
 
 namespace SortAlgorithm.Tests;
 

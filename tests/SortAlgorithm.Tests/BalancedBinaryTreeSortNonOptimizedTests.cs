@@ -1,121 +1,25 @@
 ﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
-using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class BalancedBinaryTreeSortNonOptimizedTests
+// Non-optimized reference implementation is slow; the whole class is local-only.
+[SkipCI]
+[InheritsTests]
+public class BalancedBinaryTreeSortNonOptimizedTests : SortTestsBase
 {
-    [Test, SkipCI]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => BalancedBinaryTreeSortNonOptimized.Sort(span, context);
 
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    // Node allocation and rebalancing overhead make large inputs slow.
+    protected override int MaxOrderTestSize => 1024;
 
-        BalancedBinaryTreeSortNonOptimized.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
+    // In-order traversal writes all elements back, even for sorted input.
+    protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
+    // AVL insertion moves elements via node writes, never swaps.
+    protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
-    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        BalancedBinaryTreeSortNonOptimized.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
-    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        BalancedBinaryTreeSortNonOptimized.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
-    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        BalancedBinaryTreeSortNonOptimized.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
-    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        BalancedBinaryTreeSortNonOptimized.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-
-    [Test, SkipCI]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        BalancedBinaryTreeSortNonOptimized.Sort(array.AsSpan(), stats);
-
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
-    }
-
-    [Test, SkipCI]
     [Arguments(10)]
     [Arguments(20)]
     [Arguments(50)]
@@ -144,7 +48,7 @@ public class BalancedBinaryTreeSortNonOptimizedTests
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
-    [Test, SkipCI]
+    [Test]
     [Arguments(10)]
     [Arguments(20)]
     [Arguments(50)]
@@ -173,7 +77,7 @@ public class BalancedBinaryTreeSortNonOptimizedTests
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
-    [Test, SkipCI]
+    [Test]
     [Arguments(10, 42)]
     [Arguments(10, 1234)]
     [Arguments(20, 42)]
@@ -205,7 +109,7 @@ public class BalancedBinaryTreeSortNonOptimizedTests
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
-    [Test, SkipCI]
+    [Test]
     [Arguments(10, 42)]
     [Arguments(10, 1234)]
     [Arguments(20, 42)]
@@ -231,5 +135,4 @@ public class BalancedBinaryTreeSortNonOptimizedTests
         await Assert.That(stats.CompareCount < worstCaseBST * 7 / 10).IsTrue().Because($"CompareCount ({stats.CompareCount}) should be better than 70% of unbalanced BST worst case ({worstCaseBST})");
         await Assert.That(stats.CompareCount < balancedUpperBound).IsTrue().Because($"CompareCount ({stats.CompareCount}) should be within balanced tree bounds ({balancedUpperBound})");
     }
-
 }

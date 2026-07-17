@@ -4,157 +4,14 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class DropMergeSortTests
+[InheritsTests]
+public class DropMergeSortTests : SortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => DropMergeSort.Sort(span, context);
 
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
-    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
-    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
-    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
-    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task EmptyArrayTest()
-    {
-        var stats = new StatisticsContext();
-        var array = Array.Empty<int>();
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEmpty();
-    }
-
-    [Test]
-    public async Task SingleElementTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 42 };
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsSingleElement();
-        await Assert.That(array[0]).IsEqualTo(42);
-    }
-
-    [Test]
-    public async Task TwoElementsSortedTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 1, 2 };
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array.Length).IsEqualTo(2);
-        await Assert.That(array[0]).IsEqualTo(1);
-        await Assert.That(array[1]).IsEqualTo(2);
-    }
-
-    [Test]
-    public async Task TwoElementsReversedTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 2, 1 };
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array.Length).IsEqualTo(2);
-        await Assert.That(array[0]).IsEqualTo(1);
-        await Assert.That(array[1]).IsEqualTo(2);
-    }
-
-    [Test]
-    public async Task AlreadySortedTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 1, 2, 3, 4, 5 };
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array.Length).IsEqualTo(5);
-        await Assert.That(array).IsEquivalentTo([1, 2, 3, 4, 5], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task ReverseSortedTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 5, 4, 3, 2, 1 };
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array.Length).IsEqualTo(5);
-        await Assert.That(array).IsEquivalentTo([1, 2, 3, 4, 5], CollectionOrdering.Matching);
-    }
+    // Already sorted input keeps every element in the LNS, so no writes are needed (optimized away).
+    protected override CountExpectation SortedInputWrites => CountExpectation.Zero;
 
     [Test]
     public async Task SingleOutlierTest()
@@ -177,21 +34,6 @@ public class DropMergeSortTests
 
         await Assert.That(array.Length).IsEqualTo(12);
         await Assert.That(array).IsEquivalentTo([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20], CollectionOrdering.Matching);
-    }
-
-
-    [Test]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        DropMergeSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL); // Already sorted, no writes needed (optimized away)
-        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
     }
 
     [Test]
@@ -340,5 +182,4 @@ public class DropMergeSortTests
         await Assert.That(stats.IndexReadCount).IsBetween(minReads, maxReads);
         // DropMergeSort may use swaps in QuickSort for dropped elements
     }
-
 }

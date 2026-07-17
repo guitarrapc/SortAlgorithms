@@ -4,180 +4,16 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class RadixMSD10SortTests
+[InheritsTests]
+public class RadixMSD10SortTests : IntegerSortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => RadixMSD10Sort.Sort(span, context);
 
-
-        RadixMSD10Sort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortIdempotencyTest()
-    {
-        // NOTE: stability is not observable through the integer-only API - equal keys
-        // are indistinguishable, so no test can detect equal-key reordering here.
-        // This only verifies that re-sorting already-sorted data leaves it unchanged.
-        var firstSort = new[] { 5, 3, 5, 3, 5 };
-        RadixMSD10Sort.Sort(firstSort.AsSpan());
-
-        var secondSort = firstSort.ToArray();
-        RadixMSD10Sort.Sort(secondSort.AsSpan());
-
-        await Assert.That(secondSort).IsEquivalentTo(firstSort, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task MinValueHandlingTest()
-    {
-        var stats = new StatisticsContext();
-        // Test that int.MinValue is handled correctly (no overflow)
-        var array = new[] { int.MinValue, -1, 0, 1, int.MaxValue };
-        RadixMSD10Sort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo(new[] { int.MinValue, -1, 0, 1, int.MaxValue }, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortWithNegativeNumbers()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { -5, 3, -1, 0, 2, -3, 1 };
-        var expected = new[] { -5, -3, -1, 0, 1, 2, 3 };
-        RadixMSD10Sort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortWithAllSameValues()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 5, 5, 5, 5, 5 };
-        RadixMSD10Sort.Sort(array.AsSpan(), stats);
-
-        foreach (var item in array) await Assert.That(item).IsEqualTo(5);
-    }
-
-    [Test]
-    [Arguments(typeof(byte))]
-    [Arguments(typeof(sbyte))]
-    [Arguments(typeof(short))]
-    [Arguments(typeof(ushort))]
-    [Arguments(typeof(int))]
-    [Arguments(typeof(uint))]
-    [Arguments(typeof(long))]
-    [Arguments(typeof(ulong))]
-    public async Task SortDifferentIntegerTypes(Type type)
-    {
-        var stats = new StatisticsContext();
-
-        if (type == typeof(byte))
-        {
-            var array = new byte[] { 5, 2, 8, 1, 9 };
-            RadixMSD10Sort.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(sbyte))
-        {
-            var array = new sbyte[] { -5, 2, -8, 1, 9 };
-            RadixMSD10Sort.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(short))
-        {
-            var array = new short[] { -5, 2, -8, 1, 9 };
-            RadixMSD10Sort.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(ushort))
-        {
-            var array = new ushort[] { 5, 2, 8, 1, 9 };
-            RadixMSD10Sort.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(int))
-        {
-            var array = new int[] { -5, 2, -8, 1, 9 };
-            RadixMSD10Sort.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(uint))
-        {
-            var array = new uint[] { 5, 2, 8, 1, 9 };
-            RadixMSD10Sort.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(long))
-        {
-            var array = new long[] { -5, 2, -8, 1, 9 };
-            RadixMSD10Sort.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-        else if (type == typeof(ulong))
-        {
-            var array = new ulong[] { 5, 2, 8, 1, 9 };
-            RadixMSD10Sort.Sort(array.AsSpan(), stats);
-            await Assert.That(IsSorted(array)).IsTrue();
-        }
-    }
-
-    private static bool IsSorted<T>(T[] array) where T : IComparable<T>
-    {
-        for (int i = 1; i < array.Length; i++)
-        {
-            if (new ComparableComparer<T>().Compare(array[i - 1], array[i]) > 0)
-                return false;
-        }
-        return true;
-    }
-
-    [Test]
-    public async Task EmptyArrayTest()
-    {
-        var array = Array.Empty<int>();
-        RadixMSD10Sort.Sort(array.AsSpan());
-        await Assert.That(array).IsEmpty();
-    }
-
-    [Test]
-    public async Task SingleElementTest()
-    {
-        var array = new[] { 42 };
-        RadixMSD10Sort.Sort(array.AsSpan());
-        await Assert.That(array).IsSingleElement();
-        await Assert.That(array[0]).IsEqualTo(42);
-    }
-
-    [Test]
-    public async Task TwoElementsTest()
-    {
-        var array = new[] { 2, 1 };
-        RadixMSD10Sort.Sort(array.AsSpan());
-        await Assert.That(array).IsEquivalentTo([1, 2], CollectionOrdering.Matching);
-    }
+    // MSD distribute passes always write; small buckets use insertion sort (comparisons occur, no swaps).
+    protected override CountExpectation SortedInputCompares => CountExpectation.NonZero;
+    protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
+    protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     [Test]
     public async Task DecimalDigitBoundaryTest()
@@ -207,24 +43,6 @@ public class RadixMSD10SortTests
         var expected = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
         RadixMSD10Sort.Sort(array.AsSpan());
         await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
-    }
-
-
-    [Test]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        RadixMSD10Sort.Sort(array.AsSpan(), stats);
-
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
-        // MSD radix sort uses comparisons in insertion sort for small buckets
-        // For sorted data, insertion sort should have minimal comparisons
     }
 
     [Test]
@@ -363,34 +181,4 @@ public class RadixMSD10SortTests
         await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
-
-    [Test]
-    public async Task SortEmptyArray()
-    {
-        var stats = new StatisticsContext();
-        var array = Array.Empty<int>();
-        RadixMSD10Sort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEmpty();
-        await Assert.That(stats.IndexReadCount).IsEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
-    }
-
-    [Test]
-    public async Task SortSingleElement()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 42 };
-        RadixMSD10Sort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsSingleElement();
-        await Assert.That(array[0]).IsEqualTo(42);
-        await Assert.That(stats.IndexReadCount).IsEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
-    }
-
 }

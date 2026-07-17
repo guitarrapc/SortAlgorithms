@@ -117,7 +117,7 @@ public static class DoubleSelectionSort
     {
         ArgumentOutOfRangeException.ThrowIfNegative(first);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(last, span.Length);
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(first, last);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(first, last);
 
         if (span.Length <= 1) return;
 

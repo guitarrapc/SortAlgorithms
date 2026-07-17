@@ -4,90 +4,15 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class TernaryHeapSortTests
+[InheritsTests]
+public class TernaryHeapSortTests : SortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => TernaryHeapSort.Sort(span, context);
 
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
-    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
-    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
-    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
-    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
+    // Hole-based heapify writes elements even for sorted input; Floyd-style extraction eliminates all swaps.
+    protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
+    protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     [Test]
     public async Task RangeSortTest()
@@ -151,100 +76,6 @@ public class TernaryHeapSortTests
 
         // Expected: first 5 unchanged, last 4 sorted
         await Assert.That(array).IsEquivalentTo([1, 3, 5, 7, 9, 2, 4, 6, 8], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task BasicSortTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 3, 1, 4, 1, 5, 9, 2, 6, 5, 3 };
-
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo([1, 1, 2, 3, 3, 4, 5, 5, 6, 9], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task EmptyArrayTest()
-    {
-        var stats = new StatisticsContext();
-        var array = Array.Empty<int>();
-
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEmpty();
-    }
-
-    [Test]
-    public async Task SingleElementTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 42 };
-
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo([42], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task TwoElementsTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 2, 1 };
-
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo([1, 2], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task AlreadySortedTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo([1, 2, 3, 4, 5, 6, 7, 8, 9], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task ReverseSortedTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 9, 8, 7, 6, 5, 4, 3, 2, 1 };
-
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo([1, 2, 3, 4, 5, 6, 7, 8, 9], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task AllSameElementsTest()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 5, 5, 5, 5, 5 };
-
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo([5, 5, 5, 5, 5], CollectionOrdering.Matching);
-    }
-
-
-    [Test]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        TernaryHeapSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
-        // Floyd-style extraction eliminates all swaps
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
     [Test]

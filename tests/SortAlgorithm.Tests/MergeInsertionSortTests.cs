@@ -1,103 +1,23 @@
 ﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
-using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class MergeInsertionSortTests
+// NOTE: MergeInsertionSort (Ford-Johnson) is NOT stable: the Jacobsthal insertion
+// order can place a later equal key before an earlier one, so no stability tests here.
+[InheritsTests]
+public class MergeInsertionSortTests : SortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => MergeInsertionSort.Sort(span, context);
 
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    // Recursive pairing with buffer copies makes large inputs slow.
+    protected override int MaxOrderTestSize => 512;
 
-        MergeInsertionSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
-    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        MergeInsertionSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
-    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        MergeInsertionSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
-    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        MergeInsertionSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
-    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
-    {
-        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        MergeInsertionSort.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
+    // Reads all n elements upfront and writes all n elements back at the end, even for sorted input.
+    protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
+    // MergeInsertionSort moves elements via buffer writes, never swaps.
+    protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     [Test]
     [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
@@ -114,82 +34,6 @@ public class MergeInsertionSortTests
         {
             await Assert.That(array[i]).IsLessThanOrEqualTo(array[i + 1]);
         }
-    }
-
-    [Test]
-    public async Task SortEmptyArray()
-    {
-        var stats = new StatisticsContext();
-        var array = Array.Empty<int>();
-
-        MergeInsertionSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo(Array.Empty<int>(), CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortSingleElementArray()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 42 };
-
-        MergeInsertionSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo(new[] { 42 }, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortTwoElementArray()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 2, 1 };
-
-        MergeInsertionSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo(new[] { 1, 2 }, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortAlreadySortedArray()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 1, 2, 3, 4, 5 };
-
-        MergeInsertionSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo(new[] { 1, 2, 3, 4, 5 }, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortReverseSortedArray()
-    {
-        var stats = new StatisticsContext();
-        var array = new[] { 5, 4, 3, 2, 1 };
-
-        MergeInsertionSort.Sort(array.AsSpan(), stats);
-
-        await Assert.That(array).IsEquivalentTo(new[] { 1, 2, 3, 4, 5 }, CollectionOrdering.Matching);
-    }
-
-    // NOTE: MergeInsertionSort (Ford-Johnson) is NOT stable: the Jacobsthal insertion
-    // order can place a later equal key before an earlier one, so no stability tests here.
-
-    [Test]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        if (inputSample.Samples.Length > 1024)
-            return;
-
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        MergeInsertionSort.Sort(array.AsSpan(), stats);
-
-        // MergeInsertionSort reads all n elements upfront and writes all n elements at the end
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsGreaterThan(0UL);
-        await Assert.That(stats.IndexWriteCount).IsGreaterThan(0UL);
-        await Assert.That(stats.SwapCount).IsEqualTo(0UL); // MergeInsertionSort doesn't use swaps
     }
 
     [Test]

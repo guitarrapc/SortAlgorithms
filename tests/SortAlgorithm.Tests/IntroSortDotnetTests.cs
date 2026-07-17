@@ -4,138 +4,14 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-public class IntroSortDotnetTests
+[InheritsTests]
+public class IntroSortDotnetTests : SortTestsBase
 {
-    [Test]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
-    public async Task SortResultOrderTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
+    protected override void Sort<T, TContext>(Span<T> span, TContext context)
+        => IntroSortDotnet.Sort(span, context);
 
-        IntroSortDotnet.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
-    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        IntroSortDotnet.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
-    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        IntroSortDotnet.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
-    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        IntroSortDotnet.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
-    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-
-        IntroSortDotnet.Sort(array.AsSpan(), stats);
-
-        // Check is sorted
-        Array.Sort(inputSample.Samples);
-        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task EdgeCaseEmptyArrayTest()
-    {
-        var stats = new StatisticsContext();
-        var empty = Array.Empty<int>();
-        IntroSortDotnet.Sort(empty.AsSpan(), stats);
-    }
-
-    [Test]
-    public async Task EdgeCaseSingleElementTest()
-    {
-        var stats = new StatisticsContext();
-        var single = new[] { 42 };
-        IntroSortDotnet.Sort(single.AsSpan(), stats);
-
-        await Assert.That(single[0]).IsEqualTo(42);
-    }
-
-    [Test]
-    public async Task EdgeCaseTwoElementsSortedTest()
-    {
-        var stats = new StatisticsContext();
-        var twoSorted = new[] { 1, 2 };
-        IntroSortDotnet.Sort(twoSorted.AsSpan(), stats);
-
-        await Assert.That(twoSorted).IsEquivalentTo([1, 2], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task EdgeCaseTwoElementsReversedTest()
-    {
-        var stats = new StatisticsContext();
-        var twoReversed = new[] { 2, 1 };
-        IntroSortDotnet.Sort(twoReversed.AsSpan(), stats);
-
-        await Assert.That(twoReversed).IsEquivalentTo([1, 2], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task EdgeCaseThreeElementsTest()
-    {
-        var stats = new StatisticsContext();
-        var three = new[] { 3, 1, 2 };
-        IntroSortDotnet.Sort(three.AsSpan(), stats);
-
-        await Assert.That(three).IsEquivalentTo([1, 2, 3], CollectionOrdering.Matching);
-    }
+    // No writes/swaps knobs: sorted input may take the InsertionSort path (0 writes),
+    // so only the base IndexRead/Compare non-zero assertions apply.
 
     [Test]
     public async Task RangeSortTest()
@@ -160,107 +36,6 @@ public class IntroSortDotnetTests
         IntroSortDotnet.Sort(array.AsSpan(), 0, array.Length, stats);
 
         await Assert.That(array).IsEquivalentTo([1, 2, 3, 4, 5, 6, 7, 8, 9], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SortedArrayTest()
-    {
-        var stats = new StatisticsContext();
-        var sorted = Enumerable.Range(1, 100).ToArray();
-        IntroSortDotnet.Sort(sorted.AsSpan(), stats);
-
-        await Assert.That(sorted).IsEquivalentTo(Enumerable.Range(1, 100).ToArray(), CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task ReverseSortedArrayTest()
-    {
-        var stats = new StatisticsContext();
-        var reversed = Enumerable.Range(1, 100).Reverse().ToArray();
-        IntroSortDotnet.Sort(reversed.AsSpan(), stats);
-
-        await Assert.That(reversed).IsEquivalentTo(Enumerable.Range(1, 100).ToArray(), CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task AllEqualElementsTest()
-    {
-        var stats = new StatisticsContext();
-        var allEqual = Enumerable.Repeat(42, 100).ToArray();
-        IntroSortDotnet.Sort(allEqual.AsSpan(), stats);
-
-        await Assert.That(allEqual).IsEquivalentTo(Enumerable.Repeat(42, 100).ToArray(), CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task ManyDuplicatesTest()
-    {
-        var stats = new StatisticsContext();
-        var duplicates = new[] { 1, 2, 1, 3, 2, 1, 4, 3, 2, 1, 5, 4, 3, 2, 1 };
-        IntroSortDotnet.Sort(duplicates.AsSpan(), stats);
-
-        await Assert.That(duplicates).IsEquivalentTo([1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5], CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task LargeArrayTest()
-    {
-        var stats = new StatisticsContext();
-        var random = new Random(42);
-        var large = Enumerable.Range(0, 10000).OrderBy(_ => random.Next()).ToArray();
-        var expected = large.OrderBy(x => x).ToArray();
-
-        IntroSortDotnet.Sort(large.AsSpan(), stats);
-
-        await Assert.That(large).IsEquivalentTo(expected, CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task NearlySortedArrayTest()
-    {
-        var stats = new StatisticsContext();
-        var nearlySorted = Enumerable.Range(1, 100).ToArray();
-        // Swap a few elements to make it nearly sorted
-        (nearlySorted[10], nearlySorted[20]) = (nearlySorted[20], nearlySorted[10]);
-        (nearlySorted[50], nearlySorted[60]) = (nearlySorted[60], nearlySorted[50]);
-
-        IntroSortDotnet.Sort(nearlySorted.AsSpan(), stats);
-
-        await Assert.That(nearlySorted).IsEquivalentTo(Enumerable.Range(1, 100).ToArray(), CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task SmallArrayInsertionSortThresholdTest()
-    {
-        var stats = new StatisticsContext();
-        var small = new[] { 5, 2, 8, 1, 9, 3, 7, 4, 6, 10, 15, 12, 18, 11, 19, 13, 17, 14, 16, 20 };
-        IntroSortDotnet.Sort(small.AsSpan(), stats);
-
-        await Assert.That(small).IsEquivalentTo(Enumerable.Range(1, 20).ToArray(), CollectionOrdering.Matching);
-    }
-
-    [Test]
-    public async Task StringSortTest()
-    {
-        var stats = new StatisticsContext();
-        var strings = new[] { "zebra", "apple", "mango", "banana", "cherry" };
-        IntroSortDotnet.Sort(strings.AsSpan(), stats);
-
-        await Assert.That(strings).IsEquivalentTo(["apple", "banana", "cherry", "mango", "zebra"], CollectionOrdering.Matching);
-    }
-
-
-    [Test]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
-    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
-    {
-        var stats = new StatisticsContext();
-        var array = inputSample.Samples.ToArray();
-        IntroSortDotnet.Sort(array.AsSpan(), stats);
-
-        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
     }
 
     [Test]
@@ -405,5 +180,4 @@ public class IntroSortDotnetTests
         var minIndexReads = stats.CompareCount;
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
-
 }
