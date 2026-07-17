@@ -27,7 +27,7 @@ public class DistributionBenchmark
     [Benchmark]
     public void CountingSort()
     {
-        SortAlgorithm.Algorithms.CountingSort.Sort(_buffers.Next().AsSpan(), x => x);
+        SortAlgorithm.Algorithms.CountingSort.SortBy(_buffers.Next().AsSpan(), x => x);
     }
 
     [Benchmark(Baseline = true)]
@@ -39,7 +39,7 @@ public class DistributionBenchmark
     [Benchmark]
     public void PigeonSort()
     {
-        SortAlgorithm.Algorithms.PigeonholeSort.Sort(_buffers.Next().AsSpan(), x => x);
+        SortAlgorithm.Algorithms.PigeonholeSort.SortBy(_buffers.Next().AsSpan(), x => x);
     }
 
     [Benchmark]
@@ -51,7 +51,7 @@ public class DistributionBenchmark
     [Benchmark]
     public void BucketSort()
     {
-        SortAlgorithm.Algorithms.BucketSort.Sort(_buffers.Next().AsSpan(), x => x);
+        SortAlgorithm.Algorithms.BucketSort.SortBy(_buffers.Next().AsSpan(), x => x);
     }
 
     [Benchmark]

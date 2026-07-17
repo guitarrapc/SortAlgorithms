@@ -27,7 +27,7 @@ public class CountingSortTests
         var array = inputSample.Samples.ToArray();
 
 
-        CountingSort.Sort(array.AsSpan(), x => x, stats);
+        CountingSort.SortBy(array.AsSpan(), x => x, stats);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
@@ -41,7 +41,7 @@ public class CountingSortTests
         // Test stability: equal elements should maintain relative order
         var stats = new StatisticsContext();
 
-        CountingSort.Sort(items.AsSpan(), x => x.Value, stats);
+        CountingSort.SortBy(items.AsSpan(), x => x.Value, stats);
 
         // Verify sorting correctness - values should be in ascending order
         await Assert.That(items.Select(x => x.Value).ToArray()).IsEquivalentTo(MockStabilityData.Sorted, CollectionOrdering.Matching);
@@ -68,7 +68,7 @@ public class CountingSortTests
         // Test stability with more complex scenario - multiple equal values
         var stats = new StatisticsContext();
 
-        CountingSort.Sort(items.AsSpan(), x => x.Key, stats);
+        CountingSort.SortBy(items.AsSpan(), x => x.Key, stats);
 
         // Expected: [2:B, 2:D, 2:F, 5:A, 5:C, 5:G, 8:E]
         // Keys are sorted, and elements with the same key maintain original order
@@ -88,7 +88,7 @@ public class CountingSortTests
         // They should remain in original order
         var stats = new StatisticsContext();
 
-        CountingSort.Sort(items.AsSpan(), x => x.Value, stats);
+        CountingSort.SortBy(items.AsSpan(), x => x.Value, stats);
 
         // All values are 1
         foreach (var item in items) await Assert.That(item.Value).IsEqualTo(1);
@@ -103,7 +103,7 @@ public class CountingSortTests
     {
         // Test that excessive range throws ArgumentException
         var array = new[] { 0, range };
-        Assert.Throws<ArgumentException>(() => CountingSort.Sort(array.AsSpan(), x => x));
+        Assert.Throws<ArgumentException>(() => CountingSort.SortBy(array.AsSpan(), x => x));
     }
 
     [Test]
@@ -112,7 +112,7 @@ public class CountingSortTests
         var stats = new StatisticsContext();
         var array = new[] { -5, -1, -10, 3, 0, -3 };
         var n = array.Length;
-        CountingSort.Sort(array.AsSpan(), x => x, stats);
+        CountingSort.SortBy(array.AsSpan(), x => x, stats);
 
         await Assert.That(array).IsEquivalentTo([-10, -5, -3, -1, 0, 3], CollectionOrdering.Matching);
     }
@@ -122,7 +122,7 @@ public class CountingSortTests
     {
         var stats = new StatisticsContext();
         var array = Array.Empty<int>();
-        CountingSort.Sort(array.AsSpan(), x => x, stats);
+        CountingSort.SortBy(array.AsSpan(), x => x, stats);
 
         await Assert.That(array).IsEmpty();
     }
@@ -134,7 +134,7 @@ public class CountingSortTests
     {
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
-        CountingSort.Sort(array.AsSpan(), x => x, stats);
+        CountingSort.SortBy(array.AsSpan(), x => x, stats);
 
         await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
@@ -152,7 +152,7 @@ public class CountingSortTests
     {
         var stats = new StatisticsContext();
         var sorted = Enumerable.Range(0, n).ToArray();
-        CountingSort.Sort(sorted.AsSpan(), x => x, stats);
+        CountingSort.SortBy(sorted.AsSpan(), x => x, stats);
 
         // Counting Sort with internal buffer tracking (via SortSpan):
         // 1. Find min/max and cache keys: n reads (main buffer)
@@ -180,7 +180,7 @@ public class CountingSortTests
     {
         var stats = new StatisticsContext();
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
-        CountingSort.Sort(reversed.AsSpan(), x => x, stats);
+        CountingSort.SortBy(reversed.AsSpan(), x => x, stats);
 
         // Counting Sort complexity is O(n + k) regardless of input order
         // Same operation counts for reversed as for sorted (with internal buffer tracking)
@@ -206,7 +206,7 @@ public class CountingSortTests
     {
         var stats = new StatisticsContext();
         var random = TestHelpers.ShuffledRange(n, seed);
-        CountingSort.Sort(random.AsSpan(), x => x, stats);
+        CountingSort.SortBy(random.AsSpan(), x => x, stats);
 
         // Counting Sort has same complexity regardless of input distribution
         // With internal buffer tracking: 3n reads, 2n writes
@@ -225,7 +225,7 @@ public class CountingSortTests
         var stats = new StatisticsContext();
         var n = 100;
         var allSame = Enumerable.Repeat(42, n).ToArray();
-        CountingSort.Sort(allSame.AsSpan(), x => x, stats);
+        CountingSort.SortBy(allSame.AsSpan(), x => x, stats);
 
         // When all keys are the same (min == max), early return after min/max scan
         // Only n reads for finding min/max, then early return

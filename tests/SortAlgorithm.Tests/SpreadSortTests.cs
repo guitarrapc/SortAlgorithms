@@ -14,6 +14,97 @@ public class SpreadSortTests : IntegerSortTestsBase
     // writes/swaps vary with pattern detection.
     protected override CountExpectation SortedInputCompares => CountExpectation.NonZero;
 
+    // SpreadSort is UNSTABLE: bucket distribution and the pdqsort fallback may reorder
+    // equal keys, so keySelector tests assert key order and permutation integrity only.
+
+    [Test]
+    public async Task KeySelectorSortsByKeyTest()
+    {
+        // Unstable sort: assert key order only, not tie order.
+        // 2000 elements exceeds MinSortSize (1000), so the spread path runs (not just the pdqsort fallback).
+        var random = new Random(42);
+        var records = Enumerable.Range(0, 2000).Select(i => (Key: random.Next(-10000, 10000), Index: i)).ToArray();
+
+        SpreadSort.SortBy(records.AsSpan(), x => x.Key);
+
+        var keys = records.Select(x => x.Key).ToArray();
+        var expectedKeys = keys.OrderBy(x => x).ToArray();
+        await Assert.That(keys).IsEquivalentTo(expectedKeys, CollectionOrdering.Matching);
+        // All 2000 original records must still be present exactly once
+        await Assert.That(records.Select(x => x.Index).OrderBy(x => x).ToArray())
+            .IsEquivalentTo(Enumerable.Range(0, 2000).ToArray(), CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task KeySelectorSmallInputFallbackTest()
+    {
+        // 500 elements is below MinSortSize (1000), covering the pdqsort fallback path
+        var random = new Random(42);
+        var records = Enumerable.Range(0, 500).Select(i => (Key: random.Next(-10000, 10000), Index: i)).ToArray();
+
+        SpreadSort.SortBy(records.AsSpan(), x => x.Key);
+
+        var keys = records.Select(x => x.Key).ToArray();
+        var expectedKeys = keys.OrderBy(x => x).ToArray();
+        await Assert.That(keys).IsEquivalentTo(expectedKeys, CollectionOrdering.Matching);
+        // All 500 original records must still be present exactly once
+        await Assert.That(records.Select(x => x.Index).OrderBy(x => x).ToArray())
+            .IsEquivalentTo(Enumerable.Range(0, 500).ToArray(), CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task KeySelectorNegativeKeysTest()
+    {
+        // Keys spanning negative/zero/positive; unstable sort, so assert key order only
+        var records = new (int Key, string Name)[] { (3, "c"), (-5, "a"), (0, "b"), (-5, "a2"), (3, "c2"), (int.MinValue, "min"), (int.MaxValue, "max") };
+        SpreadSort.SortBy(records.AsSpan(), x => x.Key);
+
+        await Assert.That(records.Select(x => x.Key).ToArray())
+            .IsEquivalentTo([int.MinValue, -5, -5, 0, 3, 3, int.MaxValue], CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
+    public async Task SortHalfResultOrderTest(IInputSample<Half> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        SpreadSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted (NaN-first total order, same as Array.Sort)
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
+    public async Task SortFloatResultOrderTest(IInputSample<float> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        SpreadSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted (NaN-first total order, same as Array.Sort)
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
+    public async Task SortDoubleResultOrderTest(IInputSample<double> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        SpreadSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted (NaN-first total order, same as Array.Sort)
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
     [Test]
     [Arguments(typeof(byte))]
     [Arguments(typeof(sbyte))]

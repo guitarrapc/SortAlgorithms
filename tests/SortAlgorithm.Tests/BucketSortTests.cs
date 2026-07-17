@@ -27,7 +27,7 @@ public class BucketSortTests
         var array = inputSample.Samples.ToArray();
 
 
-        BucketSort.Sort(array.AsSpan(), x => x, stats);
+        BucketSort.SortBy(array.AsSpan(), x => x, stats);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
@@ -41,7 +41,7 @@ public class BucketSortTests
         // Test stability: equal elements should maintain relative order
         var stats = new StatisticsContext();
 
-        BucketSort.Sort(items.AsSpan(), x => x.Value, stats);
+        BucketSort.SortBy(items.AsSpan(), x => x.Value, stats);
 
         // Verify sorting correctness - values should be in ascending order
         await Assert.That(items.Select(x => x.Value).ToArray()).IsEquivalentTo(MockStabilityData.Sorted, CollectionOrdering.Matching);
@@ -68,7 +68,7 @@ public class BucketSortTests
         // Test stability with more complex scenario - multiple equal values
         var stats = new StatisticsContext();
 
-        BucketSort.Sort(items.AsSpan(), x => x.Key, stats);
+        BucketSort.SortBy(items.AsSpan(), x => x.Key, stats);
 
         // Expected: [2:B, 2:D, 2:F, 5:A, 5:C, 5:G, 8:E]
         // Keys are sorted, and elements with the same key maintain original order
@@ -88,7 +88,7 @@ public class BucketSortTests
         // They should remain in original order
         var stats = new StatisticsContext();
 
-        BucketSort.Sort(items.AsSpan(), x => x.Value, stats);
+        BucketSort.SortBy(items.AsSpan(), x => x.Value, stats);
 
         // All values are 1
         foreach (var item in items) await Assert.That(item.Value).IsEqualTo(1);
@@ -104,7 +104,7 @@ public class BucketSortTests
     {
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
-        BucketSort.Sort(array.AsSpan(), x => x, stats);
+        BucketSort.SortBy(array.AsSpan(), x => x, stats);
 
         await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
@@ -122,7 +122,7 @@ public class BucketSortTests
     {
         var stats = new StatisticsContext();
         var sorted = Enumerable.Range(0, n).ToArray();
-        BucketSort.Sort(sorted.AsSpan(), x => x, stats);
+        BucketSort.SortBy(sorted.AsSpan(), x => x, stats);
 
         // BucketSort on sorted data (with internal buffer tracking via SortSpan):
         //
@@ -175,7 +175,7 @@ public class BucketSortTests
     {
         var stats = new StatisticsContext();
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
-        BucketSort.Sort(reversed.AsSpan(), x => x, stats);
+        BucketSort.SortBy(reversed.AsSpan(), x => x, stats);
 
         // BucketSort on reversed data (with internal buffer tracking):
         // - Distribution is same as sorted (independent of order)
@@ -222,7 +222,7 @@ public class BucketSortTests
     {
         var stats = new StatisticsContext();
         var random = TestHelpers.ShuffledRange(n, seed);
-        BucketSort.Sort(random.AsSpan(), x => x, stats);
+        BucketSort.SortBy(random.AsSpan(), x => x, stats);
 
         // BucketSort on random data (with internal buffer tracking):
         // - For Enumerable.Range shuffled, keys are still 0..n-1 (uniform distribution)
@@ -266,7 +266,7 @@ public class BucketSortTests
     {
         var stats = new StatisticsContext();
         var allSame = Enumerable.Repeat(42, n).ToArray();
-        BucketSort.Sort(allSame.AsSpan(), x => x, stats);
+        BucketSort.SortBy(allSame.AsSpan(), x => x, stats);
 
         // All elements are the same:
         // - min == max, early return after first pass
@@ -287,4 +287,37 @@ public class BucketSortTests
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
+    [Test]
+    public async Task SortByWithoutComparableElementTest()
+    {
+        // SortBy orders strictly by the extracted key: the element type does not
+        // need IComparable, and equal keys retain input order (stable).
+        var records = new (int Key, string Name)[] { (3, "c"), (-5, "a"), (0, "b"), (-5, "a2"), (3, "c2") };
+        BucketSort.SortBy(records.AsSpan(), x => x.Key);
+
+        await Assert.That(records.Select(x => x.Key).ToArray())
+            .IsEquivalentTo([-5, -5, 0, 3, 3], CollectionOrdering.Matching);
+        await Assert.That(records.Select(x => x.Name).ToArray())
+            .IsEquivalentTo(["a", "a2", "b", "c", "c2"], CollectionOrdering.Matching);
+    }
+
+    private readonly struct DescendingIntComparer : IComparer<int>
+    {
+        public int Compare(int x, int y) => y.CompareTo(x);
+    }
+
+    [Test]
+    public async Task SortWithComparerAndBucketHintTest()
+    {
+        // The comparer defines the final order; the key selector is only a bucket-distribution
+        // hint and must be order-consistent with the comparer (negated key for descending order).
+        var stats = new StatisticsContext();
+        var random = new Random(42);
+        var array = Enumerable.Range(0, 500).Select(_ => random.Next(-1000, 1000)).ToArray();
+        var expected = array.OrderByDescending(x => x).ToArray();
+
+        BucketSort.Sort(array.AsSpan(), x => -x, new DescendingIntComparer(), stats);
+
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
 }

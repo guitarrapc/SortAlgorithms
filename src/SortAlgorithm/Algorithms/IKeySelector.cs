@@ -58,8 +58,8 @@ internal readonly struct FuncKeySelector<T>(Func<T, int> func) : IKeySelector<T>
 
 /// <summary>
 /// Compares elements by their extracted integer key.
-/// Used by key-based distribution sorts for small-range fallbacks (e.g. insertion sort cutoff)
-/// so that the fallback orders by the same key as the distribution passes and stays stable.
+/// Used by key-ordered (<c>SortBy</c>) distribution sorts so that comparison fallbacks
+/// order by exactly the same key as the distribution passes and stay stable.
 /// </summary>
 internal readonly struct KeySelectorComparer<T, TKeySelector>(TKeySelector keySelector) : IComparer<T>
     where TKeySelector : struct, IKeySelector<T>

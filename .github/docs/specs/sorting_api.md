@@ -24,6 +24,47 @@ Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
 
 Some algorithms provide additional range, key-selector, seed, or variant overloads. Those extensions must preserve the same ordering and observation semantics for the elements they cover.
 
+## Radix Key Mapping
+
+The radix-sort family (LSD/MSD radix, American Flag, Spread) is constrained by an order-preserving
+key mapping rather than by element type: the public `IRadixKeySelector<T>` maps an element to a
+fixed-width unsigned key (at most 64 bits), and all digit extraction and bucket math operates on
+that key. Two method names split the API by what defines the order:
+
+- `Sort(...)` — the element itself is the key: integer overloads (`T : IBinaryInteger<T>`) and
+  Half/float/double overloads (IEEE 754 total-order transform, all NaN values first, matching
+  `IComparable<T>` semantics).
+- `SortBy(...)` — an extracted key defines the order: `Func<T, int>` convenience overloads, and
+  full-control overloads taking any `struct` `IRadixKeySelector<T>` (user-defined keys up to
+  64 bits, JIT-devirtualized). The two names are required because a
+  `SortBy<T, TRadixKey>(Span<T>, TRadixKey)` overload named `Sort` would collide with
+  `Sort<T, TContext>(Span<T>, TContext)` — C# does not distinguish signatures by constraints.
+
+The same rule applies to the key-selector distribution sorts: `CountingSort.SortBy` /
+`PigeonholeSort.SortBy` / `BucketSort.SortBy` order strictly by the extracted key (stable, no
+`IComparable<T>` requirement). The exception that proves the rule is
+`BucketSort.Sort(span, keySelector, comparer, context)`: there the explicit comparer defines the
+final order and the key selector is only a bucket-distribution accelerator, so the method keeps
+the `Sort` name — the order source is visible in the signature. That overload's precondition is
+that the key is order-consistent with the comparer (`comparer.Compare(x, y) <= 0` implies
+`key(x) <= key(y)`); an inconsistent hint produces unsorted output.
+
+In short: the method name states what defines the order; a parameter that does not define the
+order (a bucketing hint) never changes the name.
+
+The 64-bit key width is the abstraction's ceiling by design — wider keys (Int128, BigInteger) and
+selectors declaring `KeyBits` outside 1..64 are rejected rather than degraded.
+
+Comparison fallbacks inside these algorithms (insertion-sort cutoffs, pdqsort fallback) receive a
+comparer from the public overload that must order consistently with the key mapping: built-in
+element overloads pass the element's natural comparer, key-selector overloads pass a comparer over
+the extracted key.
+
+Lesson learned: routing the fallback comparer through the key mapping unconditionally regressed
+SpreadSort's sorted-input early detection by ~67% (key transform on every comparison); passing the
+natural comparer for built-in element types recovered baseline performance while the key-selector
+path keeps its by-construction consistency.
+
 ## Stability
 
 Stability is an algorithm property, not a library-wide guarantee. An algorithm documented as stable preserves the original relative order of elements that compare equal. An unstable algorithm may reorder equal elements.
