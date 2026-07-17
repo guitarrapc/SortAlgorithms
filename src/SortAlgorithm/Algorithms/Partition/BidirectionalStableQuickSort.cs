@@ -278,8 +278,8 @@ public static class BidirectionalStableQuickSort
         // During the forward scan each later-encountered greater element was placed at a lower
         // scratch index, so reversing the section restores the original left-to-right order.
         if (greaterStart < length)
-            s.Context.OnPhase(SortPhase.Reverse, greaterStart, length - 1);
         {
+            s.Context.OnPhase(SortPhase.Reverse, greaterStart, length - 1);
             var lo = greaterStart;
             var hi = length - 1;
             while (lo < hi)
