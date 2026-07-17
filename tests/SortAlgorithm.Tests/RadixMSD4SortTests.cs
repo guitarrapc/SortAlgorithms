@@ -35,29 +35,16 @@ public class RadixMSD4SortTests
     }
 
     [Test]
-    public async Task StabilityTest()
+    public async Task SortIdempotencyTest()
     {
-        // Test stability: elements with same key maintain relative order
-        var records = new[]
-        {
-            (value: 5, id: 1),
-            (value: 3, id: 2),
-            (value: 5, id: 3),
-            (value: 3, id: 4),
-            (value: 5, id: 5)
-        };
-
-        var keys = records.Select(r => r.value).ToArray();
-        RadixLSD4Sort.Sort(keys.AsSpan());
-
-        // After sorting by value, records with same value should maintain original order
-        // Since we only sorted keys, we verify the sort is stable by checking
-        // that multiple sorts preserve order
-        var firstSort = records.Select(r => r.value).ToArray();
-        RadixLSD4Sort.Sort(firstSort.AsSpan());
+        // NOTE: stability is not observable through the integer-only API - equal keys
+        // are indistinguishable, so no test can detect equal-key reordering here.
+        // This only verifies that re-sorting already-sorted data leaves it unchanged.
+        var firstSort = new[] { 5, 3, 5, 3, 5 };
+        RadixMSD4Sort.Sort(firstSort.AsSpan());
 
         var secondSort = firstSort.ToArray();
-        RadixLSD4Sort.Sort(secondSort.AsSpan());
+        RadixMSD4Sort.Sort(secondSort.AsSpan());
 
         await Assert.That(secondSort).IsEquivalentTo(firstSort, CollectionOrdering.Matching);
     }
@@ -68,7 +55,7 @@ public class RadixMSD4SortTests
         var stats = new StatisticsContext();
         // Test that int.MinValue is handled correctly (no overflow)
         var array = new[] { int.MinValue, -1, 0, 1, int.MaxValue };
-        RadixLSD4Sort.Sort(array.AsSpan(), stats);
+        RadixMSD4Sort.Sort(array.AsSpan(), stats);
 
         await Assert.That(array).IsEquivalentTo(new[] { int.MinValue, -1, 0, 1, int.MaxValue }, CollectionOrdering.Matching);
     }

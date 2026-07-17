@@ -84,6 +84,22 @@ public class CircleSortTests
     }
 
     [Test]
+    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
+    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
+    {
+        Skip.When(inputSample.Samples.Length > 1024, "Skip large inputs for order test");
+
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        CircleSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
     public async Task StatisticsSortedTest(IInputSample<int> inputSample)
     {
@@ -153,14 +169,18 @@ public class CircleSortTests
     }
 
     [Test]
-    [Arguments(10)]
-    [Arguments(20)]
-    [Arguments(50)]
-    [Arguments(100)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(10, 42)]
+    [Arguments(10, 1234)]
+    [Arguments(20, 42)]
+    [Arguments(20, 1234)]
+    [Arguments(50, 42)]
+    [Arguments(50, 1234)]
+    [Arguments(100, 42)]
+    [Arguments(100, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         CircleSort.Sort(random.AsSpan(), stats);
 
         // Circle Sort on random data performs O(n log n log n) comparisons on average

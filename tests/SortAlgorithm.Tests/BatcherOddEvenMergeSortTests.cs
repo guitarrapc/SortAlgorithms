@@ -215,17 +215,24 @@ public class BatcherOddEvenMergeSortTests
     }
 
     [Test]
-    [Arguments(2)]
-    [Arguments(4)]
-    [Arguments(8)]
-    [Arguments(16)]
-    [Arguments(32)]
-    [Arguments(64)]
-    [Arguments(128)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(2, 42)]
+    [Arguments(2, 1234)]
+    [Arguments(4, 42)]
+    [Arguments(4, 1234)]
+    [Arguments(8, 42)]
+    [Arguments(8, 1234)]
+    [Arguments(16, 42)]
+    [Arguments(16, 1234)]
+    [Arguments(32, 42)]
+    [Arguments(32, 1234)]
+    [Arguments(64, 42)]
+    [Arguments(64, 1234)]
+    [Arguments(128, 42)]
+    [Arguments(128, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         BatcherOddEvenMergeSort.Sort(random.AsSpan(), stats);
 
         // Batcher Odd-Even Merge Sort always performs the same number of comparisons regardless of input

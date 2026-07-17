@@ -174,14 +174,18 @@ public class BalancedBinaryTreeSortNonOptimizedTests
     }
 
     [Test, SkipCI]
-    [Arguments(10)]
-    [Arguments(20)]
-    [Arguments(50)]
-    [Arguments(100)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(10, 42)]
+    [Arguments(10, 1234)]
+    [Arguments(20, 42)]
+    [Arguments(20, 1234)]
+    [Arguments(50, 42)]
+    [Arguments(50, 1234)]
+    [Arguments(100, 42)]
+    [Arguments(100, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         BalancedBinaryTreeSortNonOptimized.Sort(random.AsSpan(), stats);
 
         // For random data, AVL tree maintains balance automatically
@@ -202,14 +206,18 @@ public class BalancedBinaryTreeSortNonOptimizedTests
     }
 
     [Test, SkipCI]
-    [Arguments(10)]
-    [Arguments(20)]
-    [Arguments(50)]
-    [Arguments(100)]
-    public async Task TheoreticalValuesBalancedPropertyTest(int n)
+    [Arguments(10, 42)]
+    [Arguments(10, 1234)]
+    [Arguments(20, 42)]
+    [Arguments(20, 1234)]
+    [Arguments(50, 42)]
+    [Arguments(50, 1234)]
+    [Arguments(100, 42)]
+    [Arguments(100, 1234)]
+    public async Task TheoreticalValuesBalancedPropertyTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         BalancedBinaryTreeSortNonOptimized.Sort(random.AsSpan(), stats);
 
         // AVL tree guarantees that the height is always O(log n)

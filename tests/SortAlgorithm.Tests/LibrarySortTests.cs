@@ -146,6 +146,19 @@ public class LibrarySortTests
     }
 
     [Test]
+    [MethodDataSource(typeof(MockStabilityAllEqualsData), nameof(MockStabilityAllEqualsData.Generate))]
+    public async Task StabilityTestWithAllEqual(StabilityTestItem[] items)
+    {
+        // All elements equal: original order must be fully preserved
+        var stats = new StatisticsContext();
+
+        LibrarySort.Sort(items.AsSpan(), stats);
+
+        foreach (var item in items) await Assert.That(item.Value).IsEqualTo(1);
+        await Assert.That(items.Select(x => x.OriginalIndex).ToArray()).IsEquivalentTo(MockStabilityAllEqualsData.Sorted, CollectionOrdering.Matching);
+    }
+
+    [Test]
     public async Task EmptyArrayTest()
     {
         var stats = new StatisticsContext();
@@ -364,14 +377,18 @@ public class LibrarySortTests
     }
 
     [Test]
-    [Arguments(10)]
-    [Arguments(20)]
-    [Arguments(50)]
-    [Arguments(100)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(10, 42)]
+    [Arguments(10, 1234)]
+    [Arguments(20, 42)]
+    [Arguments(20, 1234)]
+    [Arguments(50, 42)]
+    [Arguments(50, 1234)]
+    [Arguments(100, 42)]
+    [Arguments(100, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         LibrarySort.Sort(random.AsSpan(), stats);
 
         // LibrarySort behavior on random data:

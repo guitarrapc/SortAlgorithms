@@ -230,6 +230,71 @@ public class DestswapStableQuickSortTests
         await Assert.That(strings).IsEquivalentTo(["apple", "banana", "cherry", "mango", "zebra"], CollectionOrdering.Matching);
     }
 
+    [Test]
+    [MethodDataSource(typeof(MockStabilityData), nameof(MockStabilityData.Generate))]
+    public async Task StabilityTest(StabilityTestItem[] items)
+    {
+        // Test stability: equal elements should maintain relative order
+        var stats = new StatisticsContext();
+
+        DestswapStableQuickSort.Sort(items.AsSpan(), stats);
+
+        // Verify sorting correctness - values should be in ascending order
+        await Assert.That(items.Select(x => x.Value).ToArray()).IsEquivalentTo(MockStabilityData.Sorted, CollectionOrdering.Matching);
+
+        // Verify stability: for each group of equal values, original order is preserved
+        var value1Indices = items.Where(x => x.Value == 1).Select(x => x.OriginalIndex).ToArray();
+        var value2Indices = items.Where(x => x.Value == 2).Select(x => x.OriginalIndex).ToArray();
+        var value3Indices = items.Where(x => x.Value == 3).Select(x => x.OriginalIndex).ToArray();
+
+        await Assert.That(value1Indices).IsEquivalentTo(MockStabilityData.Sorted1, CollectionOrdering.Matching);
+        await Assert.That(value2Indices).IsEquivalentTo(MockStabilityData.Sorted2, CollectionOrdering.Matching);
+        await Assert.That(value3Indices).IsEquivalentTo(MockStabilityData.Sorted3, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockStabilityWithIdData), nameof(MockStabilityWithIdData.Generate))]
+    public async Task StabilityTestWithComplex(StabilityTestItemWithId[] items)
+    {
+        // Test stability with more complex scenario - multiple equal values
+        var stats = new StatisticsContext();
+
+        DestswapStableQuickSort.Sort(items.AsSpan(), stats);
+
+        // Keys are sorted, and elements with the same key maintain original order
+        for (var i = 0; i < items.Length; i++)
+        {
+            await Assert.That(items[i].Key).IsEqualTo(MockStabilityWithIdData.Sorted[i].Key);
+            await Assert.That(items[i].Id).IsEqualTo(MockStabilityWithIdData.Sorted[i].Id);
+        }
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockStabilityAllEqualsData), nameof(MockStabilityAllEqualsData.Generate))]
+    public async Task StabilityTestWithAllEqual(StabilityTestItem[] items)
+    {
+        // All elements equal: original order must be fully preserved
+        var stats = new StatisticsContext();
+
+        DestswapStableQuickSort.Sort(items.AsSpan(), stats);
+
+        foreach (var item in items) await Assert.That(item.Value).IsEqualTo(1);
+        await Assert.That(items.Select(x => x.OriginalIndex).ToArray()).IsEquivalentTo(MockStabilityAllEqualsData.Sorted, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
+    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+        DestswapStableQuickSort.Sort(array.AsSpan(), stats);
+
+        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
+        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
+        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
+    }
+
 #if DEBUG
 
     [Test]
@@ -295,14 +360,18 @@ public class DestswapStableQuickSortTests
     }
 
     [Test]
-    [Arguments(10)]
-    [Arguments(20)]
-    [Arguments(50)]
-    [Arguments(100)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(10, 42)]
+    [Arguments(10, 1234)]
+    [Arguments(20, 42)]
+    [Arguments(20, 1234)]
+    [Arguments(50, 42)]
+    [Arguments(50, 1234)]
+    [Arguments(100, 42)]
+    [Arguments(100, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         DestswapStableQuickSort.Sort(random.AsSpan(), stats);
 
         // DestswapStableQuickSort on random data:

@@ -7,20 +7,7 @@ namespace SortAlgorithm.Tests;
 public class SlowSortTests
 {
     [Test, SkipCI]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
+    [MethodDataSource(typeof(MockJokeSortData), nameof(MockJokeSortData.Generate))]
     public async Task SortResultOrderTest(IInputSample<int> inputSample)
     {
         // Slow Sort is extremely slow, so we limit to small arrays
@@ -38,7 +25,7 @@ public class SlowSortTests
 
 
     [Test, SkipCI]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
+    [MethodDataSource(typeof(MockJokeSortData), nameof(MockJokeSortData.GenerateSorted))]
     public async Task StatisticsSortedTest(IInputSample<int> inputSample)
     {
         // Slow Sort is extremely slow, so we limit to small arrays
@@ -109,15 +96,18 @@ public class SlowSortTests
     }
 
     [Test, SkipCI]
-    [Arguments(3)]
-    [Arguments(4)]
-    [Arguments(5)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(3, 42)]
+    [Arguments(3, 1234)]
+    [Arguments(4, 42)]
+    [Arguments(4, 1234)]
+    [Arguments(5, 42)]
+    [Arguments(5, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         // Slow Sort has data-independent comparison count
         // but data-dependent swap count
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         SlowSort.Sort(random.AsSpan(), stats);
 
         // Verify the array is sorted
@@ -278,10 +268,13 @@ public class SlowSortTests
     }
 
     [Test, SkipCI]
-    [Arguments(3)]
-    [Arguments(5)]
-    [Arguments(7)]
-    public async Task ComparisonCountDataIndependentTest(int n)
+    [Arguments(3, 42)]
+    [Arguments(3, 1234)]
+    [Arguments(5, 42)]
+    [Arguments(5, 1234)]
+    [Arguments(7, 42)]
+    [Arguments(7, 1234)]
+    public async Task ComparisonCountDataIndependentTest(int n, int seed)
     {
         // Verify that comparison count is data-independent
         // Sorted, reversed, and random data should all have the same comparison count
@@ -294,7 +287,7 @@ public class SlowSortTests
         SlowSort.Sort(reversed.AsSpan(), statsReversed);
 
         var statsRandom = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         SlowSort.Sort(random.AsSpan(), statsRandom);
 
         // All should have the same comparison count (data-independent)

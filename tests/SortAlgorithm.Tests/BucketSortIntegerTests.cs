@@ -97,14 +97,18 @@ public class BucketSortIntegerTests
     }
 
     [Test]
-    [Arguments(10)]
-    [Arguments(20)]
-    [Arguments(50)]
-    [Arguments(100)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(10, 42)]
+    [Arguments(10, 1234)]
+    [Arguments(20, 42)]
+    [Arguments(20, 1234)]
+    [Arguments(50, 42)]
+    [Arguments(50, 1234)]
+    [Arguments(100, 42)]
+    [Arguments(100, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         BucketSortInteger.Sort(random.AsSpan(), stats);
 
         var minReads = (ulong)(2 * n);
@@ -142,4 +146,108 @@ public class BucketSortIntegerTests
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
+    [Test]
+    public async Task MinValueHandlingTest()
+    {
+        var stats = new StatisticsContext();
+        // Test that int.MinValue is handled correctly (no overflow)
+        var array = new[] { int.MinValue, -1, 0, 1, int.MaxValue };
+        BucketSortInteger.Sort(array.AsSpan(), stats);
+
+        await Assert.That(array).IsEquivalentTo(new[] { int.MinValue, -1, 0, 1, int.MaxValue }, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task SortWithNegativeNumbers()
+    {
+        var stats = new StatisticsContext();
+        var array = new[] { -5, 3, -1, 0, 2, -3, 1 };
+        var expected = new[] { -5, -3, -1, 0, 1, 2, 3 };
+        BucketSortInteger.Sort(array.AsSpan(), stats);
+
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task SortWithAllSameValues()
+    {
+        var stats = new StatisticsContext();
+        var array = new[] { 5, 5, 5, 5, 5 };
+        BucketSortInteger.Sort(array.AsSpan(), stats);
+
+        foreach (var item in array) await Assert.That(item).IsEqualTo(5);
+    }
+
+    [Test]
+    [Arguments(typeof(byte))]
+    [Arguments(typeof(sbyte))]
+    [Arguments(typeof(short))]
+    [Arguments(typeof(ushort))]
+    [Arguments(typeof(int))]
+    [Arguments(typeof(uint))]
+    [Arguments(typeof(long))]
+    [Arguments(typeof(ulong))]
+    public async Task SortDifferentIntegerTypes(Type type)
+    {
+        var stats = new StatisticsContext();
+
+        if (type == typeof(byte))
+        {
+            var array = new byte[] { 5, 2, 8, 1, 9 };
+            BucketSortInteger.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
+        else if (type == typeof(sbyte))
+        {
+            var array = new sbyte[] { -5, 2, -8, 1, 9 };
+            BucketSortInteger.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
+        else if (type == typeof(short))
+        {
+            var array = new short[] { -5, 2, -8, 1, 9 };
+            BucketSortInteger.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
+        else if (type == typeof(ushort))
+        {
+            var array = new ushort[] { 5, 2, 8, 1, 9 };
+            BucketSortInteger.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
+        else if (type == typeof(int))
+        {
+            var array = new int[] { -5, 2, -8, 1, 9 };
+            BucketSortInteger.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
+        else if (type == typeof(uint))
+        {
+            var array = new uint[] { 5, 2, 8, 1, 9 };
+            BucketSortInteger.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
+        else if (type == typeof(long))
+        {
+            var array = new long[] { -5, 2, -8, 1, 9 };
+            BucketSortInteger.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
+        else if (type == typeof(ulong))
+        {
+            var array = new ulong[] { 5, 2, 8, 1, 9 };
+            BucketSortInteger.Sort(array.AsSpan(), stats);
+            await Assert.That(IsSorted(array)).IsTrue();
+        }
+    }
+
+    private static bool IsSorted<T>(T[] array) where T : IComparable<T>
+    {
+        for (int i = 1; i < array.Length; i++)
+        {
+            if (new ComparableComparer<T>().Compare(array[i - 1], array[i]) > 0)
+                return false;
+        }
+        return true;
+    }
 }

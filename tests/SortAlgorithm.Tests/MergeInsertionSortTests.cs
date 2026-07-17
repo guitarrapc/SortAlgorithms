@@ -84,6 +84,22 @@ public class MergeInsertionSortTests
     }
 
     [Test]
+    [MethodDataSource(typeof(MockIntKeyRandomData), nameof(MockIntKeyRandomData.Generate))]
+    public async Task SortIntStructResultOrderTest(IInputSample<Utils.IntKey> inputSample)
+    {
+        Skip.When(inputSample.Samples.Length > 512, "Skip large inputs for order test");
+
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+
+        MergeInsertionSort.Sort(array.AsSpan(), stats);
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
     [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
     public async Task SortNoStatistics(IInputSample<int> inputSample)
     {
@@ -155,6 +171,9 @@ public class MergeInsertionSortTests
         await Assert.That(array).IsEquivalentTo(new[] { 1, 2, 3, 4, 5 }, CollectionOrdering.Matching);
     }
 
+    // NOTE: MergeInsertionSort (Ford-Johnson) is NOT stable: the Jacobsthal insertion
+    // order can place a later equal key before an earlier one, so no stability tests here.
+
     [Test]
     [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
     public async Task StatisticsSortedTest(IInputSample<int> inputSample)
@@ -222,14 +241,18 @@ public class MergeInsertionSortTests
     }
 
     [Test]
-    [Arguments(10)]
-    [Arguments(20)]
-    [Arguments(50)]
-    [Arguments(100)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(10, 42)]
+    [Arguments(10, 1234)]
+    [Arguments(20, 42)]
+    [Arguments(20, 1234)]
+    [Arguments(50, 42)]
+    [Arguments(50, 1234)]
+    [Arguments(100, 42)]
+    [Arguments(100, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         MergeInsertionSort.Sort(random.AsSpan(), stats);
 
         // Ford-Johnson maintains near-optimal comparison count regardless of input order

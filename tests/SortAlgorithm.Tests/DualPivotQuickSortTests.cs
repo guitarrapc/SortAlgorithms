@@ -354,14 +354,18 @@ public class DualPivotQuickSortTests
     }
 
     [Test]
-    [Arguments(30)]
-    [Arguments(50)]
-    [Arguments(100)]
-    [Arguments(200)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(30, 42)]
+    [Arguments(30, 1234)]
+    [Arguments(50, 42)]
+    [Arguments(50, 1234)]
+    [Arguments(100, 42)]
+    [Arguments(100, 1234)]
+    [Arguments(200, 42)]
+    [Arguments(200, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         DualPivotQuickSort.Sort(random.AsSpan(), stats);
 
         // QuickSort Dual Pivot on random data: average case O(n log n)

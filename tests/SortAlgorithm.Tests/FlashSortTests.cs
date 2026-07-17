@@ -181,6 +181,21 @@ public class FlashSortTests
     }
 
     [Test]
+    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
+    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+        FlashSort.Sort(array.AsSpan(), stats);
+
+        // Distribution sort: classification always reads and redistributes elements.
+        // CompareCount is not asserted because classification is arithmetic, not comparison.
+        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
+        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
+    }
+
+    [Test]
     [Arguments(20)]
     [Arguments(50)]
     [Arguments(100)]
@@ -236,13 +251,16 @@ public class FlashSortTests
     }
 
     [Test]
-    [Arguments(20)]
-    [Arguments(50)]
-    [Arguments(100)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(20, 42)]
+    [Arguments(20, 1234)]
+    [Arguments(50, 42)]
+    [Arguments(50, 1234)]
+    [Arguments(100, 42)]
+    [Arguments(100, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         FlashSort.Sort(random.AsSpan(), stats);
 
         // FlashSort on random data (n > InsertionSortThreshold=16, uniform distribution):

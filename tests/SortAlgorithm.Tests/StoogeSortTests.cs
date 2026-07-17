@@ -7,20 +7,7 @@ namespace SortAlgorithm.Tests;
 public class StoogeSortTests
 {
     [Test, SkipCI]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
+    [MethodDataSource(typeof(MockJokeSortData), nameof(MockJokeSortData.Generate))]
     public async Task SortResultOrderTest(IInputSample<int> inputSample)
     {
         // Stooge Sort is extremely slow, so we limit to small arrays
@@ -38,7 +25,7 @@ public class StoogeSortTests
 
 
     [Test, SkipCI]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
+    [MethodDataSource(typeof(MockJokeSortData), nameof(MockJokeSortData.GenerateSorted))]
     public async Task StatisticsSortedTest(IInputSample<int> inputSample)
     {
         // Stooge Sort is extremely slow, so we limit to small arrays
@@ -113,15 +100,18 @@ public class StoogeSortTests
     }
 
     [Test, SkipCI]
-    [Arguments(3)]
-    [Arguments(4)]
-    [Arguments(5)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(3, 42)]
+    [Arguments(3, 1234)]
+    [Arguments(4, 42)]
+    [Arguments(4, 1234)]
+    [Arguments(5, 42)]
+    [Arguments(5, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         // Stooge Sort has data-independent comparison count
         // but data-dependent swap count
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         StoogeSort.Sort(random.AsSpan(), stats);
 
         // Verify the array is sorted

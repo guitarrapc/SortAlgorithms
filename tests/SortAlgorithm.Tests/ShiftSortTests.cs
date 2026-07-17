@@ -90,14 +90,18 @@ public class ShiftSortTests
     }
 
     [Test]
-    [Arguments(256)]  // Stackalloc threshold
-    [Arguments(257)]  // Just over threshold (should use ArrayPool)
-    [Arguments(512)]  // ArrayPool
-    [Arguments(1024)] // Large array
-    public async Task LargeArrayTest(int n)
+    [Arguments(256, 42)]  // Stackalloc threshold
+    [Arguments(256, 1234)]
+    [Arguments(257, 42)]  // Just over threshold (should use ArrayPool)
+    [Arguments(257, 1234)]
+    [Arguments(512, 42)]  // ArrayPool
+    [Arguments(512, 1234)]
+    [Arguments(1024, 42)] // Large array
+    [Arguments(1024, 1234)]
+    public async Task LargeArrayTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var array = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var array = TestHelpers.ShuffledRange(n, seed);
         ShiftSort.Sort(array.AsSpan(), stats);
 
         // Verify sorting correctness
@@ -264,14 +268,18 @@ public class ShiftSortTests
     }
 
     [Test]
-    [Arguments(10)]
-    [Arguments(20)]
-    [Arguments(50)]
-    [Arguments(100)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(10, 42)]
+    [Arguments(10, 1234)]
+    [Arguments(20, 42)]
+    [Arguments(20, 1234)]
+    [Arguments(50, 42)]
+    [Arguments(50, 1234)]
+    [Arguments(100, 42)]
+    [Arguments(100, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         ShiftSort.Sort(random.AsSpan(), stats);
 
         // For random data (with internal buffer tracking):

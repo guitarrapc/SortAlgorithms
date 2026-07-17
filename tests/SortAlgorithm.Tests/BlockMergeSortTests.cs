@@ -133,6 +133,19 @@ public class BlockMergeSortTests
     }
 
     [Test]
+    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
+    public async Task StatisticsSortedTest(IInputSample<int> inputSample)
+    {
+        var stats = new StatisticsContext();
+        var array = inputSample.Samples.ToArray();
+        BlockMergeSort.Sort(array.AsSpan(), stats);
+
+        await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
+        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
+        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
+    }
+
+    [Test]
     [Arguments(10)]
     [Arguments(20)]
     [Arguments(50)]

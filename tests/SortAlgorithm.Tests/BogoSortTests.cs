@@ -7,20 +7,7 @@ namespace SortAlgorithm.Tests;
 public class BogoSortTests
 {
     [Test, SkipCI]
-    [MethodDataSource(typeof(MockRandomData), nameof(MockRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativePositiveRandomData), nameof(MockNegativePositiveRandomData.Generate))]
-    [MethodDataSource(typeof(MockNegativeRandomData), nameof(MockNegativeRandomData.Generate))]
-    [MethodDataSource(typeof(MockReversedData), nameof(MockReversedData.Generate))]
-    [MethodDataSource(typeof(MockReversedWithDuplicatesData), nameof(MockReversedWithDuplicatesData.Generate))]
-    [MethodDataSource(typeof(MockPipeorganData), nameof(MockPipeorganData.Generate))]
-    [MethodDataSource(typeof(MockNearlySortedData), nameof(MockNearlySortedData.Generate))]
-    [MethodDataSource(typeof(MockAllSameData), nameof(MockAllSameData.Generate))]
-    [MethodDataSource(typeof(MockSameValuesData), nameof(MockSameValuesData.Generate))]
-    [MethodDataSource(typeof(MockQuickSortWorstCaseData), nameof(MockQuickSortWorstCaseData.Generate))]
-    [MethodDataSource(typeof(MockTwoDistinctValuesData), nameof(MockTwoDistinctValuesData.Generate))]
-    [MethodDataSource(typeof(MockHalfZeroHalfOneData), nameof(MockHalfZeroHalfOneData.Generate))]
-    [MethodDataSource(typeof(MockValleyRandomData), nameof(MockValleyRandomData.Generate))]
-    [MethodDataSource(typeof(MockHighlySkewedData), nameof(MockHighlySkewedData.Generate))]
+    [MethodDataSource(typeof(MockJokeSortData), nameof(MockJokeSortData.Generate))]
     public async Task SortResultOrderTest(IInputSample<int> inputSample)
     {
         // Bogo Sort is extremely slow, so we limit to small arrays
@@ -38,7 +25,7 @@ public class BogoSortTests
 
 
     [Test, SkipCI]
-    [MethodDataSource(typeof(MockSortedData), nameof(MockSortedData.Generate))]
+    [MethodDataSource(typeof(MockJokeSortData), nameof(MockJokeSortData.GenerateSorted))]
     public async Task StatisticsSortedTest(IInputSample<int> inputSample)
     {
         // Bogo Sort is extremely slow, so we limit to small arrays
@@ -103,10 +90,13 @@ public class BogoSortTests
     }
 
     [Test, SkipCI]
-    [Arguments(3)]
-    [Arguments(5)]
-    [Arguments(7)]
-    public async Task TheoreticalValuesRandomTest(int n)
+    [Arguments(3, 42)]
+    [Arguments(3, 1234)]
+    [Arguments(5, 42)]
+    [Arguments(5, 1234)]
+    [Arguments(7, 42)]
+    [Arguments(7, 1234)]
+    public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         // Bogo Sort has unbounded runtime for random data
         // We can only test that:
@@ -115,7 +105,7 @@ public class BogoSortTests
         // 3. Each shuffle performs n swaps
         // 4. Each IsSorted check performs n-1 comparisons
         var stats = new StatisticsContext();
-        var random = Enumerable.Range(0, n).OrderBy(_ => Guid.NewGuid()).ToArray();
+        var random = TestHelpers.ShuffledRange(n, seed);
         BogoSort.Sort(random.AsSpan(), stats);
 
         // Verify the array is sorted
