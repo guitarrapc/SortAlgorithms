@@ -1,4 +1,4 @@
-namespace SortAlgorithm.Benchmark;
+﻿namespace SortAlgorithm.Benchmark;
 
 /// <summary>
 /// Holds the invocation batch size shared between the benchmark job configuration

@@ -838,13 +838,13 @@ public static class Glidesort
         where TContext : ISortContext
     {
         // Pair 0: s[left0Start..left0Mid) + s[left0Mid..left0End) → t[0..left0Len)
-        var p0a = left0Start;  var p0ae = left0Mid;
-        var p0b = left0Mid;    var p0be = left0End;
+        var p0a = left0Start; var p0ae = left0Mid;
+        var p0b = left0Mid; var p0be = left0End;
         var out0 = 0;
 
         // Pair 1: s[right0Start..right0Mid) + s[right0Mid..right0End) → t[left0Len..)
         var p1a = right0Start; var p1ae = right0Mid;
-        var p1b = right0Mid;   var p1be = right0End;
+        var p1b = right0Mid; var p1be = right0End;
         var out1 = left0End - left0Start; // = left0Len
 
         // Interleaved main loop: preload all 4 current values; reload only the 2 consumed per iteration.
@@ -861,8 +861,8 @@ public static class Glidesort
                 int take1Left = s.IsLessOrEqual(v1a, v1b) ? 1 : 0;
                 t.Write(out0++, take0Left != 0 ? v0a : v0b);
                 t.Write(out1++, take1Left != 0 ? v1a : v1b);
-                p0a += take0Left;  p0b += 1 - take0Left;
-                p1a += take1Left;  p1b += 1 - take1Left;
+                p0a += take0Left; p0b += 1 - take0Left;
+                p1a += take1Left; p1b += 1 - take1Left;
                 if (p0a >= p0ae || p0b >= p0be || p1a >= p1ae || p1b >= p1be) break;
                 if (take0Left != 0) v0a = s.Read(p0a); else v0b = s.Read(p0b);
                 if (take1Left != 0) v1a = s.Read(p1a); else v1b = s.Read(p1b);
@@ -881,7 +881,7 @@ public static class Glidesort
             {
                 int take0Left = s.IsLessOrEqual(v0a, v0b) ? 1 : 0;
                 t.Write(out0++, take0Left != 0 ? v0a : v0b);
-                p0a += take0Left;  p0b += 1 - take0Left;
+                p0a += take0Left; p0b += 1 - take0Left;
                 if (p0a >= p0ae || p0b >= p0be) break;
                 if (take0Left != 0) v0a = s.Read(p0a); else v0b = s.Read(p0b);
             }
@@ -898,7 +898,7 @@ public static class Glidesort
             {
                 int take1Left = s.IsLessOrEqual(v1a, v1b) ? 1 : 0;
                 t.Write(out1++, take1Left != 0 ? v1a : v1b);
-                p1a += take1Left;  p1b += 1 - take1Left;
+                p1a += take1Left; p1b += 1 - take1Left;
                 if (p1a >= p1ae || p1b >= p1be) break;
                 if (take1Left != 0) v1a = s.Read(p1a); else v1b = s.Read(p1b);
             }
@@ -1434,14 +1434,14 @@ public static class Glidesort
             var minCount = Math.Min(leftLen, rightLen);
             for (var k = 0; k < minCount; k++)
             {
-                var valFwd = leftInMain  ? s.Read(fwdI) : t.Read(fwdI);
+                var valFwd = leftInMain ? s.Read(fwdI) : t.Read(fwdI);
                 var valBwd = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
                 int goLess = (partitionLeft ? s.IsLessOrEqual(valFwd, pivot) : s.IsLessThan(valFwd, pivot)) ? 1 : 0;
-                int goGeq  = (partitionLeft ? s.IsLessOrEqual(valBwd, pivot) : s.IsLessThan(valBwd, pivot)) ? 0 : 1;
+                int goGeq = (partitionLeft ? s.IsLessOrEqual(valBwd, pivot) : s.IsLessThan(valBwd, pivot)) ? 0 : 1;
                 if (goLess != 0) s.Write(destFront, valFwd); else t.Write(scrFront, valFwd);
-                destFront += goLess;  scrFront += 1 - goLess;
-                if (goGeq  != 0) s.Write(destBack,  valBwd); else t.Write(scrBack,  valBwd);
-                destBack  -= goGeq;   scrBack  -= 1 - goGeq;
+                destFront += goLess; scrFront += 1 - goLess;
+                if (goGeq != 0) s.Write(destBack, valBwd); else t.Write(scrBack, valBwd);
+                destBack -= goGeq; scrBack -= 1 - goGeq;
                 fwdI++;
                 bwdI--;
             }
@@ -1452,7 +1452,7 @@ public static class Glidesort
                 var val = leftInMain ? s.Read(fwdI) : t.Read(fwdI);
                 int goLess = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 1 : 0;
                 if (goLess != 0) s.Write(destFront, val); else t.Write(scrFront, val);
-                destFront += goLess;  scrFront += 1 - goLess;
+                destFront += goLess; scrFront += 1 - goLess;
             }
 
             // Backward tail (when rightLen > leftLen).
@@ -1461,7 +1461,7 @@ public static class Glidesort
                 var val = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
                 int goGeq = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 0 : 1;
                 if (goGeq != 0) s.Write(destBack, val); else t.Write(scrBack, val);
-                destBack -= goGeq;    scrBack -= 1 - goGeq;
+                destBack -= goGeq; scrBack -= 1 - goGeq;
             }
 
             // Count elements in each group.
@@ -1813,8 +1813,8 @@ public static class Glidesort
 
             dst.Write(db++, takeLeftF != 0 ? lvF : rvF);
             dst.Write(de--, takeLeftB != 0 ? lvB : rvB);
-            lb += takeLeftF;  rb += 1 - takeLeftF;
-            le -= takeLeftB;  re -= 1 - takeLeftB;
+            lb += takeLeftF; rb += 1 - takeLeftF;
+            le -= takeLeftB; re -= 1 - takeLeftB;
         }
     }
 
@@ -1870,10 +1870,10 @@ public static class Glidesort
             dst.Write(d1b++, takeL1f != 0 ? l1fv : r1fv);
             dst.Write(d0e--, takeL0e != 0 ? l0ev : r0ev);
             dst.Write(d1e--, takeL1e != 0 ? l1ev : r1ev);
-            l0b += takeL0f;  r0b += 1 - takeL0f;
-            l1b += takeL1f;  r1b += 1 - takeL1f;
-            l0e -= takeL0e;  r0e -= 1 - takeL0e;
-            l1e -= takeL1e;  r1e -= 1 - takeL1e;
+            l0b += takeL0f; r0b += 1 - takeL0f;
+            l1b += takeL1f; r1b += 1 - takeL1f;
+            l0e -= takeL0e; r0e -= 1 - takeL0e;
+            l1e -= takeL1e; r1e -= 1 - takeL1e;
         }
     }
 

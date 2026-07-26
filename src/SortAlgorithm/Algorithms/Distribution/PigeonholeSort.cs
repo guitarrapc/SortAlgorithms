@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;

@@ -1,6 +1,5 @@
 ﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
-using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 

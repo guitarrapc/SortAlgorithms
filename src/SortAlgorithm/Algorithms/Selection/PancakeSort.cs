@@ -1,4 +1,4 @@
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;

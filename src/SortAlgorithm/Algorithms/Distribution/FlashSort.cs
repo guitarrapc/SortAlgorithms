@@ -78,7 +78,7 @@ public static class FlashSort
     public static void Sort<T, TContext>(Span<T> span, TContext context)
         where T : IBinaryInteger<T>
         where TContext : ISortContext
-    { 
+    {
         if (span.Length <= 1) return;
 
         var n = span.Length;

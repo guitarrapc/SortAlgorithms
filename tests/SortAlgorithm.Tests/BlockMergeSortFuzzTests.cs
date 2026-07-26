@@ -86,12 +86,12 @@ public class BlockMergeSortFuzzTests
         var rng = new Random(seed);
         return pattern switch
         {
-            "random"         => Enumerable.Range(0, size).Select(_ => rng.Next()).ToArray(),
-            "allSame"        => Enumerable.Repeat(42, size).ToArray(),
-            "twoValues"      => Enumerable.Range(0, size).Select(_ => rng.Next(0, 2)).ToArray(),
+            "random" => Enumerable.Range(0, size).Select(_ => rng.Next()).ToArray(),
+            "allSame" => Enumerable.Repeat(42, size).ToArray(),
+            "twoValues" => Enumerable.Range(0, size).Select(_ => rng.Next(0, 2)).ToArray(),
             "highDuplicates" => Enumerable.Range(0, size).Select(_ => rng.Next(0, Math.Max(2, (int)Math.Sqrt(size)))).ToArray(),
-            "nearlySorted"   => BuildNearlySorted(rng, size),
-            "reversed"       => Enumerable.Range(0, size).Reverse().ToArray(),
+            "nearlySorted" => BuildNearlySorted(rng, size),
+            "reversed" => Enumerable.Range(0, size).Reverse().ToArray(),
             _ => throw new ArgumentOutOfRangeException(nameof(pattern), pattern, null),
         };
     }
