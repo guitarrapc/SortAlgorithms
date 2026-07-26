@@ -1925,6 +1925,7 @@ UnrollFactor=1  WarmupCount=2
 ### Merge
 - [Block Merge Sort](./src/SortAlgorithm/Algorithms/Merge/BlockMergeSort.cs)
 - [Bottom-Up Merge Sort](./src/SortAlgorithm/Algorithms/Merge/BottomupMergeSort.cs)
+- [Driftsort](./src/SortAlgorithm/Algorithms/Merge/Driftsort.cs)
 - [Flat Stable Sort](./src/SortAlgorithm/Algorithms/Merge/FlatStableSort.cs)
 - [Glidesort](./src/SortAlgorithm/Algorithms/Merge/Glidesort.cs)
 - [Merge Sort](./src/SortAlgorithm/Algorithms/Merge/MergeSort.cs)

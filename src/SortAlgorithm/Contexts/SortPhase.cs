@@ -36,6 +36,8 @@
 ///   <item><term>StdStableSortMove</term><description>left (abs start of span's left half) / mid (abs start of span's right half) / right (abs end of span, inclusive)</description></item>
 ///   <item><term>GlidesortQuicksort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>GlidesortPhysicalMerge</term><description>start (inclusive) / mid-1 (inclusive end of left half) / end-1 (inclusive end)</description></item>
+///   <item><term>DriftsortQuicksort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>DriftsortPhysicalMerge</term><description>start (inclusive) / mid-1 (inclusive end of left half) / end-1 (inclusive end)</description></item>
 ///   <item><term>BlockMergeSortNetwork</term><description>n (total array length)</description></item>
 ///   <item><term>BlockMergeSortLevel</term><description>levelWidth (current merge run size) / passNum (1-based) / blockSize (√levelWidth)</description></item>
 /// </list>
@@ -314,6 +316,18 @@ public enum SortPhase
     /// param1=start (inclusive), param2=mid-1 (inclusive end of left half), param3=end-1 (inclusive end)
     /// </summary>
     GlidesortPhysicalMerge,
+
+    /// <summary>
+    /// Driftsort stable partition quicksort on an unsorted logical run.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    DriftsortQuicksort,
+
+    /// <summary>
+    /// Driftsort physical merge of two adjacent sorted runs [start..mid) and [mid..end).
+    /// param1=start (inclusive), param2=mid-1 (inclusive end of left half), param3=end-1 (inclusive end)
+    /// </summary>
+    DriftsortPhysicalMerge,
 
     /// <summary>
     /// Block Sort (WikiSort) Phase 1: seeding sorted groups of 4–8 elements via sorting networks.
