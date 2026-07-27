@@ -264,13 +264,13 @@ public class DriftsortTests : StableSortTestsBase
     }
 
     [Test]
-    [Arguments(200, 42)]
-    [Arguments(200, 1234)]
-    public async Task PipeOrganMergePathTest(int n, int seed)
+    [Arguments(200)]
+    [Arguments(2000)]
+    public async Task PipeOrganMergePathTest(int n)
     {
         // Ascending then descending halves: both are detected as runs (the descending one
         // reversed), forcing the physical merge path rather than the quicksort path.
-        _ = seed;
+        // Deterministic input, so the cases vary size (different run thresholds), not seed.
         var array = new int[n];
         var half = n / 2;
         for (var i = 0; i < half; i++) array[i] = i * 2;

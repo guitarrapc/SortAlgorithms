@@ -88,8 +88,11 @@ public static class Driftsort
     // full n for small inputs, n/2 for large inputs, without a sudden dropoff.
     private const int MAX_FULL_ALLOC_BYTES = 8_000_000; // 8MB
 
-    // Pre-sorted runs shorter than sqrt(n) are not worth keeping; this caps the
-    // threshold for small inputs where sqrt would break pattern detection.
+    // Minimum run threshold of the sqrt regime; name matches the reference implementation
+    // for cross-referencing. For len > MIN_SQRT_RUN_LEN^2 the run-detection threshold is
+    // sqrt(len), which is then always >= this value (hence "MIN"). For smaller inputs the
+    // same constant serves as the UPPER cap on the threshold (Math.Min below), so pattern
+    // detection of fully or nearly sorted inputs keeps working.
     private const int MIN_SQRT_RUN_LEN = 64;
 
     // Recursively select a pseudomedian if the slice is at least this long.

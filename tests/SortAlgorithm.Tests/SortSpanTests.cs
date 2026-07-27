@@ -102,4 +102,39 @@ public class SortSpanTests
         await Assert.That(contextLoop.IndexReadCount).IsEqualTo(10UL);
         await Assert.That(contextLoop.IndexWriteCount).IsEqualTo(10UL);
     }
+
+    [Test]
+    public async Task RawSpan_ShouldReturnUnderlyingSpanUnderNullContext()
+    {
+        // RawSpan exists for NullContext-gated fast paths (no observer to bypass).
+        // SortSpan is a ref struct, so extract values before awaiting.
+        var source = new[] { 1, 2, 3 };
+        var span = new SortSpan<int, ComparableComparer<int>, NullContext>(source.AsSpan(), NullContext.Default, new ComparableComparer<int>(), 0);
+        var length = span.RawSpan.Length;
+        var second = span.RawSpan[1];
+
+        await Assert.That(length).IsEqualTo(3);
+        await Assert.That(second).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task RawSpan_ShouldThrowUnderObservingContext()
+    {
+        // Accessing RawSpan with an observing context would silently lose element
+        // operations, so the getter enforces the NullContext-only contract at runtime.
+        var thrown = false;
+        try
+        {
+            var source = new[] { 1, 2, 3 };
+            var context = new StatisticsContext();
+            var span = new SortSpan<int, ComparableComparer<int>, StatisticsContext>(source.AsSpan(), context, new ComparableComparer<int>(), 0);
+            _ = span.RawSpan;
+        }
+        catch (InvalidOperationException)
+        {
+            thrown = true;
+        }
+
+        await Assert.That(thrown).IsTrue().Because("RawSpan must throw for observing contexts");
+    }
 }
