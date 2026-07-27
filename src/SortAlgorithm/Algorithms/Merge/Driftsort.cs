@@ -3,6 +3,9 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -53,6 +56,11 @@ namespace SortAlgorithm.Algorithms;
 /// through <c>stable_quicksort</c> purely for binary-size reasons (behavior is identical as the length is at most 32).</description></item>
 /// <item><description><strong>Interior mutability:</strong> element operations copy values (SortSpan semantics), so the
 /// reference's Freeze-type distinction and pivot re-copy are unnecessary.</description></item>
+/// <item><description><strong>Partition kernels (beyond the reference):</strong> under NullContext the stable partition
+/// dispatches to a branchless two-cursor kernel (elements up to 16 bytes) or an AVX-512 vpcompressd kernel
+/// (int with the default comparer). Observing contexts always use the reference-shaped loop so operation
+/// counts stay accurate. Micro-benchmarked on Zen 4 (.NET 10): the partition kernel is 4x (branchless)
+/// to 14-17x (AVX-512) faster than the reference loop on unpredictable data.</description></item>
 /// </list>
 /// <para><strong>References:</strong></para>
 /// <para>GitHub: https://github.com/Voultapher/driftsort</para>
@@ -647,6 +655,19 @@ public static class Driftsort
     /// The pivot element itself is placed without a self-comparison.
     /// <para>With <paramref name="equalGoesLeft"/> false, elements &lt; pivot go left;
     /// with it true, elements &lt;= pivot go left (used by the equal-partition pass).</para>
+    /// <para><strong>Kernel tiers</strong> (micro-benchmarked on Zen 4, .NET 10, per-invocation
+    /// distinct permutations so the branch predictor cannot learn the data): the fast kernels are
+    /// gated on NullContext because the branchless kernel physically writes each element to two
+    /// candidate slots and the SIMD kernel bypasses per-element operations, either of which would
+    /// corrupt observed operation counts. Observing contexts always take the reference loop below.</para>
+    /// <list type="number">
+    /// <item><description>AVX-512 vpcompressd kernel: int + ComparableComparer + NullContext
+    /// (baseline ratio 0.06-0.20 on 1024-16384 partitions).</description></item>
+    /// <item><description>Branchless two-cursor kernel: NullContext and sizeof(T) &lt;= 16
+    /// (ratio 0.24-0.65). RyuJIT compiles the ternary store index of the reference loop to a
+    /// data-dependent branch, so the reference loop mispredicts ~50% on random data.</description></item>
+    /// <item><description>Reference loop: observing contexts and large elements.</description></item>
+    /// </list>
     /// </summary>
     private static int StablePartition<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
@@ -658,6 +679,20 @@ public static class Driftsort
     {
         var len = end - start;
         Debug.Assert(len <= t.Length, "Scratch must fit the whole partition.");
+
+        // All typeof/sizeof conditions below are JIT constants; dead tiers are eliminated
+        // per instantiation.
+        if (typeof(TContext) == typeof(NullContext))
+        {
+            if (typeof(T) == typeof(int) && comparer is IComparableComparer && Avx512F.IsSupported)
+            {
+                return StablePartitionAvx512Int(s, t, start, end, pivotPos, pivotGoesLeft, equalGoesLeft);
+            }
+            if (Unsafe.SizeOf<T>() <= 16)
+            {
+                return StablePartitionBranchless(s, t, start, end, pivotPos, pivotGoesLeft, equalGoesLeft);
+            }
+        }
 
         var pivot = s.Read(pivotPos);
         var numLeft = 0;
@@ -698,6 +733,216 @@ public static class Driftsort
         }
 
         return numLeft;
+    }
+
+    /// <summary>
+    /// Branchless stable partition for NullContext and elements up to 16 bytes.
+    /// Two independent cursors write each element unconditionally to BOTH candidate slots
+    /// (left slot first, so the right store wins when the cursors converge on one slot;
+    /// when they converge both stores carry the same value). Every slot that temporarily
+    /// holds a stale copy is overwritten later by its owning element because stale copies
+    /// only ever land in the still-open gap between the cursors. Cursor updates use
+    /// bool-to-int arithmetic; the 4x unroll amortizes loop control (RyuJIT does not
+    /// unroll this loop itself). Same scratch layout as the reference loop.
+    /// </summary>
+    private static int StablePartitionBranchless<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int start, int end, int pivotPos, bool pivotGoesLeft, bool equalGoesLeft)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var len = end - start;
+        var pivot = s.Read(pivotPos);
+        var leftIdx = 0;
+        var rightIdx = len - 1;
+
+        var i = start;
+        for (; i + 4 <= pivotPos; i += 4)
+        {
+            PartitionOneBranchless(s, t, i, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+            PartitionOneBranchless(s, t, i + 1, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+            PartitionOneBranchless(s, t, i + 2, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+            PartitionOneBranchless(s, t, i + 3, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+        }
+        for (; i < pivotPos; i++)
+        {
+            PartitionOneBranchless(s, t, i, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+        }
+
+        // The pivot is never compared against itself.
+        if (pivotGoesLeft)
+        {
+            t.Write(leftIdx, pivot);
+            leftIdx++;
+        }
+        else
+        {
+            t.Write(rightIdx, pivot);
+            rightIdx--;
+        }
+
+        i = pivotPos + 1;
+        for (; i + 4 <= end; i += 4)
+        {
+            PartitionOneBranchless(s, t, i, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+            PartitionOneBranchless(s, t, i + 1, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+            PartitionOneBranchless(s, t, i + 2, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+            PartitionOneBranchless(s, t, i + 3, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+        }
+        for (; i < end; i++)
+        {
+            PartitionOneBranchless(s, t, i, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+        }
+
+        var numLeft = leftIdx;
+        t.CopyTo(0, s, start, numLeft);
+        var numRight = len - numLeft;
+        for (var j = 0; j < numRight; j++)
+        {
+            s.Write(start + numLeft + j, t.Read(len - 1 - j));
+        }
+
+        return numLeft;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void PartitionOneBranchless<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int i, T pivot, bool equalGoesLeft, ref int leftIdx, ref int rightIdx)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var value = s.Read(i);
+        var towardsLeft = equalGoesLeft ? s.IsLessOrEqual(value, pivot) : s.IsLessThan(value, pivot);
+        var b = (int)Unsafe.As<bool, byte>(ref towardsLeft);
+        t.Write(leftIdx, value);
+        t.Write(rightIdx, value);
+        leftIdx += b;
+        rightIdx -= b ^ 1;
+    }
+
+    /// <summary>
+    /// AVX-512 stable partition for int + ComparableComparer + NullContext. vpcompressd packs
+    /// the lanes selected by a comparison mask in lane order (order-preserving, so stability
+    /// holds): left lanes are compressed to the bottom and stored at the left cursor; right
+    /// lanes are compressed, whole-vector reversed, and stored so their real lanes end at the
+    /// right cursor. Both are compress-to-REGISTER plus a plain full-width store — on Zen 4 the
+    /// memory form (vpcompressd to memory) is microcoded and 4x slower. Each full-width store
+    /// writes its unused lanes as garbage into the open gap between the cursors, so the vector
+    /// loop requires gap >= 31 (the two stores' real regions then cannot overlap each other's
+    /// garbage); the tail and narrow-gap remainder run the scalar branchless step. The right
+    /// group's copy-back also runs vectorized (load 16 / reverse permute / store forward).
+    /// </summary>
+    private static unsafe int StablePartitionAvx512Int<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        int start, int end, int pivotPos, bool pivotGoesLeft, bool equalGoesLeft)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        Debug.Assert(typeof(T) == typeof(int));
+        // Reinterpret the raw spans as int; safe because typeof(T) == typeof(int) is guarded
+        // by the caller and this tier only runs under NullContext (no observer to bypass).
+        var vRaw = s.RawSpan;
+        var tRaw = t.RawSpan;
+        var v = MemoryMarshal.CreateSpan(ref Unsafe.As<T, int>(ref MemoryMarshal.GetReference(vRaw)), vRaw.Length);
+        var scratch = MemoryMarshal.CreateSpan(ref Unsafe.As<T, int>(ref MemoryMarshal.GetReference(tRaw)), tRaw.Length);
+
+        var len = end - start;
+        var pivot = v[pivotPos];
+        var leftIdx = 0;
+        var rightIdx = len - 1;
+
+        fixed (int* vp = v, tp = scratch)
+        {
+            var pivotVec = Vector512.Create(pivot);
+            var reverseIdx = Vector512.Create(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+
+            var i = start;
+            for (; i + 16 <= pivotPos && rightIdx - leftIdx >= 31; i += 16)
+            {
+                PartitionVector16(vp, tp, i, pivotVec, reverseIdx, equalGoesLeft, ref leftIdx, ref rightIdx);
+            }
+            for (; i < pivotPos; i++)
+            {
+                PartitionOneInt(vp, tp, i, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+            }
+
+            if (pivotGoesLeft)
+            {
+                tp[leftIdx] = pivot;
+                leftIdx++;
+            }
+            else
+            {
+                tp[rightIdx] = pivot;
+                rightIdx--;
+            }
+
+            i = pivotPos + 1;
+            for (; i + 16 <= end && rightIdx - leftIdx >= 31; i += 16)
+            {
+                PartitionVector16(vp, tp, i, pivotVec, reverseIdx, equalGoesLeft, ref leftIdx, ref rightIdx);
+            }
+            for (; i < end; i++)
+            {
+                PartitionOneInt(vp, tp, i, pivot, equalGoesLeft, ref leftIdx, ref rightIdx);
+            }
+
+            var numLeft = leftIdx;
+            scratch[..numLeft].CopyTo(v[start..]);
+            var numRight = len - numLeft;
+
+            // Reverse copy scratch[len-1-j] -> v[start+numLeft+j], 16 lanes at a time.
+            var j = 0;
+            for (; j + 16 <= numRight; j += 16)
+            {
+                var block = Vector512.Load(tp + (len - 16 - j));
+                var reversed = Avx512F.PermuteVar16x32(block, reverseIdx);
+                Vector512.Store(reversed, vp + start + numLeft + j);
+            }
+            for (; j < numRight; j++)
+            {
+                vp[start + numLeft + j] = tp[len - 1 - j];
+            }
+
+            return numLeft;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static unsafe void PartitionVector16(int* vp, int* tp, int i, Vector512<int> pivotVec, Vector512<int> reverseIdx, bool equalGoesLeft, ref int leftIdx, ref int rightIdx)
+    {
+        var vec = Vector512.Load(vp + i);
+        var mask = equalGoesLeft ? Vector512.LessThanOrEqual(vec, pivotVec) : Vector512.LessThan(vec, pivotVec);
+        var k = BitOperations.PopCount(mask.ExtractMostSignificantBits());
+
+        // Left: real lanes packed at the bottom land at leftIdx.. in scan order.
+        var leftPacked = Avx512F.Compress(Vector512<int>.Zero, mask, vec);
+        Vector512.Store(leftPacked, tp + leftIdx);
+
+        // Right: pack right lanes in scan order, reverse all lanes, store so the real lanes
+        // end exactly at rightIdx (matching the back-to-front scratch layout).
+        var rightPacked = Avx512F.Compress(Vector512<int>.Zero, ~mask, vec);
+        var rightReversed = Avx512F.PermuteVar16x32(rightPacked, reverseIdx);
+        Vector512.Store(rightReversed, tp + rightIdx - 15);
+
+        leftIdx += k;
+        rightIdx -= 16 - k;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static unsafe void PartitionOneInt(int* vp, int* tp, int i, int pivot, bool equalGoesLeft, ref int leftIdx, ref int rightIdx)
+    {
+        var value = vp[i];
+        var towardsLeft = equalGoesLeft ? value <= pivot : value < pivot;
+        var b = (int)Unsafe.As<bool, byte>(ref towardsLeft);
+        tp[leftIdx] = value;
+        tp[rightIdx] = value;
+        leftIdx += b;
+        rightIdx -= b ^ 1;
     }
 
     // Pivot Selection

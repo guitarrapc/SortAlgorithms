@@ -191,6 +191,68 @@ public class DriftsortTests : StableSortTestsBase
     }
 
     [Test]
+    [Arguments(100, 42)]
+    [Arguments(100, 1234)]
+    [Arguments(1000, 42)]
+    [Arguments(1000, 1234)]
+    [Arguments(10000, 42)]
+    [Arguments(10000, 9999)]
+    public async Task NullContextIntKernelParityTest(int n, int seed)
+    {
+        // The fast partition kernels (AVX-512 vpcompressd for int, branchless two-cursor
+        // otherwise) only run under NullContext, so the StatisticsContext-based suite never
+        // exercises them. Parity-check the public NullContext API against Array.Sort across
+        // patterns that hit both the normal partition (< pivot) and the equal-partition pass
+        // (<= pivot with pivot-goes-left, triggered by duplicate-heavy input).
+        var rng = new Random(seed);
+        var patterns = new Dictionary<string, int[]>
+        {
+            ["shuffled"] = TestHelpers.ShuffledRange(n, seed),
+            ["fewDistinct"] = Enumerable.Range(0, n).Select(_ => rng.Next(4)).ToArray(),
+            ["someDistinct"] = Enumerable.Range(0, n).Select(_ => rng.Next(64)).ToArray(),
+            ["sawtooth"] = Enumerable.Range(0, n).Select(i => i % 100).ToArray(),
+            ["negativePositive"] = Enumerable.Range(0, n).Select(_ => rng.Next(int.MinValue, int.MaxValue)).ToArray(),
+        };
+
+        foreach (var (name, data) in patterns)
+        {
+            var expected = data.ToArray();
+            Array.Sort(expected);
+            var actual = data.ToArray();
+
+            Driftsort.Sort(actual.AsSpan()); // NullContext fast path
+
+            await Assert.That(actual).IsEquivalentTo(expected, CollectionOrdering.Matching).Because($"pattern={name}");
+        }
+    }
+
+    [Test]
+    [Arguments(1000, 4, 42)]
+    [Arguments(1000, 50, 1234)]
+    [Arguments(2000, 8, 9999)]
+    public async Task NullContextStabilityBranchlessPathTest(int n, int distinctValues, int seed)
+    {
+        // StabilityTestItem is a reference type (8-byte element), which routes the NullContext
+        // sort through the branchless two-cursor partition kernel. Its write-both trick briefly
+        // stores elements in two scratch slots; stability must still hold end to end.
+        var rng = new Random(seed);
+        var items = new StabilityTestItem[n];
+        for (var i = 0; i < n; i++)
+        {
+            items[i] = new StabilityTestItem(rng.Next(distinctValues), i);
+        }
+        var expected = items.OrderBy(x => x.Value).ToArray();
+
+        Driftsort.Sort(items.AsSpan()); // NullContext fast path
+
+        for (var i = 0; i < n; i++)
+        {
+            await Assert.That(items[i].Value).IsEqualTo(expected[i].Value);
+            await Assert.That(items[i].OriginalIndex).IsEqualTo(expected[i].OriginalIndex);
+        }
+    }
+
+    [Test]
     public async Task RangeOverloadSortsOnlySubrangeTest()
     {
         var array = new[] { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
