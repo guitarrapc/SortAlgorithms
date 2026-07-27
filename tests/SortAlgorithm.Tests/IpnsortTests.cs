@@ -342,6 +342,17 @@ public class IpnsortTests : SortTestsBase
         Ipnsort.Sort(array.AsSpan(), stats);
 
         await Assert.That(array.Select(x => x.Key)).IsEquivalentTo(expectedKeys, CollectionOrdering.Matching);
+
+        // NullContext exercises the branchless merge's generic (ternary) select fallback for a
+        // struct element type; parity-check it too.
+        var array2 = new MidStruct[n];
+        var rng2 = new Random(seed);
+        for (var i = 0; i < n; i++)
+        {
+            array2[i] = new MidStruct(rng2.Next(n / 4));
+        }
+        Ipnsort.Sort(array2.AsSpan());
+        await Assert.That(array2.Select(x => x.Key)).IsEquivalentTo(expectedKeys, CollectionOrdering.Matching);
     }
 
     [Test]
