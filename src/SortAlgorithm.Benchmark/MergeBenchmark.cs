@@ -115,6 +115,12 @@ public class MergeBenchmark
     }
 
     [Benchmark]
+    public void Driftsort()
+    {
+        SortAlgorithm.Algorithms.Driftsort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void FlatStableSort()
     {
         SortAlgorithm.Algorithms.FlatStableSort.Sort(_buffers.Next().AsSpan());

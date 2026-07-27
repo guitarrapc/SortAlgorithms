@@ -67,6 +67,32 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     public TContext Context => _context;
 
     /// <summary>
+    /// Exposes the underlying span without any operation tracking.
+    /// Only for NullContext-gated fast paths (e.g. SIMD kernels) where no observer exists.
+    /// The getter enforces the contract: any access with an observing <typeparamref name="TContext"/>
+    /// throws, so element operations can never be silently lost. The typeof check is a JIT
+    /// constant per instantiation — for NullContext the guard folds away entirely.
+    /// </summary>
+    internal Span<T> RawSpan
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get
+        {
+            if (typeof(TContext) != typeof(NullContext))
+            {
+                ThrowRawSpanRequiresNullContext();
+            }
+            return _span;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void ThrowRawSpanRequiresNullContext()
+        => throw new InvalidOperationException(
+            $"{nameof(RawSpan)} bypasses operation tracking and may only be used when TContext is {nameof(NullContext)}; " +
+            "an observing context would silently lose element operations.");
+
+    /// <summary>
     /// Retrieves the element at the specified zero-based index. (Equivalent to span[i].)
     /// </summary>
     /// <param name="i">The zero-based index of the element to retrieve. Must be within the bounds of the collection.</param>
