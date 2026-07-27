@@ -358,8 +358,9 @@ public static class Ipnsort
                 var numLtEq = Partition(s, start, end, pivotPos, equalGoesLeft: true);
                 context.OnRole(pivotPos, BUFFER_MAIN, RoleType.None);
 
-                // The left side holds only pivot-equal elements and numLtEq includes the pivot
-                // slot, so sorting continues after it.
+                // The left side holds only pivot-equal elements (the ancestor pivot is a lower
+                // bound, so <= pivot means == pivot) and the pivot itself sits at start + numLtEq;
+                // skip the equal block and the pivot slot, both are final.
                 start += numLtEq + 1;
                 hasAncestorPivot = false;
                 continue;
