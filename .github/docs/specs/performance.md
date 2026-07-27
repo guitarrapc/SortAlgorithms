@@ -99,7 +99,7 @@ This is a trade-off rather than a universal replacement for branchy PDQSort. The
 The repository also applies branch-sensitive structure where an algorithm justifies it:
 
 - `BlockQuickSort` classifies elements into block index buffers to amortize unpredictable partition decisions;
-- `Glidesort` contains branchless small sorting-network stages and conditional-index merge/partition paths;
+- `Glidesort` contains branchless small sorting-network stages; its bidirectional stable partition uses a write-both kernel (unconditional stores to both candidate slots, the reference implementation's technique) and an AVX-512 compress kernel under `NullContext`, because RyuJIT compiles conditional-destination writes to data-dependent branches rather than cmov;
 - `InsertionSort` and `StdSort` use guarded/unguarded inner-loop variants where a sentinel or established boundary removes repeated boundary work; and
 - PDQ variants use partial insertion-sort exits, already-partitioned detection, duplicate blocks, pattern-defeating shuffles, and heapsort fallback to avoid expensive work on favorable or adversarial inputs.
 

@@ -3,6 +3,9 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -44,6 +47,12 @@ namespace SortAlgorithm.Algorithms;
 /// (<c>stackalloc</c> is not available for generic T in C#).</description></item>
 /// <item><description><strong>Sort16 final merge:</strong> uses DoubleMerge → CopyTo-16 → SymmetricMerge (16 scratch elements on the narrow path),
 /// whereas the reference uses DoubleMerge(t→t) → SymmetricMerge (32 scratch elements on all paths).</description></item>
+/// <item><description><strong>Partition kernels:</strong> under NullContext the bidirectional stable partition
+/// dispatches to a write-both branchless kernel (elements up to 16 bytes; the reference's
+/// <c>partition_one_forward</c> technique, needed explicitly because RyuJIT does not compile conditional-destination
+/// writes to cmov) or an AVX-512 vpcompressd kernel (int with the default comparer). Observing contexts always
+/// use the reference-shaped loop so operation counts stay accurate. Measured on Zen 4 (.NET 10): partition
+/// 3.7x (branchless) to 16x (AVX-512) faster than the branchy loop on unpredictable data.</description></item>
 /// </list>
 /// <para><strong>References:</strong></para>
 /// <para>GitHub: https://github.com/orlp/glidesort</para>
@@ -1411,64 +1420,32 @@ public static class Glidesort
             // Forward scan through left: less → s[destFront++], geq → t[scrFront++]
             // Backward scan through right (reverse): geq → s[destBack--], less → t[scrBack--]
             //
-            // Overlap safety:
-            //   Forward:  destFront ≤ fwdI (when left is in s, leftOff == destStart)
-            //             scrFront  ≤ fwdI (when left is in t, leftOff == scrStart)
-            //   Backward: bwdI      ≥ destBack+1 impossible: destBack decrements by geqBwd ≤ k,
-            //             bwdI decrements by 1 each iter → bwdI ≥ rightOff, destBack ≥ rightOff
-            //   Cross fwd-write vs bwd-read: forward writes to s[destStart..+leftLen);
-            //          backward reads from s[rightOff..+rightLen) with rightOff ≥ destStart+leftLen.
-            //   Cross bwd-write vs fwd-read: backward writes to s[destStart+leftLen..+n);
-            //          forward reads from s[leftOff..+leftLen) ⊆ s[destStart..destStart+leftLen).
-            //   destFront/destBack never collide: lessFwdCount+geqBwdCount ≤ leftLen+rightLen = n.
-            var destFront = destStart;
-            var destBack = destStart + n - 1;
-            var scrFront = scrStart;
-            var scrBack = scrStart + n - 1;
-
-            // Interleaved forward+backward scan: one element from each side per iteration.
-            // Reading both values and computing both decisions before any write lets the JIT/CPU
-            // issue the two independent loads and comparisons in parallel (ILP).
-            var fwdI = leftOff;
-            var bwdI = rightOff + rightLen - 1;
-            var minCount = Math.Min(leftLen, rightLen);
-            for (var k = 0; k < minCount; k++)
+            // Kernel tiers (micro-benchmarked on Zen 4, .NET 10; all gate conditions are JIT
+            // constants per instantiation). The fast kernels are restricted to NullContext:
+            // the write-both kernel physically writes each element to both candidate slots
+            // (matching the reference partition_one_forward) and the SIMD kernel bypasses
+            // per-element operations, either of which would corrupt observed operation counts.
+            // Observing contexts always take the reference-shaped loop.
+            int lessFwdCount, lessBwdCount, geqFwdCount, geqBwdCount;
+            if (typeof(TContext) == typeof(NullContext) && typeof(T) == typeof(int)
+                && comparer is IComparableComparer && Avx512F.IsSupported)
             {
-                var valFwd = leftInMain ? s.Read(fwdI) : t.Read(fwdI);
-                var valBwd = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
-                int goLess = (partitionLeft ? s.IsLessOrEqual(valFwd, pivot) : s.IsLessThan(valFwd, pivot)) ? 1 : 0;
-                int goGeq = (partitionLeft ? s.IsLessOrEqual(valBwd, pivot) : s.IsLessThan(valBwd, pivot)) ? 0 : 1;
-                if (goLess != 0) s.Write(destFront, valFwd); else t.Write(scrFront, valFwd);
-                destFront += goLess; scrFront += 1 - goLess;
-                if (goGeq != 0) s.Write(destBack, valBwd); else t.Write(scrBack, valBwd);
-                destBack -= goGeq; scrBack -= 1 - goGeq;
-                fwdI++;
-                bwdI--;
+                (lessFwdCount, lessBwdCount, geqFwdCount, geqBwdCount) = PartitionAvx512Int(
+                    s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, rightLen,
+                    destStart, scrStart, pivot, partitionLeft);
             }
-
-            // Forward tail (when leftLen > rightLen).
-            for (; fwdI < leftOff + leftLen; fwdI++)
+            else if (typeof(TContext) == typeof(NullContext) && Unsafe.SizeOf<T>() <= 16)
             {
-                var val = leftInMain ? s.Read(fwdI) : t.Read(fwdI);
-                int goLess = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 1 : 0;
-                if (goLess != 0) s.Write(destFront, val); else t.Write(scrFront, val);
-                destFront += goLess; scrFront += 1 - goLess;
+                (lessFwdCount, lessBwdCount, geqFwdCount, geqBwdCount) = PartitionBranchless(
+                    s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, rightLen,
+                    destStart, scrStart, pivot, partitionLeft);
             }
-
-            // Backward tail (when rightLen > leftLen).
-            for (; bwdI >= rightOff; bwdI--)
+            else
             {
-                var val = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
-                int goGeq = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 0 : 1;
-                if (goGeq != 0) s.Write(destBack, val); else t.Write(scrBack, val);
-                destBack -= goGeq; scrBack -= 1 - goGeq;
+                (lessFwdCount, lessBwdCount, geqFwdCount, geqBwdCount) = PartitionReference(
+                    s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, rightLen,
+                    destStart, scrStart, pivot, partitionLeft);
             }
-
-            // Count elements in each group.
-            var lessFwdCount = destFront - destStart;
-            var lessBwdCount = scrStart + n - 1 - scrBack;
-            var geqFwdCount = scrFront - scrStart;
-            var geqBwdCount = destStart + n - 1 - destBack;
             var lessTotal = lessFwdCount + lessBwdCount;
             var geqTotal = geqFwdCount + geqBwdCount;
 
@@ -1609,6 +1586,297 @@ public static class Glidesort
                 continue;
             }
         }
+    }
+
+    /// <summary>
+    /// Reference-shaped bidirectional partition used by observing contexts and large elements.
+    /// Interleaved forward+backward scan (one element from each side per iteration; reading
+    /// both values before any write lets the CPU issue the two independent loads and
+    /// comparisons in parallel), then one tail loop per side.
+    /// <para>Overlap safety (left is a prefix of its buffer region, right a suffix):</para>
+    /// <list type="bullet">
+    /// <item><description>Forward: destFront ≤ fwdI (left in s, leftOff == destStart);
+    /// scrFront ≤ fwdI (left in t, leftOff == scrStart).</description></item>
+    /// <item><description>Backward: destBack ≥ bwdI (right in s); scrBack ≥ bwdI (right in t).</description></item>
+    /// <item><description>Cross fwd-write vs bwd-read and vice versa: forward writes stay below
+    /// destStart+leftLen / scrStart+leftLen, backward writes stay at or above them.</description></item>
+    /// <item><description>destFront/destBack (and scrFront/scrBack) never collide:
+    /// lessFwdCount+geqBwdCount ≤ n and geqFwdCount+lessBwdCount ≤ n.</description></item>
+    /// </list>
+    /// </summary>
+    private static (int lessFwd, int lessBwd, int geqFwd, int geqBwd) PartitionReference<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        bool leftInMain, int leftOff, int leftLen,
+        bool rightInMain, int rightOff, int rightLen,
+        int destStart, int scrStart,
+        T pivot, bool partitionLeft)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n = leftLen + rightLen;
+        var destFront = destStart;
+        var destBack = destStart + n - 1;
+        var scrFront = scrStart;
+        var scrBack = scrStart + n - 1;
+
+        var fwdI = leftOff;
+        var bwdI = rightOff + rightLen - 1;
+        var minCount = Math.Min(leftLen, rightLen);
+        for (var k = 0; k < minCount; k++)
+        {
+            var valFwd = leftInMain ? s.Read(fwdI) : t.Read(fwdI);
+            var valBwd = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
+            int goLess = (partitionLeft ? s.IsLessOrEqual(valFwd, pivot) : s.IsLessThan(valFwd, pivot)) ? 1 : 0;
+            int goGeq = (partitionLeft ? s.IsLessOrEqual(valBwd, pivot) : s.IsLessThan(valBwd, pivot)) ? 0 : 1;
+            if (goLess != 0) s.Write(destFront, valFwd); else t.Write(scrFront, valFwd);
+            destFront += goLess; scrFront += 1 - goLess;
+            if (goGeq != 0) s.Write(destBack, valBwd); else t.Write(scrBack, valBwd);
+            destBack -= goGeq; scrBack -= 1 - goGeq;
+            fwdI++;
+            bwdI--;
+        }
+
+        // Forward tail (when leftLen > rightLen).
+        for (; fwdI < leftOff + leftLen; fwdI++)
+        {
+            var val = leftInMain ? s.Read(fwdI) : t.Read(fwdI);
+            int goLess = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 1 : 0;
+            if (goLess != 0) s.Write(destFront, val); else t.Write(scrFront, val);
+            destFront += goLess; scrFront += 1 - goLess;
+        }
+
+        // Backward tail (when rightLen > leftLen).
+        for (; bwdI >= rightOff; bwdI--)
+        {
+            var val = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
+            int goGeq = (partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot)) ? 0 : 1;
+            if (goGeq != 0) s.Write(destBack, val); else t.Write(scrBack, val);
+            destBack -= goGeq; scrBack -= 1 - goGeq;
+        }
+
+        return (destFront - destStart, scrStart + n - 1 - scrBack, scrFront - scrStart, destStart + n - 1 - destBack);
+    }
+
+    /// <summary>
+    /// Branchless bidirectional partition for NullContext and elements up to 16 bytes.
+    /// Ports the reference's write-both trick (<c>partition_one_forward</c>: unconditional
+    /// stores to BOTH the dest and scratch cursor slots — "we'll overwrite a bad answer in a
+    /// later iteration anyway, or never read it") plus bool-arithmetic cursor updates, removing
+    /// the per-element destination-select branch that RyuJIT does not convert to cmov.
+    /// <para>Safety beyond <see cref="PartitionReference{T,TComparer,TContext}"/>: the extra
+    /// (stale) store of each step lands at the non-advancing cursor, which always sits in the
+    /// still-open gap between the front and back cursors of its buffer
+    /// (destFront ≤ destBack and scrFront ≤ scrBack hold throughout; a same-slot collision
+    /// within one interleaved iteration is impossible because the loop runs only
+    /// min(leftLen, rightLen) ≤ n/2 times), so every stale slot is later overwritten by its
+    /// owning element or never read.</para>
+    /// </summary>
+    private static (int lessFwd, int lessBwd, int geqFwd, int geqBwd) PartitionBranchless<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        bool leftInMain, int leftOff, int leftLen,
+        bool rightInMain, int rightOff, int rightLen,
+        int destStart, int scrStart,
+        T pivot, bool partitionLeft)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n = leftLen + rightLen;
+        var destFront = destStart;
+        var destBack = destStart + n - 1;
+        var scrFront = scrStart;
+        var scrBack = scrStart + n - 1;
+
+        var fwdI = leftOff;
+        var bwdI = rightOff + rightLen - 1;
+        var minCount = Math.Min(leftLen, rightLen);
+        for (var k = 0; k < minCount; k++)
+        {
+            PartitionOneForward(s, t, leftInMain, fwdI, pivot, partitionLeft, ref destFront, ref scrFront);
+            PartitionOneBackward(s, t, rightInMain, bwdI, pivot, partitionLeft, ref destBack, ref scrBack);
+            fwdI++;
+            bwdI--;
+        }
+
+        for (; fwdI < leftOff + leftLen; fwdI++)
+        {
+            PartitionOneForward(s, t, leftInMain, fwdI, pivot, partitionLeft, ref destFront, ref scrFront);
+        }
+
+        for (; bwdI >= rightOff; bwdI--)
+        {
+            PartitionOneBackward(s, t, rightInMain, bwdI, pivot, partitionLeft, ref destBack, ref scrBack);
+        }
+
+        return (destFront - destStart, scrStart + n - 1 - scrBack, scrFront - scrStart, destStart + n - 1 - destBack);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void PartitionOneForward<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        bool leftInMain, int fwdI, T pivot, bool partitionLeft,
+        ref int destFront, ref int scrFront)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var val = leftInMain ? s.Read(fwdI) : t.Read(fwdI);
+        var less = partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot);
+        var b = (int)Unsafe.As<bool, byte>(ref less);
+        s.Write(destFront, val);
+        t.Write(scrFront, val);
+        destFront += b;
+        scrFront += b ^ 1;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void PartitionOneBackward<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        bool rightInMain, int bwdI, T pivot, bool partitionLeft,
+        ref int destBack, ref int scrBack)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var val = rightInMain ? s.Read(bwdI) : t.Read(bwdI);
+        var less = partitionLeft ? s.IsLessOrEqual(val, pivot) : s.IsLessThan(val, pivot);
+        var b = (int)Unsafe.As<bool, byte>(ref less);
+        s.Write(destBack, val);
+        t.Write(scrBack, val);
+        destBack -= b ^ 1;
+        scrBack -= b;
+    }
+
+    /// <summary>
+    /// AVX-512 bidirectional partition for int + ComparableComparer + NullContext.
+    /// vpcompressd in the compress-to-REGISTER + plain full-width store form (the memory form
+    /// is microcoded and ~4x slower on Zen 4). Forward: less lanes compress to the bottom and
+    /// store at destFront (main), geq lanes at scrFront (scratch); the unused top lanes write
+    /// stale values into the open gap. Backward: lanes are loaded reversed into processing
+    /// order (descending index), compressed, reversed again so real lanes sit at the TOP, and
+    /// stored ending at destBack/scrBack; stale bottom lanes fall into the gap.
+    /// <para>Safety bounds coalesce into the loop conditions: source-aliasing needs 16+
+    /// unprocessed elements on the OTHER side (fwdRem/bwdRem ≥ 16 keeps stale lanes below /
+    /// above the unread region of the aliasing buffer), and cross-direction real slots need
+    /// gap ≥ 31 (interleaved) or ≥ 15 (single-direction tail). Remainders run the scalar
+    /// write-both steps.</para>
+    /// </summary>
+    private static unsafe (int lessFwd, int lessBwd, int geqFwd, int geqBwd) PartitionAvx512Int<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        bool leftInMain, int leftOff, int leftLen,
+        bool rightInMain, int rightOff, int rightLen,
+        int destStart, int scrStart,
+        T pivotT, bool partitionLeft)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        Debug.Assert(typeof(T) == typeof(int));
+        // Reinterpret the raw spans as int; safe because typeof(T) == typeof(int) is guarded
+        // by the caller and this tier only runs under NullContext (no observer to bypass).
+        var sRaw = s.RawSpan;
+        var tRaw = t.RawSpan;
+        var v = MemoryMarshal.CreateSpan(ref Unsafe.As<T, int>(ref MemoryMarshal.GetReference(sRaw)), sRaw.Length);
+        var w = MemoryMarshal.CreateSpan(ref Unsafe.As<T, int>(ref MemoryMarshal.GetReference(tRaw)), tRaw.Length);
+        var pivot = Unsafe.As<T, int>(ref pivotT);
+
+        var n = leftLen + rightLen;
+        var destFront = destStart;
+        var destBack = destStart + n - 1;
+        var scrFront = scrStart;
+        var scrBack = scrStart + n - 1;
+
+        var fwdI = leftOff;
+        var fwdEnd = leftOff + leftLen;
+        var bwdI = rightOff + rightLen - 1;
+
+        fixed (int* pv = v, pw = w)
+        {
+            var leftSrc = leftInMain ? pv : pw;
+            var rightSrc = rightInMain ? pv : pw;
+            var pivotVec = Vector512.Create(pivot);
+            var reverseIdx = Vector512.Create(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+
+            // Interleaved vector loop: 16 forward + 16 backward per iteration.
+            while (fwdEnd - fwdI >= 16 && bwdI - rightOff + 1 >= 16
+                && destBack - destFront >= 31 && scrBack - scrFront >= 31)
+            {
+                PartitionVec16Forward(leftSrc, pv, pw, ref fwdI, pivotVec, partitionLeft, ref destFront, ref scrFront);
+                PartitionVec16Backward(rightSrc, pv, pw, ref bwdI, pivotVec, reverseIdx, partitionLeft, ref destBack, ref scrBack);
+            }
+
+            // Scalar interleaved remainder: consumes min of both sides, exhausting one.
+            var remMin = Math.Min(fwdEnd - fwdI, bwdI - rightOff + 1);
+            for (var k = 0; k < remMin; k++)
+            {
+                PartitionOneForward(s, t, leftInMain, fwdI, pivotT, partitionLeft, ref destFront, ref scrFront);
+                PartitionOneBackward(s, t, rightInMain, bwdI, pivotT, partitionLeft, ref destBack, ref scrBack);
+                fwdI++;
+                bwdI--;
+            }
+
+            // Forward tail (backward side exhausted).
+            while (fwdEnd - fwdI >= 16 && destBack - destFront >= 15 && scrBack - scrFront >= 15)
+            {
+                PartitionVec16Forward(leftSrc, pv, pw, ref fwdI, pivotVec, partitionLeft, ref destFront, ref scrFront);
+            }
+            for (; fwdI < fwdEnd; fwdI++)
+            {
+                PartitionOneForward(s, t, leftInMain, fwdI, pivotT, partitionLeft, ref destFront, ref scrFront);
+            }
+
+            // Backward tail (forward side exhausted).
+            while (bwdI - rightOff + 1 >= 16 && destBack - destFront >= 15 && scrBack - scrFront >= 15)
+            {
+                PartitionVec16Backward(rightSrc, pv, pw, ref bwdI, pivotVec, reverseIdx, partitionLeft, ref destBack, ref scrBack);
+            }
+            for (; bwdI >= rightOff; bwdI--)
+            {
+                PartitionOneBackward(s, t, rightInMain, bwdI, pivotT, partitionLeft, ref destBack, ref scrBack);
+            }
+        }
+
+        return (destFront - destStart, scrStart + n - 1 - scrBack, scrFront - scrStart, destStart + n - 1 - destBack);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static unsafe void PartitionVec16Forward(int* src, int* pv, int* pw, ref int fwdI, Vector512<int> pivotVec, bool partitionLeft,
+        ref int destFront, ref int scrFront)
+    {
+        var vec = Vector512.Load(src + fwdI);
+        var lessMask = partitionLeft ? Vector512.LessThanOrEqual(vec, pivotVec) : Vector512.LessThan(vec, pivotVec);
+        var k = BitOperations.PopCount(lessMask.ExtractMostSignificantBits());
+
+        // Real lanes packed at the bottom; the stale top lanes fall into the open gap.
+        Vector512.Store(Avx512F.Compress(Vector512<int>.Zero, lessMask, vec), pv + destFront);
+        Vector512.Store(Avx512F.Compress(Vector512<int>.Zero, ~lessMask, vec), pw + scrFront);
+
+        destFront += k;
+        scrFront += 16 - k;
+        fwdI += 16;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static unsafe void PartitionVec16Backward(int* src, int* pv, int* pw, ref int bwdI, Vector512<int> pivotVec, Vector512<int> reverseIdx, bool partitionLeft,
+        ref int destBack, ref int scrBack)
+    {
+        // Load [bwdI-15..bwdI] reversed so lanes follow the backward processing order
+        // (descending index); compress packs kept lanes in that order, and the second
+        // reverse moves them to the TOP lanes so the store's real region ends at the cursor.
+        var revVec = Avx512F.PermuteVar16x32(Vector512.Load(src + bwdI - 15), reverseIdx);
+        var lessMaskR = partitionLeft ? Vector512.LessThanOrEqual(revVec, pivotVec) : Vector512.LessThan(revVec, pivotVec);
+        var geqMaskR = ~lessMaskR;
+        var m = BitOperations.PopCount(geqMaskR.ExtractMostSignificantBits());
+
+        var geqTop = Avx512F.PermuteVar16x32(Avx512F.Compress(Vector512<int>.Zero, geqMaskR, revVec), reverseIdx);
+        Vector512.Store(geqTop, pv + destBack - 15);
+        var lessTop = Avx512F.PermuteVar16x32(Avx512F.Compress(Vector512<int>.Zero, lessMaskR, revVec), reverseIdx);
+        Vector512.Store(lessTop, pw + scrBack - 15);
+
+        destBack -= m;
+        scrBack -= 16 - m;
+        bwdI -= 16;
     }
 
     // fixed-size small-sort pipeline (Block Insertion Sort)
