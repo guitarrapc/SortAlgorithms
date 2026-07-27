@@ -38,6 +38,7 @@
 ///   <item><term>GlidesortPhysicalMerge</term><description>start (inclusive) / mid-1 (inclusive end of left half) / end-1 (inclusive end)</description></item>
 ///   <item><term>DriftsortQuicksort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>DriftsortPhysicalMerge</term><description>start (inclusive) / mid-1 (inclusive end of left half) / end-1 (inclusive end)</description></item>
+///   <item><term>DriftsortSmallSort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>BlockMergeSortNetwork</term><description>n (total array length)</description></item>
 ///   <item><term>BlockMergeSortLevel</term><description>levelWidth (current merge run size) / passNum (1-based) / blockSize (√levelWidth)</description></item>
 /// </list>
@@ -328,6 +329,14 @@ public enum SortPhase
     /// param1=start (inclusive), param2=mid-1 (inclusive end of left half), param3=end-1 (inclusive end)
     /// </summary>
     DriftsortPhysicalMerge,
+
+    /// <summary>
+    /// Driftsort small sort of at most SMALL_SORT_THRESHOLD elements (sorting network seed,
+    /// guarded insertion extension, bidirectional merge back into place). Raised from both
+    /// call sites: eager logical-run creation and the stable quicksort base case.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    DriftsortSmallSort,
 
     /// <summary>
     /// Block Sort (WikiSort) Phase 1: seeding sorted groups of 4–8 elements via sorting networks.

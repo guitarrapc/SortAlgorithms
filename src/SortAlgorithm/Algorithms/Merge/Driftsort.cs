@@ -1043,6 +1043,8 @@ public static class Driftsort
         if (len < 2) return;
         Debug.Assert(len + 16 <= t.Length, "Small sort needs len + 16 scratch elements.");
 
+        context.OnPhase(SortPhase.DriftsortSmallSort, start, end - 1);
+
         var lenDiv2 = len / 2;
 
         int presortedLen;
