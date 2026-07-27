@@ -203,6 +203,9 @@ public class IpnsortTests : SortTestsBase
     }
 
     [Test]
+    [Arguments(24, 42)]
+    [Arguments(32, 1234)]
+    [Arguments(48, 42)]
     [Arguments(100, 42)]
     [Arguments(100, 1234)]
     [Arguments(1000, 42)]
@@ -236,6 +239,58 @@ public class IpnsortTests : SortTestsBase
 
             await Assert.That(actual).IsEquivalentTo(expected, CollectionOrdering.Matching).Because($"pattern={name}");
         }
+    }
+
+    [Test]
+    [Arguments(30, 42)]
+    [Arguments(1000, 42)]
+    [Arguments(1000, 1234)]
+    public async Task NullContextFloatingPointParityTest(int n, int seed)
+    {
+        // Under NullContext, floating-point elements take the NaN pre-pass plus the
+        // Math.Min/Max-specialized registerized network kernel; parity-check both
+        // float and double against Array.Sort, including NaN values.
+        var rng = new Random(seed);
+        var doubles = new double[n];
+        var floats = new float[n];
+        for (var i = 0; i < n; i++)
+        {
+            var nan = rng.Next(10) == 0;
+            doubles[i] = nan ? double.NaN : rng.NextDouble() * 2000 - 1000;
+            floats[i] = nan ? float.NaN : (float)(rng.NextDouble() * 2000 - 1000);
+        }
+
+        var expectedDoubles = doubles.ToArray();
+        Array.Sort(expectedDoubles);
+        Ipnsort.Sort(doubles.AsSpan()); // NullContext fast path
+        await Assert.That(doubles).IsEquivalentTo(expectedDoubles, CollectionOrdering.Matching);
+
+        var expectedFloats = floats.ToArray();
+        Array.Sort(expectedFloats);
+        Ipnsort.Sort(floats.AsSpan()); // NullContext fast path
+        await Assert.That(floats).IsEquivalentTo(expectedFloats, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [Arguments(30, 42)]
+    [Arguments(500, 1234)]
+    public async Task NullContextStringParityTest(int n, int seed)
+    {
+        // Reference-type elements (8 bytes) take the network small sort, where the registerized
+        // kernel's Min/Max primitive ladder falls through to the comparer-based value-select
+        // fallback; parity-check against Array.Sort.
+        var rng = new Random(seed);
+        var strings = new string[n];
+        for (var i = 0; i < n; i++)
+        {
+            strings[i] = $"item-{rng.Next(n * 2):D6}";
+        }
+        var expected = strings.ToArray();
+        Array.Sort(expected);
+
+        Ipnsort.Sort(strings.AsSpan()); // NullContext fast path
+
+        await Assert.That(strings).IsEquivalentTo(expected, CollectionOrdering.Matching);
     }
 
     /// <summary>
