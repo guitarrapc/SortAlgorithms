@@ -227,14 +227,19 @@ public class DriftsortTests : StableSortTestsBase
     }
 
     [Test]
+    [Arguments(33, 4, 42)]
+    [Arguments(64, 6, 42)]
     [Arguments(1000, 4, 42)]
     [Arguments(1000, 50, 1234)]
     [Arguments(2000, 8, 9999)]
     public async Task NullContextStabilityBranchlessPathTest(int n, int distinctValues, int seed)
     {
         // StabilityTestItem is a reference type (8-byte element), which routes the NullContext
-        // sort through the branchless two-cursor partition kernel. Its write-both trick briefly
-        // stores elements in two scratch slots; stability must still hold end to end.
+        // sort through the branchless two-cursor partition kernel (write-both trick briefly
+        // stores elements in two scratch slots) and the branchless bidirectional merge's
+        // ternary select fallback. Stability must still hold end to end. The 33/64 cases run
+        // eager mode, where SortSmall's bidirectional merge joins the halves directly; the
+        // larger cases hit it on quicksort leaves.
         var rng = new Random(seed);
         var items = new StabilityTestItem[n];
         for (var i = 0; i < n; i++)

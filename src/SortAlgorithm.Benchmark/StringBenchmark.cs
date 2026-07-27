@@ -85,6 +85,12 @@ public class StringBenchmark
     }
 
     [Benchmark]
+    public void Ipnsort()
+    {
+        SortAlgorithm.Algorithms.Ipnsort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void StdSort()
     {
         SortAlgorithm.Algorithms.StdSort.Sort(_buffers.Next().AsSpan());
