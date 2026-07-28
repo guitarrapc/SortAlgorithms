@@ -458,6 +458,9 @@ public static class RotateMergeSortRecursive
         if (span.Length <= 1) return;
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        // 反復版 (RotateMergeSort) と同じく、まず「しきい値以下は InsertionSort で埋める」ことを通知する。
+        // これが無いと観測側からは葉の挿入ソートしか見えず、rotate merge が動いていることが伝わらない。
+        s.Context.OnPhase(SortPhase.MergeInitSort, InsertionSortThreshold);
         SortCore(s, 0, span.Length - 1);
     }
 
@@ -496,6 +499,10 @@ public static class RotateMergeSortRecursive
         {
             return; // Already sorted, no merge needed
         }
+
+        // ここから先は必ず 2 つのソート済み半分を統合する。統合の直前に通知することで、
+        // 観測側は「どの区間とどの区間をマージ中か」を表示できる。
+        s.Context.OnPhase(SortPhase.MergeSortMerge, left, mid, right);
 
         // Completely disjoint in reverse order: every left element > every right element → rotate entire run pair.
         // Reverse-array inputs produce run pairs exactly in this form, so this skips all recursive merge work.

@@ -201,6 +201,10 @@ public static class SpinSortVariant
         var nptr = (n + 1) / 2;
         var nptr2 = n - nptr;
 
+        // 葉は InsertionSort で埋められる。これを通知しないと、観測側からは
+        // 挿入ソートしか見えず、その上で動いているマージ構造が伝わらない。
+        s.Context.OnPhase(SortPhase.MergeInitSort, SORT_MIN_INTERNAL);
+
         var buf = ArrayPool<T>.Shared.Rent(nptr);
         try
         {
@@ -235,6 +239,7 @@ public static class SpinSortVariant
             }
             else
             {
+                s.Context.OnPhase(SortPhase.MergeSortMerge, first, first + nptr - 1, last - 1);
                 MergeHalf(bufS, s, first, nptr, nptr2);
             }
         }
@@ -293,6 +298,10 @@ public static class SpinSortVariant
         }
 
         // Merge the two sorted src halves into dst
+        // 出力先 (dst) の絶対インデックスで通知する。dst はレベルごとにメイン配列と
+        // 一時バッファーを往復するため、Offset を足して実際の位置を伝える。
+        var mergeStart = dst.Offset + dstStart;
+        dst.Context.OnPhase(SortPhase.MergeSortMerge, mergeStart, mergeStart + half - 1, mergeStart + len - 1);
         MergeFromSrcToDst(src, srcStart, half, srcStart + half, right, dst, dstStart);
     }
 

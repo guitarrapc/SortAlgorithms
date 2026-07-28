@@ -139,6 +139,10 @@ public static class SpinSort
         var nelem1 = (n + 1) / 2; // ceil(n/2) — larger half
         var nelem2 = n - nelem1;   // floor(n/2) — smaller half
 
+        // 葉は InsertionSort で埋められる。これを通知しないと、観測側からは
+        // 挿入ソートしか見えず、その上で動いているマージ構造が伝わらない。
+        s.Context.OnPhase(SortPhase.MergeInitSort, SORT_MIN_INTERNAL);
+
         var buf = ArrayPool<T>.Shared.Rent(nelem1);
         try
         {
@@ -176,6 +180,7 @@ public static class SpinSort
                 RangeSort(mainLeft, 0, bufLeft, 0, nelem2, nlevel);
 
                 // MergeHalf: sorted left (buf, nelem2) + sorted right (s, nelem1) → s[first..last)
+                s.Context.OnPhase(SortPhase.MergeSortMerge, first, first + nelem2 - 1, last - 1);
                 MergeHalf(bufLeft, s, first, nelem2, nelem1);
             }
             else
@@ -208,6 +213,7 @@ public static class SpinSort
                 RangeSort(mainScratch, 0, mainRight, 0, nelem2, nlevel);
 
                 // MergeHalf: sorted left (buf, nelem1) + sorted right (s, nelem2) → s[first..last)
+                s.Context.OnPhase(SortPhase.MergeSortMerge, first, first + nelem1 - 1, last - 1);
                 MergeHalf(bufS, s, first, nelem1, nelem2);
             }
         }
@@ -277,6 +283,10 @@ public static class SpinSort
         }
 
         // Merge range1's two sorted halves into range2
+        // 出力先 (range2) の絶対インデックスで通知する。range2 はレベルのパリティによって
+        // メイン配列と一時バッファーを往復するため、Offset を足して実際の位置を伝える。
+        var mergeStart = range2.Offset + start2;
+        range2.Context.OnPhase(SortPhase.MergeSortMerge, mergeStart, mergeStart + half - 1, mergeStart + len - 1);
         MergeFromSrcToDst(range1, start1, half, start1 + half, right, range2, start2);
     }
 

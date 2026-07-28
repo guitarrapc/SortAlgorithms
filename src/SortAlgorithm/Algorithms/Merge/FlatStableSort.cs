@@ -187,6 +187,11 @@ public static class FlatStableSort
 
         RangeSortBuffer(dataLeft, auxLeft);
         RangeSortBuffer(dataRight, auxRight);
+        // ping-pong マージ (aux → data)。出力先である data の絶対インデックスで通知する。
+        // ブロック層のフェーズ (FlatStableSortMergeBlocks 等) は blockSize=1024 のため
+        // n > 5120 でしか発火しない。可視化サイズで実際に動くのはこの再帰マージなので、
+        // ここを通知しないと観測側には葉の挿入ソートしか見えない。
+        data.Context.OnPhase(SortPhase.MergeSortMerge, data.Offset, data.Offset + mid - 1, data.Offset + len - 1);
         MergeFromBufferToData(aux, mid, data);
     }
 
@@ -243,6 +248,8 @@ public static class FlatStableSort
 
         RangeSortData(dataLeft, auxLeft);
         RangeSortData(dataRight, auxRight);
+        // ping-pong マージ (data → aux)。出力先である aux の絶対インデックスで通知する。
+        aux.Context.OnPhase(SortPhase.MergeSortMerge, aux.Offset, aux.Offset + mid - 1, aux.Offset + len - 1);
         MergeFromDataToBuffer(data, mid, aux);
     }
 
