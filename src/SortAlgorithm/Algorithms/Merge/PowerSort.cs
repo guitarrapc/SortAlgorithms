@@ -48,7 +48,11 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>MIN_RUN = 24: Fixed minimum run length matching the reference PowerSort default.</description></item>
 /// <item><description>NodePower: Uses 64-bit fixed-point scaling <c>(twoM &lt;&lt; 30) / n</c> and <c>BitOperations.LeadingZeroCount</c>.</description></item>
-/// <item><description>Merge: Copy-smaller strategy (MergeLow/MergeHigh) — copies the smaller run to a buffer rented from ArrayPool.</description></item>
+/// <item><description>Merge: Copy-smaller strategy (MergeLow/MergeHigh) — copies the smaller run to a buffer rented from ArrayPool.
+/// This is a deliberate deviation: the reference defaults to <c>COPY_BOTH</c>, which needs a buffer of the full merged
+/// length. Copying only the smaller run halves the worst-case buffer to n/2 and copies fewer elements per merge.</description></item>
+/// <item><description>Run stack: sized from the reference's bound of <c>floor_log2(n) + 1</c> boundaries, which is at most 31
+/// for an int-indexed span, with margin.</description></item>
 /// </list>
 /// <para><strong>References:</strong></para>
 /// <para>Paper: "Nearly-Optimal Mergesort: Fast, Practical Sorting Methods That Optimally Adapt to Existing Runs"
@@ -167,9 +171,14 @@ public static class PowerSort
         // 1. Run stack (runBase, runLen) - stores the runs themselves
         // 2. Boundary power stack (bp) - stores powers of boundaries between adjacent runs
         // Invariant: if runCount = k, then bpCount = k - 1
-        Span<int> runBase = stackalloc int[85]; // Conservative fixed upper bound for run/boundary stack depth.
-        Span<int> runLen = stackalloc int[85];
-        Span<int> bp = stackalloc int[85];      // bp[i] = power of boundary between runs[i] and runs[i+1]
+        // Stack depth bound: boundary powers on the stack are strictly increasing, and a power is
+        // LeadingZeroCount of a value below 2^31, so it never exceeds 32. The reference sizes its
+        // stack the same way (floor_log2(n) + 1, at most 31 for an int-indexed span). 40 leaves
+        // margin; overrunning it would throw from the Span bounds check rather than corrupt memory.
+        const int StackCapacity = 40;
+        Span<int> runBase = stackalloc int[StackCapacity];
+        Span<int> runLen = stackalloc int[StackCapacity];
+        Span<int> bp = stackalloc int[StackCapacity];  // bp[i] = power of boundary between runs[i] and runs[i+1]
         var runCount = 0;   // Number of runs on stack
         var bpCount = 0;    // Number of boundary powers (always runCount - 1)
 
@@ -407,8 +416,10 @@ public static class PowerSort
     /// The temporary buffer is reused across multiple merges for efficiency.
     /// </summary>
     /// <remarks>
-    /// This follows the reference PowerSort implementation's merge strategy (COPY_SMALLER):
-    /// copy the smaller of the two runs to a temporary buffer and merge linearly.
+    /// Copies the smaller of the two runs to a temporary buffer and merges linearly, matching the
+    /// reference's <c>merge_runs_copy_half</c> (<c>COPY_SMALLER</c>). Note that the reference's own
+    /// default is <c>COPY_BOTH</c>; COPY_SMALLER is chosen here because it halves the worst-case
+    /// buffer to n/2 and copies fewer elements per merge.
     /// Unlike TimSort's galloping merge, PowerSort relies on optimal merge ORDER
     /// (via node power) rather than optimizing individual merge operations.
     /// </remarks>
