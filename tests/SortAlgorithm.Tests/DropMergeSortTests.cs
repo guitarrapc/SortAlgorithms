@@ -93,37 +93,36 @@ public class DropMergeSortTests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         DropMergeSort.Sort(reversed.AsSpan(), stats);
 
-        // DropMergeSort for reversed data:
-        // For reversed data, DropMergeSort's LNS extraction keeps only the first element,
-        // and all other n-1 elements are dropped into the temporary buffer.
-        // The dropped elements are then sorted using QuickSort (O(K log K) where K = n-1),
-        // and finally merged with the single-element LNS.
+        // DropMergeSort for reversed data (matching the reference implementation's behavior):
+        // Reversed input is a bad case for the LNS heuristic. Two regimes exist, depending on
+        // where the one-shot early-out check (loop iteration == n/4) happens to land:
         //
-        // Theoretical bounds for reversed data:
-        // - LNS extraction: n-1 comparisons (all fail, all elements dropped except first)
-        // - Sorting dropped: ~(n-1) * log₂(n-1) comparisons (QuickSort)
-        // - Merge: n-1 comparisons (merging single element with n-1 sorted elements)
+        // 1. Early-out fires -> dropped elements are restored and the whole array is sorted
+        //    by QuickSortMedian3: ~n*log2(n) comparisons.
+        // 2. Early-out misses -> the LNS phase runs RECENCY-undo cycles: each cycle accepts one
+        //    element, drops RECENCY (8) elements, then undoes (max-scan costs another RECENCY
+        //    comparisons). This is O(RECENCY * n) ~ 17-22n comparisons, plus O(K log K) for
+        //    sorting the ~n dropped elements and O(n) for the merge.
         //
-        // Actual observations for reversed data (highly adaptive):
-        // n=10:  37 comparisons  (ratio 1.114)
-        // n=20:  30 comparisons  (ratio 0.347) - surprisingly efficient!
-        // n=50:  125 comparisons (ratio 0.443)
-        // n=100: 427 comparisons (ratio 0.643)
+        // Actual observations (deterministic input, no seed):
+        // n=10:  55 comparisons   (regime 2: earlyOutStop=2 lands before any drop)
+        // n=20:  96 comparisons   (regime 1: early-out fires at iteration 5)
+        // n=50:  1077 comparisons (regime 2: at iteration 12, dropped(1) <= read(2)*0.6)
+        // n=100: 949 comparisons  (regime 1: early-out fires at iteration 25)
         //
-        // Pattern: DropMergeSort shows highly variable performance on reversed data.
-        // Small sizes can be nearly linear, larger sizes approach n*log(n).
-        // Range: approximately n to 1.2 * n * log₂(n)
+        // Bounds below cover both regimes with margin.
         var logN = Math.Log2(n);
         var minCompares = (ulong)n;  // Can be as low as n for small sizes
-        var maxCompares = (ulong)(n * logN * 2);
+        var maxCompares = (ulong)(n * 22 + n * logN * 2);
 
-        // Writes include moving dropped elements and merge operations
-        // Adjusted for higher write counts due to QuickSort partitioning overhead
+        // Writes: regime 2 rewrites the kept prefix on every undo cycle (observed up to ~18n),
+        // plus QuickSort partitioning of the dropped elements and the merge.
         var minWrites = (ulong)(n * 0.5);
-        var maxWrites = (ulong)(n * Math.Ceiling(logN) * 2.5);
+        var maxWrites = (ulong)(n * 20);
 
+        // Reads: 2 reads per comparison plus LNS shifting / max-scan / merge traffic (observed up to ~54n).
         var minReads = (ulong)n * 2;
-        var maxReads = (ulong)(n * logN * 6);
+        var maxReads = (ulong)(n * logN * 6 + n * 40);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
