@@ -40,7 +40,7 @@ public class DualPivotQuickSortTests : SortTestsBase
     }
 
     [Test]
-    [Arguments(30)]
+    [Arguments(47)] // boundary: smallest length that runs dual-pivot partitioning (below goes to insertion sort)
     [Arguments(50)]
     [Arguments(100)]
     [Arguments(200)]
@@ -52,7 +52,7 @@ public class DualPivotQuickSortTests : SortTestsBase
 
         // QuickSort Dual Pivot on sorted data:
         // - Best case behavior when data is already sorted
-        // - The algorithm uses two pivots (leftmost and rightmost elements)
+        // - The algorithm selects two pivots via 5-sample selection (2nd and 4th of five sorted samples)
         // - For sorted data:
         //   * Initial comparison between left and right pivots
         //   * Partitioning scans through all elements
@@ -77,16 +77,16 @@ public class DualPivotQuickSortTests : SortTestsBase
         await Assert.That(stats.CompareCount >= minCompares).IsTrue().Because($"CompareCount ({stats.CompareCount}) should be >= {minCompares}");
         await Assert.That(stats.SwapCount >= expectedSwaps).IsTrue().Because($"SwapCount ({stats.SwapCount}) should be >= {expectedSwaps}");
 
-        // IndexReads: Reduced due to pivot caching — inner-loop comparisons now use Compare(int, T)
-        // which records only the scanned element (1 read), not the pivot index.
-        // InsertionSort fallback still records 2 reads per compare, so the overall ratio
-        // varies by input but is always >= 1 read per comparison.
-        var minIndexReads = stats.CompareCount;
+        // IndexReads: The partition loop reads a[k] once per examination (paper's `x = a[k]`)
+        // and reuses the cached value for both pivot comparisons, so a single read can feed
+        // up to 2 comparisons. InsertionSort fallback still records 2 reads per compare, so the
+        // overall ratio varies by input but is always >= 1 read per 2 comparisons.
+        var minIndexReads = stats.CompareCount / 2;
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
 
     [Test]
-    [Arguments(30)]
+    [Arguments(47)] // boundary: smallest length that runs dual-pivot partitioning (below goes to insertion sort)
     [Arguments(50)]
     [Arguments(100)]
     [Arguments(200)]
@@ -119,17 +119,17 @@ public class DualPivotQuickSortTests : SortTestsBase
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
 
-        // IndexReads: Reduced due to pivot caching — inner-loop comparisons now use Compare(int, T)
-        // which records only the scanned element (1 read), not the pivot index.
-        // InsertionSort fallback still records 2 reads per compare, so the overall ratio
-        // varies by input but is always >= 1 read per comparison.
-        var minIndexReads = stats.CompareCount;
+        // IndexReads: The partition loop reads a[k] once per examination (paper's `x = a[k]`)
+        // and reuses the cached value for both pivot comparisons, so a single read can feed
+        // up to 2 comparisons. InsertionSort fallback still records 2 reads per compare, so the
+        // overall ratio varies by input but is always >= 1 read per 2 comparisons.
+        var minIndexReads = stats.CompareCount / 2;
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
 
     [Test]
-    [Arguments(30, 42)]
-    [Arguments(30, 1234)]
+    [Arguments(47, 42)] // boundary: smallest length that runs dual-pivot partitioning (below goes to insertion sort)
+    [Arguments(47, 1234)]
     [Arguments(50, 42)]
     [Arguments(50, 1234)]
     [Arguments(100, 42)]
@@ -162,11 +162,11 @@ public class DualPivotQuickSortTests : SortTestsBase
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.SwapCount >= minSwaps).IsTrue().Because($"SwapCount ({stats.SwapCount}) should be >= {minSwaps}");
 
-        // IndexReads: Reduced due to pivot caching — inner-loop comparisons now use Compare(int, T)
-        // which records only the scanned element (1 read), not the pivot index.
-        // InsertionSort fallback still records 2 reads per compare, so the overall ratio
-        // varies by input but is always >= 1 read per comparison.
-        var minIndexReads = stats.CompareCount;
+        // IndexReads: The partition loop reads a[k] once per examination (paper's `x = a[k]`)
+        // and reuses the cached value for both pivot comparisons, so a single read can feed
+        // up to 2 comparisons. InsertionSort fallback still records 2 reads per compare, so the
+        // overall ratio varies by input but is always >= 1 read per 2 comparisons.
+        var minIndexReads = stats.CompareCount / 2;
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
 

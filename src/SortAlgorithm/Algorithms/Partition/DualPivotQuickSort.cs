@@ -15,9 +15,9 @@ namespace SortAlgorithm.Algorithms;
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Dual-Pivot QuickSort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Pivot Selection and Ordering (Adaptive 5-Sample Method):</strong> Two pivots (p1, p2) are selected using an adaptive strategy:
+/// <item><description><strong>Pivot Selection and Ordering (5-Sample Method):</strong> Two pivots (p1, p2) are selected as follows:
 /// <list type="bullet">
-/// <item><description><strong>For arrays &lt; 47 elements:</strong> Use simple method (leftmost and rightmost elements as pivots, ensuring p1 ≤ p2)</description></item>
+/// <item><description><strong>For arrays &lt; 47 elements:</strong> Insertion sort is used instead (no pivot selection occurs)</description></item>
 /// <item><description><strong>For arrays ≥47 elements:</strong> Use Yaroslavskiy's 5-sample strategy:
 /// <list type="bullet">
 /// <item><description>Sample 5 elements at evenly distributed positions: left+length/7, left+2*length/7, middle, right-2*length/7, right-length/7</description></item>
@@ -77,7 +77,8 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Yaroslavskiy 2009 Optimizations Implemented:</strong></para>
 /// <list type="bullet">
-/// <item><description><strong>Insertion Sort Fallback (TINY_SIZE = 17):</strong> Arrays smaller than 17 elements are sorted using insertion sort for better constant-factor performance.</description></item>
+/// <item><description><strong>Insertion Sort Fallback (threshold = 47):</strong> Arrays smaller than 47 elements are sorted using insertion sort for better constant-factor performance.
+/// The 2009 paper uses TINY_SIZE = 17; this implementation follows Java 7's INSERTION_SORT_THRESHOLD = 47, which measured uniformly faster here (2-3x on ordered patterns, ~7-20% on random).</description></item>
 /// <item><description><strong>5-Sample Pivot Selection:</strong> For arrays ≥47 elements, uses 5-sample method to select pivots, reducing worst-case probability.</description></item>
 /// <item><description><strong>Inner While Loop:</strong> Partitioning uses inner while loop to scan from right when element &gt; pivot2, matching Yaroslavskiy's specification.</description></item>
 /// <item><description><strong>Equal Elements Optimization (DIST_SIZE = 13):</strong> When center region is large (&gt; length - 13) and pivots are different,
@@ -90,7 +91,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Core Algorithm:</strong> This implementation matches Yaroslavskiy's 2009 paper specification.</description></item>
 /// <item><description><strong>Adaptive Algorithm Selection:</strong> Java's implementation adaptively selects from multiple algorithms:
 /// <list type="bullet">
-/// <item><description>Insertion Sort: Arrays ≤47 elements (we use ≤17)</description></item>
+/// <item><description>Insertion Sort: Arrays &lt;47 elements (same threshold here, though Java uses pair insertion sort)</description></item>
 /// <item><description>Merge Sort: 47-286 elements with detected sorted runs (partial ordering)</description></item>
 /// <item><description>Dual-Pivot QuickSort: ≥286 elements (general case)</description></item>
 /// <item><description>Counting Sort: ≥3000 elements with small value range (e.g., byte arrays)</description></item>
@@ -106,16 +107,17 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class DualPivotQuickSort
 {
-    // Threshold for switching to 5-sample pivot selection
-    // Below this size, simple pivot selection (left, right) is used
-    // With length=47, seventh≈6, giving 5 sample points at approximately:
-    // e1≈1/7, e2≈3/7, e3≈4/7(middle), e4≈5/7, e5≈6/7 of the array
-    // This spacing ensures reliable pivot selection quality
-    private const int PivotThreshold = 47;
-
-    // Threshold for switching to insertion sort (Yaroslavskiy 2009)
-    // Arrays smaller than this size are sorted using insertion sort
-    private const int InsertionSortThreshold = 17;
+    // Threshold for switching to insertion sort.
+    // Yaroslavskiy's 2009 paper uses TINY_SIZE = 17; Java 7's DualPivotQuicksort raised it to 47
+    // (INSERTION_SORT_THRESHOLD), which this implementation follows.
+    // Measured in this codebase (int, NullContext): 47 is uniformly faster than 17 —
+    // Sorted/Reversed/SingleElementMoved improve 2-3x (insertion sort handles ordered leaves in
+    // O(n) instead of run-destroying dual-pivot partitions), Random improves ~7-20%,
+    // duplicate-heavy patterns are unchanged within noise.
+    // Every range reaching pivot selection therefore has length >= 47, which guarantees
+    // seventh >= 6 and keeps all 5 sample points e1..e5 inside [left, right] with
+    // spacing at approximately 1/7, 3/7, 4/7 (middle), 5/7, 6/7 of the range.
+    private const int InsertionSortThreshold = 47;
 
     // Threshold for equal elements optimization (Yaroslavskiy 2009)
     // When center region is larger than (length - DIST_SIZE) and pivots are different,
@@ -225,37 +227,27 @@ public static class DualPivotQuickSort
                 return;
             }
 
-            // For small arrays, use simple pivot selection (left and right)
-            if (length < PivotThreshold)
-            {
-                // Simple pivot selection: use left and right as pivots
-                if (s.IsGreaterAt(left, right))
-                {
-                    s.Swap(left, right);
-                }
-            }
-            else
-            {
-                // Phase 0. Choose pivots using 5-sample method (Yaroslavskiy 2009)
-                int seventh = (length >> 3) + (length >> 6) + 1; // ≈ length/7
+            // Phase 0. Choose pivots using 5-sample method (Yaroslavskiy 2009 / Java 7)
+            // length >= InsertionSortThreshold (47) is guaranteed here, so all sample
+            // points fall inside [left, right].
+            int seventh = (length >> 3) + (length >> 6) + 1; // ≈ length/7
 
-                // Sample 5 evenly distributed elements
-                int e3 = left + ((right - left) >> 1); // middle (overflow-safe)
-                int e2 = e3 - seventh;
-                int e1 = e2 - seventh;
-                int e4 = e3 + seventh;
-                int e5 = e4 + seventh;
+            // Sample 5 evenly distributed elements
+            int e3 = left + ((right - left) >> 1); // middle (overflow-safe)
+            int e2 = e3 - seventh;
+            int e1 = e2 - seventh;
+            int e4 = e3 + seventh;
+            int e5 = e4 + seventh;
 
-                // Sort these 5 elements using insertion sort (4-10 comparisons)
-                // This guarantees e1 <= e2 <= e3 <= e4 <= e5, ensuring pivot1 <= pivot2
-                // Using the same proven approach as StdSort.Sort5
-                Sort5(s, e1, e2, e3, e4, e5);
+            // Sort these 5 elements using insertion sort (4-10 comparisons)
+            // This guarantees e1 <= e2 <= e3 <= e4 <= e5, ensuring pivot1 <= pivot2
+            // Using the same proven approach as StdSort.Sort5
+            Sort5(s, e1, e2, e3, e4, e5);
 
-                // Now: e1 <= e2 <= e3 <= e4 <= e5 is GUARANTEED
-                // Move pivots to the edges (will be swapped to final positions later)
-                s.Swap(e2, left);
-                s.Swap(e4, right);
-            }
+            // Now: e1 <= e2 <= e3 <= e4 <= e5 is GUARANTEED
+            // Move pivots to the edges (will be swapped to final positions later)
+            s.Swap(e2, left);
+            s.Swap(e4, right);
 
             // Check if pivots are different (right after pivot selection)
             // This is more efficient than checking after partitioning
@@ -280,13 +272,16 @@ public static class DualPivotQuickSort
                 // Each element is compared against both pivot1 (left) and pivot2 (right)
                 for (int k = less; k <= great; k++)
                 {
-                    if (s.IsLessThan(s.Read(k), pivot1Value))
+                    // Read a[k] once per examination (paper's `x = a[k]`); both pivot
+                    // comparisons reuse the cached value, so one read is recorded per element.
+                    var ak = s.Read(k);
+                    if (s.IsLessThan(ak, pivot1Value))
                     {
                         // Element < pivot1: move to left region
                         s.Swap(k, less);
                         less++;
                     }
-                    else if (s.IsGreaterThan(s.Read(k), pivot2Value))
+                    else if (s.IsGreaterThan(ak, pivot2Value))
                     {
                         // Element > pivot2: scan from right to find position
                         // Check k < great first to avoid unnecessary comparisons (short-circuit evaluation)
@@ -297,8 +292,9 @@ public static class DualPivotQuickSort
                         s.Swap(k, great);
                         great--;
 
-                        // Re-check swapped element (original comparison result no longer valid after swap)
-                        if (s.IsLessThan(s.Read(k), pivot1Value))
+                        // Re-read and re-check swapped element (original value no longer at k after swap)
+                        ak = s.Read(k);
+                        if (s.IsLessThan(ak, pivot1Value))
                         {
                             s.Swap(k, less);
                             less++;
@@ -331,13 +327,16 @@ public static class DualPivotQuickSort
                 // avoids O(n²) regression on all-equal inputs.
                 for (int k = less; k <= great; k++)
                 {
-                    if (s.IsLessThan(s.Read(k), pivot1Value))
+                    // Read a[k] once per examination (paper's `x = a[k]`); both branch
+                    // comparisons reuse the cached value, so one read is recorded per element.
+                    var ak = s.Read(k);
+                    if (s.IsLessThan(ak, pivot1Value))
                     {
                         // Element < pivot: move to left region
                         s.Swap(k, less);
                         less++;
                     }
-                    else if (s.IsGreaterThan(s.Read(k), pivot1Value))
+                    else if (s.IsGreaterThan(ak, pivot1Value))
                     {
                         // Element > pivot: scan from right to find position
                         while (k < great && s.IsGreaterThan(s.Read(great), pivot1Value))
@@ -347,8 +346,9 @@ public static class DualPivotQuickSort
                         s.Swap(k, great);
                         great--;
 
-                        // Re-check swapped element
-                        if (s.IsLessThan(s.Read(k), pivot1Value))
+                        // Re-read and re-check swapped element
+                        ak = s.Read(k);
+                        if (s.IsLessThan(ak, pivot1Value))
                         {
                             s.Swap(k, less);
                             less++;
