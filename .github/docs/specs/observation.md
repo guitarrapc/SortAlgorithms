@@ -29,3 +29,7 @@ Values and indices reported to a context describe the algorithm's logical operat
 
 Auxiliary-buffer identity is necessary for faithful merge and distribution visualizations; indices alone are ambiguous when the same numeric index exists in multiple buffers. Structured phase and role events are preferable to display strings because presentation belongs to the consumer.
 
+An auxiliary buffer whose element type is an algorithm-private wrapper is reported but not consumable: the value reaching a context is opaque to anything outside the declaring type, so the buffer cannot be rendered even though every operation on it is announced. Slot metadata such as occupancy, tombstones, or bucket tags belongs beside the buffer, not inside its element type. Keeping the buffer's element type equal to the sorted element type also removes the sentinel writes such a wrapper needs, which are otherwise indistinguishable from real element movement in an observation stream.
+
+Comparisons performed directly on a comparer rather than through the observable element accessors disappear from the stream entirely. When an algorithm searches an index or a staging structure, the comparison count a consumer sees can fall to a small fraction of the real one while read and write counts stay plausible, so the omission is not visible from the totals alone.
+
