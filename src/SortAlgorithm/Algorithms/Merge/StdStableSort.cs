@@ -12,6 +12,14 @@ namespace SortAlgorithm.Algorithms;
 /// Allocates O(n) auxiliary space and preserves stability via ping-pong merging between the main span and the buffer.
 /// </summary>
 /// <remarks>
+/// <para><strong>Note on "std::stable_sort":</strong> the C++ standard fixes only stability and the O(n log n)
+/// complexity, so the internal structure differs per vendor. This port follows LLVM libcxx, which is top-down.
+/// libstdc++ (GCC) is bottom-up (__merge_sort_with_buffer: insertion-sorted chunks of 7, then merge passes with a
+/// doubling step, ping-ponging between array and buffer), and MSVC STL uses a comparable chunked bottom-up scheme.
+/// Visualizations of "std::stable_sort" recorded on GCC therefore look bottom-up; that is a different implementation,
+/// not a different algorithm specification.</para>
+/// <para><strong>Not ported:</strong> LLVM's C++17 radix-sort shortcut (__radix_sort for integer-representable
+/// value types with the default comparator and 1024 ≤ len ≤ 65536) is intentionally omitted; this type always merges.</para>
 /// <para><strong>Theoretical Conditions for Correct std::stable_sort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Full-Size Buffer Allocation:</strong> A temporary buffer of exactly n elements is allocated upfront.
@@ -27,9 +35,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>StableSortMove(s, b) — Output to b:</strong> Divides s into two halves.
 /// StableSort is called for each half (sorting each s-half in-place using the b-half as scratch).
 /// The two sorted s-halves are then merged into b via MergeIntoB.</description></item>
-/// <item><description><strong>Insertion Sort Base Case (len ≤ 8):</strong> Inside StableSortMove, when the subarray is
-/// small enough, InsertionSortMove writes the sorted result directly into b without further recursion.
-/// This mirrors the threshold used in LLVM's __stable_sort_move.</description></item>
+/// <item><description><strong>Two Insertion Sort Base Cases:</strong> StableSort stops at
+/// __stable_sort_switch&lt;T&gt;::value (128 for trivially-copyable T, see <see cref="SwitchThreshold{T}"/>) and
+/// insertion-sorts the range in place; StableSortMove stops at len ≤ 8 and writes the sorted result into b
+/// via InsertionSortMove. Since the two routines alternate, the StableSort cut is the one normally reached:
+/// for a trivially-copyable T the recursion bottoms out at an in-place insertion sort of 33..128 elements,
+/// exactly as it does in LLVM.</description></item>
 /// <item><description><strong>Stability Preservation:</strong> All merge steps take from the left half when elements are
 /// equal (IsLessOrEqual rather than IsLessThan), preserving the relative order of equal elements.</description></item>
 /// </list>
@@ -55,8 +66,25 @@ public static class StdStableSort
     // Threshold for insertion sort inside StableSortMove. LLVM's __stable_sort_move threshold.
     private const int InsertionSortThreshold = 8;
 
-    // Threshold for using insertion sort in StableSort to avoid O(n) buffer allocation and copying overhead for small arrays. LLVM threshold is 128 for trivially-copy-assignable types, but we use a smaller fixed threshold here since C# cannot detect that at compile time.
-    private const int InPlaceThreshold = 16;
+    // LLVM's __stable_sort_switch<T>::value for trivially-copy-assignable types.
+    private const int TrivialSwitchThreshold = 128;
+
+    // LLVM uses 0 for non-trivially-copy-assignable types, which makes __stable_sort recurse down to
+    // the length-2 base case and allocate a buffer even for tiny inputs. The C++ rationale is that
+    // insertion sort costs O(n^2) copy-assignments of an expensive user type; in .NET an assignment of
+    // a managed T is a reference copy, so that rationale does not carry over. A small non-zero cut is
+    // used instead to skip the pool rental and the extra recursion levels for short ranges.
+    private const int ManagedSwitchThreshold = 16;
+
+    /// <summary>
+    /// Corresponds to LLVM's __stable_sort_switch&lt;T&gt;::value.
+    /// At or below this length a range is insertion-sorted in place and the auxiliary buffer is never touched.
+    /// <see cref="RuntimeHelpers.IsReferenceOrContainsReferences{T}"/> is a JIT-time constant, so the branch
+    /// folds away per instantiation just as the C++ compile-time trait does.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int SwitchThreshold<T>()
+        => RuntimeHelpers.IsReferenceOrContainsReferences<T>() ? ManagedSwitchThreshold : TrivialSwitchThreshold;
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -89,8 +117,9 @@ public static class StdStableSort
     {
         if (span.Length <= 1) return;
 
-        // fall-back for small arrays to avoid O(n) buffer allocation and copying overhead.
-        if (span.Length <= InPlaceThreshold)
+        // Corresponds to __stable_sort_impl: the temporary buffer is allocated only when
+        // len > __stable_sort_switch<T>::value. Shorter inputs are insertion-sorted in place.
+        if (span.Length <= SwitchThreshold<T>())
         {
             InsertionSort.Sort(span, comparer, context);
             return;
@@ -132,6 +161,17 @@ public static class StdStableSort
                 if (s.IsLessAt(1, 0))
                     s.Swap(0, 1);
                 return;
+        }
+
+        // __stable_sort applies the same __stable_sort_switch<T>::value cut at every recursion level,
+        // not only at the entry point. Because StableSortMove calls back into StableSort one level down,
+        // this is what actually terminates the recursion: for a trivially-copyable T the effective leaf
+        // is an in-place insertion sort of 33..128 elements, and the len <= 8 path in StableSortMove is
+        // never reached. Omitting this cut would descend roughly four extra levels.
+        if (len <= SwitchThreshold<T>())
+        {
+            InsertionSort.SortCore(s, 0, len);
+            return;
         }
 
         var l2 = len / 2;

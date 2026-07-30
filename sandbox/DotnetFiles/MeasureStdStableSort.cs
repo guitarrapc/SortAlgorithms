@@ -4,7 +4,7 @@
 using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 
-foreach (var n in new[] { 10, 20, 50, 100 })
+foreach (var n in new[] { 10, 20, 50, 100, 129, 200, 300, 500, 1000 })
 {
     // Sorted
     {
