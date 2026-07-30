@@ -204,10 +204,14 @@ public static class TimSort
 
         try
         {
-            s.Context.OnPhase(SortPhase.MergeRunDetect);
             var i = first;
             while (i < last)
             {
+                // Re-announced every iteration: MergeCollapse below reports MergeSortMerge, so a
+                // single call before the loop would leave an observer in the merge phase while the
+                // next run is being detected.
+                s.Context.OnPhase(SortPhase.MergeRunDetect);
+
                 // Find next run (either ascending or strictly descending)
                 var runLength = CountRunAndMakeAscending(s, i, last);
                 var runEnd = i + runLength;
@@ -655,7 +659,11 @@ public static class TimSort
             var count1 = 0;  // # of times run1 won in a row
             var count2 = 0;  // # of times run2 won in a row
 
-            // One-pair-at-a-time mode
+            // One-pair-at-a-time mode.
+            // Both operands are re-read every iteration even though only one cursor advanced.
+            // Carrying the losing value over in a local was measured to be no faster: this method
+            // has more live values than available registers, so the JIT spills the cached operand
+            // and trades one load for one store (verified with DOTNET_JitDisasm).
             do
             {
                 var val1 = t.Read(cursor1);
@@ -811,7 +819,9 @@ public static class TimSort
             var count1 = 0;  // # of times run1 won in a row
             var count2 = 0;  // # of times run2 won in a row
 
-            // One-pair-at-a-time mode
+            // One-pair-at-a-time mode.
+            // Both operands are re-read every iteration; see the note in MergeLow for why caching
+            // the losing value in a local is not a win here.
             do
             {
                 var val1 = s.Read(cursor1);
