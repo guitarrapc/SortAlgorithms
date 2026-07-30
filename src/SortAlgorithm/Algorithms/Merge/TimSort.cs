@@ -76,7 +76,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Stack size = 64: Sufficient for any int-indexed Span&lt;T&gt; (worst-case stack depth is ⌈log_φ(n)⌉ where φ ≈ 1.618 is golden ratio)</description></item>
 /// <item><description>Galloping mode: Adaptive exponential search + binary search when one run consistently wins, dynamically adjusted threshold</description></item>
 /// <item><description>Range reduction: Before merging, skip elements already in final positions using galloping</description></item>
-/// <item><description>ArrayPool: Uses ArrayPool&lt;T&gt;.Shared to rent temporary buffers, reducing GC pressure and allocation overhead</description></item>
+/// <item><description>ArrayPool: Uses ArrayPool&lt;T&gt;.Shared to rent temporary buffers, reducing GC pressure and allocation overhead.
+/// The buffer is rented on the first merge, so inputs that form a single run (already sorted or reverse sorted) never rent at all</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Timsort</para>
@@ -192,10 +193,11 @@ public static class TimSort
         Span<int> runLen = stackalloc int[64];
         var stackSize = 0;
 
-        // Reusable temporary buffer for merging
-        // Start with minRun size (reasonable initial capacity)
-        var tmpBufferSize = Math.Min(minRun, n / 2);
-        var tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
+        // Reusable temporary buffer for merging.
+        // Rented lazily by the first merge that needs it: a single-run input (already sorted or
+        // reverse sorted) never merges, and n in [MIN_MERGE, 2 * MIN_MERGE) yields minRun == n,
+        // so both cases would otherwise rent and return a buffer they never touch.
+        T[]? tmpBuffer = null;
 
         // Adaptive galloping threshold - shared across all merges for learning
         var minGallop = MIN_GALLOP;
@@ -225,20 +227,53 @@ public static class TimSort
                 stackSize++;
 
                 // Merge runs to maintain invariants
-                MergeCollapse(s, runBase, runLen, ref stackSize, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
+                MergeCollapse(s, runBase, runLen, ref stackSize, ref tmpBuffer, ref minGallop);
 
                 i = runEnd;
             }
 
             // Force merge all remaining runs
             s.Context.OnPhase(SortPhase.MergeRunCollapse, stackSize);
-            MergeForceCollapse(s, runBase, runLen, ref stackSize, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
+            MergeForceCollapse(s, runBase, runLen, ref stackSize, ref tmpBuffer, ref minGallop);
         }
         finally
         {
-            // Return the rented array to the pool
-            ArrayPool<T>.Shared.Return(tmpBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            // Return the rented array to the pool (null when no merge ever needed a buffer)
+            if (tmpBuffer is not null)
+            {
+                ArrayPool<T>.Shared.Return(tmpBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            }
         }
+    }
+
+    /// <summary>
+    /// Ensures the merge buffer can hold at least <paramref name="length"/> elements, renting it on first use.
+    /// </summary>
+    /// <remarks>
+    /// The capacity check uses the rented array's actual length rather than the length that was requested.
+    /// <see cref="ArrayPool{T}.Rent(int)"/> rounds the request up to a bucket size, so tracking the requested
+    /// size instead would return and re-rent an array from the same bucket that already fits.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static T[] EnsureTmpCapacity<T>(ref T[]? tmpBuffer, int length)
+    {
+        var buffer = tmpBuffer;
+        if (buffer is null)
+        {
+            buffer = ArrayPool<T>.Shared.Rent(length);
+        }
+        else if (buffer.Length < length)
+        {
+            ArrayPool<T>.Shared.Return(buffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            buffer = ArrayPool<T>.Shared.Rent(length);
+        }
+        else
+        {
+            return buffer;
+        }
+
+        tmpBuffer = buffer;
+        return buffer;
     }
 
     /// <summary>
@@ -313,7 +348,7 @@ public static class TimSort
     /// <summary>
     /// Maintains the run stack invariants by merging runs when necessary.
     /// </summary>
-    private static void MergeCollapse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
+    private static void MergeCollapse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, ref T[]? tmpBuffer, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -332,11 +367,11 @@ public static class TimSort
                 {
                     n--;
                 }
-                MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
+                MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref minGallop);
             }
             else if (runLen[n] <= runLen[n + 1])
             {
-                MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
+                MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref minGallop);
             }
             else
             {
@@ -348,7 +383,7 @@ public static class TimSort
     /// <summary>
     /// Merges all runs on the stack until only one remains.
     /// </summary>
-    private static void MergeForceCollapse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
+    private static void MergeForceCollapse<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, ref T[]? tmpBuffer, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -359,14 +394,14 @@ public static class TimSort
             {
                 n--;
             }
-            MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
+            MergeAt(s, runBase, runLen, ref stackSize, n, ref tmpBuffer, ref minGallop);
         }
     }
 
     /// <summary>
     /// Merges the run at stack position i with the run at position i+1.
     /// </summary>
-    private static void MergeAt<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, int i, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
+    private static void MergeAt<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> runBase, Span<int> runLen, ref int stackSize, int i, ref T[]? tmpBuffer, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -379,7 +414,7 @@ public static class TimSort
         s.Context.OnPhase(SortPhase.MergeSortMerge, base1, base1 + len1 - 1, base2 + len2 - 1);
 
         // Merge runs
-        MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
+        MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref minGallop);
 
         // Update stack
         runLen[i] = len1 + len2;
@@ -394,7 +429,7 @@ public static class TimSort
     /// <summary>
     /// Merges two adjacent runs with galloping mode optimization.
     /// </summary>
-    private static void MergeRuns<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
+    private static void MergeRuns<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref T[]? tmpBuffer, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -413,11 +448,11 @@ public static class TimSort
         // Merge remaining runs using galloping
         if (len1 <= len2)
         {
-            MergeLow(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
+            MergeLow(s, base1, len1, base2, len2, ref tmpBuffer, ref minGallop);
         }
         else
         {
-            MergeHigh(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, ref minGallop);
+            MergeHigh(s, base1, len1, base2, len2, ref tmpBuffer, ref minGallop);
         }
     }
 
@@ -575,7 +610,7 @@ public static class TimSort
     /// Merges two adjacent runs where the first run is smaller or equal.
     /// Uses galloping mode when one run consistently wins.
     /// </summary>
-    private static void MergeLow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
+    private static void MergeLow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref T[]? tmpBuffer, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -595,15 +630,10 @@ public static class TimSort
             return;
         }
 
-        // Ensure buffer is large enough, grow if needed
-        if (tmpBufferSize < len1)
-        {
-            ArrayPool<T>.Shared.Return(tmpBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            tmpBufferSize = len1;
-            tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
-        }
+        // Ensure buffer is large enough, renting or growing if needed
+        var buffer = EnsureTmpCapacity(ref tmpBuffer, len1);
 
-        var t = new SortSpan<T, TComparer, TContext>(tmpBuffer.AsSpan(0, len1), s.Context, s.Comparer, BUFFER_TEMP);
+        var t = new SortSpan<T, TComparer, TContext>(buffer.AsSpan(0, len1), s.Context, s.Comparer, BUFFER_TEMP);
         s.CopyTo(base1, t, 0, len1);
 
         var cursor1 = 0;          // Index in temp (first run)
@@ -728,7 +758,7 @@ public static class TimSort
     /// Merges two adjacent runs where the second run is smaller.
     /// Uses galloping mode when one run consistently wins.
     /// </summary>
-    private static void MergeHigh<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref T[] tmpBuffer, ref int tmpBufferSize, ref int minGallop)
+    private static void MergeHigh<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2, ref T[]? tmpBuffer, ref int minGallop)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -750,15 +780,10 @@ public static class TimSort
             return;
         }
 
-        // Ensure buffer is large enough, grow if needed
-        if (tmpBufferSize < len2)
-        {
-            ArrayPool<T>.Shared.Return(tmpBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            tmpBufferSize = len2;
-            tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
-        }
+        // Ensure buffer is large enough, renting or growing if needed
+        var buffer = EnsureTmpCapacity(ref tmpBuffer, len2);
 
-        var t = new SortSpan<T, TComparer, TContext>(tmpBuffer.AsSpan(0, len2), s.Context, s.Comparer, BUFFER_TEMP);
+        var t = new SortSpan<T, TComparer, TContext>(buffer.AsSpan(0, len2), s.Context, s.Comparer, BUFFER_TEMP);
         s.CopyTo(base2, t, 0, len2);
 
         var cursor1 = base1 + len1 - 1;  // Index in span (first run, from end)
