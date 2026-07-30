@@ -1,5 +1,6 @@
 ﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
+using SortAlgorithm.Utils;
 using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
@@ -39,6 +40,33 @@ public class GlidesortTests : StableSortTestsBase
         // The two equal "2" values must remain in original order: origIdx 0 before 1
         var twoIndices = items.Where(x => x.Value == 2).Select(x => x.OriginalIndex).ToArray();
         await Assert.That(twoIndices).IsEquivalentTo(new[] { 0, 1 }, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [Arguments(128)]
+    [Arguments(129)]
+    [Arguments(200)]
+    [Arguments(1000)]
+    [Arguments(1001)]
+    [Arguments(4096)]
+    public async Task HalfRotationDoesNotReadPastTheRunTest(int n)
+    {
+        // MergeSplitPoints returns rsplit == right.len when right is the shorter side and the
+        // crossover point is 0, which leaves MergeLeftGap with an empty right1 and r1 pointing
+        // one past the run. Its "already sorted" shortcut used to read s[r1] unconditionally.
+        // Half-rotated input drives PhysicalMerge into exactly that split from n=128 upward.
+        //
+        // The stray read only threw in DEBUG builds: SortSpan indexes the span directly there,
+        // but uses Unsafe.Add without bounds checks in RELEASE, so the bug read a neighbouring
+        // element (or past the end of the array) and silently took the shortcut on garbage.
+        var array = ArrayPatterns.GenerateHalfRotation(n);
+        var expected = array.ToArray();
+        Array.Sort(expected);
+
+        var stats = new StatisticsContext();
+        Glidesort.Sort(array.AsSpan(), stats);
+
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
     }
 
     [Test]

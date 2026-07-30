@@ -1,8 +1,8 @@
 ﻿namespace SortAlgorithm.Tests;
 
 /// <summary>
-/// Aggregates the 14 standard int input patterns used by every SortResultOrderTest.
-/// Use this single data source instead of stacking 14 MethodDataSource attributes.
+/// Aggregates the 15 standard int input patterns used by every SortResultOrderTest.
+/// Use this single data source instead of stacking 15 MethodDataSource attributes.
 /// </summary>
 public static class MockStandardData
 {
@@ -20,5 +20,6 @@ public static class MockStandardData
         .Concat(MockTwoDistinctValuesData.Generate())
         .Concat(MockHalfZeroHalfOneData.Generate())
         .Concat(MockValleyRandomData.Generate())
-        .Concat(MockHighlySkewedData.Generate());
+        .Concat(MockHighlySkewedData.Generate())
+        .Concat(MockHalfRotationData.Generate());
 }

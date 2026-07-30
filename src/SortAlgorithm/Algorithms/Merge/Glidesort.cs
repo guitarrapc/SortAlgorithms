@@ -750,7 +750,17 @@ public static class Glidesort
         where TContext : ISortContext
     {
         // Already sorted: left.last ≤ right.first → copy left (t) into gap, right stays in place.
-        if (s.IsLessOrEqual(t.Read(l1Len - 1), s.Read(r1))) { t.CopyTo(0, s, outStart, l1Len); return; }
+        // The length guards are required, not an optimization: MergeSplitPoints returns
+        // rsplit == right.len when right is the shorter side and the crossover point is 0,
+        // which makes r1Len zero and leaves r1 pointing one past the right run (past the end
+        // of the whole span when this merge reaches it). Reading s[r1] there is out of bounds.
+        // Both degenerate cases fall through to the loop below, which handles them correctly:
+        // an empty left1 writes nothing, and an empty right1 copies left1 into the gap.
+        if (l1Len != 0 && r1Len != 0 && s.IsLessOrEqual(t.Read(l1Len - 1), s.Read(r1)))
+        {
+            t.CopyTo(0, s, outStart, l1Len);
+            return;
+        }
 
         var c1 = 0;
         var e1 = l1Len;
