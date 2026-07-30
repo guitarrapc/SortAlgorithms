@@ -10,11 +10,9 @@ public class LibrarySortTests : StableSortTestsBase
     protected override void Sort<T, TContext>(Span<T> span, TContext context)
         => LibrarySort.Sort(span, context);
 
-    // The position index is maintained by memmove, so the sort is quadratic in n.
-    // 10000 is the largest standard input and still runs in ~15 ms; 100000 already takes ~135 ms.
-    protected override int MaxOrderTestSize => 10000;
+    // No size cap: every standard input runs. The largest (10000) takes about 1 ms.
 
-    // Library sort always writes to the auxiliary array (gap init + placement + extraction) and never swaps.
+    // Library sort always writes to the auxiliary array (placement + shifts + extraction) and never swaps.
     protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
     protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
@@ -178,14 +176,18 @@ public class LibrarySortTests : StableSortTestsBase
     /// <summary>
     /// Every element must survive the auxiliary buffer: gap clustering must never let an insertion
     /// overwrite an occupied slot. Sweeps sizes around the InsertionSort threshold, the initial
-    /// gap range, and the rebalance thresholds.
+    /// gap range, the rebalance thresholds, and the 64-slot word boundaries of the occupancy bitset.
     /// </summary>
     [Test]
     [Arguments(33)]
     [Arguments(34)]
+    [Arguments(43)]
     [Arguments(48)]
     [Arguments(49)]
+    [Arguments(63)]
     [Arguments(64)]
+    [Arguments(65)]
+    [Arguments(127)]
     [Arguments(128)]
     [Arguments(129)]
     [Arguments(512)]
@@ -234,7 +236,67 @@ public class LibrarySortTests : StableSortTestsBase
     }
 
     /// <summary>
-    /// The binary search over the position index performs the bulk of the comparisons.
+    /// Stability rests on the binary search returning an upper bound over the gapped array: a probe
+    /// that compares equal must move the boundary past that element, not before it. These layouts
+    /// put equal keys in the arrangements most likely to expose a wrong bound - all equal, equal
+    /// runs in ascending and descending order, and keys alternating around the midpoint - at sizes
+    /// above the InsertionSort fallback so the gap machinery actually runs.
+    /// </summary>
+    [Test]
+    [Arguments(40)]
+    [Arguments(64)]
+    [Arguments(300)]
+    [Arguments(4000)]
+    public async Task EqualKeyLayoutsRemainStableTest(int n)
+    {
+        var layouts = new (string Name, Func<int, int> Key)[]
+        {
+            ("allEqual", _ => 0),
+            ("ascendingRuns", i => i / 7),
+            ("descendingRuns", i => (n - 1 - i) / 7),
+            ("alternating", i => i % 2),
+            ("sortedHalves", i => i < n / 2 ? 0 : 1),
+            ("reversedHalves", i => i < n / 2 ? 1 : 0),
+            ("sawtoothDuplicates", i => i % 13 / 3),
+        };
+
+        foreach (var (name, key) in layouts)
+        {
+            var items = Enumerable.Range(0, n).Select(i => new StabilityTestItem(key(i), i)).ToArray();
+            var expected = items.OrderBy(x => x.Value).ToArray(); // OrderBy is a stable sort
+
+            LibrarySort.Sort(items.AsSpan(), new StatisticsContext());
+
+            for (var i = 0; i < n; i++)
+            {
+                await Assert.That(items[i].Value).IsEqualTo(expected[i].Value).Because($"layout={name}, n={n}, i={i}");
+                await Assert.That(items[i].OriginalIndex).IsEqualTo(expected[i].OriginalIndex).Because($"layout={name}, n={n}, i={i}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// The paper's guarantee is one binary search per inserted element. The search bisects slot
+    /// indices over the gapped array rather than element ranks, so a probe landing in a gap must
+    /// resolve without costing extra comparisons; if it degenerated to a scan this count would blow
+    /// past the bound. Measured ratio is about 0.95 x n log2 n.
+    /// </summary>
+    [Test]
+    [Arguments(1000)]
+    [Arguments(10000)]
+    public async Task ComparisonCountStaysWithinNLogNTest(int n)
+    {
+        var stats = new StatisticsContext();
+        var array = TestHelpers.ShuffledRange(n, 42);
+
+        LibrarySort.Sort(array.AsSpan(), stats);
+
+        var bound = (ulong)(2.0 * n * Math.Log2(n));
+        await Assert.That(stats.CompareCount).IsLessThan(bound);
+    }
+
+    /// <summary>
+    /// The binary search over the gapped array performs the bulk of the comparisons.
     /// It must report them, otherwise statistics and visualization consumers see almost nothing.
     /// </summary>
     [Test]
