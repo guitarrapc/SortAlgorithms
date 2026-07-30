@@ -187,11 +187,11 @@ public static class PowerSort
             return; // Already sorted (either ascending or reversed and then reversed back)
         }
 
-        // Reusable temporary buffer for merging
-        // Start with minRun size (reasonable initial capacity)
-        // MergeLow needs len1, MergeHigh needs len2, so we track the smaller run size
-        var tmpBufferSize = Math.Min(MIN_RUN * 2, n / 2);
-        T[] tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
+        // Reusable temporary buffer for merging.
+        // Start with minRun size (reasonable initial capacity); MergeLow/MergeHigh grow it on demand.
+        // Rented unconditionally here because reaching this point means at least two runs exist, so
+        // the final collapse performs at least one merge. The single-run case returned above.
+        T[] tmpBuffer = ArrayPool<T>.Shared.Rent(Math.Min(MIN_RUN * 2, n / 2));
 
         try
         {
@@ -233,7 +233,7 @@ public static class PowerSort
                     // Verify structural consistency: runs must be adjacent
                     Debug.Assert(base1 + len1 == base2, $"Runs are not adjacent: run[{runCount - 2}] ends at {base1 + len1}, run[{runCount - 1}] starts at {base2}");
 
-                    MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, comparer, context);
+                    MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, comparer, context);
 
                     // Replace the two runs with the merged result
                     runBase[runCount - 2] = base1;
@@ -277,7 +277,7 @@ public static class PowerSort
                 // Verify structural consistency
                 Debug.Assert(base1 + len1 == base2, $"Runs are not adjacent in final collapse: run[{runCount - 2}] ends at {base1 + len1}, run[{runCount - 1}] starts at {base2}");
 
-                MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, comparer, context);
+                MergeRuns(s, base1, len1, base2, len2, ref tmpBuffer, comparer, context);
 
                 // Replace the two runs with the merged result
                 runLen[runCount - 2] = len1 + len2;
@@ -413,17 +413,17 @@ public static class PowerSort
     /// (via node power) rather than optimizing individual merge operations.
     /// </remarks>
     private static void MergeRuns<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
-        ref T[] tmpBuffer, ref int tmpBufferSize, TComparer comparer, TContext context)
+        ref T[] tmpBuffer, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         if (len1 <= len2)
         {
-            MergeLow(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, comparer, context);
+            MergeLow(s, base1, len1, base2, len2, ref tmpBuffer, comparer, context);
         }
         else
         {
-            MergeHigh(s, base1, len1, base2, len2, ref tmpBuffer, ref tmpBufferSize, comparer, context);
+            MergeHigh(s, base1, len1, base2, len2, ref tmpBuffer, comparer, context);
         }
     }
 
@@ -433,16 +433,18 @@ public static class PowerSort
     /// Uses simple linear merge matching the reference PowerSort implementation.
     /// </summary>
     private static void MergeLow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
-        ref T[] tmpBuffer, ref int tmpBufferSize, TComparer comparer, TContext context)
+        ref T[] tmpBuffer, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Ensure tmpBuffer is large enough for len1
-        if (tmpBufferSize < len1)
+        // Ensure tmpBuffer is large enough for len1.
+        // The check uses the rented array's actual length rather than the length that was requested:
+        // ArrayPool.Rent rounds the request up to a bucket size, so tracking the requested size would
+        // return and re-rent an array from the same bucket that already fits.
+        if (tmpBuffer.Length < len1)
         {
             ArrayPool<T>.Shared.Return(tmpBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            tmpBufferSize = len1;
-            tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
+            tmpBuffer = ArrayPool<T>.Shared.Rent(len1);
         }
 
         // Copy first run to temp buffer
@@ -487,16 +489,16 @@ public static class PowerSort
     /// Uses simple linear merge matching the reference PowerSort implementation.
     /// </summary>
     private static void MergeHigh<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
-        ref T[] tmpBuffer, ref int tmpBufferSize, TComparer comparer, TContext context)
+        ref T[] tmpBuffer, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Ensure tmpBuffer is large enough for len2
-        if (tmpBufferSize < len2)
+        // Ensure tmpBuffer is large enough for len2. See the note in MergeLow on why the check uses
+        // the rented array's actual length rather than the length that was requested.
+        if (tmpBuffer.Length < len2)
         {
             ArrayPool<T>.Shared.Return(tmpBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            tmpBufferSize = len2;
-            tmpBuffer = ArrayPool<T>.Shared.Rent(tmpBufferSize);
+            tmpBuffer = ArrayPool<T>.Shared.Rent(len2);
         }
 
         // Copy second run to temp buffer
