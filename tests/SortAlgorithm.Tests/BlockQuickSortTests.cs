@@ -108,6 +108,58 @@ public class BlockQuickSortTests : SortTestsBase
     }
 
     [Test]
+    [Arguments(5000)]
+    [Arguments(100000)]
+    public async Task IndexBufferWritesOnlyRecordAcceptedOffsetsTest(int n)
+    {
+        // The block partition scan stores an offset unconditionally and folds the comparison
+        // outcome into a counter increment, so that no branch depends on the comparison. That
+        // unconditional store is confined to the NullContext path: under an observing context
+        // the store must stay conditional, otherwise the index buffers would report a write for
+        // every scanned element instead of only the offsets the scan accepted.
+        //
+        // Already-sorted input separates the two forms sharply: almost nothing needs to move, so
+        // accepted offsets are rare while scanned elements are not. Measured with the conditional
+        // store the ratio is 0.001 (n=5000) and 0.018 (n=100000); an unconditional store would
+        // push it to roughly 1.0, since every scanning comparison would emit a buffer write.
+        var recorder = new IndexBufferRecorder();
+        var sorted = Enumerable.Range(0, n).ToArray();
+
+        BlockQuickSort.Sort(sorted.AsSpan(), recorder);
+
+        await Assert.That(sorted).IsEquivalentTo(Enumerable.Range(0, n).ToArray(), CollectionOrdering.Matching);
+        await Assert.That(recorder.MainCompares).IsGreaterThan(0L);
+        await Assert.That(recorder.IndexBufferWrites * 4 < recorder.MainCompares).IsTrue()
+            .Because($"index-buffer writes ({recorder.IndexBufferWrites}) should stay far below main-array compares ({recorder.MainCompares}) on sorted input");
+    }
+
+    /// <summary>
+    /// Counts main-array comparisons and writes into the two block-partition index buffers
+    /// (buffer ids 1 and 2 in <see cref="BlockQuickSort"/>).
+    /// </summary>
+    private sealed class IndexBufferRecorder : ISortContext
+    {
+        public long MainCompares;
+        public long IndexBufferWrites;
+
+        public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ)
+        {
+            if (bufferIdI == 0 && bufferIdJ == 0) MainCompares++;
+        }
+
+        public void OnIndexWrite(int index, int bufferId, object? value = null)
+        {
+            if (bufferId is 1 or 2) IndexBufferWrites++;
+        }
+
+        public void OnSwap(int i, int j, int bufferId) { }
+        public void OnIndexRead(int index, int bufferId) { }
+        public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null) { }
+        public void OnPhase(SortPhase phase, int param1 = -1, int param2 = -1, int param3 = -1) { }
+        public void OnRole(int index, int bufferId, RoleType role) { }
+    }
+
+    [Test]
     [Arguments(10)]
     [Arguments(20)]
     [Arguments(50)]

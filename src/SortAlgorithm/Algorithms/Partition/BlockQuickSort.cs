@@ -5,13 +5,12 @@ using SortAlgorithm.Contexts;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// ブロック単位の分割処理により、QuickSortのキャッシュ効率とブランチ予測性能を改善した最適化版QuickSortです。
-/// 適応的ピボット選択（median-of-sqrt(n)）、ブロックパーティショニング、IntroSortを組み合わせることで、
-/// 標準的なQuickSortより1.5～2倍高速に動作します。
+/// 分割の内側ループから比較結果による分岐を取り除くことで、ブランチ予測ミスを減らした QuickSort です。
+/// 適応的ピボット選択、ブロックパーティショニング、IntroSort フォールバックを組み合わせます。
 /// <br/>
-/// An optimized variant of QuickSort that improves cache efficiency and branch prediction performance through block-based partitioning.
-/// By combining adaptive pivot selection (median-of-sqrt(n)), block partitioning, and IntroSort,
-/// it operates 1.5-2x faster than standard QuickSort while maintaining worst-case guarantees.
+/// A QuickSort variant that removes data-dependent branches from the partitioning inner loop by
+/// storing comparison outcomes in index buffers and converting them into integer increments.
+/// Combines adaptive pivot selection, block partitioning, and an IntroSort fallback.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct BlockQuickSort:</strong></para>
@@ -24,9 +23,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>n &gt; 100: Median-of-3-medians-of-3 (3 groups of 3 elements at distributed positions, median of their medians)</description></item>
 /// <item><description>n ≤ 100: Simple median-of-3 (first, middle, last elements)</description></item>
 /// </list>
-/// The median-of-√n strategy ensures pivot quality within O(√n) expected distance from the true median, achieving near-optimal partitioning.</description></item>
+/// Sampling k elements bounds the pivot's expected rank deviation by Θ(n/√k); with k = √n that is Θ(n^(3/4)),
+/// which is far better than median-of-3 but is not a near-exact median.</description></item>
 /// <item><description><strong>Block-Based Hoare Partitioning:</strong> Unlike traditional Hoare partitioning which interleaves comparisons and swaps,
-/// block partitioning separates these operations to improve modern CPU performance:
+/// block partitioning separates these operations:
 /// <list type="bullet">
 /// <item><description>Elements are processed in blocks of 128 elements (BLOCKSIZE constant)</description></item>
 /// <item><description>Each block is scanned once, storing indices of elements that need swapping in index buffers (indexL for left, indexR for right)</description></item>
@@ -35,7 +35,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>After both scans complete, perform min(numLeft, numRight) swaps in batch</description></item>
 /// <item><description>Advance block pointers (begin += BLOCKSIZE or end -= BLOCKSIZE) when buffers are empty</description></item>
 /// </list>
-/// This approach reduces branch mispredictions (comparisons are predictable sequential access) and improves cache efficiency (swaps access nearby memory).</description></item>
+/// The point of the separation is that the scan can store an offset unconditionally and fold the comparison
+/// outcome into a counter increment, so no branch depends on the comparison result. See <c>AppendOffset</c>.
+/// The paper measures 2.31 branch misses per element for this scheme against 10.23 for std::sort (Table 1).
+/// Note that the scheme reloads every swapped element, so the number of scanned elements grows by twice the
+/// number of swaps; the block size is kept small so those elements are still in L1 when the swap happens.</description></item>
 /// <item><description><strong>Partitioning Invariant Maintenance:</strong> After partitioning, the array must satisfy:
 /// <list type="bullet">
 /// <item><description>All elements in [left, pivotIndex-1] are ≤ pivot</description></item>
@@ -50,7 +54,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Partitioning overhead (pivot selection, buffer management) dominates for n &lt; 20</description></item>
 /// <item><description>Expected recursion depth reduction: A 20-element threshold reduces tree depth by ⌊log₂(20)⌋ ≈ 4 levels</description></item>
 /// </list>
-/// The exact threshold (20) is empirically determined from the reference implementation and matches typical hybrid sort cutoffs.</description></item>
+/// The paper's reference implementation uses 16 (IS_THRESH); 20 is this repository's own cutoff and matches
+/// the other hybrid sorts here.</description></item>
 /// <item><description><strong>Termination Guarantee:</strong> The algorithm terminates because:
 /// <list type="bullet">
 /// <item><description>Base case 1: right ≤ left (partition has ≤ 1 element) → return immediately</description></item>
@@ -66,7 +71,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Depth limit: 2⌊log₂(n)⌋ + 1 (calculated using BitOperations.Log2)</description></item>
 /// <item><description>When recursion depth exceeds this limit, the algorithm switches to HeapSort for the current partition</description></item>
 /// <item><description>HeapSort guarantees O(n log n) regardless of input distribution, preventing O(n²) on adversarial patterns</description></item>
-/// <item><description>This matches the BlockQuickSort paper's reference implementation (depth_limit = 2 * ilogb(n) + 3)</description></item>
+/// <item><description>The paper's reference implementation uses depth_limit = 2 * ilogb(n) + 3; this implementation is one level stricter</description></item>
 /// <item><description>The depth limit is only triggered on pathological inputs; typical inputs complete with QuickSort's superior average-case performance</description></item>
 /// </list>
 /// The paper explicitly mentions: "recursion depth becomes often higher than the threshold for switching to Heapsort" as motivation for duplicate checks.
@@ -80,20 +85,20 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Stable      : No (partitioning does not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack + O(1) for index buffers via stackalloc)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Balanced partitions from high-quality pivot selection</description></item>
-/// <item><description>Average case: Θ(n log n) - Expected ~1.2-1.4n log₂ n comparisons (better than standard QuickSort's 1.39n log₂ n due to improved pivot quality)</description></item>
+/// <item><description>Average case: Θ(n log n) - measured ~1.1n log₂ n comparisons on random int (StatisticsContext, n = 10³ and 10⁵)</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by IntroSort fallback to HeapSort when recursion depth exceeds 2⌊log₂(n)⌋+1 (prevents QuickSort's O(n²) on adversarial inputs)</description></item>
-/// <item><description>Comparisons : ~1.2-1.4n log₂ n (average) - Block partitioning performs same logical comparisons but with better cache locality</description></item>
-/// <item><description>Swaps       : ~0.33n log₂ n (average) - Hoare scheme swaps fewer elements than Lomuto; block buffering reduces swap overhead via sequential memory access</description></item>
+/// <item><description>Comparisons : ~1.1n log₂ n (average) - the paper notes block partitioning performs the same logical comparisons as Hoare partitioning on random permutations</description></item>
+/// <item><description>Swaps       : ~0.24n log₂ n (average, measured on random int) - Hoare scheme swaps fewer elements than Lomuto</description></item>
 /// </list>
-/// <para><strong>Advantages of BlockQuickSort over Standard QuickSort:</strong></para>
+/// <para><strong>Properties of this scheme:</strong></para>
 /// <list type="bullet">
 /// <item><description>Worst-case guarantee: IntroSort fallback ensures O(n log n) even on adversarial inputs (standard QuickSort can degrade to O(n²))</description></item>
-/// <item><description>Cache efficiency: Block processing (128 elements) fits L1 cache, reducing cache misses by 30-50%</description></item>
-/// <item><description>Branch prediction: Separating comparisons from swaps makes comparison loops predictable (no data-dependent branches in tight loop)</description></item>
-/// <item><description>SIMD potential: Sequential scans can be vectorized by modern compilers (though not explicitly in this C# implementation)</description></item>
-/// <item><description>Better pivot quality: Median-of-√n provides near-optimal partitioning without O(n) overhead</description></item>
-/// <item><description>Empirical speedup: Typically 1.5-2x faster than standard QuickSort on arrays with n &gt; 10,000</description></item>
+/// <item><description>Branch prediction: the scanning loops branch only on the loop counter, never on a comparison result, so the partitioning inner loop has no mispredictable branch</description></item>
+/// <item><description>Better pivot quality than median-of-3, at O(√n) sampling cost for large inputs</description></item>
+/// <item><description>Duplicate check groups pivot-equal elements so they can be excluded from recursion (paper Section 3.1)</description></item>
 /// </list>
+/// <para><strong>Paper tunings not implemented here (Section 3.2):</strong> loop unrolling of the scanning
+/// phase, and cyclic permutations in place of pairwise swaps during rearrangement.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
 /// <para>Paper: https://arxiv.org/abs/1604.06697</para>
@@ -374,14 +379,49 @@ public static class BlockQuickSort
     }
 
     /// <summary>
+    /// Appends offset <paramref name="offset"/> to an index buffer when <paramref name="matches"/> is true,
+    /// and returns the resulting buffer length.
+    /// </summary>
+    /// <remarks>
+    /// <para>This is the paper's Algorithm 3 Lines 8-9 (and 15-16): the offset is stored <em>unconditionally</em>
+    /// and only the counter is advanced by the comparison outcome, so the comparison never becomes a
+    /// conditional branch. Storing a rejected offset is harmless because it is overwritten by the next
+    /// append: on the j-th step of a scan the count cannot exceed j, and every scan covers at most
+    /// BLOCKSIZE elements, so the store index stays within the BLOCKSIZE-slot buffer.</para>
+    /// <para>Under an observing context the store stays conditional: an unconditional store would report
+    /// index-buffer writes that the algorithm did not logically perform. The
+    /// <c>typeof(TContext) == typeof(NullContext)</c> test is a JIT-time constant, so each instantiation
+    /// keeps only one of the two forms.</para>
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static int AppendOffset<TContext>(SortSpan<int, Comparer<int>, TContext> buffer, int count, int offset, bool matches)
+        where TContext : ISortContext
+    {
+        if (typeof(TContext) == typeof(NullContext))
+        {
+            buffer.Write(count, offset);
+            return count + (matches ? 1 : 0);
+        }
+
+        if (matches)
+        {
+            buffer.Write(count, offset);
+            return count + 1;
+        }
+        return count;
+    }
+
+    /// <summary>
     /// Core block partitioning logic with the pivot already selected.
     /// This is the actual Hoare block partition implementation that processes elements in blocks.
     /// <para>
-    /// Block partitioning separates comparison from swapping to reduce branch mispredictions:
+    /// Block partitioning separates comparison from swapping:
     /// - Scan left blocks to find elements >= pivot (stored in indexL buffer)
     /// - Scan right blocks to find elements &lt;= pivot (stored in indexR buffer)
     /// - Batch swap elements from both buffers
-    /// This approach improves cache efficiency and enables better branch prediction.
+    /// The scanning loops convert each comparison outcome into an integer increment (see
+    /// <see cref="AppendOffset"/>) instead of branching on it, which is the paper's mechanism for
+    /// removing data-dependent branches from the partitioning inner loop.
     /// </para>
     /// </summary>
     static int HoareBlockPartitionCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex)
@@ -413,34 +453,24 @@ public static class BlockQuickSort
         while (end - begin + 1 > 2 * BLOCKSIZE)
         {
             // Scan left block: find elements >= pivot that need to move right
-            // Corresponds to paper's Line 9: numLeft += (pivot >= A[ℓ + j])
+            // Corresponds to paper's Lines 8-9: offsetsL[numL] = j; numL += (pivot <= A[ℓ + j])
             if (numLeft == 0)
             {
                 startLeft = 0;
                 for (var j = 0; j < BLOCKSIZE; j++)
                 {
-                    // Store index only if element >= pivot
-                    if (s.IsGreaterOrEqualAt(begin + j, pivotEnd))
-                    {
-                        sIndexL.Write(numLeft, j);
-                        numLeft++;
-                    }
+                    numLeft = AppendOffset(sIndexL, numLeft, j, s.IsGreaterOrEqualAt(begin + j, pivotEnd));
                 }
             }
 
             // Scan right block: find elements <= pivot that need to move left
-            // Corresponds to paper's Line 16: numRight += (pivot <= A[r - j])
+            // Corresponds to paper's Lines 15-16: offsetsR[numR] = j; numR += (pivot >= A[r - j])
             if (numRight == 0)
             {
                 startRight = 0;
                 for (var j = 0; j < BLOCKSIZE; j++)
                 {
-                    // Store index only if element <= pivot
-                    if (s.IsGreaterOrEqualAt(pivotEnd, end - j))
-                    {
-                        sIndexR.Write(numRight, j);
-                        numRight++;
-                    }
+                    numRight = AppendOffset(sIndexR, numRight, j, s.IsGreaterOrEqualAt(pivotEnd, end - j));
                 }
             }
 
@@ -475,29 +505,17 @@ public static class BlockQuickSort
 
             for (var j = 0; j < shiftL; j++)
             {
-                // Left: store index only if element >= pivot
-                if (s.IsGreaterOrEqualAt(begin + j, pivotEnd))
-                {
-                    sIndexL.Write(numLeft, j);
-                    numLeft++;
-                }
-
-                // Right: store index only if element <= pivot
-                if (s.IsGreaterOrEqualAt(pivotEnd, end - j))
-                {
-                    sIndexR.Write(numRight, j);
-                    numRight++;
-                }
+                // Left: element >= pivot, right: element <= pivot
+                numLeft = AppendOffset(sIndexL, numLeft, j, s.IsGreaterOrEqualAt(begin + j, pivotEnd));
+                numRight = AppendOffset(sIndexR, numRight, j, s.IsGreaterOrEqualAt(pivotEnd, end - j));
             }
 
             if (shiftL < shiftR)
             {
-                // Right: store index only if last element <= pivot
-                if (s.IsGreaterOrEqualAt(pivotEnd, end - shiftR + 1))
-                {
-                    sIndexR.Write(numRight, shiftR - 1);
-                    numRight++;
-                }
+                // Right: the odd element the loop above did not reach.
+                // shiftL < shiftR only when the range length is odd, which bounds shiftL to
+                // BLOCKSIZE-1, so numRight is at most BLOCKSIZE-1 and the store stays in range.
+                numRight = AppendOffset(sIndexR, numRight, shiftR - 1, s.IsGreaterOrEqualAt(pivotEnd, end - shiftR + 1));
             }
         }
         else if (numRight != 0)
@@ -509,12 +527,7 @@ public static class BlockQuickSort
 
             for (var j = 0; j < shiftL; j++)
             {
-                // Left: store index only if element >= pivot
-                if (s.IsGreaterOrEqualAt(begin + j, pivotEnd))
-                {
-                    sIndexL.Write(numLeft, j);
-                    numLeft++;
-                }
+                numLeft = AppendOffset(sIndexL, numLeft, j, s.IsGreaterOrEqualAt(begin + j, pivotEnd));
             }
         }
         else
@@ -526,12 +539,7 @@ public static class BlockQuickSort
 
             for (var j = 0; j < shiftR; j++)
             {
-                // Right: store index only if element <= pivot
-                if (s.IsGreaterOrEqualAt(pivotEnd, end - j))
-                {
-                    sIndexR.Write(numRight, j);
-                    numRight++;
-                }
+                numRight = AppendOffset(sIndexR, numRight, j, s.IsGreaterOrEqualAt(pivotEnd, end - j));
             }
         }
 
