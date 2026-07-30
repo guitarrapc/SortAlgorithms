@@ -39,6 +39,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Binary Insertion Sort: O(n log n) comparisons, O(n²) writes - Binary search reduces comparisons but not writes</description></item>
 /// <item><description>Practical benefit: More significant when comparisons are expensive (e.g., string comparison, complex objects)</description></item>
 /// </list>
+/// <para><strong>Implementation Notes:</strong></para>
+/// <list type="bullet">
+/// <item><description>Early continuation: If the element is already ≥ its predecessor, the binary search and the shift are skipped entirely,
+/// at the cost of one extra comparison when the check fails. This is what gives the O(n) best case.</description></item>
+/// <item><description>Shift strategy: Under <c>NullContext</c> the shift is a single overlapping block move (memmove);
+/// under an observing context it stays element-by-element so the shift remains visible one element at a time.
+/// Both perform the same number of element reads and writes.</description></item>
+/// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Insertion_sort</para>
 /// </remarks>
@@ -165,10 +173,24 @@ public static class BinaryInsertionSort
             // Optimization: if pos == i, element is already in correct position
             if (pos != i)
             {
-                // Shift elements [pos..i-1] one position to the right to make room
-                for (var j = i - 1; j >= pos; j--)
+                // Shift elements [pos..i-1] one position to the right to make room.
+                // The typeof check is a JIT constant per instantiation, so exactly one arm survives.
+                if (typeof(TContext) == typeof(NullContext))
                 {
-                    s.Write(j + 1, s.Read(j));
+                    // No observer: shift as a single overlapping block move. SortSpan.CopyTo forwards
+                    // to Span<T>.CopyTo, which is a memmove and handles the overlap. Element counts are
+                    // unchanged (length reads + length writes); only the per-element granularity is lost,
+                    // which no consumer can see under NullContext.
+                    s.CopyTo(pos, s, pos + 1, i - pos);
+                }
+                else
+                {
+                    // Observed path: keep one read and one write per shifted element so that a
+                    // visualization still renders the shift element by element.
+                    for (var j = i - 1; j >= pos; j--)
+                    {
+                        s.Write(j + 1, s.Read(j));
+                    }
                 }
 
                 // Insert the element at its correct position
