@@ -106,6 +106,150 @@ public class SpreadSortTests : IntegerSortTestsBase
     }
 
     [Test]
+    public async Task BinCacheCapacitySparseBinsTest()
+    {
+        // Regression: the bin cache used to be sized at n, on the assumption that the binCounts
+        // along a root-to-leaf path sum to at most n. binCount comes from the KEY RANGE, not the
+        // element count, so a level whose bins are mostly empty claims far more slots than it has
+        // elements. This input drives:
+        //   level 0: logRange=21 -> logDivisor=11, binCount~1023
+        //           bin 0 holds 2048 elements >= get_min_count(11)=2048 -> recurse
+        //   level 1: logRange=11 -> logDivisor=0,  binCount=2048
+        //           cacheEnd = 1023 + 2048 = 3071 > n = 3000  -> threw ArgumentOutOfRangeException
+        var values = new List<int>();
+        for (var i = 0; i < 2048; i++) values.Add(i);              // all land in top-level bin 0
+        for (var i = 0; i < 952; i++) values.Add(2048 + i * 2200); // sparse over the remaining bins
+        var random = new Random(12345);
+        var array = values.OrderBy(_ => random.Next()).ToArray();
+
+        var expected = array.OrderBy(x => x).ToArray();
+        SpreadSort.Sort(array.AsSpan());
+
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [Arguments(1)]
+    [Arguments(2)]
+    [Arguments(3)]
+    public async Task SparseValueRangeTest(int seed)
+    {
+        // Broader coverage of the same equivalence class: many elements clustered into a narrow
+        // low range plus a thin tail spread over a wide range, so most bins stay empty at every level.
+        var random = new Random(seed);
+        var n = 20000;
+        var array = new int[n];
+        for (var i = 0; i < n; i++)
+        {
+            array[i] = i % 2 == 0
+                ? random.Next(0, 4096)                 // dense cluster
+                : random.Next(4096, int.MaxValue);     // sparse tail
+        }
+
+        var expected = array.OrderBy(x => x).ToArray();
+        SpreadSort.Sort(array.AsSpan());
+
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [Arguments(500, 7)]     // below MinSortSize: PDQSort.SortCore fallback
+    [Arguments(2000, 7)]    // above MinSortSize: spread path
+    [Arguments(1200, 2)]    // above MinSortSize, but half NaN: drops below it after partitioning
+    [Arguments(1200, 1)]    // all NaN
+    public async Task NaNWithDefaultContextSizesTest(int n, int nanEvery)
+    {
+        // Every entry path has to partition NaN: the spread path derives it from the extremes,
+        // the small-input path needs an explicit pre-pass because PDQSort.SortCore (the internal
+        // entry) does not perform one unlike PDQSort's public Sort, and removing the NaN values
+        // can itself drop the remainder below MinSortSize.
+        var random = new Random(1234);
+        var array = new float[n];
+        for (var i = 0; i < n; i++)
+            array[i] = i % nanEvery == 0 ? float.NaN : (float)random.NextDouble() * 1000f;
+
+        var expected = (float[])array.Clone();
+        Array.Sort(expected);
+
+        SpreadSort.Sort(array.AsSpan()); // no-context overload
+
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task NaNWithDefaultContextTest()
+    {
+        // Regression: the float overloads passed ComparableComparer, which SortSpan specializes to
+        // raw IEEE 754 operators on the NullContext (no-context) fast path. NaN is unordered under
+        // those operators so it was never chosen as the minimum, while its radix key is 0 - below
+        // every non-NaN key - which put bin indices outside [0, binCount) and threw
+        // IndexOutOfRangeException. Only reproducible via the no-context overload in Release:
+        // the StatisticsContext overloads used by the other float tests take the comparer path,
+        // and SortSpan's DEBUG build does too.
+        var random = new Random(42);
+        var floats = new float[2000];
+        var doubles = new double[2000];
+        var halves = new Half[2000];
+        for (var i = 0; i < floats.Length; i++)
+        {
+            var isNaN = i % 10 == 0;
+            floats[i] = isNaN ? float.NaN : (float)random.NextDouble() * 1000f;
+            doubles[i] = isNaN ? double.NaN : random.NextDouble() * 1000d;
+            halves[i] = isNaN ? Half.NaN : (Half)(random.NextDouble() * 100d);
+        }
+
+        var expectedFloats = (float[])floats.Clone();
+        var expectedDoubles = (double[])doubles.Clone();
+        var expectedHalves = (Half[])halves.Clone();
+        Array.Sort(expectedFloats);
+        Array.Sort(expectedDoubles);
+        Array.Sort(expectedHalves);
+
+        // No-context overloads: this is the path that used to throw.
+        SpreadSort.Sort(floats.AsSpan());
+        SpreadSort.Sort(doubles.AsSpan());
+        SpreadSort.Sort(halves.AsSpan());
+
+        await Assert.That(floats).IsEquivalentTo(expectedFloats, CollectionOrdering.Matching);
+        await Assert.That(doubles).IsEquivalentTo(expectedDoubles, CollectionOrdering.Matching);
+        await Assert.That(halves).IsEquivalentTo(expectedHalves, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task SignedZeroTest()
+    {
+        // Regression: -0.0 and +0.0 compare EQUAL under both IEEE '<' and double.CompareTo, so the
+        // comparison-driven minimum could land on +0.0 while -0.0 carries a strictly smaller radix
+        // key. The comparison-derived minimum then failed to bound the keys and the bin index went
+        // negative, throwing IndexOutOfRangeException. The extremes are now found by key.
+        //
+        // The two zeros are a genuine tie, so their relative order is NOT asserted: SpreadSort is
+        // unstable, and Array.Sort leaves the same tie unspecified. Assert what is guaranteed.
+        var random = new Random(7);
+        var array = new double[2000];
+        for (var i = 0; i < array.Length; i++) array[i] = random.NextDouble() * 1000d + 1d;
+        array[0] = 0.0;                                  // IEEE minimum, becomes the comparison min
+        for (var i = 1; i < array.Length; i += 97) array[i] = -0.0;
+        for (var i = 2; i < array.Length; i += 97) array[i] = 0.0;
+
+        var negativeZeros = array.Count(double.IsNegative);
+        var zeros = array.Count(x => x == 0d);
+
+        SpreadSort.Sort(array.AsSpan());
+
+        // Non-decreasing under IComparable
+        for (var i = 1; i < array.Length; i++)
+        {
+            await Assert.That(array[i - 1].CompareTo(array[i])).IsLessThanOrEqualTo(0);
+        }
+        // Every zero (of either sign) is at the front, and the signed-zero counts are preserved
+        // exactly — an element must not be rewritten from -0.0 to +0.0 or vice versa.
+        await Assert.That(array.Take(zeros).All(x => x == 0d)).IsTrue();
+        await Assert.That(array.Count(double.IsNegative)).IsEqualTo(negativeZeros);
+        await Assert.That(array.Count(x => x == 0d)).IsEqualTo(zeros);
+    }
+
+    [Test]
     [Arguments(typeof(byte))]
     [Arguments(typeof(sbyte))]
     [Arguments(typeof(short))]

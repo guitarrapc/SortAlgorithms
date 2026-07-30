@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -26,13 +27,14 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Distribution (Hybrid: Distribution + Comparison via PDQSort + Insertion)</description></item>
+/// <item><description>Family      : Distribution (Hybrid: Distribution + Comparison via PDQSort)</description></item>
 /// <item><description>Stable      : No (elements are redistributed across buckets via in-place swaps)</description></item>
 /// <item><description>In-place    : Partially (distribution is in-place, but this implementation uses an auxiliary bin cache).</description></item>
 /// <item><description>Best case   : O(n) - When data is already sorted (early detection)</description></item>
 /// <item><description>Average case: O(n √(log n)) - Hybrid distribution and comparison</description></item>
 /// <item><description>Worst case  : O(n * (K/S + S)) where K = log₂(range), S = max_splits</description></item>
-/// <item><description>Memory      : O(n) auxiliary metadata in this implementation (bin_sizes on stack, bin_cache via ArrayPool)</description></item>
+/// <item><description>Memory      : O(1) auxiliary metadata — both bin_sizes and bin_cache are bounded by the
+/// key width and the tuning constants, independent of n (bin_sizes on stack, bin_cache via ArrayPool)</description></item>
 /// </list>
 /// <para><strong>Boost Constants (from constants.hpp):</strong></para>
 /// <list type="bullet">
@@ -47,9 +49,33 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description><strong>Integers:</strong> byte, sbyte, short, ushort, int, uint, long, ulong (fixed-width up to 64-bit);
 /// nint/nuint are rejected (platform-dependent bit width makes distribution behavior inconsistent across environments); Int128/UInt128/BigInteger are rejected (64-bit key ceiling)</description></item>
-/// <item><description><strong>Floating point:</strong> Half, float, double via IEEE 754 total-order key transform (all NaN values sort first, matching <see cref="IComparable{T}"/> semantics)</description></item>
+/// <item><description><strong>Floating point:</strong> Half, float, double via IEEE 754 total-order key transform
+/// (all NaN values sort first, matching <see cref="IComparable{T}"/> semantics; <c>-0.0</c> and <c>+0.0</c>
+/// are a tie and their relative order is unspecified, as in <c>Array.Sort</c>)</description></item>
 /// <item><description><strong>Key selector:</strong> arbitrary element types via an extracted <c>int</c> key; NOTE: SpreadSort is unstable, so elements with equal keys may be reordered</description></item>
 /// </list>
+/// <para><strong>Why the extremes are found by key, not by comparison:</strong></para>
+/// <para>Boost's <c>is_sorted_or_find_extremes</c> locates the min and max with <c>operator&lt;</c>,
+/// which is safe there because <c>operator&lt;</c> and <c>operator&gt;&gt;</c> are assumed to agree.
+/// Here the bin index is <c>(key &gt;&gt; log_divisor) - div_min</c>, so it only lands inside
+/// <c>[0, binCount)</c> when <c>div_min</c>/<c>div_max</c> are the extremes <em>by key</em>. Floating
+/// point breaks the assumption in two ways: <see cref="SortSpan{T, TComparer, TContext}"/>
+/// specializes <see cref="ComparableComparer{T}"/> to raw IEEE 754 operators, under which NaN is
+/// unordered and so is never selected as the minimum even though its key is 0; and even the
+/// unspecialized <c>CompareTo</c> path reports <c>-0.0</c> and <c>+0.0</c> as equal
+/// (<c>-0.0 == 0.0</c> is true) while <c>-0.0</c> carries the strictly smaller key. Either way the
+/// comparison-derived minimum fails to bound the keys.</para>
+/// <para>Only the extremes need this treatment. The already-sorted check keeps using the comparer,
+/// which is both faster and still sound: after the NaN pre-pass the two orders differ only on the
+/// <c>-0.0</c>/<c>+0.0</c> tie, and either arrangement of a tie is a valid sorted result.</para>
+/// <para>That leaves the per-bin PDQSort fallback, which does use <c>TComparer</c>. NaN would still
+/// be unordered there (its key is 0, so it shares the lowest bin with the most negative values), so
+/// the floating-point overloads partition NaN to the front first — the same pre-pass PDQSort and
+/// IntroSort use — and spread only the ordered tail.</para>
+/// <para><c>-0.0</c> and <c>+0.0</c> are a genuine tie: equal under IEEE 754 <em>and</em> under
+/// <see cref="IComparable{T}"/>. Since they also carry adjacent keys they normally land in the same
+/// bin, so their relative order is left unspecified, exactly as in <c>Array.Sort</c>. SpreadSort is
+/// unstable, so no tie order is promised anywhere.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Boost.Sort SpreadSort: https://www.boost.org/doc/libs/release/libs/sort/doc/html/sort/sort_hpp/spreadsort.html</para>
 /// <para>Paper: "Spreadsort: A Cache-Friendly Sorting Algorithm" by Steven Ross (2002) https://github.com/boostorg/sort/blob/develop/doc/papers/original_spreadsort06_2002.pdf</para>
@@ -63,7 +89,6 @@ public static class SpreadSort
     const int LogMinSplitCount = 9;                   // int_log_min_split_count: minimum split count for spreading
     const int LogFinishingCount = 31;                 // int_log_finishing_count: threshold for one-pass completion
     const int MinSortSize = 1000;                     // min_sort_size: minimum size to use spreadsort
-    const int InsertionSortCutoff = 16;               // Switch to insertion sort for tiny ranges within bins
 
     // Buffer identifiers for visualization
     const int BUFFER_MAIN = 0;
@@ -155,33 +180,33 @@ public static class SpreadSort
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<Half> span)
-        => SortCore(span, default(HalfRadixKey), new ComparableComparer<Half>(), NullContext.Default);
+        => SortFloatCore(span, default(HalfRadixKey), NullContext.Default);
 
     /// <inheritdoc cref="Sort(Span{Half})"/>
     public static void Sort<TContext>(Span<Half> span, TContext context) where TContext : ISortContext
-        => SortCore(span, default(HalfRadixKey), new ComparableComparer<Half>(), context);
+        => SortFloatCore(span, default(HalfRadixKey), context);
 
     /// <summary>
     /// Sorts <see cref="float"/> values via the IEEE 754 total-order key transform.
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<float> span)
-        => SortCore(span, default(SingleRadixKey), new ComparableComparer<float>(), NullContext.Default);
+        => SortFloatCore(span, default(SingleRadixKey), NullContext.Default);
 
     /// <inheritdoc cref="Sort(Span{float})"/>
     public static void Sort<TContext>(Span<float> span, TContext context) where TContext : ISortContext
-        => SortCore(span, default(SingleRadixKey), new ComparableComparer<float>(), context);
+        => SortFloatCore(span, default(SingleRadixKey), context);
 
     /// <summary>
     /// Sorts <see cref="double"/> values via the IEEE 754 total-order key transform.
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<double> span)
-        => SortCore(span, default(DoubleRadixKey), new ComparableComparer<double>(), NullContext.Default);
+        => SortFloatCore(span, default(DoubleRadixKey), NullContext.Default);
 
     /// <inheritdoc cref="Sort(Span{double})"/>
     public static void Sort<TContext>(Span<double> span, TContext context) where TContext : ISortContext
-        => SortCore(span, default(DoubleRadixKey), new ComparableComparer<double>(), context);
+        => SortFloatCore(span, default(DoubleRadixKey), context);
 
     static void SortCore<T, TRadixKey, TComparer, TContext>(Span<T> span, TRadixKey radixKey, TComparer comparer, TContext context)
         where TRadixKey : struct, IRadixKeySelector<T>
@@ -200,15 +225,78 @@ public static class SpreadSort
             return;
         }
 
-        SpreadCore(s, radixKey);
+        SpreadCore(s, radixKey, 0, s.Length);
     }
 
-    static void SpreadCore<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey)
+    /// <summary>
+    /// Entry point for the floating-point overloads. Identical to <see cref="SortCore"/> apart from
+    /// NaN handling: NaN maps to key 0 and therefore shares the lowest bin with the most negative
+    /// values, where the comparisons <c>TComparer</c> performs leave it unordered.
+    /// </summary>
+    /// <remarks>
+    /// The spread path needs no NaN pre-pass here — <see cref="SpreadSortRec"/> detects NaN from the
+    /// extremes it already computes — so NaN-free and already-sorted input pays nothing for this.
+    /// The small-input path does need one, because <see cref="PDQSort.SortCore"/> is the internal
+    /// entry and, unlike PDQSort's public entry, does not partition NaN itself.
+    /// </remarks>
+    static void SortFloatCore<T, TRadixKey, TContext>(Span<T> span, TRadixKey radixKey, TContext context)
+        where T : IComparable<T>
+        where TRadixKey : struct, IRadixKeySelector<T>
+        where TContext : ISortContext
+    {
+        if (span.Length <= 1) return;
+
+        RadixKeyGuard.ValidateKeyBits<T, TRadixKey>();
+        var s = new SortSpan<T, ComparableComparer<T>, TContext>(span, context, new ComparableComparer<T>(), BUFFER_MAIN);
+
+        if (span.Length < MinSortSize)
+        {
+            var nanEnd = FloatingPointUtils.MoveNaNsToFront(s, 0, span.Length);
+            PDQSort.SortCore(s, nanEnd, span.Length);
+            return;
+        }
+
+        SpreadCore(s, radixKey, 0, span.Length);
+    }
+
+    /// <summary>
+    /// Capacity the bin cache must have for a key of <paramref name="keyBits"/> bits.
+    /// </summary>
+    /// <remarks>
+    /// <para>Boost's <c>bin_cache</c> is a <c>std::vector</c> that <c>size_bins</c> grows on demand
+    /// (<c>bin_cache.resize(cache_end)</c>), so it never needs a closed-form bound. A single pooled
+    /// rental does, and it is NOT n: <c>binCount</c> is derived from the key range, not from the
+    /// element count, so a level with few elements spread over a wide range still claims thousands
+    /// of slots. The bound below comes from the recursion structure instead.</para>
+    /// <para>Per level, <c>bits = logRange - logDivisor</c> and <c>binCount = 2^bits</c>:</para>
+    /// <list type="bullet">
+    /// <item><description>A level that recurses has <c>logDivisor != 0</c>, so <c>get_log_divisor</c>'s
+    /// max_splits clamp caps <c>bits</c> at <see cref="MaxSplits"/> — at most 2^11 slots.</description></item>
+    /// <item><description>A level with <c>logDivisor == 0</c> takes up to 2^<see cref="MaxFinishingSplits"/>
+    /// slots but returns before recursing, so it can only ever be the last level of a chain.</description></item>
+    /// <item><description>Each level consumes at least 8 bits of range: <c>bits</c> is
+    /// <c>roughLog2(count) - 2</c> (clamped to <see cref="MaxSplits"/>), and <c>count</c> is at least
+    /// <see cref="MinSortSize"/> at the root and at least <c>get_min_count</c>'s floor of 2^11 in any
+    /// recursive call. A child's range is bounded by its parent's <c>logDivisor</c>, so the chain is
+    /// at most <c>keyBits / 8</c> levels deep.</description></item>
+    /// </list>
+    /// <para>The <c>+ 1</c> is slack for the root, which may consume as few as 8 bits while the bound
+    /// divides by 8 exactly. <see cref="SpreadSortRec"/> also re-checks the capacity and falls back to
+    /// PDQSort rather than indexing out of range, so a miscalculation here degrades to a slower sort
+    /// instead of a crash.</para>
+    /// </remarks>
+    static int BinCacheCapacity(int keyBits)
+        => ((keyBits / 8) + 1) * (1 << MaxSplits) + (1 << MaxFinishingSplits);
+
+    [SkipLocalsInit]
+    static void SpreadCore<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, int first, int last)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Boost: bin_sizes array sized to 1 << max_finishing_splits (4096)
+        // Boost: bin_sizes array sized to 1 << max_finishing_splits (4096).
+        // SkipLocalsInit: only binSizes[..binCount] is ever touched, and size_bins' equivalent
+        // (currentBinSizes.Clear()) zeroes exactly that prefix before the counting pass.
         Span<int> binSizes = stackalloc int[1 << MaxFinishingSplits];
 
         // Boost: bin_cache is a std::vector<RandomAccessIter> shared across recursive levels.
@@ -216,15 +304,12 @@ public static class SpreadSort
         // Siblings never coexist on the stack — the parent loops sequentially, so each
         // child reuses the region starting at the parent's cacheEnd. Only the current
         // ancestor chain's regions are live at any time.
-        //
-        // Worst-case depth is bounded: each bin has >= 2 elements (singletons are skipped),
-        // and the deepest chain of bins partitions n elements, so the sum of binCounts
-        // along any root-to-leaf path is <= n. Pre-allocating s.Length is therefore sufficient.
-        var rentedCache = ArrayPool<int>.Shared.Rent(s.Length);
+        var capacity = BinCacheCapacity(TRadixKey.KeyBits);
+        var rentedCache = ArrayPool<int>.Shared.Rent(capacity);
         try
         {
-            var binCache = rentedCache.AsSpan(0, s.Length);
-            SpreadSortRec(s, radixKey, 0, s.Length, binCache, 0, binSizes);
+            var binCache = rentedCache.AsSpan(0, capacity);
+            SpreadSortRec(s, radixKey, first, last, binCache, 0, binSizes);
         }
         finally
         {
@@ -248,11 +333,36 @@ public static class SpreadSort
         var count = last - first;
 
         // Boost: is_sorted_or_find_extremes — combined sorted check + min/max finding
-        if (!IsSortedOrFindExtremes(s, first, last, out var minIdx, out var maxIdx))
-            return; // Already sorted
+        if (!IsSortedOrFindExtremes(s, radixKey, first, last, out var minKey, out var maxKey))
+            return; // Already sorted. A comparer-sorted verdict also rules out NaN: NaN is unordered
+                    // under the comparisons SortSpan performs, so any NaN breaks the ascending walk.
 
-        var minKey = radixKey.GetKey(s.Read(minIdx));
-        var maxKey = radixKey.GetKey(s.Read(maxIdx));
+        // NaN maps to key 0 and no non-NaN floating-point value does (-0.0 maps to 0x7FF...F, not 0),
+        // so the extremes pass has already detected NaN — no dedicated scan needed. NaN cannot be
+        // ordered by TComparer, so partition it to the front and re-derive the extremes over what is
+        // left. Folded away for non-floating-point T, where key 0 is an ordinary value and
+        // MoveNaNsToFront compiles to `return first`.
+        if (minKey == 0)
+        {
+            var nanEnd = FloatingPointUtils.MoveNaNsToFront(s, first, last);
+            if (nanEnd != first)
+            {
+                first = nanEnd;
+                count = last - first;
+                if (count <= 1) return; // all NaN, and NaN values are mutually equal
+
+                // Removing the NaN values can take the remainder below min_sort_size; apply the
+                // same policy the entry point does rather than spreading a tiny range.
+                if (count < MinSortSize)
+                {
+                    PDQSort.SortCore(s, first, last);
+                    return;
+                }
+
+                if (!IsSortedOrFindExtremes(s, radixKey, first, last, out minKey, out maxKey))
+                    return;
+            }
+        }
 
         // Compute log₂ of the value range (Boost: rough_log_2_size(max - min))
         var range = maxKey - minKey;
@@ -266,8 +376,16 @@ public static class SpreadSort
         var divMax = (long)(maxKey >> logDivisor);
         var binCount = (int)(divMax - divMin) + 1;
 
-        // Boost: size_bins — clear bin_sizes and ensure bin_cache has space
+        // Boost: size_bins — clear bin_sizes and ensure bin_cache has space.
+        // Boost resizes bin_cache here; the pooled rental cannot grow, so on the (expected
+        // unreachable) capacity miss fall back to a comparison sort instead of indexing past
+        // the end. See BinCacheCapacity for why this cannot fire.
         var cacheEnd = cacheOffset + binCount;
+        if (cacheEnd > binCache.Length)
+        {
+            PDQSort.SortCore(s, first, last);
+            return;
+        }
 
         var currentBinSizes = binSizes[..binCount];
         currentBinSizes.Clear();
@@ -279,36 +397,37 @@ public static class SpreadSort
         {
             var key = radixKey.GetKey(s.Read(i));
             var bin = (int)((long)(key >> logDivisor) - divMin);
-            currentBinSizes[bin]++;
+            BinAt(currentBinSizes, bin)++;
         }
 
         // Phase 2: Compute bin positions (prefix sum using absolute indices)
         s.Context.OnPhase(SortPhase.DistributionAccumulate);
         bins[0] = first;
         for (var u = 0; u < binCount - 1; u++)
-            bins[u + 1] = bins[u] + currentBinSizes[u];
+            BinAt(bins, u + 1) = BinAt(bins, u) + BinAt(currentBinSizes, u);
 
-        // Phase 3: In-place 3-way swap (Boost: dominates runtime)
+        // Phase 3: In-place 3-way swap (Boost: dominates runtime, mostly in the swap and
+        // bin lookups — hence the bounds-check-free BinAt accessor).
         // Each bin position pointer advances as elements are swapped into place.
         s.Context.OnPhase(SortPhase.DistributionWrite);
         var nextBinStart = first;
         for (var u = 0; u < binCount - 1; u++)
         {
-            var localBinPos = bins[u];
-            nextBinStart += currentBinSizes[u];
+            var localBinPos = BinAt(bins, u);
+            nextBinStart += BinAt(currentBinSizes, u);
             for (var current = localBinPos; current < nextBinStart; current++)
             {
                 var targetBin = (int)((long)(radixKey.GetKey(s.Read(current)) >> logDivisor) - divMin);
                 while (targetBin != u)
                 {
                     // 3-way swap: reduces copies per item (Boost: ~1% faster than 2-way)
-                    var b = bins[targetBin]++;
+                    var b = BinAt(bins, targetBin)++;
                     var bBin = (int)((long)(radixKey.GetKey(s.Read(b)) >> logDivisor) - divMin);
 
                     T tmp;
                     if (bBin != u)
                     {
-                        var c = bins[bBin]++;
+                        var c = BinAt(bins, bBin)++;
                         tmp = s.Read(c);
                         s.Write(c, s.Read(b));
                     }
@@ -322,7 +441,7 @@ public static class SpreadSort
                     targetBin = (int)((long)(radixKey.GetKey(s.Read(current)) >> logDivisor) - divMin);
                 }
             }
-            bins[u] = nextBinStart;
+            BinAt(bins, u) = nextBinStart;
         }
         bins[binCount - 1] = last;
 
@@ -344,13 +463,12 @@ public static class SpreadSort
             if (binLength < 2)
                 continue;
 
-            // Boost: use pdqsort if its worst-case is better for this bin
+            // Boost: use pdqsort if its worst-case is better for this bin.
+            // No separate insertion-sort cutoff here: PDQSort already switches to insertion sort
+            // below its own threshold and reports the HybridToInsertionSort phase while doing so.
             if (binLength < maxCount)
             {
-                if (binLength <= InsertionSortCutoff)
-                    InsertionSort.SortCore(s, binEnd - binLength, binEnd);
-                else
-                    PDQSort.SortCore(s, binEnd - binLength, binEnd);
+                PDQSort.SortCore(s, binEnd - binLength, binEnd);
             }
             else
             {
@@ -360,41 +478,101 @@ public static class SpreadSort
     }
 
     /// <summary>
+    /// Bounds-check-free access to a bin slot. Bin indices are derived from radix keys that the
+    /// comparer-based min/max search has already bounded (see the comparer/key agreement invariant),
+    /// so the index is always within the span. DEBUG keeps the bounds check so a violated invariant
+    /// surfaces as an exception in tests rather than as silent corruption; this mirrors
+    /// <see cref="SortSpan{T, TComparer, TContext}"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static ref int BinAt(Span<int> bins, int index)
+    {
+#if DEBUG
+        return ref bins[index];
+#else
+        return ref Unsafe.Add(ref MemoryMarshal.GetReference(bins), (nint)(uint)index);
+#endif
+    }
+
+    /// <summary>
     /// Boost: is_sorted_or_find_extremes — combined sorted check and min/max finding.
     /// Returns true if NOT sorted (i.e., needs sorting). Returns false if already sorted.
     /// </summary>
+    /// <remarks>
+    /// <para>The sorted check stays comparison-based, exactly as in Boost. That keeps
+    /// <see cref="SortSpan{T, TComparer, TContext}"/>'s primitive specialization and, more
+    /// importantly, keeps the loop free of a loop-carried dependency: both operands are loaded
+    /// independently each iteration, so it pipelines. It is safe to decide "already sorted" this way
+    /// because after the NaN pre-pass the comparer and the key disagree only on the
+    /// <c>-0.0</c>/<c>+0.0</c> tie, where both orders are non-decreasing and the tie order is
+    /// unspecified anyway.</para>
+    /// <para>The extremes are a different matter — they must be the extremes <em>by key</em> (see the
+    /// class remarks), and the comparison walk cannot supply them, so an unsorted range is scanned
+    /// once more for min/max by key. This costs a pass only on input that is actually going to be
+    /// distributed; already-sorted input still returns after the comparison walk alone.</para>
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static bool IsSortedOrFindExtremes<T, TComparer, TContext>(
+    static bool IsSortedOrFindExtremes<T, TRadixKey, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
+        TRadixKey radixKey,
         int first, int last,
-        out int minIdx, out int maxIdx)
+        out ulong minKey, out ulong maxKey)
+        where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        minIdx = first;
-        maxIdx = first;
-
-        var current = first;
         // Walk sorted prefix: advance while next element >= current
+        var current = first;
         while (s.IsGreaterOrEqualAt(current + 1, current))
         {
             if (++current == last - 1)
+            {
+                minKey = 0;
+                maxKey = 0;
                 return false; // Entire range is sorted
+            }
         }
 
-        // The maximum so far is the last element of the sorted prefix
-        maxIdx = current;
-
-        // Continue to find true min and max
-        while (++current < last)
+        // Not sorted. Find the true extremes by key.
+        minKey = ulong.MaxValue;
+        maxKey = ulong.MinValue;
+        var minIdx = first;
+        var maxIdx = first;
+        for (var i = first; i < last; i++)
         {
-            if (s.IsGreaterAt(current, maxIdx))
-                maxIdx = current;
-            else if (s.IsLessAt(current, minIdx))
-                minIdx = current;
+            var key = radixKey.GetKey(s.Read(i));
+            ReportKeyCompare(s, i, minIdx, key, minKey);
+            if (key < minKey)
+            {
+                minKey = key;
+                minIdx = i;
+            }
+            ReportKeyCompare(s, i, maxIdx, key, maxKey);
+            if (key > maxKey)
+            {
+                maxKey = key;
+                maxIdx = i;
+            }
         }
 
         return true; // Not sorted, needs sorting
+    }
+
+    /// <summary>
+    /// Reports a key comparison to the context so observers still see the work this pass does.
+    /// Element reads are already reported by <see cref="SortSpan{T, TComparer, TContext}.Read"/>.
+    /// The whole body — including the index bookkeeping feeding it — folds away under NullContext.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static void ReportKeyCompare<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, int i, int j, ulong keyI, ulong keyJ)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            s.Context.OnCompare(s.Offset + i, s.Offset + j, keyI.CompareTo(keyJ), s.BufferId, s.BufferId);
+        }
     }
 
     /// <summary>

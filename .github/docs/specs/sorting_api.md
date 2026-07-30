@@ -65,6 +65,31 @@ SpreadSort's sorted-input early detection by ~67% (key transform on every compar
 natural comparer for built-in element types recovered baseline performance while the key-selector
 path keeps its by-construction consistency.
 
+Lesson learned: "order-consistent with the key" is a stronger requirement than the natural comparer
+satisfies for floating point, and violating it is a crash rather than merely unsorted output. A
+distribution sort that derives a bucket index as `key - min` needs `min` to be the minimum *by key*;
+if the comparer disagrees, the index leaves the bucket array. The natural comparer disagrees twice
+over: `SortSpan` specializes it to raw IEEE 754 operators, under which NaN is unordered and so is
+never selected as the minimum even though its key is the smallest; and `CompareTo` itself reports
+`-0.0` and `+0.0` as equal (because `-0.0 == 0.0`) while their keys differ. Neither shows up in
+Debug — `SortSpan`'s debug path routes through the comparer — nor under an observing context, so
+this class of defect needs Release tests on the no-context overload specifically.
+
+The resolution that kept both properties: find the extremes by key (correctness), keep the
+already-sorted check on the comparer (speed — it retains the primitive specialization and has no
+loop-carried dependency), and detect NaN from the extremes rather than with a dedicated pre-pass,
+since NaN is the only floating-point value mapping to key 0. Making the whole pass key-based instead
+was measurably worse: hoisting the previous key into a local serialized a loop that had previously
+pipelined, costing ~3x on already-sorted `double`.
+
+Lesson learned: a bin cache sized at `n` is not a safe substitute for Boost's growable
+`bin_cache`. Bin counts come from the key *range*, not the element count, so a level whose bins are
+mostly empty claims far more slots than it has elements, and `cache_offset + bin_count` can exceed
+`n` (reproducible at n=3000). The correct bound is a constant derived from the key width and the
+tuning constants — the recursion can only consume `2^max_splits` slots per level and only
+`keyBits / 8` levels deep — which also removes an O(n) rental: 33.5 MB per sort at n=8M before,
+a fixed ~88 KB pooled buffer after.
+
 ## Stability
 
 Stability is an algorithm property, not a library-wide guarantee. An algorithm documented as stable preserves the original relative order of elements that compare equal. An unstable algorithm may reorder equal elements.
