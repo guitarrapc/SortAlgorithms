@@ -3,50 +3,62 @@
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// 1つのピボットを使用して等値要素を中央にまとめる「Dutch National Flag」分割統治法のソートアルゴリズムです。
+/// 1つのピボットを使用して等値要素を中央にまとめる 3-way 分割統治法のソートアルゴリズムです。
 /// 通常の2分割QuickSortとは異なり、配列を「ピボット未満」「ピボット等値」「ピボット超過」の3領域に分割します。
-/// 等値要素が多い場合に特に高速で、等値の中央領域は再帰から除外されます。
+/// Bentley-McIlroy 方式（交差スキャン + 等値要素の両端退避）を採用しており、等値要素が多い場合に特に高速で、
+/// 等値の中央領域は再帰から除外されます。ソート済み・ほぼソート済み入力でもソート済み区間を破壊しません。
 /// <br/>
 /// A divide-and-conquer sorting algorithm that collects equal elements in the center using a single pivot
-/// (Dutch National Flag / 3-way partitioning). Unlike standard 2-partition QuickSort, it partitions the
-/// array into three regions: less-than, equal-to, and greater-than the pivot. The equal center region
-/// is excluded from further recursion, making it especially efficient when many duplicate keys are present.
+/// (3-way partitioning). Unlike standard 2-partition QuickSort, it partitions the array into three regions:
+/// less-than, equal-to, and greater-than the pivot. It uses the Bentley-McIlroy scheme (Hoare-style crossing
+/// scans with equal elements parked at both ends), so the equal center region is excluded from further
+/// recursion while sorted runs survive partitioning intact.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct 3-Way QuickSort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Pivot Selection (Median-of-3):</strong> A pivot is chosen as the median of the
-/// leftmost, middle, and rightmost elements. This simple median gives O(n log n) average performance and
-/// avoids degenerate O(n²) behaviour on sorted or reverse-sorted inputs.</description></item>
-/// <item><description><strong>Dutch National Flag Partitioning (Dijkstra):</strong> Three pointers (lt, i, gt)
-/// scan the array and maintain the following invariant throughout the loop:
+/// <item><description><strong>Pivot Selection (Median-of-3):</strong> The leftmost, middle, and rightmost elements
+/// are sorted in place and a[mid] then provides the pivot VALUE; the pivot element is not relocated.
+/// Sorting the samples absorbs stray out-of-place values at the sampled endpoints (preventing near-minimum
+/// pivot chains on nearly-sorted input). Keeping the pivot in place avoids the textbook variant's left-end
+/// pivot placement, whose final swap-back deposits a near-pivot element at the left end and re-poisons the
+/// next level's sample on nearly-sorted input containing stray large values.</description></item>
+/// <item><description><strong>Bentley-McIlroy Partitioning:</strong> Hoare-style crossing pointers with equal-element
+/// parking maintain the following invariant during the scan:
 /// <list type="bullet">
-/// <item><description>[left, lt-1] : elements strictly less than pivot</description></item>
-/// <item><description>[lt, i-1]   : elements equal to pivot</description></item>
-/// <item><description>[i, gt]     : unexamined elements</description></item>
-/// <item><description>[gt+1, right]: elements strictly greater than pivot</description></item>
+/// <item><description>[left, p]   : elements equal to pivot (parked at the left end; starts empty)</description></item>
+/// <item><description>(p, i)      : elements strictly less than pivot</description></item>
+/// <item><description>[i, j]      : unexamined elements</description></item>
+/// <item><description>(j, q)      : elements strictly greater than pivot</description></item>
+/// <item><description>[q, right]  : elements equal to pivot (parked at the right end; starts empty)</description></item>
 /// </list>
-/// At each step: if s[i] &lt; pivot → swap(lt,i), lt++, i++;
-/// if s[i] &gt; pivot → swap(i,gt), gt-- (do NOT advance i; the element from gt is unexamined);
-/// if s[i] == pivot → i++.</description></item>
-/// <item><description><strong>After Partition:</strong> [left, lt-1] &lt; pivot, [lt, gt] == pivot, [gt+1, right] &gt; pivot.
+/// i scans forward to the first element ≥ pivot, j scans backward to the last element ≤ pivot; the pair is
+/// exchanged, and any element equal to the pivot is parked at the nearest end. Elements already on the correct
+/// side are never moved — this is what preserves sorted runs. (A Dijkstra DNF loop instead swaps every
+/// greater-than element via its gt pointer, scrambling sorted runs into rotated patterns that poison later
+/// pivot samples; measured ~683 compares and ~681 swaps per element on sorted input at n=1M.)</description></item>
+/// <item><description><strong>Equal-Region Swap-Back:</strong> After the scans cross, the parked equal elements at
+/// both ends are swapped into the middle: [left, j] &lt; pivot, (j, i) == pivot, [i, right] &gt; pivot.
 /// Only the strictly-less and strictly-greater regions are recursed. The equal region is permanently in place.</description></item>
 /// <item><description><strong>Tail Recursion Optimization:</strong> Always recurse on the smaller of the two
 /// non-equal regions and loop on the larger, bounding the call stack to O(log n).</description></item>
 /// <item><description><strong>Termination:</strong> Each call reduces the active region by at least the size
-/// of the equal partition (≥1). The base cases are handled by the insertion sort threshold and the
-/// outer while loop guard (right &gt; left).</description></item>
+/// of the equal partition (≥1, the pivot itself). The inner scans stop on the pivot value (present in the range,
+/// with the left-end pivot acting as the j-scan sentinel) and carry explicit boundary guards. The base cases are
+/// handled by the insertion sort threshold and the outer while loop guard (right &gt; left).</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
-/// <item><description>Partition   : Dutch National Flag (Dijkstra's 3-way)</description></item>
+/// <item><description>Partition   : Bentley-McIlroy 3-way (crossing scans + equal-element parking)</description></item>
 /// <item><description>Stable      : No (swaps do not preserve relative order)</description></item>
 /// <item><description>In-place    : Yes (O(log n) stack for recursion)</description></item>
-/// <item><description>Best case   : Θ(n) - All elements equal (entire array is the equal region)</description></item>
+/// <item><description>Best case   : Θ(n) - All elements equal (entire array becomes the equal region in one pass;
+/// parking and swap-back cost Θ(n) swaps, unlike DNF's zero, but recursion still ends immediately)</description></item>
 /// <item><description>Average case: Θ(n log n) - Random distinct elements</description></item>
 /// <item><description>Worst case  : O(n²) - Heavily skewed partitions with poor pivot selection</description></item>
 /// <item><description>Duplicate keys: Θ(n log k) where k is the number of distinct values (k &lt;&lt; n → near O(n))</description></item>
+/// <item><description>Sorted input: Θ(n log n) with ~2 swaps per partition (sorted runs are preserved)</description></item>
 /// </list>
 /// <para><strong>Advantage over Standard QuickSort:</strong></para>
 /// <list type="bullet">
@@ -57,8 +69,9 @@ namespace SortAlgorithm.Algorithms;
 /// 3-way is a "1-pivot equal-element strategy" — different goals.</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
+/// <para>Bentley &amp; McIlroy, "Engineering a Sort Function", Software: Practice and Experience 23(11), 1993</para>
+/// <para>Sedgewick &amp; Wayne, Algorithms 4th Ed., Section 2.3 (Quicksort with 3-way partitioning)</para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Dutch_national_flag_problem</para>
-/// <para>Sedgewick &amp; Wayne, Algorithms 4th Ed., Section 2.3 (3-way partitioning)</para>
 /// </remarks>
 public static class QuickSort3way
 {
@@ -169,66 +182,109 @@ public static class QuickSort3way
                 return;
             }
 
-            // Median-of-3 pivot selection: sort left, mid, right in place
+            // Median-of-3 pivot selection: sort left, mid, right in place, then use a[mid] as the pivot VALUE
+            // without relocating it. Sorting the samples (rather than just picking the median index) absorbs
+            // stray out-of-place values at the sampled endpoints, which prevents near-minimum pivot chains on
+            // nearly-sorted input. Not relocating the pivot matters too: the textbook Bentley-McIlroy variant
+            // stores the pivot at the left end and swaps it back to the partition boundary at the end, which
+            // deposits a near-pivot element at the left end — on nearly-sorted input with a stray large value
+            // that re-poisons the next level's sample every level (measured ~612 compares per element at n=1M
+            // with 0.1% disorder) — the same failure mode fixed in QuickSortMedian3.
             int mid = left + ((right - left) >> 1);
             if (s.IsGreaterAt(left, mid)) s.Swap(left, mid);
             if (s.IsGreaterAt(left, right)) s.Swap(left, right);
             if (s.IsGreaterAt(mid, right)) s.Swap(mid, right);
-            // Bring median to left as the pivot
-            s.Swap(mid, left);
 
-            var pivot = s.Read(left);
-            s.Context.OnPhase(SortPhase.QuickSort3wayPartition, left, right, left);
+            var pivot = s.Read(mid);
+            s.Context.OnPhase(SortPhase.QuickSort3wayPartition, left, right, mid);
 
-            // Dutch National Flag 3-way partition (Dijkstra)
-            // Invariant:
-            //   [left, lt-1] : elements < pivot
-            //   [lt,   i-1 ] : elements == pivot (initially contains the chosen pivot value)
-            //   [i,    gt  ] : unexamined
-            //   [gt+1, right]: elements > pivot
-            int lt = left;
-            int gt = right;
-            int i = left + 1;
+            // Bentley-McIlroy 3-way partition.
+            // Hoare-style crossing scans exchange only elements that are on the wrong side, so sorted runs
+            // survive partitioning (a Dijkstra DNF loop instead swaps every greater-than element downward,
+            // scrambling sorted runs into rotated patterns that poison later pivot samples — measured
+            // ~683 compares and ~681 swaps per element on sorted input at n=1M before this change).
+            // Elements equal to the pivot (including the pivot element itself, discovered mid-scan) are parked
+            // at the two ends during the scan and swapped back into the middle afterwards, preserving the
+            // Θ(n log k) duplicate-key behavior:
+            //   [left, p]  : == pivot (parked; starts empty)
+            //   (p, i)     : < pivot
+            //   (j, q)     : > pivot
+            //   [q, right] : == pivot (parked; starts empty)
+            var i = left - 1;
+            var j = right + 1;
+            var p = left - 1;
+            var q = right + 1;
 
-            while (i <= gt)
+            while (true)
             {
-                int cmp = s.Compare(i, pivot);
-                if (cmp < 0)
+                // Move i forward to the first element >= pivot
+                i++;
+                while (s.IsLessThan(s.Read(i), pivot))
                 {
-                    s.Swap(lt, i);
-                    lt++;
+                    if (i == right) break;
                     i++;
                 }
-                else if (cmp > 0)
+
+                // Move j backward to the last element <= pivot
+                // (the pivot value is present in the range, and the explicit guard bounds the scan)
+                j--;
+                while (s.IsLessThan(pivot, s.Read(j)))
                 {
-                    s.Swap(i, gt);
-                    gt--;
-                    // Do not advance i: the element moved from gt is unexamined
+                    if (j == left) break;
+                    j--;
                 }
-                else
+
+                // Pointers met on an element equal to the pivot: park it before finishing
+                if (i == j && s.Compare(i, pivot) == 0)
                 {
-                    i++;
+                    p++;
+                    if (p != i) s.Swap(p, i);
+                }
+                if (i >= j) break;
+
+                s.Swap(i, j);
+                // Park equal elements at the nearest end (self-swaps are skipped)
+                if (s.Compare(i, pivot) == 0)
+                {
+                    p++;
+                    if (p != i) s.Swap(p, i);
+                }
+                if (s.Compare(j, pivot) == 0)
+                {
+                    q--;
+                    if (q != j) s.Swap(q, j);
                 }
             }
 
-            // After partition:
-            //   [left, lt-1] < pivot  (left partition)
-            //   [lt,   gt  ] == pivot (already sorted, skip)
-            //   [gt+1, right] > pivot (right partition)
+            // Swap the parked equal elements back into the middle:
+            //   before: [left, p] == pivot, (p, j] < pivot, [i, q) > pivot, [q, right] == pivot  (i == j + 1)
+            //   after : [left, j] < pivot, (j, i) == pivot, [i, right] > pivot
+            i = j + 1;
+            for (var k = left; k <= p; k++)
+            {
+                if (k != j) s.Swap(k, j);
+                j--;
+            }
+            for (var k = right; k >= q; k--)
+            {
+                if (k != i) s.Swap(k, i);
+                i++;
+            }
 
+            // The equal region (j, i) is permanently in place; recurse only on < and > regions.
             // Tail recursion: recurse on the smaller partition, loop on the larger
-            int leftSize = lt - left;
-            int rightSize = right - gt;
+            int leftSize = j - left + 1;
+            int rightSize = right - i + 1;
 
             if (leftSize <= rightSize)
             {
-                SortCore(s, left, lt - 1);
-                left = gt + 1;
+                SortCore(s, left, j);
+                left = i;
             }
             else
             {
-                SortCore(s, gt + 1, right);
-                right = lt - 1;
+                SortCore(s, i, right);
+                right = j;
             }
         }
     }

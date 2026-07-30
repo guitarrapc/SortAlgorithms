@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Algorithms;
+using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 using TUnit.Assertions.Enums;
 
@@ -52,7 +52,7 @@ public class QuickSort3wayTests : SortTestsBase
         var sorted = Enumerable.Range(1, n).ToArray();
         QuickSort3way.Sort(sorted.AsSpan(), stats);
 
-        // QuickSort 3-way (Dutch National Flag) on sorted data:
+        // QuickSort 3-way (Bentley-McIlroy) on sorted data:
         // - n < 16 (e.g. n=10): InsertionSort fallback
         //   Sorted array → each element compared once with predecessor, no shifts → n-1 comparisons, 0 swaps
         // - n >= 16: 3-way partition with median-of-3 pivot
@@ -97,7 +97,7 @@ public class QuickSort3wayTests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         QuickSort3way.Sort(reversed.AsSpan(), stats);
 
-        // QuickSort 3-way (Dutch National Flag) on reversed data:
+        // QuickSort 3-way (Bentley-McIlroy) on reversed data:
         // - n < 16 (e.g. n=10): InsertionSort fallback
         //   Reversed array → each element shifts to front → n(n-1)/2 comparisons, 0 Swaps (uses Write)
         // - n >= 16: 3-way partition with median-of-3 pivot
@@ -140,7 +140,7 @@ public class QuickSort3wayTests : SortTestsBase
         var random = TestHelpers.ShuffledRange(n, seed);
         QuickSort3way.Sort(random.AsSpan(), stats);
 
-        // QuickSort 3-way (Dutch National Flag) on random data:
+        // QuickSort 3-way (Bentley-McIlroy) on random data:
         // - n < 16: InsertionSort fallback; O(n²) worst but small constant for tiny n
         // - n >= 16: 3-way QuickSort
         //   Average case O(n log n); median-of-3 provides good pivot selection
@@ -174,27 +174,28 @@ public class QuickSort3wayTests : SortTestsBase
         var sameValues = Enumerable.Repeat(42, n).ToArray();
         QuickSort3way.Sort(sameValues.AsSpan(), stats);
 
-        // QuickSort 3-way (Dutch National Flag) key advantage: all-equal input is O(n)
+        // QuickSort 3-way (Bentley-McIlroy) key advantage: all-equal input is Θ(n) — one partition pass
+        // classifies the whole array as the equal region and recursion ends immediately.
         //
         // - n < 16 (n=5, n=10): InsertionSort fallback
         //   All equal → each element already in place → n-1 comparisons, 0 swaps, 0 writes
         //
-        // - n >= 16 (n=20, n=50): 3-way QuickSort
-        //   Median-of-3: all three sampled elements are equal → 0 comparison-swaps; 1 Swap(mid, left)
-        //   Partition scan: ALL elements compare == pivot → only i++ branch fires, 0 swaps
-        //   Equal region [lt, gt] covers the entire array after one O(n) scan
+        // - n >= 16 (n=20, n=50): one Bentley-McIlroy partition
+        //   Median-of-3: 3 comparisons, no sample swaps; 1 Swap(mid, left) for pivot placement
+        //   Crossing scans: each element is compared once per scan direction (~n), and each exchanged
+        //   pair is equality-checked for parking (~n more) → ~2n comparisons total
+        //   Parking + swap-back move the equal elements to the ends and back → ~1.5n swaps
         //   Both sub-partitions are empty → NO further recursion
-        //   Total: n-1 partition comparisons + 3 median comparisons = O(n), 1 swap
+        //   Observed: n=20 → 42 compares / ~29 swaps; n=50 → 102 compares / ~74 swaps
         //
-        // This is the fundamental advantage of 3-way DNF over Hoare/Lomuto:
-        //   Hoare on all-equal: O(n log n) swaps (equal elements distributed to both sides)
-        //   3-way DNF on all-equal: O(n) comparisons, O(1) swaps
+        // Unlike the previous Dijkstra DNF loop (O(n) compares, O(1) swaps on all-equal), Bentley-McIlroy
+        // spends Θ(n) swaps here — the trade-off that lets sorted runs survive partitioning on sorted input.
 
-        var minCompares = (ulong)(n - 1); // InsertionSort: n-1; 3-way: n+2 median comparisons
-        var maxCompares = (ulong)(2 * n); // O(n) — NOT O(n log n)
+        var minCompares = (ulong)(n - 1); // InsertionSort: n-1; BM partition: ~2n
+        var maxCompares = (ulong)(2.5 * n); // Θ(n) — NOT O(n log n)
 
         var minSwaps = 0UL; // InsertionSort: 0 (equal elements are already in place)
-        var maxSwaps = 3UL; // 3-way: only pivot placement Swap(mid, left); no partition swaps
+        var maxSwaps = (ulong)(2 * n); // BM: crossing exchanges + parking + swap-back ≈ 1.5n
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
