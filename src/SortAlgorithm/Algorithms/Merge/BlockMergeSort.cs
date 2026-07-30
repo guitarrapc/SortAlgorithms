@@ -89,10 +89,17 @@ public static class BlockMergeSort
     {
         if (span.Length <= 1) return;
 
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        if (span.Length < 8)
+        {
+            // The cache is never touched below 8 elements, so skip the ArrayPool rental entirely.
+            SortSmall(s);
+            return;
+        }
+
         var cacheArray = ArrayPool<T>.Shared.Rent(CacheSize);
         try
         {
-            var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var cache = new SortSpan<T, TComparer, TContext>(cacheArray.AsSpan(0, CacheSize), context, comparer, BUFFER_CACHE);
             SortCore(s, cache);
         }
@@ -102,7 +109,7 @@ public static class BlockMergeSort
         }
     }
 
-    static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> cache)
+    static void SortSmall<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -127,9 +134,31 @@ public static class BlockMergeSort
             return;
         }
 
+        // 4-7 elements: a single sorting-network group covers the whole span
+        var iterator = new BlockIterator(n, 4);
+        s.Context.OnPhase(SortPhase.BlockMergeSortNetwork, n);
+        NetworkSortPass(s, ref iterator);
+    }
+
+    static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> cache)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n = s.Length;
+
         // Phase 1: Sort groups of 4-8 elements using sorting networks
         var iterator = new BlockIterator(n, 4);
         s.Context.OnPhase(SortPhase.BlockMergeSortNetwork, n);
+        NetworkSortPass(s, ref iterator);
+
+        // Phase 2 & 3: Bottom-up merge
+        MergeLevels(s, cache, ref iterator);
+    }
+
+    static void NetworkSortPass<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ref BlockIterator iterator)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
         while (!iterator.Finished())
         {
             Span<byte> order = [0, 1, 2, 3, 4, 5, 6, 7];
@@ -212,9 +241,13 @@ public static class BlockMergeSort
             }
         }
 
-        if (n < 8) return;
+    }
 
-        // Phase 2 & 3: Bottom-up merge
+    static void MergeLevels<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> cache, ref BlockIterator iterator)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n = s.Length;
         var passNum = 1;
         while (true)
         {
