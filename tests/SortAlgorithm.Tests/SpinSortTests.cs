@@ -14,6 +14,84 @@ public class SpinSortTests : StableSortTestsBase
     protected override CountExpectation SortedInputWrites => CountExpectation.Zero;
     protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
+    // Boost's util::merge / util::merge_half spend one comparison on merges of 1024+ elements to detect
+    // runs that need no interleaving. Each shape below pins one branch of that probe, and n = 512 keeps
+    // every merge under the threshold so the probe is skipped entirely.
+    [Test]
+    [Arguments(512, "ascendingBlocks")]
+    [Arguments(512, "descendingBlocks")]
+    [Arguments(512, "interleaved")]
+    [Arguments(8192, "ascendingBlocks")]  // probe finds the runs already in order
+    [Arguments(8192, "descendingBlocks")] // probe finds the runs fully inverted
+    [Arguments(8192, "interleaved")]      // probe fails, element-wise merge runs
+    public async Task MergeProbeShapesTest(int n, string shape)
+    {
+        const int block = 128;
+        var rng = new Random(42);
+        var items = new StabilityTestItem[n];
+        for (var i = 0; i < n; i++)
+        {
+            var value = shape switch
+            {
+                "ascendingBlocks" => (i / block) * block + rng.Next(block),
+                "descendingBlocks" => (n / block - 1 - i / block) * block + rng.Next(block),
+                "interleaved" => rng.Next(0, n / 4),
+                _ => throw new ArgumentOutOfRangeException(nameof(shape)),
+            };
+            items[i] = new StabilityTestItem(value, i);
+        }
+
+        var expected = items.OrderBy(x => x.Value).ToArray();
+
+        SpinSort.Sort(items.AsSpan(), new StatisticsContext());
+
+        await Assert.That(items).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    // CheckStableSort routes a short unsorted tail through insert_partial_sort, which locates every tail
+    // element with a binary search. The shapes cover where the tail lands: before the prefix, after it,
+    // scattered through it, and exactly on existing keys (where upper_bound must insert after equals).
+    [Test]
+    [Arguments("lowTail")]
+    [Arguments("highTail")]
+    [Arguments("scatteredTail")]
+    [Arguments("duplicateTail")]
+    [Arguments("descendingPrefix")]
+    public async Task PartialTailInsertionTest(string shape)
+    {
+        const int n = 8192;
+        const int tailLen = 32;
+        var rng = new Random(42);
+        var items = new StabilityTestItem[n];
+
+        for (var i = 0; i < n - tailLen; i++)
+        {
+            // values are spaced so a tail element can fall strictly between two prefix keys
+            var value = shape == "descendingPrefix" ? (n - tailLen - i) * 2 : i * 2;
+            items[i] = new StabilityTestItem(value, i);
+        }
+
+        for (var i = n - tailLen; i < n; i++)
+        {
+            var value = shape switch
+            {
+                "lowTail" => -1000 + i - n,
+                "highTail" => 1_000_000 + i,
+                "scatteredTail" => rng.Next(0, n * 2),
+                "duplicateTail" => rng.Next(0, n - tailLen) * 2, // collides with prefix keys
+                "descendingPrefix" => rng.Next(0, n * 2),
+                _ => throw new ArgumentOutOfRangeException(nameof(shape)),
+            };
+            items[i] = new StabilityTestItem(value, i);
+        }
+
+        var expected = items.OrderBy(x => x.Value).ToArray();
+
+        SpinSort.Sort(items.AsSpan(), new StatisticsContext());
+
+        await Assert.That(items).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
     [Test]
     [Arguments(1)]
     [Arguments(2)]

@@ -33,6 +33,12 @@ namespace SortAlgorithm.Algorithms;
 /// is needed.</description></item>
 /// <item><description><strong>SortRangeSort:</strong> A standalone entry point that computes its own nlevel
 /// and dispatches to RangeSort. Used by CheckStableSort to sort unsorted tails.</description></item>
+/// <item><description><strong>MIN_CHECK Merge Probe:</strong> Boost's <c>util::merge</c> and
+/// <c>util::merge_half</c> spend one comparison on merges of 1024+ elements to detect runs that are
+/// already in order (or fully inverted) and replace the merge with bulk copies.</description></item>
+/// <item><description><strong>Binary-Search Tail Insertion:</strong> <c>insert_partial_sort</c> locates each
+/// tail element with <c>upper_bound</c> and shifts the prefix in blocks, so inserting a short unsorted
+/// tail costs O(tailLen · log prefixLen) comparisons instead of one per shifted element.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -59,6 +65,10 @@ public static class SpinSort
 
     // Boost's inner sort_min = 32, used in RangeSort base case and CheckStableSort.
     private const int SORT_MIN_INTERNAL = 32;
+
+    // Boost util::merge / util::merge_half MIN_CHECK: minimum combined run length for which the
+    // "already ordered" probe is attempted before falling back to the element-wise merge.
+    private const int MIN_CHECK = 1024;
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -404,9 +414,17 @@ public static class SpinSort
     }
 
     /// <summary>
-    /// Merges a small sorted tail data[mid..last) into a larger sorted prefix data[first..mid)
-    /// using right-to-left merge. Uses aux as temporary storage for the tail during merge.
+    /// Merges a small sorted tail data[mid..last) into a larger sorted prefix data[first..mid).
+    /// Uses aux as temporary storage for the tail during the insertion.
     /// </summary>
+    /// <remarks>
+    /// Mirrors Boost's <c>insert_partial_sort</c>: each tail element's destination is located with
+    /// <see cref="UpperBound"/> and the prefix elements between two consecutive destinations are
+    /// shifted as a block, so the comparison count is O(tailLen · log prefixLen) instead of being
+    /// proportional to the shift distance. Boost stores the destinations in a <c>std::vector</c> and
+    /// then walks it backwards; processing the tail from its largest element instead makes the same
+    /// traversal possible without the position array, because the destinations are monotonic.
+    /// </remarks>
     private static void InsertPartialSort<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> data, int first, int mid, int last,
         SortSpan<T, TComparer, TContext> aux, int auxStart)
@@ -416,38 +434,55 @@ public static class SpinSort
         var tailLen = last - mid;
         if (tailLen == 0 || mid == first) return;
 
-        // Copy sorted tail to aux for the merge
+        // Copy the sorted tail out; data[mid..last) becomes free space for the shifted prefix.
         data.CopyTo(mid, aux, auxStart, tailLen);
 
-        // Right-to-left merge: prefix (data[first..mid)) + tail (aux[auxStart..+tailLen))
-        var ai = mid - 1;
-        var bi = tailLen - 1;
-        var di = last - 1;
-
-        while (bi >= 0)
+        var moveLast = mid;
+        for (var remaining = tailLen; remaining > 0; remaining--)
         {
-            if (ai >= first)
+            var value = aux.Read(auxStart + remaining - 1);
+            var moveFirst = UpperBound(data, first, moveLast, value);
+
+            if (moveFirst != moveLast)
             {
-                var aVal = data.Read(ai);
-                var bVal = aux.Read(auxStart + bi);
-                if (data.IsGreaterThan(aVal, bVal))
-                {
-                    data.Write(di--, aVal);
-                    ai--;
-                }
-                else
-                {
-                    data.Write(di--, bVal);
-                    bi--;
-                }
+                // Shift the prefix block forward by the number of tail elements still to place.
+                // Source and destination overlap; SortSpan.CopyTo delegates to Span<T>.CopyTo,
+                // which uses Buffer.Memmove and therefore handles the overlap.
+                data.CopyTo(moveFirst, data, moveFirst + remaining, moveLast - moveFirst);
+            }
+
+            data.Write(moveFirst + remaining - 1, value);
+            moveLast = moveFirst;
+        }
+    }
+
+    /// <summary>
+    /// Binary search returning the first index in [<paramref name="first"/>..<paramref name="last"/>)
+    /// where <c>s[i] &gt; <paramref name="value"/></c> (strict upper bound).
+    /// </summary>
+    /// <remarks>
+    /// Uses <c>IsLessOrEqual(s[mid], value)</c>: advances past equal elements, so the insertion point
+    /// is <em>after</em> any equal values, matching Boost's <c>std::upper_bound</c> and preserving stability.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int UpperBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, T value)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        while (first < last)
+        {
+            var mid = first + ((last - first) >> 1);
+            if (s.IsLessOrEqual(s.Read(mid), value))
+            {
+                first = mid + 1;
             }
             else
             {
-                // Prefix exhausted: copy remaining tail elements from aux
-                aux.CopyTo(auxStart, data, first, bi + 1);
-                break;
+                last = mid;
             }
         }
+
+        return first;
     }
 
     /// <summary>
@@ -465,6 +500,28 @@ public static class SpinSort
         var di = dstStart;
         var leftEnd = left1 + len1;
         var rightEnd = left2 + len2;
+
+        // Boost util::merge's MIN_CHECK short-circuit: on large merges, one comparison can prove the
+        // two runs are already in order (or fully inverted), turning the merge into bulk copies.
+        // Keeping this inline matters: extracting it into a non-inlined helper cost ~9% on random input.
+        if (len1 + len2 >= MIN_CHECK && len1 != 0 && len2 != 0)
+        {
+            // src[left2] >= src[leftEnd - 1]: the runs concatenate as-is.
+            if (src.IsGreaterOrEqualAt(left2, leftEnd - 1))
+            {
+                src.CopyTo(left1, dst, di, len1);
+                src.CopyTo(left2, dst, di + len1, len2);
+                return;
+            }
+
+            // src[rightEnd - 1] < src[left1]: the whole right run precedes the whole left run.
+            if (src.IsLessAt(rightEnd - 1, left1))
+            {
+                src.CopyTo(left2, dst, di, len2);
+                src.CopyTo(left1, dst, di + len2, len1);
+                return;
+            }
+        }
 
         while (li < leftEnd && ri < rightEnd)
         {
@@ -504,6 +561,27 @@ public static class SpinSort
         var di = mainStart;
         var leftEnd = leftLen;
         var rightEnd = mainStart + leftLen + rightLen;
+
+        // Boost util::merge_half's MIN_CHECK short-circuit. Same idea as MergeFromSrcToDst, except the
+        // right run already occupies its final tail position, so the ordered case only copies the buffer.
+        if (leftLen + rightLen >= MIN_CHECK && leftLen != 0 && rightLen != 0)
+        {
+            // main[ri] >= buf[leftEnd - 1]: the runs concatenate as-is; the right run stays put.
+            if (main.IsGreaterOrEqual(main.Read(ri), buf.Read(leftEnd - 1)))
+            {
+                buf.CopyTo(0, main, di, leftLen);
+                return;
+            }
+
+            // main[rightEnd - 1] < buf[0]: the whole right run precedes the buffer.
+            // The move overlaps when rightLen > leftLen; Span<T>.CopyTo handles that.
+            if (main.IsLessThan(main.Read(rightEnd - 1), buf.Read(0)))
+            {
+                main.CopyTo(ri, main, di, rightLen);
+                buf.CopyTo(0, main, di + rightLen, leftLen);
+                return;
+            }
+        }
 
         while (li < leftEnd && ri < rightEnd)
         {
