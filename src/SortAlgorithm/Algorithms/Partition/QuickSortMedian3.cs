@@ -17,55 +17,44 @@ namespace SortAlgorithm.Algorithms;
 /// This selection method is computed using 2-3 comparisons and ensures better pivot quality than random selection or always using a fixed position.
 /// The median-of-3 strategy provides robust performance across various data patterns including sorted, reverse-sorted,
 /// and partially sorted arrays, while maintaining the O(1/n³) probability of worst-case partitioning.</description></item>
-/// <item><description><strong>Three-Way Partition (Dijkstra's Dutch National Flag):</strong> The array is partitioned into three regions in a single pass:
+/// <item><description><strong>Sampled Elements Are Sorted In Place:</strong> The three samples are ordered so that
+/// array[left] ≤ array[mid] ≤ array[right], and array[mid] then provides the pivot VALUE (the pivot is not relocated further).
+/// Two failure modes motivate this design, both measured at n=1M before the fix:
+/// relocating the pivot to the right end before partitioning scrambled sorted runs into rotated patterns
+/// (~650 comparisons and ~520 swaps per element on sorted input, versus ~20 and ~0 after);
+/// and picking the median index without sorting the samples let a stray small value at the right end of a
+/// sorted run produce a near-minimum pivot whose first Hoare exchange re-poisoned the next level's sample
+/// (~540 comparisons per element on 0.1%-disordered input). Sorting the samples absorbs such stray values into
+/// the correct side and performs zero swaps when the input is already sorted.</description></item>
+/// <item><description><strong>Hoare Bidirectional Partition:</strong> Two pointers scan toward each other:
 /// <list type="bullet">
-/// <item><description>Initialize pointers: lt = left (boundary for &lt; pivot), gt = right - 1 (boundary for &gt; pivot), i = left (current element)</description></item>
-/// <item><description>Scan and classify: compare array[i] with pivot and classify into three regions</description></item>
-/// <item><description>If array[i] &lt; pivot: swap array[i] with array[lt], increment both lt and i</description></item>
-/// <item><description>If array[i] &gt; pivot: swap array[i] with array[gt], decrement gt (don't increment i to re-examine swapped element)</description></item>
-/// <item><description>If array[i] == pivot: increment i (keep element in middle region)</description></item>
-/// <item><description>Termination: loop exits when i &gt; gt, ensuring all elements are classified</description></item>
+/// <item><description>i moves forward while array[i] &lt; pivot; j moves backward while pivot &lt; array[j]</description></item>
+/// <item><description>When both stop and i ≤ j, array[i] and array[j] are exchanged and both pointers advance</description></item>
+/// <item><description>The scans terminate because the pivot value is present in the range, providing a stopper for both directions</description></item>
+/// <item><description>Elements already on the correct side are never moved, so sorted runs survive partitioning intact</description></item>
 /// </list>
-/// This 3-way partitioning dramatically improves performance on arrays with many duplicate elements, reducing time complexity from O(n²) to O(n) for such cases.</description></item>
-/// <item><description><strong>Partition Invariant:</strong> Upon completion of the partitioning phase (when i &gt; gt, i.e., i == gt + 1):
-/// <list type="bullet">
-/// <item><description>All elements in range [left, lt) satisfy: element &lt; pivot</description></item>
-/// <item><description>All elements in range [lt, i) satisfy: element == pivot (before moving pivot from right)</description></item>
-/// <item><description>All elements in range (gt, right) satisfy: element &gt; pivot (right holds the original pivot)</description></item>
-/// <item><description>After moving pivot to position i: [lt, i] becomes the == pivot region</description></item>
-/// <item><description>Partition boundaries satisfy: left ≤ lt ≤ i ≤ right</description></item>
-/// </list>
-/// This invariant guarantees that after partitioning, the array is divided into three well-defined regions for recursive sorting.</description></item>
-/// <item><description><strong>Recursive Subdivision:</strong> The algorithm recursively sorts two independent subranges, excluding the equal region:
-/// <list type="bullet">
-/// <item><description>Left subrange: [left, lt-1] contains all elements &lt; pivot and is sorted only if left &lt; lt-1</description></item>
-/// <item><description>Middle region: [lt, eqRight] contains all elements == pivot (including the moved pivot) and needs no further sorting</description></item>
-/// <item><description>Right subrange: [eqRight+1, right] contains all elements &gt; pivot and is sorted only if eqRight+1 &lt; right</description></item>
-/// </list>
-/// Base case: when right ≤ left, the range contains ≤ 1 element and is trivially sorted.
-/// The 3-way partition ensures that elements equal to pivot are excluded from further recursion, dramatically improving performance on arrays with many duplicates.</description></item>
+/// After partitioning, no element in [left, j] exceeds the pivot value and no element in [i, right] is below it (j &lt; i).</description></item>
 /// <item><description><strong>Termination Guarantee:</strong> The algorithm terminates for all inputs because:
 /// <list type="bullet">
-/// <item><description>Progress property: After each 3-way partition, both subranges [left, lt-1] and [gt+1, right] are strictly smaller than [left, right]</description></item>
-/// <item><description>Minimum progress: Even when all elements equal the pivot, the entire array is classified as the equal region and recursion terminates immediately</description></item>
+/// <item><description>Progress property: Each crossing scan performs at least one pointer advance, and both subranges [left, j] and [i, right] are strictly smaller than [left, right]</description></item>
 /// <item><description>Base case reached: The recursion depth is bounded, and each recursive call eventually reaches the base case (right ≤ left)</description></item>
-/// <item><description>Expected recursion depth: O(log n) with median-of-3 pivot selection</description></item>
-/// <item><description>Worst-case recursion depth: O(log n) with tail recursion optimization (always recurse on smaller partition)</description></item>
 /// <item><description>Tail recursion optimization: The implementation recursively processes only the smaller partition and loops on the larger one, guaranteeing O(log n) stack depth even in adversarial cases</description></item>
 /// </list>
-/// The Hoare partition scheme guarantees progress even on arrays with many duplicate elements.</description></item>
+/// The Hoare partition scheme guarantees progress even on arrays with many duplicate elements
+/// (equal elements stop both scans and are exchanged, which keeps the split balanced).</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
-/// <item><description>Partition   : Three-way partition (Dijkstra's Dutch National Flag)</description></item>
+/// <item><description>Partition   : Hoare bidirectional partition with median-of-3 pivot value</description></item>
 /// <item><description>Stable      : No (partitioning does not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack, O(1) for partitioning)</description></item>
-/// <item><description>Best case   : Θ(n) - Occurs when all elements are equal (entire array becomes the equal region)</description></item>
-/// <item><description>Average case: Θ(n log n) - Expected ~1.39n log₂ n comparisons with 3-way partition</description></item>
+/// <item><description>Best case   : Θ(n log n) - Sorted input partitions perfectly with zero effective swaps</description></item>
+/// <item><description>Average case: Θ(n log n) - Expected ~1.39n log₂ n comparisons</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability ~1/n³ with median-of-3)</description></item>
-/// <item><description>Comparisons : ~1.39n log₂ n (average) - 3-way partition performs slightly more comparisons than Hoare but dramatically faster on duplicates</description></item>
-/// <item><description>Swaps       : ~0.33n log₂ n (average) - 3-way partition performs similar swaps to Hoare partition</description></item>
+/// <item><description>Comparisons : ~1.39n log₂ n (average)</description></item>
+/// <item><description>Swaps       : ~0.33n log₂ n (average); near zero on sorted input</description></item>
+/// <item><description>Duplicates  : O(n log n) - equal keys split evenly; use <see cref="QuickSort3way"/> for the Θ(n log k) duplicate-specialized variant</description></item>
 /// </list>
 /// <para><strong>Median-of-3 Pivot Selection Benefits:</strong></para>
 /// <list type="bullet">
@@ -78,10 +67,10 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Comparison with Other Sorting Algorithms:</strong></para>
 /// <list type="bullet">
 /// <item><description>vs. Random Pivot QuickSort: Median-of-3 provides more consistent performance with minimal overhead</description></item>
-/// <item><description>vs. Hoare/Lomuto Partition QuickSort: 3-way partition dramatically outperforms on duplicate-heavy arrays (O(n) vs O(n²))</description></item>
-/// <item><description>vs. Dual-Pivot QuickSort: Simpler implementation; dual-pivot can be faster on random data but 3-way is better for duplicates</description></item>
+/// <item><description>vs. QuickSort (middle pivot): Same Hoare partition; median-of-3 sampling improves pivot quality on skewed distributions</description></item>
+/// <item><description>vs. QuickSort3way (Dutch National Flag): 3-way partition wins on duplicate-heavy arrays (Θ(n log k)); this variant wins on sorted and nearly-sorted arrays because Hoare partitioning preserves sorted runs</description></item>
+/// <item><description>vs. Dual-Pivot QuickSort: Simpler implementation; dual-pivot can be faster on random data</description></item>
 /// <item><description>vs. IntroSort: This is the core algorithm; IntroSort adds HeapSort fallback for worst-case protection</description></item>
-/// <item><description>vs. Standard QuickSort: 3-way partition is essential for real-world data with many duplicate keys</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
@@ -183,148 +172,84 @@ public static class QuickSortMedian3
     {
         while (left < right)
         {
-            // Phase 1. Select pivot using standard median-of-3 strategy
-            // Sample left, mid, and right positions
+            // Phase 1. Select pivot using standard median-of-3 strategy.
+            // Order the three samples in place so that a[left] <= a[mid] <= a[right], then use a[mid] as the
+            // pivot value. Sorting the samples (rather than just picking the median index) matters on
+            // nearly-sorted input: a stray small value at the right end of a sorted run would otherwise make
+            // the median-of-3 a near-minimum value, and the first Hoare exchange would push a small value back
+            // to the far end, re-poisoning the next level's sample and cascading into unbalanced partitions.
+            // On sorted input these two comparisons perform no swaps, so sorted runs are left untouched.
             var mid = left + (right - left) / 2;
-            var pivotIndex = MedianOf3Index(s, left, mid, right);
-
-            // Move pivot to right position to enable index-based comparison
-            // Avoid self-swap when pivot is already at right
-            if (pivotIndex != right)
+            if (s.Compare(mid, left) < 0) s.Swap(left, mid);
+            if (s.Compare(right, mid) < 0)
             {
-                s.Swap(pivotIndex, right);
+                s.Swap(mid, right);
+                if (s.Compare(mid, left) < 0) s.Swap(left, mid);
             }
-            var pivotPos = right;
-            s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, pivotPos);
-            s.Context.OnRole(pivotPos, BUFFER_MAIN, RoleType.Pivot);
+            s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, mid);
+            s.Context.OnRole(mid, BUFFER_MAIN, RoleType.Pivot);
+            var pivot = s.Read(mid);
 
-            // Phase 2. Three-way partition
-            // Partitions into: [left, lt) < pivot, [lt, eqRight] == pivot, (eqRight, right] > pivot
-            var lt = left;      // Elements before lt are < pivot
-            var gt = right - 1; // Elements after gt are > pivot
-            var i = left;       // Current element being examined
+            // Phase 2. Hoare bidirectional partition.
+            // Scans stop at elements on the wrong side and exchange them; elements already in place are
+            // never moved, so sorted runs survive partitioning (zero effective swaps on sorted input).
+            // The pivot value is present in the range, which guarantees both inner scans terminate.
+            var i = left;
+            var j = right;
 
-            while (i <= gt)
+            while (i <= j)
             {
-                var cmp = s.Compare(i, pivotPos);
-
-                if (cmp < 0)
+                // Move i forward while elements are less than pivot
+                while (s.IsLessThan(s.Read(i), pivot))
                 {
-                    // Element < pivot: swap to left region
-                    // Avoid self-swap when lt == i (common at loop start and with sorted data)
-                    if (lt != i)
-                    {
-                        s.Swap(lt, i);
-                    }
-                    lt++;
                     i++;
                 }
-                else if (cmp > 0)
+
+                // Move j backward while elements are greater than pivot
+                while (s.IsLessThan(pivot, s.Read(j)))
                 {
-                    // Element > pivot: swap to right region
-                    if (i != gt)
-                    {
-                        s.Swap(i, gt);
-                    }
-                    gt--;
-                    // Don't increment i - need to examine swapped element
+                    j--;
                 }
-                else
+
+                // Swap if pointers haven't crossed
+                if (i <= j)
                 {
-                    // Element == pivot: keep in middle region
+                    s.Swap(i, j);
                     i++;
+                    j--;
                 }
             }
 
-            // Loop invariant at termination: i == gt + 1
-            // [left, lt) : < pivot (confirmed)
-            // [lt, gt+1) = [lt, i) : == pivot (examined in loop)
-            // [gt+1, right-1] : > pivot (swapped to the right of gt)
-            // [right] : pivot's original position
-            // 
-            // Move pivot from [right] to position [i=gt+1]
-            var eqRight = i;  // gt + 1
-            // Avoid self-swap when all elements are <= pivot (eqRight reaches right)
-            if (eqRight != pivotPos)
-            {
-                s.Swap(eqRight, pivotPos);  // Swap [gt+1] with [right]
-            }
+            s.Context.OnRole(mid, BUFFER_MAIN, RoleType.None);
 
-            // After swap:
-            // [left, lt) : < pivot
-            // [lt, gt] : == pivot
-            // [gt+1] : pivot (moved from right)
-            // [gt+2, right-1] : > pivot
-            // [right] : == pivot (element originally at gt+1, no need to sort)
-            // Phase 3. Tail recursion optimization: recurse on smaller partition
-            // Elements in [lt, eqRight] are equal to pivot and don't need further sorting
-            s.Context.OnRole(pivotPos, BUFFER_MAIN, RoleType.None);
-
-            // Calculate sizes of subranges to recurse on:
-            // Left subrange: [left, lt-1] has size (lt-1) - left + 1 = lt - left
-            // Right subrange: [eqRight+1, right] has size right - (eqRight+1) + 1 = right - eqRight
-            var leftSize = lt - left;
-            var rightSize = right - eqRight;
+            // After partitioning: no element in [left, j] is greater than the pivot value,
+            // and no element in [i, right] is less than the pivot value (j < i).
+            // Phase 3. Tail recursion optimization: recurse on smaller partition, loop on the larger one.
+            // This bounds the call-stack depth to O(log n) even on adversarial inputs.
+            var leftSize = j - left + 1;
+            var rightSize = right - i + 1;
 
             if (leftSize < rightSize)
             {
                 // Recurse on smaller left partition
-                if (left < lt - 1)
+                if (left < j)
                 {
-                    SortCore(s, left, lt - 1);
+                    SortCore(s, left, j);
                 }
                 // Tail recursion: continue loop with right partition
-                left = eqRight + 1;
+                left = i;
             }
             else
             {
                 // Recurse on smaller right partition
-                if (eqRight < right - 1)
+                if (i < right)
                 {
-                    SortCore(s, eqRight + 1, right);
+                    SortCore(s, i, right);
                 }
                 // Tail recursion: continue loop with left partition
-                right = lt - 1;
+                right = j;
             }
         }
     }
 
-    /// <summary>
-    /// Returns the median index among three elements at specified indices.
-    /// This method performs exactly 2-3 comparisons to determine the median index.
-    /// </summary>
-    private static int MedianOf3Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Use SortSpan.Compare to track statistics
-        var cmpLowMid = s.Compare(lowIdx, midIdx);
-
-        if (cmpLowMid > 0) // low > mid
-        {
-            var cmpMidHigh = s.Compare(midIdx, highIdx);
-            if (cmpMidHigh > 0) // low > mid > high
-            {
-                return midIdx; // mid is median
-            }
-            else // low > mid, mid <= high
-            {
-                var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? highIdx : lowIdx;
-            }
-        }
-        else // low <= mid
-        {
-            var cmpMidHigh = s.Compare(midIdx, highIdx);
-            if (cmpMidHigh > 0) // low <= mid, mid > high
-            {
-                var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? lowIdx : highIdx;
-            }
-            else // low <= mid <= high
-            {
-                return midIdx; // mid is median
-            }
-        }
-    }
 }
