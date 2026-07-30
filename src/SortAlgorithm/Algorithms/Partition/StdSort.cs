@@ -15,10 +15,15 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Algorithm Overview:</strong></para>
 /// <list type="bullet">
 /// <item><description>Introsort: QuickSort with HeapSort fallback at depth limit</description></item>
-/// <item><description>Sorting Networks: Optimized 2-5 element sorts</description></item>
+/// <item><description>Sorting Networks: Optimized 2-5 element sorts (branchless cmov-style variants for primitive types with natural ordering)</description></item>
 /// <item><description>Insertion Sort: For small subarrays (< 24 elements)</description></item>
 /// <item><description>Tuckey's Ninther: Advanced pivot selection for large arrays (>= 128)</description></item>
 /// <item><description>Partition Optimizations: Equal element handling, already-partitioned detection</description></item>
+/// <item><description>Bitset Partition: For primitive types with the natural-order comparer (the analog of libc++'s
+/// __use_branchless_sort), partitioning uses 64-element blocks whose comparison outcomes are packed into ulong
+/// bitsets, with swap positions extracted via TrailingZeroCount + blsr. This is the BlockQuicksort-derived
+/// branchless partition libc++ applies to arithmetic types with default comparators; other types and custom
+/// comparers use the generic Hoare-style partition.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -41,6 +46,35 @@ public static class StdSort
     private const int InsertionSortThreshold = 24;
     // Lower bound for using Tuckey's ninther technique for median computation
     private const int NINTHER_THRESHOLD = 128;
+    // Block size for the bitset partition: one ulong worth of comparison outcomes,
+    // matching libc++'s __detail::__block_size (sizeof(uint64_t) * 8)
+    private const int BitsetBlockSize = 64;
+
+    /// <summary>
+    /// C# analog of libc++'s <c>__use_branchless_sort</c>: true when <typeparamref name="T"/> is a
+    /// primitive arithmetic type compared by its natural order (<see cref="IComparableComparer"/> marker).
+    /// Selects the bitset partition and the branchless (cmov-style) Sort3/4/5 variants.
+    /// For struct comparers both operands of the check are JIT-time constants, so each instantiation
+    /// keeps only one of the two code paths.
+    /// </summary>
+    /// <remarks>
+    /// Unlike some NullContext-only kernels, this gate deliberately does not depend on TContext:
+    /// the bitset partition keeps its classification state in ulong locals (never in observable element
+    /// buffers), and the branchless small sorts' unconditional writes are operations the algorithm
+    /// genuinely performs — so the same algorithm runs under observation and its statistics stay
+    /// representative of the fast path.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool UseBranchlessSort<T, TComparer>(TComparer comparer)
+        where TComparer : IComparer<T>
+        => comparer is IComparableComparer
+           && (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte)
+            || typeof(T) == typeof(ushort) || typeof(T) == typeof(short)
+            || typeof(T) == typeof(uint) || typeof(T) == typeof(int)
+            || typeof(T) == typeof(ulong) || typeof(T) == typeof(long)
+            || typeof(T) == typeof(nuint) || typeof(T) == typeof(nint)
+            || typeof(T) == typeof(float) || typeof(T) == typeof(double)
+            || typeof(T) == typeof(Half));
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -106,7 +140,22 @@ public static class StdSort
         if (last - first <= 1) return;
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        SortCore(s, first, last);
+
+        // For floating-point types, move NaN values to the front.
+        // Required because SortSpan's NullContext fast path compares primitives with IEEE operators,
+        // which treat NaN as unordered and would break the partitioning invariants.
+        // Same approach as IntroSort/PDQSort/BlockQuickSort and dotnet/runtime's ArraySortHelper.
+        // (libc++ itself declares NaN input UB via the strict-weak-ordering requirement; this repository
+        // instead matches Array.Sort's total order, which places NaN first.)
+        var nanEnd = FloatingPointUtils.MoveNaNsToFront(s, first, last);
+
+        if (nanEnd >= last)
+        {
+            // All values are NaN, already "sorted"
+            return;
+        }
+
+        SortCore(s, nanEnd, last);
     }
 
     /// <summary>
@@ -149,13 +198,106 @@ public static class StdSort
     }
 
     /// <summary>
-    /// Sorts 3 elements. Stable, 2-3 compares, 0-2 swaps.
+    /// Ensures s[x] &lt;= s[y] with exactly one comparison and two unconditional writes.
+    /// Port of libc++'s <c>__cond_swap</c>: the value selects compile to conditional moves for
+    /// primitive types, so no branch depends on the comparison outcome.
+    /// Note: equal elements are swapped (not stable), which is unobservable under the natural
+    /// ordering of primitives — the same reasoning libc++ uses to gate this on arithmetic types.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void CondSwap<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x, int y)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var vx = s.Read(x);
+        var vy = s.Read(y);
+        var r = s.IsLessThan(vx, vy);
+        var tmp = r ? vx : vy;
+        s.Write(y, r ? vy : vx);
+        s.Write(x, tmp);
+    }
+
+    /// <summary>
+    /// Orders s[x], s[y], s[z] under the precondition that s[y] &lt;= s[z] already holds.
+    /// Port of libc++'s <c>__partially_sorted_swap</c>: two comparisons, unconditional
+    /// cmov-style writes. Used as a building block of the branchless Sort3/Sort5 networks.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void PartiallySortedSwap<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x, int y, int z)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var vx = s.Read(x);
+        var vy = s.Read(y);
+        var vz = s.Read(z);
+        var r1 = s.IsLessThan(vz, vx);
+        var tmp = r1 ? vz : vx;
+        s.Write(z, r1 ? vx : vz);
+        var r2 = s.IsLessThan(tmp, vy);
+        s.Write(x, r2 ? vx : vy);
+        s.Write(y, r2 ? vy : tmp);
+    }
+
+    /// <summary>
+    /// Branchless 3-element sort (libc++'s branchless <c>__sort3</c>): a conditional-move
+    /// network of one CondSwap and one PartiallySortedSwap, 3 comparisons always.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Sort3Branchless<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        CondSwap(s, x2, x3);
+        PartiallySortedSwap(s, x1, x2, x3);
+    }
+
+    /// <summary>
+    /// Branchless 4-element sorting network (libc++'s branchless <c>__sort4</c>), 5 comparisons always.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Sort4Branchless<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        CondSwap(s, x1, x3);
+        CondSwap(s, x2, x4);
+        CondSwap(s, x1, x2);
+        CondSwap(s, x3, x4);
+        CondSwap(s, x2, x3);
+    }
+
+    /// <summary>
+    /// Branchless 5-element sorting network (libc++'s branchless <c>__sort5</c>), 7 comparisons always.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Sort5Branchless<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4, int x5)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        CondSwap(s, x1, x2);
+        CondSwap(s, x4, x5);
+        PartiallySortedSwap(s, x3, x4, x5);
+        CondSwap(s, x2, x5);
+        PartiallySortedSwap(s, x1, x3, x4);
+        PartiallySortedSwap(s, x2, x3, x4);
+    }
+
+    /// <summary>
+    /// Sorts 3 elements. Branchy path: stable, 2-3 compares, 0-2 swaps.
+    /// Dispatches to the branchless network when <see cref="UseBranchlessSort{T,TComparer}"/> holds,
+    /// mirroring libc++'s enable_if overload selection at every call site.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x, int y, int z)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        if (UseBranchlessSort<T, TComparer>(s.Comparer))
+        {
+            Sort3Branchless(s, x, y, z);
+            return;
+        }
+
         // if x <= y
         if (s.IsGreaterOrEqualAt(y, x))
         {
@@ -183,13 +325,20 @@ public static class StdSort
     }
 
     /// <summary>
-    /// Sorts 4 elements. Stable, 3-6 compares, 0-5 swaps.
+    /// Sorts 4 elements. Branchy path: stable, 3-6 compares, 0-5 swaps.
+    /// Dispatches to the branchless network when <see cref="UseBranchlessSort{T,TComparer}"/> holds.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort4<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        if (UseBranchlessSort<T, TComparer>(s.Comparer))
+        {
+            Sort4Branchless(s, x1, x2, x3, x4);
+            return;
+        }
+
         Sort3(s, x1, x2, x3);
         if (s.IsLessAt(x4, x3))
         {
@@ -206,13 +355,20 @@ public static class StdSort
     }
 
     /// <summary>
-    /// Sorts 5 elements. Stable, 4-10 compares, 0-9 swaps.
+    /// Sorts 5 elements. Branchy path: stable, 4-10 compares, 0-9 swaps.
+    /// Dispatches to the branchless network when <see cref="UseBranchlessSort{T,TComparer}"/> holds.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4, int x5)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        if (UseBranchlessSort<T, TComparer>(s.Comparer))
+        {
+            Sort5Branchless(s, x1, x2, x3, x4, x5);
+            return;
+        }
+
         Sort4(s, x1, x2, x3, x4);
         if (s.IsLessAt(x5, x4))
         {
@@ -334,10 +490,15 @@ public static class StdSort
                 continue;
             }
 
-            // Partition
+            // Partition: bitset (BlockQuicksort-style branchless) partition for primitive types with
+            // the natural-order comparer, generic Hoare-style partition otherwise.
+            // Mirrors libc++'s _UseBitSetPartition template selection; the gate is a JIT-time
+            // constant for struct comparers, so only one branch survives per instantiation.
             s.Context.OnPhase(SortPhase.QuickSortPartition, first, last - 1, first);
             s.Context.OnRole(first, BUFFER_MAIN, RoleType.Pivot);
-            var (pivotPos, alreadyPartitioned) = PartitionWithEqualsOnRight(s, first, last);
+            var (pivotPos, alreadyPartitioned) = UseBranchlessSort<T, TComparer>(s.Comparer)
+                ? BitsetPartition(s, first, last)
+                : PartitionWithEqualsOnRight(s, first, last);
             s.Context.OnRole(first, BUFFER_MAIN, RoleType.None);
 
             // Check if already sorted using insertion sort heuristic
@@ -473,6 +634,235 @@ public static class StdSort
     }
 
     /// <summary>
+    /// Builds a bitset of comparison outcomes for one block of elements on the left side.
+    /// Bit j is set when the element at (first + j) does NOT belong on the left (element >= pivot).
+    /// Port of libc++'s <c>__populate_left_bitset</c>: the bit is built from the comparison result
+    /// via <see cref="Unsafe.As{TFrom,TTo}(ref TFrom)"/> (setcc + shift + or), so no branch depends
+    /// on the comparison outcome. Returns the bitset by value so the accumulator stays in a register
+    /// (a byref parameter forced a load-modify-store roundtrip per element in the measured codegen).
+    /// The bitset is internal classification state, never an observable element buffer.
+    /// <para>
+    /// Not vectorized on purpose: libc++ leaves this loop to the C++ compiler's auto-vectorization
+    /// ("Possible vectorization" in the reference), but the measured .NET 10 RyuJIT emits a scalar
+    /// setcc loop here. An explicit Vector256 compare + MoveMask kernel could build the bitset
+    /// 8-16 elements at a time, but that would go beyond source correspondence with the reference
+    /// implementation, so it is intentionally left as a possible future extension.
+    /// </para>
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ulong PopulateLeftBitset<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, T pivot, int size)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        ulong bitset = 0;
+        var iter = first;
+        for (var j = 0; j < size; j++)
+        {
+            var r = s.IsGreaterOrEqual(s.Read(iter), pivot);
+            bitset |= (ulong)Unsafe.As<bool, byte>(ref r) << j;
+            iter++;
+        }
+        return bitset;
+    }
+
+    /// <summary>
+    /// Builds a bitset of comparison outcomes for one block of elements on the right side
+    /// (walking down from lm1). Bit j is set when the element at (lm1 - j) does NOT belong on
+    /// the right (element &lt; pivot). Port of libc++'s <c>__populate_right_bitset</c>.
+    /// Intentionally not vectorized — see <see cref="PopulateLeftBitset"/> for the rationale.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ulong PopulateRightBitset<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lm1, T pivot, int size)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        ulong bitset = 0;
+        var iter = lm1;
+        for (var j = 0; j < size; j++)
+        {
+            var r = s.IsLessThan(s.Read(iter), pivot);
+            bitset |= (ulong)Unsafe.As<bool, byte>(ref r) << j;
+            iter--;
+        }
+        return bitset;
+    }
+
+    /// <summary>
+    /// Partitions [first, last) using 64-element blocks whose comparison outcomes are packed into
+    /// ulong bitsets, then swaps misplaced pairs extracted via bit scans. Port of libc++'s
+    /// <c>__bitset_partition</c> — the BlockQuicksort-derived branchless partition used when
+    /// <see cref="UseBranchlessSort{T,TComparer}"/> holds. Elements equal to the pivot end up in the
+    /// right partition (same contract as <see cref="PartitionWithEqualsOnRight"/>, which this replaces).
+    /// Returns (pivot position, already partitioned flag). Assumes length >= 3 and that pivot
+    /// selection has placed the median at <paramref name="first"/>.
+    /// </summary>
+    private static (int pivotPos, bool alreadyPartitioned) BitsetPartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var begin = first;  // used for the final pivot placement; not moved around
+        var pivot = s.Read(first);
+
+        // Find the first element greater than the pivot.
+        if (s.IsLessThan(pivot, s.Read(last - 1)))
+        {
+            // Unguarded: the last element is greater than the pivot and stops the scan.
+            do
+            {
+                first++;
+            } while (s.IsGreaterOrEqual(pivot, s.Read(first)));
+        }
+        else
+        {
+            while (++first < last && s.IsGreaterOrEqual(pivot, s.Read(first)))
+            {
+            }
+        }
+
+        // Find the last element less than or equal to the pivot.
+        if (first < last)
+        {
+            // Unguarded: s[begin] holds the pivot value and stops the scan at begin at the latest.
+            do
+            {
+                last--;
+            } while (s.IsLessThan(pivot, s.Read(last)));
+        }
+
+        // If the first element greater than the pivot is at or after the last element less than
+        // or equal to the pivot, the range is already partitioned.
+        var alreadyPartitioned = first >= last;
+        if (!alreadyPartitioned)
+        {
+            s.Swap(first, last);
+            first++;
+        }
+
+        // From here on, work on the inclusive range [first, lm1]. All classification state lives
+        // in ulong locals so it stays register-allocated (never observable element buffers).
+        var lm1 = last - 1;
+        ulong leftBitset = 0;
+        ulong rightBitset = 0;
+
+        // Reminder: length = lm1 - first + 1.
+        while (lm1 - first >= 2 * BitsetBlockSize - 1)
+        {
+            // Record the comparison outcomes for the elements currently on each side.
+            if (leftBitset == 0)
+            {
+                leftBitset = PopulateLeftBitset(s, first, pivot, BitsetBlockSize);
+            }
+            if (rightBitset == 0)
+            {
+                rightBitset = PopulateRightBitset(s, lm1, pivot, BitsetBlockSize);
+            }
+            // Swap the candidates recorded in the bitsets: extract positions with
+            // TrailingZeroCount, consume with blsr (x & (x - 1)). libc++'s __swap_bitmap_pos.
+            while (leftBitset != 0 && rightBitset != 0)
+            {
+                var tzLeft = BitOperations.TrailingZeroCount(leftBitset);
+                leftBitset &= leftBitset - 1;
+                var tzRight = BitOperations.TrailingZeroCount(rightBitset);
+                rightBitset &= rightBitset - 1;
+                s.Swap(first + tzLeft, lm1 - tzRight);
+            }
+            // Only advance a boundary when all its recorded elements were moved.
+            first += (leftBitset == 0) ? BitsetBlockSize : 0;
+            lm1 -= (rightBitset == 0) ? BitsetBlockSize : 0;
+        }
+
+        // Final partial blocks: fewer than a full block remains on at least one side.
+        // libc++'s __bitset_partition_partial_blocks.
+        {
+            var remainingLen = lm1 - first + 1;
+            int lSize;
+            int rSize;
+            if (leftBitset == 0 && rightBitset == 0)
+            {
+                lSize = remainingLen / 2;
+                rSize = remainingLen - lSize;
+            }
+            else if (leftBitset == 0)
+            {
+                // The right side still holds a full recorded block.
+                lSize = remainingLen - BitsetBlockSize;
+                rSize = BitsetBlockSize;
+            }
+            else
+            {
+                // rightBitset != 0: the left side still holds a full recorded block.
+                lSize = BitsetBlockSize;
+                rSize = remainingLen - BitsetBlockSize;
+            }
+
+            if (leftBitset == 0)
+            {
+                leftBitset = PopulateLeftBitset(s, first, pivot, lSize);
+            }
+            if (rightBitset == 0)
+            {
+                rightBitset = PopulateRightBitset(s, lm1, pivot, rSize);
+            }
+
+            while (leftBitset != 0 && rightBitset != 0)
+            {
+                var tzLeft = BitOperations.TrailingZeroCount(leftBitset);
+                leftBitset &= leftBitset - 1;
+                var tzRight = BitOperations.TrailingZeroCount(rightBitset);
+                rightBitset &= rightBitset - 1;
+                s.Swap(first + tzLeft, lm1 - tzRight);
+            }
+
+            first += (leftBitset == 0) ? lSize : 0;
+            lm1 -= (rightBitset == 0) ? rSize : 0;
+        }
+
+        // At most one bitset is non-empty; move its recorded elements to the boundary, consuming
+        // set positions from the high end via LeadingZeroCount so the boundary shrinks inward.
+        // libc++'s __swap_bitmap_pos_within.
+        if (leftBitset != 0)
+        {
+            while (leftBitset != 0)
+            {
+                var highLeft = BitsetBlockSize - 1 - BitOperations.LeadingZeroCount(leftBitset);
+                leftBitset &= (1UL << highLeft) - 1;
+                var it = first + highLeft;
+                if (it != lm1)
+                {
+                    s.Swap(it, lm1);
+                }
+                lm1--;
+            }
+            first = lm1 + 1;
+        }
+        else if (rightBitset != 0)
+        {
+            while (rightBitset != 0)
+            {
+                var highRight = BitsetBlockSize - 1 - BitOperations.LeadingZeroCount(rightBitset);
+                rightBitset &= (1UL << highRight) - 1;
+                var it = lm1 - highRight;
+                if (it != first)
+                {
+                    s.Swap(it, first);
+                }
+                first++;
+            }
+        }
+
+        // Move the pivot to its correct position.
+        // Matches LLVM libc++: move(pivotPos to begin), then move(pivot to pivotPos).
+        var pivotPos = first - 1;
+        if (begin != pivotPos)
+        {
+            s.Write(begin, s.Read(pivotPos));
+        }
+        s.Write(pivotPos, pivot);
+
+        return (pivotPos, alreadyPartitioned);
+    }
+
+    /// <summary>
     /// Partitions range with equal elements kept to the right of pivot.
     /// Returns (pivot position, already partitioned flag).
     /// </summary>
@@ -494,11 +884,10 @@ public static class StdSort
         var j = last - 1;
         if (i < j)
         {
-            // Optimization from LLVM libc++: if first only advanced by 1, we know last won't reach begin
-            // because median-of-3 ensures begin is <= pivot, so unguarded scan is safe.
             if (begin == i - 1)
             {
-                // Unguarded: first only advanced once, median-of-3 guarantees safety
+                // Guarded (i < j): the upward scan only advanced once, so no element below i is known
+                // to be < pivot and the downward scan needs an explicit bound.
                 while (i < j && s.IsGreaterOrEqual(s.Read(j), pivot))
                 {
                     j--;
@@ -506,7 +895,8 @@ public static class StdSort
             }
             else
             {
-                // Guarded: normal case with bounds check
+                // The upward scan advanced past at least one element < pivot (at begin + 1), which acts
+                // as a natural stopper; the j > begin bound is a redundant safety net.
                 while (j > begin && s.IsGreaterOrEqual(s.Read(j), pivot))
                 {
                     j--;
@@ -554,10 +944,10 @@ public static class StdSort
 
         // Find first element > pivot
         var i = first;
-        // Optimization from LLVM libc++: check if pivot < last element to determine if guarded scan needed
+        // From LLVM libc++: probe the last element to decide whether the upward scan needs a bound.
         if (s.IsLessThan(pivot, s.Read(last - 1)))
         {
-            // Guarded: pivot < last element, so elements > pivot exist
+            // Unguarded: the element at last - 1 is > pivot and stops the scan, so no bound is needed.
             do
             {
                 i++;
@@ -565,7 +955,7 @@ public static class StdSort
         }
         else
         {
-            // Unguarded: pivot >= last element, no need for bounds check
+            // Guarded: no element is known to be > pivot, so the scan may run to the end of the range.
             while (++i < last && s.IsGreaterOrEqual(pivot, s.Read(i)))
             {
             }

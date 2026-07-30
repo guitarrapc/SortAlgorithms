@@ -14,6 +14,47 @@ public class StdSortTests : SortTestsBase
     // so only the base IndexRead/Compare non-zero assertions apply.
 
     [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateHalf))]
+    public async Task SortHalfNullContextResultOrderTest(IInputSample<Half> inputSample)
+    {
+        var array = inputSample.Samples.ToArray();
+
+        // Default overload uses NullContext, whose Release fast path compares primitives with
+        // IEEE operators (NaN unordered). Verifies the NaN pre-pass keeps the result ordered.
+        StdSort.Sort(array.AsSpan());
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateFloat))]
+    public async Task SortFloatNullContextResultOrderTest(IInputSample<float> inputSample)
+    {
+        var array = inputSample.Samples.ToArray();
+
+        StdSort.Sort(array.AsSpan());
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [MethodDataSource(typeof(MockNanRandomData), nameof(MockNanRandomData.GenerateDouble))]
+    public async Task SortDoubleNullContextResultOrderTest(IInputSample<double> inputSample)
+    {
+        var array = inputSample.Samples.ToArray();
+
+        StdSort.Sort(array.AsSpan());
+
+        // Check is sorted
+        Array.Sort(inputSample.Samples);
+        await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+    }
+
+    [Test]
     public async Task RangeSortTest()
     {
         var stats = new StatisticsContext();
