@@ -51,7 +51,7 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Aadaptive</description></item>
+/// <item><description>Family      : Adaptive</description></item>
 /// <item><description>Stable      : No (relative order of equal elements is not preserved)</description></item>
 /// <item><description>In-place    : No (O(K) auxiliary space where K is the number of out-of-order elements)</description></item>
 /// <item><description>Best case   : O(N) - When data is already sorted or nearly sorted (K ≈ 0), only LNS extraction and merge are needed</description></item>
@@ -149,7 +149,9 @@ public static class DropMergeSort
     {
         if (span.Length <= 1) return;
 
-        // Rent buffer from ArrayPool for dropped elements (O(K) auxiliary space where K is the number of out-of-order elements)
+        // Rent an N-sized buffer from ArrayPool for dropped elements.
+        // Only the first K slots are used (K = number of out-of-order elements), but K is not known upfront
+        // and can reach N in the worst case, so renting N avoids growth logic on the hot path.
         var droppedBuffer = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
