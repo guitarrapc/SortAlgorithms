@@ -18,6 +18,17 @@ Values and indices reported to a context describe the algorithm's logical operat
 
 `NullContext` is the no-observation choice. Other contexts may aggregate counts, combine observers, or translate callbacks into visualization state.
 
+## Phase Levels
+
+A phase announcement replaces the previously announced phase at the same level; there is no exit event, and a phase remains current until the next announcement at its level. Announcements occur at two levels, and a consumer must keep one slot per level:
+
+- A **scope** phase is what the announcing algorithm decided to do, including a decision to delegate a subrange to another algorithm's core.
+- A **detail** phase is progress reported from inside such a delegated core.
+
+`SortPhase.IsDetailPhase` classifies the two. A scope announcement invalidates the detail slot, because the delegated work it described has ended. A detail announcement leaves the scope slot untouched.
+
+Cores that other algorithms delegate to are leaves: none of them delegates onward to another phase-announcing core. Two levels therefore describe every sequence this library emits, and a consumer never needs an unbounded phase stack. An algorithm whose own phases are classified detail may also run at the top level, where no scope phase accompanies them.
+
 ## Consumer Responsibilities
 
 - Context implementations must tolerate the event volume of the selected algorithm.
@@ -30,6 +41,8 @@ Values and indices reported to a context describe the algorithm's logical operat
 Auxiliary-buffer identity is necessary for faithful merge and distribution visualizations; indices alone are ambiguous when the same numeric index exists in multiple buffers. Structured phase and role events are preferable to display strings because presentation belongs to the consumer.
 
 An auxiliary buffer whose element type is an algorithm-private wrapper is reported but not consumable: the value reaching a context is opaque to anything outside the declaring type, so the buffer cannot be rendered even though every operation on it is announced. Slot metadata such as occupancy, tombstones, or bucket tags belongs beside the buffer, not inside its element type. Keeping the buffer's element type equal to the sorted element type also removes the sentinel writes such a wrapper needs, which are otherwise indistinguishable from real element movement in an observation stream.
+
+A single "current phase" slot silently destroys the phase announcements of every hybrid algorithm. The caller announces the handoff, the delegated core immediately announces its own progress, and with one slot the handoff is overwritten before a single observable operation carries it — `SymMergeSort`'s initial-sort announcement was visible for zero operations, and the same held for the insertion-sort and heap-sort fallbacks of the introsort family. Sorting correctness never depended on this, so no result-based test could detect it. Separating scope from detail preserves both without requiring any call site to know whether it is nested.
 
 Comparisons performed directly on a comparer rather than through the observable element accessors disappear from the stream entirely. When an algorithm searches an index or a staging structure, the comparison count a consumer sees can fall to a small fraction of the real one while read and write counts stay plausible, so the omission is not visible from the totals alone.
 
