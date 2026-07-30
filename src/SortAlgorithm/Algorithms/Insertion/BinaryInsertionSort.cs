@@ -43,9 +43,13 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Early continuation: If the element is already ≥ its predecessor, the binary search and the shift are skipped entirely,
 /// at the cost of one extra comparison when the check fails. This is what gives the O(n) best case.</description></item>
-/// <item><description>Shift strategy: Under <c>NullContext</c> the shift is a single overlapping block move (memmove);
-/// under an observing context it stays element-by-element so the shift remains visible one element at a time.
-/// Both perform the same number of element reads and writes.</description></item>
+/// <item><description>Shift strategy: Under <c>NullContext</c> a shift of at least 32 elements becomes a single overlapping
+/// block move (memmove); shorter shifts, and every shift under an observing context, stay element-by-element so the
+/// shift remains visible one element at a time. Both perform the same number of element reads and writes.</description></item>
+/// <item><description>Why the threshold: measured on int arrays, an unconditional block move was 3.5-4.5x faster for
+/// shift-heavy patterns at n=1024, but 12-36% slower for <c>TimSort</c>, which only ever calls this sort on ranges of
+/// minRun (32-64) where shifts average roughly minRun/4. Gating on the shift length keeps the large-input win without
+/// the short-shift regression.</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Insertion_sort</para>
@@ -54,6 +58,12 @@ public static class BinaryInsertionSort
 {
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
+
+    // Minimum shift length that goes through a block move instead of the element-wise loop.
+    // Below this, Buffer.Memmove's call overhead plus the two Span.Slice bounds checks cost more
+    // than simply copying the elements one at a time. See the Implementation Notes on this type
+    // for the measurement this value came from.
+    private const int ShiftBlockMoveThreshold = 32;
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -175,18 +185,18 @@ public static class BinaryInsertionSort
             {
                 // Shift elements [pos..i-1] one position to the right to make room.
                 // The typeof check is a JIT constant per instantiation, so exactly one arm survives.
-                if (typeof(TContext) == typeof(NullContext))
+                if (typeof(TContext) == typeof(NullContext) && i - pos >= ShiftBlockMoveThreshold)
                 {
-                    // No observer: shift as a single overlapping block move. SortSpan.CopyTo forwards
-                    // to Span<T>.CopyTo, which is a memmove and handles the overlap. Element counts are
-                    // unchanged (length reads + length writes); only the per-element granularity is lost,
-                    // which no consumer can see under NullContext.
+                    // No observer and a long enough run: shift as a single overlapping block move.
+                    // SortSpan.CopyTo forwards to Span<T>.CopyTo, which is a memmove and handles the
+                    // overlap. Element counts are unchanged (length reads + length writes); only the
+                    // per-element granularity is lost, which no consumer can see under NullContext.
                     s.CopyTo(pos, s, pos + 1, i - pos);
                 }
                 else
                 {
-                    // Observed path: keep one read and one write per shifted element so that a
-                    // visualization still renders the shift element by element.
+                    // Short shift, or an observing context. The loop keeps one read and one write per
+                    // shifted element, so a visualization still renders the shift element by element.
                     for (var j = i - 1; j >= pos; j--)
                     {
                         s.Write(j + 1, s.Read(j));

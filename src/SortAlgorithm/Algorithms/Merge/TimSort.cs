@@ -644,6 +644,12 @@ public static class TimSort
         s.Write(dest++, s.Read(cursor2++));
         len2--;
 
+        // Work on a local copy of the shared galloping threshold and write it back at exitMerge,
+        // as the reference implementations do. Through the 'ref' parameter the JIT cannot rule out
+        // aliasing with the element writes below, so the one-pair-at-a-time loop condition would
+        // reload it from memory on every iteration.
+        var minGallopLocal = minGallop;
+
         while (true)
         {
             var count1 = 0;  // # of times run1 won in a row
@@ -679,7 +685,7 @@ public static class TimSort
                         goto exitMerge;
                     }
                 }
-            } while ((count1 | count2) < minGallop);
+            } while ((count1 | count2) < minGallopLocal);
 
             // Galloping mode: one run is winning consistently
             do
@@ -722,20 +728,20 @@ public static class TimSort
                     goto exitMerge;
                 }
 
-                minGallop--;
+                minGallopLocal--;
             } while (count1 >= MIN_GALLOP || count2 >= MIN_GALLOP);
 
-            if (minGallop < 0)
+            if (minGallopLocal < 0)
             {
-                minGallop = 0;
+                minGallopLocal = 0;
             }
-            minGallop += 2;  // Penalize for leaving galloping mode
+            minGallopLocal += 2;  // Penalize for leaving galloping mode
         }
 
     exitMerge:
         // Keep minGallop at least 1, matching canonical TimSort behavior.
         // Some C++ ports use a more aggressive clamp that effectively forces it to 1.
-        minGallop = minGallop < 1 ? 1 : minGallop;
+        minGallop = minGallopLocal < 1 ? 1 : minGallopLocal;
 
         if (len1 == 1)
         {
@@ -794,6 +800,12 @@ public static class TimSort
         s.Write(dest--, s.Read(cursor1--));
         len1--;
 
+        // Work on a local copy of the shared galloping threshold and write it back at exitMerge,
+        // as the reference implementations do. Through the 'ref' parameter the JIT cannot rule out
+        // aliasing with the element writes below, so the one-pair-at-a-time loop condition would
+        // reload it from memory on every iteration.
+        var minGallopLocal = minGallop;
+
         while (true)
         {
             var count1 = 0;  // # of times run1 won in a row
@@ -829,7 +841,7 @@ public static class TimSort
                         goto exitMerge;
                     }
                 }
-            } while ((count1 | count2) < minGallop);
+            } while ((count1 | count2) < minGallopLocal);
 
             // Galloping mode: one run is winning consistently
             do
@@ -872,20 +884,20 @@ public static class TimSort
                     goto exitMerge;
                 }
 
-                minGallop--;
+                minGallopLocal--;
             } while (count1 >= MIN_GALLOP || count2 >= MIN_GALLOP);
 
-            if (minGallop < 0)
+            if (minGallopLocal < 0)
             {
-                minGallop = 0;
+                minGallopLocal = 0;
             }
-            minGallop += 2;  // Penalize for leaving galloping mode
+            minGallopLocal += 2;  // Penalize for leaving galloping mode
         }
 
     exitMerge:
         // Keep minGallop at least 1, matching canonical TimSort behavior.
         // Some C++ ports use a more aggressive clamp that effectively forces it to 1.
-        minGallop = minGallop < 1 ? 1 : minGallop;
+        minGallop = minGallopLocal < 1 ? 1 : minGallopLocal;
 
         if (len2 == 1)
         {
