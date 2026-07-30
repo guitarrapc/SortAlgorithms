@@ -1,4 +1,4 @@
-using SortAlgorithm.Algorithms;
+﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Tests;
@@ -7,8 +7,7 @@ namespace SortAlgorithm.Tests;
 /// マージ系アルゴリズムがマージフェーズを observer に通知することを保証するテスト。
 ///
 /// 通知が無いと、可視化側は葉の InsertionSort しか観測できず、直前の挿入フェーズのラベルが
-/// マージ中も貼り付いたままになる（実際に SpinSort / SpinSortVariant /
-/// RotateMergeSortRecursive / FlatStableSort でこの状態だった）。
+/// マージ中も貼り付いたままになる（実際に SpinSort / RotateMergeSortRecursive / FlatStableSort でこの状態だった）。
 /// 「ソート結果が正しい」だけではこの欠落を検出できないため、通知内容を直接検証する。
 /// </summary>
 public class MergePhaseNotificationTests
@@ -43,7 +42,6 @@ public class MergePhaseNotificationTests
     public static IEnumerable<Func<MergeSortCase>> MergeSortCases()
     {
         yield return () => new MergeSortCase("SpinSort", static (a, c) => SpinSort.Sort(a.AsSpan(), c), 80);
-        yield return () => new MergeSortCase("SpinSortVariant", static (a, c) => SpinSortVariant.Sort(a.AsSpan(), c), 80);
         yield return () => new MergeSortCase("RotateMergeSortRecursive", static (a, c) => RotateMergeSortRecursive.Sort(a.AsSpan(), c), 48);
         yield return () => new MergeSortCase("FlatStableSort", static (a, c) => FlatStableSort.Sort(a.AsSpan(), c), 48);
         yield return () => new MergeSortCase("RotateMergeSort", static (a, c) => RotateMergeSort.Sort(a.AsSpan(), c), 48);

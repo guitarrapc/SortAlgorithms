@@ -48,8 +48,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method        | Size | Pattern            | Mean           | Error        | StdDev       | Median         | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -107,8 +107,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method     | Size | Pattern            | Mean         | Error       | StdDev    | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -141,8 +141,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method              | Size | Pattern            | Mean           | Error         | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -380,8 +380,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method             | Size | Pattern            | Mean         | Error       | StdDev      | Ratio  | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -454,8 +454,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method           | Size | Pattern            | Mean           | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -588,8 +588,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                 | Size | Pattern            | Mean         | Error       | StdDev      | Median       | Ratio  | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -722,8 +722,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method             | Size | Pattern            | Mean           | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -961,8 +961,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                   | Size | Pattern            | Mean           | Error       | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -1245,8 +1245,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                  | Size | Pattern            | Mean         | Error       | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -1319,8 +1319,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                       | Size | Pattern            | Mean           | Error         | StdDev       | Median         | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -1588,8 +1588,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method              | Size | Pattern            | Mean           | Error       | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -1652,8 +1652,8 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores
 .NET SDK 10.0.302
   [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
   Job-GKDVVL : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                 | Size | Pattern            | Mean           | Error       | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -1758,7 +1758,6 @@ UnrollFactor=1  WarmupCount=2
   - Recursive
 - [Shift Sort](./src/SortAlgorithm/Algorithms/Merge/ShiftSort.cs)
 - [Spin Sort](./src/SortAlgorithm/Algorithms/Merge/SpinSort.cs)
-- [Spin Sort (Boost)](./src/SortAlgorithm/Algorithms/Merge/SpinSortVariant.cs)
 - [std::stable_sort (LLVM)](./src/SortAlgorithm/Algorithms/Merge/StdStableSort.cs)
 - [SymMerge Sort](./src/SortAlgorithm/Algorithms/Merge/SymMergeSort.cs)
 - [Tim Sort](./src/SortAlgorithm/Algorithms/Merge/TimSort.cs)

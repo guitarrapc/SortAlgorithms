@@ -1,4 +1,4 @@
-#:sdk Microsoft.NET.Sdk
+﻿#:sdk Microsoft.NET.Sdk
 #:property TargetFramework=net10.0
 // Update the algorithm list section in README.md from the source tree.
 //
@@ -80,7 +80,6 @@ Dictionary<string, string> displayNames = new()
     ["RadixMSD4Sort"] = "Radix MSD Sort (Base 4)",
     ["RadixMSD10Sort"] = "Radix MSD Sort (Base 10)",
     ["RotateMergeSort"] = "Rotate Merge Sort",
-    ["SpinSortVariant"] = "Spin Sort (Boost)",
     ["StableQuickSort"] = "Quick Sort (Stable)",
     ["StdSort"] = "std::sort (LLVM)",
     ["StdStableSort"] = "std::stable_sort (LLVM)",

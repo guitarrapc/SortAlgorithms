@@ -103,12 +103,6 @@ public class MergeBenchmark
     }
 
     [Benchmark]
-    public void SpinSortVariant()
-    {
-        SortAlgorithm.Algorithms.SpinSortVariant.Sort(_buffers.Next().AsSpan());
-    }
-
-    [Benchmark]
     public void Glidesort()
     {
         SortAlgorithm.Algorithms.Glidesort.Sort(_buffers.Next().AsSpan());
