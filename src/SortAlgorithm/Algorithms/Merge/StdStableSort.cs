@@ -13,11 +13,14 @@ namespace SortAlgorithm.Algorithms;
 /// </summary>
 /// <remarks>
 /// <para><strong>Note on "std::stable_sort":</strong> the C++ standard fixes only stability and the O(n log n)
-/// complexity, so the internal structure differs per vendor. This port follows LLVM libcxx, which is top-down.
-/// libstdc++ (GCC) is bottom-up (__merge_sort_with_buffer: insertion-sorted chunks of 7, then merge passes with a
-/// doubling step, ping-ponging between array and buffer), and MSVC STL uses a comparable chunked bottom-up scheme.
-/// Visualizations of "std::stable_sort" recorded on GCC therefore look bottom-up; that is a different implementation,
-/// not a different algorithm specification.</para>
+/// complexity, so the internal structure differs per vendor. This port follows LLVM libcxx, which is top-down:
+/// halve, recurse, merge. The other two major implementations are bottom-up and share one shape — allocate about
+/// n/2 elements, run a bottom-up merge sort over each half, then merge the two halves:
+/// libstdc++ (GCC) __stable_sort_adaptive calls __merge_sort_with_buffer, which insertion-sorts chunks of
+/// _S_chunk_size = 7 and then runs merge passes with a doubling step, ping-ponging between array and buffer;
+/// MSVC STL _Stable_sort_unchecked calls _Buffered_merge_sort_unchecked, which does the same with chunks of
+/// _ISORT_MAX = 32. Visualizations of "std::stable_sort" recorded on GCC therefore look bottom-up; that is a
+/// different implementation, not a different algorithm specification.</para>
 /// <para><strong>Not ported:</strong> LLVM's C++17 radix-sort shortcut (__radix_sort for integer-representable
 /// value types with the default comparator and 1024 ≤ len ≤ 65536) is intentionally omitted; this type always merges.</para>
 /// <para><strong>Theoretical Conditions for Correct std::stable_sort:</strong></para>
