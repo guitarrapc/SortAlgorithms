@@ -42,9 +42,24 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>max_finishing_splits = 12 — Relaxed limit for single-pass completion</description></item>
 /// <item><description>int_log_mean_bin_size = 2 — Target ~4 elements per bin</description></item>
 /// <item><description>int_log_min_split_count = 9 — Minimum split count for spreading</description></item>
-/// <item><description>int_log_finishing_count = 31 — Threshold for single-pass completion</description></item>
+/// <item><description>int_log_finishing_count = 31 — Above min_size, so single-pass completion is disabled</description></item>
+/// <item><description>float_log_min_split_count = 8, float_log_finishing_count = 4 — the floating-point
+/// instantiation, where single-pass completion IS enabled (see <see cref="GetMinCount"/>)</description></item>
 /// <item><description>min_sort_size = 1000 — Minimum size to use spreadsort</description></item>
 /// </list>
+/// <para><strong>Tuning constants follow Boost's two instantiations:</strong></para>
+/// <para>Boost templates <c>get_min_count</c> on these constants and instantiates it once for
+/// <c>integer_sort</c> and once for <c>float_sort</c>; this implementation does the same. The
+/// floating-point overloads are the <c>float_*</c> instantiation even though they otherwise run the
+/// <c>integer_sort</c> algorithm on transformed keys — <c>float_sort</c>'s remaining machinery
+/// (splitting positives from negatives, iterating negative bins in reverse) exists only because
+/// Boost casts float bits to a <em>signed</em> integer, where negative floats come out descending.
+/// The order-preserving key transform used here removes that need entirely.</para>
+/// <para>Measured: the constants only diverge where <c>log_divisor</c> is small enough to reach the
+/// one-pass-completion branch, which depends on key width. At 32/64 bits it is never reached, so
+/// float and double are unaffected; at 16 bits <see cref="Half"/> is 1.1x-2.5x faster with the
+/// <c>float_*</c> constants. The same branch measured neutral on the integer path at the same key
+/// width (<c>short</c>), so integer_sort keeps Boost's setting.</para>
 /// <para><strong>Supported Key Mappings (via <see cref="IRadixKeySelector{T}"/>):</strong></para>
 /// <list type="bullet">
 /// <item><description><strong>Integers:</strong> byte, sbyte, short, ushort, int, uint, long, ulong (fixed-width up to 64-bit);
@@ -88,6 +103,8 @@ public static class SpreadSort
     const int LogMeanBinSize = 2;                     // int_log_mean_bin_size: target ~4 elements per bin
     const int LogMinSplitCount = 9;                   // int_log_min_split_count: minimum split count for spreading
     const int LogFinishingCount = 31;                 // int_log_finishing_count: threshold for one-pass completion
+    const int FloatLogMinSplitCount = 8;              // float_log_min_split_count
+    const int FloatLogFinishingCount = 4;             // float_log_finishing_count: enables one-pass completion
     const int MinSortSize = 1000;                     // min_sort_size: minimum size to use spreadsort
 
     // Buffer identifiers for visualization
@@ -225,7 +242,7 @@ public static class SpreadSort
             return;
         }
 
-        SpreadCore(s, radixKey, 0, s.Length);
+        SpreadCore(s, radixKey, 0, s.Length, LogMinSplitCount, LogFinishingCount);
     }
 
     /// <summary>
@@ -256,7 +273,8 @@ public static class SpreadSort
             return;
         }
 
-        SpreadCore(s, radixKey, 0, span.Length);
+        // Boost instantiates spreadsort_rec with the float_* tuning constants for float_sort.
+        SpreadCore(s, radixKey, 0, span.Length, FloatLogMinSplitCount, FloatLogFinishingCount);
     }
 
     /// <summary>
@@ -289,7 +307,9 @@ public static class SpreadSort
         => ((keyBits / 8) + 1) * (1 << MaxSplits) + (1 << MaxFinishingSplits);
 
     [SkipLocalsInit]
-    static void SpreadCore<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, int first, int last)
+    static void SpreadCore<T, TRadixKey, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, int first, int last,
+        int logMinSplitCount, int logFinishingCount)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -309,7 +329,7 @@ public static class SpreadSort
         try
         {
             var binCache = rentedCache.AsSpan(0, capacity);
-            SpreadSortRec(s, radixKey, first, last, binCache, 0, binSizes);
+            SpreadSortRec(s, radixKey, first, last, binCache, 0, binSizes, logMinSplitCount, logFinishingCount);
         }
         finally
         {
@@ -325,7 +345,8 @@ public static class SpreadSort
         TRadixKey radixKey,
         int first, int last,
         Span<int> binCache, int cacheOffset,
-        Span<int> binSizes)
+        Span<int> binSizes,
+        int logMinSplitCount, int logFinishingCount)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -450,7 +471,7 @@ public static class SpreadSort
             return;
 
         // Boost: get_min_count — dynamic threshold for per-bucket pdqsort fallback
-        var maxCount = GetMinCount(logDivisor);
+        var maxCount = GetMinCount(logDivisor, logMinSplitCount, logFinishingCount);
 
         // Phase 4: Recurse on each bin
         var lastPos = first;
@@ -472,7 +493,8 @@ public static class SpreadSort
             }
             else
             {
-                SpreadSortRec(s, radixKey, binEnd - binLength, binEnd, binCache, cacheEnd, binSizes);
+                SpreadSortRec(s, radixKey, binEnd - binLength, binEnd, binCache, cacheEnd, binSizes,
+                              logMinSplitCount, logFinishingCount);
             }
         }
     }
@@ -620,24 +642,40 @@ public static class SpreadSort
     /// Below this threshold, comparison sort (pdqsort) is used instead.
     /// This is the core optimization of the SpreadSort algorithm.
     /// </summary>
-    static int GetMinCount(int logRange)
+    /// <remarks>
+    /// Boost templates this on <c>log_min_split_count</c> and <c>log_finishing_count</c> and
+    /// instantiates it twice, with <c>int_*</c> constants for <c>integer_sort</c> and <c>float_*</c>
+    /// constants for <c>float_sort</c>. Both are passed here as arguments; the function runs once per
+    /// recursion level, not per element, so there is nothing to gain from folding them.
+    /// </remarks>
+    static int GetMinCount(int logRange, int logMinSplitCount, int logFinishingCount)
     {
-        const int minSize = LogMeanBinSize + LogMinSplitCount; // 2 + 9 = 11
+        var minSize = LogMeanBinSize + logMinSplitCount; // integer: 2 + 9 = 11, float: 2 + 8 = 10
 
-        // NOTE: Boost's get_min_count is a template parameterized on log_finishing_count,
-        // and includes a guard "if (log_finishing_count < min_size)" as a compile-time
-        // dead-code elimination hint for the float_sort variant (float_log_finishing_count=4 < 10).
-        // For integer_sort the constants are fixed: LogFinishingCount(31) >= minSize(11),
-        // so that block is always unreachable and is omitted here.
+        // Boost: if we can complete in one iteration, do so. Reaching this means the bin still has
+        // more elements than the number of distinct values its remaining range can hold, so one more
+        // distribution pass bucket-sorts it outright. Boost disables the whole block for
+        // integer_sort by setting int_log_finishing_count (31) above min_size (11) — there pdqsort
+        // is the better finisher — and enables it for float_sort via float_log_finishing_count (4).
+        if (logFinishingCount < minSize)
+        {
+            if (logRange <= minSize && logRange <= MaxSplits)
+            {
+                // Return no smaller than a certain minimum limit
+                if (logRange <= logFinishingCount)
+                    return 1 << logFinishingCount;
+                return 1 << logRange;
+            }
+        }
 
-        var baseIterations = MaxSplits - LogMinSplitCount; // 11 - 9 = 2
+        var baseIterations = MaxSplits - logMinSplitCount; // integer: 11 - 9 = 2, float: 11 - 8 = 3
         // sum of n to n + x = ((x + 1) * (n + (n + x)))/2 + log_mean_bin_size
-        var baseRange = ((baseIterations + 1) * (MaxSplits + LogMinSplitCount)) / 2
-                        + LogMeanBinSize; // ((2+1)*(11+9))/2 + 2 = 32
+        var baseRange = ((baseIterations + 1) * (MaxSplits + logMinSplitCount)) / 2
+                        + LogMeanBinSize; // integer: 32, float: 40
 
         if (logRange < baseRange)
         {
-            var result = LogMinSplitCount; // 9
+            var result = logMinSplitCount;
             for (var offset = minSize; offset < logRange; offset += ++result)
             {
                 // intentionally empty; result is incremented in the loop

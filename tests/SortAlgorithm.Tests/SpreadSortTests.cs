@@ -216,6 +216,30 @@ public class SpreadSortTests : IntegerSortTestsBase
     }
 
     [Test]
+    [Arguments(4096)]
+    [Arguments(65536)]
+    public async Task HalfOnePassCompletionTest(int n)
+    {
+        // The floating-point overloads use Boost's float_* get_min_count constants
+        // (float_log_min_split_count=8, float_log_finishing_count=4), which enable the
+        // one-pass-completion branch that the int_* constants deliberately disable.
+        // Half is the width where that branch is actually reachable: 16-bit keys leave a
+        // log_divisor of 3-4 at the recursion decision, well inside the branch's gate, so a bin
+        // is finished with one more distribution pass instead of falling back to pdqsort.
+        // Half also has few distinct values, so these arrays are duplicate-heavy by construction.
+        var random = new Random(99);
+        var array = new Half[n];
+        for (var i = 0; i < n; i++) array[i] = (Half)(random.NextDouble() * 60000d);
+
+        var expected = (Half[])array.Clone();
+        Array.Sort(expected);
+
+        SpreadSort.Sort(array.AsSpan());
+
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    [Test]
     public async Task SignedZeroTest()
     {
         // Regression: -0.0 and +0.0 compare EQUAL under both IEEE '<' and double.CompareTo, so the

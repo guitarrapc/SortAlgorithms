@@ -82,6 +82,24 @@ since NaN is the only floating-point value mapping to key 0. Making the whole pa
 was measurably worse: hoisting the previous key into a local serialized a loop that had previously
 pipelined, costing ~3x on already-sorted `double`.
 
+Lesson learned: Boost templates `get_min_count` on its tuning constants and instantiates it twice —
+`int_*` for `integer_sort`, `float_*` for `float_sort` — and the difference is not cosmetic.
+`float_log_finishing_count = 4` enables a one-pass-completion branch that `int_log_finishing_count
+= 31` deliberately disables: when a bin still holds more elements than its remaining key range has
+distinct values, one more distribution pass bucket-sorts it outright instead of handing it to
+pdqsort. The floating-point path uses the `float_*` constants for this reason.
+
+Whether that branch is reachable depends entirely on key width, which is why measuring it on
+`double` alone is misleading. At 32/64-bit key widths `log_divisor` never falls into the branch's
+gate (observed 41-53 across narrow, wide, and integer-valued `double` data), so the tuning measures
+neutral there. At 16 bits it lands at 3-4, well inside the gate: `Half` is 1.1x to 2.5x faster with
+the float constants (65536 elements, narrow range: 1.69ms to 0.68ms). The gain tracks duplicate
+density rather than floating point as such — `Half` has few distinct values, so bins stay large.
+
+The same branch was measured on the integer path with `short` (identical 16-bit key width) and came
+out neutral, so Boost's choice to disable it for `integer_sort` was left alone. Deviating from the
+reference needs its own evidence, and there was none.
+
 Lesson learned: a bin cache sized at `n` is not a safe substitute for Boost's growable
 `bin_cache`. Bin counts come from the key *range*, not the element count, so a level whose bins are
 mostly empty claims far more slots than it has elements, and `cache_offset + bin_count` can exceed
