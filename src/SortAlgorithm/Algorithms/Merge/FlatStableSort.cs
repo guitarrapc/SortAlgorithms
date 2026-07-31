@@ -67,6 +67,10 @@ public static class FlatStableSort
     // Boost's inner sort_min = 32, used in RangeSort base case and CheckStableSort.
     private const int SORT_MIN_INTERNAL = 32;
 
+    // Boost util::merge / util::merge_half MIN_CHECK: minimum combined run length for which the
+    // "already in order / fully inverted" probe is worth two comparisons. Below it the probe is skipped.
+    private const int MIN_CHECK = 1024;
+
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
     /// </summary>
@@ -270,6 +274,26 @@ public static class FlatStableSort
         var right = mid;
         var dst = 0;
 
+        // Boost util::merge's MIN_CHECK short-circuit: on large merges, one comparison can prove the
+        // two runs are already in order (or fully inverted), turning the merge into bulk copies.
+        if (len >= MIN_CHECK && mid != 0 && mid != len)
+        {
+            // data[mid] >= data[mid - 1]: the runs concatenate as-is.
+            if (data.IsGreaterOrEqualAt(mid, mid - 1))
+            {
+                data.CopyTo(0, aux, 0, len);
+                return;
+            }
+
+            // data[len - 1] < data[0]: the whole right run precedes the whole left run.
+            if (data.IsLessAt(len - 1, 0))
+            {
+                data.CopyTo(mid, aux, 0, len - mid);
+                data.CopyTo(0, aux, len - mid, mid);
+                return;
+            }
+        }
+
         while (left < mid && right < len)
         {
             var leftValue = data.Read(left);
@@ -308,6 +332,25 @@ public static class FlatStableSort
         var left = 0;
         var right = mid;
         var dst = 0;
+
+        // Boost util::merge's MIN_CHECK short-circuit, mirrored for the aux → data direction.
+        if (len >= MIN_CHECK && mid != 0 && mid != len)
+        {
+            // aux[mid] >= aux[mid - 1]: the runs concatenate as-is.
+            if (aux.IsGreaterOrEqualAt(mid, mid - 1))
+            {
+                aux.CopyTo(0, data, 0, len);
+                return;
+            }
+
+            // aux[len - 1] < aux[0]: the whole right run precedes the whole left run.
+            if (aux.IsLessAt(len - 1, 0))
+            {
+                aux.CopyTo(mid, data, 0, len - mid);
+                aux.CopyTo(0, data, len - mid, mid);
+                return;
+            }
+        }
 
         while (left < mid && right < len)
         {
@@ -426,6 +469,27 @@ public static class FlatStableSort
         var leftEnd = leftLen;
         var rightEnd = mainStart + leftLen + rightLen;
 
+        // Boost util::merge_half's MIN_CHECK short-circuit. Same idea as MergeFromDataToBuffer, except
+        // the right run already occupies its final tail position, so the ordered case only copies buf.
+        if (leftLen + rightLen >= MIN_CHECK && leftLen != 0 && rightLen != 0)
+        {
+            // main[right] >= buf[leftEnd - 1]: the runs concatenate as-is; the right run stays put.
+            if (main.IsGreaterOrEqual(main.Read(right), buf.Read(leftEnd - 1)))
+            {
+                buf.CopyTo(0, main, dst, leftLen);
+                return;
+            }
+
+            // main[rightEnd - 1] < buf[0]: the whole right run precedes the buffer.
+            // The move overlaps when rightLen > leftLen; Span<T>.CopyTo handles that.
+            if (main.IsLessThan(main.Read(rightEnd - 1), buf.Read(0)))
+            {
+                main.CopyTo(right, main, dst, rightLen);
+                buf.CopyTo(0, main, dst + rightLen, leftLen);
+                return;
+            }
+        }
+
         while (left < leftEnd && right < rightEnd)
         {
             var leftValue = buf.Read(left);
@@ -444,44 +508,6 @@ public static class FlatStableSort
 
         if (left < leftEnd)
             buf.CopyTo(left, main, dst, leftEnd - left);
-    }
-
-    /// <summary>
-    /// Reverse stable merge where the right half is in <paramref name="buf"/>[0..<paramref name="rightLen"/>)
-    /// and the left half is in <paramref name="main"/>[<paramref name="mainStart"/>..+<paramref name="leftLen"/>).
-    /// Fills <paramref name="main"/> from the high end downward.
-    /// </summary>
-    /// <remarks>
-    /// Takes from the left when <c>IsGreaterThan(left, right)</c>, otherwise from
-    /// <paramref name="buf"/>. Remaining right elements in <paramref name="buf"/> are flushed into
-    /// the front of the merged region; remaining left elements are already in place.
-    /// </remarks>
-    private static void MergeHalfBackward<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> main, int mainStart, int leftLen, SortSpan<T, TComparer, TContext> buf, int rightLen)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var left = mainStart + leftLen - 1;
-        var right = rightLen - 1;
-        var dst = mainStart + leftLen + rightLen - 1;
-
-        while (left >= mainStart && right >= 0)
-        {
-            var leftValue = main.Read(left);
-            var rightValue = buf.Read(right);
-            if (main.IsGreaterThan(leftValue, rightValue))
-            {
-                main.Write(dst--, leftValue);
-                left--;
-            }
-            else
-            {
-                main.Write(dst--, rightValue);
-                right--;
-            }
-        }
-
-        if (right >= 0)
-            buf.CopyTo(0, main, mainStart, right + 1);
     }
 
     /// <summary>Reverses elements in <paramref name="s"/>[<paramref name="lo"/>..<paramref name="hi"/>] in-place.</summary>
@@ -562,9 +588,14 @@ public static class FlatStableSort
     /// </summary>
     /// <remarks>
     /// Block size is a power of two selected by element size in bytes via a lookup table:
-    /// <c>powers = [10, 10, 10, 9, 8, 7, 6, 6]</c> (index = log₂(sizeof−1), clamped to 0–7).
+    /// <c>powers = [10, 10, 10, 9, 8, 7, 6, 6]</c>. Boost indexes it with <c>tmsb[sizeof − 1]</c>,
+    /// where <c>tmsb[n]</c> is the <em>bit length</em> of <c>n</c> (0 for n = 0, otherwise
+    /// <c>⌊log₂ n⌋ + 1</c>) — not <c>⌊log₂ n⌋</c>. Sizes above 128 clamp to index 7.
     /// <c>string</c> is always treated as 64 (1&lt;&lt;6) regardless of its reference size.
-    /// Example: <c>int</c> (4 bytes) → bitSize = log₂(3) = 1 → powers[1] = 10 → blockSize = 1024.
+    /// The table keeps <c>blockSize × sizeof</c> at roughly 4 KiB, which bounds the
+    /// 2×blockSize circular scratch buffer; an off-by-one index doubles that footprint.
+    /// Examples: <c>int</c> (4 bytes) → bitLength(3) = 2 → powers[2] = 10 → 1024;
+    /// <c>long</c> (8 bytes) → bitLength(7) = 3 → powers[3] = 9 → 512.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int GetBlockSize<T>()
@@ -577,12 +608,12 @@ public static class FlatStableSort
         {
             <= 1 => 0,
             > 128 => 7,
-            _ => (int)BitOperations.Log2((uint)(size - 1)),
+            // BitOperations.Log2 is ⌊log₂ n⌋; +1 turns it into the bit length Boost's tmsb table holds.
+            _ => (int)BitOperations.Log2((uint)(size - 1)) + 1,
         };
 
         ReadOnlySpan<byte> powers = [10, 10, 10, 9, 8, 7, 6, 6];
         return 1 << powers[Math.Min(bitSize, powers.Length - 1)];
-
     }
 
     /// <summary>

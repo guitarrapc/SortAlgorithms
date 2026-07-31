@@ -13,7 +13,13 @@ public class FlatStableSortTests : StableSortTestsBase
     // No write/swap knob overrides: the Boost-like implementation has no whole-range
     // sorted fast exit, so sorted input still performs structured merge-sort work.
 
+    // FlatStableSort derives its block size from the element size, mirroring Boost's block_size_fss
+    // table indexed by the bit length of (sizeof - 1): 4-byte int -> 2^10 = 1024, 8-byte types
+    // (long, double, StabilityTestItem) -> 2^9 = 512.
+    // StabilityTestItem-based tests below use IntBlockSize as their unit; because 1024 is a multiple
+    // of 512 those lengths stay block-aligned and the tail sizes keep their intended meaning.
     private const int IntBlockSize = 1024;
+    private const int LongBlockSize = 512;
 
     // Tail block RearrangeWithIndex edge-case tests
     // These scenarios exercise the invariant that RearrangeWithIndex never copies
@@ -299,6 +305,95 @@ public class FlatStableSortTests : StableSortTestsBase
         await Assert.That(stats.IndexWriteCount).IsBetween(1UL, (ulong)(n * n));
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
         await Assert.That(stats.IndexReadCount > 0).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be > 0");
+    }
+
+    /// <summary>
+    /// 8-byte element types resolve to a 512-element block, so their tail block and the
+    /// nblock &gt; 7 partial-sorted fast paths land on different lengths than the 4-byte int case.
+    /// Uses 8 full blocks plus a tail so both <c>Divide</c> and the forward/backward pre-sort
+    /// probes are reachable.
+    /// </summary>
+    [Test]
+    [Arguments(0, "random")]
+    [Arguments(1, "random")]
+    [Arguments(LongBlockSize - 1, "random")]
+    [Arguments(1, "ascending")]
+    [Arguments(LongBlockSize - 1, "descending")]
+    [Arguments(LongBlockSize / 2, "duplicates")]
+    public async Task LongElementTailBlockBoundaryTest(int tailSize, string pattern)
+    {
+        var n = (8 * LongBlockSize) + tailSize;
+        var rng = new Random(20260731);
+        var array = new long[n];
+        for (var i = 0; i < n; i++)
+        {
+            array[i] = pattern switch
+            {
+                "ascending" => i,
+                "descending" => n - i,
+                "duplicates" => rng.Next(0, 8),
+                _ => rng.Next(),
+            };
+        }
+
+        var expected = array.ToArray();
+        Array.Sort(expected);
+
+        FlatStableSort.Sort(array.AsSpan(), new StatisticsContext());
+
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    /// <summary>
+    /// Equivalence classes of the MIN_CHECK (1024) merge short-circuit probes.
+    /// StabilityTestItem is 8 bytes, so a 2048-element array is 4 blocks: <c>SortSmall</c> sorts
+    /// [0..1024) into the buffer and [1024..2048) in place, then merges them as one 2048-element
+    /// <c>MergeHalf</c> — above MIN_CHECK, so the probes run.
+    /// <list type="bullet">
+    /// <item><description><c>concatenating</c>: left run entirely below the right run — ordered probe fires.</description></item>
+    /// <item><description><c>inverted</c>: right run entirely below the left run — inverted probe fires.</description></item>
+    /// <item><description><c>equalBoundary</c>: the right run's maximum equals the left run's minimum.
+    /// Neither probe may fire: the inverted probe is strict (<c>&lt;</c>), and relaxing it to
+    /// <c>&lt;=</c> would emit the right run's duplicates ahead of equal left-run elements.</description></item>
+    /// </list>
+    /// </summary>
+    [Test]
+    [Arguments("concatenating")]
+    [Arguments("inverted")]
+    [Arguments("equalBoundary")]
+    public async Task MinCheckMergeShortCircuitStabilityTest(string pattern)
+    {
+        const int half = 2 * LongBlockSize;
+        const int equalTail = 64;
+        var items = new StabilityTestItem[2 * half];
+
+        for (var i = 0; i < half; i++)
+        {
+            // Each run carries several distinct keys so that a probe branch which skips its copy
+            // leaves detectably wrong data behind instead of coincidentally correct constants.
+            var (leftValue, rightValue) = pattern switch
+            {
+                "concatenating" => (i % 3, 7 + (i % 3)),
+                "inverted" => (7 + (i % 3), i % 3),
+                // Left run is all 5s; the right run holds unsorted 0..4 keys followed by 5s, so after
+                // its recursive sort the right run ends on the same key the left run starts with.
+                _ => (5, i < half - equalTail ? i % 5 : 5),
+            };
+
+            items[i] = new StabilityTestItem(leftValue, i);
+            items[half + i] = new StabilityTestItem(rightValue, half + i);
+        }
+
+        // LINQ OrderBy is stable, so this is the exact expected stable permutation.
+        var expected = items.OrderBy(x => x.Value).ToArray();
+
+        FlatStableSort.Sort(items.AsSpan(), new StatisticsContext());
+
+        for (var i = 0; i < items.Length; i++)
+        {
+            await Assert.That(items[i].Value).IsEqualTo(expected[i].Value);
+            await Assert.That(items[i].OriginalIndex).IsEqualTo(expected[i].OriginalIndex);
+        }
     }
 
     private static StabilityTestItem[] CreateTailBlockStressItems(int tailLength)
