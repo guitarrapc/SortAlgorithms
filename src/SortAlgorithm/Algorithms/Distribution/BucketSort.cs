@@ -331,7 +331,7 @@ public static class BucketSortInteger
             var tempSpan = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
             var indices = indicesArray.AsSpan(0, span.Length);
 
-            SortCore(s, tempSpan, tempArray.AsSpan(0, span.Length), indices, context);
+            SortCore(s, tempSpan, indices, context);
         }
         finally
         {
@@ -340,7 +340,7 @@ public static class BucketSortInteger
         }
     }
 
-    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> bucketIndices, TContext context)
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> tempSpan, Span<int> bucketIndices, TContext context)
         where T : IBinaryInteger<T>, IMinMaxValue<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -385,10 +385,10 @@ public static class BucketSortInteger
         ulong bucketSize = Math.Max(1UL, range / (ulong)bucketCount + (range % (ulong)bucketCount != 0 ? 1UL : 0UL));
 
         // Perform bucket distribution and sorting
-        BucketDistribute(s, tempSpan, tempArray, bucketIndices, bucketCount, bucketSize, min);
+        BucketDistribute(s, tempSpan, bucketIndices, bucketCount, bucketSize, min);
     }
 
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> tempSpan, Span<T> tempArray, Span<int> bucketIndices, int bucketCount, ulong bucketSize, long min)
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> tempSpan, Span<int> bucketIndices, int bucketCount, ulong bucketSize, long min)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -438,40 +438,23 @@ public static class BucketSortInteger
             tempSpan.Write(pos, source.Read(i));
         }
 
-        // Sort each bucket using Span slicing
+        // Sort each bucket in place inside the temp buffer.
+        // The buckets are adjacent ranges of one contiguous array, so each is sliced with BUFFER_TEMP
+        // rather than a private buffer id: the slice's Offset already places it unambiguously, and the
+        // final CopyTo below reports the same buffer, so a consumer never sees elements appear in a
+        // buffer they were not written to.
         for (var i = 0; i < bucketCount; i++)
         {
             var count = bucketCounts[i];
             if (count > 1)
             {
                 var start = bucketStarts[i];
-                InsertionSortGenericBucket(tempArray.Slice(start, count), source.Comparer);
+                InsertionSort.SortCore(tempSpan.Slice(start, count, BUFFER_TEMP), 0, count);
             }
         }
 
         // Write sorted data back to original span using CopyTo for better performance
         tempSpan.CopyTo(0, source, 0, source.Length);
-    }
-
-    /// <summary>
-    /// Insertion sort for generic bucket contents (stable sort)
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void InsertionSortGenericBucket<T, TComparer>(Span<T> bucket, TComparer comparer)
-        where TComparer : IComparer<T>
-    {
-        for (var i = 1; i < bucket.Length; i++)
-        {
-            var key = bucket[i];
-            var j = i - 1;
-
-            while (j >= 0 && comparer.Compare(bucket[j], key) > 0)
-            {
-                bucket[j + 1] = bucket[j];
-                j--;
-            }
-            bucket[j + 1] = key;
-        }
     }
 
     /// <summary>
