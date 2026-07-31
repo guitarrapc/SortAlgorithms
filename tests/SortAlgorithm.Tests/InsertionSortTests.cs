@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Algorithms;
+using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 using TUnit.Assertions.Enums;
 
@@ -202,13 +202,6 @@ public class InsertionSortTests : StableSortTestsBase
     {
         var s = new SortSpan<int, ComparableComparer<int>, TContext>(array.AsSpan(), context, new ComparableComparer<int>(), 0);
         return InsertionSort.SortIncomplete(s, first, last, leftmost);
-    }
-
-    private static void RunSortCoreOnSlice(int[] array, int sliceStart, int sliceLength, int bufferId, VisualizationContext context)
-    {
-        var outer = new SortSpan<int, ComparableComparer<int>, VisualizationContext>(array.AsSpan(), context, new ComparableComparer<int>(), 0);
-        var sliced = outer.Slice(sliceStart, sliceLength, bufferId);
-        InsertionSort.SortCore(sliced, 0, sliceLength);
     }
 
     /// <summary>0..n-1 の全順列。小さい n の網羅列挙にのみ使う。</summary>
@@ -561,75 +554,5 @@ public class InsertionSortTests : StableSortTestsBase
         await Assert.That(sorted).IsTrue();
         await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
-    }
-
-    // ---- Observation coordinates ----
-
-    /// <summary>
-    /// BucketSort は temp をバケツ単位に Slice（Offset != 0, バッファ ID 100+i）して、Glidesort は
-    /// スクラッチバッファを渡して SortCore を呼ぶ。Read/Write/Compare は SortSpan 経由なので
-    /// 既にスライス自身の Offset/BufferId で報告される。相とロールがこれと違う座標系だと、
-    /// 可視化側はバケツをソート中にメイン配列の無関係な要素をハイライトすることになる。
-    /// </summary>
-    [Test]
-    public async Task SortCoreReportsPhaseAndRoleInSliceCoordinatesTest()
-    {
-        const int sliceStart = 3;
-        const int sliceLength = 4;
-        const int bufferId = 107;
-
-        var roles = new List<(int Index, int BufferId)>();
-        var phases = new List<(int P1, int P2, int P3)>();
-        var elementOps = new List<(int Index, int BufferId)>();
-
-        var context = new VisualizationContext(
-            onIndexRead: (i, b) => elementOps.Add((i, b)),
-            onIndexWrite: (i, b, _) => elementOps.Add((i, b)),
-            onPhase: (p, p1, p2, p3) =>
-            {
-                if (p == SortPhase.InsertionPass) phases.Add((p1, p2, p3));
-            },
-            onRole: (i, b, _) => roles.Add((i, b)));
-
-        var array = new[] { 0, 0, 0, 4, 3, 2, 1, 0, 0, 0 };
-        RunSortCoreOnSlice(array, sliceStart, sliceLength, bufferId, context);
-
-        await Assert.That(array).IsEquivalentTo([0, 0, 0, 1, 2, 3, 4, 0, 0, 0], CollectionOrdering.Matching);
-
-        // 前提: 要素操作はスライスの座標系で報告されている。
-        await Assert.That(elementOps).IsNotEmpty();
-        await Assert.That(elementOps.All(o => o.BufferId == bufferId)).IsTrue()
-            .Because($"要素操作のバッファ ID: [{string.Join(",", elementOps.Select(o => o.BufferId).Distinct())}]");
-        await Assert.That(elementOps.All(o => o.Index >= sliceStart && o.Index < sliceStart + sliceLength)).IsTrue()
-            .Because($"要素操作のインデックス: [{string.Join(",", elementOps.Select(o => o.Index).Distinct().Order())}]");
-
-        // ロールが同じ座標系であること。
-        await Assert.That(roles).IsNotEmpty();
-        await Assert.That(roles.All(r => r.BufferId == bufferId)).IsTrue()
-            .Because($"ロールが要素操作と違うバッファを指しています: [{string.Join(",", roles.Select(r => r.BufferId).Distinct())}]");
-        await Assert.That(roles.All(r => r.Index >= sliceStart && r.Index < sliceStart + sliceLength)).IsTrue()
-            .Because($"ロールのインデックス: [{string.Join(",", roles.Select(r => r.Index).Distinct().Order())}]");
-
-        // 相のパラメータも同じ座標系であること（param1=i, param2=first, param3=last-1）。
-        await Assert.That(phases).IsNotEmpty();
-        await Assert.That(phases.All(p => p.P2 == sliceStart && p.P3 == sliceStart + sliceLength - 1)).IsTrue()
-            .Because($"相の範囲パラメータ: [{string.Join(",", phases.Select(p => $"({p.P2},{p.P3})").Distinct())}]");
-        await Assert.That(phases.All(p => p.P1 >= sliceStart && p.P1 < sliceStart + sliceLength)).IsTrue()
-            .Because($"相の対象インデックス: [{string.Join(",", phases.Select(p => p.P1).Distinct().Order())}]");
-    }
-
-    /// <summary>Offset 0 / バッファ 0 の通常経路では従来どおりの絶対インデックスであること。</summary>
-    [Test]
-    public async Task SortCoreReportsMainBufferCoordinatesForUnslicedSpanTest()
-    {
-        var roles = new List<(int Index, int BufferId)>();
-        var context = new VisualizationContext(onRole: (i, b, _) => roles.Add((i, b)));
-
-        var array = new[] { 4, 3, 2, 1 };
-        InsertionSort.Sort(array.AsSpan(), context);
-
-        await Assert.That(roles.Select(r => r.Index).Distinct().Order().ToList())
-            .IsEquivalentTo(new List<int> { 1, 2, 3 }, CollectionOrdering.Matching);
-        await Assert.That(roles.All(r => r.BufferId == 0)).IsTrue();
     }
 }

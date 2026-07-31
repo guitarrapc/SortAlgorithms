@@ -153,8 +153,13 @@ public static class HeapSort
     {
         var n = last - first;
 
-        // Build heap
-        s.Context.OnPhase(SortPhase.HeapBuild, first, last - 1);
+        // Build heap.
+        // Read/Write/Compare report through the span they were given, so a caller that hands this core
+        // a slice already gets its own Offset and BufferId on every element operation. Index-valued phase
+        // parameters and roles must use the same coordinates, or they name a different element. The
+        // introsort family passes the whole span today, which makes the two agree only by coincidence.
+        // HeapExtract's parameters are step counts rather than indices, so they are reported as-is.
+        s.Context.OnPhase(SortPhase.HeapBuild, s.Offset + first, s.Offset + last - 1);
         for (var i = first + n / 2; i-- > first;)
             FloydHeapify(s, i, n, first);
 
@@ -163,7 +168,7 @@ public static class HeapSort
         for (var i = last - 1; i > first; i--)
         {
             s.Context.OnPhase(SortPhase.HeapExtract, last - i, totalExtractions);
-            s.Context.OnRole(first, BUFFER_MAIN, RoleType.CurrentMax);
+            s.Context.OnRole(s.Offset + first, s.BufferId, RoleType.CurrentMax);
 
             // Save max (root) and the last element, then sift down the last element
             var max = s.Read(first);
@@ -171,7 +176,7 @@ public static class HeapSort
             Heapify(s, first, i - first, first, lastVal);
             s.Write(i, max);
 
-            s.Context.OnRole(first, BUFFER_MAIN, RoleType.None);
+            s.Context.OnRole(s.Offset + first, s.BufferId, RoleType.None);
         }
     }
 
@@ -406,8 +411,10 @@ public static class HeapSortNonOptimized
     {
         var n = last - first;
 
-        // Build heap
-        s.Context.OnPhase(SortPhase.HeapBuild, first, last - 1);
+        // Build heap.
+        // Index-valued phase parameters and roles use the span's own coordinates, matching what
+        // Read/Write/Compare/Swap report. HeapExtract's parameters are step counts, not indices.
+        s.Context.OnPhase(SortPhase.HeapBuild, s.Offset + first, s.Offset + last - 1);
         for (var i = first + n / 2 - 1; i >= first; i--)
         {
             Heapify(s, i, n, first);
@@ -418,12 +425,12 @@ public static class HeapSortNonOptimized
         for (var i = last - 1; i > first; i--)
         {
             s.Context.OnPhase(SortPhase.HeapExtract, last - i, totalExtractions);
-            s.Context.OnRole(first, BUFFER_MAIN, RoleType.CurrentMax);
+            s.Context.OnRole(s.Offset + first, s.BufferId, RoleType.CurrentMax);
 
             // Move current root to end
             s.Swap(first, i);
 
-            s.Context.OnRole(first, BUFFER_MAIN, RoleType.None);
+            s.Context.OnRole(s.Offset + first, s.BufferId, RoleType.None);
 
             // Re-heapify the reduced heap (standard sift-down)
             Heapify(s, first, i - first, first);

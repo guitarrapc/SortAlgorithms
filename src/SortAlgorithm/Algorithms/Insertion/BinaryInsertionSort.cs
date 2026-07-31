@@ -160,10 +160,14 @@ public static class BinaryInsertionSort
         if (start == first)
             start++;
 
+        // Read/Write/Compare report through the span they were given, so a caller that hands this core
+        // a slice already gets its own Offset and BufferId on every element operation. Phases and roles
+        // must use the same coordinates; a raw index or a hard-coded BUFFER_MAIN would name a different
+        // element. TimSort passes the whole span today, which makes the two agree only by coincidence.
         for (var i = start; i < last; i++)
         {
-            s.Context.OnPhase(SortPhase.BinaryInsertionPass, i, first, last - 1);
-            s.Context.OnRole(i, BUFFER_MAIN, RoleType.RightPointer);
+            s.Context.OnPhase(SortPhase.BinaryInsertionPass, s.Offset + i, s.Offset + first, s.Offset + last - 1);
+            s.Context.OnRole(s.Offset + i, s.BufferId, RoleType.RightPointer);
 
             // Early termination: if element is already in correct position, skip everything
             // Compare indices directly to avoid reading tmp unnecessarily
@@ -206,7 +210,7 @@ public static class BinaryInsertionSort
                 // Insert the element at its correct position
                 s.Write(pos, tmp);
             }
-            s.Context.OnRole(i, BUFFER_MAIN, RoleType.None);
+            s.Context.OnRole(s.Offset + i, s.BufferId, RoleType.None);
         }
     }
 
