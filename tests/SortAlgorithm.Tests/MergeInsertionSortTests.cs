@@ -113,6 +113,69 @@ public class MergeInsertionSortTests : SortTestsBase
     }
 
     /// <summary>
+    /// Merge Insertion の相はすべてスコープ相なので、再帰の各段が相を発行すると
+    /// 呼び出し元が宣言した MergeInsertionSortLarger を 1 オペレーションも表示しないまま上書きする。
+    /// <see cref="PhaseScopeNotificationTests"/> と同じ不変条件だが、あちらは共有コアへ委譲する
+    /// ハイブリッド経路が対象で、どのコアにも委譲しないこのアルゴリズムは含まれない。
+    /// </summary>
+    [Test]
+    [Arguments(3)]
+    [Arguments(4)]
+    [Arguments(5)]
+    [Arguments(9)]
+    [Arguments(16)]
+    [Arguments(17)]
+    [Arguments(64)]
+    [Arguments(100)]
+    public async Task ScopePhaseIsNeverStarvedByRecursion(int n)
+    {
+        var events = new List<(SortPhase Phase, bool IsOperation)>();
+        void Op() => events.Add((SortPhase.None, true));
+
+        var context = new VisualizationContext(
+            onCompare: (_, _, _, _, _) => Op(),
+            onSwap: (_, _, _) => Op(),
+            onIndexRead: (_, _) => Op(),
+            onIndexWrite: (_, _, _) => Op(),
+            onRangeCopy: (_, _, _, _, _, _) => Op(),
+            onPhase: (p, _, _, _) => events.Add((p, false)));
+
+        var data = TestHelpers.ShuffledRange(n, 42);
+        MergeInsertionSort.Sort(data.AsSpan(), context);
+
+        // 宣言されたスコープ相は、次のスコープ相に上書きされるまでに最低 1 オペレーションを伴うこと。
+        var currentScope = SortPhase.None;
+        var opsUnderCurrentScope = 0;
+        var starved = new List<SortPhase>();
+        foreach (var e in events)
+        {
+            if (e.IsOperation) { opsUnderCurrentScope++; continue; }
+            if (!e.Phase.IsScopePhase()) continue;
+
+            if (currentScope != SortPhase.None && opsUnderCurrentScope == 0) starved.Add(currentScope);
+            currentScope = e.Phase;
+            opsUnderCurrentScope = 0;
+        }
+
+        await Assert.That(starved.Distinct().ToList()).IsEmpty()
+            .Because("宣言されたのに 1 オペレーションも表示されないスコープ相があります");
+
+        // 各相はトップレベルで高々 1 回。再帰の各段が発行していれば n とともに増える。
+        SortPhase[] phases =
+        [
+            SortPhase.MergeInsertionPairing,
+            SortPhase.MergeInsertionSortLarger,
+            SortPhase.MergeInsertionInsertPend,
+            SortPhase.MergeInsertionRearrange,
+        ];
+        foreach (var phase in phases)
+        {
+            await Assert.That(events.Count(e => !e.IsOperation && e.Phase == phase)).IsLessThanOrEqualTo(1)
+                .Because($"{phase} は最外周でのみ発行されること");
+        }
+    }
+
+    /// <summary>
     /// F(n) = sum(k=1..n) ceil(log2(3k/4)), the Ford-Johnson worst-case comparison count (OEIS A001768).
     /// F(1..10) = 0, 1, 3, 5, 7, 10, 13, 16, 19, 22.
     /// </summary>

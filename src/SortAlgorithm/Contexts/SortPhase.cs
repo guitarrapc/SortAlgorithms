@@ -165,18 +165,22 @@ public enum SortPhase
     /// <summary>
     /// Merge Insertion Sort (Ford-Johnson): pairing elements and comparing each pair.
     /// param1=0, param2=pairs-1 (number of pairs)
+    /// Emitted once per sort, for the outermost level only: the counts describe the whole input,
+    /// and nested levels stay silent so this scope phase is not overwritten mid-recursion.
     /// </summary>
     MergeInsertionPairing,
 
     /// <summary>
     /// Merge Insertion Sort (Ford-Johnson): sorting the larger elements from each pair.
     /// param1=0, param2=pairs-1
+    /// Spans the entire recursion, and is skipped when there is only one larger element to sort.
     /// </summary>
     MergeInsertionSortLarger,
 
     /// <summary>
     /// Merge Insertion Sort (Ford-Johnson): inserting pended elements using Jacobsthal sequence.
     /// param1=0, param2=pendCount-1
+    /// Outermost level only, matching <see cref="MergeInsertionPairing"/>.
     /// </summary>
     MergeInsertionInsertPend,
 

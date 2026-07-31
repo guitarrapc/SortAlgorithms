@@ -177,6 +177,12 @@ public static class MergeInsertionSort
         where TContext : ISortContext
     {
         var n = indices.Length;
+
+        // Phase announcements and chain-buffer writes are both top-level only. The Merge Insertion
+        // phases are scope phases (see SortPhaseExtensions.IsDetailPhase), so a nested level
+        // announcing MergeInsertionPairing would overwrite the caller's MergeInsertionSortLarger
+        // before a single operation is observed under it, and would also scribble intermediate
+        // state over the top-level chain buffer.
         var visualize = typeof(TContext) != typeof(NullContext) && isTopLevel;
 
         // Base case: single element
@@ -224,7 +230,7 @@ public static class MergeInsertionSort
             var pendPartners = rentedPendPartners.AsSpan(0, pairs);
 
             // Step 1: Pair elements and compare each pair
-            s.Context.OnPhase(SortPhase.MergeInsertionPairing, 0, pairs - 1);
+            if (visualize) s.Context.OnPhase(SortPhase.MergeInsertionPairing, 0, pairs - 1);
 
             for (var i = 0; i < pairs; i++)
             {
@@ -243,8 +249,10 @@ public static class MergeInsertionSort
                 }
             }
 
-            // Step 2: Recursively sort the larger elements
-            s.Context.OnPhase(SortPhase.MergeInsertionSortLarger, 0, pairs - 1);
+            // Step 2: Recursively sort the larger elements.
+            // pairs == 1 has nothing to sort, and the recursion emits no observable operation for it,
+            // so announcing the phase there would leave it starved.
+            if (visualize && pairs > 1) s.Context.OnPhase(SortPhase.MergeInsertionSortLarger, 0, pairs - 1);
             FordJohnson(s, larger, sortedLarger, chain, partnerOf, isTopLevel: false);
 
             // Map each larger element back to its pair partner for O(1) lookup below.
@@ -290,7 +298,7 @@ public static class MergeInsertionSort
             // Step 4: Insert pend elements using Jacobsthal sequence order
             if (pendCount > 0)
             {
-                s.Context.OnPhase(SortPhase.MergeInsertionInsertPend, 0, pendCount - 1);
+                if (visualize) s.Context.OnPhase(SortPhase.MergeInsertionInsertPend, 0, pendCount - 1);
                 InsertPendElements(s, outChain, ref chainLen, pendValues.Slice(0, pendCount), pendPartners.Slice(0, pendCount), chain, isTopLevel);
             }
         }
