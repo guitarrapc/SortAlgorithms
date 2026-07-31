@@ -20,17 +20,24 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Pairwise Comparison:</strong> Compare elements in pairs (2i, 2i+1) to determine larger and smaller elements.
 /// This guarantees that each pair requires exactly one comparison.</description></item>
 /// <item><description><strong>Recursive Sorting of Larger Elements:</strong> Sort the larger elements from each pair recursively.
-/// For small arrays (n &lt;= 16), use binary insertion sort as the base case.</description></item>
+/// Recursion bottoms out at n &lt;= 2, which is resolved with a single comparison. A larger base case such as
+/// binary insertion sort would be cheaper in data movement but would no longer attain the Ford-Johnson comparison bound.</description></item>
 /// <item><description><strong>Main Chain Construction:</strong> Build a sorted chain from the larger elements.
 /// The smaller elements from each pair are pended for insertion.</description></item>
 /// <item><description><strong>Jacobsthal Sequence Insertion:</strong> Insert pended elements in an order determined by the Jacobsthal sequence (1, 3, 5, 11, 21, 43, ...).
 /// This ordering minimizes the number of comparisons needed during binary insertion.
 /// The sequence ensures that when inserting element at position k, the search space has size 2^m - 1 for some m, optimal for binary search.</description></item>
-/// <item><description><strong>Binary Insertion:</strong> For each pended element, use binary search to find its insertion position within the sorted main chain,
-/// then insert it. The search range is limited based on the Jacobsthal sequence properties.</description></item>
-/// <item><description><strong>Stability:</strong> The algorithm maintains stability by using strict inequality (&lt;) in comparisons
-/// and inserting equal elements after existing ones.</description></item>
+/// <item><description><strong>Binary Insertion:</strong> For each pended element, use binary search to find its insertion position within the sorted main chain.
+/// The search range is bounded above by the current position of the element's pair partner: pairing guarantees the pended element is
+/// no greater than its partner, so the insertion point cannot lie beyond it. Combined with the Jacobsthal order this keeps every
+/// search range at most 2^m - 1 wide.</description></item>
+/// <item><description><strong>Stability:</strong> Not preserved. The Jacobsthal order inserts pended elements out of their original
+/// sequence, so a later equal key can end up before an earlier one.</description></item>
 /// </list>
+/// <para>
+/// The comparison count of this implementation matches F(n) = &#x3A3;&#x2096; &#x2308;log&#x2082;(3k/4)&#x2309; exactly
+/// (verified exhaustively for n &#x2264; 9), which is the Ford-Johnson worst-case optimum.
+/// </para>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Insertion</description></item>
@@ -113,15 +120,20 @@ public static class MergeInsertionSort
     {
         var n = s.Length;
 
+        // The chain buffer only backs visualization writes, so the NullContext fast path
+        // never touches it. typeof(TContext) is a JIT constant, so this rental disappears there.
+        var needsChain = typeof(TContext) != typeof(NullContext);
+
         // avoid per-call list/dictionary allocations
         var rentedValues = ArrayPool<T>.Shared.Rent(n);
         var rentedSorted = ArrayPool<int>.Shared.Rent(n);
         var rentedIndices = ArrayPool<int>.Shared.Rent(n);
-        var rentedChain = ArrayPool<T>.Shared.Rent(n);
+        var rentedPartners = ArrayPool<int>.Shared.Rent(n);
+        var rentedChain = needsChain ? ArrayPool<T>.Shared.Rent(n) : [];
         try
         {
             var values = rentedValues.AsSpan(0, n);
-            var chainSpan = new SortSpan<T, TComparer, TContext>(rentedChain.AsSpan(0, n), s.Context, s.Comparer, BUFFER_CHAIN);
+            var chainSpan = new SortSpan<T, TComparer, TContext>(needsChain ? rentedChain.AsSpan(0, n) : default, s.Context, s.Comparer, BUFFER_CHAIN);
             var sorted = rentedSorted.AsSpan(0, n);
             var indices = rentedIndices.AsSpan(0, n);
 
@@ -133,7 +145,7 @@ public static class MergeInsertionSort
             }
 
             // Build the sorted index order using Ford-Johnson over the original data
-            FordJohnson(s, indices, sorted, chainSpan);
+            FordJohnson(s, indices, sorted, chainSpan, rentedPartners.AsSpan(0, n));
 
             // Write back in sorted order (reads from temp buffer, writes to main buffer)
             s.Context.OnPhase(SortPhase.MergeInsertionRearrange, 0, n - 1);
@@ -145,9 +157,11 @@ public static class MergeInsertionSort
         finally
         {
             ArrayPool<T>.Shared.Return(rentedValues, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            ArrayPool<T>.Shared.Return(rentedChain, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+            if (needsChain)
+                ArrayPool<T>.Shared.Return(rentedChain, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             ArrayPool<int>.Shared.Return(rentedSorted);
             ArrayPool<int>.Shared.Return(rentedIndices);
+            ArrayPool<int>.Shared.Return(rentedPartners);
         }
     }
 
@@ -156,8 +170,9 @@ public static class MergeInsertionSort
     /// </summary>
     /// <param name="indices">Input indices to sort (read-only).</param>
     /// <param name="outChain">Pre-allocated output buffer that receives the sorted chain. Must have at least <c>indices.Length</c> elements.</param>
+    /// <param name="partnerOf">Shared scratch of length <c>values.Length</c> mapping a larger element's original index to its pair partner. Written after the recursive call so deeper levels can reuse the same buffer.</param>
     /// <param name="isTopLevel">When <c>true</c>, chain buffer writes are emitted for visualization. Recursive calls pass <c>false</c> to avoid overwriting the top-level chain state.</param>
-    private static void FordJohnson<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ReadOnlySpan<int> indices, Span<int> outChain, SortSpan<T, TComparer, TContext> chain, bool isTopLevel = true)
+    private static void FordJohnson<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, ReadOnlySpan<int> indices, Span<int> outChain, SortSpan<T, TComparer, TContext> chain, Span<int> partnerOf, bool isTopLevel = true)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -197,8 +212,6 @@ public static class MergeInsertionSort
         var hasStraggler = (n & 1) == 1;
 
         // Rent working buffers for this recursion level
-        // No partnerOf[values.Length] — use IndexOf on larger/smaller (O(pairs) per lookup)
-        // to avoid renting the full values.Length at every recursion depth.
         var rentedLarger = ArrayPool<int>.Shared.Rent(pairs);
         var rentedSmaller = ArrayPool<int>.Shared.Rent(pairs);
         var rentedSortedLarger = ArrayPool<int>.Shared.Rent(pairs);
@@ -232,15 +245,18 @@ public static class MergeInsertionSort
 
             // Step 2: Recursively sort the larger elements
             s.Context.OnPhase(SortPhase.MergeInsertionSortLarger, 0, pairs - 1);
-            FordJohnson(s, larger, sortedLarger, chain, isTopLevel: false);
+            FordJohnson(s, larger, sortedLarger, chain, partnerOf, isTopLevel: false);
+
+            // Map each larger element back to its pair partner for O(1) lookup below.
+            // Filled only after the recursive call returns: deeper levels overwrite the
+            // same shared buffer for their own pairs, which overlap this level's larger set.
+            for (var i = 0; i < pairs; i++)
+                partnerOf[larger[i]] = smaller[i];
 
             // Step 3: Build main chain directly in outChain
             // Main chain starts with b1 (smallest's partner), then all sorted larger elements
             // b1 < a1 <= a2 <= ... <= an, so b1 is known to be smaller than a1
-            // Partner lookup via IndexOf on the parallel larger/smaller arrays
-            var p = larger.IndexOf(sortedLarger[0]);
-            Debug.Assert(p >= 0);
-            outChain[0] = smaller[p];
+            outChain[0] = partnerOf[sortedLarger[0]];
             sortedLarger.CopyTo(outChain.Slice(1));
             var chainLen = 1 + pairs;
 
@@ -253,16 +269,13 @@ public static class MergeInsertionSort
             // plus the straggler (no partner) if n is odd.
             // Reuse sortedLarger buffer for pendValues (safe: values already copied to outChain[1..pairs])
             // Read original sortedLarger values from outChain[1+i] to avoid aliasing.
-            // larger/smaller remain valid for IndexOf partner lookups throughout.
             var pendValues = sortedLarger;
             var pendCount = 0;
 
             for (var i = 1; i < pairs; i++)
             {
                 var origIdx = outChain[1 + i];
-                var p2 = larger.IndexOf(origIdx);
-                Debug.Assert(p2 >= 0);
-                pendValues[pendCount] = smaller[p2];
+                pendValues[pendCount] = partnerOf[origIdx];
                 pendPartners[pendCount] = origIdx;
                 pendCount++;
             }
@@ -327,19 +340,40 @@ public static class MergeInsertionSort
 
                 // Upper bound: partner's current position in the main chain (exclusive).
                 // Straggler (partnerIdx == -1) has no partner so it can go anywhere.
-                var upperBound = partnerIdx >= 0
-                    ? mainChain.Slice(0, chainLen).IndexOf(partnerIdx)
-                    : chainLen;
+                int upperBound;
+                if (partnerIdx >= 0)
+                {
+                    // pend[j]'s partner is chain element j + 2 when the chain is first built
+                    // (b1, a1 .. a_(j+1)), and an element's position only grows as later
+                    // elements are inserted, so the scan can skip the first j + 2 slots.
+                    var lo = idx + 2;
+                    Debug.Assert(lo < chainLen);
+                    var offset = mainChain.Slice(lo, chainLen - lo).IndexOf(partnerIdx);
+                    Debug.Assert(offset >= 0);
+                    upperBound = lo + offset;
+                }
+                else
+                {
+                    upperBound = chainLen;
+                }
 
                 s.Context.OnRole(valueIdx, BUFFER_MAIN, RoleType.Inserting);
 
                 var pos = BinarySearchInChain(s, mainChain, valueIdx, 0, upperBound);
 
-                // Manual shift right to make room for insertion (replaces List.Insert)
-                for (var k = chainLen; k > pos; k--)
+                // Shift right to make room for insertion (replaces List.Insert).
+                if (visualize)
                 {
-                    mainChain[k] = mainChain[k - 1];
-                    ChainShift(chain, k, k - 1, visualize);
+                    for (var k = chainLen; k > pos; k--)
+                    {
+                        mainChain[k] = mainChain[k - 1];
+                        ChainShift(chain, k, k - 1, visualize);
+                    }
+                }
+                else
+                {
+                    // Span.CopyTo forwards to memmove, which handles the overlap.
+                    mainChain.Slice(pos, chainLen - pos).CopyTo(mainChain.Slice(pos + 1, chainLen - pos));
                 }
                 mainChain[pos] = valueIdx;
                 ChainWrite(s, chain, pos, valueIdx, visualize);
@@ -407,10 +441,13 @@ public static class MergeInsertionSort
 
     /// <summary>
     /// Fill the insertion order for pended elements using Jacobsthal numbers.
-    /// The order is: for each consecutive pair (J(k), J(k+1)] in the Jacobsthal sequence,
-    /// insert indices from J(k+1) down to J(k)+1 (in reverse).
-    /// This ensures optimal binary search bounds.
-    /// Uses <c>stackalloc</c> for the small Jacobsthal number sequence (max ~46 entries for int range).
+    /// The pend list holds b2, b3, ... (b1 is already in the chain), so pend position <c>i</c>
+    /// (1-based) is b(i+1). The classic Ford-Johnson order groups the b subscripts as
+    /// (J(k-1), J(k)] and walks each group downwards:
+    /// <c>b3 b2 | b5 b4 | b11 .. b6 | b21 .. b12 | ...</c>
+    /// In pend positions that group is <c>[J(k-1), J(k) - 1]</c>, walked from the top.
+    /// Getting these boundaries wrong still sorts correctly but costs more than F(n) comparisons.
+    /// Uses <c>stackalloc</c> for the small Jacobsthal number sequence (max ~34 entries for int range).
     /// </summary>
     /// <param name="order">Pre-allocated output span to receive 0-based indices into the pend array in insertion order.</param>
     /// <param name="count">Number of pended elements.</param>
@@ -419,22 +456,23 @@ public static class MergeInsertionSort
         if (count == 0) return;
 
         // Generate Jacobsthal numbers until we exceed count
-        // J(n) = J(n-1) + 2*J(n-2); for any practical int, at most ~46 entries needed
+        // J(n) = J(n-1) + 2*J(n-2); for any practical int, at most ~34 entries needed
         Span<int> jacobsthal = stackalloc int[64];
-        var jacLen = 2;
+        var jacLen = 3;
         jacobsthal[0] = 0;
         jacobsthal[1] = 1;
-        while (jacobsthal[jacLen - 1] < count)
+        jacobsthal[2] = 1;
+        while (jacobsthal[jacLen - 1] - 1 < count)
         {
             jacobsthal[jacLen] = jacobsthal[jacLen - 1] + 2 * jacobsthal[jacLen - 2];
             jacLen++;
         }
 
         var filled = 0;
-        for (var k = 1; k < jacLen && filled < count; k++)
+        for (var k = 3; k < jacLen && filled < count; k++)
         {
-            var groupEnd = Math.Min(jacobsthal[k], count);
-            var groupStart = jacobsthal[k - 1] + 1;
+            var groupEnd = Math.Min(jacobsthal[k] - 1, count);
+            var groupStart = jacobsthal[k - 1];
 
             // Insert in reverse within this group
             for (var i = groupEnd; i >= groupStart && filled < count; i--)

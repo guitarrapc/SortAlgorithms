@@ -112,6 +112,91 @@ public class MergeInsertionSortTests : SortTestsBase
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
+    /// <summary>
+    /// F(n) = sum(k=1..n) ceil(log2(3k/4)), the Ford-Johnson worst-case comparison count (OEIS A001768).
+    /// F(1..10) = 0, 1, 3, 5, 7, 10, 13, 16, 19, 22.
+    /// </summary>
+    private static ulong FordJohnsonBound(int n)
+    {
+        ulong total = 0;
+        for (var k = 1; k <= n; k++)
+        {
+            var t = 0;
+            // smallest t with 2^t >= 3k/4
+            while ((4L << t) < 3L * k) t++;
+            total += (ulong)t;
+        }
+        return total;
+    }
+
+    private static ulong CompareCountOf(int[] data)
+    {
+        var stats = new StatisticsContext();
+        var work = (int[])data.Clone();
+        MergeInsertionSort.Sort(work.AsSpan(), stats);
+        return stats.CompareCount;
+    }
+
+    /// <summary>
+    /// The whole point of Ford-Johnson is the comparison count, so pin it exactly rather than
+    /// with a loose big-O bound. Exhaustive over every permutation: the maximum must equal F(n).
+    /// An off-by-one in the Jacobsthal grouping still sorts correctly but overshoots F(n) here.
+    /// </summary>
+    [Test]
+    [Arguments(2)]
+    [Arguments(3)]
+    [Arguments(4)]
+    [Arguments(5)]
+    [Arguments(6)]
+    [Arguments(7)]
+    [Arguments(8)]
+    public async Task WorstCaseComparisonCountEqualsFordJohnsonBound(int n)
+    {
+        ulong worst = 0;
+        Permute(Enumerable.Range(0, n).ToArray(), 0, p =>
+        {
+            var c = CompareCountOf(p);
+            if (c > worst) worst = c;
+        });
+
+        await Assert.That(worst).IsEqualTo(FordJohnsonBound(n));
+
+        static void Permute(int[] a, int k, Action<int[]> visit)
+        {
+            if (k == a.Length) { visit(a); return; }
+            for (var i = k; i < a.Length; i++)
+            {
+                (a[k], a[i]) = (a[i], a[k]);
+                Permute(a, k + 1, visit);
+                (a[k], a[i]) = (a[i], a[k]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Above the exhaustive range, F(n) must still hold as a ceiling for every input shape.
+    /// </summary>
+    [Test]
+    [Arguments(17)]
+    [Arguments(21)]
+    [Arguments(64)]
+    [Arguments(100)]
+    [Arguments(129)]
+    [Arguments(256)]
+    public async Task ComparisonCountNeverExceedsFordJohnsonBound(int n)
+    {
+        var bound = FordJohnsonBound(n);
+
+        await Assert.That(CompareCountOf([.. Enumerable.Range(0, n)])).IsLessThanOrEqualTo(bound);
+        await Assert.That(CompareCountOf([.. Enumerable.Range(0, n).Reverse()])).IsLessThanOrEqualTo(bound);
+        await Assert.That(CompareCountOf([.. Enumerable.Repeat(42, n)])).IsLessThanOrEqualTo(bound);
+
+        foreach (var seed in (int[])[42, 1234, 9999, 20250731])
+        {
+            await Assert.That(CompareCountOf(TestHelpers.ShuffledRange(n, seed))).IsLessThanOrEqualTo(bound);
+        }
+    }
+
     [Test]
     [Arguments(5)]
     [Arguments(10)]
