@@ -219,7 +219,7 @@ public static class QuickSort3way
             {
                 // Move i forward to the first element >= pivot
                 i++;
-                while (s.IsLessThan(s.Read(i), pivot))
+                while (s.IsElementLessThan(i, pivot))
                 {
                     if (i == right) break;
                     i++;
@@ -228,7 +228,7 @@ public static class QuickSort3way
                 // Move j backward to the last element <= pivot
                 // (the pivot value is present in the range, and the explicit guard bounds the scan)
                 j--;
-                while (s.IsLessThan(pivot, s.Read(j)))
+                while (s.IsValueLessThan(pivot, j))
                 {
                     if (j == left) break;
                     j--;

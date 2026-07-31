@@ -145,6 +145,84 @@ public class ObservationCoordinateTests
         }
     }
 
+    /// <summary>決定的なシャッフル配列（値 0..n-1）。</summary>
+    private static int[] MakeArray(int n)
+    {
+        var arr = Enumerable.Range(0, n).ToArray();
+        var rng = new Random(42);
+        for (var i = n - 1; i > 0; i--)
+        {
+            var j = rng.Next(i + 1);
+            (arr[i], arr[j]) = (arr[j], arr[i]);
+        }
+        return arr;
+    }
+
+    public sealed record AlgorithmCase(string Name, Action<int[], VisualizationContext> Sort)
+    {
+        public override string ToString() => Name;
+    }
+
+    /// <summary>
+    /// 全比較で少なくとも一方のオペランドがバッファ上の要素として報告されるアルゴリズム。
+    ///
+    /// 意図的に外してあるもの（いずれも「すでに local に読み込んだ 2 値の比較」という同一形状で、
+    /// インデックスは分かっているが、値を渡すオーバーロードしか無いため位置が落ちる。
+    /// 読み直せば位置は載るが読み取り回数が変わるため、別形状の API を足すまで保留）:
+    /// - PairInsertionSort: ペアの 2 要素を読んでから大小を決める箇所
+    /// - StdSort: 分岐なしネットワーク CondSwap / PartiallySortedSwap
+    /// - TimSort: マージ本体（val1 は一時バッファ、val2 はメイン配列。書き込みで再利用される）
+    /// - DualPivotQuickSort: ak を読んでから 2 つのピボット値と複数回比較する箇所
+    /// </summary>
+    public static IEnumerable<Func<AlgorithmCase>> LocatableComparisonAlgorithms()
+    {
+        yield return () => new AlgorithmCase("InsertionSort", static (a, c) => InsertionSort.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("BinaryInsertionSort", static (a, c) => BinaryInsertionSort.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("QuickSort", static (a, c) => QuickSort.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("QuickSort3way", static (a, c) => QuickSort3way.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("QuickSortMedian3", static (a, c) => QuickSortMedian3.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("IntroSort", static (a, c) => IntroSort.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("PDQSort", static (a, c) => PDQSort.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("PDQSortBranchless", static (a, c) => PDQSortBranchless.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("HeapSort", static (a, c) => HeapSort.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("SymMergeSort", static (a, c) => SymMergeSort.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("CycleSort", static (a, c) => CycleSort.Sort(a.AsSpan(), c));
+    }
+
+    /// <summary>
+    /// 比較の両オペランドが -1 で報告されると、消費側はその比較をどの配列のどこにも置けない。
+    /// 片方でもバッファ上の要素なら、そのインデックスとバッファ ID を報告しなければならない。
+    ///
+    /// 値ベースのオーバーロードにインライン Read を渡す書き方（<c>IsGreaterThan(s.Read(j), tmp)</c>）は
+    /// 読み取りをインデックス付きで報告しておきながら、直後の比較で両オペランドの位置を捨てる。
+    /// SortVivo の HowItWorks ではこれが「Compare temp (0) and temp (0)」＝ハイライト無し・値もプレース
+    /// ホルダ、として描画されていた。
+    /// </summary>
+    [Test]
+    [MethodDataSource(nameof(LocatableComparisonAlgorithms))]
+    public async Task ComparisonsCarryTheLocationOfEveryOperandThatHasOne(AlgorithmCase testCase)
+    {
+        var unplaceable = 0;
+        var total = 0;
+        var context = new VisualizationContext(onCompare: (i, j, _, _, _) =>
+        {
+            total++;
+            if (i < 0 && j < 0) unplaceable++;
+        });
+
+        var array = MakeArray(120);
+        var expected = array.ToArray();
+        Array.Sort(expected);
+
+        testCase.Sort(array, context);
+
+        await Assert.That(array).IsEquivalentTo(expected)
+            .Because($"{testCase.Name}: 観測を変えてもソート結果は変わらないこと");
+        await Assert.That(total).IsGreaterThan(0);
+        await Assert.That(unplaceable).IsEqualTo(0)
+            .Because($"{testCase.Name}: {unplaceable}/{total} 件の比較が両オペランド -1 で、消費側が位置を特定できません");
+    }
+
     /// <summary>
     /// スライスしない通常経路（Offset 0 / バッファ 0）では、従来どおりの絶対インデックスであること。
     /// スライス側の修正が非スライス経路の報告を変えていないことを固定する。

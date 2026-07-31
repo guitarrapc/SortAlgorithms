@@ -481,7 +481,7 @@ public static class FlatStableSort
         if (leftLen + rightLen >= MIN_CHECK && leftLen != 0 && rightLen != 0)
         {
             // main[right] >= buf[leftEnd - 1]: the runs concatenate as-is; the right run stays put.
-            if (main.IsGreaterOrEqual(main.Read(right), buf.Read(leftEnd - 1)))
+            if (main.IsGreaterOrEqualAcross(right, buf, leftEnd - 1))
             {
                 buf.CopyTo(0, main, dst, leftLen);
                 return;
@@ -489,7 +489,7 @@ public static class FlatStableSort
 
             // main[rightEnd - 1] < buf[0]: the whole right run precedes the buffer.
             // The move overlaps when rightLen > leftLen; Span<T>.CopyTo handles that.
-            if (main.IsLessThan(main.Read(rightEnd - 1), buf.Read(0)))
+            if (main.IsLessAcross(rightEnd - 1, buf, 0))
             {
                 main.CopyTo(right, main, dst, rightLen);
                 buf.CopyTo(0, main, dst + rightLen, leftLen);
@@ -548,7 +548,7 @@ public static class FlatStableSort
         while (first < last)
         {
             var mid = first + ((last - first) >> 1);
-            if (s.IsLessOrEqual(s.Read(mid), value))
+            if (s.IsElementLessOrEqual(mid, value))
             {
                 first = mid + 1;
             }
@@ -577,7 +577,7 @@ public static class FlatStableSort
         while (first < last)
         {
             var mid = first + ((last - first) >> 1);
-            if (s.IsLessThan(s.Read(mid), value))
+            if (s.IsElementLessThan(mid, value))
             {
                 first = mid + 1;
             }
@@ -944,14 +944,14 @@ public static class FlatStableSort
 
                 if (circ.Size == 0)
                 {
-                    if (!_data.IsLessThan(_data.Read(rangeB.Start), _data.Read(rangeA.End - 1)))
+                    if (!_data.IsLessAt(rangeB.Start, rangeA.End - 1))
                     {
                         _index[outIndex++] = leftScratch[leftPos++];
                         hasLeft = false;
                         continue;
                     }
 
-                    if (_data.IsLessThan(_data.Read(rangeB.End - 1), _data.Read(rangeA.Start)))
+                    if (_data.IsLessAt(rangeB.End - 1, rangeA.Start))
                     {
                         if (!IsTail(rightScratch[rightPos]))
                         {
@@ -1062,7 +1062,7 @@ public static class FlatStableSort
         {
             // Fast path A: the entire A block is ≤ the start of B (A.last ≤ B.first).
             // Non-strict: equal boundary is still "A before B" — consistent with the element loop.
-            if (!_data.IsLessThan(_data.Read(firstB), _data.Read(endA - 1)))
+            if (!_data.IsLessAt(firstB, endA - 1))
             {
                 circ.PushMoveBack(_data, firstA, endA - firstA);
                 firstA = endA;
@@ -1071,7 +1071,7 @@ public static class FlatStableSort
 
             // Fast path B: the entire B block is strictly less than A.first (B.last < A.first).
             // Strict: if B.last == A.first we must NOT take all of B first — equal means A goes first.
-            if (_data.IsLessThan(_data.Read(endB - 1), _data.Read(firstA)))
+            if (_data.IsLessAt(endB - 1, firstA))
             {
                 circ.PushMoveBack(_data, firstB, endB - firstB);
                 firstB = endB;

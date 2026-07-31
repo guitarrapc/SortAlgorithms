@@ -292,13 +292,13 @@ public static class IntroSort
             while (l <= r)
             {
                 // Move l forward while elements are less than pivot
-                while (l < right && s.IsLessThan(s.Read(l), pivot))
+                while (l < right && s.IsElementLessThan(l, pivot))
                 {
                     l++;
                 }
 
                 // Move r backward while elements are greater than pivot
-                while (r > left && s.IsGreaterThan(s.Read(r), pivot))
+                while (r > left && s.IsElementGreaterThan(r, pivot))
                 {
                     r--;
                 }

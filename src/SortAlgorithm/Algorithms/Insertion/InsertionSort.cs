@@ -158,6 +158,26 @@ public static class InsertionSort
     /// <param name="first">The inclusive start index of the sorted range.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="start">The position from which to start inserting elements. Elements before this are already sorted.</param>
+    /// <remarks>
+    /// The aggressive inlining is load-bearing, not decorative: at IL size 221 this body is well past
+    /// the JIT's default budget, and without the attribute it is jitted standalone and called. Measured
+    /// with DOTNET_JitDisasmSummary on the int/ComparableComparer/NullContext instantiation
+    /// (see sandbox/DotnetFiles/InsertionSortInlineProbe.cs), native code size with vs. without:
+    ///
+    ///   InsertionSort.Sort            169   vs   182 + 97 standalone SortCore
+    ///   IntroSort.IntroSortInternal  1615   vs  1534
+    ///   PDQSort.PDQSortLoop          2423   vs  2348
+    ///   StdSort.IntroSort            3817   vs  3546
+    ///
+    /// Inlining shrinks the direct entry point, because passing the SortSpan by value to a real call
+    /// costs a struct copy that the inlined form does not pay, and grows each hybrid caller by 75-271
+    /// bytes. The wall-clock difference is smaller than this repository's benchmark machine can
+    /// resolve, so the attribute stays on the codegen evidence rather than on a timing claim.
+    ///
+    /// Note that the attribute is not what makes NullContext observation-free: that comes from the
+    /// typeof checks inside SortSpan folding per instantiation, and holds whether or not this method
+    /// is inlined.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int start)
         where TComparer : IComparer<T>
@@ -183,8 +203,9 @@ public static class InsertionSort
             var j = i - 1;
             while (j >= first)
             {
-                var a = s.Read(j);
-                if (s.IsGreaterThan(a, tmp))
+                // The out-overload reports the read of j and a comparison whose left operand is j,
+                // and hands back the element so the shift below needs no second read.
+                if (s.IsElementGreaterThan(j, tmp, out var a))
                 {
                     s.Write(j + 1, a);
                     j--;
@@ -244,8 +265,9 @@ public static class InsertionSort
             // The element at (first - 1) is guaranteed to be <= tmp, so the loop will stop
             while (true)
             {
-                var a = s.Read(j);
-                if (s.IsGreaterThan(a, tmp))
+                // The out-overload reports the read of j and a comparison whose left operand is j,
+                // and hands back the element so the shift below needs no second read.
+                if (s.IsElementGreaterThan(j, tmp, out var a))
                 {
                     s.Write(j + 1, a);
                     j--;
@@ -346,7 +368,7 @@ public static class InsertionSort
                 var tmp = s.Read(i);
                 var j = i - 1;
 
-                if (s.IsGreaterThan(s.Read(j), tmp))
+                if (s.IsElementGreaterThan(j, tmp))
                 {
                     // Element needs to be inserted (not already in correct position)
                     if (++insertionCount >= insertionLimit)
@@ -356,8 +378,7 @@ public static class InsertionSort
 
                     while (j >= first)
                     {
-                        var a = s.Read(j);
-                        if (s.IsGreaterThan(a, tmp))
+                        if (s.IsElementGreaterThan(j, tmp, out var a))
                         {
                             s.Write(j + 1, a);
                             j--;
@@ -380,7 +401,7 @@ public static class InsertionSort
                 var tmp = s.Read(i);
                 var j = i - 1;
 
-                if (s.IsGreaterThan(s.Read(j), tmp))
+                if (s.IsElementGreaterThan(j, tmp))
                 {
                     // Element needs to be inserted
                     if (++insertionCount >= insertionLimit)
@@ -390,8 +411,7 @@ public static class InsertionSort
 
                     while (true)
                     {
-                        var a = s.Read(j);
-                        if (s.IsGreaterThan(a, tmp))
+                        if (s.IsElementGreaterThan(j, tmp, out var a))
                         {
                             s.Write(j + 1, a);
                             j--;

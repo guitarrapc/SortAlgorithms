@@ -268,11 +268,11 @@ public static class StdStableSort
         {
             var tmp = s.Read(i);
             var j = i - 1;
-            if (s.IsLessThan(tmp, b.Read(j)))
+            if (b.IsValueLessThan(tmp, j))
             {
                 b.Write(i, b.Read(j));
                 j--;
-                while (j >= 0 && s.IsLessThan(tmp, b.Read(j)))
+                while (j >= 0 && b.IsValueLessThan(tmp, j))
                 {
                     b.Write(j + 1, b.Read(j));
                     j--;

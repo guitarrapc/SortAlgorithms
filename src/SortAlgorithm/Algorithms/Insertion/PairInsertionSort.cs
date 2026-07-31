@@ -166,7 +166,7 @@ public static class PairInsertionSort
             // Insert the smaller element (a) first
             // This uses guarded insertion (with boundary check)
             var j = i - 1;
-            while (j >= first && s.IsGreaterThan(s.Read(j), a))
+            while (j >= first && s.IsElementGreaterThan(j, a))
             {
                 s.Write(j + 1, s.Read(j));
                 j--;
@@ -177,7 +177,7 @@ public static class PairInsertionSort
             // Since 'a' is already inserted and a <= b, we can use unguarded insertion
             // The element 'a' acts as a sentinel, guaranteeing the loop will terminate
             j = i; // Start from position after 'a' was inserted
-            while (s.IsGreaterThan(s.Read(j), b))
+            while (s.IsElementGreaterThan(j, b))
             {
                 s.Write(j + 1, s.Read(j));
                 j--;
@@ -193,7 +193,7 @@ public static class PairInsertionSort
         {
             var tmp = s.Read(i);
             var j = i - 1;
-            while (j >= first && s.IsGreaterThan(s.Read(j), tmp))
+            while (j >= first && s.IsElementGreaterThan(j, tmp))
             {
                 s.Write(j + 1, s.Read(j));
                 j--;
@@ -252,7 +252,7 @@ public static class PairInsertionSort
 
             // Insert smaller element (a) - unguarded
             var j = i - 1;
-            while (s.IsGreaterThan(s.Read(j), a))
+            while (s.IsElementGreaterThan(j, a))
             {
                 s.Write(j + 1, s.Read(j));
                 j--;
@@ -262,7 +262,7 @@ public static class PairInsertionSort
             // Insert larger element (b) - unguarded
             // 'a' is now in place and acts as additional sentinel
             j = i;
-            while (s.IsGreaterThan(s.Read(j), b))
+            while (s.IsElementGreaterThan(j, b))
             {
                 s.Write(j + 1, s.Read(j));
                 j--;
@@ -277,7 +277,7 @@ public static class PairInsertionSort
         {
             var tmp = s.Read(i);
             var j = i - 1;
-            while (s.IsGreaterThan(s.Read(j), tmp))
+            while (s.IsElementGreaterThan(j, tmp))
             {
                 s.Write(j + 1, s.Read(j));
                 j--;

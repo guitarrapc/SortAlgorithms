@@ -277,7 +277,7 @@ public static class DropMergeSort
                     {
                         // Back-track until we can accept at least one of the recently dropped elements:
                         var maxOfDropped = MaxInRange(s, read, droppedInRow + 1);
-                        while (1 <= write && s.IsLessThan(maxOfDropped, s.Read(write - 1)))
+                        while (1 <= write && s.IsValueLessThan(maxOfDropped, write - 1))
                         {
                             backTracked++;
                             write--;
@@ -313,7 +313,7 @@ public static class DropMergeSort
         {
             var lastDropped = dropped.Read(droppedIndex);
 
-            while (0 < write && s.IsLessThan(lastDropped, s.Read(write - 1)))
+            while (0 < write && s.IsValueLessThan(lastDropped, write - 1))
             {
                 s.Write(back - 1, s.Read(write - 1));
                 back--;

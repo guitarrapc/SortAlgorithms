@@ -474,11 +474,11 @@ public static class TimSort
         var ofs = 1;
         var p = baseIdx + hint;
 
-        if (s.IsGreaterThan(key, s.Read(p)))
+        if (s.IsValueGreaterThan(key, p))
         {
             // Gallop right until s[base + hint + lastOfs] < key <= s[base + hint + ofs]
             var maxOfs = len - hint;
-            while (ofs < maxOfs && s.IsGreaterThan(key, s.Read(p + ofs)))
+            while (ofs < maxOfs && s.IsValueGreaterThan(key, p + ofs))
             {
                 lastOfs = ofs;
                 ofs = (ofs << 1) + 1;
@@ -499,7 +499,7 @@ public static class TimSort
         {
             // Gallop left until s[base + hint - ofs] < key <= s[base + hint - lastOfs]
             var maxOfs = hint + 1;
-            while (ofs < maxOfs && s.IsLessOrEqual(key, s.Read(p - ofs)))
+            while (ofs < maxOfs && s.IsValueLessOrEqual(key, p - ofs))
             {
                 lastOfs = ofs;
                 ofs = (ofs << 1) + 1;
@@ -523,7 +523,7 @@ public static class TimSort
         while (lastOfs < ofs)
         {
             var m = lastOfs + ((ofs - lastOfs) >> 1);
-            if (s.IsGreaterThan(key, s.Read(baseIdx + m)))
+            if (s.IsValueGreaterThan(key, baseIdx + m))
             {
                 lastOfs = m + 1;
             }
@@ -549,11 +549,11 @@ public static class TimSort
         var ofs = 1;
         var p = baseIdx + hint;
 
-        if (s.IsLessThan(key, s.Read(p)))
+        if (s.IsValueLessThan(key, p))
         {
             // Gallop left until s[base + hint - ofs] <= key < s[base + hint - lastOfs]
             var maxOfs = hint + 1;
-            while (ofs < maxOfs && s.IsLessThan(key, s.Read(p - ofs)))
+            while (ofs < maxOfs && s.IsValueLessThan(key, p - ofs))
             {
                 lastOfs = ofs;
                 ofs = (ofs << 1) + 1;
@@ -575,7 +575,7 @@ public static class TimSort
         {
             // Gallop right until s[base + hint + lastOfs] <= key < s[base + hint + ofs]
             var maxOfs = len - hint;
-            while (ofs < maxOfs && s.IsGreaterOrEqual(key, s.Read(p + ofs)))
+            while (ofs < maxOfs && s.IsValueGreaterOrEqual(key, p + ofs))
             {
                 lastOfs = ofs;
                 ofs = (ofs << 1) + 1;
@@ -598,7 +598,7 @@ public static class TimSort
         while (lastOfs < ofs)
         {
             var m = lastOfs + ((ofs - lastOfs) >> 1);
-            if (s.IsGreaterOrEqual(key, s.Read(baseIdx + m)))
+            if (s.IsValueGreaterOrEqual(key, baseIdx + m))
             {
                 lastOfs = m + 1;
             }

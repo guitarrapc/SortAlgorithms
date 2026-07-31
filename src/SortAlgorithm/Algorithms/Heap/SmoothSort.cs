@@ -249,7 +249,7 @@ public static class SmoothSort
                 Down(ref b1, ref c1);
             }
 
-            if (s.IsLessOrEqual(s.Read(r2), t))
+            if (s.IsElementLessOrEqual(r2, t))
             {
                 b1 = 1;
             }
@@ -307,7 +307,7 @@ public static class SmoothSort
             // When p1 == 1, short-circuit evaluation prevents s.Compare(r3, t) from being called.
             Debug.Assert(r3 >= 0 || p1 == 1, $"Trinkle: Invalid heap structure - r3={r3} (r1={r1}, b1={b1}) with p1={p1:X}. This means p's bitstring claims a heap exists to the left, but array bounds prevent it.");
 
-            if ((p1 == 1) || s.IsLessOrEqual(s.Read(r3), t))
+            if ((p1 == 1) || s.IsElementLessOrEqual(r3, t))
             {
                 // don't need to reconstruct the heap
                 p1 = 0;

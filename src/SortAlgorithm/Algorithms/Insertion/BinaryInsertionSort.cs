@@ -241,7 +241,7 @@ public static class BinaryInsertionSort
         while (left < right)
         {
             var mid = (left + right) / 2;
-            if (s.IsLessOrEqual(s.Read(mid), tmp))
+            if (s.IsElementLessOrEqual(mid, tmp))
             {
                 left = mid + 1;
             }

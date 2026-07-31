@@ -353,7 +353,7 @@ public static class Ipnsort
             // If the chosen pivot is equal to the ancestor pivot it is the smallest element in the
             // slice: partition into (equal to pivot | greater than pivot) and skip the equal block.
             // This case is usually hit when the slice contains many duplicate elements.
-            if (hasAncestorPivot && !s.IsLessThan(ancestorPivot, s.Read(pivotPos)))
+            if (hasAncestorPivot && !s.IsValueLessThan(ancestorPivot, pivotPos))
             {
                 var numLtEq = Partition(s, start, end, pivotPos, equalGoesLeft: true);
                 context.OnRole(pivotPos, BUFFER_MAIN, RoleType.None);
@@ -1388,7 +1388,7 @@ public static class Ipnsort
         {
             s.Write(j, s.Read(j - 1));
             j--;
-        } while (j > begin && s.IsLessThan(value, s.Read(j - 1)));
+        } while (j > begin && s.IsValueLessThan(value, j - 1));
         s.Write(j, value);
     }
 }

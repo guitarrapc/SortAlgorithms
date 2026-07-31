@@ -310,7 +310,7 @@ public static class ShiftSort
             while (secondCounter > 0)
             {
                 // Stability: use '>' (not '>=') to ensure left < right in final output when equal
-                if (left >= first && s.IsGreaterThan(s.Read(left), tmp2ndSpan.Read(secondCounter - 1)))
+                if (left >= first && s.IsGreaterAcross(left, tmp2ndSpan, secondCounter - 1))
                 {
                     s.Write(left + secondCounter, s.Read(left));
                     left--;
@@ -359,7 +359,7 @@ public static class ShiftSort
             while (firstCounter < bufferSize)
             {
                 // Stability: use '<' (not '<=') to ensure left < right in final output when equal
-                if (right < third && s.IsLessThan(s.Read(right), tmp1stSpan.Read(firstCounter)))
+                if (right < third && s.IsLessAcross(right, tmp1stSpan, firstCounter))
                 {
                     s.Write(writePos, s.Read(right));
                     right++;

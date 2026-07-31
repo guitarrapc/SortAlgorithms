@@ -756,7 +756,7 @@ public static class Glidesort
         // of the whole span when this merge reaches it). Reading s[r1] there is out of bounds.
         // Both degenerate cases fall through to the loop below, which handles them correctly:
         // an empty left1 writes nothing, and an empty right1 copies left1 into the gap.
-        if (l1Len != 0 && r1Len != 0 && s.IsLessOrEqual(t.Read(l1Len - 1), s.Read(r1)))
+        if (l1Len != 0 && r1Len != 0 && t.IsLessOrEqualAcross(l1Len - 1, s, r1))
         {
             t.CopyTo(0, s, outStart, l1Len);
             return;
@@ -940,7 +940,7 @@ public static class Glidesort
         where TContext : ISortContext
     {
         // Already sorted: left.last ≤ right.first → left stays in place, copy right (t) into gap.
-        if (s.IsLessOrEqual(s.Read(leftStart + leftLen - 1), t.Read(0))) { t.CopyTo(0, s, outEnd - tLen, tLen); return; }
+        if (s.IsLessOrEqualAcross(leftStart + leftLen - 1, t, 0)) { t.CopyTo(0, s, outEnd - tLen, tLen); return; }
 
         // Count-based: n1/n2 eliminate signed-comparison bounds (especially c2 >= 0 which
         // requires an integer sign check). Loop condition is a zero-check.
@@ -984,7 +984,7 @@ public static class Glidesort
         where TContext : ISortContext
     {
         // Already sorted: left.last ≤ right.first → sequential copy is sufficient.
-        if (s.IsLessOrEqual(t.Read(leftLen - 1), t.Read(leftLen))) { t.CopyTo(0, s, outStart, totalLen); return; }
+        if (t.IsLessOrEqualAt(leftLen - 1, leftLen)) { t.CopyTo(0, s, outStart, totalLen); return; }
 
         var c1 = 0;
         var e1 = leftLen;

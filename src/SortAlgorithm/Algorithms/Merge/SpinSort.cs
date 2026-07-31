@@ -472,7 +472,7 @@ public static class SpinSort
         while (first < last)
         {
             var mid = first + ((last - first) >> 1);
-            if (s.IsLessOrEqual(s.Read(mid), value))
+            if (s.IsElementLessOrEqual(mid, value))
             {
                 first = mid + 1;
             }
@@ -567,7 +567,7 @@ public static class SpinSort
         if (leftLen + rightLen >= MIN_CHECK && leftLen != 0 && rightLen != 0)
         {
             // main[ri] >= buf[leftEnd - 1]: the runs concatenate as-is; the right run stays put.
-            if (main.IsGreaterOrEqual(main.Read(ri), buf.Read(leftEnd - 1)))
+            if (main.IsGreaterOrEqualAcross(ri, buf, leftEnd - 1))
             {
                 buf.CopyTo(0, main, di, leftLen);
                 return;
@@ -575,7 +575,7 @@ public static class SpinSort
 
             // main[rightEnd - 1] < buf[0]: the whole right run precedes the buffer.
             // The move overlaps when rightLen > leftLen; Span<T>.CopyTo handles that.
-            if (main.IsLessThan(main.Read(rightEnd - 1), buf.Read(0)))
+            if (main.IsLessAcross(rightEnd - 1, buf, 0))
             {
                 main.CopyTo(ri, main, di, rightLen);
                 buf.CopyTo(0, main, di + rightLen, leftLen);

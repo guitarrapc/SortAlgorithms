@@ -564,7 +564,7 @@ public static class StdSort
                 {
                     s.Write(j, s.Read(k));
                     j = k;
-                } while (s.IsLessThan(tmp, s.Read(--k)));
+                } while (s.IsValueLessThan(tmp, --k));
                 s.Write(j, tmp);
             }
         }
@@ -620,7 +620,7 @@ public static class StdSort
                 {
                     s.Write(j, s.Read(k));
                     j = k;
-                } while (j != first && s.IsLessThan(tmp, s.Read(--k)));
+                } while (j != first && s.IsValueLessThan(tmp, --k));
                 s.Write(j, tmp);
 
                 if (++count == limit)
@@ -658,7 +658,7 @@ public static class StdSort
         var iter = first;
         for (var j = 0; j < size; j++)
         {
-            var r = s.IsGreaterOrEqual(s.Read(iter), pivot);
+            var r = s.IsElementGreaterOrEqual(iter, pivot);
             bitset |= (ulong)Unsafe.As<bool, byte>(ref r) << j;
             iter++;
         }
@@ -680,7 +680,7 @@ public static class StdSort
         var iter = lm1;
         for (var j = 0; j < size; j++)
         {
-            var r = s.IsLessThan(s.Read(iter), pivot);
+            var r = s.IsElementLessThan(iter, pivot);
             bitset |= (ulong)Unsafe.As<bool, byte>(ref r) << j;
             iter--;
         }
@@ -704,17 +704,17 @@ public static class StdSort
         var pivot = s.Read(first);
 
         // Find the first element greater than the pivot.
-        if (s.IsLessThan(pivot, s.Read(last - 1)))
+        if (s.IsValueLessThan(pivot, last - 1))
         {
             // Unguarded: the last element is greater than the pivot and stops the scan.
             do
             {
                 first++;
-            } while (s.IsGreaterOrEqual(pivot, s.Read(first)));
+            } while (s.IsValueGreaterOrEqual(pivot, first));
         }
         else
         {
-            while (++first < last && s.IsGreaterOrEqual(pivot, s.Read(first)))
+            while (++first < last && s.IsValueGreaterOrEqual(pivot, first))
             {
             }
         }
@@ -726,7 +726,7 @@ public static class StdSort
             do
             {
                 last--;
-            } while (s.IsLessThan(pivot, s.Read(last)));
+            } while (s.IsValueLessThan(pivot, last));
         }
 
         // If the first element greater than the pivot is at or after the last element less than
@@ -878,7 +878,7 @@ public static class StdSort
         do
         {
             i++;
-        } while (i < last && s.IsLessThan(s.Read(i), pivot));
+        } while (i < last && s.IsElementLessThan(i, pivot));
 
         // Find last element < pivot
         var j = last - 1;
@@ -888,7 +888,7 @@ public static class StdSort
             {
                 // Guarded (i < j): the upward scan only advanced once, so no element below i is known
                 // to be < pivot and the downward scan needs an explicit bound.
-                while (i < j && s.IsGreaterOrEqual(s.Read(j), pivot))
+                while (i < j && s.IsElementGreaterOrEqual(j, pivot))
                 {
                     j--;
                 }
@@ -897,7 +897,7 @@ public static class StdSort
             {
                 // The upward scan advanced past at least one element < pivot (at begin + 1), which acts
                 // as a natural stopper; the j > begin bound is a redundant safety net.
-                while (j > begin && s.IsGreaterOrEqual(s.Read(j), pivot))
+                while (j > begin && s.IsElementGreaterOrEqual(j, pivot))
                 {
                     j--;
                 }
@@ -913,8 +913,8 @@ public static class StdSort
 
             // After swap, find next elements to swap
             // These are always guarded by the median-of-3 pivot selection
-            do { i++; } while (s.IsLessThan(s.Read(i), pivot));
-            do { j--; } while (s.IsGreaterOrEqual(s.Read(j), pivot));
+            do { i++; } while (s.IsElementLessThan(i, pivot));
+            do { j--; } while (s.IsElementGreaterOrEqual(j, pivot));
         }
 
         // Place pivot in correct position
@@ -945,18 +945,18 @@ public static class StdSort
         // Find first element > pivot
         var i = first;
         // From LLVM libc++: probe the last element to decide whether the upward scan needs a bound.
-        if (s.IsLessThan(pivot, s.Read(last - 1)))
+        if (s.IsValueLessThan(pivot, last - 1))
         {
             // Unguarded: the element at last - 1 is > pivot and stops the scan, so no bound is needed.
             do
             {
                 i++;
-            } while (s.IsGreaterOrEqual(pivot, s.Read(i)));
+            } while (s.IsValueGreaterOrEqual(pivot, i));
         }
         else
         {
             // Guarded: no element is known to be > pivot, so the scan may run to the end of the range.
-            while (++i < last && s.IsGreaterOrEqual(pivot, s.Read(i)))
+            while (++i < last && s.IsValueGreaterOrEqual(pivot, i))
             {
             }
         }
@@ -966,7 +966,7 @@ public static class StdSort
         if (i < j)
         {
             // Always guarded because median-of-3 ensures begin <= pivot
-            while (j > begin && s.IsLessThan(pivot, s.Read(j)))
+            while (j > begin && s.IsValueLessThan(pivot, j))
             {
                 j--;
             }
@@ -979,8 +979,8 @@ public static class StdSort
 
             // After swap, find next elements to swap
             // These are always guarded by the median-of-3 pivot selection
-            do { i++; } while (s.IsGreaterOrEqual(pivot, s.Read(i)));
-            do { j--; } while (s.IsLessThan(pivot, s.Read(j)));
+            do { i++; } while (s.IsValueGreaterOrEqual(pivot, i));
+            do { j--; } while (s.IsValueLessThan(pivot, j));
         }
 
         // Place pivot in correct position

@@ -1347,7 +1347,7 @@ public static class Driftsort
         {
             s.Write(j, s.Read(j - 1));
             j--;
-        } while (j > begin && s.IsLessThan(value, s.Read(j - 1)));
+        } while (j > begin && s.IsValueLessThan(value, j - 1));
         s.Write(j, value);
     }
 }

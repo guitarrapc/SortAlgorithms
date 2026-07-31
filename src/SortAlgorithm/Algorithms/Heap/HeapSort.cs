@@ -224,7 +224,7 @@ public static class HeapSort
 
         // Phase 2: Sift up the original root value to its correct position
         var parent = offset + (hole - offset - 1) / 2;
-        while (hole > root && s.IsGreaterThan(rootValue, s.Read(parent)))
+        while (hole > root && s.IsValueGreaterThan(rootValue, parent))
         {
             s.Write(hole, s.Read(parent));
             hole = parent;
@@ -260,7 +260,7 @@ public static class HeapSort
             var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
 
             // If value is already >= largest child, heap property is satisfied
-            if (s.IsGreaterOrEqual(value, s.Read(largest))) break;
+            if (s.IsValueGreaterOrEqual(value, largest)) break;
 
             // Move larger child up to fill the hole
             s.Write(hole, s.Read(largest));

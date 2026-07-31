@@ -200,13 +200,13 @@ public static class QuickSortMedian3
             while (i <= j)
             {
                 // Move i forward while elements are less than pivot
-                while (s.IsLessThan(s.Read(i), pivot))
+                while (s.IsElementLessThan(i, pivot))
                 {
                     i++;
                 }
 
                 // Move j backward while elements are greater than pivot
-                while (s.IsLessThan(pivot, s.Read(j)))
+                while (s.IsValueLessThan(pivot, j))
                 {
                     j--;
                 }

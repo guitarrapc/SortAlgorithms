@@ -262,7 +262,7 @@ public static class BottomupHeapSort
 
             // If parent is greater than or equal to value, we found the correct position
             // Use Compare(value, parent) which compares value against span[parent]
-            if (s.IsLessOrEqual(value, s.Read(parent)))
+            if (s.IsValueLessOrEqual(value, parent))
             {
                 break;
             }
@@ -321,7 +321,7 @@ public static class BottomupHeapSort
         while (hole > root)
         {
             var parent = offset + (hole - offset - 1) / 2;
-            if (s.IsLessOrEqual(rootValue, s.Read(parent))) break;
+            if (s.IsValueLessOrEqual(rootValue, parent)) break;
             s.Write(hole, s.Read(parent));
             hole = parent;
         }

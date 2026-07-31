@@ -195,7 +195,7 @@ public static class SymMergeSort
             while (ilo < ihi)
             {
                 var c = (int)((uint)(ilo + ihi) >> 1);
-                if (s.IsGreaterThan(tmp, s.Read(c)))
+                if (s.IsValueGreaterThan(tmp, c))
                     ilo = c + 1;
                 else
                     ihi = c;
@@ -218,7 +218,7 @@ public static class SymMergeSort
             while (ilo < ihi)
             {
                 var c = (int)((uint)(ilo + ihi) >> 1);
-                if (s.IsLessOrEqual(s.Read(c), tmp))
+                if (s.IsElementLessOrEqual(c, tmp))
                     ilo = c + 1;
                 else
                     ihi = c;
@@ -416,7 +416,7 @@ public static class SymMergeSort
                 while (ilo < ihi)
                 {
                     var c = (int)((uint)(ilo + ihi) >> 1);
-                    if (s.IsLessThan(s.Read(c), tmp))
+                    if (s.IsElementLessThan(c, tmp))
                         ilo = c + 1;
                     else
                         ihi = c;
@@ -443,7 +443,7 @@ public static class SymMergeSort
                 while (ilo < ihi)
                 {
                     var c = (int)((uint)(ilo + ihi) >> 1);
-                    if (s.IsLessOrEqual(s.Read(c), tmp))
+                    if (s.IsElementLessOrEqual(c, tmp))
                         ilo = c + 1;
                     else
                         ihi = c;

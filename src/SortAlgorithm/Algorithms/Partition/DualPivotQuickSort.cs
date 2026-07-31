@@ -285,7 +285,7 @@ public static class DualPivotQuickSort
                     {
                         // Element > pivot2: scan from right to find position
                         // Check k < great first to avoid unnecessary comparisons (short-circuit evaluation)
-                        while (k < great && s.IsGreaterThan(s.Read(great), pivot2Value))
+                        while (k < great && s.IsElementGreaterThan(great, pivot2Value))
                         {
                             great--;
                         }
@@ -339,7 +339,7 @@ public static class DualPivotQuickSort
                     else if (s.IsGreaterThan(ak, pivot1Value))
                     {
                         // Element > pivot: scan from right to find position
-                        while (k < great && s.IsGreaterThan(s.Read(great), pivot1Value))
+                        while (k < great && s.IsElementGreaterThan(great, pivot1Value))
                         {
                             great--;
                         }

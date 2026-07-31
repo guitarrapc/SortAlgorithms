@@ -372,7 +372,7 @@ public static class PDQSortBranchless
         where TContext : ISortContext
     {
         Unsafe.Add(ref offsetsL, numL) = (byte)i;
-        var wrongSide = s.IsGreaterOrEqual(s.Read(it), pivot);
+        var wrongSide = s.IsElementGreaterOrEqual(it, pivot);
         numL += Unsafe.As<bool, byte>(ref wrongSide);
         it++;
         i++;
@@ -389,7 +389,7 @@ public static class PDQSortBranchless
     {
         Unsafe.Add(ref offsetsR, numR) = (byte)i;
         it--;
-        var wrongSide = s.IsLessThan(s.Read(it), pivot);
+        var wrongSide = s.IsElementLessThan(it, pivot);
         numR += Unsafe.As<bool, byte>(ref wrongSide);
         i++;
     }
@@ -416,17 +416,17 @@ public static class PDQSortBranchless
         var last = end;
 
         // Find the first element greater than or equal to the pivot (the median of 3 guarantees this exists).
-        do { first++; } while (s.IsLessThan(s.Read(first), pivot));
+        do { first++; } while (s.IsElementLessThan(first, pivot));
 
         // Find the first element strictly smaller than the pivot. We have to guard this search if
         // there was no element before *first.
         if (first - 1 == begin)
         {
-            do { last--; } while (first < last && s.IsGreaterOrEqual(s.Read(last), pivot));
+            do { last--; } while (first < last && s.IsElementGreaterOrEqual(last, pivot));
         }
         else
         {
-            do { last--; } while (s.IsGreaterOrEqual(s.Read(last), pivot));
+            do { last--; } while (s.IsElementGreaterOrEqual(last, pivot));
         }
 
         // If the first pair of elements that should be swapped to partition are the same element,
@@ -621,22 +621,22 @@ public static class PDQSortBranchless
         var first = begin;
         var last = end;
 
-        do { last--; } while (s.IsLessThan(pivot, s.Read(last)));
+        do { last--; } while (s.IsValueLessThan(pivot, last));
 
         if (last + 1 == end)
         {
-            do { first++; } while (first < last && s.IsGreaterOrEqual(pivot, s.Read(first)));
+            do { first++; } while (first < last && s.IsValueGreaterOrEqual(pivot, first));
         }
         else
         {
-            do { first++; } while (s.IsGreaterOrEqual(pivot, s.Read(first)));
+            do { first++; } while (s.IsValueGreaterOrEqual(pivot, first));
         }
 
         while (first < last)
         {
             s.Swap(first, last);
-            do { last--; } while (s.IsLessThan(pivot, s.Read(last)));
-            do { first++; } while (s.IsGreaterOrEqual(pivot, s.Read(first)));
+            do { last--; } while (s.IsValueLessThan(pivot, last));
+            do { first++; } while (s.IsValueGreaterOrEqual(pivot, first));
         }
 
         var pivotPos = last;
@@ -672,7 +672,7 @@ public static class PDQSortBranchless
                     s.Write(sift, s.Read(sift - 1));
                     sift--;
                 }
-                while (sift != begin && s.IsLessThan(siftValue, s.Read(sift - 1)));
+                while (sift != begin && s.IsValueLessThan(siftValue, sift - 1));
 
                 s.Write(sift, siftValue);
                 limit += cur - sift;

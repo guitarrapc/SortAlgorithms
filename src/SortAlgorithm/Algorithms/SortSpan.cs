@@ -593,6 +593,326 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #endif
     }
 
+    // ------------------------------------------------------------------
+    // Mixed index/value comparisons.
+    //
+    // An algorithm that holds one operand in a local (an insertion sort's element in flight, a
+    // partition pivot, a merge key) still knows where the other operand lives. Reaching for the
+    // value-based overloads with an inline Read discards that: the read is announced with its index,
+    // but the comparison that follows names neither operand, so a consumer sees a comparison it
+    // cannot place. These overloads keep the index on the operand that has one and report -1 only
+    // for the operand that genuinely is not in a buffer.
+    //
+    // Read and comparison counts are identical to `IsGreaterThan(Read(i), value)`, and the
+    // NullContext path delegates to the value-based overloads so the primitive specialization is
+    // written once. The (int, T) shape mirrors the existing `Compare(int, T)` overload set.
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is strictly less than <paramref name="value"/>.
+    /// Reports the read of <paramref name="i"/> and a comparison whose left operand is <paramref name="i"/>;
+    /// <paramref name="value"/> is reported as -1 because it is not currently stored in a buffer.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementLessThan(int i, T value)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var result = _comparer.Compare(a, value);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnCompare(_offset + i, -1, result, _bufferId, -1);
+            return result < 0;
+        }
+#if DEBUG
+        return IsLessThan(_span[i], value);
+#else
+        return IsLessThan(Unsafe.Add(ref _ref, (nint)(uint)i), value);
+#endif
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is less than or equal to <paramref name="value"/>.
+    /// Reports the read of <paramref name="i"/> and a comparison whose left operand is <paramref name="i"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementLessOrEqual(int i, T value)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var result = _comparer.Compare(a, value);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnCompare(_offset + i, -1, result, _bufferId, -1);
+            return result <= 0;
+        }
+#if DEBUG
+        return IsLessOrEqual(_span[i], value);
+#else
+        return IsLessOrEqual(Unsafe.Add(ref _ref, (nint)(uint)i), value);
+#endif
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is strictly greater than <paramref name="value"/>.
+    /// Reports the read of <paramref name="i"/> and a comparison whose left operand is <paramref name="i"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementGreaterThan(int i, T value)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var result = _comparer.Compare(a, value);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnCompare(_offset + i, -1, result, _bufferId, -1);
+            return result > 0;
+        }
+#if DEBUG
+        return IsGreaterThan(_span[i], value);
+#else
+        return IsGreaterThan(Unsafe.Add(ref _ref, (nint)(uint)i), value);
+#endif
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is greater than or equal to <paramref name="value"/>.
+    /// Reports the read of <paramref name="i"/> and a comparison whose left operand is <paramref name="i"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementGreaterOrEqual(int i, T value)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var result = _comparer.Compare(a, value);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnCompare(_offset + i, -1, result, _bufferId, -1);
+            return result >= 0;
+        }
+#if DEBUG
+        return IsGreaterOrEqual(_span[i], value);
+#else
+        return IsGreaterOrEqual(Unsafe.Add(ref _ref, (nint)(uint)i), value);
+#endif
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is strictly greater than <paramref name="value"/>,
+    /// and hands back the element that was read so a shifting caller can reuse it without a second
+    /// observable read. Equivalent to <c>var a = Read(i); IsGreaterAt(i, value)</c> counted once.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementGreaterThan(int i, T value, out T element)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            element = _span[i];
+            var result = _comparer.Compare(element, value);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnCompare(_offset + i, -1, result, _bufferId, -1);
+            return result > 0;
+        }
+#if DEBUG
+        element = _span[i];
+#else
+        element = Unsafe.Add(ref _ref, (nint)(uint)i);
+#endif
+        return IsGreaterThan(element, value);
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="value"/> is strictly less than the element at index <paramref name="j"/>.
+    /// The operand order is preserved in the reported comparison, so a consumer sees the same sign the
+    /// algorithm did; <paramref name="value"/> is reported as -1.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsValueLessThan(T value, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var b = _span[j];
+            var result = _comparer.Compare(value, b);
+            _context.OnIndexRead(_offset + j, _bufferId);
+            _context.OnCompare(-1, _offset + j, result, -1, _bufferId);
+            return result < 0;
+        }
+#if DEBUG
+        return IsLessThan(value, _span[j]);
+#else
+        return IsLessThan(value, Unsafe.Add(ref _ref, (nint)(uint)j));
+#endif
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="value"/> is less than or equal to the element at index <paramref name="j"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsValueLessOrEqual(T value, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var b = _span[j];
+            var result = _comparer.Compare(value, b);
+            _context.OnIndexRead(_offset + j, _bufferId);
+            _context.OnCompare(-1, _offset + j, result, -1, _bufferId);
+            return result <= 0;
+        }
+#if DEBUG
+        return IsLessOrEqual(value, _span[j]);
+#else
+        return IsLessOrEqual(value, Unsafe.Add(ref _ref, (nint)(uint)j));
+#endif
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="value"/> is strictly greater than the element at index <paramref name="j"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsValueGreaterThan(T value, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var b = _span[j];
+            var result = _comparer.Compare(value, b);
+            _context.OnIndexRead(_offset + j, _bufferId);
+            _context.OnCompare(-1, _offset + j, result, -1, _bufferId);
+            return result > 0;
+        }
+#if DEBUG
+        return IsGreaterThan(value, _span[j]);
+#else
+        return IsGreaterThan(value, Unsafe.Add(ref _ref, (nint)(uint)j));
+#endif
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="value"/> is greater than or equal to the element at index <paramref name="j"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsValueGreaterOrEqual(T value, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var b = _span[j];
+            var result = _comparer.Compare(value, b);
+            _context.OnIndexRead(_offset + j, _bufferId);
+            _context.OnCompare(-1, _offset + j, result, -1, _bufferId);
+            return result >= 0;
+        }
+#if DEBUG
+        return IsGreaterOrEqual(value, _span[j]);
+#else
+        return IsGreaterOrEqual(value, Unsafe.Add(ref _ref, (nint)(uint)j));
+#endif
+    }
+
+    // ------------------------------------------------------------------
+    // Cross-buffer comparisons.
+    //
+    // Merge algorithms compare an element of the main span against one of an auxiliary buffer. Both
+    // operands have an index, but they live in different SortSpans, so neither the (int, int) nor the
+    // (int, T) overloads can name both. These take the other span explicitly and report both indices
+    // with their own buffer identities — the case observation.md calls out as the reason buffer
+    // identity exists at all, since an index alone is ambiguous across buffers.
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> of this span is strictly less than the
+    /// element at index <paramref name="j"/> of <paramref name="other"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsLessAcross(int i, SortSpan<T, TComparer, TContext> other, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var b = other._span[j];
+            var result = _comparer.Compare(a, b);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnIndexRead(other._offset + j, other._bufferId);
+            _context.OnCompare(_offset + i, other._offset + j, result, _bufferId, other._bufferId);
+            return result < 0;
+        }
+#if DEBUG
+        return IsLessThan(_span[i], other._span[j]);
+#else
+        return IsLessThan(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref other._ref, (nint)(uint)j));
+#endif
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> of this span is less than or equal to the
+    /// element at index <paramref name="j"/> of <paramref name="other"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsLessOrEqualAcross(int i, SortSpan<T, TComparer, TContext> other, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var b = other._span[j];
+            var result = _comparer.Compare(a, b);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnIndexRead(other._offset + j, other._bufferId);
+            _context.OnCompare(_offset + i, other._offset + j, result, _bufferId, other._bufferId);
+            return result <= 0;
+        }
+#if DEBUG
+        return IsLessOrEqual(_span[i], other._span[j]);
+#else
+        return IsLessOrEqual(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref other._ref, (nint)(uint)j));
+#endif
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> of this span is strictly greater than the
+    /// element at index <paramref name="j"/> of <paramref name="other"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsGreaterAcross(int i, SortSpan<T, TComparer, TContext> other, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var b = other._span[j];
+            var result = _comparer.Compare(a, b);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnIndexRead(other._offset + j, other._bufferId);
+            _context.OnCompare(_offset + i, other._offset + j, result, _bufferId, other._bufferId);
+            return result > 0;
+        }
+#if DEBUG
+        return IsGreaterThan(_span[i], other._span[j]);
+#else
+        return IsGreaterThan(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref other._ref, (nint)(uint)j));
+#endif
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> of this span is greater than or equal to the
+    /// element at index <paramref name="j"/> of <paramref name="other"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsGreaterOrEqualAcross(int i, SortSpan<T, TComparer, TContext> other, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            var a = _span[i];
+            var b = other._span[j];
+            var result = _comparer.Compare(a, b);
+            _context.OnIndexRead(_offset + i, _bufferId);
+            _context.OnIndexRead(other._offset + j, other._bufferId);
+            _context.OnCompare(_offset + i, other._offset + j, result, _bufferId, other._bufferId);
+            return result >= 0;
+        }
+#if DEBUG
+        return IsGreaterOrEqual(_span[i], other._span[j]);
+#else
+        return IsGreaterOrEqual(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref other._ref, (nint)(uint)j));
+#endif
+    }
+
     /// <summary>
     /// Exchanges the values at the specified indices within the collection. (Equivalent to swapping span[i] and span[j].)
     /// </summary>
