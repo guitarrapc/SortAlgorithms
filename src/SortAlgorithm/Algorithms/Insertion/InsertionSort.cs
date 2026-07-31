@@ -166,10 +166,14 @@ public static class InsertionSort
         if (start == first)
             start++;
 
+        // Callers such as BucketSort and Glidesort hand this core a sliced SortSpan whose Offset is
+        // non-zero and whose BufferId is not the main array. Read/Write/Compare already report through
+        // that span's own coordinates, so phases and roles must use s.Offset and s.BufferId as well;
+        // a raw index or a hard-coded BUFFER_MAIN would point a consumer at an unrelated element.
         for (var i = start; i < last; i++)
         {
-            s.Context.OnPhase(SortPhase.InsertionPass, i, first, last - 1);
-            s.Context.OnRole(i, BUFFER_MAIN, RoleType.RightPointer);
+            s.Context.OnPhase(SortPhase.InsertionPass, s.Offset + i, s.Offset + first, s.Offset + last - 1);
+            s.Context.OnRole(s.Offset + i, s.BufferId, RoleType.RightPointer);
 
             // Temporarily store the value to be inserted
             var tmp = s.Read(i);
@@ -197,7 +201,7 @@ public static class InsertionSort
             {
                 s.Write(j + 1, tmp);
             }
-            s.Context.OnRole(i, BUFFER_MAIN, RoleType.None);
+            s.Context.OnRole(s.Offset + i, s.BufferId, RoleType.None);
         }
     }
 
@@ -216,9 +220,15 @@ public static class InsertionSort
     /// This precondition is guaranteed by IntroSort's partitioning scheme.
     /// Violating this precondition will cause out-of-bounds access.
     ///
-    /// Performance improvement: Removes the (j >= first) boundary check from the inner loop,
-    /// reducing branch mispredictions and improving CPU pipeline efficiency.
-    /// Typical speedup: 10-20% for small arrays compared to guarded version.
+    /// The only difference from <see cref="SortCore{T, TComparer, TContext}(SortSpan{T, TComparer, TContext}, int, int)"/>
+    /// is that the inner loop drops the (j >= first) test, leaving one loop-carried condition instead of two.
+    /// Write counts are identical. An element that travels all the way to <paramref name="first"/> costs one
+    /// extra read and one extra comparison here, because the loop stops by comparing against the sentinel
+    /// rather than by running out of range; every other element costs the same as in the guarded core.
+    /// This range has no benchmark of its own, so the runtime effect is unmeasured in this repository.
+    ///
+    /// This core does not announce phases or roles. Its callers (IntroSort, PDQSort, PDQSortBranchless)
+    /// announce the handoff as a scope phase, and a consumer sees the element operations underneath it.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void UnguardedSortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
@@ -257,7 +267,7 @@ public static class InsertionSort
     /// Attempts to sort the subrange [first..last) using insertion sort, but gives up early if the array appears unsorted.
     /// This is an optimization for nearly-sorted arrays: if too many insertions are required, returns false
     /// to indicate the array is not nearly sorted and a different algorithm should be used.
-    /// This is similar to C++ std::introsort's __insertion_sort_incomplete optimization.
+    /// This is modeled on LLVM libc++'s __insertion_sort_incomplete, used by std::sort.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
@@ -266,16 +276,26 @@ public static class InsertionSort
     /// <param name="leftmost">True if this is the leftmost partition (requires boundary checks),
     /// false otherwise (can use unguarded version with sentinel).</param>
     /// <returns>True if the range was successfully sorted or is very small (&lt;= 5 elements),
-    /// false if sorting appears to require significant work (more than 8 insertions detected).</returns>
+    /// false if an 8th element needing to move was reached, at which point at most 7 insertions have been
+    /// performed and the range is left partially sorted.</returns>
     /// <remarks>
-    /// This method implements the "give up early" optimization from LLVM libcxx's __insertion_sort_incomplete:
+    /// This method implements the "give up early" optimization from LLVM libc++'s __insertion_sort_incomplete
+    /// (used by std::sort, not by introsort itself):
     /// - For very small arrays (0-5 elements): Always completes sorting and returns true
-    /// - For larger arrays: Tracks insertion count; if more than 8 insertions are needed, gives up and returns false
+    /// - For larger arrays: Tracks insertion count; on the 8th element that needs moving, gives up and returns false
     ///
-    /// The threshold of 8 insertions is based on empirical observation that:
-    /// - Nearly sorted arrays typically need very few insertions (0-8)
-    /// - Truly unsorted arrays need many insertions, making insertion sort inefficient
-    /// - Giving up early prevents wasting time on insertion sort when QuickSort/HeapSort would be faster
+    /// The threshold of 8 is libc++'s constant, carried over unchanged; no measurement in this repository
+    /// establishes it as the best value here. The rationale it encodes is that a nearly sorted range needs
+    /// few insertions, so a range that needs many is one where QuickSort/HeapSort would have been the better
+    /// choice and the scan should be abandoned before it costs more than it saves.
+    ///
+    /// Two deliberate differences from libc++: this version tests the limit before performing the insertion,
+    /// so the element that trips it is left where it was; and it returns false even when that element is the
+    /// last one, where libc++ returns true because the range is in fact sorted. Both only affect how much
+    /// work the caller repeats — the range stays a permutation of its input either way.
+    ///
+    /// This core does not announce phases or roles, so an IntroSort run that sorts a partition here reports
+    /// only element operations under the caller's scope phase.
     ///
     /// This is particularly effective for IntroSort when swap count is zero (potential nearly-sorted partition):
     /// - If both partitions return true: entire range is sorted, done
