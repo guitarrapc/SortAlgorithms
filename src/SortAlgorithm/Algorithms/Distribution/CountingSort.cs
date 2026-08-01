@@ -43,10 +43,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n + k) - Independent of how the keys are distributed</description></item>
 /// <item><description>Comparisons : 0 - No comparison operations between keys (distribution sort)</description></item>
 /// <item><description>Swaps       : 0 - Elements are placed at a computed index, never exchanged</description></item>
-/// <item><description>IndexReads  : 2n - n to extract the keys, n to place the elements. Counting runs over the
-/// extracted keys, so it does not touch the elements a third time</description></item>
-/// <item><description>IndexWrites : n - each element is placed exactly once. Sorting in place adds a write-back of
-/// the output, which is a range copy rather than n element writes</description></item>
+/// <item><description>IndexReads  : 3n - n to extract the keys, n to place the elements, n for the write-back.
+/// Counting runs over the extracted keys, so it does not touch the elements a third time</description></item>
+/// <item><description>IndexWrites : 2n - n to place each element in the output, n for the write-back. Producing a
+/// separate output is inherent to counting sort; returning it to the caller's span is what the in-place API adds,
+/// and it is issued as one range copy that an observer expands into n reads and n writes</description></item>
 /// <item><description>Memory      : O(n + k) - an n-element output plus a k-sized counter array</description></item>
 /// <item><description>Note        : A large key range leads to excessive memory usage. The maximum range is <c>MaxCountArraySize</c> (10,000,000).</description></item>
 /// </list>
@@ -56,13 +57,15 @@ namespace SortAlgorithm.Algorithms;
 /// key selector leaves an element carrying payload its key does not determine. What differs is the price of not having
 /// a prefix sum. Pigeonhole sort computes no position, so it has to remember which elements landed in which hole — a
 /// per-element chain on top of the hole array — and collection walks those chains. Counting sort computes the position
-/// instead, so a k-sized counter array is the whole auxiliary structure and collection is a linear scan. That removes a
-/// Θ(n) structure and one pass over the elements: 2n reads / n writes against pigeonhole sort's 3n / 2n.</description></item>
+/// instead, so a k-sized counter array is the whole auxiliary structure and collection is a linear scan. The two move
+/// the elements the same number of times — both are 3n reads / 2n writes — so what counting sort buys here is not
+/// fewer operations but a cheaper shape: one fewer n-sized auxiliary array, and a collection pass that runs
+/// sequentially instead of chasing a chain pointer per element.</description></item>
 /// <item><description>vs <see cref="CountingSortInteger"/>: The integer overload runs the same mechanism and differs
 /// only in where the key comes from. Counting sort's auxiliary structure does not change with the element type. That is
 /// not true of <see cref="PigeonholeSort"/> and <see cref="PigeonholeSortInteger"/>, whose structures differ because a
 /// hole index can reconstruct an integer but not an arbitrary element. The one asymmetry is the read count: extracting
-/// a key materializes it, so counting can run over the keys and the elements are read 2n times here against 3n when the
+/// a key materializes it, so counting can run over the keys and the elements are read 3n times here against 4n when the
 /// element is its own key.</description></item>
 /// <item><description>vs <see cref="BucketSort"/>: A counting sort bucket holds exactly one key, so no comparison sort
 /// runs inside it. The running time does not depend on how the keys are distributed and there is no O(n²) worst case.
@@ -145,6 +148,13 @@ public static class CountingSort
 
             // Validate range. Computed in long so the full int key space cannot overflow the subtraction;
             // the cap below is far under int.MaxValue, so it is the only bound that has to be tested.
+            //
+            // Only the absolute cap is enforced here. CountingSortInteger additionally rejects range > MaxRangeFactor*n,
+            // because there the values are the data: a range far wider than n means counting sort is the wrong tool for
+            // this input and the caller should be told so. A key selector inverts that. The key is a projection the
+            // caller chose, so its density is a property of that projection rather than of the data, and a sparse key
+            // space may be exactly what the caller intended. Refusing it would reject a legitimate use on a guess about
+            // intent, so the generic overload bounds only what it must to allocate safely.
             long range = (long)max - (long)min + 1;
             if (range > MaxCountArraySize)
                 throw new ArgumentException($"Key range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider using another comparison-based sort.");
@@ -243,10 +253,11 @@ public static class CountingSort
 /// <item><description>Comparisons : 2n+1 (n×2 for min/max scan, +1 for early-exit equality check) - the ordering
 /// step is comparison-free, but discovering the range is not, and the scan is real work the sort performs</description></item>
 /// <item><description>Swaps       : 0 - Elements are placed at a computed index, never exchanged</description></item>
-/// <item><description>IndexReads  : 3n - n to discover the range, n to count, n to place. An element is its own key,
-/// so there is nothing to extract once and reuse; every pass reads the elements themselves</description></item>
-/// <item><description>IndexWrites : n - each element is placed exactly once. Sorting in place adds a write-back of
-/// the output, which is a range copy rather than n element writes</description></item>
+/// <item><description>IndexReads  : 4n - n to discover the range, n to count, n to place, n for the write-back. An
+/// element is its own key, so there is nothing to extract once and reuse; every pass reads the elements themselves</description></item>
+/// <item><description>IndexWrites : 2n - n to place each element in the output, n for the write-back. Producing a
+/// separate output is inherent to counting sort; returning it to the caller's span is what the in-place API adds,
+/// and it is issued as one range copy that an observer expands into n reads and n writes</description></item>
 /// <item><description>Memory      : O(n + k) - an n-element output plus a k-sized counter array</description></item>
 /// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は <c>MaxCountArraySize</c> (10,000,000)、かつ range/n ≤ <c>MaxRangeFactor</c> (32) の制約があります。</description></item>
 /// </list>

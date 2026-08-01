@@ -125,6 +125,13 @@ public static class PigeonholeSort
 
             // Validate range. Computed in long so the full int key space cannot overflow the subtraction;
             // the cap below is far under int.MaxValue, so it is the only bound that has to be tested.
+            //
+            // Only the absolute cap is enforced here. PigeonholeSortInteger additionally rejects range > MaxRangeFactor*n,
+            // because there the values are the data: a range far wider than n means pigeonhole sort is the wrong tool for
+            // this input and the caller should be told so. A key selector inverts that. The key is a projection the
+            // caller chose, so its density is a property of that projection rather than of the data, and a sparse key
+            // space may be exactly what the caller intended. Refusing it would reject a legitimate use on a guess about
+            // intent, so the generic overload bounds only what it must to allocate safely.
             long range = (long)max - (long)min + 1;
             if (range > MaxHoleArraySize)
                 throw new ArgumentException($"Key range ({range}) exceeds maximum hole array size ({MaxHoleArraySize}). Consider using another comparison-based sort.");
