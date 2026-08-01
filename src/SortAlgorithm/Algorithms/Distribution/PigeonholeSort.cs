@@ -228,11 +228,13 @@ public static class PigeonholeSort
 /// <item><description>Family      : Distribution</description></item>
 /// <item><description>Stable      : Yes, vacuously — equal integers are indistinguishable, so no relative order is observable</description></item>
 /// <item><description>In-place    : No (O(k) where k = range of values; independent of n)</description></item>
+/// <item><description>Best case   : O(n + k) - All cases have the same complexity</description></item>
+/// <item><description>Average case: O(n + k) - Linear in input size plus value range</description></item>
+/// <item><description>Worst case  : O(n + k) - Even with all elements having different values</description></item>
 /// <item><description>Comparisons : 2n+1 (n×2 for min/max scan, +1 for early-exit equality check)</description></item>
 /// <item><description>Swaps       : 0</description></item>
 /// <item><description>IndexReads  : 2n - n for the min/max scan, n for the distribution pass</description></item>
 /// <item><description>IndexWrites : n - each element is written once, directly into its final position</description></item>
-/// <item><description>Time        : O(n + k) where k is the range of values</description></item>
 /// <item><description>Memory      : O(k) - one hole array; no per-element auxiliary storage</description></item>
 /// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は{MaxHoleArraySize}、かつ range/n ≤ {MaxRangeFactor} の制約があります。</description></item>
 /// </list>

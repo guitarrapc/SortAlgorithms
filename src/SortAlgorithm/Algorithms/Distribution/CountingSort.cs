@@ -38,10 +38,40 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Distribution</description></item>
 /// <item><description>Stable      : Yes (reverse-order placement preserves relative order)</description></item>
 /// <item><description>In-place    : No (O(n + k) where k = range of keys)</description></item>
-/// <item><description>Comparisons : 0 (No comparison operations between keys)</description></item>
-/// <item><description>Time        : O(n + k) where k is the range of keys</description></item>
-/// <item><description>Memory      : O(n + k)</description></item>
+/// <item><description>Best case   : O(n + k) - Every input does the same work; no pattern is favourable</description></item>
+/// <item><description>Average case: O(n + k) - Linear in input size plus key range</description></item>
+/// <item><description>Worst case  : O(n + k) - Independent of how the keys are distributed</description></item>
+/// <item><description>Comparisons : 0 - No comparison operations between keys (distribution sort)</description></item>
+/// <item><description>Swaps       : 0 - Elements are placed at a computed index, never exchanged</description></item>
+/// <item><description>IndexReads  : 2n - n to extract the keys, n to place the elements. Counting runs over the
+/// extracted keys, so it does not touch the elements a third time</description></item>
+/// <item><description>IndexWrites : n - each element is placed exactly once. Sorting in place adds a write-back of
+/// the output, which is a range copy rather than n element writes</description></item>
+/// <item><description>Memory      : O(n + k) - an n-element output plus a k-sized counter array</description></item>
 /// <item><description>Note        : A large key range leads to excessive memory usage. The maximum range is {MaxCountArraySize}.</description></item>
+/// </list>
+/// <para><strong>Comparison with Related Algorithms:</strong></para>
+/// <list type="bullet">
+/// <item><description>vs <see cref="PigeonholeSort"/>: Both are O(n + k) and both must store the elements, because a
+/// key selector leaves an element carrying payload its key does not determine. What differs is the price of not having
+/// a prefix sum. Pigeonhole sort computes no position, so it has to remember which elements landed in which hole — a
+/// per-element chain on top of the hole array — and collection walks those chains. Counting sort computes the position
+/// instead, so a k-sized counter array is the whole auxiliary structure and collection is a linear scan. That removes a
+/// Θ(n) structure and one pass over the elements: 2n reads / n writes against pigeonhole sort's 3n / 2n.</description></item>
+/// <item><description>vs <see cref="CountingSortInteger"/>: The integer overload runs the same mechanism and differs
+/// only in where the key comes from. Counting sort's auxiliary structure does not change with the element type. That is
+/// not true of <see cref="PigeonholeSort"/> and <see cref="PigeonholeSortInteger"/>, whose structures differ because a
+/// hole index can reconstruct an integer but not an arbitrary element. The one asymmetry is the read count: extracting
+/// a key materializes it, so counting can run over the keys and the elements are read 2n times here against 3n when the
+/// element is its own key.</description></item>
+/// <item><description>vs <see cref="BucketSort"/>: A counting sort bucket holds exactly one key, so no comparison sort
+/// runs inside it. The running time does not depend on how the keys are distributed and there is no O(n²) worst case.
+/// The price is that k is the whole key range, so a sparse key range is refused outright rather than sorted more
+/// slowly — the case bucket sort exists to cover.</description></item>
+/// <item><description>vs Radix sort: Radix sort holds k down to the digit radix and pays one distribution pass per
+/// digit, so a wide key range costs passes rather than memory, and it needs a fixed-width digit mapping of the key.
+/// Counting sort distributes once against the key itself, which is cheaper while the range stays narrow and impossible
+/// once it does not.</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Counting_sort</para>
@@ -208,12 +238,37 @@ public static class CountingSort
 /// <item><description>Family      : Distribution</description></item>
 /// <item><description>Stable      : Yes</description></item>
 /// <item><description>In-place    : No (O(n + k) where k = range of values)</description></item>
+/// <item><description>Best case   : O(n + k) - Every input does the same work; no pattern is favourable</description></item>
+/// <item><description>Average case: O(n + k) - Linear in input size plus value range</description></item>
+/// <item><description>Worst case  : O(n + k) - Independent of how the values are distributed</description></item>
 /// <item><description>Comparisons : 0 (min/max scan uses direct numeric operators, not tracked as sort comparisons)</description></item>
-/// <item><description>Swaps       : 0</description></item>
-/// <item><description>Time        : O(n + k) where k is the range of values</description></item>
-/// <item><description>Memory      : O(n + k)</description></item>
+/// <item><description>Swaps       : 0 - Elements are placed at a computed index, never exchanged</description></item>
+/// <item><description>IndexReads  : 3n - n to discover the range, n to count, n to place. An element is its own key,
+/// so there is nothing to extract once and reuse; every pass reads the elements themselves</description></item>
+/// <item><description>IndexWrites : n - each element is placed exactly once. Sorting in place adds a write-back of
+/// the output, which is a range copy rather than n element writes</description></item>
+/// <item><description>Memory      : O(n + k) - an n-element output plus a k-sized counter array</description></item>
 /// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は{MaxCountArraySize}、かつ range/n ≤ {MaxRangeFactor} の制約があります。</description></item>
 /// </list>
+/// <para><strong>Comparison with Related Algorithms:</strong></para>
+/// <list type="bullet">
+/// <item><description>vs <see cref="PigeonholeSortInteger"/>: Turning counts into cumulative offsets and placing each
+/// element at a computed index is counting sort's defining step. Removing it for plain integers is possible, but what
+/// remains is pigeonhole sort rather than a faster counting sort, so this overload keeps the prefix sum, the second
+/// read pass and the O(n) output buffer that pigeonhole sort's integer overload does without. Note also that the two
+/// counting sort overloads share one mechanism while pigeonhole sort's two do not: a hole index reconstructs an integer
+/// but not an arbitrary element. Where this library draws that boundary is recorded in
+/// <c>.github/docs/specs/sorting_api.md</c>.</description></item>
+/// <item><description>vs <see cref="BucketSortInteger"/>: One counter per distinct value means no comparison sort
+/// runs inside a bucket. The running time does not depend on how the values are distributed and there is no O(n²)
+/// worst case. The price is that k is the whole value range, which is why the range limits above exist at all; bucket
+/// sort sizes its buckets by n instead and therefore accepts the sparse inputs this overload rejects.</description></item>
+/// <item><description>vs Radix sort: Radix sort holds k down to the digit radix and pays one distribution pass per
+/// digit, so a wide value range costs passes rather than memory. Counting sort distributes once against the value
+/// itself, which is cheaper while the range stays narrow and impossible once it does not.</description></item>
+/// </list>
+/// <para><strong>Reference:</strong></para>
+/// <para>Wiki: https://en.wikipedia.org/wiki/Counting_sort</para>
 /// </remarks>
 public static class CountingSortInteger
 {
