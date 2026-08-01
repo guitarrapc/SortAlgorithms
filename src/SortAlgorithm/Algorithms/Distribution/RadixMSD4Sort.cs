@@ -29,6 +29,11 @@ namespace SortAlgorithm.Algorithms;
 /// This top-down approach partitions the array into buckets recursively, processing each bucket independently for subsequent digits.</description></item>
 /// <item><description><strong>Recursive Bucket Processing:</strong> After distributing elements based on the current digit, each bucket must be recursively sorted for the remaining digits.
 /// Base cases: buckets with 0 or 1 elements are already sorted; buckets where all remaining digits are the same are also sorted.</description></item>
+/// <item><description><strong>Identity Levels Are Skippable:</strong> If every element in a range shares the same value at the
+/// current digit, the stable distribution for that digit writes them out in the order they already are — the distribution and the
+/// copy back are both the identity and can be skipped, and the range descends to the next digit untouched. Deriving the digit count
+/// from the key width cannot catch this: a uniform digit can sit anywhere, at the top of the key (values small relative to the type)
+/// or inside any bucket of the recursion (a shared prefix among the elements that reached it).</description></item>
 /// <item><description><strong>Cutoff to Insertion Sort:</strong> For small buckets (typically &lt; 16 elements), switching to insertion sort can improve performance due to lower overhead.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -265,6 +270,22 @@ public static class RadixMSD4Sort
             bucketCounts[digitValue + 1]++;
         }
 
+        // If one bucket holds every element, this digit partitions nothing: a stable distribution over a
+        // single bucket writes the elements out in the order they already are, so the distribution and the
+        // copy back are both the identity and can be skipped. The range moves on to the next digit
+        // untouched, which is what lets a shared prefix cost reads only. Unlike the LSD sorts there is no
+        // buffer parity to keep: every executed level copies back, so the data is always in s.
+        if (IsSingleBucket(bucketCounts, length))
+        {
+            if (digit > 0)
+            {
+                MSDSort(s, temp, radixKey, start, length, digit - 1, digitCount);
+            }
+
+            // digit == 0: no lower digits left, and every key in the range is equal.
+            return;
+        }
+
         // Calculate prefix sum and save bucket start positions in one pass
         // RadixSize=4 is small enough for stackalloc (16 bytes)
         Span<int> bucketStarts = stackalloc int[RadixSize];
@@ -307,5 +328,22 @@ public static class RadixMSD4Sort
                 MSDSort(s, temp, radixKey, start + bucketStart, bucketLength, digit - 1, digitCount);
             }
         }
+    }
+
+    /// <summary>
+    /// True when a single bucket holds all <paramref name="length"/> elements, i.e. every element in the
+    /// range shares this digit. Counts are still in their pre-prefix-sum layout, at
+    /// <c>bucketCounts[digit + 1]</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsSingleBucket(ReadOnlySpan<int> bucketCounts, int length)
+    {
+        // The first bucket holding anything settles it: if it does not hold everything, some other
+        // bucket holds the rest. So the scan stops at the first non-empty entry either way.
+        foreach (var count in bucketCounts[1..])
+        {
+            if (count != 0) return count == length;
+        }
+        return false;
     }
 }

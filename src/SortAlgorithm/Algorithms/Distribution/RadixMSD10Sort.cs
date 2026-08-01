@@ -30,6 +30,11 @@ namespace SortAlgorithm.Algorithms;
 /// This top-down approach partitions the array into buckets recursively, processing each bucket independently for subsequent digits.</description></item>
 /// <item><description><strong>Recursive Bucket Processing:</strong> After distributing elements based on the current digit, each bucket must be recursively sorted for the remaining digits.
 /// Base cases: buckets with 0 or 1 elements are already sorted; buckets where all remaining digits are the same are also sorted.</description></item>
+/// <item><description><strong>Identity Levels Are Skippable:</strong> If every element in a range shares the same value at the
+/// current digit, the stable distribution for that digit writes them out in the order they already are — the distribution and the
+/// copy back are both the identity and can be skipped, and the range descends to the next digit untouched. This is orthogonal to the
+/// data-derived digit count above, which only trims uniform digits above the most significant one; a digit anywhere below it can be
+/// uniform too, in any bucket of the recursion (a shared prefix among the elements that reached it).</description></item>
 /// <item><description><strong>Cutoff to Insertion Sort:</strong> For small buckets (typically &lt; 16 elements), switching to insertion sort can improve performance due to lower overhead.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -300,6 +305,23 @@ public static class RadixMSD10Sort
             counts[digitValue]++;
         }
 
+        // If one bucket holds every element, this digit partitions nothing: a stable distribution over a
+        // single bucket writes the elements out in the order they already are, so the distribution and the
+        // copy back are both the identity and can be skipped. The range moves on to the next digit
+        // untouched, which is what lets a shared prefix cost reads only. This is orthogonal to the
+        // digit count derived from the maximum key, which only trims uniform digits above the most
+        // significant one; a digit anywhere below it can be uniform too, in any bucket of the recursion.
+        if (IsSingleBucket(counts, length))
+        {
+            if (digit > 0)
+            {
+                MSDSort(s, temp, radixKey, start, length, digit - 1, digitCount, pow10);
+            }
+
+            // digit == 0: no lower digits left, and every key in the range is equal.
+            return;
+        }
+
         // Phase 2: Calculate bucket offsets (prefix sum)
         offsets[0] = 0;
         for (var i = 1; i < RadixBase; i++)
@@ -331,6 +353,23 @@ public static class RadixMSD10Sort
                 MSDSort(s, temp, radixKey, start + offsets[i], counts[i], digit - 1, digitCount, pow10);
             }
         }
+    }
+
+    /// <summary>
+    /// True when a single bucket holds all <paramref name="length"/> elements, i.e. every element in the
+    /// range shares this digit. Counts are indexed by digit value directly, before the prefix sum that
+    /// turns them into start offsets.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsSingleBucket(ReadOnlySpan<int> counts, int length)
+    {
+        // The first bucket holding anything settles it: if it does not hold everything, some other
+        // bucket holds the rest. So the scan stops at the first non-empty entry either way.
+        foreach (var count in counts)
+        {
+            if (count != 0) return count == length;
+        }
+        return false;
     }
 
     /// <summary>
