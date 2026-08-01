@@ -60,18 +60,24 @@ namespace SortAlgorithm.Algorithms;
 /// (in those two every leaf either ends at a single element or stays above the cutoff, so the fallback never runs)</description></item>
 /// <item><description>Digit Passes: d = ⌈requiredBits/8⌉ from the key range, capped by the key width (1 for byte, 2 for short, 4 for int,
 /// 8 for long); levels below that can still terminate early when a bucket's digit turns out to be uniform</description></item>
-/// <item><description>Reads       : n (range scan) + one per element per digit level visited + the permutation and cutoff reads</description></item>
+/// <item><description>Reads       : n (range scan) + one per element per digit level visited + the permutation and cutoff reads.
+/// Inputs at or below the cutoff skip the range scan entirely and go straight to <see cref="InsertionSort"/>,
+/// so a small array pays no radix overhead at all</description></item>
 /// <item><description>Memory      : O(1) auxiliary space, 2052 bytes of stack per recursion level (257 + 256 counters).
 /// Recursion depth is bounded by the digit count (at most 4 for 32-bit keys, 8 for 64-bit,
 /// and less when the key range is narrow), because each level consumes exactly one digit — it does not depend on n, on the input order,
 /// or on how the buckets split</description></item>
 /// </list>
 /// <para><strong>Algorithm Overview:</strong></para>
-/// <para>One range scan over the keys, then four phases per digit level:</para>
+/// <para>Inputs at or below the cutoff go straight to <see cref="InsertionSort"/>. Otherwise: one range scan
+/// over the keys, then four phases per digit level:</para>
 /// <list type="number">
 /// <item><description><strong>Count Phase:</strong> Count occurrences of each digit value (0-255)</description></item>
 /// <item><description><strong>Offset Calculation:</strong> Compute bucket offsets (cumulative sum)</description></item>
-/// <item><description><strong>Permutation Phase:</strong> Rearrange elements into their buckets in-place using cyclic permutations</description></item>
+/// <item><description><strong>Permutation Phase:</strong> Rearrange elements into their buckets in-place. This walks the permutation's
+/// cycles, but with a plain pairwise swap per step rather than holding the in-flight element in a register as McIlroy et al. describe:
+/// the register-held form was measured and lost at every size (see <c>AmericanFlagRadixWidthBenchmark</c>), because
+/// the swap primitive is already a single fused ref-to-ref exchange with no write to remove</description></item>
 /// <item><description><strong>Recursive Phase:</strong> Recursively sort each non-empty bucket for the next digit</description></item>
 /// </list>
 /// <para><strong>What This Buys Over The Other Distribution Sorts:</strong></para>
@@ -272,11 +278,20 @@ public static class AmericanFlagSort
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
+        // Below the cutoff the recursion would insertion-sort the whole range without extracting a single
+        // digit, so the range scan below would be pure overhead — n extra reads and n key extractions on an
+        // input that never reaches a digit pass. Take the fallback directly.
+        if (s.Length <= InsertionSortCutoff)
+        {
+            InsertionSort.SortCore(s, 0, s.Length);
+            return;
+        }
+
         // One scan of the keys decides how many digit levels can hold a difference.
-        // Without it the digit count comes from the key width alone (8 levels for a 32-bit key), and every
+        // Without it the digit count comes from the key width alone (4 levels for a 32-bit key), and every
         // level whose digit happens to be uniform still costs a full counting pass before the uniform-digit
-        // check in the recursion can fire: keys drawn from 0..999 spent 5n reads proving digits 7..3 were
-        // uniform before any element moved.
+        // check in the recursion can fire: keys drawn from 0..999 need only 2 levels, so the other 2 were
+        // spent proving a digit was uniform before any element moved.
         var minKey = ulong.MaxValue;
         var maxKey = ulong.MinValue;
         for (var i = 0; i < s.Length; i++)

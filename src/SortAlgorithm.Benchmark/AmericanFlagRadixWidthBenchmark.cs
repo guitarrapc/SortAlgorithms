@@ -18,16 +18,38 @@ namespace SortAlgorithm.Benchmark;
 /// keys badly, and raising the cutoff with it is what made the change a win everywhere:
 /// </para>
 /// <code>
-/// n         keys      C16    C32    C64    C128   shipped (C64)
-/// 4096      narrow    1.01   0.94   0.95   0.94   0.90
-/// 4096      wide      1.55   0.51   0.53   0.52   0.50
-/// 8192      narrow    0.65   0.65   0.66   0.65   0.68
-/// 8192      wide      1.52   1.01   0.68   0.64   0.63
-/// 65536     narrow    0.57   0.56   0.58   0.57   0.57
-/// 65536     wide      0.62   0.66   0.66   0.67   0.63
-/// 1048576   narrow    0.66   0.66   0.65   0.66   0.61
-/// 1048576   wide      1.21   0.65   0.66   0.65   0.62
+/// cutoff sweep (benchmark methods since replaced by the two below)
+/// n         keys      C16    C32    C64    C128
+/// 4096      narrow    1.01   0.94   0.95   0.94
+/// 4096      wide      1.55   0.51   0.53   0.52
+/// 8192      narrow    0.65   0.65   0.66   0.65
+/// 8192      wide      1.52   1.01   0.68   0.64
+/// 65536     narrow    0.57   0.56   0.58   0.57
+/// 65536     wide      0.62   0.66   0.66   0.67
+/// 1048576   narrow    0.66   0.66   0.65   0.66
+/// 1048576   wide      1.21   0.65   0.66   0.65
 /// </code>
+/// <para>
+/// Two textbook variants were then measured against the shipped configuration and BOTH LOST, so neither is
+/// being left on the table. Do not re-litigate without new evidence:
+/// </para>
+/// <code>
+/// n         keys      shipped   Cycle   BinaryLeaf
+/// 4096      narrow    0.95      0.91    0.91
+/// 4096      wide      0.50      0.59    0.64
+/// 8192      narrow    0.65      0.68    0.67
+/// 8192      wide      0.68      0.74    0.83
+/// 65536     narrow    0.57      0.57    0.58
+/// 65536     wide      0.62      0.66    0.68
+/// 1048576   narrow    0.64      0.64    0.64
+/// 1048576   wide      0.62      0.66    0.79
+/// </code>
+/// <para>
+/// Cycle: holding the in-flight element in a local removes a write per chain step, but the shipped Swap is a
+/// single fused ref-to-ref exchange, so there is no write to remove — only an extra key extraction on the
+/// held value. BinaryLeaf: binary search cuts comparisons, not element moves, and at &lt;= 64 elements the
+/// moves dominate.
+/// </para>
 /// Delete once the numbers are recorded.
 /// </summary>
 [MemoryDiagnoser]
@@ -73,14 +95,13 @@ public class AmericanFlagRadixWidthBenchmark
     [Benchmark]
     public void Radix256_Shipped() => AmericanFlagSort.Sort(_buffers.Next().AsSpan());
 
+    /// <summary>Shipped configuration but with the McIlroy register-held cycle permutation.</summary>
     [Benchmark]
-    public void Radix256_C32() => AmericanFlagSortRadix256Tunable.Sort<int, Cutoff32>(_buffers.Next().AsSpan());
+    public void Radix256_Cycle() => AmericanFlagSortVariants.SortCycle(_buffers.Next().AsSpan());
 
+    /// <summary>Shipped configuration but with BinaryInsertionSort at the 64-element cutoff.</summary>
     [Benchmark]
-    public void Radix256_C64() => AmericanFlagSortRadix256Tunable.Sort<int, Cutoff64>(_buffers.Next().AsSpan());
-
-    [Benchmark]
-    public void Radix256_C128() => AmericanFlagSortRadix256Tunable.Sort<int, Cutoff128>(_buffers.Next().AsSpan());
+    public void Radix256_BinaryLeaf() => AmericanFlagSortVariants.SortBinaryLeaf(_buffers.Next().AsSpan());
 }
 
 /// <summary>
@@ -350,6 +371,150 @@ public static class AmericanFlagSortRadix256Tunable
             {
                 Recursive<T, TRadixKey, TComparer, TContext, TCutoff>(s, radixKey, minKey, start + bucketStart, bucketLength, digit - 1, digitCount);
             }
+        }
+    }
+}
+
+/// <summary>
+/// Shipped configuration (8-bit digit, cutoff 64, range normalization) with two things varied that the
+/// shipped code does not do, to check whether either is being left on the table:
+/// <list type="bullet">
+/// <item><description><c>Cycle</c>: the register-held cycle permutation from McIlroy et al. — the in-flight
+/// element stays in a local instead of being written back to the array on every step of the chain.</description></item>
+/// <item><description><c>BinaryLeaf</c>: <see cref="BinaryInsertionSort"/> instead of <see cref="InsertionSort"/>
+/// at the cutoff. At 64 elements the leaf sort's comparison count is no longer negligible.</description></item>
+/// </list>
+/// </summary>
+public static class AmericanFlagSortVariants
+{
+    private const int RadixBits = 8;
+    private const int RadixSize = 256;
+    private const int RadixMask = RadixSize - 1;
+    private const int InsertionSortCutoff = 64;
+    private const int BUFFER_MAIN = 0;
+
+    public static void SortCycle<T>(Span<T> span) where T : IBinaryInteger<T>
+        => Entry<T, BinaryIntegerRadixKey<T>, ComparableComparer<T>, NullContext>(span, default, new ComparableComparer<T>(), NullContext.Default, cycle: true, binaryLeaf: false);
+
+    public static void SortBinaryLeaf<T>(Span<T> span) where T : IBinaryInteger<T>
+        => Entry<T, BinaryIntegerRadixKey<T>, ComparableComparer<T>, NullContext>(span, default, new ComparableComparer<T>(), NullContext.Default, cycle: false, binaryLeaf: true);
+
+    private static void Entry<T, TRadixKey, TComparer, TContext>(Span<T> span, TRadixKey radixKey, TComparer comparer, TContext context, bool cycle, bool binaryLeaf)
+        where TRadixKey : struct, IRadixKeySelector<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (span.Length <= 1) return;
+        RadixKeyGuard.ValidateKeyBits<T, TRadixKey>();
+
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        if (s.Length <= InsertionSortCutoff) { Leaf(s, 0, s.Length, binaryLeaf); return; }
+
+        var minKey = ulong.MaxValue;
+        var maxKey = ulong.MinValue;
+        for (var i = 0; i < s.Length; i++)
+        {
+            var key = radixKey.GetKey(s.Read(i));
+            if (key < minKey) minKey = key;
+            if (key > maxKey) maxKey = key;
+        }
+
+        var range = maxKey - minKey;
+        if (range == 0) return;
+
+        var requiredBits = 64 - BitOperations.LeadingZeroCount(range);
+        var digitCount = (requiredBits + RadixBits - 1) / RadixBits;
+
+        Recursive(s, radixKey, minKey, 0, s.Length, digitCount - 1, cycle, binaryLeaf);
+    }
+
+    private static void Leaf<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int length, bool binaryLeaf)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (binaryLeaf) BinaryInsertionSort.SortCore(s, start, start + length, start);
+        else InsertionSort.SortCore(s, start, start + length);
+    }
+
+    private static void Recursive<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, ulong minKey, int start, int length, int digit, bool cycle, bool binaryLeaf)
+        where TRadixKey : struct, IRadixKeySelector<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (length <= InsertionSortCutoff) { Leaf(s, start, length, binaryLeaf); return; }
+        if (digit < 0) return;
+
+        var shift = digit * RadixBits;
+        Span<int> bucketCounts = stackalloc int[RadixSize + 1];
+        Span<int> bucketNext = stackalloc int[RadixSize];
+        bucketCounts.Clear();
+
+        for (var i = 0; i < length; i++)
+        {
+            var key = radixKey.GetKey(s.Read(start + i)) - minKey;
+            bucketCounts[(int)((key >> shift) & RadixMask) + 1]++;
+        }
+
+        var nonEmptyBuckets = 0;
+        for (var i = 0; i < RadixSize; i++)
+            if (bucketCounts[i + 1] > 0 && ++nonEmptyBuckets > 1) break;
+
+        if (nonEmptyBuckets <= 1)
+        {
+            if (digit > 0) Recursive(s, radixKey, minKey, start, length, digit - 1, cycle, binaryLeaf);
+            return;
+        }
+
+        for (var i = 1; i <= RadixSize; i++) bucketCounts[i] += bucketCounts[i - 1];
+        for (var i = 0; i < RadixSize; i++) bucketNext[i] = bucketCounts[i];
+
+        if (cycle)
+        {
+            // Hold the in-flight element in a local: the chain writes each array slot once instead of
+            // performing a full swap (read + two writes) at every step.
+            for (var bucket = 0; bucket < RadixSize; bucket++)
+            {
+                var bucketEnd = bucketCounts[bucket + 1];
+                while (bucketNext[bucket] < bucketEnd)
+                {
+                    var home = start + bucketNext[bucket];
+                    var tmp = s.Read(home);
+                    int d;
+                    while ((d = (int)(((radixKey.GetKey(tmp) - minKey) >> shift) & RadixMask)) != bucket)
+                    {
+                        var q = start + bucketNext[d]++;
+                        var evicted = s.Read(q);
+                        s.Write(q, tmp);
+                        tmp = evicted;
+                    }
+                    s.Write(home, tmp);
+                    bucketNext[bucket]++;
+                }
+            }
+        }
+        else
+        {
+            for (var bucket = 0; bucket < RadixSize; bucket++)
+            {
+                var bucketEnd = bucketCounts[bucket + 1];
+                while (bucketNext[bucket] < bucketEnd)
+                {
+                    var currentPos = start + bucketNext[bucket];
+                    var currentKey = radixKey.GetKey(s.Read(currentPos)) - minKey;
+                    var currentDigit = (int)((currentKey >> shift) & RadixMask);
+                    if (currentDigit == bucket) { bucketNext[bucket]++; continue; }
+                    s.Swap(currentPos, start + bucketNext[currentDigit]);
+                    bucketNext[currentDigit]++;
+                }
+            }
+        }
+
+        for (var i = 0; i < RadixSize; i++)
+        {
+            var bucketStart = bucketCounts[i];
+            var bucketLength = bucketCounts[i + 1] - bucketStart;
+            if (bucketLength > 1)
+                Recursive(s, radixKey, minKey, start + bucketStart, bucketLength, digit - 1, cycle, binaryLeaf);
         }
     }
 }
