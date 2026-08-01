@@ -21,17 +21,19 @@ namespace SortAlgorithm.Algorithms;
 /// A hole array of size (max - min + 1) is allocated. Each index corresponds to one unique key value.</description></item>
 /// <item><description><strong>Base Key Normalization:</strong> Keys are normalized by subtracting baseKey (= min), mapping keys to array indices [0, range-1].
 /// This allows handling negative keys correctly: holes[key - baseKey] maps key to its hole.</description></item>
-/// <item><description><strong>Distribution Phase:</strong> Each element is placed into its corresponding hole using a linked-list (FIFO queue).
-/// For element at index i with key k, append i to the tail of hole[k - baseKey].
-/// Each hole stores head/tail indices into the temp array; a next[] array chains elements within each hole.</description></item>
+/// <item><description><strong>Distribution Phase:</strong> Each element is placed into its corresponding hole using a linked list.
+/// Elements are scanned from the last index down to the first, and index i is prepended to hole[k - baseKey].
+/// Each hole stores only a head index into the temp array; a next[] array chains the remaining elements within each hole.
+/// Prepending during a backward scan leaves every chain in ascending index order, which is what a forward scan
+/// appending to a tail would produce, so no per-hole tail index is needed.</description></item>
 /// <item><description><strong>Collection Phase:</strong> Iterate through holes array in ascending order.
 /// For each hole i, traverse its linked list (head → next → … → -1) and write elements back to the source array.
 /// This reconstructs the sorted sequence in O(n + k) time.</description></item>
 /// <item><description><strong>Correctness Guarantee:</strong> Since holes are traversed in index order (0 to range-1),
 /// and each index i corresponds to key (i + baseKey), elements are written back in ascending key order.
 /// The algorithm correctly sorts as long as the key selector function produces consistent integer keys.</description></item>
-/// <item><description><strong>Stability:</strong> This implementation IS stable because each hole is a FIFO queue.
-/// Elements with the same key are appended in input order and collected in that same order.</description></item>
+/// <item><description><strong>Stability:</strong> This implementation IS stable because each hole's chain holds its
+/// elements in ascending input index order and is collected head-first.</description></item>
 /// <item><description><strong>Range Limitation:</strong> The key range must be reasonable (≤ {MaxHoleArraySize}).
 /// Excessive ranges cause memory allocation failures or out-of-memory errors.</description></item>
 /// </list>
@@ -46,7 +48,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Comparisons : 0 - No comparison operations between keys (distribution sort)</description></item>
 /// <item><description>IndexReads  : 3n - n reads for key extraction, n reads for copying to temp, n reads for writing back</description></item>
 /// <item><description>IndexWrites : 2n - n writes to temp, n writes back to original array</description></item>
-/// <item><description>Memory      : O(n + k) - Temporary arrays for elements, keys, next[] links, and hole head/tail indices</description></item>
+/// <item><description>Memory      : O(n + k) - Temporary arrays for elements, keys, next[] links, and hole head indices</description></item>
 /// <item><description>Note        : A large key range leads to excessive memory usage. The maximum range is {MaxHoleArraySize}.</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
@@ -55,7 +57,7 @@ namespace SortAlgorithm.Algorithms;
 public static class PigeonholeSort
 {
     private const int MaxHoleArraySize = 10_000_000; // Maximum allowed hole array size
-    private const int StackAllocThreshold = 1024; // Use stackalloc for each holeHead/holeTail array when range is smaller than this
+    private const int StackAllocThreshold = 1024; // Use stackalloc for the holeHead array when range is smaller than this
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -131,27 +133,21 @@ public static class PigeonholeSort
             var baseKey = (long)min; // long avoids -int.MinValue overflow; subtraction is safe after range validation
             var size = (int)range;
 
-            // Each hole is a FIFO linked list: holeHead[h] = first element index, holeTail[h] = last element index (-1 = empty)
+            // Each hole is a linked list of element indices: holeHead[h] = first element index (-1 = empty).
+            // next[] chains the rest; the backward distribution scan keeps each chain in ascending index order.
             int[]? rentedHoleHeadArray = null;
-            int[]? rentedHoleTailArray = null;
             Span<int> holeHead = size <= StackAllocThreshold
                 ? stackalloc int[size]
                 : (rentedHoleHeadArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-            Span<int> holeTail = size <= StackAllocThreshold
-                ? stackalloc int[size]
-                : (rentedHoleTailArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
             holeHead.Fill(-1);
-            holeTail.Fill(-1);
             try
             {
-                DistributeAndCollect(s, tempSpan, keys, holeHead, holeTail, next, baseKey);
+                DistributeAndCollect(s, tempSpan, keys, holeHead, next, baseKey);
             }
             finally
             {
                 if (rentedHoleHeadArray is not null)
                     ArrayPool<int>.Shared.Return(rentedHoleHeadArray);
-                if (rentedHoleTailArray is not null)
-                    ArrayPool<int>.Shared.Return(rentedHoleTailArray);
             }
         }
         finally
@@ -167,21 +163,20 @@ public static class PigeonholeSort
     /// Achieves O(n + k) complexity; no prefix-sum phase.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void DistributeAndCollect<T, TContext>(SortSpan<T, NullComparer<T>, TContext> source, SortSpan<T, NullComparer<T>, TContext> temp, Span<int> keys, Span<int> holeHead, Span<int> holeTail, Span<int> next, long baseKey)
+    private static void DistributeAndCollect<T, TContext>(SortSpan<T, NullComparer<T>, TContext> source, SortSpan<T, NullComparer<T>, TContext> temp, Span<int> keys, Span<int> holeHead, Span<int> next, long baseKey)
         where TContext : ISortContext
     {
-        // Phase 1: Copy elements to temp and append each to the tail of its hole's linked list (O(n))
+        // Phase 1: Copy elements to temp and prepend each to its hole's linked list (O(n)).
+        // Scanning backwards and prepending leaves every chain in ascending index order, which is
+        // what a forward scan appending to a tail would produce - so stability holds without a
+        // per-hole tail index, and the loop drops one load, one branch and one indirect store.
         source.Context.OnPhase(SortPhase.DistributionCount);
-        for (var i = 0; i < source.Length; i++)
+        for (var i = source.Length - 1; i >= 0; i--)
         {
             temp.Write(i, source.Read(i));
             var h = (int)(keys[i] - baseKey);
-            if (holeHead[h] == -1)
-                holeHead[h] = i;
-            else
-                next[holeTail[h]] = i;
-            holeTail[h] = i;
-            next[i] = -1;
+            next[i] = holeHead[h];
+            holeHead[h] = i;
         }
 
         // Phase 2: Collect elements from holes in ascending key order (O(n + k))
@@ -234,7 +229,7 @@ public static class PigeonholeSort
 public static class PigeonholeSortInteger
 {
     private const int MaxHoleArraySize = 10_000_000; // Maximum allowed hole array size
-    private const int StackAllocThreshold = 1024; // Use stackalloc for each holeHead/holeTail array when range is smaller than this
+    private const int StackAllocThreshold = 1024; // Use stackalloc for the holeHead array when range is smaller than this
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -318,27 +313,21 @@ public static class PigeonholeSortInteger
         {
             var next = nextArray.AsSpan(0, s.Length);
 
-            // Each hole is a FIFO linked list: holeHead[h] = first element index, holeTail[h] = last element index (-1 = empty)
+            // Each hole is a linked list of element indices: holeHead[h] = first element index (-1 = empty).
+            // next[] chains the rest; the backward distribution scan keeps each chain in ascending index order.
             int[]? rentedHoleHeadArray = null;
-            int[]? rentedHoleTailArray = null;
             Span<int> holeHead = size <= StackAllocThreshold
                 ? stackalloc int[size]
                 : (rentedHoleHeadArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-            Span<int> holeTail = size <= StackAllocThreshold
-                ? stackalloc int[size]
-                : (rentedHoleTailArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
             holeHead.Fill(-1);
-            holeTail.Fill(-1);
             try
             {
-                DistributeAndCollect(s, tempSpan, holeHead, holeTail, next, umin);
+                DistributeAndCollect(s, tempSpan, holeHead, next, umin);
             }
             finally
             {
                 if (rentedHoleHeadArray is not null)
                     ArrayPool<int>.Shared.Return(rentedHoleHeadArray);
-                if (rentedHoleTailArray is not null)
-                    ArrayPool<int>.Shared.Return(rentedHoleTailArray);
             }
         }
         finally
@@ -348,23 +337,22 @@ public static class PigeonholeSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void DistributeAndCollect<T, TContext>(SortSpan<T, NumberComparer<T>, TContext> source, SortSpan<T, NumberComparer<T>, TContext> temp, Span<int> holeHead, Span<int> holeTail, Span<int> next, ulong umin)
+    private static void DistributeAndCollect<T, TContext>(SortSpan<T, NumberComparer<T>, TContext> source, SortSpan<T, NumberComparer<T>, TContext> temp, Span<int> holeHead, Span<int> next, ulong umin)
         where T : IBinaryInteger<T>, IComparisonOperators<T, T, bool>
         where TContext : ISortContext
     {
-        // Phase 1: Copy elements to temp and append each to the tail of its hole's linked list (O(n))
+        // Phase 1: Copy elements to temp and prepend each to its hole's linked list (O(n)).
+        // Scanning backwards and prepending leaves every chain in ascending index order, which is
+        // what a forward scan appending to a tail would produce - so stability holds without a
+        // per-hole tail index, and the loop drops one load, one branch and one indirect store.
         source.Context.OnPhase(SortPhase.DistributionCount);
-        for (var i = 0; i < source.Length; i++)
+        for (var i = source.Length - 1; i >= 0; i--)
         {
             var value = source.Read(i);
             temp.Write(i, value);
             var h = (int)(ulong.CreateTruncating(value) - umin);
-            if (holeHead[h] == -1)
-                holeHead[h] = i;
-            else
-                next[holeTail[h]] = i;
-            holeTail[h] = i;
-            next[i] = -1;
+            next[i] = holeHead[h];
+            holeHead[h] = i;
         }
 
         // Phase 2: Collect elements from holes in ascending value order (O(n + k))
