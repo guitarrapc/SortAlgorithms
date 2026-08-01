@@ -201,7 +201,7 @@ public class RadixLSD4SortTests : IntegerSortTestsBase
         // - required passes = ceil(7 / 2) = 4
         //
         // Per pass d (d=0,1,2,3) with ping-pong src/dst swap:
-        //   - Count phase: no reads from span (only from keys array)
+        //   - Count phase: n reads
         //   - Distribute phase: n reads (from src span) + n writes (to dst)
         //   - No copy back (src/dst swap instead)
         //
@@ -214,15 +214,15 @@ public class RadixLSD4SortTests : IntegerSortTestsBase
         // - Determined by explicit dataInOriginal flag, not parity check
         //
         // Total:
-        // - Initial scan: n reads (build keys + min/max)
-        // - Radix passes: digitCount × (n reads + n writes)
+        // - Initial min/max scan: n reads
+        // - Radix passes: digitCount × (2n reads + n writes)
         // - Final copy (if digitCount % 2 == 1): n reads + n writes
         var maxValue = n - 1;
         var range = (ulong)maxValue; // min=0 after sign-bit flip, range = max - min
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 2 - 1) / 2); // ceil(requiredBits / 2)
 
-        var expectedReads = (ulong)(n + digitCount * n + (digitCount % 2 == 1 ? n : 0));   // Initial + distribute + final copy
+        var expectedReads = (ulong)(n + digitCount * 2 * n + (digitCount % 2 == 1 ? n : 0));   // min/max + (count + distribute) per digit + final copy
         var expectedWrites = (ulong)(digitCount * n + (digitCount % 2 == 1 ? n : 0));      // distribute + final copy
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -249,7 +249,7 @@ public class RadixLSD4SortTests : IntegerSortTestsBase
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 1) / 2); // ceil(requiredBits / 2)
 
-        var expectedReads = (ulong)(n + digitCount * n + (digitCount % 2 == 1 ? n : 0));
+        var expectedReads = (ulong)(n + digitCount * 2 * n + (digitCount % 2 == 1 ? n : 0));
         var expectedWrites = (ulong)(digitCount * n + (digitCount % 2 == 1 ? n : 0));
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -280,7 +280,7 @@ public class RadixLSD4SortTests : IntegerSortTestsBase
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 2 - 1) / 2);
 
-        var expectedReads = (ulong)(n + digitCount * n + (digitCount % 2 == 1 ? n : 0));
+        var expectedReads = (ulong)(n + digitCount * 2 * n + (digitCount % 2 == 1 ? n : 0));
         var expectedWrites = (ulong)(digitCount * n + (digitCount % 2 == 1 ? n : 0));
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -310,7 +310,7 @@ public class RadixLSD4SortTests : IntegerSortTestsBase
         var requiredBits = 64 - System.Numerics.BitOperations.LeadingZeroCount(range);
         var digitCount = Math.Max(1, (requiredBits + 1) / 2); // ceil(requiredBits / 2)
 
-        var expectedReads = (ulong)(n + digitCount * n + (digitCount % 2 == 1 ? n : 0));
+        var expectedReads = (ulong)(n + digitCount * 2 * n + (digitCount % 2 == 1 ? n : 0));
         var expectedWrites = (ulong)(digitCount * n + (digitCount % 2 == 1 ? n : 0));
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -347,7 +347,7 @@ public class RadixLSD4SortTests : IntegerSortTestsBase
         // whether the result ends up in temp and needs a final copy.
         var executed = TestHelpers.CountNonIdentityDigits(values: expected, digitCount, radix: 4);
         var finalCopy = executed % 2 == 1 ? n : 0;
-        var expectedReads = (ulong)(n + executed * n + finalCopy);
+        var expectedReads = (ulong)(n + digitCount * n + executed * n + finalCopy);
         var expectedWrites = (ulong)(executed * n + finalCopy);
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -377,9 +377,9 @@ public class RadixLSD4SortTests : IntegerSortTestsBase
         var executed = TestHelpers.CountNonIdentityDigits(values: expected, digitCount, radix: 4);
         await Assert.That(executed).IsLessThan(digitCount); // guard: this test is pointless if nothing is skipped
 
-        // Counting reads the cached key array, so a skipped digit costs no span traffic at all.
+        // Counting still touches every digit; only the distribution is skipped.
         var finalCopy = executed % 2 == 1 ? n : 0;
-        var expectedReads = (ulong)(n + executed * n + finalCopy);
+        var expectedReads = (ulong)(n + digitCount * n + executed * n + finalCopy);
         var expectedWrites = (ulong)(executed * n + finalCopy);
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
