@@ -244,11 +244,16 @@ public static class AmericanFlagSort
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
         // Start American Flag Sort from the most significant digit
-        AmericanFlagSortRecursive(s, radixKey, 0, s.Length, digitCount - 1);
+        AmericanFlagSortRecursive(s, radixKey, 0, s.Length, digitCount - 1, digitCount);
     }
 
+    /// <param name="digitCount">
+    /// Total number of digit positions in the key. Carried down the recursion only to report
+    /// <see cref="SortPhase.RadixPass"/>, whose contract is param1 = current digit, param2 = total digits;
+    /// a consumer cannot derive the total from <paramref name="digit"/> alone.
+    /// </param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void AmericanFlagSortRecursive<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, int start, int length, int digit)
+    private static void AmericanFlagSortRecursive<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, int start, int length, int digit, int digitCount)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -273,7 +278,7 @@ public static class AmericanFlagSort
         Span<int> bucketNext = stackalloc int[RadixSize];        // Current write position for each bucket
 
         // Phase 1: Count occurrences of each digit value
-        s.Context.OnPhase(SortPhase.RadixPass, digit, digit);
+        s.Context.OnPhase(SortPhase.RadixPass, digit, digitCount);
         // Store count for digit d in bucketCounts[d+1] (off-by-one trick for prefix sum)
         bucketCounts.Clear();
 
@@ -300,7 +305,7 @@ public static class AmericanFlagSort
         if (nonEmptyBuckets <= 1)
         {
             if (digit > 0)
-                AmericanFlagSortRecursive(s, radixKey, start, length, digit - 1);
+                AmericanFlagSortRecursive(s, radixKey, start, length, digit - 1, digitCount);
 
             // If digit == 0, there are no lower digits left to process, so we're done.
             return;
@@ -336,7 +341,7 @@ public static class AmericanFlagSort
 
             if (bucketLength > 1)
             {
-                AmericanFlagSortRecursive(s, radixKey, start + bucketStart, bucketLength, digit - 1);
+                AmericanFlagSortRecursive(s, radixKey, start + bucketStart, bucketLength, digit - 1, digitCount);
             }
         }
     }

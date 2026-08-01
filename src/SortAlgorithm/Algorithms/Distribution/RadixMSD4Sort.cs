@@ -217,7 +217,7 @@ public static class RadixMSD4Sort
             var digitCount = (TRadixKey.KeyBits + RadixBits - 1) / RadixBits;
 
             // Start MSD radix sort from the most significant digit
-            MSDSort(s, temp, radixKey, 0, s.Length, digitCount - 1);
+            MSDSort(s, temp, radixKey, 0, s.Length, digitCount - 1, digitCount);
         }
         finally
         {
@@ -225,7 +225,12 @@ public static class RadixMSD4Sort
         }
     }
 
-    private static void MSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int start, int length, int digit)
+    /// <param name="digitCount">
+    /// Total number of digit positions in the key. Carried down the recursion only to report
+    /// <see cref="SortPhase.RadixPass"/>, whose contract is param1 = current digit, param2 = total digits;
+    /// a consumer cannot derive the total from <paramref name="digit"/> alone.
+    /// </param>
+    private static void MSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int start, int length, int digit, int digitCount)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -243,7 +248,7 @@ public static class RadixMSD4Sort
             return;
         }
 
-        s.Context.OnPhase(SortPhase.RadixPass, digit, digit);
+        s.Context.OnPhase(SortPhase.RadixPass, digit, digitCount);
         var shift = digit * RadixBits;
 
         // Allocate bucket counts on stack (RadixSize+1 = 5 elements = 20 bytes)
@@ -299,7 +304,7 @@ public static class RadixMSD4Sort
 
             if (bucketLength > 1)
             {
-                MSDSort(s, temp, radixKey, start + bucketStart, bucketLength, digit - 1);
+                MSDSort(s, temp, radixKey, start + bucketStart, bucketLength, digit - 1, digitCount);
             }
         }
     }

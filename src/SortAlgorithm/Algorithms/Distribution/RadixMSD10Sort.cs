@@ -248,7 +248,7 @@ public static class RadixMSD10Sort
             ];
 
             // Start MSD radix sort from the most significant digit
-            MSDSort(s, temp, radixKey, 0, s.Length, digitCount - 1, pow10);
+            MSDSort(s, temp, radixKey, 0, s.Length, digitCount - 1, digitCount, pow10);
         }
         finally
         {
@@ -256,7 +256,13 @@ public static class RadixMSD10Sort
         }
     }
 
-    private static void MSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int start, int length, int digit, ReadOnlySpan<ulong> pow10)
+    /// <param name="digitCount">
+    /// Total number of digit positions the data actually needs, as computed by <see cref="ComputeMaxDigit"/>.
+    /// Carried down the recursion only to report <see cref="SortPhase.RadixPass"/>, whose contract is
+    /// param1 = current digit, param2 = total digits; a consumer cannot derive the total from
+    /// <paramref name="digit"/> alone.
+    /// </param>
+    private static void MSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int start, int length, int digit, int digitCount, ReadOnlySpan<ulong> pow10)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -274,7 +280,7 @@ public static class RadixMSD10Sort
             return;
         }
 
-        s.Context.OnPhase(SortPhase.RadixPass, digit, digit);
+        s.Context.OnPhase(SortPhase.RadixPass, digit, digitCount);
         var divisor = pow10[digit];
 
         Span<int> counts = stackalloc int[RadixBase];
@@ -317,7 +323,7 @@ public static class RadixMSD10Sort
         {
             if (counts[i] > 1)
             {
-                MSDSort(s, temp, radixKey, start + offsets[i], counts[i], digit - 1, pow10);
+                MSDSort(s, temp, radixKey, start + offsets[i], counts[i], digit - 1, digitCount, pow10);
             }
         }
     }
