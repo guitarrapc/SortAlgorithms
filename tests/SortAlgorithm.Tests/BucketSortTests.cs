@@ -109,9 +109,23 @@ public class BucketSortTests
         await Assert.That((ulong)array.Length).IsEqualTo((ulong)inputSample.Samples.Length);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
         await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.CompareCount).IsNotEqualTo(0UL);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+
+        // 比較はバケツ内ソートからしか出ない（min/max 走査は生の int 比較で観測対象外）。この入力は
+        // 値域 == n の順列なので、バケツ数 min(n, 値域) はバケツ幅を 1 にし、どのバケツも等値要素しか
+        // 持たない。比較が起きるのは値域 > n の入力に限られる（TheoreticalValues* を参照）。
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL)
+            .Because("バケツ幅 1 では並べ替える相手がバケツ内に存在しない");
     }
+
+    /// <summary>
+    /// バケツが複数の異なるキーを受け持つ入力。値は (0,1), (4,5), (8,9), ... と 2 個ずつ隣接し、
+    /// 値域 2n-2 に対してバケツ幅 2 になるので、隣接ペアがちょうど同じバケツに入る。
+    /// バケツ内ソートが働くのは値域 &gt; n のときだけで、これは CountingSort / PigeonholeSort が
+    /// 値域を理由に拒否する、bucket sort 本来の担当入力でもある。
+    /// </summary>
+    private static int[] PairedSparseKeys(int n)
+        => [.. Enumerable.Range(0, n).Select(i => (i / 2) * 4 + (i % 2))];
 
     [Test]
     [Arguments(10)]
@@ -121,48 +135,45 @@ public class BucketSortTests
     public async Task TheoreticalValuesSortedTest(int n)
     {
         var stats = new StatisticsContext();
-        var sorted = Enumerable.Range(0, n).ToArray();
+        var sorted = PairedSparseKeys(n);
         BucketSort.SortBy(sorted.AsSpan(), x => x, stats);
 
-        // BucketSort on sorted data (with internal buffer tracking via SortSpan):
-        //
-        // Operations breakdown:
-        // 1. Find min/max: n reads (main buffer)
-        // 2. Distribution: n reads (main buffer) + n writes (temp buffer)
-        // 3. InsertionSort per bucket (InsertionSort.SortCore on a slice of the temp buffer):
-        //    - For sorted buckets: s.Read(i) + s.Read(j) per non-first element = 2 reads each
-        //    - j == i-1 for all elements → no shift → write skipped (optimization in SortCore)
-        //    - Total writes from InsertionSort: 0
-        // 4. CopyTo (temp → main): n reads (source) + n writes (destination) via OnRangeCopy
-        //
-        // Actual observations:
-        // n=10:  44 reads (4.4n), 20 writes (2.0n)
-        // n=20:  92 reads (4.6n), 40 writes (2.0n)
-        // n=50:  236 reads (4.72n), 100 writes (2.0n)
-        // n=100: 480 reads (4.8n), 200 writes (2.0n)
-        //
-        // Reads: 2n (find/distribute) + ~2n (insertion sort) + n (CopyTo read from temp)
-        // Writes: n (distribute to temp) + 0 (InsertionSort skips no-op writes for sorted data) + n (CopyTo write to main)
+        // 固定費（バケツ相を除く）:
+        // 1. min/max とキー抽出   : n 読み
+        // 2. 配布の 2 パス目      : n 読み + n 書き（一時バッファへ）
+        // 3. 書き戻し (temp→main) : n 読み + n 書き（OnRangeCopy）
+        var fixedReads = (ulong)(3 * n);
+        var fixedWrites = (ulong)(2 * n);
 
-        var bucketCount = Math.Max(2, Math.Min(1000, (int)Math.Sqrt(n)));
+        // PairedSparseKeys は非空バケツ n/2 個・各 2 要素になるので、挿入対象は n/2 個。
+        var insertionTargets = n / 2;
 
-        // IndexReadCount: 2n (find/distribute) + ~2n (insertion sort) + n (CopyTo)
-        var expectedReadsMin = (ulong)(4.0 * n);
-        var expectedReadsMax = (ulong)(5.0 * n);
+        // 昇順に入るバケツでは、挿入対象ごとに比較 1 回・読み 2 回（退避と比較相手）で、
+        // 定位置の要素への書き戻しは省かれるため書き込みは 0。
+        await Assert.That(stats.CompareCount).IsEqualTo((ulong)insertionTargets)
+            .Because("バケツ内の比較が観測されていること");
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(fixedWrites)
+            .Because("ソート済みバケツでは 1 要素も書き込まれない");
+        await Assert.That(stats.IndexReadCount).IsEqualTo(fixedReads + (ulong)(2 * insertionTargets));
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+    }
 
-        // IndexWriteCount: n (distribute) + 0 (insertion sort, no-op writes skipped) + n (CopyTo) = 2n
-        var expectedWritesMin = (ulong)(1.8 * n);
-        var expectedWritesMax = (ulong)(2.5 * n);
+    /// <summary>
+    /// 値域 == n の順列ではバケツ数 min(n, 値域) がバケツ幅を 1 にするので、どのバケツも等値要素しか
+    /// 持たず、バケツ内ソートは 1 度も比較しない。分配と書き戻しだけが残る形を厳密に押さえる。
+    /// </summary>
+    [Test]
+    [Arguments(10)]
+    [Arguments(100)]
+    public async Task TheoreticalValuesDenseKeysTest(int n)
+    {
+        var stats = new StatisticsContext();
+        var dense = Enumerable.Range(0, n).ToArray();
+        BucketSort.SortBy(dense.AsSpan(), x => x, stats);
 
-        // CompareCount: n - bucketCount (one per element except first in each bucket)
-        // But with SortSpan Compare(), each comparison involves reads
-        // Observed: slightly higher due to additional comparison checks
-        var expectedComparesMin = (ulong)(n - bucketCount);
-        var expectedComparesMax = (ulong)(n);
-
-        await Assert.That(stats.IndexReadCount).IsBetween(expectedReadsMin, expectedReadsMax);
-        await Assert.That(stats.IndexWriteCount).IsBetween(expectedWritesMin, expectedWritesMax);
-        await Assert.That(stats.CompareCount).IsBetween(expectedComparesMin, expectedComparesMax);
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(3 * n));
+        await Assert.That(stats.IndexWriteCount).IsEqualTo((ulong)(2 * n));
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
@@ -174,7 +185,7 @@ public class BucketSortTests
     public async Task TheoreticalValuesReversedTest(int n)
     {
         var stats = new StatisticsContext();
-        var reversed = Enumerable.Range(0, n).Reverse().ToArray();
+        var reversed = PairedSparseKeys(n).Reverse().ToArray();
         BucketSort.SortBy(reversed.AsSpan(), x => x, stats);
 
         // BucketSort on reversed data (with internal buffer tracking):
@@ -188,24 +199,18 @@ public class BucketSortTests
         // n=50:  writes=262 (5.24n)
         // n=100: writes=640 (6.4n)
 
-        var bucketCount = Math.Max(2, Math.Min(1000, (int)Math.Sqrt(n)));
+        // 逆順に入るバケツは必ずシフトするので、固定費 2n を超える書き込みが観測される。
+        // 上限は全要素が 1 バケツに落ちた最悪ケース（bucket sort の O(n²) の姿）で押さえる。
+        var fixedReads = (ulong)(3 * n);
+        var fixedWrites = (ulong)(2 * n);
+        var maxBucketCompares = (ulong)(n * (n - 1) / 2);
 
-        // IndexReadCount: base operations + heavy insertion sort reads
-        var minReads = (ulong)(2 * n);
-        var maxReads = (ulong)(15 * n); // Allow for worst case
-
-        // IndexWriteCount: many shifts during insertion sort
-        var minWrites = (ulong)n;
-        var maxWrites = (ulong)(8 * n);
-
-        // CompareCount: worst case for insertion sort
-        var bucketSize = n / bucketCount;
-        var maxComparesPerBucket = bucketSize * (bucketSize - 1) / 2;
-        var maxCompares = (ulong)(bucketCount * maxComparesPerBucket * 2);
-
-        await Assert.That(stats.IndexReadCount).IsBetween(minReads, maxReads);
-        await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
-        await Assert.That(stats.CompareCount).IsBetween(0UL, maxCompares);
+        await Assert.That(stats.IndexReadCount).IsGreaterThan(fixedReads);
+        await Assert.That(stats.IndexWriteCount).IsGreaterThan(fixedWrites)
+            .Because("逆順バケツは必ずシフトするので、バケツ内の書き込みが観測されること");
+        await Assert.That(stats.IndexWriteCount).IsLessThanOrEqualTo(fixedWrites + maxBucketCompares + (ulong)(n - 1));
+        await Assert.That(stats.CompareCount).IsGreaterThan(0UL);
+        await Assert.That(stats.CompareCount).IsLessThanOrEqualTo(maxBucketCompares);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
@@ -221,39 +226,21 @@ public class BucketSortTests
     public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = TestHelpers.ShuffledRange(n, seed);
+        var shuffleRandom = new Random(seed);
+        var random = PairedSparseKeys(n).OrderBy(_ => shuffleRandom.Next()).ToArray();
         BucketSort.SortBy(random.AsSpan(), x => x, stats);
 
-        // BucketSort on random data (with internal buffer tracking):
-        // - For Enumerable.Range shuffled, keys are still 0..n-1 (uniform distribution)
-        // - InsertionSort per bucket performs more operations on random data
-        //
-        // Actual observations:
-        // n=10:  reads vary significantly, writes ~12-30
-        // n=20:  reads ~70-130, writes ~36-70
-        // n=50:  reads ~180-350, writes ~100-200
-        // n=100: reads ~400-900, writes ~200-900
+        // 入力順によってバケツ内のシフト量は変わるが、固定費と最悪ケースの間には必ず収まる。
+        var fixedReads = (ulong)(3 * n);
+        var fixedWrites = (ulong)(2 * n);
+        var maxBucketCompares = (ulong)(n * (n - 1) / 2);
 
-        var bucketCount = Math.Max(2, Math.Min(1000, (int)Math.Sqrt(n)));
-
-        // IndexReadCount: highly variable based on randomness
-        // Base: 2n (find/distribute) + variable insertion sort reads
-        var expectedReadsMin = (ulong)(2 * n);
-        var expectedReadsMax = (ulong)(10 * n);
-
-        // IndexWriteCount: includes insertion sort shifts
-        // Random data requires more shifts than sorted data
-        var expectedWritesMin = (ulong)(0.5 * n);
-        var expectedWritesMax = (ulong)(10 * n);
-
-        // CompareCount: varies based on bucket distribution
-        var bucketSize = n / bucketCount;
-        var maxComparesPerBucket = bucketSize * (bucketSize - 1) / 2;
-        var maxCompares = (ulong)(bucketCount * maxComparesPerBucket * 2);
-
-        await Assert.That(stats.IndexReadCount).IsBetween(expectedReadsMin, expectedReadsMax);
-        await Assert.That(stats.IndexWriteCount).IsBetween(expectedWritesMin, expectedWritesMax);
-        await Assert.That(stats.CompareCount).IsBetween(0UL, maxCompares);
+        await Assert.That(stats.IndexReadCount).IsGreaterThan(fixedReads);
+        await Assert.That(stats.IndexWriteCount).IsGreaterThanOrEqualTo(fixedWrites);
+        await Assert.That(stats.IndexWriteCount).IsLessThanOrEqualTo(fixedWrites + maxBucketCompares + (ulong)(n - 1));
+        await Assert.That(stats.CompareCount).IsGreaterThan(0UL)
+            .Because("バケツ内の比較が観測されていること");
+        await Assert.That(stats.CompareCount).IsLessThanOrEqualTo(maxBucketCompares);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 

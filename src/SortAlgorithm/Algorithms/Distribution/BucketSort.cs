@@ -23,8 +23,10 @@ namespace SortAlgorithm.Algorithms;
 /// Each bucket i handles keys in the range [min + i×bucketSize, min + (i+1)×bucketSize).</description></item>
 /// <item><description><strong>Distribution Function:</strong> Elements are distributed to buckets using: bucketIndex = ⌊(key - min) / bucketSize⌋.
 /// This ensures all elements with similar keys go to the same bucket.</description></item>
-/// <item><description><strong>Bucket Count Heuristic:</strong> This implementation uses k = min(max(√n, {MinBucketCount}), {MaxBucketCount}) buckets.
-/// The √n heuristic balances distribution overhead and per-bucket sorting cost.</description></item>
+/// <item><description><strong>Bucket Count:</strong> This implementation uses k = min(n, range) buckets. The Θ(n + k) average
+/// case requires k to grow with n, so that a bucket holds O(1) elements in expectation; a bucket count fixed below that
+/// leaves n/k elements per bucket and the per-bucket sorting, not the distribution, decides the running time.
+/// More buckets than distinct keys cannot help, which is why the count is also bounded by the range.</description></item>
 /// <item><description><strong>Per-Bucket Sorting:</strong> Each bucket is sorted using Insertion Sort (stable, O(m²) for m elements).
 /// This ensures stability if the inner sort is stable.</description></item>
 /// <item><description><strong>Concatenation Order:</strong> Buckets are concatenated in ascending order (bucket 0, 1, 2, ...).
@@ -40,20 +42,31 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Ω(n + k) - Uniform distribution, each bucket has ~n/k elements</description></item>
 /// <item><description>Average case: Θ(n + k) - Assumes uniform distribution, total sort cost n×(n/k)²/k + n + k ≈ n</description></item>
 /// <item><description>Worst case  : O(n²) - All elements in one bucket, degenerates to Insertion Sort</description></item>
+/// <item><description>Range limit : None - auxiliary space depends on n, not on the key range</description></item>
 /// <item><description>Comparisons : O(n log(n/k)) on average - Each bucket sorted independently</description></item>
 /// <item><description>Memory      : O(n + k) - k bucket lists plus n elements total</description></item>
-/// <item><description>Note        : Bucket count is automatically adjusted to √n (minimum {MinBucketCount}, maximum {MaxBucketCount}). Skewed key distribution degrades performance.</description></item>
+/// <item><description>Note        : Bucket count is min(n, range); there is no cap on the key range, unlike CountingSort and PigeonholeSort. Skewed key distribution degrades performance.</description></item>
+/// </list>
+/// <para><strong>Comparison with Related Algorithms:</strong></para>
+/// <list type="bullet">
+/// <item><description>vs CountingSort / PigeonholeSort: Those size their auxiliary array by the key <em>range</em> and therefore
+/// refuse inputs whose range is large relative to n. Bucket sort sizes its buckets by n instead, so it carries no range
+/// limit and is the distribution sort for sparse keys — the case where the other two throw. The price is that a bucket
+/// holds a span of keys rather than one, so a comparison sort has to run inside it: bucket sort is not comparison-free
+/// and its cost depends on how the keys are distributed, with an O(n²) worst case the other two do not have.</description></item>
+/// <item><description>vs RadixSort: Both handle a wide key range, but radix sort makes one pass per digit and needs a
+/// fixed-width key mapping, while bucket sort distributes once. Radix sort's cost is independent of the key
+/// distribution; bucket sort's is not.</description></item>
+/// <item><description>Ordering control: <see cref="BucketSort.Sort{T, TComparer, TContext}(Span{T}, Func{T, int}, TComparer, TContext)"/>
+/// is the only distribution-sort entry point in this library where a caller-supplied comparer defines the final order and
+/// the key is merely a bucketing hint. Counting, pigeonhole and radix sort all order strictly by the extracted key.</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Bucket_sort</para>
 /// </remarks>
 public static class BucketSort
 {
-    // Bucket count is capped so the two bucket arrays stay within the same 4 KiB stackalloc budget the
-    // sibling distribution sorts use for their single count array (StackAllocThreshold = 1024 ints):
-    // two arrays of 512 ints. The cap only binds above n = 512² = 262,144, since the count is √n.
-    private const int MaxBucketCount = 512;  // Maximum number of buckets
-    private const int MinBucketCount = 2;    // Minimum number of buckets
+    private const int StackAllocThreshold = 1024; // Use stackalloc for the bucket array when the count is smaller than this
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -146,13 +159,15 @@ public static class BucketSort
             // If all keys are the same, no need to sort
             if (min == max) return;
 
-            // Determine bucket count based on input size and range
             long range = (long)max - (long)min + 1;
 
-            // Calculate optimal bucket count (sqrt(n) is a common heuristic)
-            var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(s.Length)));
+            // One bucket per element, so a bucket holds O(1) elements in expectation and the
+            // per-bucket insertion sort stays O(n) overall. A count that does not scale with n
+            // leaves n/k elements per bucket and makes the insertion sorts dominate: with the
+            // sqrt(n) heuristic this measured Theta(n^1.5) even on uniformly distributed input.
+            var bucketCount = s.Length;
 
-            // Adjust bucket count if range is smaller
+            // More buckets than distinct keys cannot help; one bucket per key is the limit.
             if (range < bucketCount)
             {
                 bucketCount = (int)range;
@@ -161,8 +176,20 @@ public static class BucketSort
             // Calculate bucket size (range divided by bucket count)
             var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
 
-            // Perform bucket distribution and sorting
-            BucketDistribute(s, tempSpan, keys, bucketCount, bucketSize, min);
+            int[]? rentedBounds = null;
+            Span<int> bucketBounds = bucketCount <= StackAllocThreshold
+                ? stackalloc int[bucketCount]
+                : (rentedBounds = ArrayPool<int>.Shared.Rent(bucketCount)).AsSpan(0, bucketCount);
+            bucketBounds.Clear(); // Required: [module: SkipLocalsInit] skips zero-initialization
+            try
+            {
+                BucketDistribute(s, tempSpan, keys, bucketBounds, bucketSize, min);
+            }
+            finally
+            {
+                if (rentedBounds is not null)
+                    ArrayPool<int>.Shared.Return(rentedBounds);
+            }
         }
         finally
         {
@@ -171,14 +198,20 @@ public static class BucketSort
         }
     }
 
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> keys, int bucketCount, long bucketSize, int min)
+    /// <summary>
+    /// Distributes elements into buckets inside the temp buffer, sorts each bucket, and copies back.
+    /// </summary>
+    /// <param name="bucketBounds">
+    /// A single k-sized array serving three roles in sequence: per-bucket counts, then each bucket's
+    /// start offset, then - because scattering advances each entry once per element - each bucket's
+    /// exclusive end. The end of bucket i-1 is the start of bucket i, so no second array is needed to
+    /// recover the bucket ranges after distribution.
+    /// </param>
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> keys, Span<int> bucketBounds, long bucketSize, int min)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Count elements per bucket and track write positions (stackalloc)
-        Span<int> bucketCounts = stackalloc int[bucketCount];
-        Span<int> bucketPositions = stackalloc int[bucketCount];
-        bucketCounts.Clear(); // bucketPositions is fully overwritten in the prefix sum loop below
+        var bucketCount = bucketBounds.Length;
 
         // First pass: convert keys to bucket indices and count
         // Reuse keys array to store bucket indices (eliminates division in second pass)
@@ -195,16 +228,17 @@ public static class BucketSort
             }
 
             keys[i] = bucketIndex; // Overwrite with bucket index
-            bucketCounts[bucketIndex]++;
+            bucketBounds[bucketIndex]++;
         }
 
-        // Calculate starting position for each bucket in the temp array
+        // Turn the counts into each bucket's starting position in the temp array
         s.Context.OnPhase(SortPhase.DistributionAccumulate);
         var offset = 0;
         for (var i = 0; i < bucketCount; i++)
         {
-            bucketPositions[i] = offset;
-            offset += bucketCounts[i];
+            var count = bucketBounds[i];
+            bucketBounds[i] = offset;
+            offset += count;
         }
 
         // Second pass: distribute elements using cached bucket indices
@@ -212,25 +246,27 @@ public static class BucketSort
         for (var i = 0; i < s.Length; i++)
         {
             var bucketIndex = keys[i]; // Reuse bucket index (no division)
-            var pos = bucketPositions[bucketIndex]++;
+            var pos = bucketBounds[bucketIndex]++;
             temp.Write(pos, s.Read(i));
         }
 
-        // Sort each bucket in place inside the temp buffer.
-        // After distribution, bucketPositions[i] == start + count, so start = bucketPositions[i] - bucketCounts[i].
+        // Sort each bucket in place inside the temp buffer. Every entry was advanced once per element
+        // it received, so bucketBounds[i] is now the exclusive end of bucket i and the previous end is
+        // its start.
         //
         // A bucket is sorted as a range of the temp buffer, not as a buffer of its own. A private
         // identifier would claim the elements moved elsewhere and then have them reappear in the CopyTo
         // below, which reports BUFFER_TEMP; the range is already unambiguous without one. Passing the
         // range instead of a slice reports the same indices and avoids building a SortSpan per bucket.
+        var start = 0;
         for (var i = 0; i < bucketCount; i++)
         {
-            var count = bucketCounts[i];
-            if (count > 1)
+            var end = bucketBounds[i];
+            if (end - start > 1)
             {
-                var start = bucketPositions[i] - count;
-                InsertionSort.SortCore(temp, start, start + count);
+                InsertionSort.SortCore(temp, start, end);
             }
+            start = end;
         }
 
         // Write sorted data back to original span using CopyTo for better performance
@@ -255,8 +291,10 @@ public static class BucketSort
 /// Each bucket i handles values in the range [min + i×bucketSize, min + (i+1)×bucketSize).</description></item>
 /// <item><description><strong>Distribution Function:</strong> Elements are distributed to buckets using: bucketIndex = ⌊(value - min) / bucketSize⌋.
 /// This ensures all elements with similar values go to the same bucket.</description></item>
-/// <item><description><strong>Bucket Count Heuristic:</strong> This implementation uses k = min(max(√n, {MinBucketCount}), {MaxBucketCount}) buckets.
-/// The √n heuristic balances distribution overhead and per-bucket sorting cost.</description></item>
+/// <item><description><strong>Bucket Count:</strong> This implementation uses k = min(n, range) buckets. The Θ(n + k) average
+/// case requires k to grow with n, so that a bucket holds O(1) elements in expectation; a bucket count fixed below that
+/// leaves n/k elements per bucket and the per-bucket sorting, not the distribution, decides the running time.
+/// More buckets than distinct keys cannot help, which is why the count is also bounded by the range.</description></item>
 /// <item><description><strong>Per-Bucket Sorting:</strong> Each bucket is sorted using Insertion Sort (stable, O(m²) for m elements).
 /// This ensures stability if the inner sort is stable.</description></item>
 /// <item><description><strong>Concatenation Order:</strong> Buckets are concatenated in ascending order (bucket 0, 1, 2, ...).
@@ -272,17 +310,15 @@ public static class BucketSort
 /// <item><description>Best case   : Ω(n + k) - Uniform distribution, each bucket has ~n/k elements</description></item>
 /// <item><description>Average case: Θ(n + k) - Assumes uniform distribution, total sort cost n×(n/k)²/k + n + k ≈ n</description></item>
 /// <item><description>Worst case  : O(n²) - All elements in one bucket, degenerates to Insertion Sort</description></item>
+/// <item><description>Range limit : None - auxiliary space depends on n, not on the key range</description></item>
 /// <item><description>Comparisons : O(n log(n/k)) on average - Each bucket sorted independently</description></item>
 /// <item><description>Memory      : O(n + k) - k bucket lists plus n elements total</description></item>
-/// <item><description>Note        : バケット数は√n (最小{MinBucketCount}、最大{MaxBucketCount}) に自動調整されます。</description></item>
+/// <item><description>Note        : バケット数は min(n, 値域)。CountingSort / PigeonholeSort と違い値域の上限制約はありません。</description></item>
 /// </list>
 /// </remarks>
 public static class BucketSortInteger
 {
-    // Same cap as <see cref="BucketSort"/>: the two overloads are the same algorithm and differ only in
-    // how the key is obtained, so the bucket-count heuristic must not depend on which one is called.
-    private const int MaxBucketCount = 512;  // Maximum number of buckets
-    private const int MinBucketCount = 2;    // Minimum number of buckets
+    private const int StackAllocThreshold = 1024; // Use stackalloc for the bucket array when the count is smaller than this
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -379,10 +415,12 @@ public static class BucketSortInteger
         ulong range = (ulong)(max - min) + 1;
         if (range == 0) range = ulong.MaxValue;
 
-        // Calculate optimal bucket count (sqrt(n) is a common heuristic)
-        var bucketCount = Math.Max(MinBucketCount, Math.Min(MaxBucketCount, (int)Math.Sqrt(s.Length)));
+        // One bucket per element, so a bucket holds O(1) elements in expectation and the per-bucket
+        // insertion sort stays O(n) overall. See <see cref="BucketSort"/> for the measurement that
+        // rules out a bucket count fixed at sqrt(n).
+        var bucketCount = s.Length;
 
-        // Adjust bucket count if range is smaller
+        // More buckets than distinct values cannot help; one bucket per value is the limit.
         if (range < (ulong)bucketCount)
         {
             bucketCount = (int)range;
@@ -392,19 +430,29 @@ public static class BucketSortInteger
         // for large ranges, so use: a / b + (a % b != 0 ? 1 : 0)
         ulong bucketSize = Math.Max(1UL, range / (ulong)bucketCount + (range % (ulong)bucketCount != 0 ? 1UL : 0UL));
 
-        // Perform bucket distribution and sorting
-        BucketDistribute(s, tempSpan, bucketIndices, bucketCount, bucketSize, min);
+        int[]? rentedBounds = null;
+        Span<int> bucketBounds = bucketCount <= StackAllocThreshold
+            ? stackalloc int[bucketCount]
+            : (rentedBounds = ArrayPool<int>.Shared.Rent(bucketCount)).AsSpan(0, bucketCount);
+        bucketBounds.Clear(); // Required: [module: SkipLocalsInit] skips zero-initialization
+        try
+        {
+            BucketDistribute(s, tempSpan, bucketIndices, bucketBounds, bucketSize, min);
+        }
+        finally
+        {
+            if (rentedBounds is not null)
+                ArrayPool<int>.Shared.Return(rentedBounds);
+        }
     }
 
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> tempSpan, Span<int> bucketIndices, int bucketCount, ulong bucketSize, long min)
+    /// <inheritdoc cref="BucketSort.BucketDistribute"/>
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> tempSpan, Span<int> bucketIndices, Span<int> bucketBounds, ulong bucketSize, long min)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Count elements per bucket and track write positions (stackalloc)
-        Span<int> bucketCounts = stackalloc int[bucketCount];
-        Span<int> bucketPositions = stackalloc int[bucketCount];
-        bucketCounts.Clear(); // bucketPositions is fully overwritten in the prefix sum loop below
+        var bucketCount = bucketBounds.Length;
 
         // First pass: calculate bucket indices and count
         // Cache bucket indices to avoid division in second pass
@@ -424,16 +472,17 @@ public static class BucketSortInteger
             }
 
             bucketIndices[i] = bucketIndex; // Cache bucket index
-            bucketCounts[bucketIndex]++;
+            bucketBounds[bucketIndex]++;
         }
 
-        // Calculate starting position for each bucket in the temp array
+        // Turn the counts into each bucket's starting position in the temp array
         source.Context.OnPhase(SortPhase.DistributionAccumulate);
         var offset = 0;
         for (var i = 0; i < bucketCount; i++)
         {
-            bucketPositions[i] = offset;
-            offset += bucketCounts[i];
+            var count = bucketBounds[i];
+            bucketBounds[i] = offset;
+            offset += count;
         }
 
         // Second pass: distribute elements using cached bucket indices
@@ -441,25 +490,26 @@ public static class BucketSortInteger
         for (var i = 0; i < source.Length; i++)
         {
             var bucketIndex = bucketIndices[i]; // Reuse cached index (no division)
-            var pos = bucketPositions[bucketIndex]++;
+            var pos = bucketBounds[bucketIndex]++;
             tempSpan.Write(pos, source.Read(i));
         }
 
-        // Sort each bucket in place inside the temp buffer.
-        // After distribution, bucketPositions[i] == start + count, so start = bucketPositions[i] - bucketCounts[i];
-        // keeping a separate starts array would only restate what the two arrays above already determine.
+        // Sort each bucket in place inside the temp buffer. Every entry was advanced once per element
+        // it received, so bucketBounds[i] is now the exclusive end of bucket i and the previous end is
+        // its start.
         //
         // A bucket is a range of the temp buffer, not a buffer of its own, so it is sorted as a range:
         // the indices reported are the same either way, and the final CopyTo below reports BUFFER_TEMP,
         // so a consumer never sees elements appear in a buffer they were not written to.
+        var start = 0;
         for (var i = 0; i < bucketCount; i++)
         {
-            var count = bucketCounts[i];
-            if (count > 1)
+            var end = bucketBounds[i];
+            if (end - start > 1)
             {
-                var start = bucketPositions[i] - count;
-                InsertionSort.SortCore(tempSpan, start, start + count);
+                InsertionSort.SortCore(tempSpan, start, end);
             }
+            start = end;
         }
 
         // Write sorted data back to original span using CopyTo for better performance

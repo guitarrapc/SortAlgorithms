@@ -22,11 +22,28 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
     protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     /// <summary>
-    /// アルゴリズムと同じヒューリスティックでバケツ数を求める。
-    /// 本テストの入力はいずれも 0..n-1 の順列（range == n &gt; bucketCount）なので、
-    /// range によるバケツ数の切り詰めは起こらず、全バケツが非空になる。
+    /// バケツが複数の異なるキーを受け持つ入力を作る。バケツ数は min(n, 値域) なので、値域 == n の順列では
+    /// バケツ幅が 1 になり、各バケツは等値要素しか持たない —— バケツ内ソートが働くのは値域 &gt; n のとき、
+    /// つまり CountingSort / PigeonholeSort が値域を理由に拒否する、bucket sort 本来の担当入力に限られる。
+    ///
+    /// 値は (0,1), (4,5), (8,9), ... と 2 個ずつ隣接する。値域は 2n-2 なのでバケツ幅は 2 になり、
+    /// 隣接ペアがちょうど同じバケツに入って、非空バケツが n/2 個・各 2 要素という決定的な形になる。
     /// </summary>
-    private static int BucketCountFor(int n) => Math.Max(2, Math.Min(1000, (int)Math.Sqrt(n)));
+    private static int[] PairedSparseKeys(int n)
+        => [.. Enumerable.Range(0, n).Select(i => (i / 2) * 4 + (i % 2))];
+
+    /// <summary>
+    /// アルゴリズムと同じ規則でバケツを割り当て、非空バケツ数を数える。
+    /// バケツ相の演算数を決めるのはバケツ数ではなく非空バケツ数で、空のバケツは何もしない。
+    /// </summary>
+    private static int NonEmptyBucketsFor(int[] data)
+    {
+        var min = data.Min();
+        long range = (long)data.Max() - min + 1;
+        var bucketCount = (int)Math.Min(data.Length, range);
+        var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
+        return data.Select(v => Math.Min((int)((v - (long)min) / bucketSize), bucketCount - 1)).Distinct().Count();
+    }
 
     /// <summary>
     /// バケツ相を除いた固定費。
@@ -45,14 +62,16 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
     ///
     /// この関係が崩れるのは、バケツ相の操作が観測から漏れているか二重計上されているとき。
     /// </summary>
-    private static async Task AssertReadsFollowFromCompares(int n, StatisticsContext stats)
+    private static async Task AssertReadsFollowFromCompares(int[] data, StatisticsContext stats)
     {
+        var n = data.Length;
+        var nonEmpty = NonEmptyBucketsFor(data);
         var (fixedReads, _, fixedCompares) = FixedCost(n);
         var bucketCompares = stats.CompareCount - fixedCompares;
-        var expectedReads = fixedReads + (ulong)(n - BucketCountFor(n)) + bucketCompares;
+        var expectedReads = fixedReads + (ulong)(n - nonEmpty) + bucketCompares;
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads)
-            .Because($"n={n}: 読み取り {stats.IndexReadCount} は固定費 {fixedReads} + 挿入対象 {n - BucketCountFor(n)} + バケツ比較 {bucketCompares} と一致すべき");
+            .Because($"n={n}: 読み取り {stats.IndexReadCount} は固定費 {fixedReads} + 挿入対象 {n - nonEmpty} + バケツ比較 {bucketCompares} と一致すべき");
     }
 
     [Test]
@@ -63,17 +82,20 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
     public async Task TheoreticalValuesSortedTest(int n)
     {
         var stats = new StatisticsContext();
-        var sorted = Enumerable.Range(0, n).ToArray();
+        var sorted = PairedSparseKeys(n);
         BucketSortInteger.Sort(sorted.AsSpan(), stats);
 
-        var bucketCount = BucketCountFor(n);
-        var (_, fixedWrites, fixedCompares) = FixedCost(n);
+        var nonEmpty = NonEmptyBucketsFor(sorted);
+        var (fixedReads, fixedWrites, fixedCompares) = FixedCost(n);
 
         // ソート済みならバケツ内も昇順なので、SortCore は要素ごとに 1 回だけ比較して 1 度も書かない
         // （定位置の要素に対する書き戻しを省く最適化）。
-        var expectedCompares = fixedCompares + (ulong)(n - bucketCount);
-        var expectedReads = (ulong)(6 * n + 1 - 2 * bucketCount);
+        var expectedCompares = fixedCompares + (ulong)(n - nonEmpty);
+        // 挿入対象ごとに退避の 1 読み + 比較の相手 1 読み = 2(n - 非空バケツ数)
+        var expectedReads = fixedReads + (ulong)(2 * (n - nonEmpty));
 
+        await Assert.That(nonEmpty).IsLessThan(n)
+            .Because("バケツ内ソートが働く入力であること（非空バケツ数 < n なら少なくとも 1 つのバケツに 2 要素以上ある）");
         await Assert.That(stats.IndexWriteCount).IsEqualTo(fixedWrites)
             .Because("ソート済みバケツでは 1 要素も書き込まれない");
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
@@ -82,7 +104,7 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
 
         await Assert.That(stats.CompareCount).IsGreaterThan(fixedCompares)
             .Because("バケツ内の比較が観測されていること（以前は raw Span 経由で 1 件も出ていなかった）");
-        await AssertReadsFollowFromCompares(n, stats);
+        await AssertReadsFollowFromCompares(sorted, stats);
     }
 
     [Test]
@@ -93,7 +115,7 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
     public async Task TheoreticalValuesReversedTest(int n)
     {
         var stats = new StatisticsContext();
-        var reversed = Enumerable.Range(0, n).Reverse().ToArray();
+        var reversed = PairedSparseKeys(n).Reverse().ToArray();
         BucketSortInteger.Sort(reversed.AsSpan(), stats);
 
         var (_, fixedWrites, fixedCompares) = FixedCost(n);
@@ -110,7 +132,7 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
         await Assert.That(stats.CompareCount).IsLessThanOrEqualTo(fixedCompares + maxBucketCompares);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
 
-        await AssertReadsFollowFromCompares(n, stats);
+        await AssertReadsFollowFromCompares(reversed, stats);
     }
 
     [Test]
@@ -125,7 +147,8 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
     public async Task TheoreticalValuesRandomTest(int n, int seed)
     {
         var stats = new StatisticsContext();
-        var random = TestHelpers.ShuffledRange(n, seed);
+        var shuffleRandom = new Random(seed);
+        var random = PairedSparseKeys(n).OrderBy(_ => shuffleRandom.Next()).ToArray();
         BucketSortInteger.Sort(random.AsSpan(), stats);
 
         var (_, fixedWrites, fixedCompares) = FixedCost(n);
@@ -139,7 +162,7 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
         await Assert.That(stats.CompareCount).IsLessThanOrEqualTo(fixedCompares + maxBucketCompares);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
 
-        await AssertReadsFollowFromCompares(n, stats);
+        await AssertReadsFollowFromCompares(random, stats);
     }
 
     [Test]
@@ -177,10 +200,11 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
         var context = new VisualizationContext(
             onCompare: (i, j, _, bi, bj) => compares.Add((i, j, bi, bj)));
 
-        var data = Enumerable.Range(0, n).Reverse().ToArray();
+        // 値域 > n の入力。バケツ幅が 2 になり、隣接ペアが同じバケツに入ってバケツ内ソートが実際に走る。
+        var data = PairedSparseKeys(n).Reverse().ToArray();
         BucketSortInteger.Sort(data.AsSpan(), context);
 
-        await Assert.That(data).IsEquivalentTo(Enumerable.Range(0, n).ToArray());
+        await Assert.That(data).IsEquivalentTo(PairedSparseKeys(n));
 
         // 一時バッファ上の比較 = バケツ内ソート。走査相はバッファ上に無い値どうしの比較なので (-1,-1)。
         var onTemp = compares.Where(c => c.BufferI == 1 || c.BufferJ == 1).ToList();
