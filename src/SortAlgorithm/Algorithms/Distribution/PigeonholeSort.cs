@@ -221,7 +221,7 @@ public static class PigeonholeSort
 /// <item><description>Swaps       : 0</description></item>
 /// <item><description>Time        : O(n + k) where k is the range of values</description></item>
 /// <item><description>Memory      : O(n + k)</description></item>
-/// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は{MaxHoleArraySize}です。</description></item>
+/// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は{MaxHoleArraySize}、かつ range/n ≤ {MaxRangeFactor} の制約があります。</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Pigeonhole_sort</para>
@@ -229,6 +229,7 @@ public static class PigeonholeSort
 public static class PigeonholeSortInteger
 {
     private const int MaxHoleArraySize = 10_000_000; // Maximum allowed hole array size
+    private const int MaxRangeFactor = 32;           // Maximum allowed range/n ratio; range > MaxRangeFactor*n means O(range) dominates O(n)
     private const int StackAllocThreshold = 1024; // Use stackalloc for the holeHead array when range is smaller than this
 
     // Buffer identifiers for visualization
@@ -305,6 +306,9 @@ public static class PigeonholeSortInteger
         ulong range = umax - umin + 1;
         if (range == 0 || range > (ulong)MaxHoleArraySize)
             throw new ArgumentException($"Value range ({range}) exceeds maximum hole array size ({MaxHoleArraySize}). Consider using another comparison-based sort.");
+        // A hole array far larger than the input makes the collection scan, not the elements, the cost of the sort.
+        if (range > (ulong)s.Length * MaxRangeFactor)
+            throw new ArgumentException($"Value range ({range}) is too large relative to array size ({s.Length}): range/n={range}/{(ulong)s.Length} exceeds limit of {MaxRangeFactor}. Consider another comparison-based sort.");
 
         var size = (int)range;
 
