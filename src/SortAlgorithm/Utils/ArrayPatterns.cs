@@ -1304,9 +1304,11 @@ public static class ArrayPatterns
     }
 
     /// <summary>
-    /// 重複多数（ユニーク値は配列サイズの20%程度）
+    /// 重複多数（ユニーク値数は size/5 を 10〜40 にクランプ。size が 200 以上なら常に 40 種類）
+    /// 値域は [1, uniqueCount] と密で、1 つの値あたり平均 size/uniqueCount 個の重複を持ちます。
     /// <br/>
-    /// Generate many duplicates (unique values are about 20% of array size)
+    /// Generate many duplicates (unique count is size/5 clamped to [10, 40], so any size >= 200 yields exactly 40 distinct values).
+    /// The value range [1, uniqueCount] is dense, and each value repeats size/uniqueCount times on average.
     /// </summary>
     public static int[] GenerateManyDuplicates(int size, Random random)
     {
@@ -2670,6 +2672,19 @@ public static class ArrayPatterns
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// 重複多数（IntKey版・ユニーク値数は size/5 を 10〜40 にクランプ）
+    /// <br/>
+    /// Generate many duplicates (IntKey version - unique count is size/5 clamped to [10, 40])
+    /// </summary>
+    public static IntKey[] GenerateManyDuplicatesIntKey(int size, Random random)
+    {
+        var uniqueCount = Math.Max(10, Math.Min(40, size / 5));
+        return Enumerable.Range(0, size)
+            .Select(_ => new IntKey(random.Next(1, uniqueCount + 1)))
+            .ToArray();
     }
 
     /// <summary>
