@@ -36,6 +36,41 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Memory      : O(1) auxiliary metadata — both bin_sizes and bin_cache are bounded by the
 /// key width and the tuning constants, independent of n (bin_sizes on stack, bin_cache via ArrayPool)</description></item>
 /// </list>
+/// <para><strong>Why SpreadSort over the other distribution sorts:</strong></para>
+/// <para>All of the distribution sorts in this namespace are linear-ish in n; they differ in what they
+/// assume about the key distribution and in what they allocate. SpreadSort's distinguishing properties,
+/// each traceable to the implementation:</para>
+/// <list type="bullet">
+/// <item><description><strong>Auxiliary memory does not scale with n.</strong> <c>bin_sizes</c> is a fixed
+/// <c>stackalloc</c> of 2^<see cref="MaxFinishingSplits"/>, and the pooled <c>bin_cache</c> is sized by
+/// <see cref="BinCacheCapacity"/> from the key width alone. <see cref="RadixLSD256Sort"/> and
+/// <see cref="BucketSort"/> need O(n) auxiliary space, and <see cref="FlashSort"/>'s O(m) is O(n) in
+/// practice because it picks m = ⌊0.43n⌋. Only <see cref="AmericanFlagSort"/> matches this.</description></item>
+/// <item><description><strong>The radix width is re-derived at every level, not fixed.</strong>
+/// <see cref="GetLogDivisor"/> computes the split count from the range and element count of the
+/// <em>current</em> sub-range. LSD radix also adapts, but once and globally (pass count from
+/// <c>max XOR min</c> in 8-bit steps), and American Flag's 4-bit digit width is fixed regardless of
+/// range. So a clustered distribution with a distant outlier costs the radix sorts the passes the full
+/// span implies, while here each recursion narrows to what its own bucket actually contains.</description></item>
+/// <item><description><strong>Each bucket independently decides to stop distributing.</strong>
+/// <see cref="GetMinCount"/> derives a per-bucket threshold from the remaining bit range and hands
+/// small or narrow buckets to <see cref="PDQSort"/>. The radix sorts commit to the remaining digit
+/// passes for every bucket; FlashSort and BucketSort commit to Insertion Sort per class, which is why
+/// FlashSort degrades to O(n²) when a class is oversubscribed. The comparison fallback bounds the
+/// non-uniform case here instead.</description></item>
+/// <item><description><strong>Sorted input is detected, not just equal input.</strong>
+/// <see cref="IsSortedOrFindExtremes"/> returns in a single pass that would have been spent finding
+/// the extremes anyway. The radix sorts only short-circuit on <c>range == 0</c>.</description></item>
+/// <item><description><strong>Below <c>min_sort_size</c> it is PDQSort.</strong> Small inputs pay a
+/// comparison sort rather than a distribution pass whose setup exceeds the work, so the type is a
+/// reasonable default when the input size is not known in advance.</description></item>
+/// </list>
+/// <para><strong>When to prefer another distribution sort:</strong> SpreadSort is unstable — when equal
+/// keys must retain their input order, use <see cref="RadixLSD256Sort"/> or <see cref="BucketSort"/>.
+/// It also requires a fixed-width key of at most 64 bits (see Supported Key Mappings below), so wider
+/// integer types are only served by the sorts that accept them. And when the key range is small and
+/// known, <see cref="CountingSort"/> or <see cref="PigeonholeSort"/> do the same work in one pass
+/// without recursion.</para>
 /// <para><strong>Boost Constants (from constants.hpp):</strong></para>
 /// <list type="bullet">
 /// <item><description>max_splits = 11 — Maximum radix bits per level (cache-tuned)</description></item>
