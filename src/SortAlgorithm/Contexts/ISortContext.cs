@@ -32,23 +32,54 @@ public interface ISortContext
     void OnIndexRead(int index, int bufferId);
 
     /// <summary>
-    /// Handles a write operation at the specified index, specifying which buffer.
+    /// Handles a write operation whose written value is not observable
+    /// (for example a tree pointer or height field, where only the fact of the write matters).
     /// </summary>
     /// <param name="index">The zero-based index at which the write operation occurs</param>
     /// <param name="bufferId">Buffer identifier (0 = main array, 1+ = auxiliary buffers)</param>
-    /// <param name="value">The value being written (optional, used for visualization)</param>
-    void OnIndexWrite(int index, int bufferId, object? value = null);
+    void OnIndexWrite(int index, int bufferId);
 
     /// <summary>
-    /// Handles a range copy operation between buffers.
+    /// Handles a write operation at the specified index, specifying which buffer, carrying the written value.
+    /// </summary>
+    /// <remarks>
+    /// The value is passed as <typeparamref name="T"/> rather than <see cref="object"/> on purpose:
+    /// an <c>object</c> parameter boxes every write, which for an observing sort is one allocation per
+    /// element written (measured: 12-19 MiB per pass for 32768 elements). Implementations that only
+    /// need the fact of the write should ignore <paramref name="value"/>; implementations that need it
+    /// for a known element type can test <c>typeof(T)</c> and reinterpret without boxing.
+    /// </remarks>
+    /// <param name="index">The zero-based index at which the write operation occurs</param>
+    /// <param name="bufferId">Buffer identifier (0 = main array, 1+ = auxiliary buffers)</param>
+    /// <param name="value">The value being written</param>
+    void OnIndexWrite<T>(int index, int bufferId, T value);
+
+    /// <summary>
+    /// Handles a range copy operation between buffers whose copied values are not available.
     /// </summary>
     /// <param name="sourceIndex">Starting index in the source buffer</param>
     /// <param name="destinationIndex">Starting index in the destination buffer</param>
     /// <param name="length">Number of elements copied</param>
     /// <param name="sourceBufferId">Source buffer identifier (0 = main array, 1+ = auxiliary buffers, -1 = external)</param>
     /// <param name="destinationBufferId">Destination buffer identifier (0 = main array, 1+ = auxiliary buffers, -1 = external)</param>
-    /// <param name="values">The actual values being copied (used for visualization accuracy). May be null if values are not available.</param>
-    void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null);
+    void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId);
+
+    /// <summary>
+    /// Handles a range copy operation between buffers, carrying the copied values.
+    /// </summary>
+    /// <remarks>
+    /// The values are passed as a <see cref="ReadOnlySpan{T}"/> over the source range rather than a
+    /// materialized <c>object?[]</c>: the array form allocated one array plus one box per element on
+    /// every range copy. The span is only valid for the duration of the call; implementations that need
+    /// to retain the values must copy them out.
+    /// </remarks>
+    /// <param name="sourceIndex">Starting index in the source buffer</param>
+    /// <param name="destinationIndex">Starting index in the destination buffer</param>
+    /// <param name="length">Number of elements copied</param>
+    /// <param name="sourceBufferId">Source buffer identifier (0 = main array, 1+ = auxiliary buffers, -1 = external)</param>
+    /// <param name="destinationBufferId">Destination buffer identifier (0 = main array, 1+ = auxiliary buffers, -1 = external)</param>
+    /// <param name="values">The actual values being copied (used for visualization accuracy)</param>
+    void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values);
 
     /// <summary>
     /// Announces the current algorithm phase using structured data.

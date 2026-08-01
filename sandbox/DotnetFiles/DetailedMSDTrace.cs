@@ -215,11 +215,14 @@ class TracingContext : ISortContext
     }
 
     public void OnIndexRead(int index, int bufferId) => _tracker.RecordRead();
-    public void OnIndexWrite(int index, int bufferId, object? value = null) => _tracker.RecordWrite();
+    public void OnIndexWrite(int index, int bufferId) => _tracker.RecordWrite();
+    public void OnIndexWrite<T>(int index, int bufferId, T value) => _tracker.RecordWrite();
     public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) { }
     public void OnSwap(int i, int j, int bufferId) { }
     public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId)
     {
         _tracker.RecordCopy(length);
     }
+    public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values)
+        => OnRangeCopy(sourceIndex, destinationIndex, length, sourceBufferId, destinationBufferId);
 }

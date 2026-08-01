@@ -40,9 +40,26 @@ public sealed class VisualizationContext : ISortContext
     public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) => _onCompare?.Invoke(i, j, result, bufferIdI, bufferIdJ);
     public void OnSwap(int i, int j, int bufferId) => _onSwap?.Invoke(i, j, bufferId);
     public void OnIndexRead(int index, int bufferId) => _onIndexRead?.Invoke(index, bufferId);
-    public void OnIndexWrite(int index, int bufferId, object? value = null) => _onIndexWrite?.Invoke(index, bufferId, value);
-    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null)
-        => _onRangeCopy?.Invoke(sourceIndex, destinationIndex, length, sourceBufferId, destinationBufferId, values);
+    public void OnIndexWrite(int index, int bufferId) => _onIndexWrite?.Invoke(index, bufferId, null);
+
+    // The callbacks are typed with object?/object?[]? so that a caller can observe any element type
+    // without knowing it. That costs a box per write and an array per range copy, but only when a
+    // callback is actually attached — the null check happens before the arguments are materialized.
+    // Consumers that record every operation of a large sort should implement ISortContext directly
+    // and keep the value as T (see SortVivo's recording context).
+    public void OnIndexWrite<T>(int index, int bufferId, T value) => _onIndexWrite?.Invoke(index, bufferId, value);
+
+    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId)
+        => _onRangeCopy?.Invoke(sourceIndex, destinationIndex, length, sourceBufferId, destinationBufferId, null);
+
+    public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values)
+    {
+        if (_onRangeCopy is null) return;
+
+        var boxed = new object?[values.Length];
+        for (var i = 0; i < values.Length; i++) boxed[i] = values[i];
+        _onRangeCopy(sourceIndex, destinationIndex, length, sourceBufferId, destinationBufferId, boxed);
+    }
     public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0) => _onPhase?.Invoke(phase, param1, param2, param3);
     public void OnRole(int index, int bufferId, RoleType role) => _onRole?.Invoke(index, bufferId, role);
 }

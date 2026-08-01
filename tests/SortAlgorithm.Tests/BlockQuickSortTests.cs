@@ -147,14 +147,17 @@ public class BlockQuickSortTests : SortTestsBase
             if (bufferIdI == 0 && bufferIdJ == 0) MainCompares++;
         }
 
-        public void OnIndexWrite(int index, int bufferId, object? value = null)
+        public void OnIndexWrite(int index, int bufferId)
         {
             if (bufferId is 1 or 2) IndexBufferWrites++;
         }
 
+        public void OnIndexWrite<T>(int index, int bufferId, T value) => OnIndexWrite(index, bufferId);
+
         public void OnSwap(int i, int j, int bufferId) { }
         public void OnIndexRead(int index, int bufferId) { }
-        public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null) { }
+        public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId) { }
+        public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values) { }
         public void OnPhase(SortPhase phase, int param1 = -1, int param2 = -1, int param3 = -1) { }
         public void OnRole(int index, int bufferId, RoleType role) { }
     }

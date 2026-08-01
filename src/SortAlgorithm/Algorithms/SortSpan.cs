@@ -950,12 +950,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         // JIT optimizes this away when TContext is NullContext (Dead Code Elimination)
         if (typeof(TContext) != typeof(NullContext))
         {
-            var values = new object?[length];
-            for (int i = 0; i < length; i++)
-            {
-                values[i] = _span[sourceIndex + i];
-            }
-            _context.OnRangeCopy(_offset + sourceIndex, destination._offset + destinationIndex, length, _bufferId, destination.BufferId, values);
+            // 値はソース範囲のスパンをそのまま渡す。object?[] を組むと 1 コピーにつき
+            // 配列 1 本 + 要素数ぶんのボックス化が発生していた。
+            _context.OnRangeCopy<T>(_offset + sourceIndex, destination._offset + destinationIndex, length, _bufferId, destination.BufferId, _span.Slice(sourceIndex, length));
         }
         _span.Slice(sourceIndex, length).CopyTo(destination._span.Slice(destinationIndex, length));
     }
@@ -983,12 +980,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         // JIT optimizes this away when TContext is NullContext (Dead Code Elimination)
         if (typeof(TContext) != typeof(NullContext))
         {
-            var values = new object?[length];
-            for (int i = 0; i < length; i++)
-            {
-                values[i] = _span[sourceIndex + i];
-            }
-            _context.OnRangeCopy(_offset + sourceIndex, destinationIndex, length, _bufferId, -1, values);
+            _context.OnRangeCopy<T>(_offset + sourceIndex, destinationIndex, length, _bufferId, -1, _span.Slice(sourceIndex, length));
         }
         _span.Slice(sourceIndex, length).CopyTo(destination.Slice(destinationIndex, length));
     }

@@ -42,7 +42,15 @@ public sealed class CompositeContext : ISortContext
         }
     }
 
-    public void OnIndexWrite(int index, int bufferId, object? value = null)
+    public void OnIndexWrite(int index, int bufferId)
+    {
+        foreach (var context in _contexts)
+        {
+            context.OnIndexWrite(index, bufferId);
+        }
+    }
+
+    public void OnIndexWrite<T>(int index, int bufferId, T value)
     {
         foreach (var context in _contexts)
         {
@@ -50,7 +58,15 @@ public sealed class CompositeContext : ISortContext
         }
     }
 
-    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null)
+    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId)
+    {
+        foreach (var context in _contexts)
+        {
+            context.OnRangeCopy(sourceIndex, destinationIndex, length, sourceBufferId, destinationBufferId);
+        }
+    }
+
+    public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values)
     {
         foreach (var context in _contexts)
         {

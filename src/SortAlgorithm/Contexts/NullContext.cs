@@ -23,10 +23,16 @@ public readonly struct NullContext : ISortContext
     public void OnIndexRead(int index, int bufferId) { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnIndexWrite(int index, int bufferId, object? value = null) { }
+    public void OnIndexWrite(int index, int bufferId) { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null) { }
+    public void OnIndexWrite<T>(int index, int bufferId, T value) { }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId) { }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values) { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0) { }

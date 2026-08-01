@@ -55,7 +55,7 @@ public sealed class StatisticsContext : ISortContext
         _indexReadCount++;
     }
 
-    public void OnIndexWrite(int index, int bufferId, object? value = null)
+    public void OnIndexWrite(int index, int bufferId)
     {
         // Exclude writes to negative buffer IDs (reserved for non-array structures excluded from statistics)
         if (bufferId < 0)
@@ -64,7 +64,10 @@ public sealed class StatisticsContext : ISortContext
         _indexWriteCount++;
     }
 
-    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, object?[]? values = null)
+    // Statistics only need the fact of the write, so the value is ignored and never boxed.
+    public void OnIndexWrite<T>(int index, int bufferId, T value) => OnIndexWrite(index, bufferId);
+
+    public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId)
     {
         // Range copy is counted as: length reads from source + length writes to destination
         // Exclude operations with negative buffer IDs (reserved for non-array structures excluded from statistics)
@@ -74,6 +77,9 @@ public sealed class StatisticsContext : ISortContext
         if (destinationBufferId >= 0)
             _indexWriteCount += (ulong)length;
     }
+
+    public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values)
+        => OnRangeCopy(sourceIndex, destinationIndex, length, sourceBufferId, destinationBufferId);
 
     public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0) { }
 
