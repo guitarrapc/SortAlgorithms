@@ -129,7 +129,18 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Practical Rarity:</strong> Sorting 128-bit integers is uncommon in typical applications.
 /// For such cases, comparison-based sorts (e.g., QuickSort, MergeSort) remain practical alternatives.</description></item>
 /// </list>
-/// <para><strong>Reference:</strong></para>
+/// <para><strong>Why the floating-point overloads compare by key:</strong></para>
+/// <para>Every range that reaches the insertion-sort cutoff is ordered by <c>TComparer</c>, not by the digit
+/// it never extracts, so the two orders have to agree or the answer depends on where the cutoff happens to
+/// fall. For integers and for the key-selector overloads they agree by construction. For floating point they
+/// did not: the element overloads passed <see cref="ComparableComparer{T}"/>, which
+/// <see cref="SortSpan{T, TComparer, TContext}"/> specializes to the raw IEEE 754 operators on the
+/// <see cref="NullContext"/> path, and under those NaN is unordered — an insertion sort cannot move it, while
+/// the digit passes place it first from its key of 0. A range holding NaN alongside ordered values therefore
+/// came out wrong whenever it fell to the cutoff, and only on that path: the same input sorted with an
+/// observation context attached, or in a Debug build, went through <c>CompareTo</c> and came out right.
+/// These overloads now pass <see cref="RadixKeyComparer{T, TRadixKey}"/>, which orders by exactly the key the
+/// digit passes use, so the fallback and the distribution cannot disagree for any selector.</para>/// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/American_flag_sort</para>
 /// <para>Paper: "Engineering Radix Sort" by McIlroy, Bostic, and McIlroy (1993)</para>
 /// </remarks>
@@ -242,33 +253,33 @@ public static class AmericanFlagSort
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<Half> span)
-        => SortCore(span, default(HalfRadixKey), new ComparableComparer<Half>(), NullContext.Default);
+        => SortCore(span, default(HalfRadixKey), new RadixKeyComparer<Half, HalfRadixKey>(default), NullContext.Default);
 
     /// <inheritdoc cref="Sort(Span{Half})"/>
     public static void Sort<TContext>(Span<Half> span, TContext context) where TContext : ISortContext
-        => SortCore(span, default(HalfRadixKey), new ComparableComparer<Half>(), context);
+        => SortCore(span, default(HalfRadixKey), new RadixKeyComparer<Half, HalfRadixKey>(default), context);
 
     /// <summary>
     /// Sorts <see cref="float"/> values via the IEEE 754 bit transform.
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<float> span)
-        => SortCore(span, default(SingleRadixKey), new ComparableComparer<float>(), NullContext.Default);
+        => SortCore(span, default(SingleRadixKey), new RadixKeyComparer<float, SingleRadixKey>(default), NullContext.Default);
 
     /// <inheritdoc cref="Sort(Span{float})"/>
     public static void Sort<TContext>(Span<float> span, TContext context) where TContext : ISortContext
-        => SortCore(span, default(SingleRadixKey), new ComparableComparer<float>(), context);
+        => SortCore(span, default(SingleRadixKey), new RadixKeyComparer<float, SingleRadixKey>(default), context);
 
     /// <summary>
     /// Sorts <see cref="double"/> values via the IEEE 754 bit transform.
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<double> span)
-        => SortCore(span, default(DoubleRadixKey), new ComparableComparer<double>(), NullContext.Default);
+        => SortCore(span, default(DoubleRadixKey), new RadixKeyComparer<double, DoubleRadixKey>(default), NullContext.Default);
 
     /// <inheritdoc cref="Sort(Span{double})"/>
     public static void Sort<TContext>(Span<double> span, TContext context) where TContext : ISortContext
-        => SortCore(span, default(DoubleRadixKey), new ComparableComparer<double>(), context);
+        => SortCore(span, default(DoubleRadixKey), new RadixKeyComparer<double, DoubleRadixKey>(default), context);
 
     private static void SortCore<T, TRadixKey, TComparer, TContext>(Span<T> span, TRadixKey radixKey, TComparer comparer, TContext context)
         where TRadixKey : struct, IRadixKeySelector<T>

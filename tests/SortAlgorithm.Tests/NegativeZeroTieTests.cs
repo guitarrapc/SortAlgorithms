@@ -1,4 +1,4 @@
-using SortAlgorithm.Algorithms;
+﻿using SortAlgorithm.Algorithms;
 using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
