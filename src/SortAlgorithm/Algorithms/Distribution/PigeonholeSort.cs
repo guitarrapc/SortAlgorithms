@@ -212,16 +212,39 @@ public static class PigeonholeSort
 /// <para><strong>Why Int128/UInt128 are not supported:</strong></para>
 /// <para>The value range for 128-bit types can reach 2^128, making the hole array impractically large.
 /// If you need to sort Int128/UInt128, consider using a comparison-based sort.</para>
+/// <para><strong>What a hole stores:</strong></para>
+/// <para>A hole records how many elements it received, not the elements themselves. The hole index already
+/// determines the value it holds (<c>value == h + min</c>), so two integers sharing a hole are equal and
+/// therefore indistinguishable: storing them would record nothing the index does not already say. This is
+/// what the integer specialization buys, and it removes the auxiliary element buffer entirely — the sort
+/// touches only the input array and one k-sized hole array.</para>
+/// <para>
+/// <see cref="PigeonholeSort"/> cannot do this. There an element carries payload beyond its key, so the
+/// holes must hold the elements and the sort needs O(n) auxiliary space. Both are pigeonhole sort; they
+/// differ only in how much of an element the hole index can reconstruct.
+/// </para>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Distribution</description></item>
-/// <item><description>Stable      : Yes (preserves relative order of elements with equal values)</description></item>
-/// <item><description>In-place    : No (O(n + k) where k = range of values)</description></item>
+/// <item><description>Stable      : Yes, vacuously — equal integers are indistinguishable, so no relative order is observable</description></item>
+/// <item><description>In-place    : No (O(k) where k = range of values; independent of n)</description></item>
 /// <item><description>Comparisons : 2n+1 (n×2 for min/max scan, +1 for early-exit equality check)</description></item>
 /// <item><description>Swaps       : 0</description></item>
+/// <item><description>IndexReads  : 2n - n for the min/max scan, n for the distribution pass</description></item>
+/// <item><description>IndexWrites : n - each element is written once, directly into its final position</description></item>
 /// <item><description>Time        : O(n + k) where k is the range of values</description></item>
-/// <item><description>Memory      : O(n + k)</description></item>
+/// <item><description>Memory      : O(k) - one hole array; no per-element auxiliary storage</description></item>
 /// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は{MaxHoleArraySize}、かつ range/n ≤ {MaxRangeFactor} の制約があります。</description></item>
+/// </list>
+/// <para><strong>Comparison with Related Algorithms:</strong></para>
+/// <list type="bullet">
+/// <item><description>vs <see cref="CountingSortInteger"/>: Counting sort turns counts into cumulative offsets and then
+/// places each element at a computed index, which requires reading the input a second time and an O(n) output
+/// buffer. Pigeonhole sort never computes a position: it walks the holes in order and emits. That removes the
+/// prefix-sum pass, one full read of the input and the O(n) buffer.</description></item>
+/// <item><description>vs <see cref="BucketSortInteger"/>: A pigeonhole is one bucket per distinct value, so no
+/// comparison sort runs inside a bucket. Performance does not depend on how the values are distributed and there
+/// is no O(n²) worst case; the cost is that k is the whole value range rather than a chosen bucket count.</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Pigeonhole_sort</para>
@@ -230,11 +253,10 @@ public static class PigeonholeSortInteger
 {
     private const int MaxHoleArraySize = 10_000_000; // Maximum allowed hole array size
     private const int MaxRangeFactor = 32;           // Maximum allowed range/n ratio; range > MaxRangeFactor*n means O(range) dominates O(n)
-    private const int StackAllocThreshold = 1024; // Use stackalloc for the holeHead array when range is smaller than this
+    private const int StackAllocThreshold = 1024; // Use stackalloc for the hole array when range is smaller than this
 
     // Buffer identifiers for visualization
-    private const int BUFFER_MAIN = 0;       // Main input array
-    private const int BUFFER_TEMP = 1;       // Temporary buffer for elements
+    private const int BUFFER_MAIN = 0;       // Main input array (the only buffer: holes hold occupancy, not elements)
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order.
@@ -265,19 +287,10 @@ public static class PigeonholeSortInteger
         var comparer = new NumberComparer<T>();
         var s = new SortSpan<T, NumberComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
-        try
-        {
-            var tempSpan = new SortSpan<T, NumberComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
-            SortCore(s, tempSpan);
-        }
-        finally
-        {
-            ArrayPool<T>.Shared.Return(tempArray, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-        }
+        SortCore(s);
     }
 
-    private static void SortCore<T, TContext>(SortSpan<T, NumberComparer<T>, TContext> s, SortSpan<T, NumberComparer<T>, TContext> tempSpan)
+    private static void SortCore<T, TContext>(SortSpan<T, NumberComparer<T>, TContext> s)
         where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparisonOperators<T, T, bool>
         where TContext : ISortContext
     {
@@ -312,64 +325,58 @@ public static class PigeonholeSortInteger
 
         var size = (int)range;
 
-        var nextArray = ArrayPool<int>.Shared.Rent(s.Length);
+        // A hole holds how many elements it received. For a plain integer the hole index already
+        // determines the value it holds (value == h + min), so storing the elements themselves would
+        // record nothing the index does not: two integers in the same hole are equal and therefore
+        // indistinguishable. That is what removes the n-sized auxiliary buffers entirely.
+        int[]? rentedHoles = null;
+        Span<int> holes = size <= StackAllocThreshold
+            ? stackalloc int[size]
+            : (rentedHoles = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
+        holes.Clear(); // Required: [module: SkipLocalsInit] skips zero-initialization
         try
         {
-            var next = nextArray.AsSpan(0, s.Length);
-
-            // Each hole is a linked list of element indices: holeHead[h] = first element index (-1 = empty).
-            // next[] chains the rest; the backward distribution scan keeps each chain in ascending index order.
-            int[]? rentedHoleHeadArray = null;
-            Span<int> holeHead = size <= StackAllocThreshold
-                ? stackalloc int[size]
-                : (rentedHoleHeadArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-            holeHead.Fill(-1);
-            try
-            {
-                DistributeAndCollect(s, tempSpan, holeHead, next, umin);
-            }
-            finally
-            {
-                if (rentedHoleHeadArray is not null)
-                    ArrayPool<int>.Shared.Return(rentedHoleHeadArray);
-            }
+            DistributeAndCollect(s, holes, umin);
         }
         finally
         {
-            ArrayPool<int>.Shared.Return(nextArray);
+            if (rentedHoles is not null)
+                ArrayPool<int>.Shared.Return(rentedHoles);
         }
     }
 
+    /// <summary>
+    /// Drops every element into its hole (phase 1), then empties the holes back into the array in
+    /// ascending hole order (phase 2). O(n + k); no prefix sum and no auxiliary element buffer.
+    /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void DistributeAndCollect<T, TContext>(SortSpan<T, NumberComparer<T>, TContext> source, SortSpan<T, NumberComparer<T>, TContext> temp, Span<int> holeHead, Span<int> next, ulong umin)
+    private static void DistributeAndCollect<T, TContext>(SortSpan<T, NumberComparer<T>, TContext> s, Span<int> holes, ulong umin)
         where T : IBinaryInteger<T>, IComparisonOperators<T, T, bool>
         where TContext : ISortContext
     {
-        // Phase 1: Copy elements to temp and prepend each to its hole's linked list (O(n)).
-        // Scanning backwards and prepending leaves every chain in ascending index order, which is
-        // what a forward scan appending to a tail would produce - so stability holds without a
-        // per-hole tail index, and the loop drops one load, one branch and one indirect store.
-        source.Context.OnPhase(SortPhase.DistributionCount);
-        for (var i = source.Length - 1; i >= 0; i--)
+        // Phase 1: drop each element into the hole its value selects (O(n)).
+        s.Context.OnPhase(SortPhase.DistributionCount);
+        for (var i = 0; i < s.Length; i++)
         {
-            var value = source.Read(i);
-            temp.Write(i, value);
-            var h = (int)(ulong.CreateTruncating(value) - umin);
-            next[i] = holeHead[h];
-            holeHead[h] = i;
+            holes[(int)(ulong.CreateTruncating(s.Read(i)) - umin)]++;
         }
 
-        // Phase 2: Collect elements from holes in ascending value order (O(n + k))
-        source.Context.OnPhase(SortPhase.DistributionWrite);
+        // Phase 2: empty the holes back into the array in ascending order (O(n + k)).
+        // Hole h holds elements whose value is h + min, recovered by reversing the phase 1 mapping:
+        // umin + h wraps in ulong exactly as the value's own arithmetic does, and CreateTruncating
+        // narrows the 2's complement bit pattern back to T for signed and unsigned types alike.
+        s.Context.OnPhase(SortPhase.DistributionWrite);
         var pos = 0;
-        for (var h = 0; h < holeHead.Length; h++)
+        for (var h = 0; h < holes.Length; h++)
         {
-            var j = holeHead[h];
-            while (j != -1)
+            var count = holes[h];
+            if (count == 0) continue;
+
+            var value = T.CreateTruncating(umin + (ulong)h);
+            do
             {
-                source.Write(pos++, temp.Read(j));
-                j = next[j];
-            }
+                s.Write(pos++, value);
+            } while (--count > 0);
         }
     }
 

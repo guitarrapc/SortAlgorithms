@@ -1,5 +1,6 @@
 ﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
+using System.Numerics;
 using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
@@ -63,6 +64,78 @@ public class PigeonholeSortIntegerTests : IntegerSortTestsBase
         await Assert.That(array).IsEquivalentTo([-10, -5, -3, -1, 0, 3], CollectionOrdering.Matching);
     }
 
+    /// <summary>
+    /// Collection rebuilds each value from its hole index (<c>umin + h</c> narrowed back to T) rather than
+    /// reading it out of a buffer, so the 2's complement round-trip has to hold at both ends of every
+    /// supported type — a value near a type's minimum and one near its maximum sit at opposite ends of
+    /// the wrapping ulong arithmetic.
+    /// </summary>
+    [Test]
+    public async Task RebuildsValuesAtTypeBoundaries()
+    {
+        // sbyte / byte: the arrays span the type's whole range, so the hole index walks from one end to the other.
+        await Roundtrip<sbyte>([sbyte.MaxValue, sbyte.MinValue + 2, sbyte.MinValue, sbyte.MaxValue - 3,
+                                sbyte.MinValue + 1, sbyte.MaxValue - 1, sbyte.MinValue + 3, sbyte.MaxValue - 2]);
+        await Roundtrip<byte>([byte.MaxValue, 2, byte.MinValue, byte.MaxValue - 3,
+                               1, byte.MaxValue - 1, 3, byte.MaxValue - 2]);
+
+        // Wider types: the full range is rejected by the range/n guard, so probe a narrow window at each end.
+        await Roundtrip<short>([short.MinValue + 2, short.MinValue, short.MinValue + 3, short.MinValue + 1]);
+        await Roundtrip<short>([short.MaxValue, short.MaxValue - 2, short.MaxValue - 3, short.MaxValue - 1]);
+        await Roundtrip<ushort>([ushort.MaxValue, ushort.MaxValue - 2, ushort.MaxValue - 3, ushort.MaxValue - 1]);
+        await Roundtrip<int>([int.MinValue + 2, int.MinValue, int.MinValue + 3, int.MinValue + 1]);
+        await Roundtrip<int>([int.MaxValue, int.MaxValue - 2, int.MaxValue - 3, int.MaxValue - 1]);
+        await Roundtrip<uint>([uint.MaxValue, uint.MaxValue - 2, uint.MaxValue - 3, uint.MaxValue - 1]);
+        await Roundtrip<long>([long.MinValue + 2, long.MinValue, long.MinValue + 3, long.MinValue + 1]);
+        await Roundtrip<long>([long.MaxValue, long.MaxValue - 2, long.MaxValue - 3, long.MaxValue - 1]);
+        await Roundtrip<ulong>([ulong.MaxValue, ulong.MaxValue - 2, ulong.MaxValue - 3, ulong.MaxValue - 1]);
+        await Roundtrip<nint>([nint.MinValue + 2, nint.MinValue, nint.MinValue + 3, nint.MinValue + 1]);
+        await Roundtrip<nuint>([nuint.MaxValue, nuint.MaxValue - 2, nuint.MaxValue - 3, nuint.MaxValue - 1]);
+
+        static async Task Roundtrip<T>(T[] values) where T : IBinaryInteger<T>, IMinMaxValue<T>
+        {
+            var actual = values.ToArray();
+            var expected = values.ToArray();
+            Array.Sort(expected);
+
+            PigeonholeSortInteger.Sort(actual.AsSpan());
+
+            await Assert.That(actual).IsEquivalentTo(expected, CollectionOrdering.Matching)
+                .Because($"{typeof(T).Name}: [{string.Join(", ", values)}]");
+        }
+    }
+
+    /// <summary>
+    /// A hole records occupancy, not elements, so the sort has no auxiliary element buffer to report.
+    /// Every element operation must therefore land on the main array. This is the observable consequence
+    /// of the integer specialization, and a consumer laying out buffers depends on it.
+    /// </summary>
+    [Test]
+    public async Task UsesNoAuxiliaryElementBuffer()
+    {
+        var buffersTouched = new HashSet<int>();
+        var rangeCopies = 0;
+
+        var context = new VisualizationContext(
+            onCompare: (_, _, _, bi, bj) => { if (bi >= 0) buffersTouched.Add(bi); if (bj >= 0) buffersTouched.Add(bj); },
+            onIndexRead: (_, b) => buffersTouched.Add(b),
+            onIndexWrite: (_, b, _) => buffersTouched.Add(b),
+            onRangeCopy: (_, _, _, _, _, _) => rangeCopies++);
+
+        var random = new Random(42);
+        var array = Enumerable.Range(0, 300).Select(_ => random.Next(0, 200)).ToArray();
+        var expected = array.OrderBy(x => x).ToArray();
+
+        PigeonholeSortInteger.Sort(array.AsSpan(), context);
+
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching)
+            .Because("観測を変えてもソート結果は変わらないこと");
+        await Assert.That(buffersTouched.Order().ToList()).IsEquivalentTo(new List<int> { 0 })
+            .Because($"観測されたバッファー: [{string.Join(",", buffersTouched.Order())}]");
+        await Assert.That(rangeCopies).IsEqualTo(0)
+            .Because("穴から直接書き戻すため、一時バッファーからの一括コピーは存在しない");
+    }
+
     [Test]
     public async Task ULongLargeValuesTest()
     {
@@ -96,16 +169,16 @@ public class PigeonholeSortIntegerTests : IntegerSortTestsBase
         var sorted = Enumerable.Range(0, n).ToArray();
         PigeonholeSortInteger.Sort(sorted.AsSpan(), stats);
 
-        // Pigeonhole Sort with internal buffer tracking (via SortSpan):
-        // 1. Find min/max: n reads (main buffer)
-        // 2. Copy to temp and count: n reads (main) + n writes (temp)
-        // 3. Calculate positions: 0 reads/writes (transform holes array in-place)
-        // 4. Place elements: n reads (temp) + n writes (main)
+        // Pigeonhole Sort over integers (via SortSpan). A hole stores occupancy, not elements, so
+        // there is no auxiliary buffer and no second pass over the input:
+        // 1. Find min/max        : n reads (main buffer)
+        // 2. Drop into holes     : n reads (main buffer), no writes
+        // 3. Empty holes in order: n writes (main buffer), no reads - the hole index gives the value
         //
-        // Total reads: n + n + n = 3n
-        // Total writes: n + n = 2n
-        var expectedReads = (ulong)(3 * n);
-        var expectedWrites = (ulong)(2 * n);
+        // Total reads: n + n = 2n
+        // Total writes: n
+        var expectedReads = (ulong)(2 * n);
+        var expectedWrites = (ulong)n;
         var expectedCompares = (ulong)(2 * n) + 1;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
@@ -126,9 +199,9 @@ public class PigeonholeSortIntegerTests : IntegerSortTestsBase
         PigeonholeSortInteger.Sort(reversed.AsSpan(), stats);
 
         // Pigeonhole Sort complexity is O(n + k) regardless of input order
-        // Same operation counts for reversed as for sorted (with internal buffer tracking)
-        var expectedReads = (ulong)(3 * n);
-        var expectedWrites = (ulong)(2 * n);
+        // Same operation counts for reversed as for sorted
+        var expectedReads = (ulong)(2 * n);
+        var expectedWrites = (ulong)n;
         var expectedCompares = (ulong)(2 * n) + 1;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
@@ -152,10 +225,9 @@ public class PigeonholeSortIntegerTests : IntegerSortTestsBase
         var random = TestHelpers.ShuffledRange(n, seed);
         PigeonholeSortInteger.Sort(random.AsSpan(), stats);
 
-        // Pigeonhole Sort has same complexity regardless of input distribution
-        // With internal buffer tracking: 3n reads, 2n writes
-        var expectedReads = (ulong)(3 * n);
-        var expectedWrites = (ulong)(2 * n);
+        // Pigeonhole Sort has same complexity regardless of input distribution: 2n reads, n writes
+        var expectedReads = (ulong)(2 * n);
+        var expectedWrites = (ulong)n;
         var expectedCompares = (ulong)(2 * n) + 1;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
