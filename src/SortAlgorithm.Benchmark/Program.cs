@@ -7,7 +7,7 @@ using BenchmarkDotNet.Reports;
 using SortAlgorithm.Benchmark;
 using System.Reflection;
 
-const string RequiredCpu = "EPYC 9V94";
+const string RequiredCpu = "EPYC 9V74";
 
 var allowAnyCpu = Array.IndexOf(args, "--allow-any-cpu") >= 0;
 args = Array.FindAll(args, static a => a != "--allow-any-cpu");

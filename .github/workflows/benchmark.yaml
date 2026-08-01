@@ -23,7 +23,7 @@ on:
           - "*StringBenchmark*"
       allow-any-cpu:
         type: boolean
-        description: Skip the AMD EPYC 7763 CPU requirement check.
+        description: Skip the AMD EPYC 9V74 CPU requirement check.
         default: false
 
 jobs:
