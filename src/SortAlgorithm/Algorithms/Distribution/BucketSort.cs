@@ -55,7 +55,6 @@ public static class BucketSort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary buffer for sorted elements
-    private const int BUFFER_BUCKET_BASE = 100; // Base ID for individual buckets (100, 101, 102, ...)
 
     /// <summary>
     /// Sorts the elements in the specified span by an integer key extracted with <paramref name="keySelector"/>.
@@ -214,16 +213,20 @@ public static class BucketSort
             temp.Write(pos, s.Read(i));
         }
 
-        // Sort each bucket using Span slicing with SortSpan for tracking
-        // After distribution, bucketPositions[i] == start + count, so start = bucketPositions[i] - bucketCounts[i]
+        // Sort each bucket in place inside the temp buffer.
+        // After distribution, bucketPositions[i] == start + count, so start = bucketPositions[i] - bucketCounts[i].
+        //
+        // Each bucket is sliced with BUFFER_TEMP rather than an identifier of its own. A bucket is a
+        // range of the temp buffer, not a separate array: the slice's Offset already places it, so
+        // nothing is ambiguous, while a private identifier would claim the elements moved to another
+        // buffer and then have them reappear in the CopyTo below, which reports BUFFER_TEMP.
         for (var i = 0; i < bucketCount; i++)
         {
             var count = bucketCounts[i];
             if (count > 1)
             {
                 var start = bucketPositions[i] - count;
-                var bucketSpan = temp.Slice(start, count, BUFFER_BUCKET_BASE + i);
-                InsertionSort.SortCore(bucketSpan, 0, count);
+                InsertionSort.SortCore(temp.Slice(start, count, BUFFER_TEMP), 0, count);
             }
         }
 

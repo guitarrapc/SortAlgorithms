@@ -129,7 +129,7 @@ public class BucketSortTests
         // Operations breakdown:
         // 1. Find min/max: n reads (main buffer)
         // 2. Distribution: n reads (main buffer) + n writes (temp buffer)
-        // 3. InsertionSort per bucket (InsertionSort.SortCore via SortSpan on bucket buffers):
+        // 3. InsertionSort per bucket (InsertionSort.SortCore on a slice of the temp buffer):
         //    - For sorted buckets: s.Read(i) + s.Read(j) per non-first element = 2 reads each
         //    - j == i-1 for all elements → no shift → write skipped (optimization in SortCore)
         //    - Total writes from InsertionSort: 0
@@ -319,5 +319,69 @@ public class BucketSortTests
         BucketSort.Sort(array.AsSpan(), x => -x, new DescendingIntComparer(), stats);
 
         await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    /// <summary>
+    /// 要素が「書き込まれていないバッファーから現れる」ストリームになっていないこと。
+    ///
+    /// バケツは temp バッファーの隣接区間であって別配列ではない。以前はバケツごとに専用のバッファー ID
+    /// (100+i) を振っていたため、消費側からは「temp に配った要素が 100 番台のどこかでソートされ、
+    /// 誰も書いていない temp から最終コピーが行われる」ように見えていた。同じ記憶域が操作によって
+    /// 別の識別子を名乗るのは、バッファー識別が持つべき意味に反する。
+    /// </summary>
+    [Test]
+    public async Task ElementOperationsStayWithinTheBuffersTheAlgorithmCopiesBetweenTest()
+    {
+        var buffersTouched = new HashSet<int>();
+        var buffersWritten = new HashSet<int>();
+        var copySources = new HashSet<int>();
+        var copyDestinations = new HashSet<int>();
+
+        var context = new VisualizationContext(
+            onCompare: (_, _, _, bi, bj) => { if (bi >= 0) buffersTouched.Add(bi); if (bj >= 0) buffersTouched.Add(bj); },
+            onIndexRead: (_, b) => buffersTouched.Add(b),
+            onIndexWrite: (_, b, _) => { buffersTouched.Add(b); buffersWritten.Add(b); },
+            onRangeCopy: (_, _, _, src, dst, _) => { copySources.Add(src); copyDestinations.Add(dst); buffersTouched.Add(src); buffersWritten.Add(dst); });
+
+        var random = new Random(42);
+        var array = Enumerable.Range(0, 300).Select(_ => random.Next(0, 1000)).ToArray();
+        var expected = array.OrderBy(x => x).ToArray();
+
+        BucketSort.SortBy(array.AsSpan(), x => x, context);
+
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching)
+            .Because("観測を変えてもソート結果は変わらないこと");
+
+        // メイン配列と一時バッファーの 2 つだけ。バケツごとの識別子は存在しない。
+        await Assert.That(buffersTouched.Order().ToList()).IsEquivalentTo(new List<int> { 0, 1 })
+            .Because($"観測されたバッファー: [{string.Join(",", buffersTouched.Order())}]");
+
+        // 最終コピーは temp から main へ。書き込まれた補助バッファーは、そのコピー元と一致しなければ
+        // 「誰も読まないバッファーに書いた」ことになる。
+        await Assert.That(copySources).IsEquivalentTo(new HashSet<int> { 1 });
+        await Assert.That(copyDestinations).IsEquivalentTo(new HashSet<int> { 0 });
+        var auxWritten = buffersWritten.Where(b => b != 0).ToHashSet();
+        await Assert.That(auxWritten).IsEquivalentTo(copySources)
+            .Because($"書き込まれた補助バッファー [{string.Join(",", auxWritten.Order())}] と、最終コピーの読み出し元 [{string.Join(",", copySources.Order())}] が一致すること");
+    }
+
+    /// <summary>
+    /// バケツ内ソートの比較が一時バッファーの座標で報告されること。
+    /// 専用 ID を振っていた頃は、これらが temp とは別のバッファー上の出来事として流れていた。
+    /// </summary>
+    [Test]
+    public async Task PerBucketSortIsReportedOnTheTempBufferTest()
+    {
+        var comparesOnTemp = 0;
+        var context = new VisualizationContext(
+            onCompare: (_, _, _, bi, bj) => { if (bi == 1 || bj == 1) comparesOnTemp++; });
+
+        var random = new Random(42);
+        var array = Enumerable.Range(0, 300).Select(_ => random.Next(0, 1000)).ToArray();
+
+        BucketSort.SortBy(array.AsSpan(), x => x, context);
+
+        await Assert.That(comparesOnTemp).IsGreaterThan(0)
+            .Because("バケツ内の挿入ソートは一時バッファー上の操作として観測されること");
     }
 }
