@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Algorithms;
+using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 using TUnit.Assertions.Enums;
 
@@ -14,6 +14,13 @@ public class RadixMSD10SortTests : IntegerSortTestsBase
     protected override CountExpectation SortedInputCompares => CountExpectation.NonZero;
     protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
     protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
+
+    /// <summary>
+    /// Mirrors <c>RadixMSD10Sort.InsertionSortCutoff</c>, which is private. A range at or below it never
+    /// reaches a digit pass, so the statistics tests below split their expectations on it: keep this in
+    /// step when the implementation constant is retuned, or those tests assert the wrong branch.
+    /// </summary>
+    private const int InsertionSortCutoff = 48;
 
     // The KeySelector overload carries satellite data, which makes stability observable:
     // these are the canonical stability tests, driven through Sort(span, keySelector, context).
@@ -163,7 +170,7 @@ public class RadixMSD10SortTests : IntegerSortTestsBase
     [Test]
     public async Task InsertionSortCutoffTest()
     {
-        // Test with array smaller than insertion sort cutoff (16)
+        // Test with array smaller than the insertion sort cutoff
         var array = new[] { 10, 5, 3, 8, 1, 9, 2, 7, 4, 6 };
         var expected = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
         RadixMSD10Sort.Sort(array.AsSpan());
@@ -185,7 +192,7 @@ public class RadixMSD10SortTests : IntegerSortTestsBase
         // MSD processes most significant digit first recursively.
         // Performance depends on:
         // - Data distribution (how elements spread across buckets)
-        // - Small buckets (<=16 elements) use insertion sort (includes comparisons and swaps)
+        // - small buckets (at or below the cutoff) use insertion sort (includes comparisons and swaps)
         // - Larger buckets continue with MSD partitioning
         //
         // For sorted data, elements distribute across buckets based on decimal digits.
@@ -197,14 +204,14 @@ public class RadixMSD10SortTests : IntegerSortTestsBase
         await Assert.That((ulong)sorted.Length).IsEqualTo((ulong)n);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
 
-        // IndexWriteCount: For small n (<=16), entire array uses insertion sort, so IndexWriteCount may be 0
-        // For larger n (>16), MSD partitioning occurs, so IndexWriteCount > 0
-        if (n > 16)
+        // IndexWriteCount: at or below the cutoff the entire array uses insertion sort, so IndexWriteCount may be 0
+        // Above it, MSD partitioning occurs, so IndexWriteCount > 0
+        if (n > InsertionSortCutoff)
         {
             await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
         }
 
-        // CompareCount and SwapCount: Always occur due to insertion sort (for buckets <=16)
+        // CompareCount and SwapCount: Always occur due to insertion sort (for buckets at or below the cutoff)
         // For small n, entire array uses insertion sort
         // For large n, at least some buckets use insertion sort
         // Values are data-dependent, so we only verify they are recorded (>= 0)
@@ -226,13 +233,13 @@ public class RadixMSD10SortTests : IntegerSortTestsBase
 
         // MSD Radix Sort on reversed data:
         // Similar to sorted data, but distribution pattern is reversed.
-        // Small buckets (<=16 elements) still use insertion sort.
+        // small buckets (at or below the cutoff) still use insertion sort.
         // Reversed data in insertion sort leads to more comparisons and swaps.
         await Assert.That((ulong)reversed.Length).IsEqualTo((ulong)n);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
 
-        // IndexWriteCount: For n > 16, MSD partitioning occurs
-        if (n > 16)
+        // IndexWriteCount: above the cutoff, MSD partitioning occurs
+        if (n > InsertionSortCutoff)
         {
             await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
         }
@@ -258,13 +265,13 @@ public class RadixMSD10SortTests : IntegerSortTestsBase
 
         // MSD Radix Sort on random data:
         // Random distribution tends to spread elements across buckets more evenly.
-        // More buckets will exceed the insertion sort cutoff (16 elements), requiring more MSD passes.
+        // More buckets will exceed the insertion sort cutoff, requiring more MSD passes.
         // Eventually small buckets are sorted via insertion sort.
         await Assert.That((ulong)array.Length).IsEqualTo((ulong)n);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
 
-        // IndexWriteCount: For n > 16, MSD partitioning occurs
-        if (n > 16)
+        // IndexWriteCount: above the cutoff, MSD partitioning occurs
+        if (n > InsertionSortCutoff)
         {
             await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
         }
@@ -291,11 +298,11 @@ public class RadixMSD10SortTests : IntegerSortTestsBase
         // MSD Radix Sort on mixed negative/positive data:
         // With sign-bit flipping, negative and positive numbers are processed uniformly.
         // Data distribution across buckets depends on the value range.
-        // Small buckets (<=16 elements) use insertion sort with comparisons and swaps.
+        // small buckets (at or below the cutoff) use insertion sort with comparisons and swaps.
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
 
-        // IndexWriteCount: For n > 16, MSD partitioning occurs
-        if (n > 16)
+        // IndexWriteCount: above the cutoff, MSD partitioning occurs
+        if (n > InsertionSortCutoff)
         {
             await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
         }

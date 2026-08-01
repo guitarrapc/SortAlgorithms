@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -37,7 +37,9 @@ namespace SortAlgorithm.Algorithms;
 /// copy back are both the identity and can be skipped, and the range descends to the next digit untouched. This is orthogonal to the
 /// data-derived digit count above, which only trims uniform digits above the most significant one; a digit anywhere below it can be
 /// uniform too, in any bucket of the recursion (a shared prefix among the elements that reached it).</description></item>
-/// <item><description><strong>Cutoff to Insertion Sort:</strong> For small buckets (typically &lt; 16 elements), switching to insertion sort can improve performance due to lower overhead.</description></item>
+/// <item><description><strong>Cutoff to Insertion Sort:</strong> Below a bucket size the recursion stops splitting and insertion-sorts the range instead,
+/// because emptying a small bucket by distribution costs more levels than sorting it outright. The definition leaves the threshold free; the value
+/// this implementation uses was measured, and is recorded on the <c>InsertionSortCutoff</c> constant.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -82,7 +84,20 @@ namespace SortAlgorithm.Algorithms;
 public static class RadixMSD10Sort
 {
     private const int RadixBase = 10;       // Decimal base
-    private const int InsertionSortCutoff = 16; // Switch to insertion sort for small buckets
+    // Switch to insertion sort for small buckets. The textbook constant is 15-16 (Sedgewick's MSD string
+    // sort, American flag sort), but those are radix-256 string sorts and nothing in the MSD definition
+    // fixes the number, so it was measured here rather than inherited. Same sweep and protocol as
+    // <see cref="RadixMSD4Sort"/> — ratios for 48 against 16, minimum of 41-71 repetitions with
+    // DOTNET_TieredCompilation=0, best of three interleaved A/B cycles per case:
+    //   n=4096     full 1.00   narrow 0.94   dup32 1.00
+    //   n=65536    full 0.96   narrow 0.92   dup32 0.96
+    //   n=1048576  not resolvable on this machine
+    // Up to n=65536 the win is small but consistent, and 16 measured worst or joint-worst everywhere.
+    // At n=1048576 it cannot be called: this sort's wall clock swings about ±40% run to run on an
+    // identical binary (one configuration spanned 13-18 ms, another 33-46 ms), and two independent
+    // sample sets disagreed on the sign. 48 is taken there to match RadixMSD4Sort rather than because
+    // the measurement chose it. Do not read any 1M-scale difference under ~40% here as real.
+    private const int InsertionSortCutoff = 48;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -307,16 +322,19 @@ public static class RadixMSD10Sort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Base case: if length is small, use insertion sort (key-based comparer keeps it stable)
-        if (length <= InsertionSortCutoff)
+        // Base case: every digit has been consumed, so every normalized key in this range is equal and any
+        // order it is in is sorted. Checked before the cutoff: below it this range would be handed to
+        // insertion sort, which can only confirm at a cost of length-1 comparisons what reaching digit < 0
+        // already proves, and would report a sort phase for work that changes nothing.
+        if (digit < 0)
         {
-            InsertionSort.SortCore(s, start, start + length);
             return;
         }
 
-        // Base case: if we've processed all digits, we're done
-        if (digit < 0)
+        // Base case: if length is small, use insertion sort
+        if (length <= InsertionSortCutoff)
         {
+            InsertionSort.SortCore(s, start, start + length);
             return;
         }
 

@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -39,7 +39,9 @@ namespace SortAlgorithm.Algorithms;
 /// copy back are both the identity and can be skipped, and the range descends to the next digit untouched. Deriving the digit count
 /// from the key width cannot catch this: a uniform digit can sit anywhere, at the top of the key (values small relative to the type)
 /// or inside any bucket of the recursion (a shared prefix among the elements that reached it).</description></item>
-/// <item><description><strong>Cutoff to Insertion Sort:</strong> For small buckets (typically &lt; 16 elements), switching to insertion sort can improve performance due to lower overhead.</description></item>
+/// <item><description><strong>Cutoff to Insertion Sort:</strong> Below a bucket size the recursion stops splitting and insertion-sorts the range instead,
+/// because emptying a small bucket by distribution costs more levels than sorting it outright. The definition leaves the threshold free; the value
+/// this implementation uses was measured, and is recorded on the <c>InsertionSortCutoff</c> constant.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -84,7 +86,20 @@ public static class RadixMSD4Sort
 {
     private const int RadixBits = 2;        // 2 bits per digit
     private const int RadixSize = 4;        // 2^2 = 4 buckets
-    private const int InsertionSortCutoff = 16; // Switch to insertion sort for small buckets
+    // Switch to insertion sort for small buckets. The textbook constant is 15-16 (Sedgewick's MSD string
+    // sort, American flag sort), but those are radix-256 string sorts and nothing in the MSD definition
+    // fixes the number, so it was measured here rather than inherited. A sweep of 8/16/24/32/48/64/96/128
+    // put the optimum at 48; 32 was within noise of it and 64 lost 4-6% at n=4096. Ratios for 48 against
+    // 16, minimum of 41-71 repetitions with DOTNET_TieredCompilation=0, best of three interleaved A/B
+    // cycles per case (n = 4096 / 65536 / 1048576, keys full-range / narrow 0..999 / 32 distinct values):
+    //   n=4096     full 0.89   narrow 0.88   dup32 0.99
+    //   n=65536    full 0.96   narrow 0.97   dup32 0.99
+    //   n=1048576  full 1.02   narrow 1.00   dup32 1.00
+    // So the gain is concentrated at small n and fades as the sort becomes memory-bound; the 1.02 is one
+    // fast baseline sample, not a measured regression. Larger than the textbook value likely because radix
+    // 4 splits only four ways: clearing a 48-element bucket by distribution takes roughly three more levels
+    // of count + scatter + copy back, which costs more than insertion-sorting it outright.
+    private const int InsertionSortCutoff = 48;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -286,16 +301,19 @@ public static class RadixMSD4Sort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Base case: if length is small, use insertion sort (key-based comparer keeps it stable)
-        if (length <= InsertionSortCutoff)
+        // Base case: every digit has been consumed, so every normalized key in this range is equal and any
+        // order it is in is sorted. Checked before the cutoff: below it this range would be handed to
+        // insertion sort, which can only confirm at a cost of length-1 comparisons what reaching digit < 0
+        // already proves, and would report a sort phase for work that changes nothing.
+        if (digit < 0)
         {
-            InsertionSort.SortCore(s, start, start + length);
             return;
         }
 
-        // Base case: if we've processed all digits, we're done
-        if (digit < 0)
+        // Base case: if length is small, use insertion sort
+        if (length <= InsertionSortCutoff)
         {
+            InsertionSort.SortCore(s, start, start + length);
             return;
         }
 
@@ -332,23 +350,18 @@ public static class RadixMSD4Sort
             return;
         }
 
-        // Calculate prefix sum and save bucket start positions in one pass
-        // RadixSize=4 is small enough for stackalloc (16 bytes)
-        Span<int> bucketStarts = stackalloc int[RadixSize];
-        bucketStarts[0] = 0; // First bucket always starts at offset 0
+        // Prefix sum. After it bucketCounts[i] is the start of bucket i and bucketCounts[i + 1] its end,
+        // so the one array carries both boundaries the recursion below needs — no separate starts array,
+        // and no conditional to keep one in step with it.
         for (var i = 1; i <= RadixSize; i++)
         {
             bucketCounts[i] += bucketCounts[i - 1];
-            if (i < RadixSize)
-            {
-                bucketStarts[i] = bucketCounts[i];
-            }
         }
 
-        // Distribute elements into temp buffer based on current digit
-        // Make a copy of bucketCounts for the scatter phase since we modify it
-        Span<int> bucketOffsets = stackalloc int[RadixSize + 1];
-        bucketCounts.CopyTo(bucketOffsets);
+        // Distribute elements into temp buffer based on current digit.
+        // The scatter advances its write positions, so it works on a copy and leaves the boundaries intact.
+        Span<int> bucketOffsets = stackalloc int[RadixSize];
+        bucketCounts[..RadixSize].CopyTo(bucketOffsets);
 
         for (var i = 0; i < length; i++)
         {
@@ -365,8 +378,8 @@ public static class RadixMSD4Sort
         // Recursively sort each bucket for the next digit
         for (var i = 0; i < RadixSize; i++)
         {
-            var bucketStart = bucketStarts[i];
-            var bucketEnd = (i == RadixSize - 1) ? length : bucketStarts[i + 1];
+            var bucketStart = bucketCounts[i];
+            var bucketEnd = bucketCounts[i + 1];
             var bucketLength = bucketEnd - bucketStart;
 
             if (bucketLength > 1)
