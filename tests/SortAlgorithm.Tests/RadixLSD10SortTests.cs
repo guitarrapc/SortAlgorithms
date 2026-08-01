@@ -168,11 +168,12 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
 
         // LSD Radix Sort with range-based optimization:
         // 1. Find min/max keys: n reads
-        // 2. For each digit d (from 0 to digitCount-1):
-        //    - Count phase: n reads
+        // 2. Build every digit's histogram in one pass: n reads
+        // 3. For each digit d (from 0 to digitCount-1):
+        //    - No count phase: its histogram already exists
         //    - Distribute phase: n reads + n writes (to the destination buffer)
         //    - No copy back: src and dst trade roles (ping-pong)
-        // 3. If digitCount is odd, one final copy from the temp buffer: n reads + n writes
+        // 4. If digitCount is odd, one final copy from the temp buffer: n reads + n writes
         //
         // For n elements with values [0, n-1]:
         // - min unsigned key = 0x8000_0000 + 0 (for non-negative 0)
@@ -191,11 +192,12 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         var range = maxKey - minKey; // range = n - 1
         var digitCount = GetDigitCountFromUlong(range);
 
-        // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
-        // roles instead of being copied back. An odd pass count leaves the result in the temp buffer,
-        // which costs one final copy.
+        // Every digit's histogram is built in one preprocessing pass, so a digit pass reads each
+        // element once (to distribute it) and writes it once. The buffers trade roles instead of
+        // being copied back, so an odd pass count leaves the result in the temp buffer and costs
+        // one final copy.
         var finalCopy = digitCount % 2 == 1 ? n : 0;
-        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy); // Find min/max + (count + distribute) per digit + final copy
+        var expectedReads = (ulong)(2 * n + digitCount * n + finalCopy); // min/max scan + histogram pass + distribute per digit + final copy
         var expectedWrites = (ulong)(digitCount * n + finalCopy);        // distribute per digit + final copy
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -225,11 +227,12 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         var range = maxKey - minKey; // range = n - 1
         var digitCount = GetDigitCountFromUlong(range);
 
-        // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
-        // roles instead of being copied back. An odd pass count leaves the result in the temp buffer,
-        // which costs one final copy.
+        // Every digit's histogram is built in one preprocessing pass, so a digit pass reads each
+        // element once (to distribute it) and writes it once. The buffers trade roles instead of
+        // being copied back, so an odd pass count leaves the result in the temp buffer and costs
+        // one final copy.
         var finalCopy = digitCount % 2 == 1 ? n : 0;
-        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy); // Find min/max + (count + distribute) per digit + final copy
+        var expectedReads = (ulong)(2 * n + digitCount * n + finalCopy); // min/max scan + histogram pass + distribute per digit + final copy
         var expectedWrites = (ulong)(digitCount * n + finalCopy);        // distribute per digit + final copy
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -263,11 +266,12 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         var range = maxKey - minKey; // range = n - 1
         var digitCount = GetDigitCountFromUlong(range);
 
-        // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
-        // roles instead of being copied back. An odd pass count leaves the result in the temp buffer,
-        // which costs one final copy.
+        // Every digit's histogram is built in one preprocessing pass, so a digit pass reads each
+        // element once (to distribute it) and writes it once. The buffers trade roles instead of
+        // being copied back, so an odd pass count leaves the result in the temp buffer and costs
+        // one final copy.
         var finalCopy = digitCount % 2 == 1 ? n : 0;
-        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy); // Find min/max + (count + distribute) per digit + final copy
+        var expectedReads = (ulong)(2 * n + digitCount * n + finalCopy); // min/max scan + histogram pass + distribute per digit + final copy
         var expectedWrites = (ulong)(digitCount * n + finalCopy);        // distribute per digit + final copy
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -290,11 +294,12 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
 
         // With range-based optimization and sign-bit flipping:
         // 1. Find min/max keys: n reads
-        // 2. For each digit d (from 0 to digitCount-1):
-        //    - Count phase: n reads
+        // 2. Build every digit's histogram in one pass: n reads
+        // 3. For each digit d (from 0 to digitCount-1):
+        //    - No count phase: its histogram already exists
         //    - Distribute phase: n reads + n writes (to the destination buffer)
         //    - No copy back: src and dst trade roles (ping-pong)
-        // 3. If digitCount is odd, one final copy from the temp buffer: n reads + n writes
+        // 4. If digitCount is odd, one final copy from the temp buffer: n reads + n writes
         //
         // For input [-n/2, ..., -1, 0, 1, ..., n/2-1]:
         // - Min value: -n/2 → min key = 0x80000000 - n/2
@@ -308,11 +313,12 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         var range = maxKey - minKey; // range = n - 1
         var digitCount = GetDigitCountFromUlong(range);
 
-        // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
-        // roles instead of being copied back. An odd pass count leaves the result in the temp buffer,
-        // which costs one final copy.
+        // Every digit's histogram is built in one preprocessing pass, so a digit pass reads each
+        // element once (to distribute it) and writes it once. The buffers trade roles instead of
+        // being copied back, so an odd pass count leaves the result in the temp buffer and costs
+        // one final copy.
         var finalCopy = digitCount % 2 == 1 ? n : 0;
-        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy); // Find min/max + (count + distribute) per digit + final copy
+        var expectedReads = (ulong)(2 * n + digitCount * n + finalCopy); // min/max scan + histogram pass + distribute per digit + final copy
         var expectedWrites = (ulong)(digitCount * n + finalCopy);        // distribute per digit + final copy
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
@@ -345,7 +351,7 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
         // roles instead of being copied back. An odd pass count leaves the result in the temp buffer.
         var finalCopy = digitCount % 2 == 1 ? n : 0;
-        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy);
+        var expectedReads = (ulong)(2 * n + digitCount * n + finalCopy);
         var expectedWrites = (ulong)(digitCount * n + finalCopy);
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);

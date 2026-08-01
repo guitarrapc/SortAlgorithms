@@ -28,6 +28,32 @@ public class PigeonholeSortIntegerTests : IntegerSortTestsBase
     }
 
     [Test]
+    [Arguments(2, 10_000)]    // range=10,001 > MaxRangeFactor*n=64,   but < MaxHoleArraySize
+    [Arguments(100, 5_000)]   // range=5,001  > MaxRangeFactor*n=3200, but < MaxHoleArraySize
+    [Arguments(100, 3_200)]   // range=3,201: one past MaxRangeFactor*n, the smallest rejected range
+    public async Task RelativeRangeLimitTest(int n, int maxValue)
+    {
+        // range is well within the absolute cap but too large relative to n: collecting from the holes
+        // walks the whole range, so O(range) would dominate O(n).
+        var array = new int[n];
+        array[n - 1] = maxValue;
+        Assert.Throws<ArgumentException>(() => PigeonholeSortInteger.Sort(array.AsSpan()));
+    }
+
+    [Test]
+    [Arguments(100, 3_199)]   // range=3,200 == MaxRangeFactor*n exactly: at the limit, still accepted
+    public async Task RelativeRangeAtTheLimitIsAccepted(int n, int maxValue)
+    {
+        var array = new int[n];
+        array[n - 1] = maxValue;
+        PigeonholeSortInteger.Sort(array.AsSpan());
+
+        var expected = new int[n];
+        expected[n - 1] = maxValue;
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    [Test]
     public async Task NegativeValuesTest()
     {
         var stats = new StatisticsContext();

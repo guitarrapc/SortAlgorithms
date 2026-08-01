@@ -47,10 +47,21 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order, d = ⌈keyBits/8⌉ for full range</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort, uses bitwise operations only)</description></item>
 /// <item><description>Digit Passes: d = ⌈requiredBits/8⌉ (early termination based on actual value range, not full bit width)</description></item>
-/// <item><description>Reads       : n (initial min/max scan) + d × n (one read per distribute pass) + optional final copy</description></item>
+/// <item><description>Reads       : n (initial min/max scan) + 2 × d × n (each pass counts its digit, then distributes) + optional final copy</description></item>
 /// <item><description>Writes      : d × n (one write per distribute pass to temp) + optional final copy</description></item>
 /// <item><description>Memory      : O(n) for temporary buffer</description></item>
 /// </list>
+/// <para><strong>Why Counting Runs Inside Each Pass:</strong></para>
+/// <para>Counting sort per digit can be arranged two ways, and both are correct LSD radix sorts: count the
+/// current digit at the start of its own pass (2 × d × n reads, used here), or spend one preprocessing pass
+/// building every digit's histogram at once so a pass only distributes (2 × n + d × n reads). The second
+/// reads strictly less, and <see cref="RadixLSD10Sort"/> uses it — but it was implemented for this radix too
+/// and measured slower: 16–38% across n = 1024/8192 and d = 1..4 over <c>int</c> keys, with no trend toward
+/// breaking even at higher d (same-run comparison, 20 iterations). What the hoisted form saves here is a
+/// sequential, prefetched span read whose key costs two ALU ops; what it adds is a per-element inner loop
+/// incrementing into d interleaved 257-counter blocks rather than one. The decimal sort makes the opposite
+/// choice because its per-pass count also performs a runtime-divisor 64-bit division, which hoisting turns
+/// into a constant-divisor one — an arithmetic saving this radix has no equivalent of.</para>
 /// <para><strong>Radix-256 Advantages:</strong></para>
 /// <list type="bullet">
 /// <item><description>Fewer passes than radix-10: 4 passes for 32-bit vs 10 passes for decimal</description></item>

@@ -155,25 +155,23 @@ public class RadixLSD256SortTests : IntegerSortTestsBase
         // For 32-bit integers: digitCount = 4 (4 bytes)
         //
         // Unified processing for all values (no separate negative/positive paths):
-        // Per pass d (d=0,1,2,3):
-        //   - Count phase: n reads
-        //   - Distribute phase: n reads + n writes (to temp)
-        //   - Copy back phase: n reads (from temp) + n writes (to main)
-        //
-        // Total per pass:
-        // - Reads: n (count) + n (distribute) + n (copy back) = 3n
-        // - Writes: n (distribute to temp) + n (copy back to main) = 2n
+        // Per pass d:
+        //   - Count phase: n reads (this pass counts its own digit)
+        //   - Distribute phase: n reads + n writes (to the destination buffer)
+        //   - No copy back: src and dst trade roles (ping-pong)
         //
         // Total:
-        // - Initial scan: n reads
-        // - Radix passes: digitCount × (3n reads + 2n writes)
+        // - Initial min/max scan: n reads
+        // - Radix passes: digitCount × (2n reads + n writes)
+        // - If digitCount is odd, one final copy from temp: n reads + n writes
         var maxValue = n - 1;
         var range = (ulong)maxValue; // min=0 after sign-bit flip, range = max - min
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 7) / 8); // ceil(requiredBits / 8)
 
-        var expectedReads = (ulong)(n + digitCount * 3 * n);  // Initial + (count + distribute + copy) × passes
-        var expectedWrites = (ulong)(digitCount * 2 * n);     // (temp write + main write) × passes
+        var finalCopy = digitCount % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy);  // min/max + (count + distribute) × passes + final copy
+        var expectedWrites = (ulong)(digitCount * n + finalCopy);         // distribute × passes + final copy
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
@@ -199,8 +197,9 @@ public class RadixLSD256SortTests : IntegerSortTestsBase
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 7) / 8);
 
-        var expectedReads = (ulong)(n + digitCount * 3 * n);
-        var expectedWrites = (ulong)(digitCount * 2 * n);
+        var finalCopy = digitCount % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy);
+        var expectedWrites = (ulong)(digitCount * n + finalCopy);
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
@@ -230,8 +229,9 @@ public class RadixLSD256SortTests : IntegerSortTestsBase
         var requiredBits = range == 0 ? 0 : (64 - System.Numerics.BitOperations.LeadingZeroCount(range));
         var digitCount = Math.Max(1, (requiredBits + 7) / 8);
 
-        var expectedReads = (ulong)(n + digitCount * 3 * n);
-        var expectedWrites = (ulong)(digitCount * 2 * n);
+        var finalCopy = digitCount % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy);
+        var expectedWrites = (ulong)(digitCount * n + finalCopy);
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);

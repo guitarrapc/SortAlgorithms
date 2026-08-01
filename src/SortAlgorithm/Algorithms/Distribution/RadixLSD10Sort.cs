@@ -41,7 +41,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Comparisons : 0 (Non-comparison sort; uses only arithmetic operations)</description></item>
 /// <item><description>Swaps       : 0 (Elements moved via bucket redistribution, not swaps)</description></item>
 /// <item><description>Writes      : d × n (one write per distribute pass) + optional final copy</description></item>
-/// <item><description>Reads       : n (initial min/max scan) + 2 × d × n (count pass + distribute pass) + optional final copy</description></item>
+/// <item><description>Reads       : 2 × n preprocessing (min/max scan, then one pass building every digit's histogram) + d × n (one read per distribute pass) + optional final copy</description></item>
 /// </list>
 /// <para><strong>Note:</strong> Uses decimal arithmetic (division and modulo), which may be slower than binary-based radix sorts (e.g., RadixLSD4Sort with bit shifts).
 /// However, it is more intuitive for understanding and debugging.</para>
@@ -66,6 +66,13 @@ namespace SortAlgorithm.Algorithms;
 public static class RadixLSD10Sort
 {
     private const int RadixBase = 10;       // Decimal base
+
+    // Per-digit slot count in the histogram block. The extra leading slot lets a pass turn its counts
+    // into start offsets with an in-place prefix sum (count for 'digit' lives at [digit + 1]).
+    private const int HistogramStride = RadixBase + 1;
+
+    // Decimal digits of ulong.MaxValue, the widest key range a pass count can be derived from.
+    private const int MaxDigits = 20;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;           // Main input array
@@ -200,8 +207,8 @@ public static class RadixLSD10Sort
         {
             var tempBuffer = tempArray.AsSpan(0, span.Length);
 
-            // Use stackalloc for small fixed-size bucket counts (10 ints = 40 bytes)
-            Span<int> bucketCounts = stackalloc int[RadixBase];
+            // One histogram block per digit, all of them stack-resident (20 × 11 ints = 880 bytes).
+            Span<int> allHistograms = stackalloc int[MaxDigits * HistogramStride];
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
 
@@ -252,8 +259,29 @@ public static class RadixLSD10Sort
             var range = maxKey - minKey;
             var digitCount = GetDigitCountFromUlong(range, pow10);
 
+            // Every digit's histogram is built in this one pass over the elements, so a digit pass
+            // reads each element exactly once (to distribute it) instead of twice. Counting per pass
+            // would re-read the whole span d times to learn something the key already carries: the key
+            // holds all d digits at once, and peeling them off with a running /= 10 divides by a
+            // constant, which costs no hardware division at all — unlike the / pow10[d] the distribute
+            // pass still needs. Layout: digit d owns [d * Stride, (d + 1) * Stride), counted at
+            // [digit + 1] so the prefix sum in each pass can run in place (see LSDSort).
+            var histograms = allHistograms[..(digitCount * HistogramStride)];
+            histograms.Clear();
+
+            for (var i = 0; i < s.Length; i++)
+            {
+                var quotient = radixKey.GetKey(s.Read(i)) - minKey;
+                for (var d = 0; d < digitCount; d++)
+                {
+                    var digit = (int)(quotient % RadixBase);
+                    quotient /= RadixBase;
+                    histograms[d * HistogramStride + digit + 1]++;
+                }
+            }
+
             // Start LSD radix sort from the least significant digit
-            LSDSort(s, temp, radixKey, digitCount, minKey, bucketCounts, pow10);
+            LSDSort(s, temp, radixKey, digitCount, minKey, histograms, pow10);
         }
         finally
         {
@@ -262,13 +290,11 @@ public static class RadixLSD10Sort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void LSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int digitCount, ulong minKey, Span<int> bucketCounts, ReadOnlySpan<ulong> pow10)
+    private static void LSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int digitCount, ulong minKey, Span<int> histograms, ReadOnlySpan<ulong> pow10)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        Span<int> bucketStarts = stackalloc int[RadixBase];
-
         // Each pass reads from src and writes the distributed result to dst. Rather than copying dst
         // back over src to set up the next pass, the two spans trade roles: a pass never has to see
         // the buffer its predecessor started from, so the copy only buys naming, not correctness.
@@ -281,35 +307,27 @@ public static class RadixLSD10Sort
             src.Context.OnPhase(SortPhase.RadixPass, d, digitCount);
             var divisor = pow10[d];
 
-            // Clear bucket counts
-            bucketCounts.Clear();
+            // This digit's histogram, already counted by the caller's single pass:
+            // - On entry: bucketOffsets[digit+1] = count of elements with 'digit'
+            // - After prefix sum: bucketOffsets[digit] = start index for 'digit' bucket
+            // - During distribution: bucketOffsets[digit]++ tracks next write position
+            var bucketOffsets = histograms.Slice(d * HistogramStride, HistogramStride);
 
-            // Count occurrences of each decimal digit
+            // Calculate cumulative bucket positions (prefix sum)
+            for (var i = 1; i <= RadixBase; i++)
+            {
+                bucketOffsets[i] += bucketOffsets[i - 1];
+            }
+
+            // Distribute elements into the destination buffer based on current digit
             // Use (key - minKey) to normalize the range, extracting only the necessary digits
             for (var i = 0; i < src.Length; i++)
             {
                 var value = src.Read(i);
                 var key = radixKey.GetKey(value);
                 var normalizedKey = key - minKey;
-                var digit = (int)((normalizedKey / divisor) % 10);
-                bucketCounts[digit]++;
-            }
-
-            // Calculate cumulative bucket positions
-            bucketStarts[0] = 0;
-            for (var i = 1; i < RadixBase; i++)
-            {
-                bucketStarts[i] = bucketStarts[i - 1] + bucketCounts[i - 1];
-            }
-
-            // Distribute elements into the destination buffer based on current digit
-            for (var i = 0; i < src.Length; i++)
-            {
-                var value = src.Read(i);
-                var key = radixKey.GetKey(value);
-                var normalizedKey = key - minKey;
-                var digit = (int)((normalizedKey / divisor) % 10);
-                var pos = bucketStarts[digit]++;
+                var digit = (int)((normalizedKey / divisor) % RadixBase);
+                var pos = bucketOffsets[digit]++;
                 dst.Write(pos, value);
             }
 
