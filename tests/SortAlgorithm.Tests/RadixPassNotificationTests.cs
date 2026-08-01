@@ -23,9 +23,10 @@ public class RadixPassNotificationTests
     }
 
     /// <param name="HasRangeScan">
-    /// 桁パスに入る前にキー範囲（min/max あるいは max のみ）を 1 回走査するか。
+    /// 桁パスに入る前にキー範囲（min/max）を 1 回走査するか。
     /// 走査するものは <see cref="SortPhase.KeyRangeScan"/> でそれを通知しなければならない。
-    /// RadixMSD4Sort だけは事前走査を持たず、桁数をキー幅から決めるので通知もしない。
+    /// 現状は全実装が走査を持つ（桁数をキー幅ではなく max − min の幅から決めるため）が、
+    /// 走査を持たない実装が加わったときに通知の有無を取り違えないよう区別を残している。
     /// </param>
     public sealed record RadixSortCase(string Name, Action<int[], VisualizationContext> Sort, bool HasRangeScan)
     {
@@ -36,7 +37,7 @@ public class RadixPassNotificationTests
     {
         // MSD 系: 再帰の各ノードが RadixPass を通知する
         yield return () => new RadixSortCase("AmericanFlagSort", static (a, c) => AmericanFlagSort.Sort(a.AsSpan(), c), HasRangeScan: true);
-        yield return () => new RadixSortCase("RadixMSD4Sort", static (a, c) => RadixMSD4Sort.Sort(a.AsSpan(), c), HasRangeScan: false);
+        yield return () => new RadixSortCase("RadixMSD4Sort", static (a, c) => RadixMSD4Sort.Sort(a.AsSpan(), c), HasRangeScan: true);
         yield return () => new RadixSortCase("RadixMSD10Sort", static (a, c) => RadixMSD10Sort.Sort(a.AsSpan(), c), HasRangeScan: true);
         // LSD 系: 元から契約を満たしている。回帰の基準として同じ検証にかける
         yield return () => new RadixSortCase("RadixLSD4Sort", static (a, c) => RadixLSD4Sort.Sort(a.AsSpan(), c), HasRangeScan: true);

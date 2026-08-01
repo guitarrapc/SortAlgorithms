@@ -21,9 +21,11 @@ namespace SortAlgorithm.Algorithms;
 /// <see cref="IRadixKeySelector{T}"/>. Signed integers flip the sign bit (e.g. 32-bit: key = (uint)value ^ 0x8000_0000),
 /// floating-point values use the IEEE 754 total-order bit transform, and key-selector overloads extract an int key from arbitrary elements.
 /// This ensures ordering correctness without separate sign handling and avoids the MinValue overflow issue with Abs().</description></item>
-/// <item><description><strong>Dynamic Starting Digit (MSD Optimization):</strong> Before sorting, performs a single O(n) pass to find the maximum key value
-/// and computes the actual required digit count. This eliminates empty high-order digit passes, which is critical for MSD performance
-/// when values are small relative to the type's capacity (e.g., values ≤ 999 in a 64-bit type need only 3 digits, not 20).</description></item>
+/// <item><description><strong>Dynamic Starting Digit (MSD Optimization):</strong> Before sorting, performs a single O(n) pass to find the minimum and maximum
+/// key values and derives the digit count from (max − min), the keys then being normalized by the minimum. This eliminates empty high-order
+/// digit passes, which is critical for MSD performance when the values span far less than the type's capacity. Deriving it from the maximum alone
+/// is not enough: the digit count then follows where the keys sit rather than how far apart they are, and an order-preserving key mapping can place
+/// them anywhere (sign-flipped non-negative ints all start above 2,147,483,648 — ten decimal digits whatever the values were).</description></item>
 /// <item><description><strong>Digit Extraction Consistency:</strong> For a given position from most significant digit, extract the digit using (key / divisor) % 10
 /// where divisor = 10^(digitCount - 1 - d) for digit position d.</description></item>
 /// <item><description><strong>MSD Processing Order:</strong> Digits must be processed from most significant (d=digitCount-1) to least significant (d=0).
@@ -42,11 +44,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Distribution (Radix Sort, MSD variant)</description></item>
 /// <item><description>Stable      : Yes (maintains relative order of elements with equal keys)</description></item>
 /// <item><description>In-place    : No (O(n) auxiliary space for temporary buffer)</description></item>
-/// <item><description>Best case   : Θ(n) - When all elements fall into one bucket early, or when the initial digit scan shows all values are equal</description></item>
-/// <item><description>Average case: Θ(n + d × n) - One O(n) pass for max digit computation + d passes where d = ⌈log₁₀(actualMax)⌉ (actual data digits, not type maximum)</description></item>
+/// <item><description>Best case   : Θ(n) - When all keys are equal (early termination on range == 0, after the single key scan)</description></item>
+/// <item><description>Average case: Θ(n + d × n) - One O(n) key range scan + d levels, d = number of decimal digits of (max − min), not of the type maximum</description></item>
 /// <item><description>Worst case  : Θ(n + d × n) - Same complexity regardless of input order</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort, uses arithmetic operations only)</description></item>
-/// <item><description>Digit Passes: 1 initial pass for max computation + up to d = ⌈log₁₀(actualMax)⌉, but can terminate early per bucket</description></item>
+/// <item><description>Digit Passes: 1 initial key range scan + d = ⌈log₁₀(max − min)⌉ levels examined; a level whose digit is uniform is counted but not distributed</description></item>
 /// <item><description>Memory      : O(n) for temporary buffer</description></item>
 /// </list>
 /// <para><strong>MSD vs LSD (Decimal):</strong></para>
@@ -208,57 +210,82 @@ public static class RadixMSD10Sort
         if (span.Length <= 1) return;
         RadixKeyGuard.ValidateKeyBits<T, TRadixKey>();
 
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+
+        // Below the cutoff the recursion would insertion-sort the whole range without extracting a single
+        // digit, so the range scan below would be pure overhead — n extra reads and n key extractions on an
+        // input that never reaches a digit pass. Take the fallback directly, before renting a buffer no
+        // digit pass would use.
+        if (s.Length <= InsertionSortCutoff)
+        {
+            InsertionSort.SortCore(s, 0, s.Length);
+            return;
+        }
+
+        // Announce the range scan: without it a consumer sees n reads with no phase attached, and the
+        // label from whatever ran before stays on screen through the whole scan. KeyRangeScan rather than
+        // DistributionCount: this measures the keys, it does not tally per-value occurrences.
+        s.Context.OnPhase(SortPhase.KeyRangeScan);
+
+        // One scan of the keys decides how many digit levels can hold a difference. Scanning for the maximum
+        // alone is not enough: the digit count then follows where the keys sit rather than how far apart they
+        // are, and the sign-flipped key of a small non-negative int sits just above 2,147,483,648 — ten
+        // decimal digits, of which the top six are the same for every element in the input.
+        var minKey = ulong.MaxValue;
+        var maxKey = ulong.MinValue;
+        for (var i = 0; i < s.Length; i++)
+        {
+            var key = radixKey.GetKey(s.Read(i));
+            if (key < minKey) minKey = key;
+            if (key > maxKey) maxKey = key;
+        }
+
+        // Digits are extracted from (key - minKey), so the level count follows the width of the range rather
+        // than where the keys sit. Subtracting a constant is order-preserving and cannot underflow (every key
+        // is >= minKey).
+        var range = maxKey - minKey;
+
+        // Every key is equal, so the input is already sorted whatever order it is in. This is the only path
+        // that is linear in n: the digit passes below are always Θ(digitCount × n).
+        if (range == 0) return;
+
+        // Pre-computed powers of 10 for O(1) divisor lookup
+        // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
+        // This eliminates O(digit) loop in divisor calculation for each recursive call
+        ReadOnlySpan<ulong> pow10 = [
+            1UL,                      // 10^0
+            10UL,                     // 10^1
+            100UL,                    // 10^2
+            1_000UL,                  // 10^3
+            10_000UL,                 // 10^4
+            100_000UL,                // 10^5
+            1_000_000UL,              // 10^6
+            10_000_000UL,             // 10^7
+            100_000_000UL,            // 10^8
+            1_000_000_000UL,          // 10^9
+            10_000_000_000UL,         // 10^10
+            100_000_000_000UL,        // 10^11
+            1_000_000_000_000UL,      // 10^12
+            10_000_000_000_000UL,     // 10^13
+            100_000_000_000_000UL,    // 10^14
+            1_000_000_000_000_000UL,  // 10^15
+            10_000_000_000_000_000UL, // 10^16
+            100_000_000_000_000_000UL,// 10^17
+            1_000_000_000_000_000_000UL,  // 10^18
+            10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
+        ];
+
+        var digitCount = GetDigitCountFromUlong(range, pow10);
+
         // Rent buffer from ArrayPool (only temp buffer needed now)
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
 
         try
         {
-            var tempBuffer = tempArray.AsSpan(0, span.Length);
+            var temp = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
 
-            // The insertion-sort cutoff compares by the radix key, matching the
-            // digit passes and preserving stability for equal keys.
-            var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-            var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
-
-            // Announce the range scan: without it a consumer sees n reads with no phase attached, and the
-            // label from whatever ran before stays on screen through the whole scan. KeyRangeScan rather than
-            // DistributionCount: this measures the keys, it does not tally per-value occurrences.
-            s.Context.OnPhase(SortPhase.KeyRangeScan);
-
-            // Compute actual maximum digit count from the data (MSD optimization)
-            // This is the key optimization: instead of using the key's maximum possible digits,
-            // we scan the data once to find the actual maximum key and its digit count.
-            // This eliminates empty high-order digit passes, which is crucial for MSD performance.
-            var digitCount = ComputeMaxDigit(s, radixKey, 0, s.Length);
-
-            // Pre-computed powers of 10 for O(1) divisor lookup
-            // Pow10[d] = 10^d for d in [0..19], supporting up to 20 decimal digits (ulong max)
-            // This eliminates O(digit) loop in divisor calculation for each recursive call
-            ReadOnlySpan<ulong> pow10 = [
-                1UL,                      // 10^0
-                10UL,                     // 10^1
-                100UL,                    // 10^2
-                1_000UL,                  // 10^3
-                10_000UL,                 // 10^4
-                100_000UL,                // 10^5
-                1_000_000UL,              // 10^6
-                10_000_000UL,             // 10^7
-                100_000_000UL,            // 10^8
-                1_000_000_000UL,          // 10^9
-                10_000_000_000UL,         // 10^10
-                100_000_000_000UL,        // 10^11
-                1_000_000_000_000UL,      // 10^12
-                10_000_000_000_000UL,     // 10^13
-                100_000_000_000_000UL,    // 10^14
-                1_000_000_000_000_000UL,  // 10^15
-                10_000_000_000_000_000UL, // 10^16
-                100_000_000_000_000_000UL,// 10^17
-                1_000_000_000_000_000_000UL,  // 10^18
-                10_000_000_000_000_000_000UL  // 10^19 (max for 20-digit ulong: 18,446,744,073,709,551,615)
-            ];
-
-            // Start MSD radix sort from the most significant digit
-            MSDSort(s, temp, radixKey, 0, s.Length, digitCount - 1, digitCount, pow10);
+            // Start MSD radix sort from the most significant digit that can differ
+            MSDSort(s, temp, radixKey, minKey, 0, s.Length, digitCount - 1, digitCount, pow10);
         }
         finally
         {
@@ -266,13 +293,16 @@ public static class RadixMSD10Sort
         }
     }
 
-    /// <param name="digitCount">
-    /// Total number of digit positions the data actually needs, as computed by <see cref="ComputeMaxDigit"/>.
-    /// Carried down the recursion only to report <see cref="SortPhase.RadixPass"/>, whose contract is
-    /// param1 = current digit, param2 = total digits; a consumer cannot derive the total from
-    /// <paramref name="digit"/> alone.
+    /// <param name="minKey">
+    /// Smallest key in the whole input. Every digit is taken from (key - minKey) so that the digit count
+    /// derives from the width of the key range; see the normalization note in <see cref="SortCore"/>.
     /// </param>
-    private static void MSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int start, int length, int digit, int digitCount, ReadOnlySpan<ulong> pow10)
+    /// <param name="digitCount">
+    /// Total number of digit positions the normalized keys need. Carried down the recursion only to report
+    /// <see cref="SortPhase.RadixPass"/>, whose contract is param1 = current digit, param2 = total digits;
+    /// a consumer cannot derive the total from <paramref name="digit"/> alone.
+    /// </param>
+    private static void MSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, ulong minKey, int start, int length, int digit, int digitCount, ReadOnlySpan<ulong> pow10)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -300,7 +330,7 @@ public static class RadixMSD10Sort
         // Phase 1: Count occurrences of each digit value
         for (var i = 0; i < length; i++)
         {
-            var key = radixKey.GetKey(s.Read(start + i));
+            var key = radixKey.GetKey(s.Read(start + i)) - minKey;
             var digitValue = (int)((key / divisor) % 10);
             counts[digitValue]++;
         }
@@ -309,13 +339,13 @@ public static class RadixMSD10Sort
         // single bucket writes the elements out in the order they already are, so the distribution and the
         // copy back are both the identity and can be skipped. The range moves on to the next digit
         // untouched, which is what lets a shared prefix cost reads only. This is orthogonal to the
-        // digit count derived from the maximum key, which only trims uniform digits above the most
-        // significant one; a digit anywhere below it can be uniform too, in any bucket of the recursion.
+        // range-derived digit count, which only trims uniform digits above the most significant one;
+        // a digit anywhere below it can be uniform too, in any bucket of the recursion.
         if (IsSingleBucket(counts, length))
         {
             if (digit > 0)
             {
-                MSDSort(s, temp, radixKey, start, length, digit - 1, digitCount, pow10);
+                MSDSort(s, temp, radixKey, minKey, start, length, digit - 1, digitCount, pow10);
             }
 
             // digit == 0: no lower digits left, and every key in the range is equal.
@@ -336,7 +366,7 @@ public static class RadixMSD10Sort
         for (var i = 0; i < length; i++)
         {
             var value = s.Read(start + i);
-            var key = radixKey.GetKey(value);
+            var key = radixKey.GetKey(value) - minKey;
             var digitValue = (int)((key / divisor) % 10);
             var destIndex = writePos[digitValue]++;
             temp.Write(start + destIndex, value);
@@ -350,7 +380,7 @@ public static class RadixMSD10Sort
         {
             if (counts[i] > 1)
             {
-                MSDSort(s, temp, radixKey, start + offsets[i], counts[i], digit - 1, digitCount, pow10);
+                MSDSort(s, temp, radixKey, minKey, start + offsets[i], counts[i], digit - 1, digitCount, pow10);
             }
         }
     }
@@ -373,52 +403,18 @@ public static class RadixMSD10Sort
     }
 
     /// <summary>
-    /// Compute the actual maximum digit count needed for the given data.
-    /// This performs a single pass through the data to find the maximum key value,
-    /// then calculates the number of digits required.
-    /// This optimization is crucial for MSD radix sort to avoid processing empty high-order digits.
+    /// Get the number of decimal digits needed to represent a ulong value
     /// </summary>
-    /// <remarks>
-    /// MSD Optimization:
-    /// - Without this: Always starts from maximum possible digits (e.g., 20 for 64-bit), causing empty recursion
-    /// - With this: Starts from actual required digits (e.g., 3 for values &lt;= 999), avoiding unnecessary passes
-    ///
-    /// Performance Impact:
-    /// - One O(n) pass upfront to scan maxKey
-    /// - Eliminates O(d × n) work for d unnecessary high-order digits
-    /// - Critical for data with small values in large integer types (e.g., byte values in long arrays)
-    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int ComputeMaxDigit<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, int start, int length)
-        where TRadixKey : struct, IRadixKeySelector<T>
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
+    private static int GetDigitCountFromUlong(ulong value, ReadOnlySpan<ulong> pow10)
     {
-        if (length == 0) return 0;
+        if (value == 0) return 1;
 
-        // Find maximum key in the data
-        var maxKey = 0UL;
-        for (var i = 0; i < length; i++)
-        {
-            var key = radixKey.GetKey(s.Read(start + i));
-            if (key > maxKey)
-            {
-                maxKey = key;
-            }
-        }
+        // value < 10^1 -> 1 digit, value < 10^2 -> 2 digits, ..., value < 10^d -> d digits
+        // Pow10 is 10^0...10^19
+        for (int d = 1; d < pow10.Length; d++)
+            if (value < pow10[d]) return d;
 
-        // Calculate digit count from maxKey
-        // log₁₀(maxKey) + 1, but using iterative division to avoid floating point
-        if (maxKey == 0) return 1; // Special case: all keys map to zero
-
-        var digitCount = 0;
-        var temp = maxKey;
-        while (temp > 0)
-        {
-            temp /= 10;
-            digitCount++;
-        }
-
-        return digitCount;
+        return 20; // max for ulong (10^20 > 2^64)
     }
 }

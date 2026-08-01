@@ -25,6 +25,11 @@ namespace SortAlgorithm.Algorithms;
 /// This ensures ordering correctness without separate sign handling and avoids the MinValue overflow issue with Abs().</description></item>
 /// <item><description><strong>Digit Extraction Correctness:</strong> For each digit position d (from digitCount-1 down to 0), extract the d-th 2-bit digit using bitwise operations:
 /// digit = (key >> (d × 2)) &amp; 0b11. This ensures each 2-bit segment of the integer is processed independently.</description></item>
+/// <item><description><strong>Digit Count From The Key Range:</strong> The number of digit levels is determined by the actual range of key values,
+/// not the full key width. Keys are shifted down by the minimum key, so digitCount = ⌈requiredBits / 2⌉ where requiredBits is the bit width
+/// of (max − min). Subtracting a constant is order-preserving, so this changes how many levels the recursion starts from and nothing else.
+/// Unlike a (max XOR min) bit width it stays effective when the range straddles a high bit boundary, as sign-flipped keys of signed values
+/// around zero do.</description></item>
 /// <item><description><strong>MSD Processing Order:</strong> Digits must be processed from most significant (d=digitCount-1) to least significant (d=0).
 /// This top-down approach partitions the array into buckets recursively, processing each bucket independently for subsequent digits.</description></item>
 /// <item><description><strong>Recursive Bucket Processing:</strong> After distributing elements based on the current digit, each bucket must be recursively sorted for the remaining digits.
@@ -41,16 +46,18 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Distribution (Radix Sort, MSD variant)</description></item>
 /// <item><description>Stable      : Yes (maintains relative order of elements with equal keys)</description></item>
 /// <item><description>In-place    : No (O(n) auxiliary space for temporary buffer)</description></item>
-/// <item><description>Best case   : Θ(n) - When all elements fall into one bucket early</description></item>
-/// <item><description>Average case: Θ(d × n) - d = ⌈bitSize/2⌉ is constant for fixed-width integers</description></item>
-/// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order</description></item>
+/// <item><description>Best case   : Θ(n) - When all keys are equal (early termination on range == 0, after the single key scan)</description></item>
+/// <item><description>Average case: Θ(n + d × n) - One O(n) key range scan + d levels, d = ⌈bitWidth(max − min)/2⌉</description></item>
+/// <item><description>Worst case  : Θ(n + d × n) - Same complexity regardless of input order, d = ⌈keyBits/2⌉ for a full-width range</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort, uses bitwise operations only)</description></item>
-/// <item><description>Digit Passes: up to d = ⌈bitSize/2⌉ (4 for byte, 8 for short, 16 for int, 32 for long), but can terminate early</description></item>
+/// <item><description>Digit Passes: d = ⌈bitWidth(max − min)/2⌉ examined, at most ⌈keyBits/2⌉ (4 for byte, 8 for short, 16 for int, 32 for long);
+/// a level whose digit is uniform is counted but not distributed</description></item>
 /// <item><description>Memory      : O(n) for temporary buffer</description></item>
 /// </list>
 /// <para><strong>MSD vs LSD:</strong></para>
 /// <list type="bullet">
 /// <item><description>MSD processes high-order digits first, enabling early termination when buckets are fully sorted</description></item>
+/// <item><description>MSD skips a uniform digit per bucket, where LSD can only skip one that is uniform across the whole input</description></item>
 /// <item><description>MSD is cache-friendlier for partially sorted data as it localizes accesses within buckets</description></item>
 /// <item><description>MSD requires recursive processing of buckets, adding overhead compared to LSD's iterative approach</description></item>
 /// <item><description>Both MSD and LSD can be implemented as stable sorts (this implementation maintains stability)</description></item>
@@ -205,24 +212,59 @@ public static class RadixMSD4Sort
         if (span.Length <= 1) return;
         RadixKeyGuard.ValidateKeyBits<T, TRadixKey>();
 
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+
+        // Below the cutoff the recursion would insertion-sort the whole range without extracting a single
+        // digit, so the range scan below would be pure overhead — n extra reads and n key extractions on an
+        // input that never reaches a digit pass. Take the fallback directly, before renting a buffer no
+        // digit pass would use.
+        if (s.Length <= InsertionSortCutoff)
+        {
+            InsertionSort.SortCore(s, 0, s.Length);
+            return;
+        }
+
+        // Announce the range scan: without it a consumer sees n reads with no phase attached, and the
+        // label from whatever ran before stays on screen through the whole scan. KeyRangeScan rather than
+        // DistributionCount: this measures the keys, it does not tally per-value occurrences.
+        s.Context.OnPhase(SortPhase.KeyRangeScan);
+
+        // One scan of the keys decides how many digit levels can hold a difference.
+        // Without it the digit count comes from the key width alone (16 levels for a 32-bit key), and every
+        // level above the range still costs a full counting pass before the uniform-digit check in the
+        // recursion can fire. That is not a corner case: the sign-flipped key of a small non-negative int
+        // sits just above 0x8000_0000, so keys drawn from 0..999 leave the top 11 of the 16 levels uniform.
+        var minKey = ulong.MaxValue;
+        var maxKey = ulong.MinValue;
+        for (var i = 0; i < s.Length; i++)
+        {
+            var key = radixKey.GetKey(s.Read(i));
+            if (key < minKey) minKey = key;
+            if (key > maxKey) maxKey = key;
+        }
+
+        // Digits are extracted from (key - minKey), so the level count follows the width of the range rather
+        // than where the keys sit. Subtracting a constant is order-preserving and cannot underflow (every key
+        // is >= minKey), and unlike a (max XOR min) width it stays effective when the range straddles a high
+        // bit boundary — which is exactly what sign-flipped keys of signed values around zero do.
+        var range = maxKey - minKey;
+
+        // Every key is equal, so the input is already sorted whatever order it is in. This is the only path
+        // that is linear in n: the digit passes below are always Θ(digitCount × n).
+        if (range == 0) return;
+
+        var requiredBits = 64 - BitOperations.LeadingZeroCount(range);
+        var digitCount = (requiredBits + RadixBits - 1) / RadixBits;
+
         // Rent temporary buffer from ArrayPool for element redistribution
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
 
         try
         {
-            var tempBuffer = tempArray.AsSpan(0, span.Length);
+            var temp = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
 
-            // The insertion-sort cutoff compares by the radix key, matching the
-            // digit passes and preserving stability for equal keys.
-            var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-            var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
-
-            // Calculate digit count from the key width (2 bits per digit)
-            // MSD doesn't need to scan for min/max - empty buckets are naturally skipped
-            var digitCount = (TRadixKey.KeyBits + RadixBits - 1) / RadixBits;
-
-            // Start MSD radix sort from the most significant digit
-            MSDSort(s, temp, radixKey, 0, s.Length, digitCount - 1, digitCount);
+            // Start MSD radix sort from the most significant digit that can differ
+            MSDSort(s, temp, radixKey, minKey, 0, s.Length, digitCount - 1, digitCount);
         }
         finally
         {
@@ -230,12 +272,16 @@ public static class RadixMSD4Sort
         }
     }
 
+    /// <param name="minKey">
+    /// Smallest key in the whole input. Every digit is taken from (key - minKey) so that the digit count
+    /// derives from the width of the key range; see the normalization note in <see cref="SortCore"/>.
+    /// </param>
     /// <param name="digitCount">
-    /// Total number of digit positions in the key. Carried down the recursion only to report
+    /// Total number of digit positions the normalized keys need. Carried down the recursion only to report
     /// <see cref="SortPhase.RadixPass"/>, whose contract is param1 = current digit, param2 = total digits;
     /// a consumer cannot derive the total from <paramref name="digit"/> alone.
     /// </param>
-    private static void MSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int start, int length, int digit, int digitCount)
+    private static void MSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, ulong minKey, int start, int length, int digit, int digitCount)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -265,7 +311,7 @@ public static class RadixMSD4Sort
         for (var i = 0; i < length; i++)
         {
             var value = s.Read(start + i);
-            var key = radixKey.GetKey(value);
+            var key = radixKey.GetKey(value) - minKey;
             var digitValue = (int)((key >> shift) & 0b11);  // Extract 2-bit digit
             bucketCounts[digitValue + 1]++;
         }
@@ -279,7 +325,7 @@ public static class RadixMSD4Sort
         {
             if (digit > 0)
             {
-                MSDSort(s, temp, radixKey, start, length, digit - 1, digitCount);
+                MSDSort(s, temp, radixKey, minKey, start, length, digit - 1, digitCount);
             }
 
             // digit == 0: no lower digits left, and every key in the range is equal.
@@ -307,7 +353,7 @@ public static class RadixMSD4Sort
         for (var i = 0; i < length; i++)
         {
             var value = s.Read(start + i);
-            var key = radixKey.GetKey(value);
+            var key = radixKey.GetKey(value) - minKey;
             var digitValue = (int)((key >> shift) & 0b11);  // Extract 2-bit digit
             var destIndex = bucketOffsets[digitValue]++;
             temp.Write(start + destIndex, value);
@@ -325,7 +371,7 @@ public static class RadixMSD4Sort
 
             if (bucketLength > 1)
             {
-                MSDSort(s, temp, radixKey, start + bucketStart, bucketLength, digit - 1, digitCount);
+                MSDSort(s, temp, radixKey, minKey, start + bucketStart, bucketLength, digit - 1, digitCount);
             }
         }
     }
