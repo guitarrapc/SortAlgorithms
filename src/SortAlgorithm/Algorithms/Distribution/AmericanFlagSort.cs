@@ -39,7 +39,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>MSD Processing Order:</strong> Digits must be processed from most significant (d=digitCount-1) to least significant (d=0).
 /// This top-down approach partitions the array into buckets recursively, processing each bucket independently for subsequent digits.</description></item>
 /// <item><description><strong>Recursive Bucket Processing:</strong> After permuting elements based on the current digit, each bucket must be recursively sorted for the remaining digits.
-/// Base cases: buckets with 0 or 1 elements are already sorted; buckets where all remaining digits are the same are also sorted.</description></item>
+/// Base cases: buckets with 0 or 1 elements are already sorted; buckets where all remaining digits are the same are also sorted.
+/// The digit position is inherited from the parent rather than re-derived per bucket: rescanning each node's own key range
+/// would let it skip several uniform levels at once, but it costs a pass per node while the inherited scheme already
+/// discovers one uniform level per counting pass, and it measured slower at every size (see <c>AmericanFlagRadixWidthBenchmark</c>).</description></item>
 /// <item><description><strong>Cutoff to Insertion Sort:</strong> For small buckets, switching to insertion sort can improve performance
 /// due to lower overhead. The threshold has to scale with the radix rather than sit at a "small array" constant: at 256 buckets a split
 /// costs ~1000 fixed operations before a single element moves, so this implementation cuts off at &lt;= 64 elements
@@ -77,7 +80,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Permutation Phase:</strong> Rearrange elements into their buckets in-place. This walks the permutation's
 /// cycles, but with a plain pairwise swap per step rather than holding the in-flight element in a register as McIlroy et al. describe:
 /// the register-held form was measured and lost at every size (see <c>AmericanFlagRadixWidthBenchmark</c>), because
-/// the swap primitive is already a single fused ref-to-ref exchange with no write to remove</description></item>
+/// the swap primitive is already a single fused ref-to-ref exchange with no write to remove.
+/// The final bucket is skipped: once every other bucket is full, only its own elements can remain</description></item>
 /// <item><description><strong>Recursive Phase:</strong> Recursively sort each non-empty bucket for the next digit</description></item>
 /// </list>
 /// <para><strong>What This Buys Over The Other Distribution Sorts:</strong></para>
@@ -287,6 +291,10 @@ public static class AmericanFlagSort
             return;
         }
 
+        // Announce the range scan so a consumer sees a labelled phase rather than n unattributed reads.
+        // FlashSort reports its own min/max pass the same way.
+        s.Context.OnPhase(SortPhase.DistributionCount);
+
         // One scan of the keys decides how many digit levels can hold a difference.
         // Without it the digit count comes from the key width alone (4 levels for a 32-bit key), and every
         // level whose digit happens to be uniform still costs a full counting pass before the uniform-digit
@@ -327,7 +335,9 @@ public static class AmericanFlagSort
     /// <see cref="SortPhase.RadixPass"/>, whose contract is param1 = current digit, param2 = total digits;
     /// a consumer cannot derive the total from <paramref name="digit"/> alone.
     /// </param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    // No AggressiveInlining here: the JIT will not inline a recursive call, so the attribute could only ever
+    // affect the single entry call from SortCore, and it would pull a 2 KB stackalloc into that frame.
+    // The sibling MSD sorts do not carry it either.
     private static void AmericanFlagSortRecursive<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, ulong minKey, int start, int length, int digit, int digitCount)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
@@ -441,9 +451,12 @@ public static class AmericanFlagSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // In-place permutation using bucket positions
-        // Process each bucket sequentially
-        for (var bucket = 0; bucket < RadixSize; bucket++)
+        // In-place permutation using bucket positions.
+        // The last bucket is deliberately not visited: once buckets 0..RadixSize-2 have each been filled to
+        // their own count, every element with one of those digits sits in its own bucket, so whatever is left
+        // in the final bucket's range can only be elements of that digit. Walking it would re-read and
+        // re-classify count[RadixSize-1] elements to conclude they are already home.
+        for (var bucket = 0; bucket < RadixSize - 1; bucket++)
         {
             // Get the range for this bucket directly from bucketCounts
             // bucketCounts[bucket] = start, bucketCounts[bucket + 1] = end

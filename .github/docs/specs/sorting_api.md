@@ -108,6 +108,40 @@ tuning constants — the recursion can only consume `2^max_splits` slots per lev
 `keyBits / 8` levels deep — which also removes an O(n) rental: 33.5 MB per sort at n=8M before,
 a fixed ~88 KB pooled buffer after.
 
+## Distribution Auxiliary Structures
+
+A distribution sort's auxiliary structure holds what the sort cannot recover from where an element
+sits. How much that is depends on the element type, not on the algorithm, so an algorithm's integer
+overload and its key-selector overload may legitimately need different amounts of storage while
+remaining the same algorithm. The rule: store only what the position cannot reconstruct.
+
+Pigeonhole sort is where this bites. Its definition says one hole per key value and concatenate the
+holes in key order; it says nothing about how a hole holds its contents. For a plain integer, the
+hole index already determines the value it holds, and two integers sharing a hole are equal and
+therefore indistinguishable — so a hole only has to record how many elements it received.
+`PigeonholeSortInteger` stores occupancy and rebuilds each value from its hole index, which leaves
+it with no auxiliary element buffer at all: `O(k)` auxiliary space independent of `n`, one read pass
+to distribute, one write pass to collect, and every element written exactly once directly into its
+final position. `PigeonholeSort.SortBy` cannot do this, because an element there carries payload the
+key does not determine, so its holes must hold the elements and its space is `O(n + k)`.
+
+This is what separates pigeonhole sort from counting sort once both are specialized to integers.
+Counting sort's defining step is turning counts into cumulative offsets and placing each element at
+a computed index; removing it would leave something that is no longer counting sort, so
+`CountingSortInteger` keeps the prefix sum, the second read pass, and the `O(n)` output buffer.
+Pigeonhole sort never computes a position, so nothing has to be kept. The naming boundary between
+the two is not drawn identically across the literature; this library draws it at the prefix sum.
+
+The consequence is measurable rather than notional. Before the occupancy representation,
+`PigeonholeSortInteger` held its holes as index linked lists and ran at 2.5x `CountingSortInteger`
+on duplicate-heavy input, where a hole's chain grows with `n` and collection becomes a dependent
+load chain; afterwards it runs at 0.70-0.89x across every benchmarked pattern. The earlier form was
+not an optimization opportunity that had been missed but the opposite — work spent preserving
+intra-hole order that no caller can observe.
+
+Stability is unaffected and, for the integer overloads, vacuous: equal integers are
+indistinguishable, so no relative order among them is observable in the first place.
+
 ## Stability
 
 Stability is an algorithm property, not a library-wide guarantee. An algorithm documented as stable preserves the original relative order of elements that compare equal. An unstable algorithm may reorder equal elements.

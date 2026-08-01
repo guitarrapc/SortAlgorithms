@@ -183,3 +183,5 @@ The following are not repository-wide strategies: ISA-specific SIMD (`Vector128/
 - `SkipLocalsInit` turns an implicit runtime guarantee into a repository-wide audit obligation; increment-before-initialize buffers are easy to miss.
 - A primitive fast path needs a natural-comparer marker. `typeof(T)` alone would silently violate reverse or domain-specific ordering.
 - Generated code is a property of the closed generic instantiation, build configuration, JIT, and CPU; documentation describes the measured context.
+- Benchmark parity between sibling algorithms can mean no input exercises the difference rather than no difference existing. Every distribution pattern was a permutation or held each value twice, so a bucket never grew past two elements and the cost of collection stayed invisible; adding a duplicate-heavy pattern showed `PigeonholeSortInteger` running at 2.5x `CountingSortInteger` where it had looked identical. Before concluding two implementations are equally good, check that some input actually separates them.
+- Storing what a position already determines is a cost, not a safeguard. See the distribution auxiliary structure rule in `sorting_api.md`.

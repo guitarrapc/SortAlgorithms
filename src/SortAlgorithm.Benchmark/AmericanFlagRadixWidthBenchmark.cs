@@ -30,25 +30,27 @@ namespace SortAlgorithm.Benchmark;
 /// 1048576   wide      1.21   0.65   0.66   0.65
 /// </code>
 /// <para>
-/// Two textbook variants were then measured against the shipped configuration and BOTH LOST, so neither is
-/// being left on the table. Do not re-litigate without new evidence:
+/// Three further variants were measured against the shipped configuration and ALL THREE LOST, so none of them
+/// is being left on the table. Do not re-litigate without new evidence:
 /// </para>
 /// <code>
-/// n         keys      shipped   Cycle   BinaryLeaf
-/// 4096      narrow    0.95      0.91    0.91
-/// 4096      wide      0.50      0.59    0.64
-/// 8192      narrow    0.65      0.68    0.67
-/// 8192      wide      0.68      0.74    0.83
-/// 65536     narrow    0.57      0.57    0.58
-/// 65536     wide      0.62      0.66    0.68
-/// 1048576   narrow    0.64      0.64    0.64
-/// 1048576   wide      0.62      0.66    0.79
+/// n         keys      shipped   Cycle   BinaryLeaf   PerNodeRescan
+/// 4096      narrow    0.95      0.92    0.95         1.05
+/// 4096      wide      0.52      0.59    0.64         0.56
+/// 8192      narrow    0.66      0.65    0.66         0.71
+/// 8192      wide      0.67      0.75    0.93         0.71
+/// 65536     narrow    0.56      0.60    0.57         0.61
+/// 65536     wide      0.62      0.63    0.65         0.65
+/// 1048576   narrow    0.70      0.71    0.66         0.71
+/// 1048576   wide      0.68      0.68    0.84         0.69
 /// </code>
 /// <para>
 /// Cycle: holding the in-flight element in a local removes a write per chain step, but the shipped Swap is a
 /// single fused ref-to-ref exchange, so there is no write to remove — only an extra key extraction on the
 /// held value. BinaryLeaf: binary search cuts comparisons, not element moves, and at &lt;= 64 elements the
-/// moves dominate.
+/// moves dominate. PerNodeRescan: one extra pass per node buys skipping that node's uniform levels, but the
+/// shipped code already finds one uniform level per counting pass, so the rescan only pays off for a node
+/// that skips 2+ levels — which these distributions do not produce often enough to cover the extra pass.
 /// </para>
 /// Delete once the numbers are recorded.
 /// </summary>
@@ -102,6 +104,10 @@ public class AmericanFlagRadixWidthBenchmark
     /// <summary>Shipped configuration but with BinaryInsertionSort at the 64-element cutoff.</summary>
     [Benchmark]
     public void Radix256_BinaryLeaf() => AmericanFlagSortVariants.SortBinaryLeaf(_buffers.Next().AsSpan());
+
+    /// <summary>Shipped configuration but rescanning the key range at every recursion node, not just the top.</summary>
+    [Benchmark]
+    public void Radix256_PerNodeRescan() => AmericanFlagSortPerNodeRescan.Sort(_buffers.Next().AsSpan());
 }
 
 /// <summary>
@@ -515,6 +521,107 @@ public static class AmericanFlagSortVariants
             var bucketLength = bucketCounts[i + 1] - bucketStart;
             if (bucketLength > 1)
                 Recursive(s, radixKey, minKey, start + bucketStart, bucketLength, digit - 1, cycle, binaryLeaf);
+        }
+    }
+}
+
+/// <summary>
+/// Shipped configuration plus a min/max rescan at EVERY recursion node, not just at the top.
+/// <para>
+/// Correctness: within a node all higher digits are already equal, so re-normalizing by the node's own
+/// minimum and re-deriving its digit count still sorts the node by key — subtracting a constant is
+/// order-preserving and the node's position among its siblings is already fixed.
+/// </para>
+/// <para>
+/// It also makes the uniform-digit early-termination check dead: normalized keys span [0, range], so the
+/// minimum's top digit is 0 while the maximum's is non-zero by construction, and the top digit of a
+/// rescanned node can never be uniform. The variant therefore drops that check.
+/// </para>
+/// <para>
+/// The trade: one extra pass per node buys skipping however many uniform levels that node has. It wins only
+/// if a node skips 2+ levels on average, because the shipped code already discovers one uniform level per
+/// counting pass.
+/// </para>
+/// </summary>
+public static class AmericanFlagSortPerNodeRescan
+{
+    private const int RadixBits = 8;
+    private const int RadixSize = 256;
+    private const int RadixMask = RadixSize - 1;
+    private const int InsertionSortCutoff = 64;
+    private const int BUFFER_MAIN = 0;
+
+    public static void Sort<T>(Span<T> span) where T : IBinaryInteger<T>
+    {
+        if (span.Length <= 1) return;
+        RadixKeyGuard.ValidateKeyBits<T, BinaryIntegerRadixKey<T>>();
+        var s = new SortSpan<T, ComparableComparer<T>, NullContext>(span, NullContext.Default, new ComparableComparer<T>(), BUFFER_MAIN);
+        if (s.Length <= InsertionSortCutoff) { InsertionSort.SortCore(s, 0, s.Length); return; }
+        Recursive(s, default(BinaryIntegerRadixKey<T>), 0, s.Length);
+    }
+
+    private static void Recursive<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, int start, int length)
+        where TRadixKey : struct, IRadixKeySelector<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (length <= InsertionSortCutoff)
+        {
+            InsertionSort.SortCore(s, start, start + length);
+            return;
+        }
+
+        // Rescan this node's own key range instead of inheriting the parent's digit position.
+        var minKey = ulong.MaxValue;
+        var maxKey = ulong.MinValue;
+        for (var i = 0; i < length; i++)
+        {
+            var key = radixKey.GetKey(s.Read(start + i));
+            if (key < minKey) minKey = key;
+            if (key > maxKey) maxKey = key;
+        }
+
+        var range = maxKey - minKey;
+        if (range == 0) return; // every key in this node is equal
+
+        var requiredBits = 64 - BitOperations.LeadingZeroCount(range);
+        var digit = (requiredBits + RadixBits - 1) / RadixBits - 1;
+        var shift = digit * RadixBits;
+
+        Span<int> bucketCounts = stackalloc int[RadixSize + 1];
+        Span<int> bucketNext = stackalloc int[RadixSize];
+        bucketCounts.Clear();
+
+        for (var i = 0; i < length; i++)
+        {
+            var key = radixKey.GetKey(s.Read(start + i)) - minKey;
+            bucketCounts[(int)((key >> shift) & RadixMask) + 1]++;
+        }
+
+        // No uniform-digit check: the rescan guarantees the top digit varies.
+        for (var i = 1; i <= RadixSize; i++) bucketCounts[i] += bucketCounts[i - 1];
+        for (var i = 0; i < RadixSize; i++) bucketNext[i] = bucketCounts[i];
+
+        for (var bucket = 0; bucket < RadixSize - 1; bucket++)
+        {
+            var bucketEnd = bucketCounts[bucket + 1];
+            while (bucketNext[bucket] < bucketEnd)
+            {
+                var currentPos = start + bucketNext[bucket];
+                var currentKey = radixKey.GetKey(s.Read(currentPos)) - minKey;
+                var currentDigit = (int)((currentKey >> shift) & RadixMask);
+                if (currentDigit == bucket) { bucketNext[bucket]++; continue; }
+                s.Swap(currentPos, start + bucketNext[currentDigit]);
+                bucketNext[currentDigit]++;
+            }
+        }
+
+        for (var i = 0; i < RadixSize; i++)
+        {
+            var bucketStart = bucketCounts[i];
+            var bucketLength = bucketCounts[i + 1] - bucketStart;
+            if (bucketLength > 1)
+                Recursive(s, radixKey, start + bucketStart, bucketLength);
         }
     }
 }
