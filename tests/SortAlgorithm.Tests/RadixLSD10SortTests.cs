@@ -170,8 +170,9 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         // 1. Find min/max keys: n reads
         // 2. For each digit d (from 0 to digitCount-1):
         //    - Count phase: n reads
-        //    - Distribute phase: n reads + n writes (to temp buffer)
-        //    - Copy back phase (using CopyTo): n reads (from temp buffer) + n writes (to main buffer)
+        //    - Distribute phase: n reads + n writes (to the destination buffer)
+        //    - No copy back: src and dst trade roles (ping-pong)
+        // 3. If digitCount is odd, one final copy from the temp buffer: n reads + n writes
         //
         // For n elements with values [0, n-1]:
         // - min unsigned key = 0x8000_0000 + 0 (for non-negative 0)
@@ -190,8 +191,12 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         var range = maxKey - minKey; // range = n - 1
         var digitCount = GetDigitCountFromUlong(range);
 
-        var expectedReads = (ulong)(n + digitCount * 3 * n); // Find min/max + (count + distribute + CopyTo) per digit
-        var expectedWrites = (ulong)(digitCount * 2 * n); // (distribute + CopyTo) writes per digit
+        // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
+        // roles instead of being copied back. An odd pass count leaves the result in the temp buffer,
+        // which costs one final copy.
+        var finalCopy = digitCount % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy); // Find min/max + (count + distribute) per digit + final copy
+        var expectedWrites = (ulong)(digitCount * n + finalCopy);        // distribute per digit + final copy
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
@@ -220,8 +225,12 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         var range = maxKey - minKey; // range = n - 1
         var digitCount = GetDigitCountFromUlong(range);
 
-        var expectedReads = (ulong)(n + digitCount * 3 * n); // Find min/max + (count + distribute + CopyTo)
-        var expectedWrites = (ulong)(digitCount * 2 * n); // (distribute + CopyTo) writes
+        // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
+        // roles instead of being copied back. An odd pass count leaves the result in the temp buffer,
+        // which costs one final copy.
+        var finalCopy = digitCount % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy); // Find min/max + (count + distribute) per digit + final copy
+        var expectedWrites = (ulong)(digitCount * n + finalCopy);        // distribute per digit + final copy
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
@@ -254,8 +263,12 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         var range = maxKey - minKey; // range = n - 1
         var digitCount = GetDigitCountFromUlong(range);
 
-        var expectedReads = (ulong)(n + digitCount * 3 * n); // Find min/max + (count + distribute + CopyTo)
-        var expectedWrites = (ulong)(digitCount * 2 * n); // (distribute + CopyTo) writes
+        // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
+        // roles instead of being copied back. An odd pass count leaves the result in the temp buffer,
+        // which costs one final copy.
+        var finalCopy = digitCount % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy); // Find min/max + (count + distribute) per digit + final copy
+        var expectedWrites = (ulong)(digitCount * n + finalCopy);        // distribute per digit + final copy
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
@@ -279,8 +292,9 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         // 1. Find min/max keys: n reads
         // 2. For each digit d (from 0 to digitCount-1):
         //    - Count phase: n reads
-        //    - Distribute phase: n reads + n writes (to temp buffer)
-        //    - Copy back phase: n reads + n writes
+        //    - Distribute phase: n reads + n writes (to the destination buffer)
+        //    - No copy back: src and dst trade roles (ping-pong)
+        // 3. If digitCount is odd, one final copy from the temp buffer: n reads + n writes
         //
         // For input [-n/2, ..., -1, 0, 1, ..., n/2-1]:
         // - Min value: -n/2 → min key = 0x80000000 - n/2
@@ -294,8 +308,12 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         var range = maxKey - minKey; // range = n - 1
         var digitCount = GetDigitCountFromUlong(range);
 
-        var expectedReads = (ulong)(n + digitCount * 3 * n); // Find min/max + (count + distribute + CopyTo) per digit
-        var expectedWrites = (ulong)(digitCount * 2 * n); // (distribute + CopyTo) writes per digit
+        // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
+        // roles instead of being copied back. An odd pass count leaves the result in the temp buffer,
+        // which costs one final copy.
+        var finalCopy = digitCount % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy); // Find min/max + (count + distribute) per digit + final copy
+        var expectedWrites = (ulong)(digitCount * n + finalCopy);        // distribute per digit + final copy
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);

@@ -23,8 +23,8 @@ namespace SortAlgorithm.Algorithms;
 /// This uses (value / divisor) % 10 where divisor = 10^d (d = 0, 1, 2, ...).</description></item>
 /// <item><description><strong>LSD Processing Order:</strong> Process digits from least significant (ones place) to most significant (highest decimal digit).
 /// This ensures that lower-order digits are already sorted when processing higher-order digits.</description></item>
-/// <item><description><strong>Complete Pass Coverage:</strong> Must perform d passes where d = ⌈log₁₀(max)⌉ + 1 (number of decimal digits in the maximum value).
-/// Incomplete passes result in partially sorted arrays.</description></item>
+/// <item><description><strong>Complete Pass Coverage:</strong> Must perform d passes where d is the number of decimal digits of (max − min),
+/// the keys having been normalized by the minimum key. Incomplete passes result in partially sorted arrays.</description></item>
 /// <item><description><strong>Order-Preserving Key Mapping:</strong> Elements are mapped to fixed-width unsigned keys through
 /// <see cref="IRadixKeySelector{T}"/>. Signed integers flip the sign bit (e.g. 32-bit: key = (uint)value ^ 0x8000_0000),
 /// floating-point values use the IEEE 754 total-order bit transform, and key-selector overloads extract an int key from arbitrary elements.
@@ -35,13 +35,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Distribution (Non-comparison based)</description></item>
 /// <item><description>Stable      : Yes (insertion order preserved in buckets)</description></item>
 /// <item><description>In-place    : No (O(n + 10) auxiliary space for buckets)</description></item>
-/// <item><description>Best case   : Θ(d × n) - d = number of decimal digits (d = ⌈log₁₀(max)⌉ + 1)</description></item>
+/// <item><description>Best case   : Θ(n) - When all elements are identical (early termination on range == 0)</description></item>
 /// <item><description>Average case: Θ(d × n) - Linear in input size, independent of value distribution</description></item>
 /// <item><description>Worst case  : Θ(d × n) - Performance depends on digit count, not comparisons</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort; uses only arithmetic operations)</description></item>
 /// <item><description>Swaps       : 0 (Elements moved via bucket redistribution, not swaps)</description></item>
-/// <item><description>Writes      : d × n (Each element written once per digit pass)</description></item>
-/// <item><description>Reads       : d × n (Each element read once per digit pass)</description></item>
+/// <item><description>Writes      : d × n (one write per distribute pass) + optional final copy</description></item>
+/// <item><description>Reads       : n (initial min/max scan) + 2 × d × n (count pass + distribute pass) + optional final copy</description></item>
 /// </list>
 /// <para><strong>Note:</strong> Uses decimal arithmetic (division and modulo), which may be slower than binary-based radix sorts (e.g., RadixLSD4Sort with bit shifts).
 /// However, it is more intuitive for understanding and debugging.</para>
@@ -262,17 +262,23 @@ public static class RadixLSD10Sort
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void LSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int digitCount, ulong minKey, Span<int> bucketCounts, ReadOnlySpan<ulong> pow10)
+    private static void LSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int digitCount, ulong minKey, Span<int> bucketCounts, ReadOnlySpan<ulong> pow10)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         Span<int> bucketStarts = stackalloc int[RadixBase];
 
+        // Each pass reads from src and writes the distributed result to dst. Rather than copying dst
+        // back over src to set up the next pass, the two spans trade roles: a pass never has to see
+        // the buffer its predecessor started from, so the copy only buys naming, not correctness.
+        var src = s;
+        var dst = temp;
+
         // Perform LSD radix sort on unsigned keys
         for (int d = 0; d < digitCount; d++)
         {
-            source.Context.OnPhase(SortPhase.RadixPass, d, digitCount);
+            src.Context.OnPhase(SortPhase.RadixPass, d, digitCount);
             var divisor = pow10[d];
 
             // Clear bucket counts
@@ -280,9 +286,9 @@ public static class RadixLSD10Sort
 
             // Count occurrences of each decimal digit
             // Use (key - minKey) to normalize the range, extracting only the necessary digits
-            for (var i = 0; i < source.Length; i++)
+            for (var i = 0; i < src.Length; i++)
             {
-                var value = source.Read(i);
+                var value = src.Read(i);
                 var key = radixKey.GetKey(value);
                 var normalizedKey = key - minKey;
                 var digit = (int)((normalizedKey / divisor) % 10);
@@ -296,19 +302,28 @@ public static class RadixLSD10Sort
                 bucketStarts[i] = bucketStarts[i - 1] + bucketCounts[i - 1];
             }
 
-            // Distribute elements into temp buffer based on current digit
-            for (var i = 0; i < source.Length; i++)
+            // Distribute elements into the destination buffer based on current digit
+            for (var i = 0; i < src.Length; i++)
             {
-                var value = source.Read(i);
+                var value = src.Read(i);
                 var key = radixKey.GetKey(value);
                 var normalizedKey = key - minKey;
                 var digit = (int)((normalizedKey / divisor) % 10);
                 var pos = bucketStarts[digit]++;
-                temp.Write(pos, value);
+                dst.Write(pos, value);
             }
 
-            // Copy back from temp buffer
-            temp.CopyTo(0, source, 0, source.Length);
+            // Swap src/dst for next pass (ping-pong)
+            var tempSortSpan = src;
+            src = dst;
+            dst = tempSortSpan;
+        }
+
+        // After digitCount swaps, an odd pass count leaves the sorted data in the temp buffer.
+        // Pass 0: s→temp, swap (src=temp), Pass 1: temp→s, swap (src=s), ...
+        if ((digitCount & 1) == 1)
+        {
+            src.CopyTo(0, s, 0, s.Length);
         }
     }
 
