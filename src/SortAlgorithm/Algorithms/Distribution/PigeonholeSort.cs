@@ -34,7 +34,7 @@ namespace SortAlgorithm.Algorithms;
 /// The algorithm correctly sorts as long as the key selector function produces consistent integer keys.</description></item>
 /// <item><description><strong>Stability:</strong> This implementation IS stable because each hole's chain holds its
 /// elements in ascending input index order and is collected head-first.</description></item>
-/// <item><description><strong>Range Limitation:</strong> The key range must be reasonable (≤ {MaxHoleArraySize}).
+/// <item><description><strong>Range Limitation:</strong> The key range must be reasonable (≤ <c>MaxHoleArraySize</c>, 10,000,000).
 /// Excessive ranges cause memory allocation failures or out-of-memory errors.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -49,7 +49,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>IndexReads  : 3n - n reads for key extraction, n reads for copying to temp, n reads for writing back</description></item>
 /// <item><description>IndexWrites : 2n - n writes to temp, n writes back to original array</description></item>
 /// <item><description>Memory      : O(n + k) - Temporary arrays for elements, keys, next[] links, and hole head indices</description></item>
-/// <item><description>Note        : A large key range leads to excessive memory usage. The maximum range is {MaxHoleArraySize}.</description></item>
+/// <item><description>Note        : A large key range leads to excessive memory usage. The maximum range is <c>MaxHoleArraySize</c> (10,000,000).</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Pigeonhole_sort</para>
@@ -123,10 +123,9 @@ public static class PigeonholeSort
             // If all keys are the same, no need to sort
             if (min == max) return;
 
-            // Check for overflow and validate range
+            // Validate range. Computed in long so the full int key space cannot overflow the subtraction;
+            // the cap below is far under int.MaxValue, so it is the only bound that has to be tested.
             long range = (long)max - (long)min + 1;
-            if (range > int.MaxValue)
-                throw new ArgumentException($"Key range is too large for PigeonholeSort: {range}. Maximum supported range is {int.MaxValue}.");
             if (range > MaxHoleArraySize)
                 throw new ArgumentException($"Key range ({range}) exceeds maximum hole array size ({MaxHoleArraySize}). Consider using another comparison-based sort.");
 
@@ -139,7 +138,7 @@ public static class PigeonholeSort
             Span<int> holeHead = size <= StackAllocThreshold
                 ? stackalloc int[size]
                 : (rentedHoleHeadArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-            holeHead.Fill(-1);
+            holeHead.Fill(-1); // Required: an empty hole must read as -1, and [module: SkipLocalsInit] leaves stackalloc uninitialized
             try
             {
                 DistributeAndCollect(s, tempSpan, keys, holeHead, next, baseKey);
@@ -236,7 +235,7 @@ public static class PigeonholeSort
 /// <item><description>IndexReads  : 2n - n for the min/max scan, n for the distribution pass</description></item>
 /// <item><description>IndexWrites : n - each element is written once, directly into its final position</description></item>
 /// <item><description>Memory      : O(k) - one hole array; no per-element auxiliary storage</description></item>
-/// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は{MaxHoleArraySize}、かつ range/n ≤ {MaxRangeFactor} の制約があります。</description></item>
+/// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は <c>MaxHoleArraySize</c> (10,000,000)、かつ range/n ≤ <c>MaxRangeFactor</c> (32) の制約があります。</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
 /// <list type="bullet">
@@ -335,7 +334,7 @@ public static class PigeonholeSortInteger
         Span<int> holes = size <= StackAllocThreshold
             ? stackalloc int[size]
             : (rentedHoles = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-        holes.Clear(); // Required: [module: SkipLocalsInit] skips zero-initialization
+        holes.Clear(); // Required: neither branch yields zeroed memory - [module: SkipLocalsInit] skips it for stackalloc, and a pooled array carries its previous contents
         try
         {
             DistributeAndCollect(s, holes, umin);

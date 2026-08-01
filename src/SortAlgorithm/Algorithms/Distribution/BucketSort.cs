@@ -180,7 +180,7 @@ public static class BucketSort
             Span<int> bucketBounds = bucketCount <= StackAllocThreshold
                 ? stackalloc int[bucketCount]
                 : (rentedBounds = ArrayPool<int>.Shared.Rent(bucketCount)).AsSpan(0, bucketCount);
-            bucketBounds.Clear(); // Required: [module: SkipLocalsInit] skips zero-initialization
+            bucketBounds.Clear(); // Required: neither branch yields zeroed memory - [module: SkipLocalsInit] skips it for stackalloc, and a pooled array carries its previous contents
             try
             {
                 BucketDistribute(s, tempSpan, keys, bucketBounds, bucketSize, min);
@@ -434,7 +434,7 @@ public static class BucketSortInteger
         Span<int> bucketBounds = bucketCount <= StackAllocThreshold
             ? stackalloc int[bucketCount]
             : (rentedBounds = ArrayPool<int>.Shared.Rent(bucketCount)).AsSpan(0, bucketCount);
-        bucketBounds.Clear(); // Required: [module: SkipLocalsInit] skips zero-initialization
+        bucketBounds.Clear(); // Required: neither branch yields zeroed memory - [module: SkipLocalsInit] skips it for stackalloc, and a pooled array carries its previous contents
         try
         {
             BucketDistribute(s, tempSpan, bucketIndices, bucketBounds, bucketSize, min);

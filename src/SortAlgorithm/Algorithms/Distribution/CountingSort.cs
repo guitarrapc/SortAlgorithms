@@ -30,7 +30,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Placement Phase:</strong> Elements are placed in reverse order (for stability).
 /// For each element with key k, it is placed at position <c>countArray[k - min] - 1</c>, then the count is decremented.</description></item>
 /// <item><description><strong>Stability:</strong> Processing elements in reverse order ensures that elements with equal keys maintain their original relative order.</description></item>
-/// <item><description><strong>Range Limitation:</strong> The key range must be reasonable (≤ {MaxCountArraySize}).
+/// <item><description><strong>Range Limitation:</strong> The key range must be reasonable (≤ <c>MaxCountArraySize</c>, 10,000,000).
 /// Excessive ranges cause memory allocation failures.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -48,7 +48,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>IndexWrites : n - each element is placed exactly once. Sorting in place adds a write-back of
 /// the output, which is a range copy rather than n element writes</description></item>
 /// <item><description>Memory      : O(n + k) - an n-element output plus a k-sized counter array</description></item>
-/// <item><description>Note        : A large key range leads to excessive memory usage. The maximum range is {MaxCountArraySize}.</description></item>
+/// <item><description>Note        : A large key range leads to excessive memory usage. The maximum range is <c>MaxCountArraySize</c> (10,000,000).</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
 /// <list type="bullet">
@@ -143,10 +143,9 @@ public static class CountingSort
             // If all keys are the same, no need to sort
             if (min == max) return;
 
-            // Check for overflow and validate range
+            // Validate range. Computed in long so the full int key space cannot overflow the subtraction;
+            // the cap below is far under int.MaxValue, so it is the only bound that has to be tested.
             long range = (long)max - (long)min + 1;
-            if (range > int.MaxValue)
-                throw new ArgumentException($"Key range is too large for CountingSort: {range}. Maximum supported range is {MaxCountArraySize}.");
             if (range > MaxCountArraySize)
                 throw new ArgumentException($"Key range ({range}) exceeds maximum count array size ({MaxCountArraySize}). Consider using another comparison-based sort.");
 
@@ -157,7 +156,7 @@ public static class CountingSort
             Span<int> countArray = size <= StackAllocThreshold
                 ? stackalloc int[size]
                 : (rentedCountArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-            countArray.Clear();
+            countArray.Clear(); // Required: neither branch yields zeroed memory - [module: SkipLocalsInit] skips it for stackalloc, and a pooled array carries its previous contents
             try
             {
                 CountSort(s, keys, tempSpan, countArray, min);
@@ -249,7 +248,7 @@ public static class CountingSort
 /// <item><description>IndexWrites : n - each element is placed exactly once. Sorting in place adds a write-back of
 /// the output, which is a range copy rather than n element writes</description></item>
 /// <item><description>Memory      : O(n + k) - an n-element output plus a k-sized counter array</description></item>
-/// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は{MaxCountArraySize}、かつ range/n ≤ {MaxRangeFactor} の制約があります。</description></item>
+/// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は <c>MaxCountArraySize</c> (10,000,000)、かつ range/n ≤ <c>MaxRangeFactor</c> (32) の制約があります。</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
 /// <list type="bullet">
@@ -350,7 +349,7 @@ public static class CountingSortInteger
             Span<int> countArray = size <= StackAllocThreshold
                 ? stackalloc int[size]
                 : (rentedCountArray = ArrayPool<int>.Shared.Rent(size)).AsSpan(0, size);
-            countArray.Clear();
+            countArray.Clear(); // Required: neither branch yields zeroed memory - [module: SkipLocalsInit] skips it for stackalloc, and a pooled array carries its previous contents
             try
             {
                 CountSort(s, tempSpan, countArray, umin);
