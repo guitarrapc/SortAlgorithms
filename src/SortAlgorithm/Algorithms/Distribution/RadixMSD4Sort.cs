@@ -358,6 +358,16 @@ public static class RadixMSD4Sort
             bucketCounts[i] += bucketCounts[i - 1];
         }
 
+        // The offsets are final here, so where every bucket will lie is already decided even though no element
+        // has moved yet. Report it before the distribution: a consumer that works the boundaries out for itself
+        // has to reimplement the key mapping, the normalization and the digit width, and a wrong reconstruction
+        // still looks like a plausible partition. The whole report sits behind the NullContext test so the
+        // optimized path keeps none of it.
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            ReportBuckets(s.Context, bucketCounts, start);
+        }
+
         // Distribute elements into temp buffer based on current digit.
         // The scatter advances its write positions, so it works on a copy and leaves the boundaries intact.
         Span<int> bucketOffsets = stackalloc int[RadixSize];
@@ -405,4 +415,24 @@ public static class RadixMSD4Sort
         }
         return false;
     }
+    /// <summary>
+    /// Reports the span each non-empty bucket occupies, one <see cref="SortPhase.DistributionBucket"/> per bucket.
+    /// Empty buckets are skipped, so this costs min(radix, length) reports rather than a fixed RadixSize.
+    /// </summary>
+    /// <param name="boundaries">Prefix-summed offsets: boundaries[d] is the start of bucket d relative to
+    /// <paramref name="start"/>, boundaries[d + 1] its end.</param>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void ReportBuckets<TContext>(TContext context, ReadOnlySpan<int> boundaries, int start)
+        where TContext : ISortContext
+    {
+        for (var d = 0; d < RadixSize; d++)
+        {
+            var length = boundaries[d + 1] - boundaries[d];
+            if (length > 0)
+            {
+                context.OnPhase(SortPhase.DistributionBucket, start + boundaries[d], length, d);
+            }
+        }
+    }
+
 }

@@ -486,6 +486,25 @@ public enum SortPhase
     /// </summary>
     DistributionWrite,
 
+    /// <summary>
+    /// The span one non-empty bucket occupies, reported once per bucket as soon as the offsets are known
+    /// and before any element moves. Purely structural: it states where a bucket will lie, and carries no
+    /// progress meaning, so a consumer that only renders progress can ignore it.
+    /// param1 = start index of the bucket (absolute, in whichever buffer the following writes target),
+    /// param2 = number of elements in the bucket, param3 = bucket label (the digit value for radix sorts;
+    /// the meaning is algorithm-specific).
+    /// <para>
+    /// Exists so consumers do not have to re-derive bucket boundaries. Doing that requires reimplementing the
+    /// key mapping, the range normalization, the digit width and the digit count — four things that live in
+    /// this library and change with it. Every one of those has already drifted out of sync with a consumer at
+    /// least once, silently, because a wrong reconstruction still produces a plausible-looking partition.
+    /// The counts and offsets reported here are the ones the sort itself computed, so there is nothing to
+    /// keep in sync and nothing extra to compute; empty buckets are skipped, which bounds the reports per
+    /// distribution to min(radix, length).
+    /// </para>
+    /// </summary>
+    DistributionBucket,
+
     // Partition family
 
     /// <summary>
