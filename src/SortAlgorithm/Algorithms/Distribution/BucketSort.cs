@@ -49,7 +49,10 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class BucketSort
 {
-    private const int MaxBucketCount = 256;  // Maximum number of buckets
+    // Bucket count is capped so the two bucket arrays stay within the same 4 KiB stackalloc budget the
+    // sibling distribution sorts use for their single count array (StackAllocThreshold = 1024 ints):
+    // two arrays of 512 ints. The cap only binds above n = 512² = 262,144, since the count is √n.
+    private const int MaxBucketCount = 512;  // Maximum number of buckets
     private const int MinBucketCount = 2;    // Minimum number of buckets
 
     // Buffer identifiers for visualization
@@ -276,7 +279,9 @@ public static class BucketSort
 /// </remarks>
 public static class BucketSortInteger
 {
-    private const int MaxBucketCount = 1000; // Maximum number of buckets
+    // Same cap as <see cref="BucketSort"/>: the two overloads are the same algorithm and differ only in
+    // how the key is obtained, so the bucket-count heuristic must not depend on which one is called.
+    private const int MaxBucketCount = 512;  // Maximum number of buckets
     private const int MinBucketCount = 2;    // Minimum number of buckets
 
     // Buffer identifiers for visualization
@@ -396,11 +401,10 @@ public static class BucketSortInteger
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Count elements per bucket and calculate bucket positions (stackalloc)
+        // Count elements per bucket and track write positions (stackalloc)
         Span<int> bucketCounts = stackalloc int[bucketCount];
-        Span<int> bucketStarts = stackalloc int[bucketCount];
         Span<int> bucketPositions = stackalloc int[bucketCount];
-        bucketCounts.Clear();
+        bucketCounts.Clear(); // bucketPositions is fully overwritten in the prefix sum loop below
 
         // First pass: calculate bucket indices and count
         // Cache bucket indices to avoid division in second pass
@@ -428,7 +432,6 @@ public static class BucketSortInteger
         var offset = 0;
         for (var i = 0; i < bucketCount; i++)
         {
-            bucketStarts[i] = offset;
             bucketPositions[i] = offset;
             offset += bucketCounts[i];
         }
@@ -443,6 +446,9 @@ public static class BucketSortInteger
         }
 
         // Sort each bucket in place inside the temp buffer.
+        // After distribution, bucketPositions[i] == start + count, so start = bucketPositions[i] - bucketCounts[i];
+        // keeping a separate starts array would only restate what the two arrays above already determine.
+        //
         // A bucket is a range of the temp buffer, not a buffer of its own, so it is sorted as a range:
         // the indices reported are the same either way, and the final CopyTo below reports BUFFER_TEMP,
         // so a consumer never sees elements appear in a buffer they were not written to.
@@ -451,7 +457,7 @@ public static class BucketSortInteger
             var count = bucketCounts[i];
             if (count > 1)
             {
-                var start = bucketStarts[i];
+                var start = bucketPositions[i] - count;
                 InsertionSort.SortCore(tempSpan, start, start + count);
             }
         }
