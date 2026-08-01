@@ -25,6 +25,12 @@ namespace SortAlgorithm.Algorithms;
 /// This ensures negative values are ordered correctly before positive values without separate processing.</description></item>
 /// <item><description><strong>Digit Extraction Correctness:</strong> For each digit position d (from digitCount-1 down to 0), extract the d-th 4-bit digit using bitwise operations:
 /// digit = (key >> (d × 4)) &amp; 0xF. This ensures each 4-bit segment of the integer is processed independently.</description></item>
+/// <item><description><strong>Digit Count Determination with Range Normalization:</strong> The number of digit levels is determined by the actual
+/// range of the keys, not by the key width. One scan finds min and max; digits are then extracted from (key − min), so
+/// digitCount = ⌈requiredBits / 4⌉ where requiredBits is the bit width of (max − min). Subtracting a constant is order-preserving
+/// and cannot underflow, and — unlike a (max XOR min) width — it stays effective when the range straddles a high bit boundary,
+/// as sign-flipped keys of signed values around zero do. When all keys are equal (range == 0), sorting is skipped entirely.
+/// Without this, uniform high digits are still discovered one full counting pass at a time.</description></item>
 /// <item><description><strong>In-Place Permutation:</strong> Elements are rearranged in-place using a two-pass approach:
 /// 1. Count phase: Count occurrences of each digit value
 /// 2. Permutation phase: Place each element in its correct bucket position using bucket offsets</description></item>
@@ -39,21 +45,23 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Distribution (Radix Sort, MSD variant, American Flag Sort)</description></item>
 /// <item><description>Stable      : No (in-place permutation does not preserve relative order)</description></item>
 /// <item><description>In-place    : Yes (bucket counters are stack-allocated, O(radix) per recursion level; nothing is allocated on the heap)</description></item>
-/// <item><description>Best case   : Θ(n) - only when a single counting pass already reduces every bucket to the insertion-sort cutoff.
-/// An all-equal input is <em>not</em> this case: without an up-front key-range scan, every digit level still pays a full counting pass
-/// before its uniform-digit check fires (measured: 8.00n reads for n = 100,000 equal <c>int</c> values, i.e. Θ(d × n))</description></item>
-/// <item><description>Average case: Θ(d × n) - d = ⌈bitSize/4⌉ is constant for fixed-width integers</description></item>
+/// <item><description>Best case   : Θ(n) - all keys equal, caught by the range scan and returned before any digit pass
+/// (measured: 1.00n reads and zero writes for n = 100,000 equal <c>int</c> values)</description></item>
+/// <item><description>Average case: Θ(d × n) - d = ⌈requiredBits/4⌉, from the width of the key range rather than the key width</description></item>
 /// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order</description></item>
 /// <item><description>Comparisons : data-dependent, not zero. The digit passes themselves use bitwise operations only, but every bucket that
 /// reaches the cutoff is finished by <see cref="InsertionSort"/>, which compares. Measured with StatisticsContext at n = 100,000 <c>int</c>:
-/// 78,663 comparisons for uniform random input, 93,750 for already-sorted input, and 0 for keys drawn from 0..999
+/// 78,075 comparisons for uniform random input, 93,750 for already-sorted input, and 0 for keys drawn from 0..999
 /// (there every leaf bucket stays above the cutoff, so no fallback runs)</description></item>
-/// <item><description>Digit Passes: up to d = ⌈bitSize/4⌉ (2 for byte, 4 for short, 8 for int, 16 for long), but can terminate early</description></item>
-/// <item><description>Memory      : O(1) auxiliary space. Recursion depth is bounded by the digit count (8 for 32-bit keys, 16 for 64-bit),
-/// because each level consumes exactly one digit — it does not depend on n, on the input order, or on how the buckets split</description></item>
+/// <item><description>Digit Passes: d = ⌈requiredBits/4⌉ from the key range, capped by the key width (2 for byte, 4 for short, 8 for int,
+/// 16 for long); levels below that can still terminate early when a bucket's digit turns out to be uniform</description></item>
+/// <item><description>Reads       : n (range scan) + one per element per digit level visited + the permutation and cutoff reads</description></item>
+/// <item><description>Memory      : O(1) auxiliary space. Recursion depth is bounded by the digit count (at most 8 for 32-bit keys, 16 for 64-bit,
+/// and less when the key range is narrow), because each level consumes exactly one digit — it does not depend on n, on the input order,
+/// or on how the buckets split</description></item>
 /// </list>
 /// <para><strong>Algorithm Overview:</strong></para>
-/// <para>The algorithm consists of four phases per digit level:</para>
+/// <para>One range scan over the keys, then four phases per digit level:</para>
 /// <list type="number">
 /// <item><description><strong>Count Phase:</strong> Count occurrences of each digit value (0-15)</description></item>
 /// <item><description><strong>Offset Calculation:</strong> Compute bucket offsets (cumulative sum)</description></item>
@@ -68,7 +76,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Against <see cref="RadixMSD4Sort"/> (same MSD partitioning, buffered):</strong> strictly less element traffic.
 /// Both partition top-down from the most significant digit and both skip uniform digit levels, but the buffered variant scatters every
 /// element of a level into a rented temp buffer and copies the whole level back, while the in-place permutation only touches elements that
-/// are not already in their bucket. Measured: 1.64M reads / 843K writes here against 2.56M reads / 1.75M writes for RadixMSD4Sort;
+/// are not already in their bucket. Measured: 1.74M reads / 797K writes here against 2.40M reads / 1.62M writes for RadixMSD4Sort;
 /// README n = 4096 Random reports 65.3 µs against 107.2 µs. It also rents nothing from ArrayPool.
 /// The price is stability — RadixMSD4Sort keeps equal keys in input order, this does not.</description></item>
 /// <item><description><strong>Against <see cref="RadixLSD256Sort"/> (LSD, buffered):</strong> the advantage is memory, not throughput.
@@ -236,24 +244,53 @@ public static class AmericanFlagSort
     {
         if (span.Length <= 1) return;
 
+        // Validate the key width up front (BinaryIntegerRadixKey throws NotSupportedException for >64-bit types).
         RadixKeyGuard.ValidateKeyBits<T, TRadixKey>();
 
-        // Validate the key width up front (BinaryIntegerRadixKey throws NotSupportedException for >64-bit types)
-        // and derive the digit count from it (4 bits per digit).
-        var digitCount = (TRadixKey.KeyBits + RadixBits - 1) / RadixBits;
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // Start American Flag Sort from the most significant digit
-        AmericanFlagSortRecursive(s, radixKey, 0, s.Length, digitCount - 1, digitCount);
+        // One scan of the keys decides how many digit levels can hold a difference.
+        // Without it the digit count comes from the key width alone (8 levels for a 32-bit key), and every
+        // level whose digit happens to be uniform still costs a full counting pass before the uniform-digit
+        // check in the recursion can fire: keys drawn from 0..999 spent 5n reads proving digits 7..3 were
+        // uniform before any element moved.
+        var minKey = ulong.MaxValue;
+        var maxKey = ulong.MinValue;
+        for (var i = 0; i < s.Length; i++)
+        {
+            var key = radixKey.GetKey(s.Read(i));
+            if (key < minKey) minKey = key;
+            if (key > maxKey) maxKey = key;
+        }
+
+        // Digits are extracted from (key - minKey), so the level count follows the width of the range rather
+        // than where the keys sit. Subtracting a constant is order-preserving and cannot underflow (every key
+        // is >= minKey), and unlike a (max XOR min) width it stays effective when the range straddles a high
+        // bit boundary — which is exactly what sign-flipped keys of signed values around zero do.
+        var range = maxKey - minKey;
+
+        // Every key is equal, so any permutation is sorted. This is the only path that is linear in n:
+        // the digit passes below are always Θ(digitCount × n).
+        if (range == 0) return;
+
+        var requiredBits = 64 - BitOperations.LeadingZeroCount(range);
+        var digitCount = (requiredBits + RadixBits - 1) / RadixBits;
+
+        // Start American Flag Sort from the most significant digit that can differ
+        AmericanFlagSortRecursive(s, radixKey, minKey, 0, s.Length, digitCount - 1, digitCount);
     }
 
+    /// <param name="minKey">
+    /// Smallest key in the whole input. Every digit is taken from (key - minKey) so that the digit count
+    /// derives from the width of the key range; see the normalization note in <see cref="SortCore"/>.
+    /// </param>
     /// <param name="digitCount">
-    /// Total number of digit positions in the key. Carried down the recursion only to report
+    /// Total number of digit positions the normalized keys need. Carried down the recursion to report
     /// <see cref="SortPhase.RadixPass"/>, whose contract is param1 = current digit, param2 = total digits;
     /// a consumer cannot derive the total from <paramref name="digit"/> alone.
     /// </param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void AmericanFlagSortRecursive<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, int start, int length, int digit, int digitCount)
+    private static void AmericanFlagSortRecursive<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, ulong minKey, int start, int length, int digit, int digitCount)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -285,7 +322,7 @@ public static class AmericanFlagSort
         for (var i = 0; i < length; i++)
         {
             var value = s.Read(start + i);
-            var key = radixKey.GetKey(value);
+            var key = radixKey.GetKey(value) - minKey;
             var digitValue = (int)((key >> shift) & 0xF);  // Extract 4-bit digit
             bucketCounts[digitValue + 1]++;
         }
@@ -305,7 +342,7 @@ public static class AmericanFlagSort
         if (nonEmptyBuckets <= 1)
         {
             if (digit > 0)
-                AmericanFlagSortRecursive(s, radixKey, start, length, digit - 1, digitCount);
+                AmericanFlagSortRecursive(s, radixKey, minKey, start, length, digit - 1, digitCount);
 
             // If digit == 0, there are no lower digits left to process, so we're done.
             return;
@@ -329,7 +366,7 @@ public static class AmericanFlagSort
 
         // Phase 3: In-place permutation
         // Rearrange elements into their correct buckets using cyclic permutation
-        PermuteInPlace(s, radixKey, start, shift, bucketCounts, bucketNext);
+        PermuteInPlace(s, radixKey, minKey, start, shift, bucketCounts, bucketNext);
 
         // Phase 4: Recursively sort each bucket for the next digit
         for (var i = 0; i < RadixSize; i++)
@@ -341,7 +378,7 @@ public static class AmericanFlagSort
 
             if (bucketLength > 1)
             {
-                AmericanFlagSortRecursive(s, radixKey, start + bucketStart, bucketLength, digit - 1, digitCount);
+                AmericanFlagSortRecursive(s, radixKey, minKey, start + bucketStart, bucketLength, digit - 1, digitCount);
             }
         }
     }
@@ -355,9 +392,11 @@ public static class AmericanFlagSort
     /// - <paramref name="bucketCounts"/>: Immutable boundary array where bucketCounts[i] = start of bucket i, bucketCounts[i+1] = end of bucket i
     /// - <paramref name="bucketNext"/>: Mutable current write position for each bucket (incremented as elements are placed)
     /// This separation ensures correct boundary detection and avoids array role confusion.
+    /// <paramref name="minKey"/> must be the same value the counting pass used, or an element would be routed
+    /// to a bucket the counts never reserved space for.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PermuteInPlace<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, int start, int shift, Span<int> bucketCounts, Span<int> bucketNext)
+    private static void PermuteInPlace<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, ulong minKey, int start, int shift, Span<int> bucketCounts, Span<int> bucketNext)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -375,7 +414,7 @@ public static class AmericanFlagSort
             {
                 var currentPos = start + bucketNext[bucket];
                 var currentValue = s.Read(currentPos);
-                var currentKey = radixKey.GetKey(currentValue);
+                var currentKey = radixKey.GetKey(currentValue) - minKey;
                 var currentDigit = (int)((currentKey >> shift) & 0xF);
 
                 // If element is already in correct bucket, advance

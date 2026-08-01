@@ -106,6 +106,112 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
         await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
     }
 
+    /// <summary>
+    /// 桁数はキー幅ではなくキー範囲の幅から決まる。範囲スキャンが無い実装は常にキー幅由来の
+    /// 8 桁（int）を報告するため、狭い範囲のケースがここで落ちる。
+    /// 期待値は ⌈bitlength(max-min) / 4⌉。
+    /// </summary>
+    [Test]
+    [Arguments("range 0..999 (10 bits)", 0, 1000, 3)]
+    [Arguments("range 0..15 (4 bits)", 0, 16, 1)]
+    [Arguments("range spanning zero -500..500 (10 bits)", -500, 501, 3)]
+    public async Task RangeScanDerivesDigitCountFromKeyRange(string label, int minInclusive, int maxExclusive, int expectedDigitCount)
+    {
+        var random = new Random(42);
+        var array = new int[2000];
+        for (var i = 0; i < array.Length; i++) array[i] = random.Next(minInclusive, maxExclusive);
+        // 範囲の両端を必ず含め、min/max スキャンの結果を確定させる
+        array[0] = minInclusive;
+        array[1] = maxExclusive - 1;
+
+        var totals = new List<int>();
+        AmericanFlagSort.Sort(array.AsSpan(), new VisualizationContext(onPhase: (phase, _, p2, _) =>
+        {
+            if (phase == SortPhase.RadixPass) totals.Add(p2);
+        }));
+
+        await Assert.That(IsSorted(array)).IsTrue().Because(label);
+        await Assert.That(totals).IsNotEmpty();
+        await Assert.That(totals.Distinct().ToArray()).IsEquivalentTo([expectedDigitCount]);
+    }
+
+    /// <summary>
+    /// 符号ビット反転キーが 0x8000_0000 をまたぐ入力では (max XOR min) がキー幅いっぱいを報告してしまう。
+    /// 減算正規化はまたぎに影響されないので、同じ幅の範囲なら 0 起点でも 0 をまたいでも桁数は一致する。
+    /// </summary>
+    [Test]
+    public async Task RangeScanIsUnaffectedByKeysStraddlingTheSignBoundary()
+    {
+        static int[] DigitCounts(int minInclusive, int maxExclusive)
+        {
+            var random = new Random(42);
+            var array = new int[2000];
+            for (var i = 0; i < array.Length; i++) array[i] = random.Next(minInclusive, maxExclusive);
+            array[0] = minInclusive;
+            array[1] = maxExclusive - 1;
+
+            var totals = new List<int>();
+            AmericanFlagSort.Sort(array.AsSpan(), new VisualizationContext(onPhase: (phase, _, p2, _) =>
+            {
+                if (phase == SortPhase.RadixPass) totals.Add(p2);
+            }));
+            return totals.Distinct().ToArray();
+        }
+
+        // どちらも max-min == 1000。前者は 0 起点、後者は符号境界をまたぐ
+        await Assert.That(DigitCounts(0, 1001)).IsEquivalentTo(DigitCounts(-500, 501));
+    }
+
+    /// <summary>
+    /// 全キーが等しい入力は範囲スキャンで打ち切られ、桁パスに一切入らない。
+    /// スキャン導入前は 8 回の数え上げパス（8n reads）を回していた。
+    /// </summary>
+    [Test]
+    public async Task AllEqualKeysSkipDigitPassesEntirely()
+    {
+        const int n = 1000;
+        var array = Enumerable.Repeat(42, n).ToArray();
+
+        var radixPasses = 0;
+        AmericanFlagSort.Sort(array.AsSpan(), new VisualizationContext(onPhase: (phase, _, _, _) =>
+        {
+            if (phase == SortPhase.RadixPass) radixPasses++;
+        }));
+        await Assert.That(radixPasses).IsEqualTo(0);
+
+        var stats = new StatisticsContext();
+        AmericanFlagSort.Sort(array.AsSpan(), stats);
+
+        // スキャンの n reads のみ。要素は 1 つも動かない
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)n);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
+        await Assert.That(array).IsEquivalentTo(Enumerable.Repeat(42, n).ToArray(), CollectionOrdering.Matching);
+    }
+
+    /// <summary>
+    /// 減算正規化は order-preserving でなければならない。キー空間の両端を含む入力で確認する。
+    /// </summary>
+    [Test]
+    public async Task KeySpaceExtremesSortCorrectly()
+    {
+        var random = new Random(42);
+        var array = new int[500];
+        for (var i = 0; i < array.Length; i++) array[i] = random.Next(int.MinValue, int.MaxValue);
+        array[0] = int.MinValue;
+        array[1] = int.MaxValue;
+        array[2] = 0;
+        array[3] = -1;
+
+        var expected = array.ToArray();
+        Array.Sort(expected);
+
+        AmericanFlagSort.Sort(array.AsSpan());
+
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
     [Test]
     public async Task LargeRangeTest()
     {
