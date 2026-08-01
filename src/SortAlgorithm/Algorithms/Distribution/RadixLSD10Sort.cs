@@ -34,7 +34,7 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Family      : Distribution (Non-comparison based)</description></item>
 /// <item><description>Stable      : Yes (insertion order preserved in buckets)</description></item>
-/// <item><description>In-place    : No (O(n + 10) auxiliary space for buckets)</description></item>
+/// <item><description>In-place    : No (O(n) auxiliary space for the temporary buffer, plus d × 11 stack counters)</description></item>
 /// <item><description>Best case   : Θ(n) - When all elements are identical (early termination on range == 0)</description></item>
 /// <item><description>Average case: Θ(d × n) - Linear in input size, independent of value distribution</description></item>
 /// <item><description>Worst case  : Θ(d × n) - Performance depends on digit count, not comparisons</description></item>
@@ -42,9 +42,19 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Swaps       : 0 (Elements moved via bucket redistribution, not swaps)</description></item>
 /// <item><description>Writes      : d × n (one write per distribute pass) + optional final copy</description></item>
 /// <item><description>Reads       : 2 × n preprocessing (min/max scan, then one pass building every digit's histogram) + d × n (one read per distribute pass) + optional final copy</description></item>
+/// <item><description>Memory      : O(n) for temporary buffer + d × 11 stack counters</description></item>
 /// </list>
 /// <para><strong>Note:</strong> Uses decimal arithmetic (division and modulo), which may be slower than binary-based radix sorts (e.g., RadixLSD4Sort with bit shifts).
 /// However, it is more intuitive for understanding and debugging.</para>
+/// <para><strong>Why the Distribute Pass Still Divides by a Run-Time Divisor:</strong></para>
+/// <para>Extracting the d-th digit as (key / 10^d) % 10 divides by a divisor only known at run time, which is the
+/// one arithmetic operation on this path the hardware is bad at. It can be removed: carry each element's running
+/// quotient beside it, and its digit becomes a remainder, with the next pass continuing from quotient / 10 —
+/// every division then by a literal 10, which the JIT lowers to a multiply and a shift. That was implemented and
+/// measured against this version, and it is about 2.2× slower at n = 8192 (3 to 10 decimal digits), though only
+/// ~10% slower at n = 1024 where every buffer still fits in L1. The quotient has to be permuted alongside its
+/// element, so the distribute loop gains a second scattered write, of 8 bytes, into a second array — twice the
+/// randomly-addressed write streams. The division is real but it is not what this sort is bound by.</para>
 /// <para><strong>Supported Key Mappings (via <see cref="IRadixKeySelector{T}"/>):</strong></para>
 /// <list type="bullet">
 /// <item><description><strong>Integers:</strong> byte, sbyte, short, ushort, int, uint, long, ulong, nint, nuint (up to 64-bit); Int128/UInt128/BigInteger are rejected (64-bit key ceiling, see below)</description></item>
@@ -263,20 +273,29 @@ public static class RadixLSD10Sort
             // reads each element exactly once (to distribute it) instead of twice. Counting per pass
             // would re-read the whole span d times to learn something the key already carries: the key
             // holds all d digits at once, and peeling them off with a running /= 10 divides by a
-            // constant, which costs no hardware division at all — unlike the / pow10[d] the distribute
-            // pass still needs. Layout: digit d owns [d * Stride, (d + 1) * Stride), counted at
-            // [digit + 1] so the prefix sum in each pass can run in place (see LSDSort).
+            // constant, which costs no hardware division at all.
+            //
+            // The distribute pass below still divides by pow10[d], whose divisor is only known at run
+            // time. Removing that too — by carrying each element's running quotient through the passes
+            // so its digit is just a remainder — was implemented and measured: it makes this sort about
+            // 2.2x slower at n = 8192 (and ~10% at n = 1024, where everything fits in L1). The quotient
+            // has to be permuted alongside its element, so the distribute loop gains a second scattered
+            // write, of 8 bytes, into a second array; that costs far more than the division it removes.
+            //
+            // Layout: digit d owns histograms[d * Stride .. (d + 1) * Stride), counted at [digit + 1]
+            // so the prefix sum in each pass can run in place (see LSDSort).
             var histograms = allHistograms[..(digitCount * HistogramStride)];
             histograms.Clear();
 
             for (var i = 0; i < s.Length; i++)
             {
                 var quotient = radixKey.GetKey(s.Read(i)) - minKey;
+                var block = 0;
                 for (var d = 0; d < digitCount; d++)
                 {
-                    var digit = (int)(quotient % RadixBase);
+                    histograms[block + (int)(quotient % RadixBase) + 1]++;
                     quotient /= RadixBase;
-                    histograms[d * HistogramStride + digit + 1]++;
+                    block += HistogramStride;
                 }
             }
 
@@ -324,8 +343,7 @@ public static class RadixLSD10Sort
             for (var i = 0; i < src.Length; i++)
             {
                 var value = src.Read(i);
-                var key = radixKey.GetKey(value);
-                var normalizedKey = key - minKey;
+                var normalizedKey = radixKey.GetKey(value) - minKey;
                 var digit = (int)((normalizedKey / divisor) % RadixBase);
                 var pos = bucketOffsets[digit]++;
                 dst.Write(pos, value);
