@@ -216,17 +216,17 @@ public static class BucketSort
         // Sort each bucket in place inside the temp buffer.
         // After distribution, bucketPositions[i] == start + count, so start = bucketPositions[i] - bucketCounts[i].
         //
-        // Each bucket is sliced with BUFFER_TEMP rather than an identifier of its own. A bucket is a
-        // range of the temp buffer, not a separate array: the slice's Offset already places it, so
-        // nothing is ambiguous, while a private identifier would claim the elements moved to another
-        // buffer and then have them reappear in the CopyTo below, which reports BUFFER_TEMP.
+        // A bucket is sorted as a range of the temp buffer, not as a buffer of its own. A private
+        // identifier would claim the elements moved elsewhere and then have them reappear in the CopyTo
+        // below, which reports BUFFER_TEMP; the range is already unambiguous without one. Passing the
+        // range instead of a slice reports the same indices and avoids building a SortSpan per bucket.
         for (var i = 0; i < bucketCount; i++)
         {
             var count = bucketCounts[i];
             if (count > 1)
             {
                 var start = bucketPositions[i] - count;
-                InsertionSort.SortCore(temp.Slice(start, count, BUFFER_TEMP), 0, count);
+                InsertionSort.SortCore(temp, start, start + count);
             }
         }
 
@@ -442,17 +442,16 @@ public static class BucketSortInteger
         }
 
         // Sort each bucket in place inside the temp buffer.
-        // The buckets are adjacent ranges of one contiguous array, so each is sliced with BUFFER_TEMP
-        // rather than a private buffer id: the slice's Offset already places it unambiguously, and the
-        // final CopyTo below reports the same buffer, so a consumer never sees elements appear in a
-        // buffer they were not written to.
+        // A bucket is a range of the temp buffer, not a buffer of its own, so it is sorted as a range:
+        // the indices reported are the same either way, and the final CopyTo below reports BUFFER_TEMP,
+        // so a consumer never sees elements appear in a buffer they were not written to.
         for (var i = 0; i < bucketCount; i++)
         {
             var count = bucketCounts[i];
             if (count > 1)
             {
                 var start = bucketStarts[i];
-                InsertionSort.SortCore(tempSpan.Slice(start, count, BUFFER_TEMP), 0, count);
+                InsertionSort.SortCore(tempSpan, start, start + count);
             }
         }
 
