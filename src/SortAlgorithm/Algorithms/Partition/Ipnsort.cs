@@ -1096,7 +1096,9 @@ public static class Ipnsort
             // float/double: the NaN pre-pass in Sort guarantees no NaN reaches the network. Math.Min/Max
             // put -0.0 before +0.0, which the comparer neither requires nor forbids — it reports the two
             // as equal — so this is one valid arrangement of a tie. Ipnsort is unstable, so no tie order
-            // is promised.
+            // is promised. The reference ipnsort has nothing to say here: it never inspects a value, only
+            // the caller's is_less, and its one documented floating-point example passes partial_cmp,
+            // under which -0.0 and +0.0 are equal. This whole specialization is ours.
             if (typeof(T) == typeof(float)) { MinMax(ref Unsafe.As<T, float>(ref a), ref Unsafe.As<T, float>(ref b)); return; }
             if (typeof(T) == typeof(double)) { MinMax(ref Unsafe.As<T, double>(ref a), ref Unsafe.As<T, double>(ref b)); return; }
         }

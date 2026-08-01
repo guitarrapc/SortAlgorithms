@@ -127,6 +127,25 @@ namespace SortAlgorithm.Algorithms;
 /// <para><c>-0.0</c> and <c>+0.0</c> are a genuine tie: equal under IEEE 754, under
 /// <see cref="IComparable{T}"/>, and now by key as well, so they always share a bin. SpreadSort is
 /// unstable, so their relative order is unspecified, exactly as in <c>Array.Sort</c>.</para>
+/// <para><strong>Deliberate deviation from Boost on -0.0 (documented, not incidental):</strong></para>
+/// <para>Boost's documentation states that "-0.0 vs. 0.0 and NaN are given definitive ordered positions by
+/// the radix-based portion of this algorithm, where comparison-based sorting does not guarantee their
+/// relative position" (<c>doc/spreadsort.qbk</c>, Float Sort). This implementation keeps half of that and
+/// drops the other half: NaN still gets a definitive position (key 0 plus the front partition above), while
+/// <c>-0.0</c> and <c>+0.0</c> are tied and their order is left unspecified. Measured, at sizes above
+/// <c>min_sort_size</c> where the distribution path actually runs: with a <c>totalOrder</c> key every
+/// <c>-0.0</c> came out ahead of every <c>+0.0</c> at n = 1024/4096/65536; with the tied key the two are
+/// interleaved.</para>
+/// <para>Three reasons the tie wins here. First, this sort does not implement Boost's <c>float_sort</c> —
+/// it runs Boost's <c>integer_sort</c> on transformed keys and borrows only <c>float_sort</c>'s tuning
+/// constants (see above), and the definitive position is a property of the machinery it does not implement:
+/// the raw bit cast and the reverse walk over negative bins. Second, Boost frames it as a caveat rather
+/// than a guarantee — the same paragraph notes that <c>std::sort</c> disagrees, and Boost's own tests avoid
+/// creating <c>-0.0</c> so their results match <c>std::sort</c>. Third, the key is shared with the stable
+/// radix sorts in this namespace, which cannot separate a tie without reordering elements their declared
+/// order calls equal; a selector that split <c>-0.0</c> from <c>+0.0</c> for this sort alone would make it
+/// the only sort in the library that distinguishes them. A caller who needs <c>totalOrder</c> can pass a
+/// custom <see cref="IRadixKeySelector{T}"/> to the <c>SortBy</c> overloads.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Boost.Sort SpreadSort: https://www.boost.org/doc/libs/release/libs/sort/doc/html/sort/sort_hpp/spreadsort.html</para>
 /// <para>Paper: "Spreadsort: A Cache-Friendly Sorting Algorithm" by Steven Ross (2002) https://github.com/boostorg/sort/blob/develop/doc/papers/original_spreadsort06_2002.pdf</para>
