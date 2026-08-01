@@ -138,7 +138,11 @@ public static class SplaySort
 
         // Empty tree: create root directly
         if (rootIndex == NULL_INDEX)
-            return CreateNode(arena, value, ref nodeCount, s.Context);
+        {
+            var newRoot = CreateNode(arena, value, ref nodeCount, s.Context);
+            s.Context.OnLink(NULL_INDEX, newRoot, BUFFER_TREE, LinkSide.None);
+            return newRoot;
+        }
 
         // Standard BST traversal to find the insertion point
         var current = rootIndex;
@@ -154,6 +158,7 @@ public static class SplaySort
                     var newIndex = CreateNode(arena, value, ref nodeCount, s.Context);
                     arena[current].Left = newIndex;
                     s.Context.OnIndexWrite(current, BUFFER_TREE); // write Left pointer
+                    s.Context.OnLink(current, newIndex, BUFFER_TREE, LinkSide.Left);
                     arena[newIndex].Parent = current;
                     s.Context.OnIndexWrite(newIndex, BUFFER_TREE); // write Parent pointer
                     current = newIndex;
@@ -173,6 +178,7 @@ public static class SplaySort
                     var newIndex = CreateNode(arena, value, ref nodeCount, s.Context);
                     arena[current].Right = newIndex;
                     s.Context.OnIndexWrite(current, BUFFER_TREE); // write Right pointer
+                    s.Context.OnLink(current, newIndex, BUFFER_TREE, LinkSide.Right);
                     arena[newIndex].Parent = current;
                     s.Context.OnIndexWrite(newIndex, BUFFER_TREE); // write Parent pointer
                     current = newIndex;
@@ -264,6 +270,7 @@ public static class SplaySort
         context.OnIndexRead(y, BUFFER_TREE); // read Left
         arena[x].Right = arena[y].Left;
         context.OnIndexWrite(x, BUFFER_TREE); // write Right
+        context.OnLink(x, arena[x].Right, BUFFER_TREE, LinkSide.Right);
         if (arena[y].Left != NULL_INDEX)
         {
             arena[arena[y].Left].Parent = x;
@@ -281,16 +288,24 @@ public static class SplaySort
             {
                 arena[arena[x].Parent].Left = y;
                 context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
+                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Left);
             }
             else
             {
                 arena[arena[x].Parent].Right = y;
                 context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
+                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Right);
             }
+        }
+        else
+        {
+            // x was the root, so y takes its place
+            context.OnLink(NULL_INDEX, y, BUFFER_TREE, LinkSide.None);
         }
 
         arena[y].Left = x;
         context.OnIndexWrite(y, BUFFER_TREE);
+        context.OnLink(y, x, BUFFER_TREE, LinkSide.Left);
         arena[x].Parent = y;
         context.OnIndexWrite(x, BUFFER_TREE);
     }
@@ -310,6 +325,7 @@ public static class SplaySort
         context.OnIndexRead(y, BUFFER_TREE); // read Right
         arena[x].Left = arena[y].Right;
         context.OnIndexWrite(x, BUFFER_TREE); // write Left
+        context.OnLink(x, arena[x].Left, BUFFER_TREE, LinkSide.Left);
         if (arena[y].Right != NULL_INDEX)
         {
             arena[arena[y].Right].Parent = x;
@@ -327,16 +343,24 @@ public static class SplaySort
             {
                 arena[arena[x].Parent].Right = y;
                 context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
+                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Right);
             }
             else
             {
                 arena[arena[x].Parent].Left = y;
                 context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
+                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Left);
             }
+        }
+        else
+        {
+            // x was the root, so y takes its place
+            context.OnLink(NULL_INDEX, y, BUFFER_TREE, LinkSide.None);
         }
 
         arena[y].Right = x;
         context.OnIndexWrite(y, BUFFER_TREE);
+        context.OnLink(y, x, BUFFER_TREE, LinkSide.Right);
         arena[x].Parent = y;
         context.OnIndexWrite(x, BUFFER_TREE);
     }

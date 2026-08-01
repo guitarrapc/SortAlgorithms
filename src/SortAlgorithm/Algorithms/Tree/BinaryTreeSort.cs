@@ -128,7 +128,11 @@ public static class BinaryTreeSort
     {
         // If the tree is empty, create a new root and return.
         if (rootIndex == NULL_INDEX)
-            return CreateNode(arena, value, ref nodeCount, context);
+        {
+            var newRoot = CreateNode(arena, value, ref nodeCount, context);
+            context.OnLink(NULL_INDEX, newRoot, BUFFER_TREE, LinkSide.None);
+            return newRoot;
+        }
 
         // Iterate left & right node and insert.
         // If there's an existing tree, use 'current' to traverse down the children.
@@ -144,8 +148,10 @@ public static class BinaryTreeSort
                 if (arena[current].Left == NULL_INDEX)
                 {
                     // Link new node as left child (structural write to current node)
-                    arena[current].Left = CreateNode(arena, value, ref nodeCount, context);
+                    var newIndex = CreateNode(arena, value, ref nodeCount, context);
+                    arena[current].Left = newIndex;
                     context.OnIndexWrite(current, BUFFER_TREE);
+                    context.OnLink(current, newIndex, BUFFER_TREE, LinkSide.Left);
                     break;
                 }
                 current = arena[current].Left;
@@ -157,8 +163,10 @@ public static class BinaryTreeSort
                 if (arena[current].Right == NULL_INDEX)
                 {
                     // Link new node as right child (structural write to current node)
-                    arena[current].Right = CreateNode(arena, value, ref nodeCount, context);
+                    var newIndex = CreateNode(arena, value, ref nodeCount, context);
+                    arena[current].Right = newIndex;
                     context.OnIndexWrite(current, BUFFER_TREE);
+                    context.OnLink(current, newIndex, BUFFER_TREE, LinkSide.Right);
                     break;
                 }
                 current = arena[current].Right;

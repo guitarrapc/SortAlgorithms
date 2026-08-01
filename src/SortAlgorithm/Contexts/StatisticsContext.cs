@@ -25,6 +25,15 @@ public sealed class StatisticsContext : ISortContext
     public ulong IndexWriteCount => _indexWriteCount;
     private ulong _indexWriteCount;
 
+    /// <summary>
+    /// Link writes are already counted through <see cref="OnIndexWrite(int, int)"/> at the same call site;
+    /// counting them again here would double-count every tree pointer write and silently change the
+    /// published write counts of the tree sorts.
+    /// </summary>
+    public void OnLink(int parentIndex, int childIndex, int bufferId, LinkSide side)
+    {
+    }
+
     public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ)
     {
         // Always count comparisons (even with negative buffer IDs)

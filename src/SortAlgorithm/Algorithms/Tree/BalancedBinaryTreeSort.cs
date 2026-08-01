@@ -170,7 +170,9 @@ public static class BalancedBinaryTreeSort
         // If tree is empty, create root
         if (rootIndex == NULL_INDEX)
         {
-            return CreateNode(arena, insertValue, ref nodeCount, s.Context);
+            var newRoot = CreateNode(arena, insertValue, ref nodeCount, s.Context);
+            s.Context.OnLink(NULL_INDEX, newRoot, BUFFER_TREE, LinkSide.None);
+            return newRoot;
         }
 
         // Phase 1: Navigate to insertion point and track path
@@ -194,6 +196,7 @@ public static class BalancedBinaryTreeSort
                     var newIndex = CreateNode(arena, insertValue, ref nodeCount, s.Context);
                     arena[currentIndex].Left = newIndex;
                     s.Context.OnIndexWrite(currentIndex, BUFFER_TREE);
+                    s.Context.OnLink(currentIndex, newIndex, BUFFER_TREE, LinkSide.Left);
                     currentIndex = newIndex;
                     break;
                 }
@@ -210,6 +213,7 @@ public static class BalancedBinaryTreeSort
                     var newIndex = CreateNode(arena, insertValue, ref nodeCount, s.Context);
                     arena[currentIndex].Right = newIndex;
                     s.Context.OnIndexWrite(currentIndex, BUFFER_TREE);
+                    s.Context.OnLink(currentIndex, newIndex, BUFFER_TREE, LinkSide.Right);
                     currentIndex = newIndex;
                     break;
                 }
@@ -233,11 +237,13 @@ public static class BalancedBinaryTreeSort
             {
                 arena[nodeIndex].Left = subtreeRoot;
                 s.Context.OnIndexWrite(nodeIndex, BUFFER_TREE);
+                s.Context.OnLink(nodeIndex, subtreeRoot, BUFFER_TREE, LinkSide.Left);
             }
             else if (arena[nodeIndex].Right == subtreeFrom)
             {
                 arena[nodeIndex].Right = subtreeRoot;
                 s.Context.OnIndexWrite(nodeIndex, BUFFER_TREE);
+                s.Context.OnLink(nodeIndex, subtreeRoot, BUFFER_TREE, LinkSide.Right);
             }
 
             // Update height of current node
@@ -251,7 +257,12 @@ public static class BalancedBinaryTreeSort
         }
 
         // After processing all nodes up to the root, subtreeRoot is the new tree root
-        // (which may have changed if rotations occurred at the top level)
+        // (which may have changed if rotations occurred at the top level).
+        // This tree keeps no parent pointers, so a root change is otherwise invisible to an observer.
+        if (subtreeRoot != rootIndex)
+        {
+            s.Context.OnLink(NULL_INDEX, subtreeRoot, BUFFER_TREE, LinkSide.None);
+        }
         return subtreeRoot;
     }
 
@@ -431,6 +442,7 @@ public static class BalancedBinaryTreeSort
             {
                 arena[nodeIndex].Left = RotateLeft(arena, leftIndex, context);
                 context.OnIndexWrite(nodeIndex, BUFFER_TREE); // write Left pointer
+                context.OnLink(nodeIndex, arena[nodeIndex].Left, BUFFER_TREE, LinkSide.Left);
             }
             return RotateRight(arena, nodeIndex, context);
         }
@@ -444,6 +456,7 @@ public static class BalancedBinaryTreeSort
             {
                 arena[nodeIndex].Right = RotateRight(arena, rightIndex, context);
                 context.OnIndexWrite(nodeIndex, BUFFER_TREE); // write Right pointer
+                context.OnLink(nodeIndex, arena[nodeIndex].Right, BUFFER_TREE, LinkSide.Right);
             }
             return RotateLeft(arena, nodeIndex, context);
         }
@@ -468,8 +481,10 @@ public static class BalancedBinaryTreeSort
         // Perform the rotation
         arena[xIndex].Right = yIndex;
         context.OnIndexWrite(xIndex, BUFFER_TREE);
+        context.OnLink(xIndex, yIndex, BUFFER_TREE, LinkSide.Right);
         arena[yIndex].Left = t2Index;
         context.OnIndexWrite(yIndex, BUFFER_TREE);
+        context.OnLink(yIndex, t2Index, BUFFER_TREE, LinkSide.Left);
 
         // Recompute heights
         UpdateHeight(arena, yIndex, context);
@@ -495,8 +510,10 @@ public static class BalancedBinaryTreeSort
         // Perform the rotation
         arena[yIndex].Left = xIndex;
         context.OnIndexWrite(yIndex, BUFFER_TREE);
+        context.OnLink(yIndex, xIndex, BUFFER_TREE, LinkSide.Left);
         arena[xIndex].Right = t2Index;
         context.OnIndexWrite(xIndex, BUFFER_TREE);
+        context.OnLink(xIndex, t2Index, BUFFER_TREE, LinkSide.Right);
 
         // Recompute heights
         UpdateHeight(arena, xIndex, context);

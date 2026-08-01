@@ -93,6 +93,42 @@ public interface ISortContext
     void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0);
 
     /// <summary>
+    /// Handles a link write in a pointer-based tree: the <paramref name="side"/> child slot of the node at
+    /// <paramref name="parentIndex"/> now points at <paramref name="childIndex"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the payload-carrying counterpart of <see cref="OnIndexWrite(int, int)"/> for reference writes,
+    /// mirroring how <see cref="OnIndexWrite{T}(int, int, T)"/> carries the value of an element write.
+    /// The write itself is still reported through <see cref="OnIndexWrite(int, int)"/>, so statistics are
+    /// unaffected by this event; implementations that only count operations must treat it as a no-op.
+    /// </para>
+    /// <para>
+    /// Tree-based sorts are the only algorithms whose structure is not recoverable from index operations
+    /// alone: an observer sees that a node was written, but not which edge was created, so it cannot
+    /// reconstruct the tree without reimplementing the algorithm's insertion and rebalancing rules.
+    /// Emitting every child-pointer write makes the structure self-describing — a rotation is simply the
+    /// sequence of link writes it performs, and an observer never needs to know what a rotation is.
+    /// </para>
+    /// <para>
+    /// Parent pointers, heights, colors and priorities are deliberately not reported here: they are
+    /// derivable from the link sequence or irrelevant to the shape, and reporting them would put
+    /// algorithm-specific vocabulary into the observation contract.
+    /// </para>
+    /// <para>
+    /// The default implementation is a no-op so that existing implementations keep compiling. Value-type
+    /// implementations should still override it explicitly: a constrained call that falls through to the
+    /// default interface implementation boxes the receiver, which would cost an allocation per link on
+    /// the otherwise zero-cost <see cref="NullContext"/> path.
+    /// </para>
+    /// </remarks>
+    /// <param name="parentIndex">Index of the parent node, or -1 when <paramref name="childIndex"/> became the root</param>
+    /// <param name="childIndex">Index of the node being linked, or -1 when the slot is being cleared</param>
+    /// <param name="bufferId">Buffer identifier of the node arena (0 = main array, 1+ = auxiliary buffers)</param>
+    /// <param name="side">Which child slot was written; <see cref="LinkSide.None"/> for a root link</param>
+    void OnLink(int parentIndex, int childIndex, int bufferId, LinkSide side) { }
+
+    /// <summary>
     /// Assigns a semantic role to a specific array element (e.g., Pivot, CurrentMin).
     /// The role persists across steps until explicitly cleared with <see cref="RoleType.None"/>.
     /// Implementations that do not support tutorial visualization may implement this as a no-op.

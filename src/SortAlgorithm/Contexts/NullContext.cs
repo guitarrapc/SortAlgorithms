@@ -34,6 +34,12 @@ public readonly struct NullContext : ISortContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values) { }
 
+    // Implemented explicitly rather than inherited from the interface default: a constrained call that
+    // falls through to a default interface implementation boxes the struct receiver, which would put one
+    // allocation per link on the zero-cost path.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnLink(int parentIndex, int childIndex, int bufferId, LinkSide side) { }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0) { }
 

@@ -10,6 +10,7 @@ An observable algorithm reports the operations it performs through the supplied 
 
 - comparisons, including both operand locations and their buffer identities;
 - swaps, reads, writes, and range copies;
+- the edges of a pointer-based tree, when the algorithm builds one;
 - structured algorithm phases and semantic element roles when the algorithm provides them.
 
 Buffer `0` identifies the caller's main span. Positive identifiers distinguish auxiliary buffers within an operation. `-1` may identify external storage where the context contract permits it. Identifiers are semantic labels for an observation stream, not globally unique handles.
@@ -18,7 +19,13 @@ Values and indices reported to a context describe the algorithm's logical operat
 
 Callbacks that carry element values are generic in the element type. Writes come in two forms — one that carries the written value and one that does not, for writes whose value is not observable such as a tree pointer — and range copies likewise, with the values delivered as a `ReadOnlySpan<T>` over the source range. A context that only counts ignores the value and therefore never touches it; a context that needs the value for a known element type tests `typeof(T)` and reinterprets it. The span is valid only for the duration of the call, so a context that retains values must copy them out.
 
+A tree-building algorithm additionally reports every write to a child pointer as a link: which parent, which child, and which of the two child slots. A parent identifier of `-1` means the child became the root; a child identifier of `-1` means the slot was emptied. The write itself is still reported as a valueless write at the same call site, so a context that only counts operations must treat links as free — counting both would double-count every pointer write.
+
+Links are reported because a tree's shape is the one thing an observer cannot recover from index operations: it sees that a node was written, not which edge was created. Reporting the edges makes the structure self-describing. A rotation is nothing but the links it performs, so an observer never needs to know what a rotation is, nor how the algorithm chooses to rebalance, nor how it generates priorities. Parent pointers, heights, colors and priorities are deliberately not reported: they are either derivable from the link sequence or irrelevant to the shape, and reporting them would move algorithm-specific vocabulary into the observation contract.
+
 `NullContext` is the no-observation choice. Other contexts may aggregate counts, combine observers, or translate callbacks into visualization state.
+
+A callback added to the contract carries a no-op default implementation so that existing implementations keep compiling, but value-type contexts override it explicitly: a constrained call that falls through to a default interface implementation boxes the receiver, which would put an allocation on the otherwise zero-cost `NullContext` path.
 
 ## Phase Levels
 
@@ -45,6 +52,8 @@ Auxiliary-buffer identity is necessary for faithful merge and distribution visua
 An identifier names storage, not a role within it. `BucketSort` gave every bucket one, but a bucket is a range of the temp buffer rather than a separate array, so the same elements were announced under one identity while being distributed and another while being sorted, and the copy back to the input read from a buffer nothing had written. Ranges of one buffer are already unambiguous through their offsets, so the identity added nothing a consumer could use and cost it the ability to follow the elements; the consumer that exists tracked the temp buffer by identifier and therefore saw no per-bucket sorting at all. Splitting a buffer into per-role identifiers is a presentation choice, and presentation belongs to the consumer. The test that pins this compares the set of auxiliary buffers written against the set the final copy reads from: elements must not appear in a buffer nothing reads, nor leave one nothing wrote.
 
 An auxiliary buffer whose element type is an algorithm-private wrapper is reported but not consumable: the value reaching a context is opaque to anything outside the declaring type, so the buffer cannot be rendered even though every operation on it is announced. Slot metadata such as occupancy, tombstones, or bucket tags belongs beside the buffer, not inside its element type. Keeping the buffer's element type equal to the sorted element type also removes the sentinel writes such a wrapper needs, which are otherwise indistinguishable from real element movement in an observation stream.
+
+Omitting an event because "the consumer can work it out" pushes a copy of the algorithm into the consumer. Tree sorts reported only that a node had been written, never which edge, so the only consumer that draws trees reimplemented the insertion descent, the AVL rebalancing, the splay case analysis and the treap priority generator — including a copy of the seed constant — just to know the shape. Nothing detects that kind of drift: both sides sort correctly, and the drawing stays plausible while showing a tree the algorithm never built. Reporting the edges deleted the copy outright, and the consumer stopped needing to know which kind of tree it was looking at. The cost on the algorithm side is not instrumentation but the opposite: the call sites already announced these writes and were discarding what they wrote.
 
 A single "current phase" slot silently destroys the phase announcements of every hybrid algorithm. The caller announces the handoff, the delegated core immediately announces its own progress, and with one slot the handoff is overwritten before a single observable operation carries it — `SymMergeSort`'s initial-sort announcement was visible for zero operations, and the same held for the insertion-sort and heap-sort fallbacks of the introsort family. Sorting correctness never depended on this, so no result-based test could detect it. Separating scope from detail preserves both without requiring any call site to know whether it is nested.
 

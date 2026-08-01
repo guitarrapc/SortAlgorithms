@@ -74,6 +74,14 @@ public sealed class CompositeContext : ISortContext
         }
     }
 
+    public void OnLink(int parentIndex, int childIndex, int bufferId, LinkSide side)
+    {
+        foreach (var context in _contexts)
+        {
+            context.OnLink(parentIndex, childIndex, bufferId, side);
+        }
+    }
+
     public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0)
     {
         foreach (var context in _contexts)

@@ -16,6 +16,7 @@ public sealed class VisualizationContext : ISortContext
     private readonly Action<int, int>? _onIndexRead;
     private readonly Action<int, int, object?>? _onIndexWrite;
     private readonly Action<int, int, int, int, int, object?[]?>? _onRangeCopy;
+    private readonly Action<int, int, int, LinkSide>? _onLink;
     private readonly Action<SortPhase, int, int, int>? _onPhase;
     private readonly Action<int, int, RoleType>? _onRole;
 
@@ -26,7 +27,8 @@ public sealed class VisualizationContext : ISortContext
         Action<int, int, object?>? onIndexWrite = null,
         Action<int, int, int, int, int, object?[]?>? onRangeCopy = null,
         Action<SortPhase, int, int, int>? onPhase = null,
-        Action<int, int, RoleType>? onRole = null)
+        Action<int, int, RoleType>? onRole = null,
+        Action<int, int, int, LinkSide>? onLink = null)
     {
         _onCompare = onCompare;
         _onSwap = onSwap;
@@ -35,6 +37,7 @@ public sealed class VisualizationContext : ISortContext
         _onRangeCopy = onRangeCopy;
         _onPhase = onPhase;
         _onRole = onRole;
+        _onLink = onLink;
     }
 
     public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) => _onCompare?.Invoke(i, j, result, bufferIdI, bufferIdJ);
@@ -60,6 +63,7 @@ public sealed class VisualizationContext : ISortContext
         for (var i = 0; i < values.Length; i++) boxed[i] = values[i];
         _onRangeCopy(sourceIndex, destinationIndex, length, sourceBufferId, destinationBufferId, boxed);
     }
+    public void OnLink(int parentIndex, int childIndex, int bufferId, LinkSide side) => _onLink?.Invoke(parentIndex, childIndex, bufferId, side);
     public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0) => _onPhase?.Invoke(phase, param1, param2, param3);
     public void OnRole(int index, int bufferId, RoleType role) => _onRole?.Invoke(index, bufferId, role);
 }
