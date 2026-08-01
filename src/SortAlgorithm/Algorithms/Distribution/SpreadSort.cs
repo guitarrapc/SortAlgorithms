@@ -99,7 +99,7 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description><strong>Integers:</strong> byte, sbyte, short, ushort, int, uint, long, ulong (fixed-width up to 64-bit);
 /// nint/nuint are rejected (platform-dependent bit width makes distribution behavior inconsistent across environments); Int128/UInt128/BigInteger are rejected (64-bit key ceiling)</description></item>
-/// <item><description><strong>Floating point:</strong> Half, float, double via IEEE 754 total-order key transform
+/// <item><description><strong>Floating point:</strong> Half, float, double via IEEE 754 bit transform
 /// (all NaN values sort first, matching <see cref="IComparable{T}"/> semantics; <c>-0.0</c> and <c>+0.0</c>
 /// are a tie and their relative order is unspecified, as in <c>Array.Sort</c>)</description></item>
 /// <item><description><strong>Key selector:</strong> arbitrary element types via an extracted <c>int</c> key; NOTE: SpreadSort is unstable, so elements with equal keys may be reordered</description></item>
@@ -108,24 +108,25 @@ namespace SortAlgorithm.Algorithms;
 /// <para>Boost's <c>is_sorted_or_find_extremes</c> locates the min and max with <c>operator&lt;</c>,
 /// which is safe there because <c>operator&lt;</c> and <c>operator&gt;&gt;</c> are assumed to agree.
 /// Here the bin index is <c>(key &gt;&gt; log_divisor) - div_min</c>, so it only lands inside
-/// <c>[0, binCount)</c> when <c>div_min</c>/<c>div_max</c> are the extremes <em>by key</em>. Floating
-/// point breaks the assumption in two ways: <see cref="SortSpan{T, TComparer, TContext}"/>
-/// specializes <see cref="ComparableComparer{T}"/> to raw IEEE 754 operators, under which NaN is
-/// unordered and so is never selected as the minimum even though its key is 0; and even the
-/// unspecialized <c>CompareTo</c> path reports <c>-0.0</c> and <c>+0.0</c> as equal
-/// (<c>-0.0 == 0.0</c> is true) while <c>-0.0</c> carries the strictly smaller key. Either way the
-/// comparison-derived minimum fails to bound the keys.</para>
-/// <para>Only the extremes need this treatment. The already-sorted check keeps using the comparer,
-/// which is both faster and still sound: after the NaN pre-pass the two orders differ only on the
-/// <c>-0.0</c>/<c>+0.0</c> tie, and either arrangement of a tie is a valid sorted result.</para>
+/// <c>[0, binCount)</c> when <c>div_min</c>/<c>div_max</c> are the extremes <em>by key</em>. NaN breaks
+/// the assumption: <see cref="SortSpan{T, TComparer, TContext}"/> specializes
+/// <see cref="ComparableComparer{T}"/> to raw IEEE 754 operators, under which NaN is unordered and so is
+/// never selected as the minimum even though its key is 0, and the comparison-derived minimum then fails
+/// to bound the keys.</para>
+/// <para><c>-0.0</c> used to be a second reason — it is equal to <c>+0.0</c> under both comparison paths
+/// while the raw IEEE 754 <c>totalOrder</c> transform gave it a strictly smaller key. That divergence was
+/// removed where it started, in <see cref="DoubleRadixKey"/> and its siblings, which now map <c>-0.0</c>
+/// and <c>+0.0</c> to the same key. So on this path the comparer and the key now agree on everything
+/// except NaN.</para>
+/// <para>Only the extremes need this treatment. The already-sorted check keeps using the comparer, which
+/// is both faster and still sound: after the NaN pre-pass the comparer order and the key order coincide.</para>
 /// <para>That leaves the per-bin PDQSort fallback, which does use <c>TComparer</c>. NaN would still
 /// be unordered there (its key is 0, so it shares the lowest bin with the most negative values), so
 /// the floating-point overloads partition NaN to the front first — the same pre-pass PDQSort and
 /// IntroSort use — and spread only the ordered tail.</para>
-/// <para><c>-0.0</c> and <c>+0.0</c> are a genuine tie: equal under IEEE 754 <em>and</em> under
-/// <see cref="IComparable{T}"/>. Since they also carry adjacent keys they normally land in the same
-/// bin, so their relative order is left unspecified, exactly as in <c>Array.Sort</c>. SpreadSort is
-/// unstable, so no tie order is promised anywhere.</para>
+/// <para><c>-0.0</c> and <c>+0.0</c> are a genuine tie: equal under IEEE 754, under
+/// <see cref="IComparable{T}"/>, and now by key as well, so they always share a bin. SpreadSort is
+/// unstable, so their relative order is unspecified, exactly as in <c>Array.Sort</c>.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Boost.Sort SpreadSort: https://www.boost.org/doc/libs/release/libs/sort/doc/html/sort/sort_hpp/spreadsort.html</para>
 /// <para>Paper: "Spreadsort: A Cache-Friendly Sorting Algorithm" by Steven Ross (2002) https://github.com/boostorg/sort/blob/develop/doc/papers/original_spreadsort06_2002.pdf</para>
@@ -228,7 +229,7 @@ public static class SpreadSort
         => SortCore(span, radixKey, new RadixKeyComparer<T, TRadixKey>(radixKey), context);
 
     /// <summary>
-    /// Sorts <see cref="Half"/> values via the IEEE 754 total-order key transform.
+    /// Sorts <see cref="Half"/> values via the IEEE 754 bit transform.
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<Half> span)
@@ -239,7 +240,7 @@ public static class SpreadSort
         => SortFloatCore(span, default(HalfRadixKey), context);
 
     /// <summary>
-    /// Sorts <see cref="float"/> values via the IEEE 754 total-order key transform.
+    /// Sorts <see cref="float"/> values via the IEEE 754 bit transform.
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<float> span)
@@ -250,7 +251,7 @@ public static class SpreadSort
         => SortFloatCore(span, default(SingleRadixKey), context);
 
     /// <summary>
-    /// Sorts <see cref="double"/> values via the IEEE 754 total-order key transform.
+    /// Sorts <see cref="double"/> values via the IEEE 754 bit transform.
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<double> span)
@@ -393,7 +394,8 @@ public static class SpreadSort
             return; // Already sorted. A comparer-sorted verdict also rules out NaN: NaN is unordered
                     // under the comparisons SortSpan performs, so any NaN breaks the ascending walk.
 
-        // NaN maps to key 0 and no non-NaN floating-point value does (-0.0 maps to 0x7FF...F, not 0),
+        // NaN maps to key 0 and no non-NaN floating-point value does (the smallest non-NaN key is -∞'s;
+        // -0.0 shares +0.0's key, which is mid-range),
         // so the extremes pass has already detected NaN — no dedicated scan needed. NaN cannot be
         // ordered by TComparer, so partition it to the front and re-derive the extremes over what is
         // left. Folded away for non-floating-point T, where key 0 is an ordinary value and
@@ -560,9 +562,8 @@ public static class SpreadSort
     /// <see cref="SortSpan{T, TComparer, TContext}"/>'s primitive specialization and, more
     /// importantly, keeps the loop free of a loop-carried dependency: both operands are loaded
     /// independently each iteration, so it pipelines. It is safe to decide "already sorted" this way
-    /// because after the NaN pre-pass the comparer and the key disagree only on the
-    /// <c>-0.0</c>/<c>+0.0</c> tie, where both orders are non-decreasing and the tie order is
-    /// unspecified anyway.</para>
+    /// because after the NaN pre-pass the comparer order and the key order coincide: NaN was the last
+    /// place they differed, once the key selectors stopped separating <c>-0.0</c> from <c>+0.0</c>.</para>
     /// <para>The extremes are a different matter — they must be the extremes <em>by key</em> (see the
     /// class remarks), and the comparison walk cannot supply them, so an unsorted range is scanned
     /// once more for min/max by key. This costs a pass only on input that is actually going to be

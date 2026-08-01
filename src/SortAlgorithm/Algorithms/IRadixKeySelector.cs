@@ -17,7 +17,11 @@ namespace SortAlgorithm.Algorithms;
 /// Elements with equal keys are ties; stable radix implementations keep their input order for ties.</description></item>
 /// <item><description><strong>Monotonicity:</strong> a selector that mirrors an existing element order (e.g. the built-in
 /// integer and IEEE 754 selectors) must be strictly monotonic with respect to it:
-/// if x orders strictly before y, then GetKey(x) &lt; GetKey(y), and equal elements map to equal keys.</description></item>
+/// if x orders strictly before y, then GetKey(x) &lt; GetKey(y), and equal elements map to equal keys.
+/// The second half is the binding one for floating point: -0 and +0 are equal elements, so the built-in
+/// IEEE 754 selectors give them the same key rather than the distinct keys the <c>totalOrder</c> predicate
+/// would assign. Separating them would leave a stable radix sort reordering elements its declared order
+/// calls equal.</description></item>
 /// <item><description><strong>Fixed width:</strong> only the low <see cref="KeyBits"/> bits of the key may be non-zero.
 /// <see cref="KeyBits"/> must not exceed 64; wider keys are outside this abstraction by design
 /// (see the 128-bit rationale in the radix sort class docs).</description></item>
@@ -172,13 +176,20 @@ internal readonly struct FuncRadixKeySelector<T>(Func<T, int> func) : IRadixKeyS
 }
 
 /// <summary>
-/// Order-preserving radix key for <see cref="Half"/>, matching the <see cref="IComparable{T}"/> total order
-/// (all NaN values first, then -∞ .. -0 &lt; +0 .. +∞).
+/// Order-preserving radix key for <see cref="Half"/>, matching the <see cref="IComparable{T}"/> order
+/// (all NaN values first, then -∞ .. +∞, with -0 and +0 tied).
 /// </summary>
 /// <remarks>
-/// IEEE 754 bit transform: if the sign bit is set, flip all bits; otherwise flip only the sign bit.
+/// <para>IEEE 754 bit transform: if the sign bit is set, flip all bits; otherwise flip only the sign bit.
 /// NaN (any payload or sign) is normalized to key 0 so it sorts first like <c>Half.CompareTo</c>;
-/// no non-NaN value maps to 0 (the smallest non-NaN key is ~0xFC00 for -∞).
+/// no non-NaN value maps to 0 (the smallest non-NaN key is ~0xFC00 for -∞).</para>
+/// <para>-0 is normalized to +0 before the transform. The raw transform separates them — it is the IEEE 754
+/// <c>totalOrder</c> predicate, under which -0 sorts strictly first — but -0 and +0 are equal under IEEE 754
+/// comparison <em>and</em> under <see cref="IComparable{T}"/>, so <see cref="IRadixKeySelector{T}"/> requires
+/// them to map to the same key: a selector that separated them would make a stable radix sort reorder elements
+/// its own declared order calls equal, and would make the result depend on whether a range fell below an
+/// implementation's insertion-sort cutoff. A caller who wants <c>totalOrder</c> can pass a custom selector to
+/// the <c>SortBy</c> overloads.</para>
 /// </remarks>
 public readonly struct HalfRadixKey : IRadixKeySelector<Half>
 {
@@ -189,13 +200,16 @@ public readonly struct HalfRadixKey : IRadixKeySelector<Half>
     {
         if (Half.IsNaN(value)) return 0UL;
         var bits = BitConverter.HalfToUInt16Bits(value);
+        // See DoubleRadixKey: this gives -0 the bits of +0, so the two tie.
+        if ((ushort)(bits << 1) == 0) bits = 0;
         return (bits & 0x8000) != 0 ? (ushort)~bits : (ushort)(bits ^ 0x8000);
     }
 }
 
 /// <summary>
-/// Order-preserving radix key for <see cref="float"/>, matching the <see cref="IComparable{T}"/> total order
-/// (all NaN values first, then -∞ .. -0 &lt; +0 .. +∞). See <see cref="HalfRadixKey"/> remarks for the transform.
+/// Order-preserving radix key for <see cref="float"/>, matching the <see cref="IComparable{T}"/> order
+/// (all NaN values first, then -∞ .. +∞, with -0 and +0 tied).
+/// See <see cref="HalfRadixKey"/> remarks for the transform and for why -0 and +0 tie.
 /// </summary>
 public readonly struct SingleRadixKey : IRadixKeySelector<float>
 {
@@ -206,13 +220,16 @@ public readonly struct SingleRadixKey : IRadixKeySelector<float>
     {
         if (float.IsNaN(value)) return 0UL;
         var bits = BitConverter.SingleToUInt32Bits(value);
+        // See DoubleRadixKey: this gives -0 the bits of +0, so the two tie.
+        if (bits << 1 == 0) bits = 0;
         return (bits & 0x8000_0000) != 0 ? ~bits : bits ^ 0x8000_0000;
     }
 }
 
 /// <summary>
-/// Order-preserving radix key for <see cref="double"/>, matching the <see cref="IComparable{T}"/> total order
-/// (all NaN values first, then -∞ .. -0 &lt; +0 .. +∞). See <see cref="HalfRadixKey"/> remarks for the transform.
+/// Order-preserving radix key for <see cref="double"/>, matching the <see cref="IComparable{T}"/> order
+/// (all NaN values first, then -∞ .. +∞, with -0 and +0 tied).
+/// See <see cref="HalfRadixKey"/> remarks for the transform and for why -0 and +0 tie.
 /// </summary>
 public readonly struct DoubleRadixKey : IRadixKeySelector<double>
 {
@@ -223,6 +240,15 @@ public readonly struct DoubleRadixKey : IRadixKeySelector<double>
     {
         if (double.IsNaN(value)) return 0UL;
         var bits = BitConverter.DoubleToUInt64Bits(value);
+        // Give -0 the bits of +0, so the two tie. Shifting the sign bit out leaves zero for exactly the
+        // two zeros and for nothing else, so the test needs no 64-bit sign constant. That matters: the
+        // three forms measured 1.3%/1.4%, 5.2%/4.8% and 11.8%/12.2% over an unnormalized key on
+        // RadixLSD256Sort<double> at n = 65536/1048576 (minimum of 71/41 repetitions,
+        // DOTNET_TieredCompilation=0, an int sort in the same run as drift anchor):
+        //   this shift test                        1.3% / 1.4%   (inside the anchor's own drift)
+        //   comparing bits to the sign constant    5.2% / 4.8%
+        //   (value + 0.0) before taking the bits  11.8% / 12.2%
+        if (bits << 1 == 0) bits = 0;
         return (bits & 0x8000_0000_0000_0000) != 0 ? ~bits : bits ^ 0x8000_0000_0000_0000;
     }
 }

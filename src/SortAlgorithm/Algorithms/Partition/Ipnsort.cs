@@ -1093,8 +1093,10 @@ public static class Ipnsort
             if (typeof(T) == typeof(int)) { MinMax(ref Unsafe.As<T, int>(ref a), ref Unsafe.As<T, int>(ref b)); return; }
             if (typeof(T) == typeof(ulong)) { MinMax(ref Unsafe.As<T, ulong>(ref a), ref Unsafe.As<T, ulong>(ref b)); return; }
             if (typeof(T) == typeof(long)) { MinMax(ref Unsafe.As<T, long>(ref a), ref Unsafe.As<T, long>(ref b)); return; }
-            // float/double: the NaN pre-pass in Sort guarantees no NaN reaches the network, and
-            // Math.Min/Max order -0.0 before +0.0 (consistent with the comparer's total order).
+            // float/double: the NaN pre-pass in Sort guarantees no NaN reaches the network. Math.Min/Max
+            // put -0.0 before +0.0, which the comparer neither requires nor forbids — it reports the two
+            // as equal — so this is one valid arrangement of a tie. Ipnsort is unstable, so no tie order
+            // is promised.
             if (typeof(T) == typeof(float)) { MinMax(ref Unsafe.As<T, float>(ref a), ref Unsafe.As<T, float>(ref b)); return; }
             if (typeof(T) == typeof(double)) { MinMax(ref Unsafe.As<T, double>(ref a), ref Unsafe.As<T, double>(ref b)); return; }
         }

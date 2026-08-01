@@ -21,7 +21,7 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="number">
 /// <item><description><strong>Order-Preserving Key Mapping:</strong> Elements are mapped to fixed-width unsigned keys through
 /// <see cref="IRadixKeySelector{T}"/>. Signed integers flip the sign bit (e.g. 32-bit: key = (uint)value ^ 0x8000_0000),
-/// floating-point values use the IEEE 754 total-order bit transform, and key-selector overloads extract an int key from arbitrary elements.
+/// floating-point values use the IEEE 754 bit transform (-0 and +0 tie), and key-selector overloads extract an int key from arbitrary elements.
 /// This ensures negative values are ordered correctly before positive values without separate processing.</description></item>
 /// <item><description><strong>Digit Extraction Correctness:</strong> For each digit position d (from digitCount-1 down to 0), extract the d-th 8-bit digit using bitwise operations:
 /// digit = (key >> (d × 8)) &amp; 0xFF. This ensures each byte of the integer is processed independently.
@@ -117,7 +117,7 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Supported Key Mappings (via <see cref="IRadixKeySelector{T}"/>):</strong></para>
 /// <list type="bullet">
 /// <item><description><strong>Integers:</strong> byte, sbyte, short, ushort, int, uint, long, ulong, nint, nuint (up to 64-bit); Int128/UInt128/BigInteger are rejected (64-bit key ceiling, see below)</description></item>
-/// <item><description><strong>Floating point:</strong> Half, float, double via IEEE 754 total-order key transform (all NaN values sort first, matching <see cref="IComparable{T}"/> semantics)</description></item>
+/// <item><description><strong>Floating point:</strong> Half, float, double via IEEE 754 bit transform (all NaN values sort first, matching <see cref="IComparable{T}"/> semantics; <c>-0.0</c> and <c>+0.0</c> are a tie and their relative order is unspecified, as in <c>Array.Sort</c>)</description></item>
 /// <item><description><strong>Key selector:</strong> arbitrary element types via an extracted <c>int</c> key; NOTE: unlike the stable radix variants, the in-place permutation may reorder elements with equal keys</description></item>
 /// </list>
 /// <para><strong>Why 128-bit Types Are Not Supported:</strong></para>
@@ -238,7 +238,7 @@ public static class AmericanFlagSort
         => SortCore(span, radixKey, new RadixKeyComparer<T, TRadixKey>(radixKey), context);
 
     /// <summary>
-    /// Sorts <see cref="Half"/> values via the IEEE 754 total-order key transform.
+    /// Sorts <see cref="Half"/> values via the IEEE 754 bit transform.
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<Half> span)
@@ -249,7 +249,7 @@ public static class AmericanFlagSort
         => SortCore(span, default(HalfRadixKey), new ComparableComparer<Half>(), context);
 
     /// <summary>
-    /// Sorts <see cref="float"/> values via the IEEE 754 total-order key transform.
+    /// Sorts <see cref="float"/> values via the IEEE 754 bit transform.
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<float> span)
@@ -260,7 +260,7 @@ public static class AmericanFlagSort
         => SortCore(span, default(SingleRadixKey), new ComparableComparer<float>(), context);
 
     /// <summary>
-    /// Sorts <see cref="double"/> values via the IEEE 754 total-order key transform.
+    /// Sorts <see cref="double"/> values via the IEEE 754 bit transform.
     /// All NaN values sort first, matching <see cref="IComparable{T}"/> semantics.
     /// </summary>
     public static void Sort(Span<double> span)
