@@ -99,7 +99,7 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
     [Test]
     public async Task InsertionSortCutoffTest()
     {
-        // Test with array smaller than insertion sort cutoff (16)
+        // Test with array smaller than insertion sort cutoff (64)
         var array = new[] { 10, 5, 3, 8, 1, 9, 2, 7, 4, 6 };
         var expected = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
         AmericanFlagSort.Sort(array.AsSpan());
@@ -108,13 +108,14 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
 
     /// <summary>
     /// 桁数はキー幅ではなくキー範囲の幅から決まる。範囲スキャンが無い実装は常にキー幅由来の
-    /// 8 桁（int）を報告するため、狭い範囲のケースがここで落ちる。
-    /// 期待値は ⌈bitlength(max-min) / 4⌉。
+    /// 4 桁（int / 8bit 桁）を報告するため、狭い範囲のケースがここで落ちる。
+    /// 期待値は ⌈bitlength(max-min) / 8⌉。
     /// </summary>
     [Test]
-    [Arguments("range 0..999 (10 bits)", 0, 1000, 3)]
+    [Arguments("range 0..999 (10 bits)", 0, 1000, 2)]
     [Arguments("range 0..15 (4 bits)", 0, 16, 1)]
-    [Arguments("range spanning zero -500..500 (10 bits)", -500, 501, 3)]
+    [Arguments("range 0..(1<<20) (21 bits)", 0, 1 << 20, 3)]
+    [Arguments("range spanning zero -500..500 (10 bits)", -500, 501, 2)]
     public async Task RangeScanDerivesDigitCountFromKeyRange(string label, int minInclusive, int maxExclusive, int expectedDigitCount)
     {
         var random = new Random(42);
@@ -227,12 +228,18 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
     public async Task InPlacePermutationTest()
     {
         var stats = new StatisticsContext();
-        // Verify that the sort is performed in-place (no auxiliary array)
-        // Use larger array to exceed InsertionSortCutoff (16)
-        var array = new[] { 25, 13, 28, 11, 22, 29, 14, 27, 16, 30, 15, 26, 17, 31, 18, 24, 19, 23, 20, 21 };
-        var expected = new[] { 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
+        // Verify that the sort is performed in-place (no auxiliary array).
+        // The array must exceed InsertionSortCutoff (64), otherwise the range never reaches the
+        // in-place permutation and this test would silently be an InsertionSort test.
+        var random = new Random(42);
+        var array = Enumerable.Range(11, 200).OrderBy(_ => random.Next()).ToArray();
+        var expected = Enumerable.Range(11, 200).ToArray();
+
         AmericanFlagSort.Sort(array.AsSpan(), stats);
+
         await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+        // In-place permutation moves elements with Swap on the main buffer only
+        await Assert.That(stats.SwapCount).IsNotEqualTo(0UL);
     }
 
     [Test]
@@ -249,7 +256,7 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
         // American Flag Sort is an in-place MSD Radix Sort variant
         // For sorted data:
         // - Elements distribute into buckets
-        // - Small buckets (<=16) use insertion sort
+        // - Small buckets (<=64) use insertion sort
         // - In-place permutation minimizes writes
         await Assert.That((ulong)sorted.Length).IsEqualTo((ulong)n);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
@@ -297,8 +304,10 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
         await Assert.That(IsSorted(array)).IsTrue();
 
-        // Random data should require swap operations when n > InsertionSortCutoff (16)
-        if (n > 16)
+        // Random data should require swap operations when n > InsertionSortCutoff (64).
+        // At or below the cutoff the range never reaches the in-place permutation: InsertionSort
+        // shifts with Write, so SwapCount legitimately stays 0 there.
+        if (n > 64)
         {
             await Assert.That(stats.SwapCount).IsNotEqualTo(0UL);
         }

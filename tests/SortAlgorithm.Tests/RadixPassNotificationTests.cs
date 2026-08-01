@@ -43,8 +43,9 @@ public class RadixPassNotificationTests
     [MethodDataSource(nameof(RadixSortCases))]
     public async Task RadixPassReportsTotalDigitsInParam2(RadixSortCase testCase)
     {
-        // カットオフ(16)を十分に超えるバケットが複数段できるサイズ
-        var array = MakeArray(2000);
+        // 桁レベルが 2 段以上走るサイズ。最も粗く分割するのは AmericanFlagSort（256 バケット・
+        // カットオフ 64）で、1 段目のバケットが 64 を超えるには n > 256*64 = 16384 が要る。
+        var array = MakeArray(50_000);
         var expected = array.ToArray();
         Array.Sort(expected);
 

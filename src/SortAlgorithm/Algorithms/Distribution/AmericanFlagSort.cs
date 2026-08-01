@@ -12,22 +12,24 @@ namespace SortAlgorithm.Algorithms;
 /// <see cref="RadixMSD4Sort"/>と異なり補助バッファを一切確保せず、配列内で要素をスワップすることでin-placeソートを実現します。
 /// <br/>
 /// American Flag Sort - An in-place MSD Radix Sort implementation.
-/// Treats values as bit sequences, dividing them into 4-bit digits (16 buckets) and classifying elements in-place.
+/// Treats values as bit sequences, dividing them into 8-bit digits (256 buckets) and classifying elements in-place.
 /// Processing from the Most Significant Digit to the least significant ensures a recursive sort.
 /// Unlike <see cref="RadixMSD4Sort"/>, this implementation allocates no auxiliary buffer at all and achieves in-place sorting by swapping elements within the array.
 /// </summary>
 /// <remarks>
-/// <para><strong>Theoretical Conditions for Correct American Flag Sort (Base-16):</strong></para>
+/// <para><strong>Theoretical Conditions for Correct American Flag Sort (Base-256):</strong></para>
 /// <list type="number">
 /// <item><description><strong>Order-Preserving Key Mapping:</strong> Elements are mapped to fixed-width unsigned keys through
 /// <see cref="IRadixKeySelector{T}"/>. Signed integers flip the sign bit (e.g. 32-bit: key = (uint)value ^ 0x8000_0000),
 /// floating-point values use the IEEE 754 total-order bit transform, and key-selector overloads extract an int key from arbitrary elements.
 /// This ensures negative values are ordered correctly before positive values without separate processing.</description></item>
-/// <item><description><strong>Digit Extraction Correctness:</strong> For each digit position d (from digitCount-1 down to 0), extract the d-th 4-bit digit using bitwise operations:
-/// digit = (key >> (d × 4)) &amp; 0xF. This ensures each 4-bit segment of the integer is processed independently.</description></item>
+/// <item><description><strong>Digit Extraction Correctness:</strong> For each digit position d (from digitCount-1 down to 0), extract the d-th 8-bit digit using bitwise operations:
+/// digit = (key >> (d × 8)) &amp; 0xFF. This ensures each byte of the integer is processed independently.
+/// The byte-wise digit is the form McIlroy, Bostic and McIlroy describe; it halves the level count against a 4-bit digit,
+/// at the cost of a 16x larger fixed cost per recursion node (see <c>InsertionSortCutoff</c>).</description></item>
 /// <item><description><strong>Digit Count Determination with Range Normalization:</strong> The number of digit levels is determined by the actual
 /// range of the keys, not by the key width. One scan finds min and max; digits are then extracted from (key − min), so
-/// digitCount = ⌈requiredBits / 4⌉ where requiredBits is the bit width of (max − min). Subtracting a constant is order-preserving
+/// digitCount = ⌈requiredBits / 8⌉ where requiredBits is the bit width of (max − min). Subtracting a constant is order-preserving
 /// and cannot underflow, and — unlike a (max XOR min) width — it stays effective when the range straddles a high bit boundary,
 /// as sign-flipped keys of signed values around zero do. When all keys are equal (range == 0), sorting is skipped entirely.
 /// Without this, uniform high digits are still discovered one full counting pass at a time.</description></item>
@@ -38,7 +40,10 @@ namespace SortAlgorithm.Algorithms;
 /// This top-down approach partitions the array into buckets recursively, processing each bucket independently for subsequent digits.</description></item>
 /// <item><description><strong>Recursive Bucket Processing:</strong> After permuting elements based on the current digit, each bucket must be recursively sorted for the remaining digits.
 /// Base cases: buckets with 0 or 1 elements are already sorted; buckets where all remaining digits are the same are also sorted.</description></item>
-/// <item><description><strong>Cutoff to Insertion Sort:</strong> For small buckets (this implementation: &lt;= 16 elements), switching to insertion sort can improve performance due to lower overhead.</description></item>
+/// <item><description><strong>Cutoff to Insertion Sort:</strong> For small buckets, switching to insertion sort can improve performance
+/// due to lower overhead. The threshold has to scale with the radix rather than sit at a "small array" constant: at 256 buckets a split
+/// costs ~1000 fixed operations before a single element moves, so this implementation cuts off at &lt;= 64 elements
+/// (the measurements behind that number are on the <c>InsertionSortCutoff</c> constant).</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -47,49 +52,53 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>In-place    : Yes (bucket counters are stack-allocated, O(radix) per recursion level; nothing is allocated on the heap)</description></item>
 /// <item><description>Best case   : Θ(n) - all keys equal, caught by the range scan and returned before any digit pass
 /// (measured: 1.00n reads and zero writes for n = 100,000 equal <c>int</c> values)</description></item>
-/// <item><description>Average case: Θ(d × n) - d = ⌈requiredBits/4⌉, from the width of the key range rather than the key width</description></item>
+/// <item><description>Average case: Θ(d × n) - d = ⌈requiredBits/8⌉, from the width of the key range rather than the key width</description></item>
 /// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order</description></item>
 /// <item><description>Comparisons : data-dependent, not zero. The digit passes themselves use bitwise operations only, but every bucket that
 /// reaches the cutoff is finished by <see cref="InsertionSort"/>, which compares. Measured with StatisticsContext at n = 100,000 <c>int</c>:
-/// 78,075 comparisons for uniform random input, 93,750 for already-sorted input, and 0 for keys drawn from 0..999
-/// (there every leaf bucket stays above the cutoff, so no fallback runs)</description></item>
-/// <item><description>Digit Passes: d = ⌈requiredBits/4⌉ from the key range, capped by the key width (2 for byte, 4 for short, 8 for int,
-/// 16 for long); levels below that can still terminate early when a bucket's digit turns out to be uniform</description></item>
+/// 66,544 comparisons for uniform random input, and 0 both for already-sorted 0..n and for keys drawn from 0..999
+/// (in those two every leaf either ends at a single element or stays above the cutoff, so the fallback never runs)</description></item>
+/// <item><description>Digit Passes: d = ⌈requiredBits/8⌉ from the key range, capped by the key width (1 for byte, 2 for short, 4 for int,
+/// 8 for long); levels below that can still terminate early when a bucket's digit turns out to be uniform</description></item>
 /// <item><description>Reads       : n (range scan) + one per element per digit level visited + the permutation and cutoff reads</description></item>
-/// <item><description>Memory      : O(1) auxiliary space. Recursion depth is bounded by the digit count (at most 8 for 32-bit keys, 16 for 64-bit,
+/// <item><description>Memory      : O(1) auxiliary space, 2052 bytes of stack per recursion level (257 + 256 counters).
+/// Recursion depth is bounded by the digit count (at most 4 for 32-bit keys, 8 for 64-bit,
 /// and less when the key range is narrow), because each level consumes exactly one digit — it does not depend on n, on the input order,
 /// or on how the buckets split</description></item>
 /// </list>
 /// <para><strong>Algorithm Overview:</strong></para>
 /// <para>One range scan over the keys, then four phases per digit level:</para>
 /// <list type="number">
-/// <item><description><strong>Count Phase:</strong> Count occurrences of each digit value (0-15)</description></item>
+/// <item><description><strong>Count Phase:</strong> Count occurrences of each digit value (0-255)</description></item>
 /// <item><description><strong>Offset Calculation:</strong> Compute bucket offsets (cumulative sum)</description></item>
 /// <item><description><strong>Permutation Phase:</strong> Rearrange elements into their buckets in-place using cyclic permutations</description></item>
 /// <item><description><strong>Recursive Phase:</strong> Recursively sort each non-empty bucket for the next digit</description></item>
 /// </list>
 /// <para><strong>What This Buys Over The Other Distribution Sorts:</strong></para>
 /// <para>All three sorts below order by the same <see cref="IRadixKeySelector{T}"/> keys and differ only in how elements are moved.
-/// The figures come from <c>sandbox/DotnetFiles/AmericanFlagPassAudit.cs</c> (StatisticsContext, n = 100,000 uniform random <c>int</c>)
-/// and from the benchmark tables in README.md.</para>
+/// The operation counts come from <c>sandbox/DotnetFiles/AmericanFlagPassAudit.cs</c> (StatisticsContext, n = 100,000 uniform
+/// random <c>int</c>); they are deterministic and machine-independent. For wall-clock, see the benchmark tables in README.md —
+/// the numbers there are produced on the benchmark CI machine, so do not compare them against a local run.</para>
 /// <list type="bullet">
 /// <item><description><strong>Against <see cref="RadixMSD4Sort"/> (same MSD partitioning, buffered):</strong> strictly less element traffic.
 /// Both partition top-down from the most significant digit and both skip uniform digit levels, but the buffered variant scatters every
 /// element of a level into a rented temp buffer and copies the whole level back, while the in-place permutation only touches elements that
-/// are not already in their bucket. Measured: 1.74M reads / 797K writes here against 2.40M reads / 1.62M writes for RadixMSD4Sort;
-/// README n = 4096 Random reports 65.3 µs against 107.2 µs. It also rents nothing from ArrayPool.
+/// are not already in their bucket, and the 8-bit digit needs half the levels of RadixMSD4Sort's 2-bit one.
+/// Measured: 1.01M reads / 462K writes / 67K comparisons here against 2.40M reads / 1.62M writes / 223K comparisons for
+/// RadixMSD4Sort. It also rents nothing from ArrayPool.
 /// The price is stability — RadixMSD4Sort keeps equal keys in input order, this does not.</description></item>
 /// <item><description><strong>Against <see cref="RadixLSD256Sort"/> (LSD, buffered):</strong> the advantage is memory, not throughput.
 /// LSD rents an n-element buffer and writes all n elements once per digit pass; this implementation permutes the caller's span in place and
-/// allocates nothing. In exchange LSD is the faster of the two at the benchmarked sizes (README n = 4096 Random: 18.9 µs against 65.3 µs),
-/// because it consumes 8 bits per pass rather than 4 and its scatter is a straight sequential write instead of a swap chain.
+/// allocates nothing. Both now use an 8-bit digit, and LSD remains the faster of the two: its scatter is a straight sequential write into a
+/// separate buffer, while the in-place permutation follows a swap chain whose next destination is data-dependent. Measured at n = 100,000
+/// uniform random <c>int</c>: 600K reads / 400K writes for RadixLSD256Sort against 1.01M / 462K here.
 /// Reach for this algorithm when an O(n) auxiliary buffer is unavailable or unwanted, not when raw speed is the goal.</description></item>
 /// <item><description><strong>Low digits are never examined once a bucket is small enough.</strong> An LSD sort must run every pass it has
 /// committed to, over the whole array, before the result is ordered. An MSD sort stops descending as soon as a bucket reaches the cutoff, so
 /// for keys that separate on their high digits the low digits are never read at all — the deeper the key (64-bit integers,
 /// <see cref="double"/>), the more that matters.</description></item>
 /// <item><description><strong>Recursion is bounded by the key width, not by the data.</strong> Each level consumes exactly one digit, so depth
-/// is at most 8 for 32-bit keys and 16 for 64-bit keys for any input. This is what separates it from an in-place comparison-based partitioner
+/// is at most 4 for 32-bit keys and 8 for 64-bit keys for any input. This is what separates it from an in-place comparison-based partitioner
 /// such as QuickSort, where an adversarial input can drive depth toward O(n).</description></item>
 /// <item><description><strong>Non-goal — stability.</strong> The cyclic in-place permutation reorders equal keys by construction; it cannot be
 /// made stable without the auxiliary buffer whose absence is the entire point. Use <see cref="RadixLSD256Sort"/> or
@@ -116,9 +125,23 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class AmericanFlagSort
 {
-    private const int RadixBits = 4;        // 4 bits per digit
-    private const int RadixSize = 16;       // 2^4 = 16 buckets
-    private const int InsertionSortCutoff = 16; // Switch to insertion sort for small buckets
+    private const int RadixBits = 8;        // 8 bits per digit
+    private const int RadixSize = 256;      // 2^8 = 256 buckets
+    private const int RadixMask = RadixSize - 1;
+
+    // Switch to insertion sort for small buckets. This has to scale with the radix, not sit at a
+    // "small array" constant: a 256-way split costs ~1000 fixed operations (clear 257 counters, prefix
+    // sum, bucket-boundary walk) before a single element moves, so a node has to be big enough to earn
+    // it back. Leaving it at 16 while widening the digit from 4 to 8 bits made full-int-range keys
+    // 1.5x SLOWER at n=4096 and n=8192, where one 256-way split leaves buckets sitting just above 16
+    // and every one of them pays that fixed cost again to sort ~20 elements. Measured ratios against
+    // the 4-bit digit at n=4096/8192/65536/1048576 with full-range keys:
+    //   cutoff 16 -> 1.55 / 1.52 / 0.62 / 1.21   (worse than 4-bit at three of four sizes)
+    //   cutoff 32 -> 0.51 / 1.01 / 0.66 / 0.65
+    //   cutoff 64 -> 0.53 / 0.68 / 0.66 / 0.66
+    // 64 is RadixSize/4 and is the smallest value that wins at every measured size; 128 measured the
+    // same within noise but doubles the quadratic term insertion sort pays on its largest input.
+    private const int InsertionSortCutoff = 64;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -310,7 +333,9 @@ public static class AmericanFlagSort
 
         var shift = digit * RadixBits;
 
-        // Allocate bucket arrays on stack (RadixSize=16, so only small stack usage)
+        // Bucket arrays live on the stack: 2052 bytes per level (257 + 256 ints). Recursion depth is capped
+        // by the digit count (at most 4 levels for a 32-bit key, 8 for a 64-bit one), so the whole sort holds
+        // at most ~16 KB of them.
         Span<int> bucketCounts = stackalloc int[RadixSize + 1];  // Stores both start and end for each bucket
         Span<int> bucketNext = stackalloc int[RadixSize];        // Current write position for each bucket
 
@@ -323,7 +348,7 @@ public static class AmericanFlagSort
         {
             var value = s.Read(start + i);
             var key = radixKey.GetKey(value) - minKey;
-            var digitValue = (int)((key >> shift) & 0xF);  // Extract 4-bit digit
+            var digitValue = (int)((key >> shift) & RadixMask);  // Extract 8-bit digit
             bucketCounts[digitValue + 1]++;
         }
 
@@ -415,7 +440,7 @@ public static class AmericanFlagSort
                 var currentPos = start + bucketNext[bucket];
                 var currentValue = s.Read(currentPos);
                 var currentKey = radixKey.GetKey(currentValue) - minKey;
-                var currentDigit = (int)((currentKey >> shift) & 0xF);
+                var currentDigit = (int)((currentKey >> shift) & RadixMask);
 
                 // If element is already in correct bucket, advance
                 if (currentDigit == bucket)
