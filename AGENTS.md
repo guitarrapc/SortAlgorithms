@@ -5,6 +5,8 @@ Keep changes focused, measurable, and consistent across optimized and observable
 
 ## Core Principles
 
+- Stay faithful to the textbook algorithm. Each algorithm implements its own definition, keeping the behavior that definition implies — including its bad cases. Bucket sort's O(n²) collapse and quicksort's adversarial inputs are properties to preserve, not defects to patch over. Do not add cutoffs, fallbacks, or hybrid stages that the algorithm's own definition does not contain.
+- Optimize within the definition, not around it. An optimization is in scope when it changes only how a step is carried out — a cheaper representation of an auxiliary structure, a removed redundant pass, a parameter the theory leaves free such as a bucket count. It is out of scope when it changes which algorithm is running. When an implementation choice and the algorithm's stated complexity disagree, the implementation is what is wrong.
 - Preserve sorting correctness for every supported input pattern, comparer, and context.
 - Treat low allocation and hot-path performance as first-class requirements.
 - Use `Span<T>` and the generic comparer/context design so the JIT can specialize optimized paths.
@@ -48,6 +50,7 @@ scripts/                      Repository maintenance scripts.
 
 ## Documentation
 
+- A class summary describes the algorithm, not this implementation's measurements. Best, average, and worst case state the textbook complexity; they are not rewritten to match what the current code happens to achieve. If the code does not reach the stated complexity, fix the code. Implementation-specific numbers — operation counts, chosen parameters, buffer identifiers — belong beside the theory as clearly labelled implementation notes, and benchmark figures belong in `.github/docs/specs/` or the README rather than in a class summary.
 - Keep specifications implementation-neutral: document WHAT, WHY, public guarantees, non-goals, and lessons learned.
 - Put detailed HOW, code patterns, and command recipes under `.github/docs/references/`, in code comments, or in the implementation.
 - After implementation, update related specs to match what was actually built and record newly learned constraints.
