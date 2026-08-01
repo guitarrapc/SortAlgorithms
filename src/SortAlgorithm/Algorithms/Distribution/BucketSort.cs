@@ -404,6 +404,7 @@ public static class BucketSortInteger
 
         // First pass: calculate bucket indices and count
         // Cache bucket indices to avoid division in second pass
+        source.Context.OnPhase(SortPhase.DistributionCount);
         for (var i = 0; i < source.Length; i++)
         {
             var value = source.Read(i);
