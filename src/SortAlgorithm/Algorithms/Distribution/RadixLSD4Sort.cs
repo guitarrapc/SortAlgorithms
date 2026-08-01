@@ -30,8 +30,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>LSD Processing Order:</strong> Digits must be processed from least significant (d=0) to most significant (d=digitCount-1).
 /// This bottom-up approach ensures that after processing digit d, all digits 0 through d are correctly sorted, with stability maintained by previous passes.</description></item>
 /// <item><description><strong>Digit Count Determination with Early Termination:</strong> The number of passes (digitCount) is determined by the actual range of key values, not the full key width.
-/// digitCount = ⌈requiredBits / 2⌉ where requiredBits is calculated from (max XOR min) to find differing bits.
-/// This optimization skips unnecessary high-order digit passes when the key range is small.</description></item>
+/// Keys are shifted down by the minimum key, so digitCount = ⌈requiredBits / 2⌉ where requiredBits is the bit width of (max − min).
+/// This optimization skips unnecessary high-order digit passes when the key range is small, and — unlike a (max XOR min) bit width —
+/// it stays effective when the range straddles a high bit boundary, as sign-flipped keys of signed values around zero do.</description></item>
 /// <item><description><strong>Bucket Collection Order:</strong> After distributing elements for a digit, buckets must be collected in ascending order (bucket 0, 1, 2, 3).
 /// Due to the order-preserving key mapping, negative values naturally sort before positive values.</description></item>
 /// </list>
@@ -235,12 +236,25 @@ public static class RadixLSD4Sort
                 if (key > maxKey) maxKey = key;
             }
 
-            // Calculate required number of passes based on the range
-            // XOR to find differing bits, then count bits needed
-            var range = maxKey ^ minKey;
+            // Calculate required number of passes from the width of the key range.
+            // The keys are then shifted down by minKey so that every key fits in that width:
+            // normalized keys span [0, maxKey - minKey], and subtracting a constant preserves order.
+            var range = maxKey - minKey;
 
             // Early exit: if all elements are the same (range == 0), no sorting needed
             if (range == 0) return;
+
+            // Normalizing is what makes the pass count depend on the span of the keys rather than on
+            // where they sit: keys straddling a high bit boundary (e.g. signed values around zero, whose
+            // sign-flipped keys straddle 0x8000_0000) share no leading bits, so max ^ min would report the
+            // full key width and force every pass. bitlength(max - min) <= bitlength(max ^ min) always.
+            if (minKey != 0)
+            {
+                for (var i = 0; i < keys.Length; i++)
+                {
+                    keys[i] -= minKey;
+                }
+            }
 
             var requiredBits = 64 - BitOperations.LeadingZeroCount(range);
             var digitCount = (requiredBits + RadixBits - 1) / RadixBits;

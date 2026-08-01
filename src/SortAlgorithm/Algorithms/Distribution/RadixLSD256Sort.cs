@@ -30,8 +30,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>LSD Processing Order:</strong> Digits must be processed from least significant (d=0) to most significant (d=digitCount-1).
 /// This bottom-up approach ensures that after processing digit d, all digits 0 through d are correctly sorted, with stability maintained by previous passes.</description></item>
 /// <item><description><strong>Digit Count Determination with Early Termination:</strong> The number of passes (digitCount) is determined by the actual range of values, not the full bit width.
-/// digitCount = ⌈requiredBits / 8⌉ where requiredBits is calculated from (max XOR min) to find differing bits.
-/// This optimization skips unnecessary high-order digit passes when the value range is small. When all elements are equal (range == 0), sorting is skipped entirely.</description></item>
+/// Digits are extracted from (key − min), so digitCount = ⌈requiredBits / 8⌉ where requiredBits is the bit width of (max − min).
+/// This optimization skips unnecessary high-order digit passes when the value range is small, and — unlike a (max XOR min) bit width —
+/// it stays effective when the range straddles a high bit boundary, as sign-flipped keys of signed values around zero do.
+/// When all elements are equal (range == 0), sorting is skipped entirely.</description></item>
 /// <item><description><strong>Bucket Collection Order:</strong> After distributing elements for a digit, buckets must be collected in ascending order (bucket 0, 1, 2, ..., 255).
 /// Due to sign-bit flipping, negative values naturally sort before positive values.</description></item>
 /// </list>
@@ -230,18 +232,23 @@ public static class RadixLSD256Sort
                 if (key > maxKey) maxKey = key;
             }
 
-            // Calculate required number of passes based on the range
-            // XOR to find differing bits, then count bits needed
-            var range = maxKey ^ minKey;
+            // Calculate required number of passes from the width of the key range.
+            // Digit extraction then works on (key - minKey), so every key fits in that width:
+            // normalized keys span [0, maxKey - minKey], and subtracting a constant preserves order.
+            var range = maxKey - minKey;
 
             // Early return if all elements are equal (range == 0)
             if (range == 0) return;
 
+            // Normalizing is what makes the pass count depend on the span of the keys rather than on
+            // where they sit: keys straddling a high bit boundary (e.g. signed values around zero, whose
+            // sign-flipped keys straddle 0x8000_0000) share no leading bits, so max ^ min would report the
+            // full key width and force every pass. bitlength(max - min) <= bitlength(max ^ min) always.
             var requiredBits = 64 - System.Numerics.BitOperations.LeadingZeroCount(range);
             var digitCount = (requiredBits + RadixBits - 1) / RadixBits;
 
             // Start LSD radix sort from the least significant digit
-            LSDSort(s, temp, radixKey, digitCount, bucketOffsets);
+            LSDSort(s, temp, radixKey, digitCount, minKey, bucketOffsets);
         }
         finally
         {
@@ -250,7 +257,7 @@ public static class RadixLSD256Sort
         }
     }
 
-    private static void LSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int digitCount, Span<int> bucketOffsets)
+    private static void LSDSort<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, TRadixKey radixKey, int digitCount, ulong minKey, Span<int> bucketOffsets)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -275,7 +282,7 @@ public static class RadixLSD256Sort
             for (var i = 0; i < src.Length; i++)
             {
                 var value = src.Read(i);
-                var key = radixKey.GetKey(value);
+                var key = radixKey.GetKey(value) - minKey;
                 var digit = (int)((key >> shift) & 0xFF);
                 bucketOffsets[digit + 1]++;
             }
@@ -291,7 +298,7 @@ public static class RadixLSD256Sort
             for (var i = 0; i < src.Length; i++)
             {
                 var value = src.Read(i);
-                var key = radixKey.GetKey(value);
+                var key = radixKey.GetKey(value) - minKey;
                 var digit = (int)((key >> shift) & 0xFF);
                 var destIndex = bucketOffsets[digit]++;
                 dst.Write(destIndex, value);

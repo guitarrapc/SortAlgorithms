@@ -251,12 +251,20 @@ public class RadixLSD256SortTests : IntegerSortTestsBase
         var mixed = Enumerable.Range(-n / 2, n).ToArray();
         RadixLSD256Sort.Sort(mixed.AsSpan(), stats);
 
-        // With sign-bit flipping and early termination:
-        // For mixed negative/positive data, verify the sort is correct
-        // The actual pass count depends on the range after sign-bit flipping
+        // Data straddling zero is the case that separates the two ways of sizing the key range.
+        // After sign-bit flipping the keys straddle 0x8000_0000, so min and max share no leading
+        // bits at all: (max ^ min) reports the full 32 bits and would force all 4 passes regardless of
+        // how narrow the data actually is. Digits are taken from (key - min) instead, so the pass count
+        // follows (max - min) = n - 1 — the same count this input would get without any negatives.
+        var range = (ulong)(n - 1);
+        var requiredBits = 64 - System.Numerics.BitOperations.LeadingZeroCount(range);
+        var digitCount = Math.Max(1, (requiredBits + 7) / 8); // ceil(requiredBits / 8)
 
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
+        var expectedReads = (ulong)(n + digitCount * 2 * n + (digitCount % 2 == 1 ? n : 0));
+        var expectedWrites = (ulong)(digitCount * n + (digitCount % 2 == 1 ? n : 0));
+
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
         await Assert.That(stats.CompareCount).IsEqualTo(0UL);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
 
