@@ -34,6 +34,11 @@ namespace SortAlgorithm.Algorithms;
 /// This optimization skips unnecessary high-order digit passes when the value range is small, and — unlike a (max XOR min) bit width —
 /// it stays effective when the range straddles a high bit boundary, as sign-flipped keys of signed values around zero do.
 /// When all elements are equal (range == 0), sorting is skipped entirely.</description></item>
+/// <item><description><strong>Identity Passes Are Skippable:</strong> If every element shares the same value at digit d, the stable
+/// distribution for that digit writes them out in the order they already are — the pass is the identity and can be skipped
+/// without affecting the result. This is orthogonal to the range-derived digit count, which only trims uniform digits above
+/// the most significant one; a digit anywhere below it can be uniform too (every value a multiple of 256, say). Skipping
+/// changes which buffer holds the data, so the final copy is decided by the number of passes actually executed.</description></item>
 /// <item><description><strong>Bucket Collection Order:</strong> After distributing elements for a digit, buckets must be collected in ascending order (bucket 0, 1, 2, ..., 255).
 /// Due to sign-bit flipping, negative values naturally sort before positive values.</description></item>
 /// </list>
@@ -46,9 +51,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(d × n) - Linear in input size, where d depends on actual value range</description></item>
 /// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order, d = ⌈keyBits/8⌉ for full range</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort, uses bitwise operations only)</description></item>
-/// <item><description>Digit Passes: d = ⌈requiredBits/8⌉ (early termination based on actual value range, not full bit width)</description></item>
-/// <item><description>Reads       : n (initial min/max scan) + 2 × d × n (each pass counts its digit, then distributes) + optional final copy</description></item>
-/// <item><description>Writes      : d × n (one write per distribute pass to temp) + optional final copy</description></item>
+/// <item><description>Digit Passes: d = ⌈requiredBits/8⌉ examined (early termination based on actual value range, not full bit width); e ≤ d executed, the rest being identity passes</description></item>
+/// <item><description>Reads       : n (initial min/max scan) + d × n (every digit is counted) + e × n (one read per executed distribute pass) + optional final copy</description></item>
+/// <item><description>Writes      : e × n (one write per executed distribute pass to temp) + optional final copy</description></item>
 /// <item><description>Memory      : O(n) for temporary buffer</description></item>
 /// </list>
 /// <para><strong>Why Counting Runs Inside Each Pass:</strong></para>
@@ -276,6 +281,10 @@ public static class RadixLSD256Sort
         var src = s;
         var dst = temp;
 
+        // Counted separately from d: a pass that turns out to be the identity is not run, and it is the
+        // number actually run that decides which buffer the result ends up in.
+        var executedPasses = 0;
+
         // Perform LSD radix sort with ping-pong buffers
         for (int d = 0; d < digitCount; d++)
         {
@@ -298,6 +307,13 @@ public static class RadixLSD256Sort
                 bucketOffsets[digit + 1]++;
             }
 
+            // If one bucket holds every element, this digit sorts nothing: a stable distribution over a
+            // single bucket writes the elements out in the order they already are, so the pass is the
+            // identity and the whole distribution can be skipped. Deriving digitCount from the key range
+            // cannot catch this — that only trims uniform digits above the most significant one, while a
+            // digit anywhere below it can be uniform too (every value a multiple of 256, say).
+            if (IsSingleBucket(bucketOffsets, src.Length)) continue;
+
             // Calculate cumulative offsets (prefix sum)
             // After this: bucketOffsets[digit] = start index for bucket 'digit'
             for (var i = 1; i <= RadixSize; i++)
@@ -319,13 +335,33 @@ public static class RadixLSD256Sort
             var tempSortSpan = src;
             src = dst;
             dst = tempSortSpan;
+            executedPasses++;
         }
 
-        // After digitCount swaps, if digitCount is odd, final data is in src (which points to temp buffer after odd swaps)
+        // Each executed pass moves the data to the other buffer, so an odd number of them leaves it in
+        // temp. Skipped passes move nothing, which is exactly why the parity is taken from the passes
+        // that ran rather than from digitCount.
         // Pass 0: s→temp, swap (src=temp), Pass 1: temp→s, swap (src=s), ...
-        if ((digitCount & 1) == 1)
+        if ((executedPasses & 1) == 1)
         {
             src.CopyTo(0, s, 0, s.Length);
         }
+    }
+
+    /// <summary>
+    /// True when a single bucket holds all <paramref name="length"/> elements, i.e. every element shares
+    /// this digit. Counts are still in their pre-prefix-sum layout, at <c>bucketOffsets[digit + 1]</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsSingleBucket(ReadOnlySpan<int> bucketOffsets, int length)
+    {
+        // The first bucket holding anything settles it: if it does not hold everything, some other
+        // bucket holds the rest. So the scan stops at the first non-empty entry either way, which
+        // matters at radix 256 where walking all of them would cost more than the check saves.
+        foreach (var count in bucketOffsets[1..])
+        {
+            if (count != 0) return count == length;
+        }
+        return false;
     }
 }

@@ -348,11 +348,16 @@ public class RadixLSD10SortTests : IntegerSortTestsBase
         var digitCount = GetDigitCountFromUlong(range);
         await Assert.That(digitCount).IsGreaterThanOrEqualTo(2); // guard: this test is pointless at 1 pass
 
-        // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
-        // roles instead of being copied back. An odd pass count leaves the result in the temp buffer.
-        var finalCopy = digitCount % 2 == 1 ? n : 0;
-        var expectedReads = (ulong)(2 * n + digitCount * n + finalCopy);
-        var expectedWrites = (ulong)(digitCount * n + finalCopy);
+        // Only the digits the values disagree on are distributed; a digit they all share is an identity
+        // pass, already visible in the histograms before any pass runs. Every value here is a multiple of
+        // the stride, so its low digits are all zero and those passes are skipped outright — this input
+        // is the case the optimisation exists for.
+        var executed = TestHelpers.CountNonIdentityDigits(values: expected, digitCount, radix: 10);
+        await Assert.That(executed).IsLessThan(digitCount); // multiples of a power of ten always have identity digits
+
+        var finalCopy = executed % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(2 * n + executed * n + finalCopy);
+        var expectedWrites = (ulong)(executed * n + finalCopy);
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);

@@ -293,11 +293,46 @@ public class RadixLSD256SortTests : IntegerSortTestsBase
         var digitCount = Math.Max(1, (requiredBits + 7) / 8); // ceil(requiredBits / 8)
         await Assert.That(digitCount).IsGreaterThanOrEqualTo(2); // guard: this test is pointless at 1 pass
 
-        // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
-        // roles instead of being copied back. An odd pass count leaves the result in the temp buffer.
-        var finalCopy = digitCount % 2 == 1 ? n : 0;
-        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy);
-        var expectedWrites = (ulong)(digitCount * n + finalCopy);
+        // Every digit is counted, but only the ones the values disagree on are distributed: a digit they
+        // all share is an identity pass. Each executed pass reads once to distribute and writes once, and
+        // the buffers trade roles instead of being copied back, so it is the executed count whose parity
+        // decides whether the result ends up in temp and needs a final copy.
+        var executed = TestHelpers.CountNonIdentityDigits(values: expected, digitCount, radix: 256);
+        var finalCopy = executed % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + digitCount * n + executed * n + finalCopy);
+        var expectedWrites = (ulong)(executed * n + finalCopy);
+
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+
+        await Assert.That(values).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [Arguments(100, 42, 256)]    // every value a multiple of 256: digit 0 is identity      -> 2 digits, 1 executed (odd)
+    [Arguments(100, 42, 65_536)] // every value a multiple of 65,536: digits 0-1 are identity -> 3 digits, 1 executed (odd)
+    public async Task TheoreticalValuesIdentityDigitSkipTest(int n, int seed, int stride)
+    {
+        var stats = new StatisticsContext();
+        var values = TestHelpers.ShuffledRangeScaled(n, seed, stride);
+        var expected = values.OrderBy(x => x).ToArray();
+        RadixLSD256Sort.Sort(values.AsSpan(), stats);
+
+        // Values that are all multiples of a power of the radix share their low digits, and a digit every
+        // element shares is distributed back into the order it was already in. Those passes are skipped.
+        // The range-derived digit count cannot find them: it only trims uniform digits above the top one.
+        var range = (ulong)((n - 1) * stride);
+        var requiredBits = 64 - System.Numerics.BitOperations.LeadingZeroCount(range);
+        var digitCount = Math.Max(1, (requiredBits + 7) / 8);
+        var executed = TestHelpers.CountNonIdentityDigits(values: expected, digitCount, radix: 256);
+        await Assert.That(executed).IsLessThan(digitCount); // guard: this test is pointless if nothing is skipped
+
+        // Counting still touches every digit; only the distribution is skipped.
+        var finalCopy = executed % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + digitCount * n + executed * n + finalCopy);
+        var expectedWrites = (ulong)(executed * n + finalCopy);
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);

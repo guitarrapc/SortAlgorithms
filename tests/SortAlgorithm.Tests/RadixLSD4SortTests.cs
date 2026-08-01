@@ -341,11 +341,46 @@ public class RadixLSD4SortTests : IntegerSortTestsBase
         var digitCount = Math.Max(1, (requiredBits + 1) / 2); // ceil(requiredBits / 2)
         await Assert.That(digitCount).IsGreaterThanOrEqualTo(2); // guard: this test is pointless at 1 pass
 
-        // Counting reads the cached key array rather than the span, so a pass costs one span read
-        // (distribute) and one span write. An odd pass count leaves the result in the temp buffer.
-        var finalCopy = digitCount % 2 == 1 ? n : 0;
-        var expectedReads = (ulong)(n + digitCount * n + finalCopy);
-        var expectedWrites = (ulong)(digitCount * n + finalCopy);
+        // Counting reads the cached key array rather than the span, so an executed pass costs one span
+        // read (distribute) and one span write, and a digit the values all share costs no span traffic
+        // at all — it is an identity pass and is skipped. It is the executed count whose parity decides
+        // whether the result ends up in temp and needs a final copy.
+        var executed = TestHelpers.CountNonIdentityDigits(values: expected, digitCount, radix: 4);
+        var finalCopy = executed % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + executed * n + finalCopy);
+        var expectedWrites = (ulong)(executed * n + finalCopy);
+
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+
+        await Assert.That(values).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [Arguments(100, 42, 4)]   // every value a multiple of 4: digit 0 is identity        -> 5 digits, 4 executed (even)
+    [Arguments(100, 42, 64)]  // every value a multiple of 64: digits 0-2 are identity   -> 7 digits, 4 executed (even)
+    public async Task TheoreticalValuesIdentityDigitSkipTest(int n, int seed, int stride)
+    {
+        var stats = new StatisticsContext();
+        var values = TestHelpers.ShuffledRangeScaled(n, seed, stride);
+        var expected = values.OrderBy(x => x).ToArray();
+        RadixLSD4Sort.Sort(values.AsSpan(), stats);
+
+        // Values that are all multiples of a power of the radix share their low digits, and a digit every
+        // element shares is distributed back into the order it was already in. Those passes are skipped.
+        // The range-derived digit count cannot find them: it only trims uniform digits above the top one.
+        var range = (ulong)((n - 1) * stride);
+        var requiredBits = 64 - System.Numerics.BitOperations.LeadingZeroCount(range);
+        var digitCount = Math.Max(1, (requiredBits + 1) / 2);
+        var executed = TestHelpers.CountNonIdentityDigits(values: expected, digitCount, radix: 4);
+        await Assert.That(executed).IsLessThan(digitCount); // guard: this test is pointless if nothing is skipped
+
+        // Counting reads the cached key array, so a skipped digit costs no span traffic at all.
+        var finalCopy = executed % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + executed * n + finalCopy);
+        var expectedWrites = (ulong)(executed * n + finalCopy);
 
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
