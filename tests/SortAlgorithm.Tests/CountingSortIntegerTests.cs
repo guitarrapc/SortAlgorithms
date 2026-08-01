@@ -13,8 +13,8 @@ public class CountingSortIntegerTests : IntegerSortTestsBase
     // Throws ArgumentException on excessive key ranges (see RangeLimitTest), so full-integer-range inputs are rejected by contract.
     protected override bool SupportsFullIntegerRange => false;
 
-    // Counting sort: no comparisons or swaps; distribute/copy-back passes always write.
-    protected override CountExpectation SortedInputCompares => CountExpectation.Zero;
+    // Min/max scan uses tracked comparisons (exact 2n+1 asserted in TheoreticalValues tests); distribute/copy-back passes always write; no swaps.
+    protected override CountExpectation SortedInputCompares => CountExpectation.NonZero;
     protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
     protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
@@ -60,14 +60,14 @@ public class CountingSortIntegerTests : IntegerSortTestsBase
         CountingSortInteger.Sort(sorted.AsSpan(), stats);
 
         // CountingSortInteger with temp buffer tracking:
-        // 1. Find min/max: n reads (s.Read), using direct operators (not tracked as comparisons)
+        // 1. Find min/max: n reads (s.Read) + 2n tracked comparisons, then +1 for the min == max check
         // 2. Count occurrences: n reads (s.Read)
         // 3. Build result in reverse: n reads (s.Read) + n writes (tempSpan.Write)
         // 4. Write back: n reads (tempSpan.Read) + n writes (s.Write)
-        //  Total: 4n reads, 2n writes, 0 comparisons
+        //  Total: 4n reads, 2n writes, 2n+1 comparisons
         var expectedReads = (ulong)(4 * n);
         var expectedWrites = (ulong)(2 * n);
-        var expectedCompare = 0UL;
+        var expectedCompare = (ulong)(2 * n) + 1;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompare);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
@@ -87,10 +87,10 @@ public class CountingSortIntegerTests : IntegerSortTestsBase
         CountingSortInteger.Sort(reversed.AsSpan(), stats);
 
         // CountingSortInteger complexity is O(n + k) regardless of input order
-        // With temp buffer tracking: 4n reads, 2n writes, 0 comparisons
+        // With temp buffer tracking: 4n reads, 2n writes, 2n+1 comparisons
         var expectedReads = (ulong)(4 * n);
         var expectedWrites = (ulong)(2 * n);
-        var expectedcompare = 0UL;
+        var expectedcompare = (ulong)(2 * n) + 1;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedcompare);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
@@ -114,10 +114,10 @@ public class CountingSortIntegerTests : IntegerSortTestsBase
         CountingSortInteger.Sort(random.AsSpan(), stats);
 
         // CountingSortInteger has same complexity regardless of input distribution
-        // 4n reads due to temp buffer tracking, 2n writes, 0 comparisons
+        // 4n reads due to temp buffer tracking, 2n writes, 2n+1 comparisons
         var expectedReads = (ulong)(4 * n);
         var expectedWrites = (ulong)(2 * n);
-        var expectedCompare = 0UL;
+        var expectedCompare = (ulong)(2 * n) + 1;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompare);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
@@ -134,10 +134,10 @@ public class CountingSortIntegerTests : IntegerSortTestsBase
         CountingSortInteger.Sort(allSame.AsSpan(), stats);
 
         // When all values are the same (min == max), early return after min/max scan
-        // Only n reads for finding min/max (direct operators, not tracked), then early return (no writes)
+        // Only n reads for finding min/max, its 2n comparisons and the +1 min == max check, then early return (no writes)
         var expectedReads = (ulong)n;
         var expectedWrites = 0UL;
-        var expectedCompare = 0UL;
+        var expectedCompare = (ulong)(2 * n) + 1;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompare);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);

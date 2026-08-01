@@ -241,7 +241,8 @@ public static class CountingSort
 /// <item><description>Best case   : O(n + k) - Every input does the same work; no pattern is favourable</description></item>
 /// <item><description>Average case: O(n + k) - Linear in input size plus value range</description></item>
 /// <item><description>Worst case  : O(n + k) - Independent of how the values are distributed</description></item>
-/// <item><description>Comparisons : 0 (min/max scan uses direct numeric operators, not tracked as sort comparisons)</description></item>
+/// <item><description>Comparisons : 2n+1 (n×2 for min/max scan, +1 for early-exit equality check) - the ordering
+/// step is comparison-free, but discovering the range is not, and the scan is real work the sort performs</description></item>
 /// <item><description>Swaps       : 0 - Elements are placed at a computed index, never exchanged</description></item>
 /// <item><description>IndexReads  : 3n - n to discover the range, n to count, n to place. An element is its own key,
 /// so there is nothing to extract once and reuse; every pass reads the elements themselves</description></item>
@@ -297,34 +298,36 @@ public static class CountingSortInteger
     /// <param name="span"> The span of elements to sort.</param>
     /// <param name="context">The sort context that defines the sorting strategy or options to use during the operation.</param>
     public static void Sort<T, TContext>(Span<T> span, TContext context)
-        where T : IBinaryInteger<T>, IMinMaxValue<T>
+        where T : IBinaryInteger<T>, IMinMaxValue<T>, IComparisonOperators<T, T, bool>
         where TContext : ISortContext
     {
         if (span.Length <= 1) return;
 
         EnsureSupportedType<T>();
 
-        var comparer = new NullComparer<T>();
-        var s = new SortSpan<T, NullComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
+        var comparer = new NumberComparer<T>();
+        var s = new SortSpan<T, NumberComparer<T>, TContext>(span, context, comparer, BUFFER_MAIN);
 
         var tempArray = ArrayPool<T>.Shared.Rent(span.Length);
         try
         {
-            var tempSpan = new SortSpan<T, NullComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
-            // Find min and max to determine range
+            var tempSpan = new SortSpan<T, NumberComparer<T>, TContext>(tempArray.AsSpan(0, span.Length), context, comparer, BUFFER_TEMP);
+            // Find min and max to determine range.
+            // The scan runs through the observable accessors: these comparisons are work the sort really
+            // performs, and a comparer call made directly would leave no trace of it in the stream. That the
+            // ordering step of counting sort is comparison-free does not make the range scan free.
             var minValue = T.MaxValue;
             var maxValue = T.MinValue;
 
-            // comparing with Min/Max should not track as statistic
             for (var i = 0; i < s.Length; i++)
             {
                 var value = s.Read(i);
-                if (value < minValue) minValue = value;
-                if (value > maxValue) maxValue = value;
+                if (s.IsLessThan(value, minValue)) minValue = value;
+                if (s.IsGreaterThan(value, maxValue)) maxValue = value;
             }
 
             // If all elements are the same, no need to sort
-            if (minValue == maxValue) return;
+            if (s.Compare(minValue, maxValue) == 0) return;
 
             // Use ulong arithmetic for range calculation to correctly handle all supported types
             // including ulong and nuint. ulong.CreateTruncating preserves 2's complement bit patterns
@@ -367,8 +370,8 @@ public static class CountingSortInteger
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CountSort<T, TContext>(SortSpan<T, NullComparer<T>, TContext> s, SortSpan<T, NullComparer<T>, TContext> tempSpan, Span<int> countArray, ulong umin)
-        where T : IBinaryInteger<T>
+    private static void CountSort<T, TContext>(SortSpan<T, NumberComparer<T>, TContext> s, SortSpan<T, NumberComparer<T>, TContext> tempSpan, Span<int> countArray, ulong umin)
+        where T : IBinaryInteger<T>, IComparisonOperators<T, T, bool>
         where TContext : ISortContext
     {
         // Count occurrences
