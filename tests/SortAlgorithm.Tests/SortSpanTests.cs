@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Algorithms;
+using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 using TUnit.Assertions.Enums;
 
@@ -394,6 +394,123 @@ public class SortSpanTests
             }
 
             return (fast, observed);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // 読んだ値を後でも使う呼び出し向けの out オーバーロード。
+    // span が読んで値を返すので、報告される位置は span 自身が出したものであり、誤りようがない。
+    // ------------------------------------------------------------------
+
+    /// <summary>out オーバーロードは両インデックスを報告し、読み取りは各 1 回だけ。</summary>
+    [Test]
+    public async Task IsLessAt_OutVariant_ReportsBothIndicesAndReadsEachOnce()
+    {
+        var compares = new List<CompareEvent>();
+        var reads = new List<(int Index, int BufferId)>();
+        var source = new[] { 10, 20, 30 };
+        var span = new SortSpan<int, ComparableComparer<int>, VisualizationContext>(
+            source.AsSpan(), Recording(compares, reads), new ComparableComparer<int>(), 4);
+
+        var result = span.IsLessAt(0, 2, out var a0, out var a2);
+
+        await Assert.That(result).IsTrue().Because("10 < 30");
+        await Assert.That(a0).IsEqualTo(10);
+        await Assert.That(a2).IsEqualTo(30);
+        await Assert.That(reads).IsEquivalentTo(new List<(int, int)> { (0, 4), (2, 4) })
+            .Because("値を返すために読み直してはならない");
+        await Assert.That(compares).HasCount(1);
+        await Assert.That((compares[0].I, compares[0].J, compares[0].BufferI, compares[0].BufferJ))
+            .IsEqualTo((0, 2, 4, 4));
+    }
+
+    /// <summary>クロスバッファの out オーバーロードは各バッファーの ID を保つ。</summary>
+    [Test]
+    public async Task IsLessOrEqualAcross_OutVariant_KeepsEachOperandsBuffer()
+    {
+        var compares = new List<CompareEvent>();
+        var reads = new List<(int Index, int BufferId)>();
+        var context = Recording(compares, reads);
+        var main = new[] { 10, 20, 30 };
+        var aux = new[] { 5, 25 };
+        var mainSpan = new SortSpan<int, ComparableComparer<int>, VisualizationContext>(main.AsSpan(), context, new ComparableComparer<int>(), 0);
+        var auxSpan = new SortSpan<int, ComparableComparer<int>, VisualizationContext>(aux.AsSpan(), context, new ComparableComparer<int>(), 1);
+
+        var result = mainSpan.IsLessOrEqualAcross(1, auxSpan, 1, out var mv, out var av);
+
+        await Assert.That(result).IsTrue().Because("main[1]=20 <= aux[1]=25");
+        await Assert.That(mv).IsEqualTo(20);
+        await Assert.That(av).IsEqualTo(25);
+        await Assert.That(reads).IsEquivalentTo(new List<(int, int)> { (1, 0), (1, 1) });
+        await Assert.That((compares[0].I, compares[0].BufferI, compares[0].J, compares[0].BufferJ))
+            .IsEqualTo((1, 0, 1, 1));
+    }
+
+    /// <summary>
+    /// 新オーバーロードは、置き換え対象の手書き形と読み取り数・比較数が一致しなければならない。
+    /// </summary>
+    [Test]
+    public async Task ReadRetainingComparisons_MatchOperationCountsOfTheManualForm()
+    {
+        var source = new[] { 30, 10, 20, 40 };
+
+        var manual = new StatisticsContext();
+        RunManual(source, manual);
+
+        var overloads = new StatisticsContext();
+        RunOverloads(source, overloads);
+
+        await Assert.That(overloads.IndexReadCount).IsEqualTo(manual.IndexReadCount);
+        await Assert.That(overloads.CompareCount).IsEqualTo(manual.CompareCount);
+
+        // 手書き: 2 回読んで 1 回比較、さらに 1 回読んで 1 回比較
+        static void RunManual(int[] source, StatisticsContext context)
+        {
+            var s = new SortSpan<int, ComparableComparer<int>, StatisticsContext>(source.AsSpan(), context, new ComparableComparer<int>(), 0);
+            var a = s.Read(0);
+            var b = s.Read(1);
+            _ = s.IsGreaterThan(a, b);
+            var c = s.Read(2);
+            _ = s.IsLessThan(c, 25);
+        }
+
+        static void RunOverloads(int[] source, StatisticsContext context)
+        {
+            var s = new SortSpan<int, ComparableComparer<int>, StatisticsContext>(source.AsSpan(), context, new ComparableComparer<int>(), 0);
+            _ = s.IsGreaterAt(0, 1, out _, out _);
+            _ = s.IsElementLessThan(2, 25, out _);
+        }
+    }
+
+    /// <summary>カスタム比較子を迂回しないこと（プリミティブ特殊化を通る経路の確認）。</summary>
+    [Test]
+    public async Task ReadRetainingComparisons_HonorACustomComparer()
+    {
+        var source = new[] { 10, 20, 30 };
+
+        var (asc, desc) = Evaluate(source);
+
+        await Assert.That(asc).IsEquivalentTo(new List<bool> { true, true });
+        await Assert.That(desc).IsEquivalentTo(new List<bool> { false, false })
+            .Because("降順比較子では 2 つとも反転する");
+
+        static (List<bool> Ascending, List<bool> Descending) Evaluate(int[] source)
+        {
+            var ascending = new List<bool>();
+            {
+                var s = new SortSpan<int, ComparableComparer<int>, NullContext>(source.AsSpan(), NullContext.Default, new ComparableComparer<int>(), 0);
+                ascending.Add(s.IsLessAt(0, 2, out _, out _));              // 10 < 30
+                ascending.Add(s.IsElementLessThan(0, 15, out _));           // 10 < 15
+            }
+
+            var descending = new List<bool>();
+            {
+                var s = new SortSpan<int, DescendingIntComparer, NullContext>(source.AsSpan(), NullContext.Default, new DescendingIntComparer(), 0);
+                descending.Add(s.IsLessAt(0, 2, out _, out _));
+                descending.Add(s.IsElementLessThan(0, 15, out _));
+            }
+
+            return (ascending, descending);
         }
     }
 }

@@ -152,12 +152,11 @@ public static class PairInsertionSort
         {
             s.Context.OnPhase(SortPhase.PairInsertionPass, i, last - 1);
             // Read the pair of elements
-            var a = s.Read(i);
-            var b = s.Read(i + 1);
-
             // Ensure a <= b (swap if necessary)
-            // This pre-sorting of the pair reduces comparisons later
-            if (s.IsGreaterThan(a, b))
+            // This pre-sorting of the pair reduces comparisons later.
+            // The out-overload performs both reads and reports the comparison against i and i+1,
+            // where the value-based form named neither operand.
+            if (s.IsGreaterAt(i, i + 1, out var a, out var b))
             {
                 // Swap so that a is smaller
                 (a, b) = (b, a);
@@ -241,11 +240,8 @@ public static class PairInsertionSort
         // Process pairs of elements without boundary checks
         while (i + 1 < last)
         {
-            var a = s.Read(i);
-            var b = s.Read(i + 1);
-
             // Ensure a <= b
-            if (s.IsGreaterThan(a, b))
+            if (s.IsGreaterAt(i, i + 1, out var a, out var b))
             {
                 (a, b) = (b, a);
             }

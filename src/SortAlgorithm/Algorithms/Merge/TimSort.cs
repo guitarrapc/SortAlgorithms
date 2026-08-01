@@ -666,10 +666,9 @@ public static class TimSort
             // and trades one load for one store (verified with DOTNET_JitDisasm).
             do
             {
-                var val1 = t.Read(cursor1);
-                var val2 = s.Read(cursor2);
-
-                if (s.IsLessOrEqual(val1, val2))
+                // Both operands are elements, but of different buffers, so the cross-buffer overload
+                // is what can name them; it reads each once and hands the values back for the write.
+                if (t.IsLessOrEqualAcross(cursor1, s, cursor2, out var val1, out var val2))
                 {
                     s.Write(dest++, val1);
                     cursor1++;
@@ -824,10 +823,8 @@ public static class TimSort
             // the losing value in a local is not a win here.
             do
             {
-                var val1 = s.Read(cursor1);
-                var val2 = t.Read(cursor2);
-
-                if (s.IsGreaterOrEqual(val2, val1))
+                // Cross-buffer again, with the temp buffer as the left operand this time.
+                if (t.IsGreaterOrEqualAcross(cursor2, s, cursor1, out var val2, out var val1))
                 {
                     s.Write(dest--, val2);
                     cursor2--;

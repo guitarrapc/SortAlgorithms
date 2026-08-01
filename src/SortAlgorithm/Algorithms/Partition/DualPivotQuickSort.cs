@@ -274,8 +274,12 @@ public static class DualPivotQuickSort
                 {
                     // Read a[k] once per examination (paper's `x = a[k]`); both pivot
                     // comparisons reuse the cached value, so one read is recorded per element.
-                    var ak = s.Read(k);
-                    if (s.IsLessThan(ak, pivot1Value))
+                    // The first comparison reads through the span and so is reported against k. The
+                    // second reuses the cached value, so it names neither operand: locating it would
+                    // mean either reading twice, which announces work this loop deliberately avoids,
+                    // or having the caller assert where the value came from, which is an assertion
+                    // nothing can check.
+                    if (s.IsElementLessThan(k, pivot1Value, out var ak))
                     {
                         // Element < pivot1: move to left region
                         s.Swap(k, less);
@@ -293,8 +297,7 @@ public static class DualPivotQuickSort
                         great--;
 
                         // Re-read and re-check swapped element (original value no longer at k after swap)
-                        ak = s.Read(k);
-                        if (s.IsLessThan(ak, pivot1Value))
+                        if (s.IsElementLessThan(k, pivot1Value, out _))
                         {
                             s.Swap(k, less);
                             less++;
@@ -329,8 +332,7 @@ public static class DualPivotQuickSort
                 {
                     // Read a[k] once per examination (paper's `x = a[k]`); both branch
                     // comparisons reuse the cached value, so one read is recorded per element.
-                    var ak = s.Read(k);
-                    if (s.IsLessThan(ak, pivot1Value))
+                    if (s.IsElementLessThan(k, pivot1Value, out var ak))
                     {
                         // Element < pivot: move to left region
                         s.Swap(k, less);
@@ -347,8 +349,7 @@ public static class DualPivotQuickSort
                         great--;
 
                         // Re-read and re-check swapped element
-                        ak = s.Read(k);
-                        if (s.IsLessThan(ak, pivot1Value))
+                        if (s.IsElementLessThan(k, pivot1Value, out _))
                         {
                             s.Swap(k, less);
                             less++;

@@ -209,9 +209,9 @@ public static class StdSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var vx = s.Read(x);
-        var vy = s.Read(y);
-        var r = s.IsLessThan(vx, vy);
+        // The out-overload reads both and reports the comparison against x and y; the values come
+        // back because the unconditional writes below need them.
+        var r = s.IsLessAt(x, y, out var vx, out var vy);
         var tmp = r ? vx : vy;
         s.Write(y, r ? vy : vx);
         s.Write(x, tmp);
@@ -227,6 +227,11 @@ public static class StdSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // The three reads happen up front, as the network requires, and both comparisons then run on
+        // the cached values. Neither is reported with an operand location: the second compares a value
+        // the conditional selection produced, which is in no buffer at all, and reordering the reads to
+        // let the first one use an index-based overload would change the stream to suit the API rather
+        // than to describe the algorithm.
         var vx = s.Read(x);
         var vy = s.Read(y);
         var vz = s.Read(z);

@@ -166,18 +166,24 @@ public class ObservationCoordinateTests
     /// <summary>
     /// 全比較で少なくとも一方のオペランドがバッファ上の要素として報告されるアルゴリズム。
     ///
-    /// 意図的に外してあるもの（いずれも「すでに local に読み込んだ 2 値の比較」という同一形状で、
-    /// インデックスは分かっているが、値を渡すオーバーロードしか無いため位置が落ちる。
-    /// 読み直せば位置は載るが読み取り回数が変わるため、別形状の API を足すまで保留）:
-    /// - PairInsertionSort: ペアの 2 要素を読んでから大小を決める箇所
-    /// - StdSort: 分岐なしネットワーク CondSwap / PartiallySortedSwap
-    /// - TimSort: マージ本体（val1 は一時バッファ、val2 はメイン配列。書き込みで再利用される）
-    /// - DualPivotQuickSort: ak を読んでから 2 つのピボット値と複数回比較する箇所
+    /// 「読んだ値を後でも使う」箇所は、span 自身が読んで値を返す out オーバーロードで解消できる。
+    ///
+    /// 外してあるのは、1 回の読み取りを複数の比較で使い回すアルゴリズム:
+    /// - StdSort: 分岐なしネットワーク PartiallySortedSwap（2 つ目は cmov が選んだ中間値どうしの比較で、
+    ///   そもそもバッファ上に無い）
+    /// - DualPivotQuickSort: ak を読んで 2 つのピボット値と比較する
+    ///
+    /// ここに位置を載せるには、読み直して実際には行わない読み取りを報告するか、呼び出し側に
+    /// 「この値はこのインデックスから読んだ」と申告させるしかない。後者は任意の T に対して検証不能な
+    /// 主張になり、手書きのロールインデックスがずれていたのと同じ壊れ方を作る。両オペランド -1 のまま
+    /// 残す方が、嘘の位置を載せるより正確。
     /// </summary>
     public static IEnumerable<Func<AlgorithmCase>> LocatableComparisonAlgorithms()
     {
         yield return () => new AlgorithmCase("InsertionSort", static (a, c) => InsertionSort.Sort(a.AsSpan(), c));
         yield return () => new AlgorithmCase("BinaryInsertionSort", static (a, c) => BinaryInsertionSort.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("PairInsertionSort", static (a, c) => PairInsertionSort.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("TimSort", static (a, c) => TimSort.Sort(a.AsSpan(), c));
         yield return () => new AlgorithmCase("QuickSort", static (a, c) => QuickSort.Sort(a.AsSpan(), c));
         yield return () => new AlgorithmCase("QuickSort3way", static (a, c) => QuickSort3way.Sort(a.AsSpan(), c));
         yield return () => new AlgorithmCase("QuickSortMedian3", static (a, c) => QuickSortMedian3.Sort(a.AsSpan(), c));

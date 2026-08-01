@@ -340,94 +340,6 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     }
 
     /// <summary>
-    /// Returns true if the element at index <paramref name="i"/> is strictly less than the element at index <paramref name="j"/>.
-    /// Equivalent to <c>Compare(i, j) &lt; 0</c> but avoids the <c>CompareTo</c> → <c>int</c> → <c>&lt; 0</c> chain
-    /// for primitive types by returning <c>bool</c> directly via the same specialization used by <see cref="IsLessThan"/>.
-    /// Named "At" to disambiguate from the value-based <see cref="IsLessThan"/> overload when <typeparamref name="T"/> is <c>int</c>.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsLessAt(int i, int j)
-    {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var b = _span[j];
-            var result = _comparer.Compare(a, b);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnIndexRead(_offset + j, _bufferId);
-            _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
-            return result < 0;
-        }
-#if DEBUG
-        return _comparer.Compare(_span[i], _span[j]) < 0; // TEMP: bounds check for debugging OOB
-#else
-        if (_comparer is IComparableComparer)
-        {
-            ref T ai = ref Unsafe.Add(ref _ref, (nint)(uint)i);
-            ref T aj = ref Unsafe.Add(ref _ref, (nint)(uint)j);
-            if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref ai) < Unsafe.As<T, byte>(ref aj);
-            if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref ai) < Unsafe.As<T, sbyte>(ref aj);
-            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref ai) < Unsafe.As<T, ushort>(ref aj);
-            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref ai) < Unsafe.As<T, short>(ref aj);
-            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref ai) < Unsafe.As<T, uint>(ref aj);
-            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref ai) < Unsafe.As<T, int>(ref aj);
-            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref ai) < Unsafe.As<T, ulong>(ref aj);
-            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref ai) < Unsafe.As<T, long>(ref aj);
-            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref ai) < Unsafe.As<T, nuint>(ref aj);
-            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref ai) < Unsafe.As<T, nint>(ref aj);
-            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref ai) < Unsafe.As<T, float>(ref aj);
-            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref ai) < Unsafe.As<T, double>(ref aj);
-            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) < Unsafe.As<T, Half>(ref aj);
-        }
-        return _comparer.Compare(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref _ref, (nint)(uint)j)) < 0;
-#endif
-    }
-
-    /// <summary>
-    /// Returns true if the element at index <paramref name="i"/> is less than or equal to the element at index <paramref name="j"/>.
-    /// Equivalent to <c>Compare(i, j) &lt;= 0</c> but avoids the <c>CompareTo</c> → <c>int</c> → <c>&lt;= 0</c> chain
-    /// for primitive types by returning <c>bool</c> directly via the same specialization used by <see cref="IsLessOrEqual"/>.
-    /// Named "At" to disambiguate from the value-based <see cref="IsLessOrEqual"/> overload when <typeparamref name="T"/> is <c>int</c>.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsLessOrEqualAt(int i, int j)
-    {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var b = _span[j];
-            var result = _comparer.Compare(a, b);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnIndexRead(_offset + j, _bufferId);
-            _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
-            return result <= 0;
-        }
-#if DEBUG
-        return _comparer.Compare(_span[i], _span[j]) <= 0; // TEMP: bounds check for debugging OOB
-#else
-        if (_comparer is IComparableComparer)
-        {
-            ref T ai = ref Unsafe.Add(ref _ref, (nint)(uint)i);
-            ref T aj = ref Unsafe.Add(ref _ref, (nint)(uint)j);
-            if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref ai) <= Unsafe.As<T, byte>(ref aj);
-            if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref ai) <= Unsafe.As<T, sbyte>(ref aj);
-            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref ai) <= Unsafe.As<T, ushort>(ref aj);
-            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref ai) <= Unsafe.As<T, short>(ref aj);
-            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref ai) <= Unsafe.As<T, uint>(ref aj);
-            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref ai) <= Unsafe.As<T, int>(ref aj);
-            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref ai) <= Unsafe.As<T, ulong>(ref aj);
-            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref ai) <= Unsafe.As<T, long>(ref aj);
-            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref ai) <= Unsafe.As<T, nuint>(ref aj);
-            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref ai) <= Unsafe.As<T, nint>(ref aj);
-            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref ai) <= Unsafe.As<T, float>(ref aj);
-            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref ai) <= Unsafe.As<T, double>(ref aj);
-            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) <= Unsafe.As<T, Half>(ref aj);
-        }
-        return _comparer.Compare(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref _ref, (nint)(uint)j)) <= 0;
-#endif
-    }
-
-    /// <summary>
     /// Returns true if <paramref name="a"/> is strictly greater than <paramref name="b"/>.
     /// Equivalent to <c>Compare(a, b) &gt; 0</c> and logically identical to <c>!IsLessOrEqual(a, b)</c>,
     /// but provided for readability at call sites that naturally express "greater than" semantics.
@@ -505,243 +417,232 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #endif
     }
 
+
+    // ------------------------------------------------------------------
+    // Located comparisons.
+    //
+    // Every overload below answers the same question — how do two operands order — and differs only in
+    // where each operand lives. Which reads happen, and which locations the comparison can name, follow
+    // from the operand shape alone, so each shape announces itself once, in one Report* helper, and the
+    // public overloads are the four orderings over it. Repeating the index and buffer arithmetic per
+    // operator is what lets one of them drift, which is the failure this whole surface exists to avoid.
+    //
+    // The NullContext path never reaches a Report* helper: it reads directly and delegates to the
+    // value-based overloads, which hold the primitive specialization. That keeps the specialization in
+    // one place per operator rather than one per overload.
+    //
+    // Naming:
+    //   Is<op>At        both operands are indices of this span
+    //   IsElement<op>   the left operand is an index of this span, the right is a value
+    //   IsValue<op>     the left operand is a value, the right is an index of this span
+    //   Is<op>Across    both operands are indices, of this span and another
+    // An `out` parameter means the span performs the read and hands the value back, for callers that
+    // need it afterwards; the reported location is then the span's own and cannot be wrong.
+    // ------------------------------------------------------------------
+
+    /// <summary>Reads without announcing anything. Only for the NullContext path.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private T ReadUnobserved(int i)
+    {
+#if DEBUG
+        return _span[i]; // TEMP: bounds check for debugging OOB
+#else
+        return Unsafe.Add(ref _ref, (nint)(uint)i);
+#endif
+    }
+
+    /// <summary>Announces the reads and the comparison for two indices of this span.</summary>
+    private int ReportCompareAt(int i, int j, out T ai, out T aj)
+    {
+        ai = _span[i];
+        aj = _span[j];
+        var result = _comparer.Compare(ai, aj);
+        _context.OnIndexRead(_offset + i, _bufferId);
+        _context.OnIndexRead(_offset + j, _bufferId);
+        _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
+        return result;
+    }
+
+    /// <summary>
+    /// Announces the read and the comparison for an element of this span against a value that is not
+    /// in any buffer, which is reported as -1.
+    /// </summary>
+    private int ReportCompareElement(int i, T value, out T element)
+    {
+        element = _span[i];
+        var result = _comparer.Compare(element, value);
+        _context.OnIndexRead(_offset + i, _bufferId);
+        _context.OnCompare(_offset + i, -1, result, _bufferId, -1);
+        return result;
+    }
+
+    /// <summary>
+    /// As <see cref="ReportCompareElement"/> with the operands the other way round, so a consumer sees
+    /// the same sign the algorithm did.
+    /// </summary>
+    private int ReportCompareValue(T value, int j, out T element)
+    {
+        element = _span[j];
+        var result = _comparer.Compare(value, element);
+        _context.OnIndexRead(_offset + j, _bufferId);
+        _context.OnCompare(-1, _offset + j, result, -1, _bufferId);
+        return result;
+    }
+
+    /// <summary>
+    /// Announces the reads and the comparison for one index of this span and one of another. Both
+    /// operands keep their own buffer identity, which is what an index alone cannot express.
+    /// </summary>
+    private int ReportCompareAcross(int i, SortSpan<T, TComparer, TContext> other, int j, out T ai, out T bj)
+    {
+        ai = _span[i];
+        bj = other._span[j];
+        var result = _comparer.Compare(ai, bj);
+        _context.OnIndexRead(_offset + i, _bufferId);
+        _context.OnIndexRead(other._offset + j, other._bufferId);
+        _context.OnCompare(_offset + i, other._offset + j, result, _bufferId, other._bufferId);
+        return result;
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is strictly less than the element at index <paramref name="j"/>.
+    /// Named "At" to disambiguate from the value-based <see cref="IsLessThan"/> overload when <typeparamref name="T"/> is <c>int</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsLessAt(int i, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAt(i, j, out _, out _) < 0;
+        return IsLessThan(ReadUnobserved(i), ReadUnobserved(j));
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is less than or equal to the element at index <paramref name="j"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsLessOrEqualAt(int i, int j)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAt(i, j, out _, out _) <= 0;
+        return IsLessOrEqual(ReadUnobserved(i), ReadUnobserved(j));
+    }
+
     /// <summary>
     /// Returns true if the element at index <paramref name="i"/> is strictly greater than the element at index <paramref name="j"/>.
-    /// Equivalent to <c>Compare(i, j) &gt; 0</c> and logically identical to <c>!IsLessOrEqualAt(i, j)</c>,
-    /// but provided for readability at call sites that naturally express "greater than" semantics.
-    /// Named "At" to disambiguate from the value-based <see cref="IsGreaterThan"/> overload when <typeparamref name="T"/> is <c>int</c>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsGreaterAt(int i, int j)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var b = _span[j];
-            var result = _comparer.Compare(a, b);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnIndexRead(_offset + j, _bufferId);
-            _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
-            return result > 0;
-        }
-#if DEBUG
-        return _comparer.Compare(_span[i], _span[j]) > 0; // TEMP: bounds check for debugging OOB
-#else
-        if (_comparer is IComparableComparer)
-        {
-            ref T ai = ref Unsafe.Add(ref _ref, (nint)(uint)i);
-            ref T aj = ref Unsafe.Add(ref _ref, (nint)(uint)j);
-            if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref ai) > Unsafe.As<T, byte>(ref aj);
-            if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref ai) > Unsafe.As<T, sbyte>(ref aj);
-            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref ai) > Unsafe.As<T, ushort>(ref aj);
-            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref ai) > Unsafe.As<T, short>(ref aj);
-            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref ai) > Unsafe.As<T, uint>(ref aj);
-            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref ai) > Unsafe.As<T, int>(ref aj);
-            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref ai) > Unsafe.As<T, ulong>(ref aj);
-            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref ai) > Unsafe.As<T, long>(ref aj);
-            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref ai) > Unsafe.As<T, nuint>(ref aj);
-            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref ai) > Unsafe.As<T, nint>(ref aj);
-            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref ai) > Unsafe.As<T, float>(ref aj);
-            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref ai) > Unsafe.As<T, double>(ref aj);
-            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) > Unsafe.As<T, Half>(ref aj);
-        }
-        return _comparer.Compare(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref _ref, (nint)(uint)j)) > 0;
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAt(i, j, out _, out _) > 0;
+        return IsGreaterThan(ReadUnobserved(i), ReadUnobserved(j));
     }
 
     /// <summary>
     /// Returns true if the element at index <paramref name="i"/> is greater than or equal to the element at index <paramref name="j"/>.
-    /// Equivalent to <c>Compare(i, j) &gt;= 0</c> and logically identical to <c>!IsLessAt(i, j)</c>,
-    /// but provided for readability at call sites that naturally express "greater or equal" semantics.
-    /// Named "At" to disambiguate from the value-based <see cref="IsGreaterOrEqual"/> overload when <typeparamref name="T"/> is <c>int</c>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsGreaterOrEqualAt(int i, int j)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var b = _span[j];
-            var result = _comparer.Compare(a, b);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnIndexRead(_offset + j, _bufferId);
-            _context.OnCompare(_offset + i, _offset + j, result, _bufferId, _bufferId);
-            return result >= 0;
-        }
-#if DEBUG
-        return _comparer.Compare(_span[i], _span[j]) >= 0; // TEMP: bounds check for debugging OOB
-#else
-        if (_comparer is IComparableComparer)
-        {
-            ref T ai = ref Unsafe.Add(ref _ref, (nint)(uint)i);
-            ref T aj = ref Unsafe.Add(ref _ref, (nint)(uint)j);
-            if (typeof(T) == typeof(byte)) return Unsafe.As<T, byte>(ref ai) >= Unsafe.As<T, byte>(ref aj);
-            if (typeof(T) == typeof(sbyte)) return Unsafe.As<T, sbyte>(ref ai) >= Unsafe.As<T, sbyte>(ref aj);
-            if (typeof(T) == typeof(ushort)) return Unsafe.As<T, ushort>(ref ai) >= Unsafe.As<T, ushort>(ref aj);
-            if (typeof(T) == typeof(short)) return Unsafe.As<T, short>(ref ai) >= Unsafe.As<T, short>(ref aj);
-            if (typeof(T) == typeof(uint)) return Unsafe.As<T, uint>(ref ai) >= Unsafe.As<T, uint>(ref aj);
-            if (typeof(T) == typeof(int)) return Unsafe.As<T, int>(ref ai) >= Unsafe.As<T, int>(ref aj);
-            if (typeof(T) == typeof(ulong)) return Unsafe.As<T, ulong>(ref ai) >= Unsafe.As<T, ulong>(ref aj);
-            if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref ai) >= Unsafe.As<T, long>(ref aj);
-            if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref ai) >= Unsafe.As<T, nuint>(ref aj);
-            if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref ai) >= Unsafe.As<T, nint>(ref aj);
-            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref ai) >= Unsafe.As<T, float>(ref aj);
-            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref ai) >= Unsafe.As<T, double>(ref aj);
-            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref ai) >= Unsafe.As<T, Half>(ref aj);
-        }
-        return _comparer.Compare(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref _ref, (nint)(uint)j)) >= 0;
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAt(i, j, out _, out _) >= 0;
+        return IsGreaterOrEqual(ReadUnobserved(i), ReadUnobserved(j));
     }
 
-    // ------------------------------------------------------------------
-    // Mixed index/value comparisons.
-    //
-    // An algorithm that holds one operand in a local (an insertion sort's element in flight, a
-    // partition pivot, a merge key) still knows where the other operand lives. Reaching for the
-    // value-based overloads with an inline Read discards that: the read is announced with its index,
-    // but the comparison that follows names neither operand, so a consumer sees a comparison it
-    // cannot place. These overloads keep the index on the operand that has one and report -1 only
-    // for the operand that genuinely is not in a buffer.
-    //
-    // Read and comparison counts are identical to `IsGreaterThan(Read(i), value)`, and the
-    // NullContext path delegates to the value-based overloads so the primitive specialization is
-    // written once. The (int, T) shape mirrors the existing `Compare(int, T)` overload set.
-    // ------------------------------------------------------------------
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is strictly less than the element at
+    /// index <paramref name="j"/>, handing back both elements.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsLessAt(int i, int j, out T ai, out T aj)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAt(i, j, out ai, out aj) < 0;
+        ai = ReadUnobserved(i);
+        aj = ReadUnobserved(j);
+        return IsLessThan(ai, aj);
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is strictly greater than the element at
+    /// index <paramref name="j"/>, handing back both elements.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsGreaterAt(int i, int j, out T ai, out T aj)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAt(i, j, out ai, out aj) > 0;
+        ai = ReadUnobserved(i);
+        aj = ReadUnobserved(j);
+        return IsGreaterThan(ai, aj);
+    }
 
     /// <summary>
     /// Returns true if the element at index <paramref name="i"/> is strictly less than <paramref name="value"/>.
-    /// Reports the read of <paramref name="i"/> and a comparison whose left operand is <paramref name="i"/>;
-    /// <paramref name="value"/> is reported as -1 because it is not currently stored in a buffer.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsElementLessThan(int i, T value)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var result = _comparer.Compare(a, value);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnCompare(_offset + i, -1, result, _bufferId, -1);
-            return result < 0;
-        }
-#if DEBUG
-        return IsLessThan(_span[i], value);
-#else
-        return IsLessThan(Unsafe.Add(ref _ref, (nint)(uint)i), value);
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out _) < 0;
+        return IsLessThan(ReadUnobserved(i), value);
     }
 
     /// <summary>
     /// Returns true if the element at index <paramref name="i"/> is less than or equal to <paramref name="value"/>.
-    /// Reports the read of <paramref name="i"/> and a comparison whose left operand is <paramref name="i"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsElementLessOrEqual(int i, T value)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var result = _comparer.Compare(a, value);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnCompare(_offset + i, -1, result, _bufferId, -1);
-            return result <= 0;
-        }
-#if DEBUG
-        return IsLessOrEqual(_span[i], value);
-#else
-        return IsLessOrEqual(Unsafe.Add(ref _ref, (nint)(uint)i), value);
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out _) <= 0;
+        return IsLessOrEqual(ReadUnobserved(i), value);
     }
 
     /// <summary>
     /// Returns true if the element at index <paramref name="i"/> is strictly greater than <paramref name="value"/>.
-    /// Reports the read of <paramref name="i"/> and a comparison whose left operand is <paramref name="i"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsElementGreaterThan(int i, T value)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var result = _comparer.Compare(a, value);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnCompare(_offset + i, -1, result, _bufferId, -1);
-            return result > 0;
-        }
-#if DEBUG
-        return IsGreaterThan(_span[i], value);
-#else
-        return IsGreaterThan(Unsafe.Add(ref _ref, (nint)(uint)i), value);
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out _) > 0;
+        return IsGreaterThan(ReadUnobserved(i), value);
     }
 
     /// <summary>
     /// Returns true if the element at index <paramref name="i"/> is greater than or equal to <paramref name="value"/>.
-    /// Reports the read of <paramref name="i"/> and a comparison whose left operand is <paramref name="i"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsElementGreaterOrEqual(int i, T value)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var result = _comparer.Compare(a, value);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnCompare(_offset + i, -1, result, _bufferId, -1);
-            return result >= 0;
-        }
-#if DEBUG
-        return IsGreaterOrEqual(_span[i], value);
-#else
-        return IsGreaterOrEqual(Unsafe.Add(ref _ref, (nint)(uint)i), value);
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out _) >= 0;
+        return IsGreaterOrEqual(ReadUnobserved(i), value);
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> is strictly less than <paramref name="value"/>,
+    /// handing back the element that was read.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementLessThan(int i, T value, out T element)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out element) < 0;
+        element = ReadUnobserved(i);
+        return IsLessThan(element, value);
     }
 
     /// <summary>
     /// Returns true if the element at index <paramref name="i"/> is strictly greater than <paramref name="value"/>,
-    /// and hands back the element that was read so a shifting caller can reuse it without a second
-    /// observable read. Equivalent to <c>var a = Read(i); IsGreaterAt(i, value)</c> counted once.
+    /// handing back the element that was read.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsElementGreaterThan(int i, T value, out T element)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            element = _span[i];
-            var result = _comparer.Compare(element, value);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnCompare(_offset + i, -1, result, _bufferId, -1);
-            return result > 0;
-        }
-#if DEBUG
-        element = _span[i];
-#else
-        element = Unsafe.Add(ref _ref, (nint)(uint)i);
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out element) > 0;
+        element = ReadUnobserved(i);
         return IsGreaterThan(element, value);
     }
 
     /// <summary>
     /// Returns true if <paramref name="value"/> is strictly less than the element at index <paramref name="j"/>.
-    /// The operand order is preserved in the reported comparison, so a consumer sees the same sign the
-    /// algorithm did; <paramref name="value"/> is reported as -1.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsValueLessThan(T value, int j)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var b = _span[j];
-            var result = _comparer.Compare(value, b);
-            _context.OnIndexRead(_offset + j, _bufferId);
-            _context.OnCompare(-1, _offset + j, result, -1, _bufferId);
-            return result < 0;
-        }
-#if DEBUG
-        return IsLessThan(value, _span[j]);
-#else
-        return IsLessThan(value, Unsafe.Add(ref _ref, (nint)(uint)j));
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareValue(value, j, out _) < 0;
+        return IsLessThan(value, ReadUnobserved(j));
     }
 
     /// <summary>
@@ -750,19 +651,8 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsValueLessOrEqual(T value, int j)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var b = _span[j];
-            var result = _comparer.Compare(value, b);
-            _context.OnIndexRead(_offset + j, _bufferId);
-            _context.OnCompare(-1, _offset + j, result, -1, _bufferId);
-            return result <= 0;
-        }
-#if DEBUG
-        return IsLessOrEqual(value, _span[j]);
-#else
-        return IsLessOrEqual(value, Unsafe.Add(ref _ref, (nint)(uint)j));
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareValue(value, j, out _) <= 0;
+        return IsLessOrEqual(value, ReadUnobserved(j));
     }
 
     /// <summary>
@@ -771,19 +661,8 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsValueGreaterThan(T value, int j)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var b = _span[j];
-            var result = _comparer.Compare(value, b);
-            _context.OnIndexRead(_offset + j, _bufferId);
-            _context.OnCompare(-1, _offset + j, result, -1, _bufferId);
-            return result > 0;
-        }
-#if DEBUG
-        return IsGreaterThan(value, _span[j]);
-#else
-        return IsGreaterThan(value, Unsafe.Add(ref _ref, (nint)(uint)j));
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareValue(value, j, out _) > 0;
+        return IsGreaterThan(value, ReadUnobserved(j));
     }
 
     /// <summary>
@@ -792,30 +671,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsValueGreaterOrEqual(T value, int j)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var b = _span[j];
-            var result = _comparer.Compare(value, b);
-            _context.OnIndexRead(_offset + j, _bufferId);
-            _context.OnCompare(-1, _offset + j, result, -1, _bufferId);
-            return result >= 0;
-        }
-#if DEBUG
-        return IsGreaterOrEqual(value, _span[j]);
-#else
-        return IsGreaterOrEqual(value, Unsafe.Add(ref _ref, (nint)(uint)j));
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareValue(value, j, out _) >= 0;
+        return IsGreaterOrEqual(value, ReadUnobserved(j));
     }
-
-    // ------------------------------------------------------------------
-    // Cross-buffer comparisons.
-    //
-    // Merge algorithms compare an element of the main span against one of an auxiliary buffer. Both
-    // operands have an index, but they live in different SortSpans, so neither the (int, int) nor the
-    // (int, T) overloads can name both. These take the other span explicitly and report both indices
-    // with their own buffer identities — the case observation.md calls out as the reason buffer
-    // identity exists at all, since an index alone is ambiguous across buffers.
-    // ------------------------------------------------------------------
 
     /// <summary>
     /// Returns true if the element at index <paramref name="i"/> of this span is strictly less than the
@@ -824,21 +682,8 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsLessAcross(int i, SortSpan<T, TComparer, TContext> other, int j)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var b = other._span[j];
-            var result = _comparer.Compare(a, b);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnIndexRead(other._offset + j, other._bufferId);
-            _context.OnCompare(_offset + i, other._offset + j, result, _bufferId, other._bufferId);
-            return result < 0;
-        }
-#if DEBUG
-        return IsLessThan(_span[i], other._span[j]);
-#else
-        return IsLessThan(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref other._ref, (nint)(uint)j));
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAcross(i, other, j, out _, out _) < 0;
+        return IsLessThan(ReadUnobserved(i), other.ReadUnobserved(j));
     }
 
     /// <summary>
@@ -848,21 +693,8 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsLessOrEqualAcross(int i, SortSpan<T, TComparer, TContext> other, int j)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var b = other._span[j];
-            var result = _comparer.Compare(a, b);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnIndexRead(other._offset + j, other._bufferId);
-            _context.OnCompare(_offset + i, other._offset + j, result, _bufferId, other._bufferId);
-            return result <= 0;
-        }
-#if DEBUG
-        return IsLessOrEqual(_span[i], other._span[j]);
-#else
-        return IsLessOrEqual(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref other._ref, (nint)(uint)j));
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAcross(i, other, j, out _, out _) <= 0;
+        return IsLessOrEqual(ReadUnobserved(i), other.ReadUnobserved(j));
     }
 
     /// <summary>
@@ -872,45 +704,45 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsGreaterAcross(int i, SortSpan<T, TComparer, TContext> other, int j)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var b = other._span[j];
-            var result = _comparer.Compare(a, b);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnIndexRead(other._offset + j, other._bufferId);
-            _context.OnCompare(_offset + i, other._offset + j, result, _bufferId, other._bufferId);
-            return result > 0;
-        }
-#if DEBUG
-        return IsGreaterThan(_span[i], other._span[j]);
-#else
-        return IsGreaterThan(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref other._ref, (nint)(uint)j));
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAcross(i, other, j, out _, out _) > 0;
+        return IsGreaterThan(ReadUnobserved(i), other.ReadUnobserved(j));
     }
 
     /// <summary>
-    /// Returns true if the element at index <paramref name="i"/> of this span is greater than or equal to the
-    /// element at index <paramref name="j"/> of <paramref name="other"/>.
+    /// Returns true if the element at index <paramref name="i"/> of this span is greater than or equal to
+    /// the element at index <paramref name="j"/> of <paramref name="other"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsGreaterOrEqualAcross(int i, SortSpan<T, TComparer, TContext> other, int j)
     {
-        if (typeof(TContext) != typeof(NullContext))
-        {
-            var a = _span[i];
-            var b = other._span[j];
-            var result = _comparer.Compare(a, b);
-            _context.OnIndexRead(_offset + i, _bufferId);
-            _context.OnIndexRead(other._offset + j, other._bufferId);
-            _context.OnCompare(_offset + i, other._offset + j, result, _bufferId, other._bufferId);
-            return result >= 0;
-        }
-#if DEBUG
-        return IsGreaterOrEqual(_span[i], other._span[j]);
-#else
-        return IsGreaterOrEqual(Unsafe.Add(ref _ref, (nint)(uint)i), Unsafe.Add(ref other._ref, (nint)(uint)j));
-#endif
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAcross(i, other, j, out _, out _) >= 0;
+        return IsGreaterOrEqual(ReadUnobserved(i), other.ReadUnobserved(j));
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> of this span is less than or equal to the
+    /// element at index <paramref name="j"/> of <paramref name="other"/>, handing back both elements.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsLessOrEqualAcross(int i, SortSpan<T, TComparer, TContext> other, int j, out T ai, out T bj)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAcross(i, other, j, out ai, out bj) <= 0;
+        ai = ReadUnobserved(i);
+        bj = other.ReadUnobserved(j);
+        return IsLessOrEqual(ai, bj);
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> of this span is greater than or equal to
+    /// the element at index <paramref name="j"/> of <paramref name="other"/>, handing back both elements.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsGreaterOrEqualAcross(int i, SortSpan<T, TComparer, TContext> other, int j, out T ai, out T bj)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAcross(i, other, j, out ai, out bj) >= 0;
+        ai = ReadUnobserved(i);
+        bj = other.ReadUnobserved(j);
+        return IsGreaterOrEqual(ai, bj);
     }
 
     /// <summary>
