@@ -22,7 +22,12 @@ public class RadixPassNotificationTests
         return arr;
     }
 
-    public sealed record RadixSortCase(string Name, Action<int[], VisualizationContext> Sort)
+    /// <param name="HasRangeScan">
+    /// 桁パスに入る前にキー範囲（min/max あるいは max のみ）を 1 回走査するか。
+    /// 走査するものは <see cref="SortPhase.KeyRangeScan"/> でそれを通知しなければならない。
+    /// RadixMSD4Sort だけは事前走査を持たず、桁数をキー幅から決めるので通知もしない。
+    /// </param>
+    public sealed record RadixSortCase(string Name, Action<int[], VisualizationContext> Sort, bool HasRangeScan)
     {
         public override string ToString() => Name;
     }
@@ -30,13 +35,46 @@ public class RadixPassNotificationTests
     public static IEnumerable<Func<RadixSortCase>> RadixSortCases()
     {
         // MSD 系: 再帰の各ノードが RadixPass を通知する
-        yield return () => new RadixSortCase("AmericanFlagSort", static (a, c) => AmericanFlagSort.Sort(a.AsSpan(), c));
-        yield return () => new RadixSortCase("RadixMSD4Sort", static (a, c) => RadixMSD4Sort.Sort(a.AsSpan(), c));
-        yield return () => new RadixSortCase("RadixMSD10Sort", static (a, c) => RadixMSD10Sort.Sort(a.AsSpan(), c));
+        yield return () => new RadixSortCase("AmericanFlagSort", static (a, c) => AmericanFlagSort.Sort(a.AsSpan(), c), HasRangeScan: true);
+        yield return () => new RadixSortCase("RadixMSD4Sort", static (a, c) => RadixMSD4Sort.Sort(a.AsSpan(), c), HasRangeScan: false);
+        yield return () => new RadixSortCase("RadixMSD10Sort", static (a, c) => RadixMSD10Sort.Sort(a.AsSpan(), c), HasRangeScan: true);
         // LSD 系: 元から契約を満たしている。回帰の基準として同じ検証にかける
-        yield return () => new RadixSortCase("RadixLSD4Sort", static (a, c) => RadixLSD4Sort.Sort(a.AsSpan(), c));
-        yield return () => new RadixSortCase("RadixLSD10Sort", static (a, c) => RadixLSD10Sort.Sort(a.AsSpan(), c));
-        yield return () => new RadixSortCase("RadixLSD256Sort", static (a, c) => RadixLSD256Sort.Sort(a.AsSpan(), c));
+        yield return () => new RadixSortCase("RadixLSD4Sort", static (a, c) => RadixLSD4Sort.Sort(a.AsSpan(), c), HasRangeScan: true);
+        yield return () => new RadixSortCase("RadixLSD10Sort", static (a, c) => RadixLSD10Sort.Sort(a.AsSpan(), c), HasRangeScan: true);
+        yield return () => new RadixSortCase("RadixLSD256Sort", static (a, c) => RadixLSD256Sort.Sort(a.AsSpan(), c), HasRangeScan: true);
+    }
+
+    /// <summary>
+    /// 事前のキー範囲走査は要素を 1 つも動かさないまま n 回 read するため、通知が無いと可視化側には
+    /// 「直前のフェーズのラベルが貼られたまま n ステップ進む」状態に見える。
+    /// 走査を持つ実装は最初の RadixPass より前に KeyRangeScan を 1 回だけ出すこと。
+    /// </summary>
+    [Test]
+    [MethodDataSource(nameof(RadixSortCases))]
+    public async Task RangeScanIsAnnouncedBeforeTheFirstDigitPass(RadixSortCase testCase)
+    {
+        var array = MakeArray(2000);
+        var expected = array.ToArray();
+        Array.Sort(expected);
+
+        var phases = new List<SortPhase>();
+        testCase.Sort(array, new VisualizationContext(onPhase: (phase, _, _, _) =>
+        {
+            if (phase is SortPhase.KeyRangeScan or SortPhase.RadixPass) phases.Add(phase);
+        }));
+
+        await Assert.That(array).IsEquivalentTo(expected);
+
+        var scanCount = phases.Count(p => p == SortPhase.KeyRangeScan);
+        if (!testCase.HasRangeScan)
+        {
+            await Assert.That(scanCount).IsEqualTo(0);
+            return;
+        }
+
+        // 走査は 1 回だけ、かつ必ず最初の桁パスより前
+        await Assert.That(scanCount).IsEqualTo(1);
+        await Assert.That(phases[0]).IsEqualTo(SortPhase.KeyRangeScan);
     }
 
     [Test]

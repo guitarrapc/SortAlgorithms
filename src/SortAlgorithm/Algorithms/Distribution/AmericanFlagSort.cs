@@ -291,9 +291,10 @@ public static class AmericanFlagSort
             return;
         }
 
-        // Announce the range scan so a consumer sees a labelled phase rather than n unattributed reads.
-        // FlashSort reports its own min/max pass the same way.
-        s.Context.OnPhase(SortPhase.DistributionCount);
+        // Announce the range scan: without it a consumer sees n reads with no phase attached, and the label
+        // from whatever ran before stays on screen. KeyRangeScan rather than DistributionCount: this measures
+        // the keys, it does not tally per-value occurrences.
+        s.Context.OnPhase(SortPhase.KeyRangeScan);
 
         // One scan of the keys decides how many digit levels can hold a difference.
         // Without it the digit count comes from the key width alone (4 levels for a 32-bit key), and every

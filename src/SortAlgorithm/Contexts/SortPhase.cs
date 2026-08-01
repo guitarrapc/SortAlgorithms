@@ -466,6 +466,15 @@ public enum SortPhase
     DistributionCount,
 
     /// <summary>
+    /// A pass over the input that only measures the keys — finding min/max, or the maximum digit count — to
+    /// decide how much work the following passes need. No element is read for its own sake and none is moved.
+    /// Distinct from <see cref="DistributionCount"/>, which tallies per-value occurrences: describing a
+    /// min/max scan as "counting occurrences" tells a consumer the wrong thing about what it is watching.
+    /// No parameters.
+    /// </summary>
+    KeyRangeScan,
+
+    /// <summary>
     /// Distribution Sort accumulate phase (prefix sum / compute offsets).
     /// No parameters.
     /// </summary>

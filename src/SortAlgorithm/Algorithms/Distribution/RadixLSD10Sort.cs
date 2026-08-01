@@ -228,6 +228,11 @@ public static class RadixLSD10Sort
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var temp = new SortSpan<T, TComparer, TContext>(tempBuffer, context, comparer, BUFFER_TEMP);
 
+            // Announce the range scan: without it a consumer sees n reads with no phase attached, and the
+            // label from whatever ran before stays on screen through the whole scan. KeyRangeScan rather than
+            // DistributionCount: this measures the keys, it does not tally per-value occurrences.
+            s.Context.OnPhase(SortPhase.KeyRangeScan);
+
             // Find min and max unsigned keys to determine required digit count
             var minKey = ulong.MaxValue;
             var maxKey = ulong.MinValue;
