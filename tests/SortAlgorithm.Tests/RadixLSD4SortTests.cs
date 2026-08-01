@@ -321,4 +321,37 @@ public class RadixLSD4SortTests : IntegerSortTestsBase
         // Verify result is sorted
         await Assert.That(mixed).IsEquivalentTo(mixed.OrderBy(x => x), CollectionOrdering.Matching);
     }
+
+    [Test]
+    [Arguments(100, 42, 10)]         // range 990        -> 10 bits ->  5 passes (odd: one final copy back)
+    [Arguments(100, 42, 1_000)]      // range 99,000     -> 17 bits ->  9 passes (odd)
+    [Arguments(100, 42, 1_000_000)]  // range 99,000,000 -> 27 bits -> 14 passes (even: result ends in the main buffer)
+    public async Task TheoreticalValuesWideRangeTest(int n, int seed, int stride)
+    {
+        var stats = new StatisticsContext();
+        var values = TestHelpers.ShuffledRangeScaled(n, seed, stride);
+        var expected = values.OrderBy(x => x).ToArray();
+        RadixLSD4Sort.Sort(values.AsSpan(), stats);
+
+        // The other statistics tests here use a dense [0, n) range, which caps the pass count at 4.
+        // Scaling the values widens the key range without changing n, so the pass count is what varies
+        // here — up to 14 passes, where the per-pass cost and the ping-pong parity dominate the totals.
+        var range = (ulong)((n - 1) * stride);
+        var requiredBits = 64 - System.Numerics.BitOperations.LeadingZeroCount(range);
+        var digitCount = Math.Max(1, (requiredBits + 1) / 2); // ceil(requiredBits / 2)
+        await Assert.That(digitCount).IsGreaterThanOrEqualTo(2); // guard: this test is pointless at 1 pass
+
+        // Counting reads the cached key array rather than the span, so a pass costs one span read
+        // (distribute) and one span write. An odd pass count leaves the result in the temp buffer.
+        var finalCopy = digitCount % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + digitCount * n + finalCopy);
+        var expectedWrites = (ulong)(digitCount * n + finalCopy);
+
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+
+        await Assert.That(values).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
 }

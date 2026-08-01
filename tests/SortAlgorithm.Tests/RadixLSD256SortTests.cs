@@ -271,4 +271,39 @@ public class RadixLSD256SortTests : IntegerSortTestsBase
         // Verify result is sorted
         await Assert.That(mixed).IsEquivalentTo(mixed.OrderBy(x => x), CollectionOrdering.Matching);
     }
+
+    [Test]
+    [Arguments(100, 42, 10)]         // range 990        -> 10 bits -> 2 passes (even: result ends in the main buffer)
+    [Arguments(100, 42, 1_000)]      // range 99,000     -> 17 bits -> 3 passes (odd: one final copy back)
+    [Arguments(100, 42, 1_000_000)]  // range 99,000,000 -> 27 bits -> 4 passes (even)
+    public async Task TheoreticalValuesWideRangeTest(int n, int seed, int stride)
+    {
+        var stats = new StatisticsContext();
+        var values = TestHelpers.ShuffledRangeScaled(n, seed, stride);
+        var expected = values.OrderBy(x => x).ToArray();
+        RadixLSD256Sort.Sort(values.AsSpan(), stats);
+
+        // Every other statistics test here uses a dense [0, n) range with n <= 100, which is 7 bits and
+        // therefore always a single pass. One pass hides everything that only shows up across passes:
+        // the per-pass read/write cost, and the ping-pong parity that decides whether the sorted data
+        // ends up in the main buffer or has to be copied back from temp. Scaling the values widens the
+        // key range without changing n, so the pass count is what varies here.
+        var range = (ulong)((n - 1) * stride);
+        var requiredBits = 64 - System.Numerics.BitOperations.LeadingZeroCount(range);
+        var digitCount = Math.Max(1, (requiredBits + 7) / 8); // ceil(requiredBits / 8)
+        await Assert.That(digitCount).IsGreaterThanOrEqualTo(2); // guard: this test is pointless at 1 pass
+
+        // Ping-pong: a pass reads twice (count + distribute) and writes once, and the buffers trade
+        // roles instead of being copied back. An odd pass count leaves the result in the temp buffer.
+        var finalCopy = digitCount % 2 == 1 ? n : 0;
+        var expectedReads = (ulong)(n + digitCount * 2 * n + finalCopy);
+        var expectedWrites = (ulong)(digitCount * n + finalCopy);
+
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+
+        await Assert.That(values).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
 }
