@@ -1479,7 +1479,11 @@ public static class ArrayPatterns
     /// <br/>
     /// Generate quadratic distribution (x²)
     /// </summary>
-    public static int[] GenerateQuadraticDistribution(int size)
+    public static int[] GenerateQuadraticDistribution(int size) => GenerateQuadraticDistribution(size, new Random());
+
+    /// <inheritdoc cref="GenerateQuadraticDistribution(int)"/>
+    /// <remarks>Deterministic for a given <paramref name="random"/> seed (seeded shuffle for reproducible sharing).</remarks>
+    public static int[] GenerateQuadraticDistribution(int size, Random random)
     {
         var array = new int[size];
         var n = size - 1;
@@ -1491,7 +1495,7 @@ public static class ArrayPatterns
         }
 
         // Shuffle to randomize order while keeping value distribution
-        return ShuffleArray(array);
+        return ShuffleArray(array, random);
     }
 
     /// <summary>
@@ -1499,7 +1503,11 @@ public static class ArrayPatterns
     /// <br/>
     /// Generate square root distribution (√x)
     /// </summary>
-    public static int[] GenerateSquareRootDistribution(int size)
+    public static int[] GenerateSquareRootDistribution(int size) => GenerateSquareRootDistribution(size, new Random());
+
+    /// <inheritdoc cref="GenerateSquareRootDistribution(int)"/>
+    /// <remarks>Deterministic for a given <paramref name="random"/> seed (seeded shuffle for reproducible sharing).</remarks>
+    public static int[] GenerateSquareRootDistribution(int size, Random random)
     {
         var array = new int[size];
         var n = size - 1;
@@ -1510,7 +1518,7 @@ public static class ArrayPatterns
             array[i] = (int)(n * Math.Sqrt(x)) + 1;
         }
 
-        return ShuffleArray(array);
+        return ShuffleArray(array, random);
     }
 
     /// <summary>
@@ -1518,7 +1526,11 @@ public static class ArrayPatterns
     /// <br/>
     /// Generate cubic distribution (x³ centered)
     /// </summary>
-    public static int[] GenerateCubicDistribution(int size)
+    public static int[] GenerateCubicDistribution(int size) => GenerateCubicDistribution(size, new Random());
+
+    /// <inheritdoc cref="GenerateCubicDistribution(int)"/>
+    /// <remarks>Deterministic for a given <paramref name="random"/> seed (seeded shuffle for reproducible sharing).</remarks>
+    public static int[] GenerateCubicDistribution(int size, Random random)
     {
         var array = new int[size];
         var h = size / 2.0;
@@ -1530,7 +1542,7 @@ public static class ArrayPatterns
             array[i] = (int)(h * (cubic + 1));
         }
 
-        return ShuffleArray(array);
+        return ShuffleArray(array, random);
     }
 
     /// <summary>
@@ -1538,7 +1550,11 @@ public static class ArrayPatterns
     /// <br/>
     /// Generate quintic distribution (x⁵ centered)
     /// </summary>
-    public static int[] GenerateQuinticDistribution(int size)
+    public static int[] GenerateQuinticDistribution(int size) => GenerateQuinticDistribution(size, new Random());
+
+    /// <inheritdoc cref="GenerateQuinticDistribution(int)"/>
+    /// <remarks>Deterministic for a given <paramref name="random"/> seed (seeded shuffle for reproducible sharing).</remarks>
+    public static int[] GenerateQuinticDistribution(int size, Random random)
     {
         var array = new int[size];
         var h = size / 2.0;
@@ -1550,7 +1566,7 @@ public static class ArrayPatterns
             array[i] = (int)(h * (quintic + 1));
         }
 
-        return ShuffleArray(array);
+        return ShuffleArray(array, random);
     }
 
     /// <summary>
@@ -1558,7 +1574,11 @@ public static class ArrayPatterns
     /// <br/>
     /// Generate cube root distribution (∛x)
     /// </summary>
-    public static int[] GenerateCubeRootDistribution(int size)
+    public static int[] GenerateCubeRootDistribution(int size) => GenerateCubeRootDistribution(size, new Random());
+
+    /// <inheritdoc cref="GenerateCubeRootDistribution(int)"/>
+    /// <remarks>Deterministic for a given <paramref name="random"/> seed (seeded shuffle for reproducible sharing).</remarks>
+    public static int[] GenerateCubeRootDistribution(int size, Random random)
     {
         var array = new int[size];
         var h = size / 2.0;
@@ -1570,7 +1590,7 @@ public static class ArrayPatterns
             array[i] = (int)(h * (root + 1));
         }
 
-        return ShuffleArray(array);
+        return ShuffleArray(array, random);
     }
 
     /// <summary>
@@ -1578,7 +1598,11 @@ public static class ArrayPatterns
     /// <br/>
     /// Generate fifth root distribution (⁵√x)
     /// </summary>
-    public static int[] GenerateFifthRootDistribution(int size)
+    public static int[] GenerateFifthRootDistribution(int size) => GenerateFifthRootDistribution(size, new Random());
+
+    /// <inheritdoc cref="GenerateFifthRootDistribution(int)"/>
+    /// <remarks>Deterministic for a given <paramref name="random"/> seed (seeded shuffle for reproducible sharing).</remarks>
+    public static int[] GenerateFifthRootDistribution(int size, Random random)
     {
         var array = new int[size];
         var h = size / 2.0;
@@ -1590,7 +1614,7 @@ public static class ArrayPatterns
             array[i] = (int)(h * (root + 1));
         }
 
-        return ShuffleArray(array);
+        return ShuffleArray(array, random);
     }
 
     /// <summary>
@@ -1598,9 +1622,12 @@ public static class ArrayPatterns
     /// <br/>
     /// Fisher-Yates shuffle (randomize array)
     /// </summary>
-    public static int[] ShuffleArray(int[] array)
+    public static int[] ShuffleArray(int[] array) => ShuffleArray(array, new Random());
+
+    /// <inheritdoc cref="ShuffleArray(int[])"/>
+    /// <remarks>Deterministic for a given <paramref name="random"/> seed.</remarks>
+    public static int[] ShuffleArray(int[] array, Random random)
     {
-        var random = new Random();
         for (var i = array.Length - 1; i > 0; i--)
         {
             var j = random.Next(i + 1);
@@ -1705,11 +1732,15 @@ public static class ArrayPatterns
     /// <br/>
     /// Generate Cantor function distribution
     /// </summary>
-    public static int[] GenerateCantorDistribution(int size)
+    public static int[] GenerateCantorDistribution(int size) => GenerateCantorDistribution(size, new Random());
+
+    /// <inheritdoc cref="GenerateCantorDistribution(int)"/>
+    /// <remarks>Deterministic for a given <paramref name="random"/> seed (seeded shuffle for reproducible sharing).</remarks>
+    public static int[] GenerateCantorDistribution(int size, Random random)
     {
         var array = new int[size];
         CantorRecursive(array, 0, size, 0, size - 1);
-        return ShuffleArray(array);
+        return ShuffleArray(array, random);
 
         static void CantorRecursive(int[] arr, int a, int b, int min, int max)
         {
