@@ -76,9 +76,19 @@ namespace SortAlgorithm.Algorithms;
 /// order, so the order is the only part of this phase that is not derivable — and without the role the only way to recover it is to
 /// assume the node read immediately before each write-back is the extracted one, which is a coupling to the statement order here.</description></item>
 /// </list>
+/// <para><strong>Orientation of the tree:</strong></para>
+/// <para>
+/// Levcopoulos and Petersson state the algorithm over a Cartesian tree with the <em>maximum</em> at the root, which
+/// emits the elements in descending order. This implementation uses the min-at-root convention, so that it sorts
+/// ascending like every other algorithm here and matches the ordering a comparer expresses. The two are duals -
+/// reverse the comparison in the pop test and in the queue and one becomes the other - so the structure, the linear
+/// construction, the adaptivity and the bounds above are unchanged. The min-at-root form is also the one the
+/// Wikipedia article documents, and is what any reader comparing this code against either source will expect.
+/// </para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Cartesian_tree</para>
-/// <para>Original paper: Levcopoulos, C.; Petersson, O. (1989). "Heapsort - Adapted for Presorted Files". WADS 1989, LNCS 382, pp. 499-509.</para>
+/// <para>The sorting algorithm: Levcopoulos, C.; Petersson, O. (1989). "Heapsort - Adapted for Presorted Files". WADS 1989, LNCS 382, pp. 499-509.</para>
+/// <para>The data structure it sorts with: Vuillemin, J. (1980). "A unifying look at data structures". Communications of the ACM 23(4), pp. 229-239.</para>
 /// </remarks>
 public static class CartesianTreeSort
 {
