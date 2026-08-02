@@ -35,6 +35,15 @@ public static class TimsortAdversaryGenerator
 
     private static int[] BuildTimSortBadRuns(int size, int minRun)
     {
+        // With size <= 2 * minRun, TimSort forms at most two runs (only the final run may be
+        // shorter than minRun), and the [minRun, minRun + 1] seed below (2 * minRun + 1 elements)
+        // would overshoot the array, driving the remainder negative — which the trimming logic
+        // never handles. This is exactly sizes 64..127 with ComputeMinRun (minRun ~ size / 2).
+        // Fall back to the only adversarial shape available at this size: two runs whose single
+        // merge is stressed by the anti-galloping interleave.
+        if (size <= 2 * minRun)
+            return [minRun, size - minRun];
+
         var rev = new List<int>();
         int sum = 0;
 
