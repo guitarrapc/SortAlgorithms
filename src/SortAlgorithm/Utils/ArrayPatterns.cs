@@ -2193,42 +2193,21 @@ public static class ArrayPatterns
     // Adversarial Patterns
 
     /// <summary>
-    /// QuickSort最悪ケース（median-of-3 pivot選択用）
+    /// QuickSort最悪ケース（中央値 pivot 系を O(n²) 化する）
+    /// McIlroy の遅延評価 adversary を QuickSort 自身に対して走らせ、選ばれる pivot が常に極値になる順列を得る。
+    /// 中央要素を pivot にする系（QuickSort / QuickSortMedian3 / QuickSort3way）が対象で、ninther や四分位 pivot は対象外。
+    /// 生成コストは誘発する二次時間そのもの（n=32,768 で約 800ms）なので、大きいサイズで繰り返し使う場合はキャッシュすること。
     /// <br/>
-    /// Generate QuickSort adversary (worst case for median-of-3 pivot selection)
+    /// Generate QuickSort adversary (drives the middle-pivot family into O(n²))
+    /// Derived by running QuickSort itself against McIlroy's lazy-evaluation adversary, so every pivot it selects turns out to be an extreme value.
+    /// Targets the middle-pivot family (QuickSort / QuickSortMedian3 / QuickSort3way); ninther and quartile-pivot variants have different killers.
+    /// Generation costs the quadratic work it provokes (~800ms at n = 32,768), so cache the result when materializing it repeatedly at large sizes.
+    /// <br/>
+    /// ref: M. D. McIlroy, "A Killer Adversary for Quicksort", Software - Practice and Experience 29(4), 1999. https://www.cs.dartmouth.edu/~doug/mdmspe.pdf
     /// </summary>
     public static int[] GenerateQuickSortAdversary(int size)
-    {
-        if (size <= 0)
-            return Array.Empty<int>();
-
-        var result = new int[size];
-        int pos = 0;
-
-        // First half: odd numbers, interleaving low/high
-        int lowOdd = 1;
-        int highOdd = (size % 2 == 0) ? size - 1 : size;
-
-        while (pos < size / 2)
-        {
-            result[pos++] = lowOdd;
-            lowOdd += 2;
-
-            if (pos < size / 2)
-            {
-                result[pos++] = highOdd;
-                highOdd -= 2;
-            }
-        }
-
-        // Second half: all even numbers ascending
-        for (int even = 2; pos < size; even += 2)
-        {
-            result[pos++] = even;
-        }
-
-        return result;
-    }
+        // This overload has always answered a non-positive size with an empty array rather than throwing.
+        => size <= 0 ? [] : QuickSortAdversaryGenerator.Generate(size);
 
     /// <summary>
     /// PDQソート対抗パターン（Pattern-defeating QuickSort用）
@@ -2723,38 +2702,22 @@ public static class ArrayPatterns
     }
 
     /// <summary>
-    /// QuickSort最悪ケース（IntKey版・median-of-3 pivot選択用）
+    /// QuickSort最悪ケース（IntKey版）
     /// <br/>
-    /// Generate QuickSort adversary (IntKey version - worst case for median-of-3 pivot selection)
+    /// Generate QuickSort adversary (IntKey version)
     /// </summary>
+    /// <remarks>
+    /// The adversary is a property of the comparison sequence, not of the element type, so this
+    /// projects the int pattern rather than repeating its construction. The two used to be
+    /// copy-pasted twins and could drift apart silently.
+    /// </remarks>
     public static IntKey[] GenerateQuickSortAdversaryIntKey(int size)
     {
-        if (size <= 0)
-            return Array.Empty<IntKey>();
-
-        var result = new IntKey[size];
-        int pos = 0;
-
-        // First half: odd numbers, interleaving low/high
-        int lowOdd = 1;
-        int highOdd = (size % 2 == 0) ? size - 1 : size;
-
-        while (pos < size / 2)
+        var keys = GenerateQuickSortAdversary(size);
+        var result = new IntKey[keys.Length];
+        for (var i = 0; i < keys.Length; i++)
         {
-            result[pos++] = new IntKey(lowOdd);
-            lowOdd += 2;
-
-            if (pos < size / 2)
-            {
-                result[pos++] = new IntKey(highOdd);
-                highOdd -= 2;
-            }
-        }
-
-        // Second half: all even numbers ascending
-        for (int even = 2; pos < size; even += 2)
-        {
-            result[pos++] = new IntKey(even);
+            result[i] = new IntKey(keys[i]);
         }
 
         return result;
