@@ -199,14 +199,22 @@ public static class BinomialHeapSort
 
         // The merged list can hold up to three roots of the same degree (two from the inputs plus one carry),
         // so the sweep looks one root ahead before deciding to link.
+        //
+        // Two values are carried across iterations rather than re-read. Both are known exactly, so reading
+        // them again would report memory traffic the algorithm does not need:
+        //   - x's degree: every branch either leaves x alone, moves x to next (whose degree was just read),
+        //     or links, which raises the degree of whichever node stays a root by exactly one.
+        //   - x's sibling after the branch: advancing makes it next's sibling, adopting sets it to next's
+        //     sibling, and linking x under next leaves next's sibling untouched. In all three it is the
+        //     nextSibling already in hand.
         var prev = NULL_INDEX;
         var x = head;
+        var degreeX = ReadDegree(nodes, x, context);
         var next = ReadSibling(nodes, x, context);
 
         while (next != NULL_INDEX)
         {
             var nextSibling = ReadSibling(nodes, next, context);
-            var degreeX = ReadDegree(nodes, x, context);
             var degreeNext = ReadDegree(nodes, next, context);
 
             if (degreeX != degreeNext || (nextSibling != NULL_INDEX && ReadDegree(nodes, nextSibling, context) == degreeX))
@@ -214,12 +222,14 @@ public static class BinomialHeapSort
                 // Different degrees, or three in a row: leave x alone and advance.
                 prev = x;
                 x = next;
+                degreeX = degreeNext;
             }
             else if (CompareNodes(nodes, x, next, comparer, context) <= 0)
             {
                 // x keeps the smaller key, so it adopts next and stays in the root list.
                 SetSibling(nodes, x, nextSibling, context);
                 Link(nodes, next, x, context);
+                degreeX++;
             }
             else
             {
@@ -234,9 +244,10 @@ public static class BinomialHeapSort
                 }
                 Link(nodes, x, next, context);
                 x = next;
+                degreeX = degreeNext + 1;
             }
 
-            next = ReadSibling(nodes, x, context);
+            next = nextSibling;
         }
 
         return head;
@@ -297,6 +308,13 @@ public static class BinomialHeapSort
     {
         // Min-heap order puts each tree's minimum at its root, so scanning the root list finds the global minimum.
         // The scan keeps the first strict minimum, which is one of the two tie-breaks that cost this sort its stability.
+        //
+        // Both operands are read here even though the best key so far could be carried in a local. Reporting a
+        // comparison with only one read makes the recorder's read coalescing ambiguous: it absorbs a pending read
+        // whose index and buffer match either operand, and cannot tell a pointer read from a value read. The
+        // sibling read that walks this loop names the very node that is usually the current minimum, so it would
+        // be absorbed as that operand's read and the expanded stream would come back in a different order.
+        // The tree sorts get away with the one-read form because their two operands live in different buffers.
         var minPrev = NULL_INDEX;
         var min = head;
         var prev = head;

@@ -257,9 +257,10 @@ public static class PairingHeapSort
             }
 
             current = ReadSibling(nodes, b, context);
-            SetSibling(nodes, a, NULL_INDEX, context);
-            SetSibling(nodes, b, NULL_INDEX, context);
 
+            // Neither sibling is cleared first. The usual formulation detaches both before melding, but
+            // every one of those writes is overwritten before it can be read: the meld's loser has its
+            // sibling set to the winner's first child, and the winner's is set by the push on the next line.
             var paired = Meld(nodes, a, b, comparer, context);
             SetSibling(nodes, paired, stack, context);
             stack = paired;
@@ -270,12 +271,15 @@ public static class PairingHeapSort
         var result = NULL_INDEX;
         while (stack != NULL_INDEX)
         {
-            var next = ReadSibling(nodes, stack, context);
             var top = stack;
-            stack = next;
-            SetSibling(nodes, top, NULL_INDEX, context);
+            stack = ReadSibling(nodes, top, context);
             result = Meld(nodes, result, top, comparer, context);
         }
+
+        // The popped node keeps its stack link only while it wins its melds, and a winner is a root — no
+        // child list runs through it — so the stale link is unreachable until the fold ends. Clearing it
+        // once here costs one write instead of one per pop.
+        if (result != NULL_INDEX) SetSibling(nodes, result, NULL_INDEX, context);
 
         return PublishRoot(published, result, context);
     }
