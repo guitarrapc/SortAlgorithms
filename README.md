@@ -1829,6 +1829,7 @@ UnrollFactor=1  WarmupCount=2
 - [Tim Sort](./src/SortAlgorithm/Algorithms/Merge/TimSort.cs)
 
 ### Heap
+- [Binomial Heap Sort](./src/SortAlgorithm/Algorithms/Heap/BinomialHeapSort.cs)
 - [Bottom-Up Heap Sort](./src/SortAlgorithm/Algorithms/Heap/BottomupHeapSort.cs)
 - [Heap Sort](./src/SortAlgorithm/Algorithms/Heap/HeapSort.cs)
 - [Min-Heap Sort](./src/SortAlgorithm/Algorithms/Heap/MinHeapSort.cs)

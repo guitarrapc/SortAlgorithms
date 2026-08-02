@@ -14,6 +14,8 @@
 ///   <item><term>SelectionFindMin</term><description>i (sorted boundary) / last (last index)</description></item>
 ///   <item><term>TournamentBuild</term><description>n (element count) / size (leaf count = next power of 2 ≥ n)</description></item>
 ///   <item><term>TournamentExtract</term><description>sortedCount+1 (1-based extraction step) / n (total elements)</description></item>
+///   <item><term>BinomialHeapInsert</term><description>i (index of element being inserted) / last (array last index)</description></item>
+///   <item><term>BinomialHeapExtract</term><description>step (1-based extraction step) / n (total elements)</description></item>
 ///   <item><term>DoubleSelectionFindMinMax</term><description>left (left boundary) / right (right boundary)</description></item>
 ///   <item><term>CycleSortCycle</term><description>cycleStart (cycle start index) / last (last index)</description></item>
 ///   <item><term>PancakeFindMax</term><description>first (head index) / currentSize (current subarray last index, inclusive)</description></item>
@@ -277,6 +279,21 @@ public enum SortPhase
     /// param1=sortedCount+1 (1-based extraction step), param2=n (total elements)
     /// </summary>
     TournamentExtract,
+
+    /// <summary>
+    /// Binomial Heap Sort build phase: inserting the element at index i into the binomial heap.
+    /// Distinct from <see cref="HeapBuild"/>, which heapifies the array in place in a single bottom-up pass:
+    /// this phase reports per-element progress because the heap is grown one insert at a time, and each insert
+    /// carries through the root list like a binary increment.
+    /// param1=i (index of element being inserted), param2=last (array last index)
+    /// </summary>
+    BinomialHeapInsert,
+
+    /// <summary>
+    /// Binomial Heap Sort extract phase: removing the minimum root and unioning its children back into the heap.
+    /// param1=step (1-based extraction step), param2=n (total elements)
+    /// </summary>
+    BinomialHeapExtract,
 
     /// <summary>
     /// In-place reversal of a subrange (e.g. MinHeapSort final step).
