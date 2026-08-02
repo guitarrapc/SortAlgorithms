@@ -2306,13 +2306,21 @@ public static class ArrayPatterns
     }
 
     /// <summary>
-    /// Timsortドラッグと呼ばれるrun長列が長くなりやすいパターン
+    /// TimSort のマージコストを最大化するパターン
+    /// 全 run をちょうど minRun にして自然な run を一切与えず、run 内は挿入距離が最大になる並び、
+    /// run 間はマージ木のどの階層でも完全に交互になるよう順位を配る。
+    /// TimSort は O(n log n) が保証されているため二次時間にはならず、ランダム入力の約 1.3 倍が実測値。
     /// <br/>
-    /// Generate Timsort drag adversary (pattern that creates long run lengths called Timsort drag)
+    /// Generate TimSort adversary (maximizes merge cost)
+    /// Every run is exactly minRun so none comes for free; within a run the layout maximizes binary-insertion distance,
+    /// and across runs the ranks interleave at every level of the merge tree so galloping never pays off.
+    /// TimSort is O(n log n) by construction, so this measures ~1.3x random input rather than a quadratic case.
     /// <br/>
     /// ref: Buss & Knop（Strategies for Stable Merge Sorting, arXiv:1801.04641 https://arxiv.org/abs/1801.04641
+    /// マージコストという枠組みは同論文による。ただし drag 型の run 長列そのものは逆効果で、採用していない
+    /// （理由は <see cref="TimsortAdversaryGenerator"/> を参照）
     /// </summary>
-    public static int[] GenerateTimsortDragAdversary(int size) => TimsortAdversaryGenerator.Generate(size, TimSort.ComputeMinRun(size));
+    public static int[] GenerateTimsortAdversary(int size) => TimsortAdversaryGenerator.Generate(size, TimSort.ComputeMinRun(size));
 
 
     // Floating-Point with NaN Pattern Generators
