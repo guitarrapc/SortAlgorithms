@@ -4,7 +4,7 @@ using SortAlgorithm.Contexts;
 namespace SortAlgorithm.Tests;
 
 [InheritsTests]
-public class StrandSortTests : SortTestsBase
+public class StrandSortTests : StableSortTestsBase
 {
     protected override void Sort<T, TContext>(Span<T> span, TContext context)
         => StrandSort.Sort(span, context);
