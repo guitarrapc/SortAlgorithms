@@ -68,6 +68,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class QuickSortMedian9
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by QuickSortMedian9Tests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 

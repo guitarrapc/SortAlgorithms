@@ -152,6 +152,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class SpreadSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => false;
+
     // Boost constants from constants.hpp
     const int MaxSplits = 11;                         // max_splits: max log₂(bucketCount) per level
     const int MaxFinishingSplits = MaxSplits + 1;     // max_finishing_splits: relaxed limit for one-pass completion

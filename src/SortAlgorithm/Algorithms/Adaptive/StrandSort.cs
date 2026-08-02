@@ -47,6 +47,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class StrandSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by StrandSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;        // Main input array (merge scratch)
     private const int BUFFER_REMAINING = 1;   // Elements not yet placed in any strand

@@ -74,6 +74,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class PingpongMergeSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by PingpongMergeSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array (destination at top level)
     private const int BUFFER_MERGE = 1;      // Auxiliary buffer (initial source / ping buffer)

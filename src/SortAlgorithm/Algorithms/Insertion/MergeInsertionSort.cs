@@ -60,6 +60,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class MergeInsertionSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by MergeInsertionSortTests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_CHAIN = 1;      // Evolving sorted chain (Ford-Johnson chain construction)

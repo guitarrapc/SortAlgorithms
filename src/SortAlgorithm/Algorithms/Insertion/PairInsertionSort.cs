@@ -56,6 +56,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class PairInsertionSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by PairInsertionSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 

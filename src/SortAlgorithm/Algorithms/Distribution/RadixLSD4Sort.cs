@@ -93,6 +93,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class RadixLSD4Sort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => true;
+
     private const int RadixBits = 2;        // 2 bits per digit
     private const int RadixSize = 4;        // 2^2 = 4 buckets
 

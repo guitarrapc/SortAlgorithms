@@ -75,6 +75,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class QuickSort3way
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by QuickSort3wayTests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Threshold for switching to insertion sort
     private const int InsertionSortThreshold = 16;
 

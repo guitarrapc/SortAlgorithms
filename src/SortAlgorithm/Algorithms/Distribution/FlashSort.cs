@@ -47,6 +47,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class FlashSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => false;
+
     private const int InsertionSortThreshold = 16;
 
     // Buffer identifiers for visualization

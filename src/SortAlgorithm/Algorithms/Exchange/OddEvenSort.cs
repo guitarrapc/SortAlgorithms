@@ -51,6 +51,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class OddEvenSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by OddEvenSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 

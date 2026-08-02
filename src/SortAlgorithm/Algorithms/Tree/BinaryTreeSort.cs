@@ -59,6 +59,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class BinaryTreeSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by BinaryTreeSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TREE = 1;       // Tree nodes (auxiliary buffer for arena; tracked in statistics like merge sort's auxiliary buffer)

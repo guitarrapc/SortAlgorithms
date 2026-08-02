@@ -105,6 +105,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class BlockQuickSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by BlockQuickSortTests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Block size for partitioning - matches reference implementation
     const int BLOCKSIZE = 128;
 

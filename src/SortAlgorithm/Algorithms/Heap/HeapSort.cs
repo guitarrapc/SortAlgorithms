@@ -66,6 +66,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class HeapSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by HeapSortTests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
@@ -326,6 +332,12 @@ public static class HeapSort
 /// </remarks>
 public static class HeapSortNonOptimized
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by HeapSortNonOptimizedTests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     private const int BUFFER_MAIN = 0;       // Main input array
 
     /// <summary>

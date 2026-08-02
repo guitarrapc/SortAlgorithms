@@ -39,6 +39,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class CocktailShakerSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by CocktailShakerSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
@@ -158,6 +164,12 @@ public static class CocktailShakerSort
 /// </remarks>
 public static class CocktailShakerSortNonOptimized
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by CocktailShakerSortNonOptimizedTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 

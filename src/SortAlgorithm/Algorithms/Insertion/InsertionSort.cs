@@ -60,6 +60,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class InsertionSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by InsertionSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
@@ -556,6 +562,12 @@ public static class InsertionSort
 /// <typeparam name="T"></typeparam>
 public static class InsertionSortNonOptimized
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by InsertionSortNonOptimizedTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 

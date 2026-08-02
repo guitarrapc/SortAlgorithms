@@ -61,6 +61,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class MergeSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by MergeSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_MERGE = 1;      // Merge buffer (auxiliary space)

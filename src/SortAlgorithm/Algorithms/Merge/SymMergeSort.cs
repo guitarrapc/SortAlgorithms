@@ -66,6 +66,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class SymMergeSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by SymMergeSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Threshold for using insertion sort for initial block seeding (Phase 1).
     // Matches Go's sort.stable blockSize (20).
     private const int InsertionSortThreshold = 20;

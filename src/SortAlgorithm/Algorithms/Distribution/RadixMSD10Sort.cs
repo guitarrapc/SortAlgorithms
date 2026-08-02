@@ -97,6 +97,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class RadixMSD10Sort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => true;
+
     private const int RadixBase = 10;       // Decimal base
     // Switch to insertion sort for small buckets. The textbook constant is 15-16 (Sedgewick's MSD string
     // sort, American flag sort), but those are radix-256 string sorts and nothing in the MSD definition

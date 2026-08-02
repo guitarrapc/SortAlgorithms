@@ -53,6 +53,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class BatcherOddEvenMergeSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => false;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 

@@ -81,6 +81,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class RadixLSD10Sort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => true;
+
     private const int RadixBase = 10;       // Decimal base
 
     // Per-digit slot count in the histogram block. The extra leading slot lets a pass turn its counts

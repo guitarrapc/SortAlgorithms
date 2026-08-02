@@ -66,6 +66,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class PDQSortBranchless
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by PDQSortBranchlessTests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Constants (identical to PDQSort)
     private const int InsertionSortThreshold = 24;
     private const int NintherThreshold = 128;

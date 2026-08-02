@@ -36,6 +36,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class BogoSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => false;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const uint XORSHIFT_SEED = 0x9E3779B9u; // Golden ratio derived; deterministic seed for reproducible shuffle sequence

@@ -53,6 +53,8 @@ Prefer no auxiliary storage when the algorithm permits it. For required storage,
 
 Document the algorithm's ordering, stability, average/worst time complexity, auxiliary-space complexity, special preconditions, and relevant source or paper. After implementation, update the related spec with any newly discovered constraint or failed assumption.
 
+Stability is declared twice on purpose, and the two are not interchangeable: `public static bool IsStable` is what consumers read, and the type summary is where the reason lives. Derive the tests from `StableSortTestsBase` when the value is `true` — `StabilityDeclarationTests` requires the two to agree, so a claim that nothing measures fails the build rather than reaching a consumer. Prefer measuring over reasoning: four summaries in this repository claimed the wrong value for years, one of them contradicting a comment in its own merge loop, because a wrong stability claim sorts perfectly and no ordering test can see it.
+
 ## Testing Reference
 
 The repository uses TUnit with Microsoft.Testing.Platform.

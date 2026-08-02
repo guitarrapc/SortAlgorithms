@@ -80,6 +80,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class BalancedBinaryTreeSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by BalancedBinaryTreeSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TREE = 1;       // Tree nodes (auxiliary buffer for arena; tracked in statistics like merge sort's auxiliary buffer)
@@ -623,6 +629,12 @@ public static class BalancedBinaryTreeSort
 /// </remarks>
 public static class BalancedBinaryTreeSortNonOptimized
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by BalancedBinaryTreeSortNonOptimizedTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 

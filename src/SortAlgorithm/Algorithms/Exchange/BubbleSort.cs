@@ -40,6 +40,12 @@ namespace SortAlgorithm.Algorithms;
 /// <typeparam name="T"></typeparam>
 public static class BubbleSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by BubbleSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
@@ -143,6 +149,12 @@ public static class BubbleSort
 /// <typeparam name="T"></typeparam>
 public static class BubbleSortNonOptimized
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by BubbleSortNonOptimizedTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 

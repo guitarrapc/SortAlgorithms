@@ -103,6 +103,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class IntroSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by IntroSortTests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Partitioning correctness: Hoare partition maintains invariant s[left..r] ≤ pivot ≤ s[l..right] with proper boundary checks
     // Recursion correctness: Both partitions [left, r] and [l, right] are strictly smaller than [left, right] due to pointer advance after swap
     // Termination guarantee: Combination of depth limit (triggers HeapSort) and tail recursion (limits stack depth) ensures termination

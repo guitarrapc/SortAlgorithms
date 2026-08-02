@@ -77,6 +77,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class Driftsort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by DriftsortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Scratch buffer (partition destination / merge buffer / small-sort staging)

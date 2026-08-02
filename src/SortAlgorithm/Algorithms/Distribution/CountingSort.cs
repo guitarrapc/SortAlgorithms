@@ -81,6 +81,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class CountingSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => true;
+
     private const int MaxCountArraySize = 10_000_000; // Maximum allowed count array size
     private const int StackAllocThreshold = 1024; // Use stackalloc for count arrays smaller than this
 
@@ -283,6 +289,12 @@ public static class CountingSort
 /// </remarks>
 public static class CountingSortInteger
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => true;
+
     private const int MaxCountArraySize = 10_000_000; // Maximum allowed count array size
     private const int MaxRangeFactor = 32;            // Maximum allowed range/n ratio; range > MaxRangeFactor*n means O(range) dominates O(n)
     private const int StackAllocThreshold = 1024;     // Use stackalloc for count arrays smaller than this

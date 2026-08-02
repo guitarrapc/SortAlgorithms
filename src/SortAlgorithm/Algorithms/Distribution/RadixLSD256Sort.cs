@@ -95,6 +95,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class RadixLSD256Sort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => true;
+
     private const int RadixBits = 8;        // 8 bits per digit
     private const int RadixSize = 256;      // 2^8 = 256 buckets
 

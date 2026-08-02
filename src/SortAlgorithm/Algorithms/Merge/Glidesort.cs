@@ -61,6 +61,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class Glidesort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by GlidesortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary merge buffer

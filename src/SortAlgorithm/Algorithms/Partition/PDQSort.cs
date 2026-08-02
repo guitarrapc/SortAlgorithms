@@ -93,6 +93,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class PDQSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by PDQSortTests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // InsertionSortThreshold: 24 elements (empirically optimal, balances overhead vs. efficiency)
     // NintherThreshold: 128 elements (above this, use ninther; below this, use median-of-3)
     // PartialInsertionSortLimit: 8 element moves (threshold for detecting nearly-sorted partitions)

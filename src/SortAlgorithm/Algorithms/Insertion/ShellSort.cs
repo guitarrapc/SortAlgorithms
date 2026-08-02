@@ -48,6 +48,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class ShellSortKnuth1973
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by ShellSortKnuth1973Tests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
@@ -202,6 +208,12 @@ public static class ShellSortKnuth1973
 /// <typeparam name="T"></typeparam>
 public static class ShellSortSedgewick1986
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by ShellSortSedgewick1986Tests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
@@ -357,6 +369,12 @@ public static class ShellSortSedgewick1986
 /// <typeparam name="T"></typeparam>
 public static class ShellSortTokuda1992
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by ShellSortTokuda1992Tests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
@@ -514,6 +532,12 @@ public static class ShellSortTokuda1992
 /// <typeparam name="T"></typeparam>
 public static class ShellSortCiura2001
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by ShellSortCiura2001Tests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 
@@ -670,6 +694,12 @@ public static class ShellSortCiura2001
 /// <typeparam name="T"></typeparam>
 public static class ShellSortLee2021
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by ShellSortLee2021Tests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
 

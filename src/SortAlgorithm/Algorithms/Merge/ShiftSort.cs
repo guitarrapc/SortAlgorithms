@@ -72,6 +72,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class ShiftSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by ShiftSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Threshold for using stackalloc vs ArrayPool (128 int = 512 bytes)
     private const int StackallocThreshold = 256; // (128 * 2) - 2 = max span.Length for stackalloc
 

@@ -66,6 +66,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class BucketSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => true;
+
     private const int StackAllocThreshold = 1024; // Use stackalloc for the bucket array when the count is smaller than this
 
     // Buffer identifiers for visualization
@@ -318,6 +324,12 @@ public static class BucketSort
 /// </remarks>
 public static class BucketSortInteger
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => true;
+
     private const int StackAllocThreshold = 1024; // Use stackalloc for the bucket array when the count is smaller than this
 
     // Buffer identifiers for visualization

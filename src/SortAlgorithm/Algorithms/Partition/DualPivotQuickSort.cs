@@ -107,6 +107,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class DualPivotQuickSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by DualPivotQuickSortTests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Threshold for switching to insertion sort.
     // Yaroslavskiy's 2009 paper uses TINY_SIZE = 17; Java 7's DualPivotQuicksort raised it to 47
     // (INSERTION_SORT_THRESHOLD), which this implementation follows.

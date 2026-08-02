@@ -24,6 +24,14 @@ Sort<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
 
 Some algorithms provide additional range, key-selector, seed, or variant overloads. Those extensions must preserve the same ordering and observation semantics for the elements they cover.
 
+## Declared Properties
+
+Every algorithm type exposes `public static bool IsStable`, stating whether it preserves the relative order of elements that compare equal. It is part of the API rather than only of the documentation because consumers act on it: a catalog that labels algorithms, a UI that offers "stable only", or a caller choosing between two algorithms all need the fact in a form they can read. A consumer must read this property rather than restate the value, so that the answer has one source.
+
+The library does not promise stability across algorithms — that is explicitly out of scope — so the property is per algorithm and says nothing about any other. A stable algorithm additionally carries the reasoning in its type summary, because stability is usually a consequence of one specific choice (which side equal keys are sent to, which end of a merge wins a tie) rather than of the algorithm's shape, and the next person to touch that choice needs to know it was load-bearing.
+
+Stability is not derivable from a sorted result, so a wrong value is invisible in every ordering test. `StableSortTestsBase` is what measures it, and `StabilityDeclarationTests` requires the declaration to agree with the suite an algorithm's tests derive from. Where a suite cannot observe stability — integer-only entry points make equal keys indistinguishable — the algorithm is listed as an explicit exemption there rather than silently skipped.
+
 ## Radix Key Mapping
 
 The radix-sort family (LSD/MSD radix, American Flag, Spread) is constrained by an order-preserving

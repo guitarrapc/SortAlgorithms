@@ -51,6 +51,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class BlockMergeSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by BlockMergeSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Buffer identifiers for visualization
     const int BUFFER_MAIN = 0;
     const int BUFFER_CACHE = 1;

@@ -68,6 +68,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class RotateMergeSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by RotateMergeSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Threshold for using insertion sort instead of rotation-based merge
     private const int InsertionSortThreshold = 16;
 
@@ -419,6 +425,12 @@ public static class RotateMergeSort
 /// </remarks>
 public static class RotateMergeSortRecursive
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by RotateMergeSortRecursiveTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Threshold for using insertion sort instead of rotation-based merge
     // Small subarrays benefit from insertion sort's lower overhead
     private const int InsertionSortThreshold = 16;
@@ -735,6 +747,12 @@ public static class RotateMergeSortRecursive
 /// </remarks>
 public static class RotateMergeSortNonOptimized
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by RotateMergeSortNonOptimizedTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
+
     // Threshold for using insertion sort instead of rotation-based merge
     // Small subarrays benefit from insertion sort's lower overhead
     private const int InsertionSortThreshold = 16;

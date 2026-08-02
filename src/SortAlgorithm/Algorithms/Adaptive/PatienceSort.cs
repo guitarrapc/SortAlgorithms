@@ -46,6 +46,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class PatienceSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by PatienceSortTests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;        // Main input array
     private const int BUFFER_AUX = 1;         // Auxiliary merge buffer

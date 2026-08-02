@@ -56,6 +56,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class PigeonholeSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => true;
+
     private const int MaxHoleArraySize = 10_000_000; // Maximum allowed hole array size
     private const int StackAllocThreshold = 1024; // Use stackalloc for the holeHead array when range is smaller than this
 
@@ -259,6 +265,12 @@ public static class PigeonholeSort
 /// </remarks>
 public static class PigeonholeSortInteger
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>See the stability note in this type's summary.</remarks>
+    public static bool IsStable => true;
+
     private const int MaxHoleArraySize = 10_000_000; // Maximum allowed hole array size
     private const int MaxRangeFactor = 32;           // Maximum allowed range/n ratio; range > MaxRangeFactor*n means O(range) dominates O(n)
     private const int StackAllocThreshold = 1024; // Use stackalloc for the hole array when range is smaller than this

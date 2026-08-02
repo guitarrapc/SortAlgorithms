@@ -76,6 +76,12 @@ namespace SortAlgorithm.Algorithms;
 /// </remarks>
 public static class WeakHeapSort
 {
+    /// <summary>
+    /// Whether this algorithm preserves the relative order of elements that compare equal.
+    /// </summary>
+    /// <remarks>Verified by WeakHeapSortTests, which derives from SortTestsBase.</remarks>
+    public static bool IsStable => false;
+
     private const int STACKALLOC_BITS_THRESHOLD = 1024;
 
     // Buffer identifiers for visualization
