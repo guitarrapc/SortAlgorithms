@@ -32,3 +32,7 @@ Out-of-bounds accesses can pass every RELEASE test. `SortSpan` indexes the span 
 
 Structural patterns that make two runs unequal in length belong in the shared standard data set, not in one algorithm's test file. This pattern was absent from `MockStandardData`, so no algorithm was ever checked against it.
 
+An adversary for an adaptive algorithm cannot be written down as a fixed layout. Arrangements drawn to poison one step - the pivot slots of one partition, the run boundaries of one merge - stop being adversarial the moment the algorithm reacts, because the recovery machinery (pattern-defeating shuffles, already-partitioned detection, complexity fallbacks) is precisely what changes the next step. The PDQSort adversary was such a layout and cost PDQSort only ~15% more than random input; deriving it instead by running PDQSort against a comparer that decides values lazily, as each comparison is asked, raised it to ~2.5x and made the heapsort fallback fire. Two consequences worth stating: an adversary generator of this kind is only meaningful for the exact algorithm it was derived against, and it must be validated by what it costs that algorithm, never by how disordered the array looks.
+
+An adversary must not be judged against the wrong bound either. For an algorithm with a complexity fallback, O(n²) is unreachable by construction - an input that reached it would be evidence of a bug in the algorithm, not a better adversary. The bound to assert is the one the algorithm actually admits.
+

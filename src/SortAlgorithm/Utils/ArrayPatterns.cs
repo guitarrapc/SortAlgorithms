@@ -2232,10 +2232,14 @@ public static class ArrayPatterns
 
     /// <summary>
     /// PDQソート対抗パターン（Pattern-defeating QuickSort用）
-    /// 降順ベースに断層・昇順ラン・外れ値を戦略的配置し、パターン検出とpivot選択を困難にする
+    /// McIlroy の遅延評価 adversary を PDQSort 自身に対して走らせ、選ばれる pivot が常に極値になる順列を得る。
+    /// PDQSort は log2(n) 回の偏った分割を消費したのち heapsort へ退避する（O(n²) にはならない）。
     /// <br/>
     /// Generate PDQ sort adversary pattern (for Pattern-defeating QuickSort)
-    /// Strategic placement of faults, ascending runs, and outliers in descending base to defeat pattern detection and pivot selection
+    /// Derived by running PDQSort itself against McIlroy's lazy-evaluation adversary, so every pivot it selects turns out to be an extreme value.
+    /// PDQSort burns log2(n) bad partitions before falling back to heapsort; the result is its true worst case, not O(n²).
+    /// <br/>
+    /// ref: M. D. McIlroy, "A Killer Adversary for Quicksort", Software - Practice and Experience 29(4), 1999. https://www.cs.dartmouth.edu/~doug/mdmspe.pdf
     /// </summary>
     public static int[] GeneratePdqSortAdversary(int size) => PdqAdversaryGenerator.Generate(size);
 
