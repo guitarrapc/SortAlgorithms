@@ -50,8 +50,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Random input: O(n log n) amortized, similar to unbalanced BST with self-adjustment benefit</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
-/// <para>Wiki: https://en.wikipedia.org/wiki/Splay_tree</para>
-/// <para>Original paper: Sleator, D. D.; Tarjan, R. E. (1985). "Self-Adjusting Binary Search Trees"</para>
+/// <para>Wiki: https://en.wikipedia.org/wiki/Splaysort</para>
+/// <para>The sorting algorithm: Moffat, A.; Eddy, G.; Petersson, O. (1996). "Splaysort: Fast, Versatile, Practical". Software - Practice and Experience 26(7), pp. 781-797.</para>
+/// <para>The data structure it sorts with: Sleator, D. D.; Tarjan, R. E. (1985). "Self-Adjusting Binary Search Trees". JACM 32(3), pp. 652-686.</para>
 /// </remarks>
 public static class SplaySort
 {
