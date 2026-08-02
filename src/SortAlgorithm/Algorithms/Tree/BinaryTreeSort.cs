@@ -29,7 +29,7 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Tree-based sorting</description></item>
-/// <item><description>Stable      : No (equal elements may be reordered based on insertion order)</description></item>
+/// <item><description>Stable      : Yes (equal elements are inserted to the right, so in-order traversal returns them in insertion order; see the stability note below)</description></item>
 /// <item><description>In-place    : No (Requires O(n) auxiliary space for tree nodes)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Balanced tree (e.g., random input or middle-out insertion)</description></item>
 /// <item><description>Average case: Θ(n log n) - Tree height is O(log n), each insertion takes O(log n) comparisons</description></item>
@@ -46,7 +46,12 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Uses iterative insertion instead of recursive insertion to reduce call stack overhead</description></item>
 /// <item><description>Tree nodes are struct-based and allocated via <see cref="System.Buffers.ArrayPool{T}"/> (arena); Left/Right are integer indices into the arena (-1 = null)</description></item>
-/// <item><description>Equal elements are inserted to the right subtree (value ≥ current), making the sort unstable</description></item>
+/// <item><description><strong>Stability:</strong> a binary search tree says nothing about stability on its own — it is decided entirely by which
+/// side equal keys are sent to, which the search-tree property leaves free. This implementation sends them right (value ≥ current).
+/// That is sufficient: while descending, an incoming element never skips a node equal to itself. Going left at a node w means the
+/// element is smaller than w, so the skipped right subtree holds values ≥ w and therefore strictly larger; going right at w means the
+/// skipped left subtree holds values &lt; w ≤ the element, so strictly smaller. Every equal node is therefore met, and the element goes
+/// right from each, landing after all of them in in-order. Sending equal keys left instead would reverse them and make the sort unstable.</description></item>
 /// <item><description>No tree balancing is performed; for guaranteed O(n log n) performance, consider using AVL or Red-Black tree variants</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

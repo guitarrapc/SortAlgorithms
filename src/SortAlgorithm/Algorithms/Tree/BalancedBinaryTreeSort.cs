@@ -45,7 +45,7 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Tree</description></item>
-/// <item><description>Stable      : No (does not preserve relative order of equal elements)</description></item>
+/// <item><description>Stable      : Yes (equal elements are inserted to the right, and rotations preserve in-order; see the stability note below)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for tree structure)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Already sorted or reversed, still requires building balanced tree</description></item>
 /// <item><description>Average case: Θ(n log n) - Each of n insertions takes O(log n) comparisons</description></item>
@@ -62,6 +62,19 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Predictable performance regardless of input distribution</description></item>
 /// <item><description>Height always bounded by 1.44 × log₂(n)</description></item>
 /// </list>
+/// <para><strong>Stability:</strong></para>
+/// <para>
+/// A search tree is not stable or unstable in itself; the search-tree property leaves the placement of equal keys free, and that
+/// choice is the whole of it. Insertion here sends an equal element right (value ≥ node), and while descending it never skips a node
+/// equal to itself — going left at w means it is smaller than w, so the skipped right subtree is strictly larger; going right at w
+/// means the skipped left subtree is strictly smaller. It therefore meets every equal node and passes to the right of each.
+/// </para>
+/// <para>
+/// Rebalancing does not disturb this. A rotation is <em>defined</em> as the restructuring that preserves the in-order sequence — that is
+/// what lets it change the height without breaking the search-tree property — so no amount of rebalancing can move an element past an
+/// equal one. The same reasoning is what makes <see cref="SplaySort"/> and <see cref="TreapSort"/> stable, and it is independent of how
+/// each of them decides to restructure.
+/// </para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Tree_sort</para>
 /// </remarks>
@@ -590,7 +603,7 @@ public static class BalancedBinaryTreeSort
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Tree</description></item>
-/// <item><description>Stable      : No (does not preserve relative order of equal elements)</description></item>
+/// <item><description>Stable      : Yes (equal elements are inserted to the right, and rotations preserve in-order; see the stability note below)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for tree structure)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Already sorted or reversed, still requires building balanced tree</description></item>
 /// <item><description>Average case: Θ(n log n) - Each of n insertions takes O(log n) comparisons</description></item>

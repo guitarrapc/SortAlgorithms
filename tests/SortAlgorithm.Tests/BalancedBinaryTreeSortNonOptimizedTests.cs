@@ -6,7 +6,7 @@ namespace SortAlgorithm.Tests;
 // Non-optimized reference implementation is slow; the whole class is local-only.
 [SkipCI]
 [InheritsTests]
-public class BalancedBinaryTreeSortNonOptimizedTests : SortTestsBase
+public class BalancedBinaryTreeSortNonOptimizedTests : StableSortTestsBase
 {
     protected override void Sort<T, TContext>(Span<T> span, TContext context)
         => BalancedBinaryTreeSortNonOptimized.Sort(span, context);

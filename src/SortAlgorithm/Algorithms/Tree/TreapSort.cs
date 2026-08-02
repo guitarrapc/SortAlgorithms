@@ -30,7 +30,7 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Tree / Randomized</description></item>
-/// <item><description>Stable      : No (random priorities determine tree structure; equal elements may be reordered by rotations)</description></item>
+/// <item><description>Stable      : Yes (equal elements are inserted to the right, and rotations preserve in-order regardless of the priorities; see the stability note below)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for tree nodes with parent pointers and priorities)</description></item>
 /// <item><description>Best case   : Θ(n log n) expected</description></item>
 /// <item><description>Average case: Θ(n log n) expected - guaranteed by random priority assignment</description></item>
@@ -41,6 +41,19 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Swaps       : 0 - no swapping; elements are copied to tree nodes and written back during traversal</description></item>
 /// <item><description>Space       : O(n) - one node per element; each node holds value, left/right/parent indices, and priority</description></item>
 /// </list>
+/// <para><strong>Stability:</strong></para>
+/// <para>
+/// A search tree is not stable or unstable in itself; the search-tree property leaves the placement of equal keys free, and that
+/// choice is the whole of it. Insertion here sends an equal element right (value ≥ node), and while descending it never skips a node
+/// equal to itself — going left at w means it is smaller than w, so the skipped right subtree is strictly larger; going right at w
+/// means the skipped left subtree is strictly smaller. It therefore meets every equal node and passes to the right of each.
+/// </para>
+/// <para>
+/// The priorities do not enter that argument, and neither does the tree's shape. A rotation is <em>defined</em> as the restructuring
+/// that preserves the in-order sequence, so the heap-up that follows an insertion cannot move an element past an equal one. Stability
+/// therefore holds for every seed, which <c>TreapSortTests.StabilityHoldsForEveryPrioritySeed</c> checks across a seed sweep rather
+/// than for the default seed alone.
+/// </para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Treap</para>
 /// <para>Original paper: Aragon, C. R.; Seidel, R. (1989). "Randomized Search Trees"</para>

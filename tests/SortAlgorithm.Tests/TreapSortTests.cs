@@ -4,7 +4,7 @@ using SortAlgorithm.Contexts;
 namespace SortAlgorithm.Tests;
 
 [InheritsTests]
-public class TreapSortTests : SortTestsBase
+public class TreapSortTests : StableSortTestsBase
 {
     protected override void Sort<T, TContext>(Span<T> span, TContext context)
         => TreapSort.Sort(span, context);
@@ -16,6 +16,46 @@ public class TreapSortTests : SortTestsBase
     protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
     // TreapSort moves elements via node writes, never swaps.
     protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
+
+    /// <summary>
+    /// Stability must not depend on the priorities, and the seed that produces them is a public parameter.
+    /// The reason it does not is that neither half of the argument mentions priorities: insertion sends an
+    /// equal element to the right of every equal element it meets, and a rotation is defined to preserve the
+    /// in-order sequence. Priorities decide the shape, and the shape is what stability is independent of.
+    /// A seed sweep is what separates that from "it happens to hold for the default seed".
+    /// </summary>
+    [Test]
+    [Arguments(2u)]
+    [Arguments(7u)]
+    [Arguments(42u)]
+    [Arguments(1234u)]
+    [Arguments(0x9E3779B9u)]
+    [Arguments(uint.MaxValue)]
+    public async Task StabilityHoldsForEveryPrioritySeed(uint seed)
+    {
+        var problems = new List<string>();
+
+        foreach (var distinctKeys in (int[])[1, 2, 5, 32])
+        {
+            foreach (var n in (int[])[2, 17, 256, 1000])
+            {
+                var random = new Random(20260802);
+                var items = Enumerable.Range(0, n)
+                    .Select(i => new StabilityTestItem(random.Next(distinctKeys), i))
+                    .ToArray();
+                var expected = items.OrderBy(x => x.Value).ThenBy(x => x.OriginalIndex).ToArray();
+
+                var actual = items.ToArray();
+                TreapSort.Sort(actual.AsSpan(), new ComparableComparer<StabilityTestItem>(), new StatisticsContext(), seed);
+
+                if (!actual.SequenceEqual(expected))
+                    problems.Add($"seed={seed} distinctKeys={distinctKeys} n={n}");
+            }
+        }
+
+        await Assert.That(problems).IsEmpty()
+            .Because($"equal elements were reordered for: {string.Join(", ", problems)}");
+    }
 
     [Test]
     [Arguments(10)]
