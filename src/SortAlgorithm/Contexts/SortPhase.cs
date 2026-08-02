@@ -234,6 +234,24 @@ public enum SortPhase
     /// </summary>
     TreeSortExtract,
 
+    /// <summary>
+    /// Cartesian Tree Sort build phase: appending the element at index i to the tree by popping the
+    /// right spine. Distinct from <see cref="TreeSortInsert"/>, which descends from the root to find an
+    /// insertion point: nothing is searched here, and the nodes touched are the tail of the previous
+    /// step's spine rather than a root-to-leaf path.
+    /// param1=i (index of element being appended), param2=last (array last index)
+    /// </summary>
+    CartesianTreeBuild,
+
+    /// <summary>
+    /// Cartesian Tree Sort extraction phase: extracting the smallest available node and making its
+    /// children available. Distinct from <see cref="TreeSortExtract"/>, which is a single in-order
+    /// traversal: this phase reports per-extraction progress because the order is decided by a priority
+    /// queue rather than by the tree shape alone.
+    /// param1=step (1-based extraction step), param2=n (total elements)
+    /// </summary>
+    CartesianTreeExtract,
+
     // Heap family
 
     /// <summary>

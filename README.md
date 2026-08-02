@@ -1881,6 +1881,7 @@ UnrollFactor=1  WarmupCount=2
 ### Tree
 - [Binary Tree Sort (AVL)](./src/SortAlgorithm/Algorithms/Tree/BalancedBinaryTreeSort.cs)
 - [Binary Tree Sort (BST)](./src/SortAlgorithm/Algorithms/Tree/BinaryTreeSort.cs)
+- [Cartesian Tree Sort](./src/SortAlgorithm/Algorithms/Tree/CartesianTreeSort.cs)
 - [Splay Sort](./src/SortAlgorithm/Algorithms/Tree/SplaySort.cs)
 - [Treap Sort](./src/SortAlgorithm/Algorithms/Tree/TreapSort.cs)
 

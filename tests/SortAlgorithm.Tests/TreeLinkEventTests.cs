@@ -115,6 +115,12 @@ public class TreeLinkEventTests
         public int OrphanCount()
             => Enumerable.Range(0, _size).Count(i => i != _root && _parent[i] < 0);
 
+        /// <summary>Parent-child pairs that violate min-heap order on values.</summary>
+        public int MinHeapViolationCount()
+            => Enumerable.Range(0, _size).Count(i =>
+                (_left[i] != -1 && _value[_left[i]] < _value[i]) ||
+                (_right[i] != -1 && _value[_right[i]] < _value[i]));
+
         // The shape is fully described by node creation and link events; nothing else is observed.
         public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) { }
         public void OnSwap(int i, int j, int bufferId) { }
@@ -202,6 +208,68 @@ public class TreeLinkEventTests
                 A tree sort is not reporting every child-pointer write through ISortContext.OnLink,
                 so an observer cannot reconstruct the tree without reimplementing the algorithm.
                 Check the rotation branches and the root promotion for a missing OnLink:
+                {string.Join("\n", problems)}
+                """);
+    }
+
+    /// <summary>
+    /// <see cref="CartesianTreeSort"/> publishes the same link contract but its tree is not a search tree,
+    /// so it is checked against a different invariant and cannot join the list above. Its in-order sequence
+    /// is the <em>input</em> order, and the sorted output comes from a priority queue walking that tree — so
+    /// asserting "in-order equals the sorted span" would be asserting the wrong thing, and would pass only
+    /// on inputs that are already sorted.
+    ///
+    /// <para>
+    /// The two properties checked here are exactly the ones that define a Cartesian tree, and together they
+    /// pin the shape down completely: in-order equals the input, and every node is no greater than its
+    /// children. An observer that replays the links gets the tree the algorithm actually built only if both
+    /// survive, and a missing link on the pop path breaks the first while leaving the second intact.
+    /// </para>
+    /// </summary>
+    [Test]
+    [Arguments(1)]
+    [Arguments(2)]
+    [Arguments(17)]
+    [Arguments(128)]
+    public async Task CartesianTreeLinkEventsDescribeTheTreeBuiltFromTheInput(int n)
+    {
+        var problems = new List<string>();
+
+        foreach (var (source, pattern) in Patterns(n))
+        {
+            var span = source.ToArray();
+            var context = new LinkReplayContext(source.Length);
+            CartesianTreeSort.Sort(span.AsSpan(), context);
+
+            if (context.Error is not null)
+            {
+                problems.Add($"({pattern}, n={n}): {context.Error}");
+                continue;
+            }
+
+            // A single element is already sorted, so the algorithm returns before building a tree.
+            if (source.Length <= 1)
+            {
+                if (context.Size != 0)
+                    problems.Add($"({pattern}, n={n}): built a tree for an input that needs no sorting");
+                continue;
+            }
+
+            if (context.Size != source.Length)
+                problems.Add($"({pattern}, n={n}): rebuilt {context.Size} nodes, expected {source.Length}");
+            if (context.OrphanCount() > 0)
+                problems.Add($"({pattern}, n={n}): {context.OrphanCount()} node(s) never linked into the tree");
+            if (!context.Inorder().SequenceEqual(source))
+                problems.Add($"({pattern}, n={n}): rebuilt tree traverses to [{string.Join(", ", context.Inorder())}], expected the input order");
+            if (context.MinHeapViolationCount() > 0)
+                problems.Add($"({pattern}, n={n}): {context.MinHeapViolationCount()} node(s) hold a value greater than a child's");
+        }
+
+        await Assert.That(problems).IsEmpty()
+            .Because($"""
+                CartesianTreeSort is not reporting every child-pointer write through ISortContext.OnLink,
+                so an observer cannot reconstruct the tree without reimplementing the construction.
+                Check the pop path (left-child adoption) and the root promotion for a missing OnLink:
                 {string.Join("\n", problems)}
                 """);
     }

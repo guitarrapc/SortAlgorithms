@@ -30,6 +30,12 @@ public class TreeBenchmark
         SortAlgorithm.Algorithms.BalancedBinaryTreeSort.Sort(_buffers.Next().AsSpan());
     }
 
+    [Benchmark]
+    public void CartesianTreeSort()
+    {
+        SortAlgorithm.Algorithms.CartesianTreeSort.Sort(_buffers.Next().AsSpan());
+    }
+
     [Benchmark(Baseline = true)]
     public void BinaryTreeSort()
     {
