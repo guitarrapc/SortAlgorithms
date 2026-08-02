@@ -71,4 +71,10 @@ public class HeapBenchmark
     {
         SortAlgorithm.Algorithms.BinomialHeapSort.Sort(_buffers.Next().AsSpan());
     }
+
+    [Benchmark]
+    public void PairingHeapSort()
+    {
+        SortAlgorithm.Algorithms.PairingHeapSort.Sort(_buffers.Next().AsSpan());
+    }
 }

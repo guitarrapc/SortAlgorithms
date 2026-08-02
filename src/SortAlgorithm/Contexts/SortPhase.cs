@@ -16,6 +16,8 @@
 ///   <item><term>TournamentExtract</term><description>sortedCount+1 (1-based extraction step) / n (total elements)</description></item>
 ///   <item><term>BinomialHeapInsert</term><description>i (index of element being inserted) / last (array last index)</description></item>
 ///   <item><term>BinomialHeapExtract</term><description>step (1-based extraction step) / n (total elements)</description></item>
+///   <item><term>PairingHeapInsert</term><description>i (index of element being inserted) / last (array last index)</description></item>
+///   <item><term>PairingHeapExtract</term><description>step (1-based extraction step) / n (total elements)</description></item>
 ///   <item><term>DoubleSelectionFindMinMax</term><description>left (left boundary) / right (right boundary)</description></item>
 ///   <item><term>CycleSortCycle</term><description>cycleStart (cycle start index) / last (last index)</description></item>
 ///   <item><term>PancakeFindMax</term><description>first (head index) / currentSize (current subarray last index, inclusive)</description></item>
@@ -294,6 +296,19 @@ public enum SortPhase
     /// param1=step (1-based extraction step), param2=n (total elements)
     /// </summary>
     BinomialHeapExtract,
+
+    /// <summary>
+    /// Pairing Heap Sort build phase: melding the element at index i into the heap as a single-node heap.
+    /// param1=i (index of element being inserted), param2=last (array last index)
+    /// </summary>
+    PairingHeapInsert,
+
+    /// <summary>
+    /// Pairing Heap Sort extract phase: removing the root and rebuilding one heap from its children
+    /// with the two pairing passes.
+    /// param1=step (1-based extraction step), param2=n (total elements)
+    /// </summary>
+    PairingHeapExtract,
 
     /// <summary>
     /// In-place reversal of a subrange (e.g. MinHeapSort final step).
