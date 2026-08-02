@@ -71,6 +71,10 @@ namespace SortAlgorithm.Algorithms;
 /// first - or the two are in disjoint subtrees, in which case whichever becomes available second still loses the tie to the other
 /// only if its index is larger. Either way u is written first.</description></item>
 /// <item><description>The priority queue is an implicit binary min-heap over arena indices; sift-up and sift-down move indices, which is why the sort reports no swaps.</description></item>
+/// <item><description>Each extracted node is announced as <see cref="RoleType.CurrentMin"/> on the tree buffer for the duration of its step.
+/// The tree shape reaches an observer through the link events and the queue's membership follows from that shape plus the extraction
+/// order, so the order is the only part of this phase that is not derivable — and without the role the only way to recover it is to
+/// assume the node read immediately before each write-back is the extracted one, which is a coupling to the statement order here.</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Cartesian_tree</para>
@@ -218,6 +222,12 @@ public static class CartesianTreeSort
             context.OnPhase(SortPhase.CartesianTreeExtract, writeIndex + 1, s.Length);
 
             var node = Pop(arena, heap, ref heapCount, s.Comparer, context);
+            // Which node the queue chose is the one thing about this phase that an observer cannot derive.
+            // The queue's membership follows from the tree and the extraction order, and the tree follows
+            // from the link events, but the order itself is decided inside the queue. Naming the node here
+            // is what keeps an observer from having to infer it from the position of the read below.
+            context.OnRole(node, BUFFER_TREE, RoleType.CurrentMin);
+
             s.Write(writeIndex++, ReadNodeValue(arena, node, context));
 
             context.OnIndexRead(node, BUFFER_TREE); // read Left pointer
@@ -227,6 +237,8 @@ public static class CartesianTreeSort
             context.OnIndexRead(node, BUFFER_TREE); // read Right pointer
             var right = arena[node].Right;
             if (right != NULL_INDEX) Push(arena, heap, ref heapCount, right, s.Comparer, context);
+
+            context.OnRole(node, BUFFER_TREE, RoleType.None);
         }
     }
 

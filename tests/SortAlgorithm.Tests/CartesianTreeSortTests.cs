@@ -60,6 +60,71 @@ public class CartesianTreeSortTests : StableSortTestsBase
         public void OnRole(int index, int bufferId, RoleType role) { }
     }
 
+    /// <summary>
+    /// Pairs each extraction's announced node with the value the same step writes back, so the role can be
+    /// checked against what actually left the tree.
+    /// </summary>
+    private sealed class ExtractionRoleContext : ISortContext
+    {
+        private const int BufferTree = 1;
+
+        private readonly Dictionary<int, int> _nodeValues = [];
+        private int _current = -1;
+
+        public List<string> Problems { get; } = [];
+        public List<int> ExtractedNodes { get; } = [];
+        public List<int> WrittenValues { get; } = [];
+
+        public void OnIndexWrite<T>(int index, int bufferId, T value)
+        {
+            if (typeof(T) != typeof(int)) return;
+            var v = (int)(object)value!;
+
+            if (bufferId == BufferTree)
+            {
+                _nodeValues[index] = v;
+                return;
+            }
+
+            if (bufferId != 0) return;
+            if (_current < 0)
+            {
+                Problems.Add($"write of {v} to index {index} happened with no node announced as the current minimum");
+                return;
+            }
+            if (!_nodeValues.TryGetValue(_current, out var nodeValue) || nodeValue != v)
+                Problems.Add($"node {_current} was announced as the current minimum but the write carried {v}, not {nodeValue}");
+
+            ExtractedNodes.Add(_current);
+            WrittenValues.Add(v);
+        }
+
+        public void OnRole(int index, int bufferId, RoleType role)
+        {
+            if (bufferId != BufferTree) return;
+            switch (role)
+            {
+                case RoleType.CurrentMin:
+                    if (_current >= 0) Problems.Add($"node {index} was announced while node {_current} still held the role");
+                    _current = index;
+                    break;
+                case RoleType.None:
+                    if (_current != index) Problems.Add($"role cleared on node {index} while node {_current} held it");
+                    _current = -1;
+                    break;
+            }
+        }
+
+        public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) { }
+        public void OnSwap(int i, int j, int bufferId) { }
+        public void OnIndexRead(int index, int bufferId) { }
+        public void OnIndexWrite(int index, int bufferId) { }
+        public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId) { }
+        public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values) { }
+        public void OnLink(int parentIndex, int childIndex, int bufferId, LinkSide side) { }
+        public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0) { }
+    }
+
     private static int[] PipeOrgan(int n)
         => Enumerable.Range(0, n).Select(i => i < (n + 1) / 2 ? i : n - 1 - i).ToArray();
 
@@ -233,6 +298,46 @@ public class CartesianTreeSortTests : StableSortTestsBase
         CartesianTreeSort.Sort(TestHelpers.ShuffledRange(n, 20260803).AsSpan(), context);
 
         await Assert.That(context.ExtractCompares).IsGreaterThan((ulong)n);
+    }
+
+    /// <summary>
+    /// The extraction order is decided inside the priority queue, so it is the one thing about that phase an
+    /// observer cannot derive from the tree. It is published as a role on the tree buffer; without it the only
+    /// way to recover the order is to assume the tree node read just before each write-back is the extracted
+    /// one, which is a guess about statement order rather than a contract.
+    /// </summary>
+    [Test]
+    [Arguments("sorted")]
+    [Arguments("reversed")]
+    [Arguments("random")]
+    [Arguments("pipeOrgan")]
+    [Arguments("duplicates")]
+    public async Task EachExtractionAnnouncesTheNodeItEmits(string pattern)
+    {
+        const int n = 256;
+        var input = pattern switch
+        {
+            "sorted" => Enumerable.Range(0, n).ToArray(),
+            "reversed" => Enumerable.Range(0, n).Reverse().ToArray(),
+            "random" => TestHelpers.ShuffledRange(n, 20260805),
+            "pipeOrgan" => PipeOrgan(n),
+            _ => Enumerable.Range(0, n).Select(i => i % 5).ToArray(),
+        };
+
+        var context = new ExtractionRoleContext();
+        var array = input.ToArray();
+        CartesianTreeSort.Sort(array.AsSpan(), context);
+
+        await Assert.That(context.Problems).IsEmpty();
+
+        // Every element leaves the tree exactly once, and the announced nodes are all distinct.
+        await Assert.That(context.ExtractedNodes.Count).IsEqualTo(n);
+        await Assert.That(context.ExtractedNodes.Distinct().Count()).IsEqualTo(n);
+
+        // The announced sequence is the sorted output, not the arena order.
+        var expected = input.ToArray();
+        Array.Sort(expected);
+        await Assert.That(context.WrittenValues).IsEquivalentTo(expected, CollectionOrdering.Matching);
     }
 
     /// <summary>
