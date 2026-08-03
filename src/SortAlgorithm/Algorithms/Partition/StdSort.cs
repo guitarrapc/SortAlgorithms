@@ -27,11 +27,17 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Best case:    O(n) - Already sorted with partition detection</description></item>
-/// <item><description>Average case:  O(n log n) - Typical random data</description></item>
-/// <item><description>Worst case:    O(n log n) - Guaranteed by HeapSort fallback</description></item>
+/// <item><description>Family      : Hybrid (Partition (base) + Heap + Insertion)</description></item>
+/// <item><description>Stable      : No (partitioning and heapsort are unstable)</description></item>
+/// <item><description>In-place    : Yes (O(log n) recursion stack, no additional arrays allocated)</description></item>
+/// <item><description>Best case   : O(n) - Already sorted with partition detection</description></item>
+/// <item><description>Average case: O(n log n) - Typical random data</description></item>
+/// <item><description>Worst case  : O(n log n) - Guaranteed by HeapSort fallback</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, O(n log n) worst - introsort's quicksort phase bounded by the heapsort fallback</description></item>
+/// <item><description>Swaps       : Θ(n log n) - the partition scheme exchanges elements, and the heapsort fallback sifts by exchange</description></item>
+/// <item><description>Index Reads : Θ(n log n) - every partition level reads each element of the range it splits</description></item>
+/// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(log n) - Recursion stack depth</description></item>
-/// <item><description>Stable:        No</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>LLVM libc++: https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/libcxx/include/__algorithm/sort.h</para>

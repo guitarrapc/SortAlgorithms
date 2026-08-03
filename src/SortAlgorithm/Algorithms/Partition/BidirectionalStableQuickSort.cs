@@ -68,8 +68,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n) - Expected ~n log₂ n comparisons with median-of-3 pivot selection</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability ~1/n³ with median-of-3)</description></item>
 /// <item><description>Comparisons : ~n log₂ n (average) - Less elements cost 1 comparison; greater/equal cost 2; fewer total comparisons than 2-pass when duplicates are rare</description></item>
+/// <item><description>Swaps       : Θ(n log n) - at most greaterCount/2 per partition level, from the in-place reversal of the greater section in scratch that restores stability</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - every partition level reads each element of its range, then reads it back out of scratch</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each element is written into scratch and back at every level</description></item>
+/// <item><description>Space       : O(n) total auxiliary across all active recursion levels + O(log n) recursion stack</description></item>
 /// <item><description>Copies      : ~2n log₂ n (average) - Each element copied to/from temporary storage at each recursion level</description></item>
-/// <item><description>Swaps       : ~(greaterCount/2) per partition level - In-place reversal of the greater section in scratch to restore stability</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>

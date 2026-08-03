@@ -53,7 +53,6 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
-/// <item><description>Partition   : Hoare bidirectional partition with median-of-9 pivot value</description></item>
 /// <item><description>Stable      : No (partitioning does not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack, O(1) for partitioning)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Sorted input partitions perfectly with zero effective swaps</description></item>
@@ -61,8 +60,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability &lt; 1/n⁹, extremely unlikely)</description></item>
 /// <item><description>Comparisons : ~1.39n log₂ n + 12n (average) - Additional ~12 comparisons per partition for median-of-9 selection</description></item>
 /// <item><description>Swaps       : ~0.33n log₂ n (average); near zero on sorted input</description></item>
-/// <item><description>Duplicates  : O(n log n) - equal keys split evenly; use <see cref="QuickSort3way"/> for the Θ(n log k) duplicate-specialized variant</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - every partition level reads each element of the range it splits, plus the nine samples per pivot choice</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(log n) - recursion stack only; partitioning itself is O(1)</description></item>
 /// </list>
+/// <para><strong>Partition scheme:</strong> Hoare bidirectional partition with a median-of-9 pivot value.
+/// Equal keys split evenly, so duplicate-heavy input stays O(n log n); use <see cref="QuickSort3way"/> for the Θ(n log k) duplicate-specialized variant.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
 /// </remarks>

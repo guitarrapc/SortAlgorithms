@@ -64,6 +64,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n) - Expected ~n log₂ n comparisons with median-of-3 pivot selection</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability ~1/n³ with median-of-3)</description></item>
 /// <item><description>Comparisons : ~2n log₂ n (average) - Two comparison passes per partition (count, then distribute), ~2n comparisons per level</description></item>
+/// <item><description>Swaps       : 0 - elements move by copying to and from the scratch buffer, never by exchange</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - the count pass and the distribute pass each read every element of the range at every level</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each element is written into scratch and back at every level</description></item>
+/// <item><description>Space       : O(n) total auxiliary across all active recursion levels + O(log n) recursion stack</description></item>
 /// <item><description>Copies      : ~2n log₂ n (average) - Each element copied to/from temporary storage at each recursion level</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

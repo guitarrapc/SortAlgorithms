@@ -29,6 +29,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Θ(n log n) - Occurs when QuickSort consistently creates balanced partitions and InsertionSort handles small subarrays efficiently</description></item>
 /// <item><description>Average case: Θ(n log n) - Expected ~1.386n log₂ n comparisons from QuickSort</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by HeapSort fallback when recursion depth exceeds 2⌊log₂(n)⌋</description></item>
+/// <item><description>Comparisons : ~1.386n log₂ n (average), O(n log n) worst - QuickSort's expected count, bounded by the HeapSort fallback</description></item>
+/// <item><description>Swaps       : Θ(n log n) - the partition scheme exchanges elements; the HeapSort fallback sifts by exchange as well</description></item>
+/// <item><description>Index Reads : Θ(n log n) - every partition level reads each element of the range it splits</description></item>
+/// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(log n) - recursion stack only, no additional arrays allocated</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>dotnet runtime: https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Collections/Generic/ArraySortHelper.cs</para>

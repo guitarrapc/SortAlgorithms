@@ -80,16 +80,19 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer) + Hybrid</description></item>
-/// <item><description>Partition   : Hoare block partition scheme (128-element blocks with buffered swaps)</description></item>
-/// <item><description>Pivot       : Adaptive selection (median-of-√n for n &gt; 20,000, median-of-5-medians-of-5 for n &gt; 800, median-of-3-medians-of-3 for n &gt; 100, median-of-3 otherwise)</description></item>
 /// <item><description>Stable      : No (partitioning does not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack + O(1) for index buffers via stackalloc)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Balanced partitions from high-quality pivot selection</description></item>
-/// <item><description>Average case: Θ(n log n) - measured ~1.1n log₂ n comparisons on random int (StatisticsContext, n = 10³ and 10⁵)</description></item>
+/// <item><description>Average case: Θ(n log n) - block partitioning performs the same logical comparisons as Hoare partitioning, so the classical quicksort bound carries over</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by IntroSort fallback to HeapSort when recursion depth exceeds 2⌊log₂(n)⌋+1 (prevents QuickSort's O(n²) on adversarial inputs)</description></item>
-/// <item><description>Comparisons : ~1.1n log₂ n (average) - the paper notes block partitioning performs the same logical comparisons as Hoare partitioning on random permutations</description></item>
-/// <item><description>Swaps       : ~0.24n log₂ n (average, measured on random int) - Hoare scheme swaps fewer elements than Lomuto</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, O(n log n) worst - Edelkamp and Weiß show block partitioning performs the same logical comparisons as Hoare partitioning on random permutations, so it inherits quicksort's ~1.39n log₂ n</description></item>
+/// <item><description>Swaps       : Θ(n log n) average - the Hoare scheme exchanges fewer elements than Lomuto, and buffering the offsets does not change which exchanges are needed</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, O(n log n) worst - every partition level reads each element of the range it splits, once to classify it into the offset buffer</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(n log n) worst - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(log n) recursion stack + O(1) index buffers (two 128-entry offset blocks via stackalloc)</description></item>
 /// </list>
+/// <para><strong>Partition scheme:</strong> Hoare block partitioning over 128-element blocks with buffered swaps. Pivot selection is
+/// adaptive: median-of-√n for n &gt; 20,000, median-of-5-medians-of-5 for n &gt; 800, median-of-3-medians-of-3 for n &gt; 100, median-of-3 otherwise.</para>
 /// <para><strong>Properties of this scheme:</strong></para>
 /// <list type="bullet">
 /// <item><description>Worst-case guarantee: IntroSort fallback ensures O(n log n) even on adversarial inputs (standard QuickSort can degrade to O(n²))</description></item>

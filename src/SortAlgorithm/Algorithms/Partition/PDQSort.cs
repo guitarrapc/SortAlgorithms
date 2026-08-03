@@ -86,6 +86,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n) - Guaranteed by HeapSort fallback when bad partition limit exceeded</description></item>
 /// <item><description>Comparisons : ~1.2-1.4n log₂ n (average) - Ninther pivot selection and insertion sort reduce constant factors</description></item>
 /// <item><description>Swaps       : ~0.33n log₂ n (average) - Partitioning performs fewer swaps than Lomuto scheme</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, Θ(n) best - every partition level reads each element of the range it splits; a detected pattern is settled by the partial insertion sort instead</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(1) best - each swap writes two positions; an already ordered input is never partitioned</description></item>
+/// <item><description>Space       : O(log n) - recursion stack only</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Paper: https://arxiv.org/abs/2106.05123</para>

@@ -59,7 +59,6 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
-/// <item><description>Partition   : 3-way partition (Yaroslavskiy's method - neither Hoare nor Lomuto)</description></item>
 /// <item><description>Stable      : No (partitioning does not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack)</description></item>
 /// <item><description>Best case   : Θ(n log₃ n) - Balanced partitions (each region ≈ n/3)</description></item>
@@ -67,7 +66,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is highly unbalanced (rare with dual pivots)</description></item>
 /// <item><description>Comparisons : 1.9n ln n (average) - Each element compared with both pivots during partitioning</description></item>
 /// <item><description>Swaps       : 0.6n ln n (average) - More swaps than single-pivot (~0.33n ln n), but net faster due to fewer comparisons and better cache behavior</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - every partition level reads each element of the range it splits</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(log n) - recursion stack only</description></item>
 /// </list>
+/// <para><strong>Partition scheme:</strong> Yaroslavskiy's 3-way dual-pivot partition — neither Hoare nor Lomuto.</para>
 /// <para><strong>Advantages over Single-Pivot QuickSort:</strong></para>
 /// <list type="bullet">
 /// <item><description>More balanced partitions: log₃ n vs log₂ n recursion depth (≈37% reduction)</description></item>

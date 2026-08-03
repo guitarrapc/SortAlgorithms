@@ -58,6 +58,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) - Sorted, reverse sorted, all equal elements</description></item>
 /// <item><description>Average case: Θ(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n) - HeapSort fallback</description></item>
+/// <item><description>Comparisons : ~1.2-1.4n log₂ n (average), Θ(n) best - the branchless partition performs the same logical comparisons as the branching one, so the counts match <see cref="PDQSort"/></description></item>
+/// <item><description>Swaps       : ~0.33n log₂ n (average) - buffering the offsets changes when the exchanges happen, not which ones are needed</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, Θ(n) best - every partition level reads each element once to classify it into the offset buffer</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(1) best - each swap writes two positions; an already ordered input is never partitioned</description></item>
+/// <item><description>Space       : O(log n) recursion stack + O(1) offset buffers (128 bytes per partition call)</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Paper: https://arxiv.org/abs/2106.05123 (pdqsort), https://arxiv.org/abs/1604.06697 (BlockQuicksort)</para>

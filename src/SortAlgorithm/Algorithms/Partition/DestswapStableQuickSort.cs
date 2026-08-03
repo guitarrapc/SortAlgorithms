@@ -69,6 +69,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n) - Expected ~n log₂ n comparisons with pseudo-median pivot selection</description></item>
 /// <item><description>Worst case  : O(n log n) - Bottom-up merge sort fallback after 2·log₂ n recursion levels bounds adversarial inputs</description></item>
 /// <item><description>Comparisons : ~n log₂ n (average) - The 2-way partition costs 1 comparison per element per level</description></item>
+/// <item><description>Swaps       : 0 - the destination-swap partition moves elements by assignment between buffer roles, never by exchange</description></item>
+/// <item><description>Index Reads : Θ(n log n) - every partition level reads each element of the range it splits, bounded by the merge sort fallback</description></item>
+/// <item><description>Index Writes: Θ(n log n) - each element is written once per partition level, with no copy-back pass</description></item>
+/// <item><description>Space       : O(n) pooled scratch buffer + O(log n) recursion stack</description></item>
 /// <item><description>Copies      : ~n log₂ n (average) - Each element is written once per partition level; no per-level copy-back</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

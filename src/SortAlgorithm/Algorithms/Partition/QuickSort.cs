@@ -46,7 +46,6 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
-/// <item><description>Partition   : Hoare partition scheme (bidirectional scan)</description></item>
 /// <item><description>Stable      : No (partitioning does not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for explicit stack, guaranteed by smaller-partition-first strategy)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Balanced partitions (pivot divides array into two equal halves)</description></item>
@@ -54,7 +53,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n²) - Occurs when pivot is always the smallest or largest element (e.g., sorted or reverse-sorted arrays with poor pivot selection)</description></item>
 /// <item><description>Comparisons : 2n ln n (average) - Each partitioning pass compares elements with the pivot</description></item>
 /// <item><description>Swaps       : n ln n / 3 (average) - Hoare's scheme performs fewer swaps than Lomuto's scheme</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - every partition level reads each element of the range it splits</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(log n) - explicit stack only, bounded by pushing the larger partition and looping on the smaller</description></item>
 /// </list>
+/// <para><strong>Partition scheme:</strong> Hoare (bidirectional scan).</para>
 /// <para><strong>Advantages of Hoare Partition Scheme:</strong></para>
 /// <list type="bullet">
 /// <item><description>Fewer swaps than Lomuto's scheme: approximately 3 times fewer on average</description></item>

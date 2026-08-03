@@ -50,16 +50,21 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
-/// <item><description>Partition   : Bentley-McIlroy 3-way (crossing scans + equal-element parking)</description></item>
 /// <item><description>Stable      : No (swaps do not preserve relative order)</description></item>
 /// <item><description>In-place    : Yes (O(log n) stack for recursion)</description></item>
 /// <item><description>Best case   : Θ(n) - All elements equal (entire array becomes the equal region in one pass;
 /// parking and swap-back cost Θ(n) swaps, unlike DNF's zero, but recursion still ends immediately)</description></item>
 /// <item><description>Average case: Θ(n log n) - Random distinct elements</description></item>
 /// <item><description>Worst case  : O(n²) - Heavily skewed partitions with poor pivot selection</description></item>
-/// <item><description>Duplicate keys: Θ(n log k) where k is the number of distinct values (k &lt;&lt; n → near O(n))</description></item>
-/// <item><description>Sorted input: Θ(n log n) with ~2 swaps per partition (sorted runs are preserved)</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, Θ(n log k) for k distinct values, O(n²) worst - each partition level compares every element of its range against the pivot</description></item>
+/// <item><description>Swaps       : Θ(n log n) average - equal elements are parked at the ends and swapped back to the middle, so the all-equal case still costs Θ(n) swaps where a Dutch-national-flag partition would cost none</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, Θ(n log k) for k distinct values - every partition level reads each element of the range it splits</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, Θ(n log k) for k distinct values - each swap writes two positions</description></item>
+/// <item><description>Space       : O(log n) - recursion stack only</description></item>
 /// </list>
+/// <para><strong>Partition scheme:</strong> Bentley-McIlroy 3-way (crossing scans with equal-element parking).
+/// Duplicate-heavy input costs Θ(n log k) for k distinct values, approaching O(n) as k shrinks; sorted input costs
+/// Θ(n log n) with about two swaps per partition, so existing runs are preserved.</para>
 /// <para><strong>Advantage over Standard QuickSort:</strong></para>
 /// <list type="bullet">
 /// <item><description>Standard 2-way QuickSort degrades to O(n²) on all-equal or few-distinct-key inputs.

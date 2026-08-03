@@ -46,6 +46,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) - Fully ascending or descending input sorts with exactly n-1 comparisons</description></item>
 /// <item><description>Average case: O(n log k) where k is the number of distinct values - Equal-partition trick exploits duplicates</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by the bounded partition count plus heapsort fallback</description></item>
+/// <item><description>Comparisons : O(n) for fully ascending or descending input, O(n log k) expected for k distinct values, O(n log n) worst - the three guarantees the reference implementation states</description></item>
+/// <item><description>Swaps       : Θ(n log n) - partitioning exchanges elements, and the heapsort fallback sifts by exchange; the sorting network in the small sort exchanges too</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, Θ(n) best - every partition level reads each element of the range it splits</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, Θ(n) best - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(log n) stack; at most 48 pooled scratch elements for the small sort</description></item>
 /// </list>
 /// <para><strong>Differences from the Reference (Rust) Implementation:</strong></para>
