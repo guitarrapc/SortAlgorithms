@@ -48,6 +48,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) - Already sorted, reverse sorted, or nearly-sorted data</description></item>
 /// <item><description>Average case: O(n log n) - Balanced recursive merge</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by balanced binary split</description></item>
+/// <item><description>Comparisons : Θ(n) best, O(n log n) average and worst - matching the running time Boost states for spinsort</description></item>
+/// <item><description>Swaps       : O(n) - only the reversal that turns a detected descending run ascending; merging moves elements by copying</description></item>
+/// <item><description>Index Reads : O(n log n) - every merge level reads each element of the runs it joins; Θ(n) when the input is one run</description></item>
+/// <item><description>Index Writes: O(n log n) - every merge level writes each element it moves, into the half buffer or back; Θ(n) when the input is one run</description></item>
 /// <item><description>Space       : O(ceil(n/2))</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

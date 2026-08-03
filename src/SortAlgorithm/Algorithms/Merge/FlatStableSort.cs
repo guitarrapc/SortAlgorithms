@@ -49,9 +49,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Merge (Block-based)</description></item>
 /// <item><description>Stable      : Yes (≤ comparison in all merge operations preserves relative order)</description></item>
 /// <item><description>In-place    : No (requires O(n / BLOCK_SIZE) block-index storage plus O(BLOCK_SIZE) circular scratch)</description></item>
-/// <item><description>Best case   : O(n) to O(n log n), depending on whether the partial-sorted fast paths trigger</description></item>
+/// <item><description>Best case   : Θ(n) - an already ordered input is settled by one scan, the figure Boost states for flat_stable_sort</description></item>
 /// <item><description>Average case: O(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n) (balanced binary split at block granularity)</description></item>
+/// <item><description>Comparisons : Θ(n) best, O(n log n) average and worst - matching the running time Boost states for flat_stable_sort</description></item>
+/// <item><description>Swaps       : O(n) - only the reversal that turns a detected descending run ascending; merging moves elements through the block scratch by copying</description></item>
+/// <item><description>Index Reads : O(n log n) - every merge level reads each element of the blocks it joins; Θ(n) when the input is one run</description></item>
+/// <item><description>Index Writes: O(n log n) - every merge level writes each element it moves; Θ(n) when the input is one run</description></item>
 /// <item><description>Space       : O(n / BLOCK_SIZE) indices + O(BLOCK_SIZE) temporary elements + O(log n) recursion stack</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

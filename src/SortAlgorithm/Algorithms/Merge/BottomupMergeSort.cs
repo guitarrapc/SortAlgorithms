@@ -50,9 +50,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n log n) - ⌈log₂(n)⌉ passes with n work per pass</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed performance regardless of input</description></item>
 /// <item><description>Comparisons : O(n log n) - At most n⌈log₂(n)⌉ - 2^⌈log₂(n)⌉ + 1 comparisons</description></item>
-/// <item><description>Index Writes: O(n log n) - Each pass writes all n elements, ⌈log₂(n)⌉ passes total</description></item>
-/// <item><description>Space       : O(n) - Full-size auxiliary buffer for ping-pong passes (uses ArrayPool for efficiency)</description></item>
-/// <item><description>Stack       : O(1) - No recursion, constant stack usage (unlike O(log n) for top-down)</description></item>
+/// <item><description>Swaps       : 0 - elements move by copying between the input and the auxiliary buffer, never by exchange</description></item>
+/// <item><description>Index Reads : Θ(n log n) - Each pass reads all n elements, ⌈log₂(n)⌉ passes total</description></item>
+/// <item><description>Index Writes: Θ(n log n) - Each pass writes all n elements, ⌈log₂(n)⌉ passes total</description></item>
+/// <item><description>Space       : O(n) - Full-size auxiliary buffer for ping-pong passes (uses ArrayPool for efficiency); no recursion, so the stack stays O(1) unlike top-down merge sort's O(log n)</description></item>
 /// </list>
 /// <para><strong>Advantages Over Top-Down Merge Sort:</strong></para>
 /// <list type="bullet">

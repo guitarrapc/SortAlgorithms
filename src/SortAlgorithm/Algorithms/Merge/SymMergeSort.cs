@@ -50,6 +50,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) – Sorted data: insertion sort is O(n), all phase-2 merges are skipped</description></item>
 /// <item><description>Average case: O(n log² n) moves, O(n log n) comparisons</description></item>
 /// <item><description>Worst case  : O(n log² n) moves, O(n log n) comparisons</description></item>
+/// <item><description>Comparisons : O(n log n) - each SymMerge locates its split by binary search, so a merge level costs O(n) comparisons</description></item>
+/// <item><description>Swaps       : O(n log² n) - the merge is performed by rotation, and a rotation is a sequence of block exchanges; this is what makes the move bound exceed the comparison bound</description></item>
+/// <item><description>Index Reads : O(n log² n) - dominated by the rotations rather than by the binary searches</description></item>
+/// <item><description>Index Writes: O(n log² n) - each rotation writes every element of the block it moves</description></item>
 /// <item><description>Space       : O(log n) – Recursion stack depth within each SymMerge call</description></item>
 /// </list>
 /// <para><strong>SymMerge vs RotateMerge:</strong></para>

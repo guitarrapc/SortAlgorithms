@@ -40,8 +40,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) - Already sorted or reverse sorted data (single run)</description></item>
 /// <item><description>Average case: O(n log n) - Optimal merge tree construction</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by power-based merge strategy</description></item>
-/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - Exploits existing order</description></item>
-/// <item><description>Index Writes: Best O(1), Average/Worst O(n log n) - Minimal for sorted data</description></item>
+/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - run detection costs n-1 comparisons, and the power-based merge tree keeps the merge cost near the optimum for the run lengths it found</description></item>
+/// <item><description>Swaps       : O(n) - only the reversal that turns a detected descending run ascending; merging moves elements by copying</description></item>
+/// <item><description>Index Reads : Best Θ(n), Average/Worst O(n log n) - every merge reads each element of the two runs it joins</description></item>
+/// <item><description>Index Writes: Best O(1), Average/Worst O(n log n) - an input that is already one run is never merged, so nothing is written</description></item>
 /// <item><description>Space       : O(n/2) worst-case for temporary merge buffer</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>

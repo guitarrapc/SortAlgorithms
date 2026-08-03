@@ -41,6 +41,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) — Already sorted data: all merge-level skips fire</description></item>
 /// <item><description>Average case: O(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n)</description></item>
+/// <item><description>Comparisons : O(n log n) - the bound WikiSort achieves without a linear buffer</description></item>
+/// <item><description>Swaps       : O(n log n) - block-level rotations and the internal-buffer tagging move elements by exchange rather than by copying, which is how the algorithm stays O(1) in space</description></item>
+/// <item><description>Index Reads : O(n log n) - every merge level reads each element of the blocks it joins</description></item>
+/// <item><description>Index Writes: O(n log n) - every merge level writes each element it moves, through exchanges or the fixed cache</description></item>
 /// <item><description>Space       : O(1) — fixed 512-element cache rented from ArrayPool (no per-call allocation once the pool is warm)</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

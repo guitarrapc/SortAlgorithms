@@ -55,6 +55,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n log n)</description></item>
 /// <item><description>Average case: O(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n)</description></item>
+/// <item><description>Comparisons : O(n log n) - the guarantee libstdc++ gives when the auxiliary buffer is available; O(n log² n) if it is not</description></item>
+/// <item><description>Swaps       : O(n) - only the two-element base case exchanges; every larger merge moves elements by copying</description></item>
+/// <item><description>Index Reads : O(n log n) - every merge level reads each element of the runs it joins</description></item>
+/// <item><description>Index Writes: O(n log n) - every merge level writes each element it moves, into the auxiliary buffer or back</description></item>
 /// <item><description>Space       : O(n) auxiliary buffer + O(log n) stack for recursion</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

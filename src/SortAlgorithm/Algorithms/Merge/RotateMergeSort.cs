@@ -51,10 +51,14 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Family      : Hybrid (Merge + Insertion), Iterative</description></item>
 /// <item><description>Stable      : Yes (lower/upper bound preserves relative order)</description></item>
-/// <item><description>Bufferless  : Yes (no external buffer; merge uses O(log n) explicit stack via stackalloc)</description></item>
+/// <item><description>In-place    : Yes (no external buffer; merge uses O(log n) explicit stack via stackalloc)</description></item>
 /// <item><description>Best case   : O(n) – Sorted data: insertion sort is O(n), all phase-2 merges are skipped</description></item>
 /// <item><description>Average case: O(n log² n) – Binary search (log n) + rotation (n) per merge × log n passes</description></item>
 /// <item><description>Worst case  : O(n log² n)</description></item>
+/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) – each merge locates its split by binary search, so comparisons stay below the move bound</description></item>
+/// <item><description>Swaps       : O(n log² n) – the three-reversal rotation moves elements by exchange, which is what the extra log factor pays for</description></item>
+/// <item><description>Index Reads : Best O(n), Average/Worst O(n log² n) – dominated by the rotations rather than by the binary searches</description></item>
+/// <item><description>Index Writes: Best O(n), Average/Worst O(n log² n) – every rotation writes each element of the block it moves</description></item>
 /// <item><description>Space       : O(log n) – Explicit merge stack (stackalloc, no heap allocation or call-stack recursion)</description></item>
 /// </list>
 /// <para><strong>Fully Iterative Design:</strong></para>
@@ -410,13 +414,14 @@ public static class RotateMergeSort
 /// <list type="bullet">
 /// <item><description>Family      : Hybrid (Merge + Insertion)</description></item>
 /// <item><description>Stable      : Yes (lower/upper bound preserves relative order)</description></item>
-/// <item><description>Bufferless  : Yes (no external buffer, uses rotation for in-place merging)</description></item>
+/// <item><description>In-place    : Yes (no external buffer, uses rotation for in-place merging)</description></item>
 /// <item><description>Best case   : O(n) - Sorted data with insertion sort optimization for small partitions</description></item>
 /// <item><description>Average case: O(n log² n) - Binary search (log n) + rotation (n) per merge level (log n levels)</description></item>
 /// <item><description>Worst case  : O(n log² n) - Rotation adds O(n) factor to each merge operation</description></item>
-/// <item><description>Comparisons : Best O(n), Average/Worst O(n log² n)</description></item>
+/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - each merge locates its split by binary search, so comparisons stay below the move bound</description></item>
+/// <item><description>Swaps       : O(n log² n) - 0 for the k==1/k==n-1 fast paths, at most n/2 per rotation otherwise (3-reversal)</description></item>
+/// <item><description>Index Reads : Best O(n), Average/Worst O(n log² n) - dominated by the rotations rather than by the binary searches</description></item>
 /// <item><description>Index Writes: Best O(n), Average/Worst O(n log² n) - k==1/k==n-1 fast paths use sequential writes; 3-reversal uses cache-friendly swaps</description></item>
-/// <item><description>Swaps       : 0 for k==1/k==n-1 fast paths; O(n/2) per rotation in general case (3-reversal)</description></item>
 /// <item><description>Space       : O(log n) - Recursion stack for sort + merge, no auxiliary buffer needed</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
@@ -732,13 +737,14 @@ public static class RotateMergeSortRecursive
 /// <list type="bullet">
 /// <item><description>Family      : Hybrid (Merge + Insertion)</description></item>
 /// <item><description>Stable      : Yes (lower/upper bound preserves relative order)</description></item>
-/// <item><description>Bufferless  : Yes (no external buffer, uses rotation for in-place merging)</description></item>
+/// <item><description>In-place    : Yes (no external buffer, uses rotation for in-place merging)</description></item>
 /// <item><description>Best case   : O(n) - Sorted data with insertion sort optimization for small partitions</description></item>
 /// <item><description>Average case: O(n log² n) - Binary search (log n) + rotation (n) per merge level (log n levels)</description></item>
 /// <item><description>Worst case  : O(n log² n) - Rotation adds O(n) factor to each merge operation</description></item>
-/// <item><description>Comparisons : Best O(n), Average/Worst O(n log² n)</description></item>
-/// <item><description>Index Writes: Best O(n), Average/Worst O(n² log n) - GCD-cycle rotation uses assignments only (no swaps)</description></item>
+/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - each merge locates its split by binary search, so comparisons stay below the move bound</description></item>
 /// <item><description>Swaps       : 0 - GCD-cycle rotation uses only write operations, no swaps needed</description></item>
+/// <item><description>Index Reads : Best O(n), Average/Worst O(n log² n) - dominated by the rotations rather than by the binary searches</description></item>
+/// <item><description>Index Writes: Best O(n), Average/Worst O(n log² n) - GCD-cycle rotation uses assignments only (no swaps)</description></item>
 /// <item><description>Space       : O(log n) - Recursion stack for sort + merge, no auxiliary buffer needed</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

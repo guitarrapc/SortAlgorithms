@@ -39,6 +39,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) - Already sorted or reverse sorted data (single run detected)</description></item>
 /// <item><description>Average case: O(n log k) where k is the number of distinct values - Exploits duplicates via quicksort partitioning</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by powersort merge tree and bounded quicksort recursion</description></item>
+/// <item><description>Comparisons : O(n log k) average, O(n log n) worst - the running time of this algorithm is its comparison count</description></item>
+/// <item><description>Swaps       : O(n) - only the reversal that turns a detected descending run ascending, plus the branchless merge's paired exchange; merging otherwise moves elements by copying</description></item>
+/// <item><description>Index Reads : O(n log k) average, O(n log n) worst - every merge level reads each element of the runs it joins</description></item>
+/// <item><description>Index Writes: O(n log k) average, O(n log n) worst - every merge level writes each element it moves, into the auxiliary buffer or back</description></item>
 /// <item><description>Space       : O(n) default auxiliary buffer (scales down for very large arrays)</description></item>
 /// </list>
 /// <para><strong>Differences from the Reference (Rust) Implementation:</strong></para>

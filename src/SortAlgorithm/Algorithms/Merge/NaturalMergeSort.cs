@@ -33,10 +33,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Merge</description></item>
 /// <item><description>Stable      : Yes (equal elements maintain relative order via &lt;= comparison during merge)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for merging)</description></item>
-/// <item><description>Adaptive    : Yes (exploits existing sorted runs in the input, both ascending and descending)</description></item>
 /// <item><description>Best case   : O(n) - Already sorted or fully reversed data is a single run; only one detection scan needed</description></item>
 /// <item><description>Average case: O(n log n) - Random data has ~n/2 runs, requiring ~log₂(n) merge passes</description></item>
 /// <item><description>Worst case  : O(n log n) - Alternating up/down data produces many small runs, requiring full merge passes</description></item>
+/// <item><description>Comparisons : Θ(n) best, O(n log r) for r natural runs, O(n log n) worst - run detection costs n-1 comparisons and each merge level costs O(n)</description></item>
+/// <item><description>Swaps       : O(n) - only the reversal that turns a detected descending run ascending; merging moves elements by copying</description></item>
+/// <item><description>Index Reads : O(n log r) - every merge level reads each element of the runs it joins; Θ(n) when the input is a single run</description></item>
+/// <item><description>Index Writes: O(n log r) - every merge level writes each element it moves; Θ(n) when the input is a single run</description></item>
 /// <item><description>Space       : O(n) - Auxiliary buffer for merging (this implementation uses ArrayPool for efficiency)</description></item>
 /// </list>
 /// <para><strong>Advantages over Standard Merge Sort:</strong></para>

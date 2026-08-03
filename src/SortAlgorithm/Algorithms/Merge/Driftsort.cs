@@ -44,6 +44,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) - Fully ascending or descending input sorts with exactly n-1 comparisons</description></item>
 /// <item><description>Average case: O(n log k) where k is the number of distinct values - Equal-partition trick exploits duplicates</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by the powersort merge tree and the bounded quicksort recursion</description></item>
+/// <item><description>Comparisons : O(n log k) expected for k distinct values, O(n log n) worst - the running time of this algorithm is its comparison count</description></item>
+/// <item><description>Swaps       : O(n) - only the reversal that turns a detected descending run ascending; merging moves elements by copying</description></item>
+/// <item><description>Index Reads : O(n log k) expected, O(n log n) worst - every merge level reads each element of the runs it joins</description></item>
+/// <item><description>Index Writes: O(n log k) expected, O(n log n) worst - every merge level writes each element it moves, into the auxiliary buffer or back</description></item>
 /// <item><description>Space       : O(n) auxiliary (max(ceil(n/2), min(n, 8MB/sizeof(T))) elements, at least 48)</description></item>
 /// </list>
 /// <para><strong>Differences from the Reference (Rust) Implementation:</strong></para>

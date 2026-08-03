@@ -50,8 +50,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) - Already sorted or reverse sorted data (single run detected, n-1 comparisons)</description></item>
 /// <item><description>Average case: O(n log n) - Balanced run detection and merge tree with adaptive behavior</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by minRun calculation (ensures balanced merges) and stack invariants (ensures O(log n) depth)</description></item>
-/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - Exploits existing order in data</description></item>
-/// <item><description>Index Writes: Best O(1), Average/Worst O(n log n) - Minimal writes for sorted data due to run detection</description></item>
+/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - run detection costs n-1 comparisons, and galloping cuts the merge cost further when one run dominates</description></item>
+/// <item><description>Swaps       : O(n) - only the reversal that turns a detected descending run ascending; merging moves elements by copying</description></item>
+/// <item><description>Index Reads : Best Θ(n), Average/Worst O(n log n) - every merge reads each element of the two runs it joins</description></item>
+/// <item><description>Index Writes: Best O(1), Average/Worst O(n log n) - an input that is already one run is never merged, so nothing is written</description></item>
 /// <item><description>Space       : O(n/2) worst-case for temporary merge buffer (smaller run is copied)</description></item>
 /// </list>
 /// <para><strong>Adaptive Behavior:</strong></para>
