@@ -59,6 +59,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(N log N) - Falls back to QuickSort when disorder exceeds 60% (early-out), or when K ≈ N</description></item>
 /// <item><description>Comparisons : O(N + K log K) - N comparisons for LNS extraction, K log K for sorting dropped elements, N for merge</description></item>
 /// <item><description>Swaps       : O(K log K) - Mainly in sorting the dropped elements; LNS extraction and merge use moves, not swaps</description></item>
+/// <item><description>Index Reads : O(N + K log K) - one pass to find the longest non-decreasing subsequence, then the sort of the dropped elements and the final merge</description></item>
+/// <item><description>Index Writes: O(N + K log K) - the dropped elements are written out and merged back in</description></item>
 /// <item><description>Space       : O(K) - Temporary storage for dropped elements</description></item>
 /// </list>
 /// <para><strong>Optimal Use Cases:</strong></para>

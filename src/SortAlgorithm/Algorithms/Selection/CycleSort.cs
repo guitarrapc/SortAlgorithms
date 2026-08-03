@@ -34,8 +34,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n²) - Comparisons dominate; writes are O(n) on average</description></item>
 /// <item><description>Worst case  : Θ(n²) - Same comparison count; maximum n-1 writes when all elements displaced</description></item>
 /// <item><description>Comparisons : Θ(n²) - Always n(n-1)/2 comparisons to calculate all positions</description></item>
-/// <item><description>Index Writes: O(n) - Theoretically optimal; at most n writes (each element placed once)</description></item>
+/// <item><description>Swaps       : 0 - each element is carried in a held variable and dropped into its computed position; nothing is exchanged</description></item>
 /// <item><description>Index Reads : Θ(n²) - Multiple reads during position calculation phase</description></item>
+/// <item><description>Index Writes: O(n) - Theoretically optimal; at most n writes (each element placed once)</description></item>
+/// <item><description>Space       : O(1) - only the held element and a few counters</description></item>
 /// </list>
 /// <para><strong>Use Cases:</strong></para>
 /// <list type="bullet">

@@ -55,7 +55,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : Θ(n log² n) - Comparison count: ½ × n × log² n for n = 2^k</description></item>
 /// <item><description>Comparisons : Θ(n log² n) - Exactly (log² n × (log n + 1)) / 4 × n comparisons for n = 2^k</description></item>
 /// <item><description>Swaps       : O(n log² n) - At most equal to comparison count; depends on input disorder</description></item>
-/// <item><description>Parallel depth: O(log² n) - Network depth allows O(log² n) parallel time with O(n log n) processors</description></item>
+/// <item><description>Index Reads : Θ(n log² n) - every comparator reads the two positions it tests, and the network runs the same comparators whatever the input</description></item>
+/// <item><description>Index Writes: O(n log² n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the comparators act directly on the input span</description></item>
+/// <item><description>Depth       : O(log² n) - Network depth allows O(log² n) parallel time with O(n log n) processors</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
@@ -290,7 +293,10 @@ public static class BitonicSort
 /// <item><description>Worst case  : Θ(n log² n) - Comparison count: ½ × n × log² n for n = 2^k</description></item>
 /// <item><description>Comparisons : Θ(n log² n) - Exactly (log² n × (log n + 1)) / 4 × n comparisons for n = 2^k</description></item>
 /// <item><description>Swaps       : O(n log² n) - At most equal to comparison count; depends on input disorder</description></item>
-/// <item><description>Parallel depth: O(log² n) - Network depth allows O(log² n) parallel time with O(n log n) processors</description></item>
+/// <item><description>Index Reads : Θ(n log² n) - every comparator reads the two positions it tests, and the network runs the same comparators whatever the input</description></item>
+/// <item><description>Index Writes: O(n log² n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the comparators act directly on the input span</description></item>
+/// <item><description>Depth       : O(log² n) - Network depth allows O(log² n) parallel time with O(n log n) processors</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">

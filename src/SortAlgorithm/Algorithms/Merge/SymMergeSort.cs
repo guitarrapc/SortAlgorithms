@@ -7,13 +7,14 @@ namespace SortAlgorithm.Algorithms;
 /// SymMerge Sortは、SymMergeアルゴリズムを用いたイテレーティブな（ボトムアップ）安定インプレースソートです。
 /// RotateMergeSortIterativeと同じボトムアップ構造ですが、マージステップにRotateではなくSymMergeを使用します。
 /// SymMergeは各マージで対称二分探索により最適な分割点を1回見つけ、1回のローテーションと2つの再帰呼び出しでマージします。
-/// これによりRotateMergeに比べて比較回数がO(n log² n)からO(n log n)に削減されます。
+/// 分割点を全体の中点から取るため、RotateMergeのように長い側の中央から取る場合と違って部分問題が常に等分され、探索範囲が毎回半分になります。
 /// <br/>
 /// SymMerge Sort is an iterative (bottom-up) stable in-place sort using the SymMerge algorithm.
 /// It shares the same bottom-up structure as RotateMergeSortIterative, but replaces the rotation-based
 /// merge with SymMerge: a single symmetric binary search finds the optimal split point, then one rotation
 /// and two recursive calls complete the merge.
-/// This reduces the comparison count from O(n log² n) to O(n log n) compared to RotateMerge.
+/// The split point comes from the midpoint of the whole range rather than from the median of the longer
+/// side, so every sub-problem is halved and the search range halves with it.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct SymMerge Sort:</strong></para>
@@ -58,11 +59,14 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>SymMerge vs RotateMerge:</strong></para>
 /// <list type="bullet">
-/// <item><description>RotateMerge scans left-to-right and may perform many small rotations, costing
-/// O(n log n) comparisons per merge (due to binary search per gallop step)</description></item>
 /// <item><description>SymMerge performs exactly one O(log n) binary search per recursive call and one rotation,
 /// achieving O(n) comparisons per merge via balanced recursion (T(n) = 2T(n/2) + O(log n) = O(n))</description></item>
-/// <item><description>Total comparisons: O(n log n) for SymMergeSort vs O(n log² n) for RotateMergeSortIterative</description></item>
+/// <item><description>RotateMerge splits at the median of the longer side instead, so a sub-problem is only
+/// guaranteed to shrink to 3/4 rather than 1/2; it reaches the same O(n log n) total comparisons
+/// (Dudziński–Dydek) but with a larger constant, and its sub-problems are unbalanced enough that the
+/// resulting rotations move more elements</description></item>
+/// <item><description>Both are O(n log n) comparisons and O(n log² n) moves; the separation between them is a
+/// constant factor, not an asymptotic one</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Pok-Son Kim and Arne Kutzner, "Stable minimum storage merging by symmetric comparisons" (2004) https://link.springer.com/chapter/10.1007/978-3-540-30140-0_50</para>

@@ -38,11 +38,11 @@ namespace SortAlgorithm.Algorithms;
 /// the larger side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
 /// rotates the overlapping region, then pushes the two resulting sub-problems onto an explicit worklist (stackalloc).
 /// This replaces recursion with an iterative loop, eliminating O(log n) call-stack frames per merge.</description></item>
-/// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal with fast paths):</strong>
-/// Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems].
-/// Fast path k==1: move leftmost element to right end.
-/// Fast path k==n-1: move rightmost element to left end (left rotate n-1 = right rotate 1).
-/// General case uses 3-reversal: Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).</description></item>
+/// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal):</strong>
+/// Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems]
+/// via 3-reversal: Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).
+/// Implementation note: a side of at most 4 elements is instead held in registers while the other side is
+/// shifted over it, which performs the same rotation with one read and one write per element.</description></item>
 /// <item><description><strong>Stability Preservation:</strong> Lower bound is used when the left side is larger
 /// and upper bound when the right side is larger, ensuring equal elements from the left run appear before
 /// those from the right run.</description></item>
@@ -55,11 +55,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) – Sorted data: insertion sort is O(n), all phase-2 merges are skipped</description></item>
 /// <item><description>Average case: O(n log² n) – Binary search (log n) + rotation (n) per merge × log n passes</description></item>
 /// <item><description>Worst case  : O(n log² n)</description></item>
-/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) – each merge locates its split by binary search, so comparisons stay below the move bound</description></item>
-/// <item><description>Swaps       : O(n log² n) – the three-reversal rotation moves elements by exchange, which is what the extra log factor pays for</description></item>
+/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) – merging runs of length m ≤ n costs O(m log(n/m + 1)) comparisons (Dudziński–Dydek), which is O(width) for the equal-length runs a pass produces, so a pass costs O(n) and the sort costs O(n log n)</description></item>
+/// <item><description>Swaps       : O(n log² n) – equals the element moves, because the rotation is realized by exchange</description></item>
 /// <item><description>Index Reads : Best O(n), Average/Worst O(n log² n) – dominated by the rotations rather than by the binary searches</description></item>
 /// <item><description>Index Writes: Best O(n), Average/Worst O(n log² n) – every rotation writes each element of the block it moves</description></item>
 /// <item><description>Space       : O(log n) – Explicit merge stack (stackalloc, no heap allocation or call-stack recursion)</description></item>
+/// <item><description>Rotations   : Best 0, Average/Worst O(n log n) – one per merge decomposition step, and a step costs at least one comparison</description></item>
 /// </list>
 /// <para><strong>Fully Iterative Design:</strong></para>
 /// <list type="bullet">
@@ -80,6 +81,10 @@ public static class RotateMergeSort
 
     // Threshold for using insertion sort instead of rotation-based merge
     private const int InsertionSortThreshold = 16;
+
+    // Maximum small-side length for the shift-based Rotate fast path.
+    // The saved side is held in local variables, so this bound is the number of those locals.
+    private const int RotateSmallThreshold = 4;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;
@@ -178,7 +183,8 @@ public static class RotateMergeSort
         where TContext : ISortContext
     {
         // Explicit stack for iterative divide-and-conquer merge.
-        // Each decomposition step halves the smaller side, so max depth is O(log n).
+        // Each decomposition step halves the larger side, so the depth is bounded by
+        // log2(len1) + log2(len2), i.e. O(log n).
         // 64 entries handle any practical Span<T> length addressable by int indexing.
         Span<int> stackL = stackalloc int[64];
         Span<int> stackM = stackalloc int[64];
@@ -260,18 +266,25 @@ public static class RotateMergeSort
     /// Finds the first position in [left..right] where s[pos] >= s[keyIndex] (lower bound).
     /// Returns right + 1 if all elements are less than s[keyIndex].
     /// Uses &lt;= comparison so equal elements from the left run stay before the right run (stability).
+    /// <para>
+    /// Implementation note: the key is read once. Nothing moves while the search runs, so comparing each
+    /// probe against the held value costs one read per step instead of the two an index-to-index
+    /// comparison announces. The comparison then names only the probe, the key being a value rather than
+    /// a location.
+    /// </para>
     /// </summary>
     private static int LowerBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int keyIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var key = s.Read(keyIndex);
         var lo = left;
         var hi = right + 1;
 
         while (lo < hi)
         {
             var m = lo + (hi - lo) / 2;
-            if (s.IsLessAt(m, keyIndex))
+            if (s.IsElementLessThan(m, key))
                 lo = m + 1;
             else
                 hi = m;
@@ -284,18 +297,20 @@ public static class RotateMergeSort
     /// Finds the first position in [left..right] where s[pos] > s[keyIndex] (upper bound).
     /// Returns right + 1 if all elements are less than or equal to s[keyIndex].
     /// Uses strict &gt; so equal elements from the left run stay before the right run (stability).
+    /// <para>Implementation note: the key is read once, as in <see cref="LowerBound"/>.</para>
     /// </summary>
     private static int UpperBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int keyIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var key = s.Read(keyIndex);
         var lo = left;
         var hi = right + 1;
 
         while (lo < hi)
         {
             var m = lo + (hi - lo) / 2;
-            if (s.IsLessOrEqualAt(m, keyIndex))
+            if (s.IsElementLessOrEqual(m, key))
                 lo = m + 1;
             else
                 hi = m;
@@ -306,10 +321,16 @@ public static class RotateMergeSort
 
     /// <summary>
     /// Left-rotates A[left..right] by k positions: [left_k_elems | rest] → [rest | left_k_elems].
-    /// Fast path k==1 (left rotate 1): move leftmost element to right end.
-    /// Fast path k==n-1 (left rotate n-1 = right rotate 1): move rightmost element to left end.
     /// General case uses 3-reversal: Reverse[left..left+k-1], Reverse[left+k..right], Reverse[left..right].
     /// All paths are linear scans, enabling hardware prefetching without GCD or modulo overhead.
+    /// <para>
+    /// Implementation note: when either side is at most <see cref="RotateSmallThreshold"/> elements it is
+    /// held in local variables while the other side is shifted over it, costing one read and one write per
+    /// element. The 3-reversal touches every element of the block twice — once in a half reversal, once in
+    /// the full one — so the fast path halves the element traffic for the many tiny rotations the
+    /// divide-and-conquer merge produces near its leaves. It is the same shape as the k==1 case a plain
+    /// rotate merge already needs, generalized to four; the rotation performed is identical either way.
+    /// </para>
     /// </summary>
     /// <param name="k">The number of positions to rotate left</param>
     private static void Rotate<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int k)
@@ -322,23 +343,37 @@ public static class RotateMergeSort
         k = k % n;
         if (k == 0) return;
 
-        // Fast path: k==1 (left rotate 1) - move leftmost element to right end, shift rest left (sequential read/write, no swap)
-        if (k == 1)
+        // Fast path: small left side - save it, shift the right side left over it, write it back.
+        if (k <= RotateSmallThreshold)
         {
-            var tmp = s.Read(left);
-            for (var i = left; i < right; i++)
-                s.Write(i, s.Read(i + 1));
-            s.Write(right, tmp);
+            var t0 = s.Read(left);
+            var t1 = k > 1 ? s.Read(left + 1) : default!;
+            var t2 = k > 2 ? s.Read(left + 2) : default!;
+            var t3 = k > 3 ? s.Read(left + 3) : default!;
+            for (var i = left; i <= right - k; i++)
+                s.Write(i, s.Read(i + k));
+            var dst = right - k + 1;
+            s.Write(dst, t0);
+            if (k > 1) s.Write(dst + 1, t1);
+            if (k > 2) s.Write(dst + 2, t2);
+            if (k > 3) s.Write(dst + 3, t3);
             return;
         }
 
-        // Fast path: k==n-1 (left rotate n-1 = right rotate 1) - move rightmost element to left end, shift rest right (sequential read/write, no swap)
-        if (k == n - 1)
+        // Fast path: small right side - save it, shift the left side right over it, write it back.
+        var rightLen = n - k;
+        if (rightLen <= RotateSmallThreshold)
         {
-            var tmp = s.Read(right);
-            for (var i = right; i > left; i--)
-                s.Write(i, s.Read(i - 1));
-            s.Write(left, tmp);
+            var t0 = s.Read(left + k);
+            var t1 = rightLen > 1 ? s.Read(left + k + 1) : default!;
+            var t2 = rightLen > 2 ? s.Read(left + k + 2) : default!;
+            var t3 = rightLen > 3 ? s.Read(left + k + 3) : default!;
+            for (var i = right; i >= left + rightLen; i--)
+                s.Write(i, s.Read(i - rightLen));
+            s.Write(left, t0);
+            if (rightLen > 1) s.Write(left + 1, t1);
+            if (rightLen > 2) s.Write(left + 2, t2);
+            if (rightLen > 3) s.Write(left + 3, t3);
             return;
         }
 
@@ -401,11 +436,11 @@ public static class RotateMergeSort
 /// <c>s[left] &gt; s[right]</c> every element of the left run exceeds every element of the right run.
 /// The entire pair is resolved with a single rotation, bypassing all recursive merge work.
 /// Reverse-order inputs produce run pairs exactly in this form, turning O(n log² n) merge work into O(n log n) rotations.</description></item>
-/// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal with fast paths):</strong>
-/// Fast path k==1: move leftmost element to right end (sequential reads/writes, no swap).
-/// Fast path k==n-1: move rightmost element to left end (left rotate n-1 = right rotate 1, sequential reads/writes, no swap).
-/// General case uses 3-reversal: Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).
-/// All three phases are linear scans, enabling hardware prefetching and eliminating GCD/modulo overhead.</description></item>
+/// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal):</strong>
+/// Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).
+/// All three phases are linear scans, enabling hardware prefetching and eliminating GCD/modulo overhead.
+/// Implementation note: a side of at most 4 elements is instead held in registers while the other side is
+/// shifted over it, which performs the same rotation with one read and one write per element.</description></item>
 /// <item><description><strong>Stability Preservation:</strong> Lower bound is used when the left side is larger
 /// and upper bound when the right side is larger, ensuring equal elements from the left run appear before
 /// those from the right run.</description></item>
@@ -418,14 +453,16 @@ public static class RotateMergeSort
 /// <item><description>Best case   : O(n) - Sorted data with insertion sort optimization for small partitions</description></item>
 /// <item><description>Average case: O(n log² n) - Binary search (log n) + rotation (n) per merge level (log n levels)</description></item>
 /// <item><description>Worst case  : O(n log² n) - Rotation adds O(n) factor to each merge operation</description></item>
-/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - each merge locates its split by binary search, so comparisons stay below the move bound</description></item>
-/// <item><description>Swaps       : O(n log² n) - 0 for the k==1/k==n-1 fast paths, at most n/2 per rotation otherwise (3-reversal)</description></item>
+/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - merging runs of length m ≤ n costs O(m log(n/m + 1)) comparisons (Dudziński–Dydek), which is O(length) for the equal halves the divide step produces, so a level costs O(n) and the sort costs O(n log n)</description></item>
+/// <item><description>Swaps       : O(n log² n) - equals the element moves, because the rotation is realized by exchange</description></item>
 /// <item><description>Index Reads : Best O(n), Average/Worst O(n log² n) - dominated by the rotations rather than by the binary searches</description></item>
-/// <item><description>Index Writes: Best O(n), Average/Worst O(n log² n) - k==1/k==n-1 fast paths use sequential writes; 3-reversal uses cache-friendly swaps</description></item>
+/// <item><description>Index Writes: Best O(n), Average/Worst O(n log² n) - every rotation writes each element of the block it moves</description></item>
 /// <item><description>Space       : O(log n) - Recursion stack for sort + merge, no auxiliary buffer needed</description></item>
+/// <item><description>Rotations   : Best 0, Average/Worst O(n log n) - one per merge decomposition step, and a step costs at least one comparison</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Merge_sort#Variants</para>
+/// <para>Divide-and-conquer in-place merge: Dudziński, Dydek, "On a stable storage merging algorithm" (1981)</para>
 /// <para>Rotation-based in-place merge: Practical In-Place Merging (Geffert et al.)</para>
 /// </remarks>
 public static class RotateMergeSortRecursive
@@ -439,6 +476,10 @@ public static class RotateMergeSortRecursive
     // Threshold for using insertion sort instead of rotation-based merge
     // Small subarrays benefit from insertion sort's lower overhead
     private const int InsertionSortThreshold = 16;
+
+    // Maximum small-side length for the shift-based Rotate fast path.
+    // The saved side is held in local variables, so this bound is the number of those locals.
+    private const int RotateSmallThreshold = 4;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array (in-place operations only)
@@ -535,7 +576,7 @@ public static class RotateMergeSortRecursive
 
     /// <summary>
     /// Merges two sorted subarrays [left..mid] and [mid+1..right] in-place using divide-and-conquer rotation.
-    /// Picks the median of the smaller side, binary searches for its position in the opposite side,
+    /// Picks the median of the larger side, binary searches for its position in the opposite side,
     /// rotates the overlapping region, then recursively merges both resulting sub-problems.
     /// </summary>
     private static void MergeInPlace<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int mid, int right)
@@ -590,18 +631,24 @@ public static class RotateMergeSortRecursive
 
     /// <summary>
     /// Finds the first position in [left..right] where s[pos] >= s[keyIndex] (lower bound).
+    /// <para>
+    /// Implementation note: the key is read once. Nothing moves while the search runs, so comparing each
+    /// probe against the held value costs one read per step instead of the two an index-to-index
+    /// comparison announces.
+    /// </para>
     /// </summary>
     private static int LowerBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int keyIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var key = s.Read(keyIndex);
         var lo = left;
         var hi = right + 1;
 
         while (lo < hi)
         {
             var m = lo + (hi - lo) / 2;
-            if (s.IsLessAt(m, keyIndex))
+            if (s.IsElementLessThan(m, key))
                 lo = m + 1;
             else
                 hi = m;
@@ -612,18 +659,20 @@ public static class RotateMergeSortRecursive
 
     /// <summary>
     /// Finds the first position in [left..right] where s[pos] > s[keyIndex] (upper bound).
+    /// <para>Implementation note: the key is read once, as in <see cref="LowerBound"/>.</para>
     /// </summary>
     private static int UpperBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int keyIndex)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var key = s.Read(keyIndex);
         var lo = left;
         var hi = right + 1;
 
         while (lo < hi)
         {
             var m = lo + (hi - lo) / 2;
-            if (s.IsLessOrEqualAt(m, keyIndex))
+            if (s.IsElementLessOrEqual(m, key))
                 lo = m + 1;
             else
                 hi = m;
@@ -634,9 +683,13 @@ public static class RotateMergeSortRecursive
 
     /// <summary>
     /// Rotates a subarray left by k positions.
-    /// Fast paths for k==1 and k==n-1 shift a single element sequentially (no swaps, linear access).
     /// General case uses 3-reversal: Reverse[left..left+k-1], Reverse[left+k..right], Reverse[left..right].
     /// All paths are linear scans, enabling hardware prefetching without GCD or modulo overhead.
+    /// <para>
+    /// Implementation note: when either side is at most <see cref="RotateSmallThreshold"/> elements it is
+    /// held in local variables while the other side is shifted over it, costing one read and one write per
+    /// element instead of the 3-reversal's two touches per element. The rotation performed is identical.
+    /// </para>
     /// </summary>
     /// <param name="s">The SortSpan wrapping the array</param>
     /// <param name="left">The start index of the subarray to rotate</param>
@@ -652,23 +705,37 @@ public static class RotateMergeSortRecursive
         k = k % n;
         if (k == 0) return;
 
-        // Fast path: k==1 (left rotate 1) - move leftmost element to right end, shift rest left (sequential read/write, no swap)
-        if (k == 1)
+        // Fast path: small left side - save it, shift the right side left over it, write it back.
+        if (k <= RotateSmallThreshold)
         {
-            var tmp = s.Read(left);
-            for (var i = left; i < right; i++)
-                s.Write(i, s.Read(i + 1));
-            s.Write(right, tmp);
+            var t0 = s.Read(left);
+            var t1 = k > 1 ? s.Read(left + 1) : default!;
+            var t2 = k > 2 ? s.Read(left + 2) : default!;
+            var t3 = k > 3 ? s.Read(left + 3) : default!;
+            for (var i = left; i <= right - k; i++)
+                s.Write(i, s.Read(i + k));
+            var dst = right - k + 1;
+            s.Write(dst, t0);
+            if (k > 1) s.Write(dst + 1, t1);
+            if (k > 2) s.Write(dst + 2, t2);
+            if (k > 3) s.Write(dst + 3, t3);
             return;
         }
 
-        // Fast path: k==n-1 (left rotate n-1 = right rotate 1) - move rightmost element to left end, shift rest right (sequential read/write, no swap)
-        if (k == n - 1)
+        // Fast path: small right side - save it, shift the left side right over it, write it back.
+        var rightLen = n - k;
+        if (rightLen <= RotateSmallThreshold)
         {
-            var tmp = s.Read(right);
-            for (var i = right; i > left; i--)
-                s.Write(i, s.Read(i - 1));
-            s.Write(left, tmp);
+            var t0 = s.Read(left + k);
+            var t1 = rightLen > 1 ? s.Read(left + k + 1) : default!;
+            var t2 = rightLen > 2 ? s.Read(left + k + 2) : default!;
+            var t3 = rightLen > 3 ? s.Read(left + k + 3) : default!;
+            for (var i = right; i >= left + rightLen; i--)
+                s.Write(i, s.Read(i - rightLen));
+            s.Write(left, t0);
+            if (rightLen > 1) s.Write(left + 1, t1);
+            if (rightLen > 2) s.Write(left + 2, t2);
+            if (rightLen > 3) s.Write(left + 3, t3);
             return;
         }
 
@@ -741,14 +808,16 @@ public static class RotateMergeSortRecursive
 /// <item><description>Best case   : O(n) - Sorted data with insertion sort optimization for small partitions</description></item>
 /// <item><description>Average case: O(n log² n) - Binary search (log n) + rotation (n) per merge level (log n levels)</description></item>
 /// <item><description>Worst case  : O(n log² n) - Rotation adds O(n) factor to each merge operation</description></item>
-/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - each merge locates its split by binary search, so comparisons stay below the move bound</description></item>
-/// <item><description>Swaps       : 0 - GCD-cycle rotation uses only write operations, no swaps needed</description></item>
+/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - merging runs of length m ≤ n costs O(m log(n/m + 1)) comparisons (Dudziński–Dydek), which is O(length) for the equal halves the divide step produces, so a level costs O(n) and the sort costs O(n log n)</description></item>
+/// <item><description>Swaps       : Best 0, Average/Worst O(n log n) - the GCD-cycle rotation is write-only, so the only exchange left is the two-element base case, which is reached at most once per merge decomposition step</description></item>
 /// <item><description>Index Reads : Best O(n), Average/Worst O(n log² n) - dominated by the rotations rather than by the binary searches</description></item>
 /// <item><description>Index Writes: Best O(n), Average/Worst O(n log² n) - GCD-cycle rotation uses assignments only (no swaps)</description></item>
 /// <item><description>Space       : O(log n) - Recursion stack for sort + merge, no auxiliary buffer needed</description></item>
+/// <item><description>Rotations   : Best 0, Average/Worst O(n log n) - one per merge decomposition step, and a step costs at least one comparison</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Merge_sort#Variants</para>
+/// <para>Divide-and-conquer in-place merge: Dudziński, Dydek, "On a stable storage merging algorithm" (1981)</para>
 /// <para>Rotation-based in-place merge: Practical In-Place Merging (Geffert et al.)</para>
 /// </remarks>
 public static class RotateMergeSortNonOptimized

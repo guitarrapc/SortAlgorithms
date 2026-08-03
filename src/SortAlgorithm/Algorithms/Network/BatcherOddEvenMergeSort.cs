@@ -37,7 +37,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Θ(n log² n) - Data-independent comparison count (same as worst case)</description></item>
 /// <item><description>Average case: Θ(n log² n) - Performs the same comparisons for all inputs</description></item>
 /// <item><description>Worst case  : Θ(n log² n) - For n = 2^k: (1/4) × n × log n × (log n + 1) comparisons</description></item>
-/// <item><description>Parallel depth: O(log² n) - Network depth allows O(log² n) parallel time</description></item>
+/// <item><description>Comparisons : Θ(n log² n) - For n = 2^k: (1/4) × n × log n × (log n + 1); the network runs the same comparators whatever the input</description></item>
+/// <item><description>Swaps       : O(n log² n) - At most one per comparator, so at most the comparison count; how many actually fire depends on the input</description></item>
+/// <item><description>Index Reads : Θ(n log² n) - every comparator reads the two positions it tests</description></item>
+/// <item><description>Index Writes: O(n log² n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the comparators act directly on the input span</description></item>
+/// <item><description>Depth       : O(log² n) - Network depth allows O(log² n) parallel time</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">

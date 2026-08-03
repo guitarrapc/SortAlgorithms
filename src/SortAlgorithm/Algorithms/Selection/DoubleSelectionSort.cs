@@ -41,6 +41,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : Θ(n²) - Same comparison count; approximately n swaps when reverse sorted</description></item>
 /// <item><description>Comparisons : Θ(n²) - Approximately n(n-1)/2 comparisons (two comparisons per element in unsorted region)</description></item>
 /// <item><description>Swaps       : O(n) - At most n swaps (2 per iteration); best case 0 (already sorted), worst case ~n</description></item>
+/// <item><description>Index Reads : Θ(n²) - the scan for both extremes reads every element of the unsorted region on each iteration</description></item>
+/// <item><description>Index Writes: O(n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the extremes are tracked in constant extra variables</description></item>
 /// <item><description>Iterations  : ⌈n/2⌉ - Half the number of iterations compared to standard selection sort</description></item>
 /// </list>
 /// <para><strong>Use Cases:</strong></para>

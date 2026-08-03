@@ -33,6 +33,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n²) - Reverse-sorted input requires n(n-1)/2 swaps</description></item>
 /// <item><description>Comparisons : Best O(n), Average/Worst O(n²)</description></item>
 /// <item><description>Swaps       : Best 0, Average n(n-1)/4, Worst n(n-1)/2</description></item>
+/// <item><description>Index Reads : O(n²) - each comparison reads both neighbours of the pair it tests</description></item>
+/// <item><description>Index Writes: O(n²) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the sort exchanges neighbours inside the input span</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Bubble_sort</para>
@@ -142,6 +145,9 @@ public static class BubbleSort
 /// <item><description>Worst case  : O(n²) - Reverse-sorted input requires n(n-1)/2 swaps</description></item>
 /// <item><description>Comparisons : Exactly n(n-1)/2 comparisons in all cases</description></item>
 /// <item><description>Swaps       : Best 0, Average n(n-1)/4, Worst n(n-1)/2</description></item>
+/// <item><description>Index Reads : O(n²) - each comparison reads both neighbours of the pair it tests</description></item>
+/// <item><description>Index Writes: O(n²) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the sort exchanges neighbours inside the input span</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Bubble_sort</para>

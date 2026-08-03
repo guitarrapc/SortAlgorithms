@@ -37,6 +37,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Swaps       : 0 to n(n-1)/2 - Each flip of length k performs k/2 swaps; worst case 2n flips of average length n/2</description></item>
 /// <item><description>Index Reads : 2 × comparisons + 2 × swaps - Comparisons read 2 elements; swaps read and write 2 elements each</description></item>
 /// <item><description>Index Writes: 2 × swaps - Each swap writes 2 elements</description></item>
+/// <item><description>Space       : O(1) - the flips reverse ranges inside the input span</description></item>
 /// </list>
 /// <para><strong>Note:</strong> The Pancake Sorting Problem asks for the minimum number of flips to sort any array.
 /// This implementation uses a simple greedy approach (not necessarily optimal) that guarantees at most 2(n-1) flips.

@@ -36,6 +36,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n^(log 3 / log 1.5)) ≈ O(n^2.71) - Asymptotically slower than even bubble sort O(n²)</description></item>
 /// <item><description>Comparisons : Θ(n^2.71) - One comparison at each of the ~n^2.71 recursive calls</description></item>
 /// <item><description>Swaps       : O(n^2.71) - At most one swap per recursive call</description></item>
+/// <item><description>Index Reads : O(n^2.71) - each recursive call compares and reads the two ends of its range</description></item>
+/// <item><description>Index Writes: O(n^2.71) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(log n) - recursion stack only</description></item>
 /// </list>
 /// <para><strong>Note:</strong> Stooge Sort is a deliberately inefficient algorithm used for educational purposes to demonstrate
 /// that not all recursive divide-and-conquer algorithms are efficient. The "multiply and surrender" strategy (triple recursion on overlapping 2/3 segments)

@@ -61,6 +61,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n^(log₂ n / 2)) ≈ O(n^(log n)) - Asymptotically worse than O(n²), one of the slowest known sorting algorithms</description></item>
 /// <item><description>Comparisons : Θ(n^(log n)) - One comparison at each of the exponentially many recursive calls</description></item>
 /// <item><description>Swaps       : O(n^(log n)) - At most one swap per recursive call, but depends on data ordering</description></item>
+/// <item><description>Index Reads : O(n^(log n)) - each recursive call compares and reads the two subrange maxima it comes back with</description></item>
+/// <item><description>Index Writes: O(n^(log n)) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(log n) - recursion stack only</description></item>
 /// </list>
 /// <para><strong>Note:</strong> Slow Sort is a deliberately inefficient algorithm created by Andrei Broder and Jorge Stolfi in 1984
 /// to demonstrate the "Multiply and Surrender" paradigm—a pessimal variant of divide-and-conquer.

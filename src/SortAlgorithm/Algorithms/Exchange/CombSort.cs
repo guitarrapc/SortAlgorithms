@@ -40,6 +40,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n²) - Certain input patterns can degrade to quadratic time</description></item>
 /// <item><description>Comparisons : O(n log n) average - Each gap h performs (n-h) comparisons, summed over all gaps</description></item>
 /// <item><description>Swaps       : O(n log n) average - Significantly fewer than BubbleSort due to gap sequence</description></item>
+/// <item><description>Index Reads : O(n log n) average - each comparison reads the two ends of the gap it tests</description></item>
+/// <item><description>Index Writes: O(n log n) average - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the gaps index the input span directly</description></item>
 /// <item><description>Gap sequence: ⌊n × 10/13⌋, ⌊h × 10/13⌋, ..., 11, 8, 6, 4, 3, 2, 1 (with Comb11 optimization)</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>

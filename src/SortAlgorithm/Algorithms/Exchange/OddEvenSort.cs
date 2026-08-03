@@ -38,7 +38,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n²) - Reversed array requires ~n passes, each with ~n/2 comparisons, totaling ~n²/2 comparisons</description></item>
 /// <item><description>Comparisons : n-1 (best) to ~n²/2 (average/worst) - Each pass compares approximately n/2 pairs in each phase</description></item>
 /// <item><description>Swaps       : 0 (best) to n(n-1)/2 (worst) - Reversed array swaps every compared out-of-order pair</description></item>
-/// <item><description>Parallel time: O(n) - With unlimited processors, each phase takes O(1) time, and at most n phases are needed</description></item>
+/// <item><description>Index Reads : O(n²) - every phase compares each adjacent pair of its parity, reading both</description></item>
+/// <item><description>Index Writes: O(n²) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the sort exchanges neighbours inside the input span</description></item>
+/// <item><description>Depth       : O(n) - With unlimited processors, each phase takes O(1) time, and at most n phases are needed</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
 /// <list type="bullet">

@@ -33,6 +33,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n log n)</description></item>
 /// <item><description>Comparisons : O(n log n log n)</description></item>
 /// <item><description>Swaps       : O(n log n log n) worst case</description></item>
+/// <item><description>Index Reads : O(n log² n) worst case - each comparison reads the two ends of the circle it pairs</description></item>
+/// <item><description>Index Writes: O(n log² n) worst case - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(log n) - recursion stack only; the pairing happens inside the input span</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://sourceforge.net/p/forth-4th/wiki/Circle%20sort/</para>

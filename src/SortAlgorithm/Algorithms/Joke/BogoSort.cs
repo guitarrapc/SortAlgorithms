@@ -30,6 +30,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : Unbounded - Theoretically could run forever (though probability diminishes exponentially)</description></item>
 /// <item><description>Comparisons : (e-1) × n × (n-1) / 2 on average - Each verification performs n-1 comparisons</description></item>
 /// <item><description>Swaps       : (n-1) × n! on average - Each shuffle performs n-1 swaps via Fisher-Yates</description></item>
+/// <item><description>Index Reads : O(n × n!) on average - each shuffle reads every element and each order check scans until it finds a descent</description></item>
+/// <item><description>Index Writes: O(n × n!) on average - each shuffle writes every element through its n-1 swaps</description></item>
+/// <item><description>Space       : O(1) - the shuffle permutes the input span</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Bogosort</para>
