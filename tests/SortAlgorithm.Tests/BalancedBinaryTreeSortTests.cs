@@ -130,4 +130,35 @@ public class BalancedBinaryTreeSortTests : StableSortTestsBase
         await Assert.That(stats.CompareCount < worstCaseBST * 7 / 10).IsTrue().Because($"CompareCount ({stats.CompareCount}) should be better than 70% of unbalanced BST worst case ({worstCaseBST})");
         await Assert.That(stats.CompareCount < balancedUpperBound).IsTrue().Because($"CompareCount ({stats.CompareCount}) should be within balanced tree bounds ({balancedUpperBound})");
     }
+
+    /// <summary>
+    /// The insertion retrace stops early, so a rebalancing that is skipped when it should not be
+    /// would still produce sorted output — only the tree shape would degrade. Sorted and reversed
+    /// input drive the deepest rebalancing, and comparison count is the observable proxy for height:
+    /// a tree that is no longer AVL-balanced blows past 1.44 × log₂(n) comparisons per insertion.
+    /// </summary>
+    [Test]
+    [Arguments(256)]
+    [Arguments(1024)]
+    public async Task InsertionKeepsAvlHeightOnAdversarialInputTest(int n)
+    {
+        // AVL height bound: h ≤ 1.44 × log₂(n + 2). One comparison per level, per insertion.
+        var avlUpperBound = (ulong)(n * 1.44 * Math.Log2(n + 2));
+        var degenerateBST = (ulong)((long)n * (n - 1) / 2);
+
+        foreach (var (pattern, source) in new (string, int[])[]
+        {
+            ("sorted", [.. Enumerable.Range(0, n)]),
+            ("reversed", [.. Enumerable.Range(0, n).Reverse()]),
+        })
+        {
+            var stats = new StatisticsContext();
+            var data = source.ToArray();
+            BalancedBinaryTreeSort.Sort(data.AsSpan(), stats);
+
+            await Assert.That(data).IsEquivalentTo(Enumerable.Range(0, n).ToArray());
+            await Assert.That(stats.CompareCount <= avlUpperBound).IsTrue()
+                .Because($"{pattern} n={n}: CompareCount ({stats.CompareCount}) must stay within the AVL height bound ({avlUpperBound}); a degenerate BST would need ~{degenerateBST}");
+        }
+    }
 }

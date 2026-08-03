@@ -50,17 +50,28 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Θ(n log n) - Already sorted or reversed, still requires building balanced tree</description></item>
 /// <item><description>Average case: Θ(n log n) - Each of n insertions takes O(log n) comparisons</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by AVL balancing property</description></item>
-/// <item><description>Comparisons : O(n log n) - Each insertion performs at most log₂(n) comparisons</description></item>
-/// <item><description>Index Reads : Θ(n log n) - With Value caching, each comparison reads both values (2 reads per comparison) plus n traversal reads</description></item>
-/// <item><description>Index Writes: Θ(2n) - Each element is written once to the tree (CreateNode) and once during in-order traversal</description></item>
+/// <item><description>Comparisons : O(n log n) - Each insertion performs at most 1.44 × log₂(n) comparisons</description></item>
+/// <item><description>Index Reads : Θ(n log n) - Each element is read once from the array; every comparison and every retraced node reads tree nodes</description></item>
+/// <item><description>Index Writes: Θ(2n) elements + O(n) structure - Each element is written once to the tree (CreateNode) and once during in-order traversal, plus height and pointer updates</description></item>
 /// <item><description>Swaps       : 0 - No swaps performed; only tree node manipulations</description></item>
-/// <item><description>Rotations   : O(n log n) worst case - At most 2 rotations per insertion (amortized O(1))</description></item>
+/// <item><description>Rotations   : O(n) - An insertion needs at most one rebalancing, i.e. a single or a double rotation</description></item>
 /// </list>
 /// <para><strong>Advantages over unbalanced BST:</strong></para>
 /// <list type="bullet">
 /// <item><description>Guaranteed O(n log n) time complexity even on sorted/reversed input (BST degrades to O(n²))</description></item>
 /// <item><description>Predictable performance regardless of input distribution</description></item>
 /// <item><description>Height always bounded by 1.44 × log₂(n)</description></item>
+/// </list>
+/// <para><strong>Implementation Notes:</strong></para>
+/// <list type="bullet">
+/// <item><description>Tree nodes are struct-based and allocated via <see cref="System.Buffers.ArrayPool{T}"/> (arena); Left/Right are integer indices into the arena (-1 = null)</description></item>
+/// <item><description>Insertion is iterative; the descent path is recorded in a stack sized by the AVL height bound, so it always fits in <c>stackalloc</c></description></item>
+/// <item><description><strong>Retrace termination:</strong> the upward retrace stops as soon as the current subtree regains its pre-insertion height,
+/// which is what bounds an AVL insertion to at most one rebalancing. It ends either when a rotation is performed — a rotation restores the
+/// subtree's previous height, so no ancestor can be affected — or when a node's recomputed height equals its stored height and the node is
+/// still balanced. Only the parent's child pointer is then updated. Walking to the root instead would stay O(log n) per insertion but would
+/// recompute heights and balance factors that provably cannot have changed.</description></item>
+/// <item><description>Height and balance factor are derived from one read of a node's children rather than one pass each, and a height is written back only when it changed</description></item>
 /// </list>
 /// <para><strong>Stability:</strong></para>
 /// <para>
@@ -127,22 +138,22 @@ public static class BalancedBinaryTreeSort
     {
         if (span.Length <= 1) return;
 
-        // Allocate path stack for iterative insertion
+        // Path stack depth for iterative insertion.
         // AVL tree theoretical height: h ≤ 1.44 * log₂(n+2) - 0.328
-        // Add +2 margin to cover any rounding and the -0.328 offset
+        // Add +2 margin to cover any rounding and the -0.328 offset.
+        // This stays below 48 even for span.Length == int.MaxValue, so the stack is always
+        // small enough to stackalloc; no pooled fallback is needed.
         var avlMaxHeight = span.Length <= 16
             ? span.Length
             : (int)Math.Ceiling(1.44 * Math.Log2(span.Length + 2)) + 2;
+        Span<int> pathStack = stackalloc int[avlMaxHeight];
 
         // Use ArrayPool for arena allocation
         // Note: Cannot use stackalloc with Node<T> when T might be a reference type
         var arena = ArrayPool<Node<T>>.Shared.Rent(span.Length);
-        int[]? rentedPathStack = null;
-        Span<int> pathStack = avlMaxHeight <= 128
-            ? stackalloc int[avlMaxHeight]
-            : (rentedPathStack = ArrayPool<int>.Shared.Rent(avlMaxHeight)).AsSpan(0, avlMaxHeight);
         try
         {
+            var arenaSpan = arena.AsSpan(0, span.Length);
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var rootIndex = NULL_INDEX;
             var nodeCount = 0;
@@ -152,22 +163,18 @@ public static class BalancedBinaryTreeSort
             {
                 context.OnPhase(SortPhase.TreeSortInsert, i, s.Length - 1);
                 context.OnRole(i, BUFFER_MAIN, RoleType.Inserting);
-                rootIndex = InsertIterative(arena, rootIndex, ref nodeCount, i, s, pathStack);
+                rootIndex = InsertIterative(arenaSpan, rootIndex, ref nodeCount, i, s, pathStack);
                 context.OnRole(i, BUFFER_MAIN, RoleType.None);
             }
 
             // Traverse in order and write back into the array (iterative to avoid stack overflow)
             context.OnPhase(SortPhase.TreeSortExtract);
             var writeIndex = 0;
-            Inorder(s, arena, rootIndex, ref writeIndex, avlMaxHeight);
+            Inorder(s, arenaSpan, rootIndex, ref writeIndex, avlMaxHeight);
         }
         finally
         {
-            ArrayPool<Node<T>>.Shared.Return(arena, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            if (rentedPathStack is not null)
-            {
-                ArrayPool<int>.Shared.Return(rentedPathStack);
-            }
+            ArrayPool<Node<T>>.Shared.Return(arena, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<Node<T>>());
         }
     }
 
@@ -240,39 +247,60 @@ public static class BalancedBinaryTreeSort
             }
         }
 
-        // Phase 2: Rebalance upward along the insertion path
+        // Phase 2: Retrace upward along the insertion path.
         // subtreeRoot: the (possibly rotated) root of the subtree we just finished processing
         // subtreeFrom: the original node index before any rotation (for parent to identify which child)
+        //
+        // The retrace stops as soon as the subtree rooted at the current node has the same height
+        // it had before the insertion, because from that point upward no height and no balance
+        // factor can have changed. Two situations end it:
+        //   - a rebalancing rotation was performed (a rotation restores the subtree's pre-insertion
+        //     height, which is why an AVL insertion needs at most one rebalancing), or
+        //   - the recomputed height equals the stored one and the node is still balanced.
         var subtreeRoot = currentIndex;
-        int subtreeFrom = currentIndex;
+        var subtreeFrom = currentIndex;
 
         while (stackTop > 0)
         {
             var nodeIndex = pathStack[--stackTop];
 
-            // Ensure nodeIndex points to the correct child subtree root (propagate up)
-            s.Context.OnIndexRead(nodeIndex, BUFFER_TREE); // read Left/Right to find which child
-            if (arena[nodeIndex].Left == subtreeFrom)
+            if (subtreeRoot != subtreeFrom)
             {
-                arena[nodeIndex].Left = subtreeRoot;
-                s.Context.OnIndexWrite(nodeIndex, BUFFER_TREE);
-                s.Context.OnLink(nodeIndex, subtreeRoot, BUFFER_TREE, LinkSide.Left);
-            }
-            else if (arena[nodeIndex].Right == subtreeFrom)
-            {
-                arena[nodeIndex].Right = subtreeRoot;
-                s.Context.OnIndexWrite(nodeIndex, BUFFER_TREE);
-                s.Context.OnLink(nodeIndex, subtreeRoot, BUFFER_TREE, LinkSide.Right);
+                // A rotation one level below replaced the child subtree root: relink it here.
+                // The rotated subtree kept its pre-insertion height, so this node and every
+                // ancestor already hold correct heights and balance factors. Relink and stop.
+                s.Context.OnIndexRead(nodeIndex, BUFFER_TREE); // read Left to find which child
+                if (arena[nodeIndex].Left == subtreeFrom)
+                {
+                    arena[nodeIndex].Left = subtreeRoot;
+                    s.Context.OnIndexWrite(nodeIndex, BUFFER_TREE);
+                    s.Context.OnLink(nodeIndex, subtreeRoot, BUFFER_TREE, LinkSide.Left);
+                }
+                else
+                {
+                    arena[nodeIndex].Right = subtreeRoot;
+                    s.Context.OnIndexWrite(nodeIndex, BUFFER_TREE);
+                    s.Context.OnLink(nodeIndex, subtreeRoot, BUFFER_TREE, LinkSide.Right);
+                }
+                return rootIndex;
             }
 
-            // Update height of current node
-            UpdateHeight(arena, nodeIndex, s.Context);
+            // No rotation below, so the child pointer already points at subtreeRoot and needs no write.
+            var balance = UpdateHeightAndGetBalance(arena, nodeIndex, s.Context, out var heightChanged);
 
-            // Balance this subtree - may rotate and return a new subtree root
-            var newRoot = Balance(arena, nodeIndex, s.Context);
+            if (balance is > 1 or < -1)
+            {
+                // Rebalance this subtree; the next iteration only relinks it under its parent.
+                subtreeFrom = nodeIndex;
+                subtreeRoot = Balance(arena, nodeIndex, balance, s.Context);
+                continue;
+            }
+
+            // Balanced and the height did not move: nothing above this node is affected.
+            if (!heightChanged) return rootIndex;
 
             subtreeFrom = nodeIndex;
-            subtreeRoot = newRoot;
+            subtreeRoot = nodeIndex;
         }
 
         // After processing all nodes up to the root, subtreeRoot is the new tree root
@@ -386,15 +414,23 @@ public static class BalancedBinaryTreeSort
     // methods used to maintain AVL tree balance
 
     /// <summary>
-    /// Update the node's height based on the heights of its children using arena indices.
+    /// Recomputes the node's height from its children and returns its balance factor
+    /// (left height - right height) using arena indices.
     /// </summary>
+    /// <remarks>
+    /// Height and balance factor are derived from the same two child heights, so they are produced
+    /// together from a single read of the node and its children rather than one read pass each.
+    /// The height is written back only when it actually changed, so an unchanged node records no write.
+    /// </remarks>
+    /// <param name="heightChanged">True when the recomputed height differs from the stored one.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void UpdateHeight<T, TContext>(Span<Node<T>> arena, int nodeIndex, TContext context)
+    private static int UpdateHeightAndGetBalance<T, TContext>(Span<Node<T>> arena, int nodeIndex, TContext context, out bool heightChanged)
         where TContext : ISortContext
     {
-        context.OnIndexRead(nodeIndex, BUFFER_TREE); // read Left/Right pointers
-        var leftIndex = arena[nodeIndex].Left;
-        var rightIndex = arena[nodeIndex].Right;
+        context.OnIndexRead(nodeIndex, BUFFER_TREE); // read Left/Right pointers and Height
+        ref var node = ref arena[nodeIndex];
+        var leftIndex = node.Left;
+        var rightIndex = node.Right;
 
         // Get the heights of the left and right children.
         int leftHeight = 0;
@@ -411,9 +447,24 @@ public static class BalancedBinaryTreeSort
         }
 
         // node's height = max child's height + 1
-        arena[nodeIndex].Height = 1 + Math.Max(leftHeight, rightHeight);
-        context.OnIndexWrite(nodeIndex, BUFFER_TREE); // write Height
+        var height = 1 + Math.Max(leftHeight, rightHeight);
+        heightChanged = node.Height != height;
+        if (heightChanged)
+        {
+            node.Height = height;
+            context.OnIndexWrite(nodeIndex, BUFFER_TREE); // write Height
+        }
+
+        return leftHeight - rightHeight;
     }
+
+    /// <summary>
+    /// Update the node's height based on the heights of its children using arena indices.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void UpdateHeight<T, TContext>(Span<Node<T>> arena, int nodeIndex, TContext context)
+        where TContext : ISortContext
+        => UpdateHeightAndGetBalance(arena, nodeIndex, context, out _);
 
     /// <summary>
     /// Returns the balance factor (left height - right height) using arena indices.
@@ -444,13 +495,12 @@ public static class BalancedBinaryTreeSort
     /// <summary>
     /// Rebalance the node after insertion using AVL rotations (arena-based).
     /// </summary>
+    /// <param name="balance">The node's balance factor, already computed by the caller.</param>
     /// <returns>Index of the new root after balancing.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int Balance<T, TContext>(Span<Node<T>> arena, int nodeIndex, TContext context)
+    private static int Balance<T, TContext>(Span<Node<T>> arena, int nodeIndex, int balance, TContext context)
         where TContext : ISortContext
     {
-        int balance = GetBalance(arena, nodeIndex, context);
-
         // Left heavy (balance > 1)
         if (balance > 1)
         {
