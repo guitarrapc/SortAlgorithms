@@ -36,10 +36,18 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n) expected - guaranteed by random priority assignment</description></item>
 /// <item><description>Worst case  : O(n²) with astronomically low probability (when random priorities produce degenerate tree)</description></item>
 /// <item><description>Comparisons : O(n log n) expected</description></item>
-/// <item><description>Index Reads : Θ(n) main + O(comparisons) tree - each element read once from main array; each comparison reads a tree node; n traversal reads</description></item>
-/// <item><description>Index Writes: Θ(2n) - each element written once to the tree (CreateNode) and once during in-order traversal</description></item>
+/// <item><description>Index Reads : Θ(n) main + O(n log n) expected tree - each element read once from main array; each comparison reads a tree node; rotations read the nodes they relink; n traversal reads</description></item>
+/// <item><description>Index Writes: Θ(2n) elements + O(n) expected structure - each element is written once to the tree (CreateNode) and once during in-order traversal; an insertion performs O(1) expected rotations, each rewriting a constant number of child and parent pointers</description></item>
+/// <item><description>Rotations   : O(n) expected - the expected number of rotations per insertion is constant, independent of n</description></item>
 /// <item><description>Swaps       : 0 - no swapping; elements are copied to tree nodes and written back during traversal</description></item>
 /// <item><description>Space       : O(n) - one node per element; each node holds value, left/right/parent indices, and priority</description></item>
+/// </list>
+/// <para><strong>Implementation Notes:</strong></para>
+/// <list type="bullet">
+/// <item><description>Tree nodes are struct-based and allocated via <see cref="System.Buffers.ArrayPool{T}"/> (arena); Left/Right/Parent are integer indices into the arena (-1 = null)</description></item>
+/// <item><description>The heap-up stops at the first ancestor whose priority is not exceeded, which is what makes the expected rotation count per insertion constant rather than proportional to the depth</description></item>
+/// <item><description>Priorities come from a deterministic xorshift32 stream so that a given seed always yields the same tree; the seed is a parameter of <c>Sort</c> rather than a fixed constant</description></item>
+/// <item><description>The in-order traversal stack is sized n rather than by a height bound: a treap's height is O(log n) only in expectation</description></item>
 /// </list>
 /// <para><strong>Stability:</strong></para>
 /// <para>
@@ -211,13 +219,17 @@ public static class TreapSort
     private static int HeapUp<T, TContext>(Span<Node<T>> arena, int x, ref int rootIndex, TContext context)
         where TContext : ISortContext
     {
+        // A node's priority is assigned once at creation and never rewritten, so it is read once here
+        // even though the heap-up compares against it at every level.
+        var xPriority = arena[x].Priority;
+
         context.OnIndexRead(x, BUFFER_TREE); // read Parent
-        while (arena[x].Parent != NULL_INDEX)
+        var p = arena[x].Parent;
+        while (p != NULL_INDEX)
         {
-            var p = arena[x].Parent;
             context.OnIndexRead(x, BUFFER_TREE); // read Priority
             context.OnIndexRead(p, BUFFER_TREE); // read Priority
-            if (arena[x].Priority <= arena[p].Priority)
+            if (xPriority <= arena[p].Priority)
                 break;
 
             // x has higher priority than parent → rotate x up
@@ -228,11 +240,12 @@ public static class TreapSort
                 RotateLeft(arena, p, context);
 
             context.OnIndexRead(x, BUFFER_TREE); // read Parent for next iteration
+            p = arena[x].Parent;
         }
 
         // If x has no parent, it is the new root
         context.OnIndexRead(x, BUFFER_TREE); // read Parent
-        if (arena[x].Parent == NULL_INDEX)
+        if (p == NULL_INDEX)
             rootIndex = x;
 
         return rootIndex;
@@ -242,6 +255,12 @@ public static class TreapSort
     /// Left rotation: y = x.Right becomes the new subtree root; x becomes y.Left.
     /// Updates parent pointers for x, y, and y's former left child.
     /// </summary>
+    /// <remarks>
+    /// The three nodes a rotation touches — x, its child y, and x's parent — are held in locals.
+    /// They are distinct by construction, but the intervening stores make that impossible to prove
+    /// from the loads alone, so re-reading the fields would compile to reloads rather than being
+    /// folded away. The context events are unchanged: each field is announced once, as before.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void RotateLeft<T, TContext>(Span<Node<T>> arena, int x, TContext context)
         where TContext : ISortContext
@@ -251,33 +270,35 @@ public static class TreapSort
 
         // x.Right = y.Left
         context.OnIndexRead(y, BUFFER_TREE); // read Left
-        arena[x].Right = arena[y].Left;
+        var t = arena[y].Left;
+        arena[x].Right = t;
         context.OnIndexWrite(x, BUFFER_TREE); // write Right
-        context.OnLink(x, arena[x].Right, BUFFER_TREE, LinkSide.Right);
-        if (arena[y].Left != NULL_INDEX)
+        context.OnLink(x, t, BUFFER_TREE, LinkSide.Right);
+        if (t != NULL_INDEX)
         {
-            arena[arena[y].Left].Parent = x;
-            context.OnIndexWrite(arena[x].Right, BUFFER_TREE); // write Parent of y's former left child
+            arena[t].Parent = x;
+            context.OnIndexWrite(t, BUFFER_TREE); // write Parent of y's former left child
         }
 
         // y inherits x's parent
         context.OnIndexRead(x, BUFFER_TREE); // read Parent
-        arena[y].Parent = arena[x].Parent;
+        var p = arena[x].Parent;
+        arena[y].Parent = p;
         context.OnIndexWrite(y, BUFFER_TREE); // write Parent
-        if (arena[x].Parent != NULL_INDEX)
+        if (p != NULL_INDEX)
         {
-            context.OnIndexRead(arena[x].Parent, BUFFER_TREE); // read parent's Left
-            if (arena[arena[x].Parent].Left == x)
+            context.OnIndexRead(p, BUFFER_TREE); // read parent's Left
+            if (arena[p].Left == x)
             {
-                arena[arena[x].Parent].Left = y;
-                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
-                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Left);
+                arena[p].Left = y;
+                context.OnIndexWrite(p, BUFFER_TREE);
+                context.OnLink(p, y, BUFFER_TREE, LinkSide.Left);
             }
             else
             {
-                arena[arena[x].Parent].Right = y;
-                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
-                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Right);
+                arena[p].Right = y;
+                context.OnIndexWrite(p, BUFFER_TREE);
+                context.OnLink(p, y, BUFFER_TREE, LinkSide.Right);
             }
         }
         else
@@ -297,6 +318,7 @@ public static class TreapSort
     /// Right rotation: y = x.Left becomes the new subtree root; x becomes y.Right.
     /// Updates parent pointers for x, y, and y's former right child.
     /// </summary>
+    /// <remarks>See <see cref="RotateLeft"/> for why the touched nodes are held in locals.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void RotateRight<T, TContext>(Span<Node<T>> arena, int x, TContext context)
         where TContext : ISortContext
@@ -306,33 +328,35 @@ public static class TreapSort
 
         // x.Left = y.Right
         context.OnIndexRead(y, BUFFER_TREE); // read Right
-        arena[x].Left = arena[y].Right;
+        var t = arena[y].Right;
+        arena[x].Left = t;
         context.OnIndexWrite(x, BUFFER_TREE); // write Left
-        context.OnLink(x, arena[x].Left, BUFFER_TREE, LinkSide.Left);
-        if (arena[y].Right != NULL_INDEX)
+        context.OnLink(x, t, BUFFER_TREE, LinkSide.Left);
+        if (t != NULL_INDEX)
         {
-            arena[arena[y].Right].Parent = x;
-            context.OnIndexWrite(arena[x].Left, BUFFER_TREE); // write Parent of y's former right child
+            arena[t].Parent = x;
+            context.OnIndexWrite(t, BUFFER_TREE); // write Parent of y's former right child
         }
 
         // y inherits x's parent
         context.OnIndexRead(x, BUFFER_TREE); // read Parent
-        arena[y].Parent = arena[x].Parent;
+        var p = arena[x].Parent;
+        arena[y].Parent = p;
         context.OnIndexWrite(y, BUFFER_TREE); // write Parent
-        if (arena[x].Parent != NULL_INDEX)
+        if (p != NULL_INDEX)
         {
-            context.OnIndexRead(arena[x].Parent, BUFFER_TREE); // read parent's Right
-            if (arena[arena[x].Parent].Right == x)
+            context.OnIndexRead(p, BUFFER_TREE); // read parent's Right
+            if (arena[p].Right == x)
             {
-                arena[arena[x].Parent].Right = y;
-                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
-                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Right);
+                arena[p].Right = y;
+                context.OnIndexWrite(p, BUFFER_TREE);
+                context.OnLink(p, y, BUFFER_TREE, LinkSide.Right);
             }
             else
             {
-                arena[arena[x].Parent].Left = y;
-                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
-                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Left);
+                arena[p].Left = y;
+                context.OnIndexWrite(p, BUFFER_TREE);
+                context.OnLink(p, y, BUFFER_TREE, LinkSide.Left);
             }
         }
         else

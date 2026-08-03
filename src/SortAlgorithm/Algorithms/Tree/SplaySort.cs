@@ -34,20 +34,39 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Tree / Adaptive</description></item>
 /// <item><description>Stable      : Yes (equal elements go right during BST insertion; BST rotations preserve in-order traversal, so insertion order is maintained)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for tree nodes with parent pointers)</description></item>
-/// <item><description>Best case   : Θ(n log n) amortized - sorted or reverse-sorted inputs benefit from spatial locality</description></item>
+/// <item><description>Best case   : Θ(n) - reached when each element is adjacent in sorted order to the one inserted before it, which holds for both sorted and reverse-sorted input (see Adaptive Behavior)</description></item>
 /// <item><description>Average case: Θ(n log n) amortized - guaranteed by splay tree amortized analysis</description></item>
-/// <item><description>Worst case  : O(n²) per-operation worst case, but O(n log n) amortized over all n insertions</description></item>
-/// <item><description>Comparisons : O(n log n) amortized</description></item>
-/// <item><description>Index Reads : Θ(n) main + O(comparisons) tree - each element read once from main array; each comparison reads a tree node; n traversal reads</description></item>
-/// <item><description>Index Writes: Θ(2n) - each element written once to the tree (CreateNode) and once during in-order traversal</description></item>
+/// <item><description>Worst case  : O(n log n) - the splay tree's amortized bound applied to a sequence of n insertions; a single insertion may still cost Θ(n)</description></item>
+/// <item><description>Comparisons : O(n log n) amortized, Ω(n) - one comparison per level of the descent</description></item>
+/// <item><description>Index Reads : Θ(n) main + O(n log n) amortized tree - the descent and the splay that follows it each touch O(log n) nodes per insertion amortized, plus n traversal reads</description></item>
+/// <item><description>Index Writes: Θ(2n) elements + O(n log n) amortized structure - each element is written once to the tree (CreateNode) and once during in-order traversal; each splay rotation rewrites a constant number of child and parent pointers</description></item>
 /// <item><description>Swaps       : 0 - no swapping; elements are copied to tree nodes and written back during traversal</description></item>
 /// <item><description>Space       : O(n) - one node per element; each node holds value, left/right/parent indices</description></item>
 /// </list>
 /// <para><strong>Adaptive Behavior:</strong></para>
+/// <para>
+/// Splaying leaves the most recently inserted element at the root, so the cost of the next insertion is decided by how far the
+/// next element is from that one in key order rather than by the size of the tree. This is what makes the sort adaptive, and it
+/// is why both extremes of pre-existing order are cheap rather than only the ascending one. Moffat, Eddy and Petersson report
+/// splaysort as adaptive with respect to the accepted measures of presortedness, bounding its cost both by the distances between
+/// successive insertions and by the per-element inversion counts. The Θ(n) figure below is the distance bound at its minimum; note
+/// that the inversion measure does not explain the reverse-sorted case, which is maximally inverted and still linear here.
+/// </para>
 /// <list type="bullet">
-/// <item><description>Sorted input: recently inserted nodes remain near root → shorter traversal paths → O(n) amortized</description></item>
-/// <item><description>Reversed input: each insertion reaches the opposite end, but splay moves it to root → O(n log n)</description></item>
-/// <item><description>Random input: O(n log n) amortized, similar to unbalanced BST with self-adjustment benefit</description></item>
+/// <item><description>Sorted input: the root is the largest element so far, and the next element is its immediate successor, so it becomes the root's right child at depth 1 → Θ(n)</description></item>
+/// <item><description>Reversed input: symmetric — the root is the smallest element so far and the next element becomes its left child at depth 1 → Θ(n)</description></item>
+/// <item><description>Random input: successive elements are unrelated in key order, so the descent is a full O(log n) amortized → Θ(n log n)</description></item>
+/// </list>
+/// <para><strong>Implementation Notes:</strong></para>
+/// <list type="bullet">
+/// <item><description>Tree nodes are struct-based and allocated via <see cref="System.Buffers.ArrayPool{T}"/> (arena); Left/Right/Parent are integer indices into the arena (-1 = null)</description></item>
+/// <item><description>Splaying is bottom-up: the node is inserted first, then carried to the root using its parent pointer. The alternative
+/// top-down formulation needs no parent pointer, but it builds a different (equally valid) tree, so the choice is visible to anything
+/// observing the link stream and is not purely an implementation detail.</description></item>
+/// <item><description>The zig-zig case rotates the grandparent before the parent. Rotating the parent twice instead would be the move-to-root
+/// heuristic, which restructures toward the same root but forfeits the amortized O(log n) bound.</description></item>
+/// <item><description>The in-order traversal stack is sized n rather than by a height bound: a splay tree has no height guarantee, and a
+/// presorted input leaves it a long spine</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Splaysort</para>
@@ -212,9 +231,9 @@ public static class SplaySort
         where TContext : ISortContext
     {
         context.OnIndexRead(x, BUFFER_TREE); // read Parent
-        while (arena[x].Parent != NULL_INDEX)
+        var p = arena[x].Parent;
+        while (p != NULL_INDEX)
         {
-            var p = arena[x].Parent;
             context.OnIndexRead(p, BUFFER_TREE); // read Parent of p (grandparent)
             var g = arena[p].Parent;
 
@@ -229,21 +248,26 @@ public static class SplaySort
             }
             else
             {
+                // p is a child of g and x a child of p, so each node sits on exactly one side:
+                // the two directions decide all four cases and are read once each.
                 context.OnIndexRead(g, BUFFER_TREE); // read g's Left/Right
+                var pIsLeftChild = arena[g].Left == p;
                 context.OnIndexRead(p, BUFFER_TREE); // read p's Left/Right
-                if (arena[g].Left == p && arena[p].Left == x)
+                var xIsLeftChild = arena[p].Left == x;
+
+                if (pIsLeftChild && xIsLeftChild)
                 {
                     // Zig-zig left-left: rotate grandparent right first, then parent right
                     RotateRight(arena, g, context);
                     RotateRight(arena, p, context);
                 }
-                else if (arena[g].Right == p && arena[p].Right == x)
+                else if (!pIsLeftChild && !xIsLeftChild)
                 {
                     // Zig-zig right-right: rotate grandparent left first, then parent left
                     RotateLeft(arena, g, context);
                     RotateLeft(arena, p, context);
                 }
-                else if (arena[g].Left == p && arena[p].Right == x)
+                else if (pIsLeftChild)
                 {
                     // Zig-zag left-right: rotate parent left, then grandparent right
                     RotateLeft(arena, p, context);
@@ -258,6 +282,7 @@ public static class SplaySort
             }
 
             context.OnIndexRead(x, BUFFER_TREE); // read Parent for next iteration
+            p = arena[x].Parent;
         }
         return x;
     }
@@ -266,6 +291,12 @@ public static class SplaySort
     /// Left rotation: y = x.Right becomes the new subtree root; x becomes y.Left.
     /// Updates parent pointers for x, y, and y's former left child.
     /// </summary>
+    /// <remarks>
+    /// The three nodes a rotation touches — x, its child y, and x's parent — are held in locals.
+    /// They are distinct by construction, but the intervening stores make that impossible to prove
+    /// from the loads alone, so re-reading the fields would compile to reloads rather than being
+    /// folded away. The context events are unchanged: each field is announced once, as before.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void RotateLeft<T, TContext>(Span<Node<T>> arena, int x, TContext context)
         where TContext : ISortContext
@@ -275,33 +306,35 @@ public static class SplaySort
 
         // x.Right = y.Left
         context.OnIndexRead(y, BUFFER_TREE); // read Left
-        arena[x].Right = arena[y].Left;
+        var t = arena[y].Left;
+        arena[x].Right = t;
         context.OnIndexWrite(x, BUFFER_TREE); // write Right
-        context.OnLink(x, arena[x].Right, BUFFER_TREE, LinkSide.Right);
-        if (arena[y].Left != NULL_INDEX)
+        context.OnLink(x, t, BUFFER_TREE, LinkSide.Right);
+        if (t != NULL_INDEX)
         {
-            arena[arena[y].Left].Parent = x;
-            context.OnIndexWrite(arena[x].Right, BUFFER_TREE); // write Parent
+            arena[t].Parent = x;
+            context.OnIndexWrite(t, BUFFER_TREE); // write Parent
         }
 
         // y inherits x's parent
         context.OnIndexRead(x, BUFFER_TREE); // read Parent
-        arena[y].Parent = arena[x].Parent;
+        var p = arena[x].Parent;
+        arena[y].Parent = p;
         context.OnIndexWrite(y, BUFFER_TREE); // write Parent
-        if (arena[x].Parent != NULL_INDEX)
+        if (p != NULL_INDEX)
         {
-            context.OnIndexRead(arena[x].Parent, BUFFER_TREE); // read parent's Left
-            if (arena[arena[x].Parent].Left == x)
+            context.OnIndexRead(p, BUFFER_TREE); // read parent's Left
+            if (arena[p].Left == x)
             {
-                arena[arena[x].Parent].Left = y;
-                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
-                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Left);
+                arena[p].Left = y;
+                context.OnIndexWrite(p, BUFFER_TREE);
+                context.OnLink(p, y, BUFFER_TREE, LinkSide.Left);
             }
             else
             {
-                arena[arena[x].Parent].Right = y;
-                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
-                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Right);
+                arena[p].Right = y;
+                context.OnIndexWrite(p, BUFFER_TREE);
+                context.OnLink(p, y, BUFFER_TREE, LinkSide.Right);
             }
         }
         else
@@ -321,6 +354,7 @@ public static class SplaySort
     /// Right rotation: y = x.Left becomes the new subtree root; x becomes y.Right.
     /// Updates parent pointers for x, y, and y's former right child.
     /// </summary>
+    /// <remarks>See <see cref="RotateLeft"/> for why the touched nodes are held in locals.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void RotateRight<T, TContext>(Span<Node<T>> arena, int x, TContext context)
         where TContext : ISortContext
@@ -330,33 +364,35 @@ public static class SplaySort
 
         // x.Left = y.Right
         context.OnIndexRead(y, BUFFER_TREE); // read Right
-        arena[x].Left = arena[y].Right;
+        var t = arena[y].Right;
+        arena[x].Left = t;
         context.OnIndexWrite(x, BUFFER_TREE); // write Left
-        context.OnLink(x, arena[x].Left, BUFFER_TREE, LinkSide.Left);
-        if (arena[y].Right != NULL_INDEX)
+        context.OnLink(x, t, BUFFER_TREE, LinkSide.Left);
+        if (t != NULL_INDEX)
         {
-            arena[arena[y].Right].Parent = x;
-            context.OnIndexWrite(arena[x].Left, BUFFER_TREE); // write Parent
+            arena[t].Parent = x;
+            context.OnIndexWrite(t, BUFFER_TREE); // write Parent
         }
 
         // y inherits x's parent
         context.OnIndexRead(x, BUFFER_TREE); // read Parent
-        arena[y].Parent = arena[x].Parent;
+        var p = arena[x].Parent;
+        arena[y].Parent = p;
         context.OnIndexWrite(y, BUFFER_TREE); // write Parent
-        if (arena[x].Parent != NULL_INDEX)
+        if (p != NULL_INDEX)
         {
-            context.OnIndexRead(arena[x].Parent, BUFFER_TREE); // read parent's Right
-            if (arena[arena[x].Parent].Right == x)
+            context.OnIndexRead(p, BUFFER_TREE); // read parent's Right
+            if (arena[p].Right == x)
             {
-                arena[arena[x].Parent].Right = y;
-                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
-                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Right);
+                arena[p].Right = y;
+                context.OnIndexWrite(p, BUFFER_TREE);
+                context.OnLink(p, y, BUFFER_TREE, LinkSide.Right);
             }
             else
             {
-                arena[arena[x].Parent].Left = y;
-                context.OnIndexWrite(arena[x].Parent, BUFFER_TREE);
-                context.OnLink(arena[x].Parent, y, BUFFER_TREE, LinkSide.Left);
+                arena[p].Left = y;
+                context.OnIndexWrite(p, BUFFER_TREE);
+                context.OnLink(p, y, BUFFER_TREE, LinkSide.Left);
             }
         }
         else
