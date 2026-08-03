@@ -30,8 +30,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n²) - Comparisons: O(n log n), Shifts: O(n²) dominate overall complexity</description></item>
 /// <item><description>Worst case  : O(n²) - Reverse sorted array, maximum shifts for each element</description></item>
 /// <item><description>Comparisons : O(n log n) - Binary search performs Σ(i=1 to n-1) ceiling(log₂(i+1)) comparisons ≈ n log n</description></item>
-/// <item><description>Index Writes: O(n²) - Each element may require shifting up to i elements (Σ(i=1 to n-1) i = n(n-1)/2)</description></item>
+/// <item><description>Swaps       : 0 - insertion shifts elements one position and drops the held value into the gap; nothing is exchanged</description></item>
 /// <item><description>Index Reads : O(n²) - Binary search reads: O(n log n), Shift reads: O(n²)</description></item>
+/// <item><description>Index Writes: O(n²) - Each element may require shifting up to i elements (Σ(i=1 to n-1) i = n(n-1)/2)</description></item>
+/// <item><description>Space       : O(1) - only the temp variable holding the element being inserted</description></item>
 /// </list>
 /// <para><strong>Comparison with Standard Insertion Sort:</strong></para>
 /// <list type="bullet">

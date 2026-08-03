@@ -34,6 +34,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n^1.5) - Proven upper bound for Knuth's sequence (Knuth, 1973)</description></item>
 /// <item><description>Comparisons : O(n^1.5) average - Depends on gap sequence and input distribution</description></item>
 /// <item><description>Swaps       : O(n^1.5) average - Each gap-insertion may perform multiple swaps</description></item>
+/// <item><description>Index Reads : O(n^1.5) average - each comparison reads a gap-separated pair, so the reads follow the comparison count</description></item>
+/// <item><description>Index Writes: O(n^1.5) average - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the gaps index the input span directly</description></item>
 /// </list>
 /// <para><strong>Gap Sequence Characteristics (Knuth 1973):</strong></para>
 /// <list type="bullet">
@@ -195,6 +198,9 @@ public static class ShellSortKnuth1973
 /// <item><description>Worst case  : O(n^{4/3}) - Proven upper bound (Sedgewick, 1986)</description></item>
 /// <item><description>Comparisons : O(n^{4/3}) average - Better than Knuth's O(n^{3/2})</description></item>
 /// <item><description>Swaps       : O(n^{4/3}) average - Proportional to comparisons</description></item>
+/// <item><description>Index Reads : O(n^{4/3}) average - each comparison reads a gap-separated pair, so the reads follow the comparison count</description></item>
+/// <item><description>Index Writes: O(n^{4/3}) average - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the gaps index the input span directly</description></item>
 /// </list>
 /// <para><strong>Gap Sequence Characteristics (Sedgewick 1986):</strong></para>
 /// <list type="bullet">
@@ -355,6 +361,9 @@ public static class ShellSortSedgewick1986
 /// <item><description>Worst case  : O(n^{3/2}) - Theoretical upper bound</description></item>
 /// <item><description>Comparisons : O(n^{1.25}) average - Fewer than Knuth in practice</description></item>
 /// <item><description>Swaps       : O(n^{1.25}) average - Proportional to comparisons</description></item>
+/// <item><description>Index Reads : O(n^{1.25}) average - each comparison reads a gap-separated pair, so the reads follow the comparison count</description></item>
+/// <item><description>Index Writes: O(n^{1.25}) average - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the gaps index the input span directly</description></item>
 /// </list>
 /// <para><strong>Gap Sequence Characteristics (Tokuda 1992):</strong></para>
 /// <list type="bullet">
@@ -516,6 +525,9 @@ public static class ShellSortTokuda1992
 /// <item><description>Worst case  : O(n^{3/2}) - Theoretical upper bound (similar to other good sequences)</description></item>
 /// <item><description>Comparisons : O(n^{1.3}) average - Empirically fewest among tested sequences</description></item>
 /// <item><description>Swaps       : O(n^{1.3}) average - Proportional to comparisons</description></item>
+/// <item><description>Index Reads : O(n^{1.3}) average - each comparison reads a gap-separated pair, so the reads follow the comparison count</description></item>
+/// <item><description>Index Writes: O(n^{1.3}) average - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the gaps index the input span directly</description></item>
 /// </list>
 /// <para><strong>Gap Sequence Characteristics (Ciura 2001):</strong></para>
 /// <list type="bullet">
@@ -679,6 +691,9 @@ public static class ShellSortCiura2001
 /// <item><description>Worst case  : O(n^{3/2}) - Theoretical upper bound</description></item>
 /// <item><description>Comparisons : O(n^{1.25}) average - State-of-the-art, fewer than Tokuda by ~5-10%</description></item>
 /// <item><description>Swaps       : O(n^{1.25}) average - Proportional to comparisons</description></item>
+/// <item><description>Index Reads : O(n^{1.25}) average - each comparison reads a gap-separated pair, so the reads follow the comparison count</description></item>
+/// <item><description>Index Writes: O(n^{1.25}) average - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the gaps index the input span directly</description></item>
 /// </list>
 /// <para><strong>Gap Sequence Characteristics (Lee 2021):</strong></para>
 /// <list type="bullet">

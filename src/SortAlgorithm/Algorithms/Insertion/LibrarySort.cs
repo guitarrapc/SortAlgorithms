@@ -50,6 +50,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Final Extraction:</strong> After all insertions, extract non-gap elements
 /// back to original array in sorted order.</description></item>
 /// </list>
+/// <para><strong>Where the cost goes:</strong> the binary search is O(log n) per insertion, the shift that follows it averages
+/// O(log n) while the gaps hold, and a rebalance costs O(n) — triggered at each round end or when a shift runs long.</para>
 /// <para><strong>Gap Management Strategy:</strong></para>
 /// <list type="bullet">
 /// <item><description>Gap Ratio (ε): 1.0, i.e. 2n total space with n gaps. ε is the only tuning knob:
@@ -65,18 +67,19 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family        : Insertion (gap-based variant)</description></item>
-/// <item><description>Stable        : Yes (equal keys are inserted after their equals and never shift past one another)</description></item>
-/// <item><description>In-place      : No (requires (1+ε)n auxiliary space for gaps)</description></item>
-/// <item><description>Best case     : O(n log n) - Every element costs a binary search regardless of
+/// <item><description>Family      : Insertion (gap-based variant)</description></item>
+/// <item><description>Stable      : Yes (equal keys are inserted after their equals and never shift past one another)</description></item>
+/// <item><description>In-place    : No (requires (1+ε)n auxiliary space for gaps)</description></item>
+/// <item><description>Best case   : O(n log n) - Every element costs a binary search regardless of
 /// how sorted the input is; sorted input merely adds no shifting on top</description></item>
-/// <item><description>Average case  : O(n log n) - With random input and good gap distribution</description></item>
-/// <item><description>Worst case    : O(n²) - Pathological gap clustering without randomization</description></item>
+/// <item><description>Average case: O(n log n) - With random input and good gap distribution</description></item>
+/// <item><description>Worst case  : O(n²) - Pathological gap clustering without randomization</description></item>
+/// <item><description>Comparisons : Θ(n log n) - one binary search per insertion, at O(log n) comparisons each, whatever the input order</description></item>
+/// <item><description>Swaps       : 0 - elements are placed into gaps and shifted within the auxiliary array, never exchanged</description></item>
+/// <item><description>Index Reads : O(n log n) average, O(n²) worst - the binary searches plus the shifting, which stays short only while the gaps hold</description></item>
+/// <item><description>Index Writes: O(n log n) average, O(n²) worst - the per-insertion shifting plus the rebalances that redistribute the gaps</description></item>
 /// <item><description>Space       : O(n) - Auxiliary array of (1+ε)n elements, an n-element staging
 /// buffer for rebalancing, and one occupancy bit per auxiliary slot</description></item>
-/// <item><description>Binary Search : O(log n) per insertion to find position</description></item>
-/// <item><description>Shift Cost    : O(log n) average per insertion with good gaps</description></item>
-/// <item><description>Rebalance     : O(n) per rebalance, at each round end or on a long shift</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Paper: https://arxiv.org/abs/cs/0407003 "Insertion Sort is O(n log n)" by Michael A. Bender, Martín Farach-Colton, and Miguel Mosteiro</para>

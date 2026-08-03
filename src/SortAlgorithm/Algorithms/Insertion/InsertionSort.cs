@@ -35,9 +35,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) - Already sorted array, only n-1 comparisons, zero writes</description></item>
 /// <item><description>Average case: O(n²) - On average, each element shifts halfway back (n²/4 comparisons and writes)</description></item>
 /// <item><description>Worst case  : O(n²) - Reverse sorted array, maximum shifts: n(n-1)/2 comparisons and writes</description></item>
-/// <item><description>Comparisons : O(n²) - Sum of comparisons for each insertion, worst case: n(n-1)/2</description></item>
-/// <item><description>Index Writes: O(n²) - Each shift writes one element, worst case: n(n-1)/2 shifts + (n-1) final insertions</description></item>
+/// <item><description>Comparisons : Best n-1, Average/Worst O(n²) - Sum of comparisons for each insertion, worst case: n(n-1)/2</description></item>
+/// <item><description>Swaps       : 0 - insertion shifts elements one position and drops the held value into the gap; nothing is exchanged</description></item>
 /// <item><description>Index Reads : O(n²) - Each comparison reads one element, each shift reads the element being moved</description></item>
+/// <item><description>Index Writes: O(n²) - Each shift writes one element, worst case: n(n-1)/2 shifts + (n-1) final insertions</description></item>
+/// <item><description>Space       : O(1) - only the temp variable holding the element being inserted</description></item>
 /// </list>
 /// <para><strong>Advantages of Insertion Sort:</strong></para>
 /// <list type="bullet">
@@ -531,9 +533,11 @@ public static class InsertionSort
 /// <item><description>Best case   : O(n) - Already sorted array, only n-1 comparisons, zero swaps</description></item>
 /// <item><description>Average case: O(n²) - On average, each element swaps halfway back (n²/4 comparisons and swaps)</description></item>
 /// <item><description>Worst case  : O(n²) - Reverse sorted array, maximum swaps: n(n-1)/2 comparisons and swaps</description></item>
-/// <item><description>Comparisons : O(n²) - Same as optimized version: worst case n(n-1)/2</description></item>
-/// <item><description>Swaps       : O(n²) - Each swap involves 2 reads + 2 writes = 4 operations total</description></item>
-/// <item><description>Index Writes: O(n²) - Approximately 2x optimized version (swaps use 2 writes vs shift's 1 write)</description></item>
+/// <item><description>Comparisons : Best n-1, Average/Worst O(n²) - Same as the shift-based version: worst case n(n-1)/2</description></item>
+/// <item><description>Swaps       : O(n²) - this variant walks the element down by exchanging neighbours instead of shifting</description></item>
+/// <item><description>Index Reads : O(n²) - Each comparison reads one element, and each swap reads both of its operands</description></item>
+/// <item><description>Index Writes: O(n²) - Approximately 2x the shift-based version, since a swap writes two positions where a shift writes one</description></item>
+/// <item><description>Space       : O(1) - no temporary storage for the element being moved</description></item>
 /// </list>
 /// <para><strong>Comparison with Optimized Insertion Sort:</strong></para>
 /// <list type="bullet">

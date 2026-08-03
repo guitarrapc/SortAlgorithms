@@ -33,8 +33,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) - Already sorted array</description></item>
 /// <item><description>Average case: O(n²) - Similar to standard insertion sort but with lower constant factors</description></item>
 /// <item><description>Worst case  : O(n²) - Reverse sorted array</description></item>
-/// <item><description>Comparisons : ~n²/4 on average (fewer than standard insertion sort due to pair comparison)</description></item>
-/// <item><description>Index Writes: Similar to standard insertion sort, but better cache behavior</description></item>
+/// <item><description>Comparisons : Best n-1, Average ~n²/4, Worst O(n²) - inserting two elements per pass saves roughly half the comparisons of a single insertion sort</description></item>
+/// <item><description>Swaps       : 0 - insertion shifts elements one position and drops the held values into the gap; nothing is exchanged</description></item>
+/// <item><description>Index Reads : O(n²) - each comparison reads one element, and each shift reads the element being moved</description></item>
+/// <item><description>Index Writes: O(n²) - same order as a single insertion sort; the pair pass shares the shifting between the two elements it places</description></item>
+/// <item><description>Space       : O(1) - only the two temp variables holding the pair being inserted</description></item>
 /// </list>
 /// <para><strong>Advantages over Standard Insertion Sort:</strong></para>
 /// <list type="bullet">

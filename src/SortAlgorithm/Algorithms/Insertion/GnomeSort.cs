@@ -36,7 +36,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n²) - Reverse sorted, exactly n(n-1)/2 swaps and 2×n(n-1)/2 = n(n-1) comparisons</description></item>
 /// <item><description>Comparisons : Best: n-1 | Average: ~n²/2 | Worst: n(n-1) (each swap requires 2 compares: one before swap, one in while condition)</description></item>
 /// <item><description>Swaps       : Best: 0 | Average: ~n²/4 | Worst: n(n-1)/2</description></item>
+/// <item><description>Index Reads : Best: n-1 | Average/Worst: O(n²) (each comparison reads both neighbours, and each swap reads its two operands)</description></item>
 /// <item><description>Index Writes: Best: 0 | Average: ~n²/2 | Worst: n(n-1) (2 writes per swap)</description></item>
+/// <item><description>Space       : O(1) - the gnome walks the array with a single position variable</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Gnome_sort</para>
@@ -136,7 +138,9 @@ public static class GnomeSort
 /// <item><description>Worst case  : O(n²) - Reverse sorted, exactly n(n-1)/2 swaps and 2×n(n-1)/2 = n(n-1) comparisons</description></item>
 /// <item><description>Comparisons : Best: n-1 | Average: ~n²/2 | Worst: n(n-1) (each swap requires 2 compares: one before swap, one in while condition)</description></item>
 /// <item><description>Swaps       : Best: 0 | Average: ~n²/4 | Worst: n(n-1)/2</description></item>
+/// <item><description>Index Reads : Best: n-1 | Average/Worst: O(n²) (each comparison reads both neighbours, and each swap reads its two operands)</description></item>
 /// <item><description>Index Writes: Best: 0 | Average: ~n²/2 | Worst: n(n-1) (2 writes per swap)</description></item>
+/// <item><description>Space       : O(1) - the gnome walks the array with a single position variable</description></item>
 /// </list>
 /// </remarks>
 public static class GnomeSortNonOptimized
