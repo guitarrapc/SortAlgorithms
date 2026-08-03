@@ -38,6 +38,8 @@ jobs:
           echo "=== CPU info (pre-benchmark) ==="
           grep -m1 'model name' /proc/cpuinfo
           lscpu
+          echo "=== AVX512 info ==="
+          grep -o 'avx512[a-z0-9_]*' /proc/cpuinfo | sort -u | tr '\n' ' '; echo
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
