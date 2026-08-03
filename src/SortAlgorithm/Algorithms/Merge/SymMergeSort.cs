@@ -49,7 +49,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Hybrid (Merge + Insertion), Iterative</description></item>
 /// <item><description>Stable      : Yes (≥ comparison in binary search preserves relative order)</description></item>
 /// <item><description>In-place    : Yes (no external buffer; the symmetric recursion needs an O(log n) stack)</description></item>
-/// <item><description>Best case   : O(n) – Sorted data: insertion sort is O(n), all phase-2 merges are skipped</description></item>
+/// <item><description>Best case   : O(n log n) – SymMerge is not adaptive: every pass still binary-searches each pair, even on input where no rotation would move an element</description></item>
 /// <item><description>Average case: O(n log² n) moves, O(n log n) comparisons</description></item>
 /// <item><description>Worst case  : O(n log² n) moves, O(n log n) comparisons</description></item>
 /// <item><description>Comparisons : O(n log n) - each SymMerge locates its split by binary search, so a merge level costs O(n) comparisons</description></item>
@@ -58,6 +58,15 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(n log² n) - each rotation writes every element it moves; this is what makes the move bound exceed the comparison bound</description></item>
 /// <item><description>Space       : O(log n) – Recursion stack depth within each SymMerge call</description></item>
 /// </list>
+/// <para><strong>Implementation note – already-sorted skip:</strong></para>
+/// <para>The Best case row above is SymMerge's own: neither Kim and Kutzner's algorithm nor Go's
+/// sort.stable is adaptive, and both pay their binary searches on every pass regardless of input.
+/// This implementation adds a check Go does not have — a merge whose left run ends at or below the
+/// start of its right run is already merged, so it is skipped — at the top of each phase-2 pair and
+/// again at each SymMerge sub-problem. The check is identity-preserving: it never changes the output
+/// or the order of any operation, it only recognises a merge that has nothing to do. Its effect is
+/// that sorted input costs one comparison per pair instead of a binary search, which drops the
+/// measured cost on sorted and nearly-sorted input to O(n); it does not make SymMerge adaptive.</para>
 /// <para><strong>Implementation note – rotation cost:</strong></para>
 /// <para>Kim and Kutzner state the O((M+N)·log M) assignment bound for a rotation costing M+N+gcd(M+N)
 /// assignments, i.e. the GCD-cycle (juggling) rotation. Go's sort.symMerge substitutes a block-swap
@@ -146,32 +155,52 @@ public static class SymMergeSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // n is a span length, so it can be as large as int.MaxValue. Every index expression below is
+        // therefore written so that it cannot overflow: none of them forms a sum that exceeds n.
+        // The natural spellings do overflow — `width * 2` once width passes 2^30 (reached from 20 at
+        // n > 20*2^26 = 1,342,177,280), and `left + width` once the two together pass int.MaxValue.
+        // Because the project compiles unchecked, such a sum wraps negative instead of throwing, and a
+        // negative index reaches SortSpan's Unsafe.Add unbounded. Comparing against a difference
+        // (n - i, n - mid, n - width) keeps both operands inside the span and needs no guard.
+
         // Phase 1: sort every block of size InsertionSortThreshold with insertion sort.
         s.Context.OnPhase(SortPhase.MergeInitSort, InsertionSortThreshold);
-        for (var i = 0; i < n; i += InsertionSortThreshold)
-            InsertionSort.SortCore(s, i, Math.Min(i + InsertionSortThreshold, n));
+        for (var i = 0; i < n; )
+        {
+            var blockEnd = n - i > InsertionSortThreshold ? i + InsertionSortThreshold : n;
+            InsertionSort.SortCore(s, i, blockEnd);
+            i = blockEnd;
+        }
 
         // Phase 2: bottom-up merge passes using SymMerge.
         // Each pass merges adjacent pairs of runs of length `width`, then doubles width.
         var passNum = 0;
-        for (var width = InsertionSortThreshold; width < n; width *= 2)
+        var width = InsertionSortThreshold;
+        while (width < n)
         {
             passNum++;
             s.Context.OnPhase(SortPhase.MergePass, width, passNum);
-            // left + width < n guarantees a non-empty right run exists.
-            for (var left = 0; left + width < n; left += width * 2)
+            // left < n - width is `left + width < n`: it guarantees a non-empty right run exists.
+            for (var left = 0; left < n - width; )
             {
                 // mid: exclusive end of left run / start of right run (half-open convention).
                 var mid = left + width;
-                // right: exclusive end of right run — clamped to last valid index for the final pair.
-                var right = Math.Min(left + width * 2, n);
+                // right: exclusive end of right run — clamped to n for the final, short pair.
+                var right = n - mid > width ? mid + width : n;
 
                 // Already-sorted skip: left run's max ≤ right run's min → no merge needed.
-                if (s.IsLessOrEqualAt(mid - 1, mid))
-                    continue;
+                if (!s.IsLessOrEqualAt(mid - 1, mid))
+                    SymMerge(s, left, mid, right);
 
-                SymMerge(s, left, mid, right);
+                // right is min(left + 2*width, n), so this is the `left += width * 2` step: when the
+                // pair was clamped, right == n ends the pass exactly as the unclamped sum would.
+                left = right;
             }
+
+            // Stop before doubling would pass n. Spelled as width > n - width rather than
+            // width * 2 > n so the pass sequence terminates without ever forming the overflowing product.
+            if (width > n - width) break;
+            width *= 2;
         }
     }
 
