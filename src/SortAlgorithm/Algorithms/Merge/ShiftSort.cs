@@ -5,37 +5,46 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// 配列内の自然に発生するソート済み領域（runs）を検出し、それらを効率的にマージすることで、
-/// 従来のMerge Sortと比較して書き込み操作を削減した安定な適応的ソートアルゴリズムです。
-/// 特にデータが部分的にソート済みの場合、O(n)に近い性能を発揮します。
+/// 配列を後ろから走査し、左隣の要素に対して順序が崩れている位置を導関数リスト（derivative list）に記録します。
+/// 記録された位置はすでに昇順になっている部分列（sublist）の開始位置であり、走査中に長さ 3 の厳密降順の窓を見つけた場合は
+/// 1 回のスワップで昇順に変えて部分列の数を減らします。その後、配列ではなく導関数リストを分割統治でたどりながら
+/// 部分列同士をシフトでマージします。導関数リストが空であれば配列はすでにソート済みで、走査 1 回の O(n) で終了します。
+/// 安定ソートです。
 /// <br/>
-/// Detects naturally occurring sorted runs (both ascending and descending) within the array
-/// and efficiently merges them using shift-based operations instead of traditional swaps,
-/// reducing write operations compared to traditional merge sort while maintaining stability.
-/// Achieves near O(n) performance when data is partially sorted.
+/// Scans the array backwards and records, in a derivative list, the index of every element that is out of order
+/// with respect to its left neighbour; those indices are the starts of the already-ascending sublists. A window of
+/// three in strictly descending order is turned ascending by a single swap instead of being recorded, which shortens
+/// the derivative list. The derivative list — not the array — is then split in half recursively, and the sublists it
+/// delimits are merged by shifting. An empty derivative list means the array was already sorted, so the scan is all
+/// the work. Stable sort.
 /// </summary>
 /// <remarks>
 /// <para><strong>Algorithm Overview:</strong></para>
 /// <para>
-/// This implementation extends the original ShiftSort concept (https://github.com/JamesQuintero/ShiftSort) with
-/// a complete natural merge sort approach. Unlike the reference implementation which only performs limited optimizations
-/// during a right-to-left scan, this version implements full ascending and descending run detection similar to TimSort and PowerSort,
-/// providing better adaptivity to existing order in real-world data.
+/// ShiftSort is similar to merge sort but more selective about what it merges. Merge sort splits the array in half
+/// until it reaches a base case of 2 elements and merges as it returns; ShiftSort splits a derivative array instead,
+/// uses the result to decide which parts of the array to merge, and then merges as it returns. Splitting the derivative
+/// list rather than the array is what makes the algorithm adaptive: the shorter the derivative list, the less recursion
+/// and merging there is.
 /// </para>
 /// <para><strong>Core Algorithm Steps:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Run Detection Phase (Natural Sorted Subsequence Identification):</strong> The algorithm scans the array from left to right,
-/// extending each run as far as possible. A non-descending run grows while arr[i+1] &gt;= arr[i];
-/// a strictly descending run grows while arr[i+1] &lt; arr[i] and is then reversed in-place to produce an ascending run.
-/// This approach captures the longest possible natural runs (both ascending and descending) and has O(n) time complexity.
-/// Run reversal uses at most n/2 swaps in the worst case (when the entire array is strictly descending).</description></item>
-/// <item><description><strong>Run Boundary Registration:</strong> Detected run boundaries are stored in an ascending index array (zeroIndices) as [0, b₁, b₂, …, bₖ, n].
-/// Each adjacent pair (zeroIndices[m], zeroIndices[m+1]) defines one sorted run. The maximum number of runs is ⌈n/2⌉,
-/// so the array needs at most n/2 + 2 entries. For small arrays (≤256 elements) the index array is allocated on the stack
-/// using stackalloc; for larger arrays ArrayPool&lt;int&gt;.Shared is used to avoid stack overflow.</description></item>
-/// <item><description><strong>Adaptive Merge Strategy (Binary Merge Tree):</strong> The detected runs are merged using a divide-and-conquer approach.
-/// The Split method recursively divides the run list into two halves until a half holds fewer than 2 runs and needs no merge,
-/// then merges them bottom-up. This guarantees O(log k) merge levels where k is the number of runs (k ≤ ⌈n/2⌉).</description></item>
+/// <item><description><strong>Derivative List Creation:</strong> The scan runs from the last index down to the first.
+/// Where arr[x] &lt; arr[x-1], the element at x is out of order and therefore starts a sorted sublist. Before recording it,
+/// the scan checks arr[x-1] &lt; arr[x-2]: if that also holds, arr[x-2..x] is a strictly descending window of three, and one
+/// swap of arr[x-2] and arr[x] turns it ascending. That swap can fuse the window into the sublist on its right, so a boundary
+/// is then recorded only at x+1 and only if arr[x+1] &lt; arr[x] still holds after the swap. Either branch consumes two indices,
+/// so the scan is O(n) and performs at most n/2 swaps. The window length of three is not a tunable cutoff: it is exactly what
+/// the two comparisons the scan already performs can establish.</description></item>
+/// <item><description><strong>Derivative List Registration:</strong> The scan produces the boundaries in descending order,
+/// [n, bₖ, …, b₁, 0]; they are reversed once into the ascending form [0, b₁, …, bₖ, n] that the split expects.
+/// Each adjacent pair (zeroIndices[m], zeroIndices[m+1]) delimits one sorted sublist. Because each recorded boundary consumes
+/// two indices, the maximum number of sublists is ⌈n/2⌉ and the array needs at most n/2 + 2 entries. For small arrays
+/// (≤256 elements) it is allocated on the stack using stackalloc; for larger arrays ArrayPool&lt;int&gt;.Shared is used
+/// to avoid stack overflow.</description></item>
+/// <item><description><strong>Splitting of the Derivative List:</strong> The derivative list is divided in half recursively
+/// until a half delimits fewer than 2 sublists and needs no merge, then the sublists are merged bottom-up.
+/// This gives O(log k) merge levels and exactly k-1 merges for k sublists (k ≤ ⌈n/2⌉).</description></item>
 /// <item><description><strong>Size-Adaptive Merge Direction:</strong> Unlike traditional merge sort, ShiftSort chooses which partition to buffer
 /// based on size comparison (second - first &gt; third - second). The smaller partition is copied to temporary storage,
 /// so a merge buffers min(len₁, len₂) elements rather than always buffering the left run. The work buffer is sized once
@@ -51,27 +60,30 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Merge (Adaptive Natural Merge Sort with shift-based optimization)</description></item>
-/// <item><description>Stable      : Yes (stability preserved via '&lt;'/'&gt;' comparison priority during merge)</description></item>
-/// <item><description>In-place    : No (requires the run-boundary list and a merge list alongside the input)</description></item>
-/// <item><description>Best case   : O(n) - Already sorted data requires only one O(n) scan with no merges</description></item>
-/// <item><description>Average case: O(n log k) where k = number of runs - Typically k &lt;&lt; n for real-world data with existing order</description></item>
-/// <item><description>Worst case  : O(n log n) - Completely random or alternating data produces maximum runs (k ≈ ⌈n/2⌉)</description></item>
-/// <item><description>Comparisons : O(n log k) - Run detection: O(n), merging: O(n log k)</description></item>
-/// <item><description>Swaps       : O(n) - at most n/2, only during run detection for the in-place reversal of descending runs</description></item>
-/// <item><description>Index Reads : O(n log k) - every merge level reads each element of the runs it joins</description></item>
-/// <item><description>Index Writes: O(n log k) - Shift-based merge operations (fewer than swap-based approaches)</description></item>
-/// <item><description>Space       : O(n) - the run-boundary list and the merge list are each about n/2</description></item>
+/// <item><description>Family      : Merge (adaptive, divide and conquer over a derivative list)</description></item>
+/// <item><description>Stable      : Yes (the three-element swap only reorders a strictly descending window, and merges break ties toward the left sublist)</description></item>
+/// <item><description>In-place    : No (requires the derivative list and a merge list alongside the input)</description></item>
+/// <item><description>Best case   : O(n) - an empty derivative list means the array is already sorted, so the scan is all the work</description></item>
+/// <item><description>Average case: O(n log n) - the same order as merge sort; a shorter derivative list only lowers the constant</description></item>
+/// <item><description>Worst case  : O(n log n) - a reverse-sorted array, whose descending windows yield the maximum ⌈n/2⌉ sublists</description></item>
+/// <item><description>Comparisons : O(n log n) - derivative list creation: O(n), merging: O(n log k) for k sublists</description></item>
+/// <item><description>Swaps       : O(n) - at most n/2, only the three-element swap during derivative list creation</description></item>
+/// <item><description>Index Reads : O(n log n) - every merge level reads each element of the sublists it joins</description></item>
+/// <item><description>Index Writes: O(n log n) - shift-based merge operations (fewer than swap-based approaches)</description></item>
+/// <item><description>Space       : O(n) - the derivative list and the merge list are each about n/2</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
-/// <item><description>This implementation extends the original ShiftSort concept with full natural merge sort capabilities</description></item>
+/// <item><description>The merge follows the C++ reference, which breaks ties with '&gt;' and '&lt;'. The Java reference uses '&gt;=' in the
+/// backward merge, which is not stable and contradicts the paper's own claim that ShiftSort is stable.</description></item>
+/// <item><description>The reference splits with a gap (new_i = new_j + 1), which leaves one sublist unclaimed by either recursive call
+/// and needs two merges per node to pick it up. Sharing the boundary needs one, and both shapes perform the same k-1 merges.</description></item>
 /// <item><description>Uses ArrayPool&lt;T&gt; for zero-allocation operation on repeated sorts</description></item>
-/// <item><description>Stack-allocates index arrays for small inputs (≤256 elements) to avoid heap pressure</description></item>
+/// <item><description>Stack-allocates the derivative list for small inputs (≤256 elements) to avoid heap pressure</description></item>
 /// <item><description>Integrates with SortSpan pattern for comprehensive statistics tracking and visualization</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
-/// <para>Original concept: https://github.com/JamesQuintero/ShiftSort</para>
+/// <para>https://github.com/JamesQuintero/ShiftSort — see ShiftSort-Analysis.pdf for the algorithm's definition.</para>
 /// </remarks>
 public static class ShiftSort
 {
@@ -165,7 +177,7 @@ public static class ShiftSort
     }
 
     /// <summary>
-    /// Core sorting logic - detects runs and merges them.
+    /// Core sorting logic - builds the derivative list and merges the sublists it delimits.
     /// </summary>
     private static void SortCore<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context, Span<int> zeroIndices, Span<T> workBuffer)
         where TComparer : IComparer<T>
@@ -173,63 +185,50 @@ public static class ShiftSort
     {
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // Phase 1: Natural Run Detection - scan left to right
+        // Phase 1: Derivative List Creation - scan from the last index down to the first.
         context.OnPhase(SortPhase.MergeRunDetect);
-        // Extends each run as far as possible: non-descending runs grow as-is,
-        // strictly descending runs are reversed in-place to produce ascending runs.
-        // Builds the ascending boundary sequence directly: [0, b₁, …, bₖ, n]
+        // An element out of order with its left neighbour starts a sorted sublist, so its index is recorded.
+        // Where the two elements to its left continue descending, the window of three is turned ascending by
+        // one swap instead; that can fuse the window into the sublist on its right, in which case a boundary
+        // is recorded only at x+1 and only if the order is still broken there.
         //
-        // Invariant: zeroIndices always forms [0, boundary₁, ..., boundaryₘ, n]
-        //            where each adjacent pair defines one sorted run.
+        // The scan produces the boundaries in descending order, [n, bₖ, …, b₁, 0], because it walks backwards.
+        // They are reversed once below into the [0, b₁, …, bₖ, n] form the split expects.
         var endTracker = 0;
-        zeroIndices[endTracker++] = 0;
+        zeroIndices[endTracker++] = s.Length;
 
-        var i = 0;
-        while (i < s.Length - 1)
+        for (var x = s.Length - 1; x >= 1; x--)
         {
-            var runStart = i;
-            if (s.IsLessAt(i + 1, i)) // strictly descending run: extend then reverse
+            if (s.IsLessAt(x, x - 1))
             {
-                i++; // consume the outer comparison's pair
-                while (i < s.Length - 1 && s.IsLessAt(i + 1, i))
-                    i++;
-                ReverseRun(s, runStart, i);
-            }
-            else // non-descending run: extend
-            {
-                i++; // consume the outer comparison's pair
-                while (i < s.Length - 1 && s.IsGreaterOrEqualAt(i + 1, i))
-                    i++;
-            }
+                if (x > 1 && s.IsLessAt(x - 1, x - 2))
+                {
+                    // s[x-2] > s[x-1] > s[x], so one swap makes the three ascending. The window is strictly
+                    // descending, so no two equal elements move past each other and stability is preserved.
+                    s.Swap(x - 2, x);
 
-            i++;
-            if (i < s.Length)
-                zeroIndices[endTracker++] = i;
+                    // s[x] now holds the largest of the three, so the element to its right may have become
+                    // the one out of order.
+                    if (x != s.Length - 1 && s.IsLessAt(x + 1, x))
+                    {
+                        zeroIndices[endTracker++] = x + 1;
+                    }
+                }
+                else
+                {
+                    zeroIndices[endTracker++] = x;
+                }
+
+                // x-1 is in order either way — the else branch tested it, and the swap made it so — so skip it.
+                x--;
+            }
         }
 
-        // Close the sequence with n. The loop only records a boundary while it is still below s.Length,
-        // so n is never already present and this always appends.
-        zeroIndices[endTracker] = s.Length;
+        zeroIndices[endTracker] = 0;
+        zeroIndices[..(endTracker + 1)].Reverse();
 
-        // Phase 2: Adaptive Merge - Recursively merge detected runs
+        // Phase 2: Splitting of the Derivative List - merge the sublists it delimits
         Split(s, zeroIndices, 0, endTracker, workBuffer);
-    }
-
-    /// <summary>
-    /// Reverses the run between indices <paramref name="lo"/> and <paramref name="hi"/> (inclusive) in-place.
-    /// Used to convert a strictly descending run into ascending order during run detection.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void ReverseRun<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lo, int hi)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        while (lo < hi)
-        {
-            s.Swap(lo, hi);
-            lo++;
-            hi--;
-        }
     }
 
     /// <summary>

@@ -176,15 +176,39 @@ public class ShiftSortTests : StableSortTestsBase
     }
 
     /// <summary>
-    /// Every merge the algorithm performs must announce itself, including the ones at the bottom of the
-    /// merge tree. Two runs are the smallest input that merges at all; when that case was special-cased it
-    /// merged silently, so a consumer watching an input with few runs saw no merge phase whatsoever.
+    /// Reverse-sorted input is ShiftSort's designated worst case — the reference benchmark labels it
+    /// "worst complexity (reverse sorted list)". The scan turns each strictly descending window of three
+    /// ascending with one swap, which produces the maximum number of sublists rather than one, so the merge
+    /// tree is at its deepest here. Detecting arbitrary-length descending runs and reversing them instead
+    /// would sort this input with no merges at all, which is a different algorithm.
     /// </summary>
     [Test]
-    public async Task TwoRunInput_AnnouncesItsMerge()
+    [Arguments(64)]
+    [Arguments(256)]
+    [Arguments(1024)]
+    public async Task ReverseSortedInputIsTheWorstCaseNotTheBestCase(int n)
     {
         var context = new MergeEventRecordingContext();
-        // Exactly two natural runs: [1,3,5,7] then [0,2,4,6].
+        var array = Enumerable.Range(0, n).Reverse().ToArray();
+
+        ShiftSort.Sort(array.AsSpan(), context);
+
+        await Assert.That(array).IsEquivalentTo(Enumerable.Range(0, n).ToArray(), CollectionOrdering.Matching);
+        await Assert.That(context.Merges.Count).IsEqualTo(n / 2 - 1)
+            .Because("n/2 sublists is the most the derivative list can hold, so this input costs the most merges");
+    }
+
+    /// <summary>
+    /// Every merge the algorithm performs must announce itself, including the ones at the bottom of the
+    /// merge tree. Two sublists are the smallest input that merges at all; when that case was special-cased
+    /// it merged silently, so a consumer watching an input with few sublists saw no merge phase whatsoever.
+    /// </summary>
+    [Test]
+    public async Task TwoSublistInput_AnnouncesItsMerge()
+    {
+        var context = new MergeEventRecordingContext();
+        // No window of three descends, and only index 4 is out of order with its left neighbour,
+        // so the derivative list is [0, 4, 8]: the sublists are [1,3,5,7] and [0,2,4,6].
         var array = new[] { 1, 3, 5, 7, 0, 2, 4, 6 };
 
         ShiftSort.Sort(array.AsSpan(), context);
@@ -198,7 +222,7 @@ public class ShiftSortTests : StableSortTestsBase
     }
 
     /// <summary>
-    /// A k-run input performs exactly k-1 merges, and each one must be announced. Roughly half of them sit
+    /// A k-sublist input performs exactly k-1 merges, and each one must be announced. Roughly half of them sit
     /// at the bottom of the merge tree, which is where the silent path used to be.
     /// </summary>
     [Test]
@@ -206,12 +230,15 @@ public class ShiftSortTests : StableSortTestsBase
     [Arguments(7)]
     [Arguments(16)]
     [Arguments(33)]
-    public async Task EveryMergeIsAnnounced(int runCount)
+    public async Task EveryMergeIsAnnounced(int pairCount)
     {
         var context = new MergeEventRecordingContext();
-        // Each pair (2i+1, 2i) is a descending run of length 2, giving exactly runCount runs.
-        var array = new int[runCount * 2];
-        for (var i = 0; i < runCount; i++)
+        // 2 * pairCount elements shaped [1,0, 3,2, 5,4, ...]. Every odd index is out of order with its left
+        // neighbour, and no window of three descends (arr[x-1] is the larger of its own pair), so the scan
+        // records every odd index and never swaps. The derivative list is [0, 1, 3, ..., 2*pairCount-1, n],
+        // which delimits pairCount + 1 sublists and therefore costs pairCount merges.
+        var array = new int[pairCount * 2];
+        for (var i = 0; i < pairCount; i++)
         {
             array[i * 2] = i * 2 + 1;
             array[i * 2 + 1] = i * 2;
@@ -219,9 +246,9 @@ public class ShiftSortTests : StableSortTestsBase
 
         ShiftSort.Sort(array.AsSpan(), context);
 
-        await Assert.That(array).IsEquivalentTo(Enumerable.Range(0, runCount * 2).ToArray(), CollectionOrdering.Matching);
-        await Assert.That(context.Merges.Count).IsEqualTo(runCount - 1)
-            .Because($"a binary merge tree over {runCount} runs performs {runCount - 1} merges");
+        await Assert.That(array).IsEquivalentTo(Enumerable.Range(0, pairCount * 2).ToArray(), CollectionOrdering.Matching);
+        await Assert.That(context.Merges.Count).IsEqualTo(pairCount)
+            .Because($"a binary merge tree over {pairCount + 1} sublists performs {pairCount} merges");
         // The last announced merge is the root: it must cover the whole span.
         await Assert.That(context.Merges[^1]).IsEqualTo((0, context.Merges[^1].Mid, array.Length - 1));
     }
