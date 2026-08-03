@@ -159,33 +159,48 @@ public static class BottomupMergeSort
 
         // Iterate through merge sizes: 1, 2, 4, 8, ..., until size >= n
         // Each pass writes all elements from src to dst (ping-pong)
-        // Guard against overflow: size > 0 ensures we stop if size * 2 overflows to negative
+        //
+        // n is a span length, so it can be as large as int.MaxValue. Every index expression below is
+        // therefore written so that it cannot overflow: none of them forms a sum that exceeds n.
+        // The natural spellings do overflow — `size * 2` once size passes 2^30, and `left + size`
+        // whenever the left half is the last, short one. Because the project compiles unchecked, such
+        // a sum wraps negative instead of throwing, and a negative index reaches SortSpan's
+        // Unsafe.Add unbounded. Comparing against a difference (n - left, n - mid, n - size) keeps
+        // both operands inside the span and needs no guard.
         var passNum = 0;
-        for (var size = 1; size < n && size > 0; size *= 2)
+        var size = 1;
+        while (size < n)
         {
             passNum++;
             src.Context.OnPhase(SortPhase.MergePass, size, passNum);
-            for (var left = 0; left < n; left += size * 2)
+            for (var left = 0; left < n; )
             {
-                var mid = left + size;                      // exclusive end of left half
-                var right = Math.Min(left + size * 2, n);  // exclusive end of right half
-
-                if (mid >= n)
+                // n - left <= size is `left + size >= n`: only the left half exists, so there is
+                // nothing to merge and mid would be out of range.
+                if (n - left <= size)
                 {
                     // Only left half exists: copy it to dst as-is
                     src.CopyTo(left, dst, left, n - left);
                     break;
                 }
 
+                var mid = left + size;                          // exclusive end of left half, now < n
+                var right = n - mid > size ? mid + size : n;    // exclusive end of right half
+
                 // Optimization: Skip merge if already sorted (still copy to dst)
                 if (src.IsLessOrEqualAt(mid - 1, mid))
                 {
                     src.CopyTo(left, dst, left, right - left);
-                    continue;
+                }
+                else
+                {
+                    // Merge src[left..mid) and src[mid..right) into dst[left..right)
+                    MergePingPong(src, dst, left, mid, right);
                 }
 
-                // Merge src[left..mid) and src[mid..right) into dst[left..right)
-                MergePingPong(src, dst, left, mid, right);
+                // right is min(left + 2*size, n), so this is the `left += size * 2` step: when the
+                // pair was clamped, right == n ends the pass exactly as the unclamped sum would.
+                left = right;
             }
 
             // Swap src and dst for next pass (ref struct cannot use tuple deconstruction)
@@ -193,6 +208,11 @@ public static class BottomupMergeSort
             src = dst;
             dst = tmp;
             srcIsOriginal = !srcIsOriginal;
+
+            // Stop before doubling would pass n. Spelled as size > n - size rather than
+            // size * 2 > n so the pass sequence terminates without ever forming the overflowing product.
+            if (size > n - size) break;
+            size *= 2;
         }
 
         // If final result ended up in b (not s), copy it back to s

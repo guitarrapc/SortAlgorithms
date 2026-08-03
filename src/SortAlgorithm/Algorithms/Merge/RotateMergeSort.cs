@@ -134,41 +134,61 @@ public static class RotateMergeSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // n is a span length, so it can be as large as int.MaxValue. Every index expression below is
+        // therefore written so that it cannot overflow: none of them forms a sum that exceeds n.
+        // The natural spellings do overflow — `width * 2` once width passes 2^30 (reached from 20 at
+        // n > 20*2^26 = 1,342,177,280), and `i + InsertionSortThreshold` at the very top of the range.
+        // Because the project compiles unchecked, such a sum wraps negative instead of throwing, and a
+        // negative index reaches SortSpan's Unsafe.Add unbounded. Comparing against a difference
+        // (n - i, n - mid, n - width) keeps both operands inside the span and needs no guard.
+
         // Phase 1: sort every block of size InsertionSortThreshold with insertion sort.
-        // InsertionSort.SortCore uses exclusive end [first, last), so pass Math.Min(i + threshold, n).
+        // InsertionSort.SortCore uses exclusive end [first, last), so pass the block's exclusive end.
         s.Context.OnPhase(SortPhase.MergeInitSort, InsertionSortThreshold);
-        for (var i = 0; i < n; i += InsertionSortThreshold)
-            InsertionSort.SortCore(s, i, Math.Min(i + InsertionSortThreshold, n));
+        for (var i = 0; i < n; )
+        {
+            var blockEnd = n - i > InsertionSortThreshold ? i + InsertionSortThreshold : n;
+            InsertionSort.SortCore(s, i, blockEnd);
+            i = blockEnd;
+        }
 
         // Phase 2: bottom-up merge passes.
         // Each pass merges adjacent pairs of runs of length `width`, then doubles width.
         var passNum = 0;
-        for (var width = InsertionSortThreshold; width < n; width *= 2)
+        var width = InsertionSortThreshold;
+        while (width < n)
         {
             passNum++;
             s.Context.OnPhase(SortPhase.MergePass, width, passNum);
-            // left + width < n guarantees a non-empty right run ([mid+1..right]) exists.
-            for (var left = 0; left < n - width; left += width * 2)
+            // left < n - width is `left + width < n`: it guarantees a non-empty right run ([mid+1..right]) exists.
+            for (var left = 0; left < n - width; )
             {
                 // mid: inclusive end of left run — always exactly `width` elements from `left`.
                 var mid = left + width - 1;
-                // right: inclusive end of right run — clamped to last valid index for the final pair.
-                var right = Math.Min(left + width * 2 - 1, n - 1);
+                // right: inclusive end of right run — clamped to the last valid index for the final pair.
+                var right = n - mid > width ? mid + width : n - 1;
 
                 // Already-sorted skip: left run's max ≤ right run's min → no merge needed.
-                if (s.IsLessOrEqualAt(mid, mid + 1))
-                    continue;
-
-                // Completely disjoint in reverse order: every left element > every right element → rotate entire run pair.
-                // Reverse-array inputs produce run pairs exactly in this form after Phase 1, so this skips all recursive merge work.
-                if (s.IsGreaterAt(left, right))
+                if (!s.IsLessOrEqualAt(mid, mid + 1))
                 {
-                    Rotate(s, left, right, mid - left + 1);
-                    continue;
+                    // Completely disjoint in reverse order: every left element > every right element → rotate entire run pair.
+                    // Reverse-array inputs produce run pairs exactly in this form after Phase 1, so this skips all recursive merge work.
+                    if (s.IsGreaterAt(left, right))
+                        Rotate(s, left, right, mid - left + 1);
+                    else
+                        MergeInPlace(s, left, mid, right);
                 }
 
-                MergeInPlace(s, left, mid, right);
+                // right is the inclusive min(left + 2*width - 1, n - 1), so right + 1 is the
+                // `left += width * 2` step: when the pair was clamped, right + 1 == n ends the pass
+                // exactly as the unclamped sum would.
+                left = right + 1;
             }
+
+            // Stop before doubling would pass n. Spelled as width > n - width rather than
+            // width * 2 > n so the pass sequence terminates without ever forming the overflowing product.
+            if (width > n - width) break;
+            width *= 2;
         }
     }
 
