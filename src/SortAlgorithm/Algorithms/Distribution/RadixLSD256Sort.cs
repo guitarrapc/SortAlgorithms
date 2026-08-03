@@ -51,10 +51,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(d × n) - Linear in input size, where d depends on actual value range</description></item>
 /// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order, d = ⌈keyBits/8⌉ for full range</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort, uses bitwise operations only)</description></item>
-/// <item><description>Digit Passes: d = ⌈requiredBits/8⌉ examined (early termination based on actual value range, not full bit width); e ≤ d executed, the rest being identity passes</description></item>
-/// <item><description>Index Reads : n (initial min/max scan) + d × n (every digit is counted) + e × n (one read per executed distribute pass) + optional final copy</description></item>
-/// <item><description>Index Writes: e × n (one write per executed distribute pass to temp) + optional final copy</description></item>
+/// <item><description>Swaps       : 0 - elements move by distribution into the temp buffer, never by exchange</description></item>
+/// <item><description>Index Reads : Θ(d × n) - n (initial min/max scan) + d × n (every digit is counted) + e × n (one read per executed distribute pass) + optional final copy</description></item>
+/// <item><description>Index Writes: Θ(d × n) - e × n (one write per executed distribute pass to temp) + optional final copy</description></item>
 /// <item><description>Space       : O(n) for temporary buffer</description></item>
+/// <item><description>Digit Passes: d = ⌈requiredBits/8⌉ examined (early termination based on actual value range, not full bit width); e ≤ d executed, the rest being identity passes</description></item>
 /// </list>
 /// <para><strong>Why Counting Runs Inside Each Pass:</strong></para>
 /// <para>Counting sort per digit can be arranged two ways, and both are correct LSD radix sorts: count the

@@ -38,10 +38,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Ω(n) - Uniform distribution, one pass over the array</description></item>
 /// <item><description>Average case: Θ(n) - Assumes uniform distribution, permutation phase is O(n)</description></item>
 /// <item><description>Worst case  : O(n²) - All elements in one class, degenerates to Insertion Sort</description></item>
-/// <item><description>Comparisons : O(n log(n/m)) on average - Each class sorted independently by Insertion Sort</description></item>
+/// <item><description>Comparisons : O(n log(n/m)) on average - Each class sorted independently by Insertion Sort; O(n²) worst, when one class holds everything</description></item>
+/// <item><description>Swaps       : O(1) - a single exchange brings the maximum to the front; the permutation cycle moves elements by assignment, not by swapping</description></item>
+/// <item><description>Index Reads : Θ(n) on average - the classification and the permutation each touch every element once; O(n²) worst, when the final Insertion Sort degenerates</description></item>
+/// <item><description>Index Writes: Θ(n) on average - the permutation places each element once; O(n²) worst for the same reason</description></item>
 /// <item><description>Space       : O(m) - Two integer arrays of size m for counts and boundaries</description></item>
-/// <item><description>Note        : クラス数は 0.43n (最小 2) に自動調整されます。キーの分布が偏るとパフォーマンスが低下します。128ビット整数型には対応していません。</description></item>
 /// </list>
+/// <para><strong>Note:</strong> クラス数は 0.43n (最小 2) に自動調整されます。キーの分布が偏るとパフォーマンスが低下します。128ビット整数型には対応していません。</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Flashsort</para>
 /// </remarks>

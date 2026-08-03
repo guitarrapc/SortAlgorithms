@@ -28,11 +28,17 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Distribution (Hybrid: Distribution + Comparison via PDQSort)</description></item>
-/// <item><description>Stable      : No (elements are redistributed across buckets via in-place swaps)</description></item>
+/// <item><description>Stable      : No (the in-place redistribution moves each element directly to its bin, which does not preserve relative order)</description></item>
 /// <item><description>In-place    : Partially (distribution is in-place, but this implementation uses an auxiliary bin cache).</description></item>
 /// <item><description>Best case   : O(n) - When data is already sorted (early detection)</description></item>
 /// <item><description>Average case: O(n √(log n)) - Hybrid distribution and comparison</description></item>
 /// <item><description>Worst case  : O(n * (K/S + S)) where K = log₂(range), S = max_splits</description></item>
+/// <item><description>Comparisons : Θ(n) when the distribution passes carry the sort; O(n log n) once a bin falls back to <see cref="PDQSort"/>,
+/// which also covers every input below <c>min_sort_size</c></description></item>
+/// <item><description>Swaps       : 0 in the distribution passes, which move elements directly to their bin rather than exchanging;
+/// O(n log n) from the <see cref="PDQSort"/> fallback</description></item>
+/// <item><description>Index Reads : O(n √(log n)) on average - every distribution pass reads each element once, and the pass count is what the running time counts</description></item>
+/// <item><description>Index Writes: O(n √(log n)) on average - every distribution pass places each element once</description></item>
 /// <item><description>Space       : O(1) auxiliary metadata — both bin_sizes and bin_cache are bounded by the
 /// key width and the tuning constants, independent of n (bin_sizes on stack, bin_cache via ArrayPool)</description></item>
 /// </list>

@@ -42,11 +42,17 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Ω(n + k) - Uniform distribution, each bucket has ~n/k elements</description></item>
 /// <item><description>Average case: Θ(n + k) - Assumes uniform distribution, total sort cost n×(n/k)²/k + n + k ≈ n</description></item>
 /// <item><description>Worst case  : O(n²) - All elements in one bucket, degenerates to Insertion Sort</description></item>
-/// <item><description>Range limit : None - auxiliary space depends on n, not on the key range</description></item>
-/// <item><description>Comparisons : O(n log(n/k)) on average - Each bucket sorted independently</description></item>
+/// <item><description>Comparisons : O(n) expected, Θ(n²) worst - with one bucket per element a bucket holds O(1) keys in expectation, so the
+/// per-bucket <see cref="InsertionSort"/> costs O(1) each; every key landing in one bucket collapses it to a single insertion sort</description></item>
+/// <item><description>Swaps       : 0 - elements are copied into the temp buffer and back, never exchanged</description></item>
+/// <item><description>Index Reads : Θ(n) expected - a key scan, a scatter and a gather each touch every element once, and the per-bucket
+/// sorts add O(n) expected on top; Θ(n²) worst for the same reason as the comparisons</description></item>
+/// <item><description>Index Writes: Θ(2n) expected - each element is written once into its bucket in the temp buffer and once back into the
+/// input; the per-bucket sorts add O(n) expected shifts, Θ(n²) worst</description></item>
 /// <item><description>Space       : O(n + k) - k bucket lists plus n elements total</description></item>
-/// <item><description>Note        : Bucket count is min(n, range); there is no cap on the key range, unlike CountingSort and PigeonholeSort. Skewed key distribution degrades performance.</description></item>
+/// <item><description>Range limit : None - auxiliary space depends on n, not on the key range</description></item>
 /// </list>
+/// <para><strong>Note:</strong> Bucket count is min(n, range); there is no cap on the key range, unlike CountingSort and PigeonholeSort. Skewed key distribution degrades performance.</para>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
 /// <list type="bullet">
 /// <item><description>vs CountingSort / PigeonholeSort: Those size their auxiliary array by the key <em>range</em> and therefore
@@ -316,11 +322,17 @@ public static class BucketSort
 /// <item><description>Best case   : Ω(n + k) - Uniform distribution, each bucket has ~n/k elements</description></item>
 /// <item><description>Average case: Θ(n + k) - Assumes uniform distribution, total sort cost n×(n/k)²/k + n + k ≈ n</description></item>
 /// <item><description>Worst case  : O(n²) - All elements in one bucket, degenerates to Insertion Sort</description></item>
-/// <item><description>Range limit : None - auxiliary space depends on n, not on the key range</description></item>
-/// <item><description>Comparisons : O(n log(n/k)) on average - Each bucket sorted independently</description></item>
+/// <item><description>Comparisons : O(n) expected, Θ(n²) worst - with one bucket per element a bucket holds O(1) keys in expectation, so the
+/// per-bucket <see cref="InsertionSort"/> costs O(1) each; every key landing in one bucket collapses it to a single insertion sort</description></item>
+/// <item><description>Swaps       : 0 - elements are copied into the temp buffer and back, never exchanged</description></item>
+/// <item><description>Index Reads : Θ(n) expected - a key scan, a scatter and a gather each touch every element once, and the per-bucket
+/// sorts add O(n) expected on top; Θ(n²) worst for the same reason as the comparisons</description></item>
+/// <item><description>Index Writes: Θ(2n) expected - each element is written once into its bucket in the temp buffer and once back into the
+/// input; the per-bucket sorts add O(n) expected shifts, Θ(n²) worst</description></item>
 /// <item><description>Space       : O(n + k) - k bucket lists plus n elements total</description></item>
-/// <item><description>Note        : バケット数は min(n, 値域)。CountingSort / PigeonholeSort と違い値域の上限制約はありません。</description></item>
+/// <item><description>Range limit : None - auxiliary space depends on n, not on the key range</description></item>
 /// </list>
+/// <para><strong>Note:</strong> バケット数は min(n, 値域)。CountingSort / PigeonholeSort と違い値域の上限制約はありません。</para>
 /// </remarks>
 public static class BucketSortInteger
 {

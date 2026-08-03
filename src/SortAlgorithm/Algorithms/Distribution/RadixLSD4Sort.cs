@@ -50,10 +50,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(d × n) - Linear in input size, where d depends on actual key range</description></item>
 /// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order, d = ⌈keyBits/2⌉ for full range</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort, uses bitwise operations only)</description></item>
-/// <item><description>Digit Passes: d = ⌈requiredBits/2⌉ examined (early termination based on actual key range, not full key width); e ≤ d executed, the rest being identity passes</description></item>
-/// <item><description>Index Reads : n (initial min/max scan) + d × n (every digit is counted) + e × n (one read per executed distribute pass) + optional final copy</description></item>
-/// <item><description>Index Writes: e × n (one write per executed distribute pass to temp) + optional final copy</description></item>
+/// <item><description>Swaps       : 0 - elements move by distribution into the temp buffer, never by exchange</description></item>
+/// <item><description>Index Reads : Θ(d × n) - n (initial min/max scan) + d × n (every digit is counted) + e × n (one read per executed distribute pass) + optional final copy</description></item>
+/// <item><description>Index Writes: Θ(d × n) - e × n (one write per executed distribute pass to temp) + optional final copy</description></item>
 /// <item><description>Space       : O(n) for temporary buffer</description></item>
+/// <item><description>Digit Passes: d = ⌈requiredBits/2⌉ examined (early termination based on actual key range, not full key width); e ≤ d executed, the rest being identity passes</description></item>
 /// </list>
 /// <para><strong>Why Keys Are Recomputed Rather Than Memoized:</strong></para>
 /// <para>At radix 4 a 32-bit key takes up to 16 passes, more than any other radix here, so memoizing each

@@ -49,13 +49,21 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Θ(n) - When all keys are equal (early termination on range == 0, after the single key scan)</description></item>
 /// <item><description>Average case: Θ(n + d × n) - One O(n) key range scan + d levels, d = number of decimal digits of (max − min), not of the type maximum</description></item>
 /// <item><description>Worst case  : Θ(n + d × n) - Same complexity regardless of input order</description></item>
-/// <item><description>Comparisons : data-dependent, not zero. The digit passes themselves use arithmetic operations only, but every range that
-/// reaches the cutoff is finished by <see cref="InsertionSort"/>, which compares. Measured with StatisticsContext at n = 100,000 <c>int</c>:
-/// 667,030 comparisons for uniform random input, 90,000 for already-sorted 0..n, and 0 for keys drawn from 0..999 and for all-equal input
-/// (there every leaf either ends at a single element or is settled by the range scan, so the fallback never runs)</description></item>
-/// <item><description>Digit Passes: 1 initial key range scan + d = ⌈log₁₀(max − min)⌉ levels examined; a level whose digit is uniform is counted but not distributed</description></item>
+/// <item><description>Comparisons : O(n) - the digit passes use arithmetic operations only, so comparisons come solely from the cutoff
+/// <see cref="InsertionSort"/> that finishes short ranges; a range at the cutoff is bounded by a constant, so the leaves cost O(n) together</description></item>
+/// <item><description>Swaps       : 0 - elements move by distribution into the temp buffer, never by exchange</description></item>
+/// <item><description>Index Reads : Θ(d × n) - one range scan plus one read per element at every level that distributes, plus the cutoff sort's reads</description></item>
+/// <item><description>Index Writes: Θ(d × n) - one write per element at every level that distributes, plus the cutoff sort's shifts</description></item>
 /// <item><description>Space       : O(n) for temporary buffer</description></item>
+/// <item><description>Digit Passes: 1 initial key range scan + d = ⌈log₁₀(max − min)⌉ levels examined; a level whose digit is uniform is counted but not distributed</description></item>
 /// </list>
+/// <para><strong>Implementation Note — how much the cutoff actually compares:</strong></para>
+/// <para>
+/// The comparison count is data-dependent even though the row above is O(n), because whether a leaf reaches the cutoff at all
+/// depends on how the keys split. Measured with <c>StatisticsContext</c> at n = 100,000 <c>int</c>: 667,030 comparisons for uniform
+/// random input, 90,000 for already-sorted 0..n, and 0 both for keys drawn from 0..999 and for all-equal input — in those two every
+/// leaf either ends at a single element or is settled by the range scan, so the fallback never runs.
+/// </para>
 /// <para><strong>MSD vs LSD (Decimal):</strong></para>
 /// <list type="bullet">
 /// <item><description>MSD processes high-order digits first, enabling early termination when buckets are fully sorted</description></item>

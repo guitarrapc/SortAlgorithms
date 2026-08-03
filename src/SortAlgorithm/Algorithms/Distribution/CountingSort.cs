@@ -49,8 +49,8 @@ namespace SortAlgorithm.Algorithms;
 /// separate output is inherent to counting sort; returning it to the caller's span is what the in-place API adds,
 /// and it is issued as one range copy that an observer expands into n reads and n writes</description></item>
 /// <item><description>Space       : O(n + k) - an n-element output plus a k-sized counter array</description></item>
-/// <item><description>Note        : A large key range leads to excessive memory usage. The maximum range is <c>MaxCountArraySize</c> (10,000,000).</description></item>
 /// </list>
+/// <para><strong>Note:</strong> A large key range leads to excessive memory usage. The maximum range is <c>MaxCountArraySize</c> (10,000,000).</para>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
 /// <list type="bullet">
 /// <item><description>vs <see cref="PigeonholeSort"/>: Both are O(n + k) and both must store the elements, because a
@@ -265,8 +265,8 @@ public static class CountingSort
 /// separate output is inherent to counting sort; returning it to the caller's span is what the in-place API adds,
 /// and it is issued as one range copy that an observer expands into n reads and n writes</description></item>
 /// <item><description>Space       : O(n + k) - an n-element output plus a k-sized counter array</description></item>
-/// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は <c>MaxCountArraySize</c> (10,000,000)、かつ range/n ≤ <c>MaxRangeFactor</c> (32) の制約があります。</description></item>
 /// </list>
+/// <para><strong>Note:</strong> 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は <c>MaxCountArraySize</c> (10,000,000)、かつ range/n ≤ <c>MaxRangeFactor</c> (32) の制約があります。</para>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
 /// <list type="bullet">
 /// <item><description>vs <see cref="PigeonholeSortInteger"/>: Turning counts into cumulative offsets and placing each

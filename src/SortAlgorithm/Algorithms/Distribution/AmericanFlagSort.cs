@@ -53,24 +53,31 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Distribution (Radix Sort, MSD variant, American Flag Sort)</description></item>
 /// <item><description>Stable      : No (in-place permutation does not preserve relative order)</description></item>
 /// <item><description>In-place    : Yes (bucket counters are stack-allocated, O(radix) per recursion level; nothing is allocated on the heap)</description></item>
-/// <item><description>Best case   : Θ(n) - all keys equal, caught by the range scan and returned before any digit pass
-/// (measured: 1.00n reads and zero writes for n = 100,000 equal <c>int</c> values)</description></item>
+/// <item><description>Best case   : Θ(n) - all keys equal, caught by the range scan and returned before any digit pass</description></item>
 /// <item><description>Average case: Θ(d × n) - d = ⌈requiredBits/8⌉, from the width of the key range rather than the key width</description></item>
 /// <item><description>Worst case  : Θ(d × n) - Same complexity regardless of input order</description></item>
-/// <item><description>Comparisons : data-dependent, not zero. The digit passes themselves use bitwise operations only, but every bucket that
-/// reaches the cutoff is finished by <see cref="InsertionSort"/>, which compares. Measured with StatisticsContext at n = 100,000 <c>int</c>:
-/// 66,544 comparisons for uniform random input, and 0 both for already-sorted 0..n and for keys drawn from 0..999
-/// (in those two every leaf either ends at a single element or stays above the cutoff, so the fallback never runs)</description></item>
-/// <item><description>Digit Passes: d = ⌈requiredBits/8⌉ from the key range, capped by the key width (1 for byte, 2 for short, 4 for int,
-/// 8 for long); levels below that can still terminate early when a bucket's digit turns out to be uniform</description></item>
-/// <item><description>Index Reads : n (range scan) + one per element per digit level visited + the permutation and cutoff reads.
+/// <item><description>Comparisons : O(n) - the digit passes use bitwise operations only, so comparisons come solely from the cutoff
+/// <see cref="InsertionSort"/> that finishes short buckets; a bucket at the cutoff is bounded by a constant, so the leaves cost O(n) together</description></item>
+/// <item><description>Swaps       : Θ(d × n) - the permutation is in-place, so every level moves each element into its bucket by exchange</description></item>
+/// <item><description>Index Reads : Θ(d × n) - n (range scan) + one per element per digit level visited + the permutation and cutoff reads.
 /// Inputs at or below the cutoff skip the range scan entirely and go straight to <see cref="InsertionSort"/>,
 /// so a small array pays no radix overhead at all</description></item>
+/// <item><description>Index Writes: Θ(d × n) - the in-place permutation writes through its exchanges, and the cutoff sort adds its shifts</description></item>
 /// <item><description>Space       : O(1) auxiliary space, 2052 bytes of stack per recursion level (257 + 256 counters).
 /// Recursion depth is bounded by the digit count (at most 4 for 32-bit keys, 8 for 64-bit,
 /// and less when the key range is narrow), because each level consumes exactly one digit — it does not depend on n, on the input order,
 /// or on how the buckets split</description></item>
+/// <item><description>Digit Passes: d = ⌈requiredBits/8⌉ from the key range, capped by the key width (1 for byte, 2 for short, 4 for int,
+/// 8 for long); levels below that can still terminate early when a bucket's digit turns out to be uniform</description></item>
 /// </list>
+/// <para><strong>Implementation Note — how much the cutoff actually compares:</strong></para>
+/// <para>
+/// The comparison count is data-dependent even though the row above is O(n), because whether a bucket reaches the cutoff at all
+/// depends on how the keys split. Measured with <c>StatisticsContext</c> at n = 100,000 <c>int</c>: 66,544 comparisons for uniform
+/// random input, and 0 both for already-sorted 0..n and for keys drawn from 0..999 — in those two every leaf either ends at a single
+/// element or stays above the cutoff, so the fallback never runs. All-equal input returns from the range scan after 1.00n reads and
+/// zero writes.
+/// </para>
 /// <para><strong>Algorithm Overview:</strong></para>
 /// <para>Inputs at or below the cutoff go straight to <see cref="InsertionSort"/>. Otherwise: one range scan
 /// over the keys, then four phases per digit level:</para>

@@ -46,11 +46,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n + k) - Linear in input size plus key range</description></item>
 /// <item><description>Worst case  : O(n + k) - Even with all elements having different keys</description></item>
 /// <item><description>Comparisons : 0 - No comparison operations between keys (distribution sort)</description></item>
+/// <item><description>Swaps       : 0 - Elements are placed at a computed index, never exchanged</description></item>
 /// <item><description>Index Reads : 3n - n reads for key extraction, n reads for copying to temp, n reads for writing back</description></item>
 /// <item><description>Index Writes: 2n - n writes to temp, n writes back to original array</description></item>
 /// <item><description>Space       : O(n + k) - Temporary arrays for elements, keys, next[] links, and hole head indices</description></item>
-/// <item><description>Note        : A large key range leads to excessive memory usage. The maximum range is <c>MaxHoleArraySize</c> (10,000,000).</description></item>
 /// </list>
+/// <para><strong>Note:</strong> A large key range leads to excessive memory usage. The maximum range is <c>MaxHoleArraySize</c> (10,000,000).</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Pigeonhole_sort</para>
 /// </remarks>
@@ -248,8 +249,8 @@ public static class PigeonholeSort
 /// <item><description>Index Reads : 2n - n for the min/max scan, n for the distribution pass</description></item>
 /// <item><description>Index Writes: n - each element is written once, directly into its final position</description></item>
 /// <item><description>Space       : O(k) - one hole array; no per-element auxiliary storage</description></item>
-/// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は <c>MaxHoleArraySize</c> (10,000,000)、かつ range/n ≤ <c>MaxRangeFactor</c> (32) の制約があります。</description></item>
 /// </list>
+/// <para><strong>Note:</strong> 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は <c>MaxHoleArraySize</c> (10,000,000)、かつ range/n ≤ <c>MaxRangeFactor</c> (32) の制約があります。</para>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
 /// <list type="bullet">
 /// <item><description>vs <see cref="CountingSortInteger"/>: Counting sort turns counts into cumulative offsets and then
