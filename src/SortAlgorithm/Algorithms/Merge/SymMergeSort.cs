@@ -37,11 +37,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Single-Element Base Cases:</strong> When one run has exactly 1 element,
 /// a binary search finds its insertion position in the other run and a single shift completes the merge,
 /// avoiding the full SymMerge binary search + rotation + recursion overhead.</description></item>
-/// <item><description><strong>Rotation Algorithm (shift-based fast paths + GCD block-swap fallback):</strong>
+/// <item><description><strong>Rotation Algorithm (shift fast paths, block swap when balanced, GCD-cycle otherwise):</strong>
 /// Left-rotates s[lo..hi) by (m-lo) positions: [left_part | right_block] → [right_block | left_part].
 /// Fast path leftLen≤4 or rightLen≤4: save the small side to local variables, shift, and write back.
-/// General case uses GCD-based block-swap: repeatedly swaps adjacent blocks of the smaller side
-/// until both sides are equal length, then performs one final block swap.
+/// Equal-length sides: a single block swap exchanges the two halves.
+/// Otherwise: the GCD-cycle (juggling) rotation the SymMerge paper's assignment bound is stated for —
+/// gcd(leftLen, rightLen) independent cycles, each advanced by assignment.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -52,11 +53,19 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n log² n) moves, O(n log n) comparisons</description></item>
 /// <item><description>Worst case  : O(n log² n) moves, O(n log n) comparisons</description></item>
 /// <item><description>Comparisons : O(n log n) - each SymMerge locates its split by binary search, so a merge level costs O(n) comparisons</description></item>
-/// <item><description>Swaps       : O(n log² n) - the merge is performed by rotation, and a rotation is a sequence of block exchanges; this is what makes the move bound exceed the comparison bound</description></item>
+/// <item><description>Swaps       : O(n log² n) - bounded by the rotations, but only the equal-length ones exchange blocks; every other rotation moves elements by assignment and is counted under Index Writes instead</description></item>
 /// <item><description>Index Reads : O(n log² n) - dominated by the rotations rather than by the binary searches</description></item>
-/// <item><description>Index Writes: O(n log² n) - each rotation writes every element of the block it moves</description></item>
+/// <item><description>Index Writes: O(n log² n) - each rotation writes every element it moves; this is what makes the move bound exceed the comparison bound</description></item>
 /// <item><description>Space       : O(log n) – Recursion stack depth within each SymMerge call</description></item>
 /// </list>
+/// <para><strong>Implementation note – rotation cost:</strong></para>
+/// <para>Kim and Kutzner state the O((M+N)·log M) assignment bound for a rotation costing M+N+gcd(M+N)
+/// assignments, i.e. the GCD-cycle (juggling) rotation. Go's sort.symMerge substitutes a block-swap
+/// (Gries–Mills) rotation, which costs len - gcd swaps and therefore 2(len - gcd) reads and writes —
+/// roughly twice the traffic on unbalanced sides. Go does this because sort.Interface exposes only Swap;
+/// SortSpan exposes Read and Write, so this implementation uses the GCD-cycle rotation the bound assumes
+/// and keeps the block swap only for equal-length sides, where the two cost the same len writes and the
+/// block swap runs as two sequential streams.</para>
 /// <para><strong>SymMerge vs RotateMerge:</strong></para>
 /// <list type="bullet">
 /// <item><description>SymMerge performs exactly one O(log n) binary search per recursive call and one rotation,
@@ -83,11 +92,6 @@ public static class SymMergeSort
     // Threshold for using insertion sort for initial block seeding (Phase 1).
     // Matches Go's sort.stable blockSize (20).
     private const int InsertionSortThreshold = 20;
-
-    // Threshold for falling back to insertion sort inside SymMerge recursion.
-    // Lower than InsertionSortThreshold because SymMerge sub-problems are already
-    // two sorted runs, so a merge-aware fallback is more efficient at smaller sizes.
-    private const int SymMergeThreshold = 8;
 
     // Maximum small-side length for the shift-based Rotate fast path.
     // When the smaller side of the rotation is <= this value, the elements are
@@ -176,6 +180,10 @@ public static class SymMergeSort
     /// Performs a symmetric binary search to find the optimal split index, then one rotation,
     /// and recursively merges the two resulting subproblems.
     /// Based on the algorithm by Pok-Son Kim and Arne Kutzner (2004).
+    /// <para>
+    /// The second of the two sub-problems is in tail position, so it is taken as a loop iteration
+    /// instead of a call; only the left sub-problem [a..start, mid) consumes a stack frame.
+    /// </para>
     /// </summary>
     /// <param name="s">The SortSpan to operate on</param>
     /// <param name="a">Inclusive start of the left sorted run (half-open: left run is s[a..m))</param>
@@ -185,135 +193,135 @@ public static class SymMergeSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Base cases: empty halves
-        if (a >= m || m >= b) return;
-
-        // Already-sorted skip (Bottleneck 2): left run's max ≤ right run's min.
-        // This fires frequently during recursive sub-problems where the two halves
-        // ended up already in order after the rotation of the parent call.
-        if (s.IsLessOrEqualAt(m - 1, m)) return;
-
-        // Single-element base cases: when one side has exactly 1 element,
-        // binary-search for its insertion position in the other run and shift-insert.
-        // This avoids the full SymMerge machinery (binary search + rotation + 2 recursive calls)
-        // and reduces comparisons to O(log n) + O(n) moves.
-        if (m - a == 1)
+        while (true)
         {
-            // Left run is a single element: binary search in right run for insertion position.
-            // Use lower_bound in the right run: find the first element >= tmp.
-            // Inserting tmp before that position preserves stability because the left-run element
-            // must remain before equal elements from the right run.
-            var tmp = s.Read(a);
-            var ilo = m;
-            var ihi = b;
-            while (ilo < ihi)
+            // Base cases: empty halves
+            if (a >= m || m >= b) return;
+
+            // Already-sorted skip (Bottleneck 2): left run's max ≤ right run's min.
+            // This fires frequently during recursive sub-problems where the two halves
+            // ended up already in order after the rotation of the parent call.
+            if (s.IsLessOrEqualAt(m - 1, m)) return;
+
+            // Single-element base cases: when one side has exactly 1 element,
+            // binary-search for its insertion position in the other run and shift-insert.
+            // This avoids the full SymMerge machinery (binary search + rotation + 2 recursive calls)
+            // and reduces comparisons to O(log n) + O(n) moves.
+            if (m - a == 1)
             {
-                var c = (int)((uint)(ilo + ihi) >> 1);
-                if (s.IsValueGreaterThan(tmp, c))
-                    ilo = c + 1;
-                else
-                    ihi = c;
+                // Left run is a single element: binary search in right run for insertion position.
+                // Use lower_bound in the right run: find the first element >= tmp.
+                // Inserting tmp before that position preserves stability because the left-run element
+                // must remain before equal elements from the right run.
+                var tmp = s.Read(a);
+                var ilo = m;
+                var ihi = b;
+                while (ilo < ihi)
+                {
+                    var c = (int)((uint)(ilo + ihi) >> 1);
+                    if (s.IsValueGreaterThan(tmp, c))
+                        ilo = c + 1;
+                    else
+                        ihi = c;
+                }
+                // Shift s[m..ilo) one position to the left, then place tmp at ilo-1.
+                for (var i = a; i < ilo - 1; i++)
+                    s.Write(i, s.Read(i + 1));
+                s.Write(ilo - 1, tmp);
+                return;
             }
-            // Shift s[m..ilo) one position to the left, then place tmp at ilo-1.
-            for (var i = a; i < ilo - 1; i++)
-                s.Write(i, s.Read(i + 1));
-            s.Write(ilo - 1, tmp);
-            return;
-        }
-        if (b - m == 1)
-        {
-            // Right run is a single element: binary search in left run for insertion position.
-            // Use upper_bound in the left run: find the first element > tmp.
-            // Inserting tmp there preserves stability because equal elements from the left run
-            // must remain before the right-run element.
-            var tmp = s.Read(m);
-            var ilo = a;
-            var ihi = m;
-            while (ilo < ihi)
+            if (b - m == 1)
             {
-                var c = (int)((uint)(ilo + ihi) >> 1);
-                if (s.IsElementLessOrEqual(c, tmp))
-                    ilo = c + 1;
-                else
-                    ihi = c;
+                // Right run is a single element: binary search in left run for insertion position.
+                // Use upper_bound in the left run: find the first element > tmp.
+                // Inserting tmp there preserves stability because equal elements from the left run
+                // must remain before the right-run element.
+                var tmp = s.Read(m);
+                var ilo = a;
+                var ihi = m;
+                while (ilo < ihi)
+                {
+                    var c = (int)((uint)(ilo + ihi) >> 1);
+                    if (s.IsElementLessOrEqual(c, tmp))
+                        ilo = c + 1;
+                    else
+                        ihi = c;
+                }
+                // Shift s[ilo..m) one position to the right, then place tmp at ilo.
+                for (var i = m; i > ilo; i--)
+                    s.Write(i, s.Read(i - 1));
+                s.Write(ilo, tmp);
+                return;
             }
-            // Shift s[ilo..m) one position to the right, then place tmp at ilo.
-            for (var i = m; i > ilo; i--)
-                s.Write(i, s.Read(i - 1));
-            s.Write(ilo, tmp);
-            return;
-        }
 
-        // For small ranges, use merge-aware insertion that exploits the two-run structure.
-        // Unlike plain InsertionSort (which treats the range as unsorted), this inserts elements
-        // from the shorter side into the merged sequence using binary search, yielding
-        // comparisons: roughly O(min(L,R) * log(L+R)), moves: up to O(min(L,R) * (L+R))
-        if (b - a <= SymMergeThreshold)
-        {
-            MergeAwareInsertion(s, a, m, b);
-            return;
-        }
+            // mid: midpoint of the whole range [a..b); pivot sum n = mid + m
+            var mid = (int)((uint)(a + b) >> 1);
+            var n = mid + m;
 
-        // mid: midpoint of the whole range [a..b); pivot sum n = mid + m
-        var mid = (int)((uint)(a + b) >> 1);
-        var n = mid + m;
-
-        // Binary search bounds: search for split index 'start' such that
-        // elements s[a..start) go to the first half and s[start..m) go to the second half.
-        // The symmetric mirror of 'start' in the right run is 'end = n - start'.
-        int lo, hi;
-        if (m > mid)
-        {
-            // Right run is longer: search in the left portion of the right run
-            lo = n - b;
-            hi = mid;
-        }
-        else
-        {
-            // Left run is longer (or equal): search in the right portion of the left run
-            lo = a;
-            hi = m;
-        }
-
-        // p = n - 1: the index such that indices (c) and (p - c) are mirror positions.
-        var p = n - 1;
-
-        // Find the smallest 'lo' such that s[p - lo] < s[lo].
-        // When s[p-c] >= s[c], s[c] belongs in the first half → advance lo.
-        // The >= condition (not >) ensures stability: equal left-run elements stay before right-run elements.
-        while (lo < hi)
-        {
-            var c = (int)((uint)(lo + hi) >> 1);
-            if (s.IsGreaterOrEqualAt(p - c, c))
-                lo = c + 1;
+            // Binary search bounds: search for split index 'start' such that
+            // elements s[a..start) go to the first half and s[start..m) go to the second half.
+            // The symmetric mirror of 'start' in the right run is 'end = n - start'.
+            int lo, hi;
+            if (m > mid)
+            {
+                // Right run is longer: search in the left portion of the right run
+                lo = n - b;
+                hi = mid;
+            }
             else
-                hi = c;
+            {
+                // Left run is longer (or equal): search in the right portion of the left run
+                lo = a;
+                hi = m;
+            }
+
+            // p = n - 1: the index such that indices (c) and (p - c) are mirror positions.
+            var p = n - 1;
+
+            // Find the smallest 'lo' such that s[p - lo] < s[lo].
+            // When s[p-c] >= s[c], s[c] belongs in the first half → advance lo.
+            // The >= condition (not >) ensures stability: equal left-run elements stay before right-run elements.
+            while (lo < hi)
+            {
+                var c = (int)((uint)(lo + hi) >> 1);
+                if (s.IsGreaterOrEqualAt(p - c, c))
+                    lo = c + 1;
+                else
+                    hi = c;
+            }
+
+            var end = n - lo;
+
+            // Rotate s[lo..end) to bring s[m..end) before s[lo..m):
+            // [s[a..lo) | s[lo..m) | s[m..end) | s[end..b)]
+            //            ^^^^^^^^^   ^^^^^^^^^^
+            //            left part   right part  → after rotate: [s[m..end) | s[lo..m)]
+            if (lo < m && m < end)
+                Rotate(s, lo, m, end);
+
+            // Merge the two remaining subproblems on each half. The left one recurses;
+            // the right one is in tail position, so it continues the loop instead.
+            if (a < lo && lo < mid)
+                SymMerge(s, a, lo, mid);
+            if (mid < end && end < b)
+            {
+                a = mid;
+                m = end;
+                continue;
+            }
+            return;
         }
-
-        var end = n - lo;
-
-        // Rotate s[lo..end) to bring s[m..end) before s[lo..m):
-        // [s[a..lo) | s[lo..m) | s[m..end) | s[end..b)]
-        //            ^^^^^^^^^   ^^^^^^^^^^
-        //            left part   right part  → after rotate: [s[m..end) | s[lo..m)]
-        if (lo < m && m < end)
-            Rotate(s, lo, m, end);
-
-        // Recursively merge the two remaining subproblems on each half
-        if (a < lo && lo < mid)
-            SymMerge(s, a, lo, mid);
-        if (mid < end && end < b)
-            SymMerge(s, mid, end, b);
     }
 
     /// <summary>
     /// Left-rotates s[lo..hi) by (m - lo) positions: [s[lo..m) | s[m..hi)] → [s[m..hi) | s[lo..m)].
     /// Fast paths for small sides (≤ RotateSmallThreshold): save the small side to local variables,
-    /// shift the large side, and write the saved elements back. This replaces swap-based rotation
-    /// with 1×Read + 1×Write per element, cutting write traffic roughly in half for small rotations.
-    /// General case uses GCD-based block-swap: repeatedly swaps adjacent blocks of the smaller side
-    /// until both sides are equal, then performs one final block swap. This achieves exactly (hi - lo)
-    /// swaps with good cache locality from contiguous swapRange operations.
+    /// shift the large side, and write the saved elements back.
+    /// Equal-length sides: one block swap of the two halves.
+    /// General case: the GCD-cycle (juggling) rotation — gcd(leftLen, rightLen) independent cycles,
+    /// each advanced by assignment.
+    /// Every path moves each of the len elements exactly once; the equal-length branch reports that
+    /// movement as swaps and the other three as reads and writes.
     /// </summary>
     private static void Rotate<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lo, int m, int hi)
         where TComparer : IComparer<T>
@@ -361,119 +369,69 @@ public static class SymMergeSort
             return;
         }
 
-        // Generally simple symmerge implementation uses a 3-reversal rotate: reverse the left part, reverse the right part, then reverse the whole.
-        // 3-reversal [A|B] → Reverse(A), Reverse(B), Reverse(AB) → [B|A]
-        // However, this can be slower than necessary for small sides due to the multiple passes and non-sequential access patterns.
-        // So we use the fast paths above for small sides, and fall back to the block-swap rotation method for larger sides, which achieves the rotation with exactly (hi - lo) swaps and good cache locality.
-        //
-        // Reverse(s, lo, m - 1);
-        // Reverse(s, m, hi - 1);
-        // Reverse(s, lo, hi - 1);
-
-
-        // General case uses block-swap rotation.
-        // repeatedly swaps adjacent blocks of the smaller side until both sides are equal,
-        // then performs one final block swap.
-        var i2 = leftLen;
-        var j2 = rightLen;
-        while (i2 != j2)
+        // Equal-length sides: one block swap exchanges the two halves. That is leftLen swaps,
+        // so len reads and len writes — the same traffic as the GCD-cycle below, but read and
+        // written as two sequential streams. This is the only shape where a swap-based rotation
+        // does not pay for the extra writes, so it is the only shape that keeps one.
+        if (leftLen == rightLen)
         {
-            if (i2 > j2)
-            {
-                SwapRange(s, m - i2, m, j2);
-                i2 -= j2;
-            }
-            else
-            {
-                SwapRange(s, m - i2, m + j2 - i2, i2);
-                j2 -= i2;
-            }
+            SwapRange(s, lo, m, leftLen);
+            return;
         }
-        SwapRange(s, m - i2, m, i2);
+
+        // General case: GCD-cycle (juggling) rotation.
+        // Left-rotating len elements by leftLen decomposes the permutation into
+        // gcd(leftLen, rightLen) independent cycles; walking each cycle by assignment reads and
+        // writes every element exactly once, for len reads and len writes.
+        //
+        // The alternatives both cost more writes here:
+        //   - block swap (Gries-Mills), what Go's sort.rotate uses: len - gcd swaps,
+        //     i.e. 2(len - gcd) reads and writes — about twice the traffic when the sides are
+        //     unbalanced, and equal only when leftLen == rightLen (handled above).
+        //     Go takes it because sort.Interface exposes only Swap; SortSpan exposes Read/Write.
+        //   - 3-reversal, Reverse(A), Reverse(B), Reverse(AB): 3·len/2 swaps, i.e. 3·len writes.
+        //
+        // Kim and Kutzner state the O((M+N)·log M) assignment bound of SymMerge for a rotation
+        // costing M+N+gcd(M+N) assignments, which is this one.
+        var len = hi - lo;
+        var cycles = Gcd(leftLen, rightLen);
+        for (var cycle = 0; cycle < cycles; cycle++)
+        {
+            // Each cycle carries one element in `tmp` while the rest shift back by leftLen.
+            var start = lo + cycle;
+            var tmp = s.Read(start);
+            var current = start;
+            while (true)
+            {
+                var next = current + leftLen;
+                if (next >= hi) next -= len;
+                if (next == start) break;
+                s.Write(current, s.Read(next));
+                current = next;
+            }
+            s.Write(current, tmp);
+        }
     }
 
     /// <summary>
-    /// Merge-aware insertion: merges two sorted runs s[a..m) and s[m..b) by binary-inserting
-    /// elements from the shorter side into the merged sequence. This exploits the known two-run
-    /// structure that the SymMerge fallback receives, unlike plain InsertionSort which treats
-    /// the range as unsorted.
-    /// <para>
-    /// <strong>Left ≤ Right case:</strong> Inserts left elements right-to-left. After each insertion
-    /// the sorted merged region [i+1, b) extends one position to the left. Binary search uses
-    /// lower_bound (strict &lt;) so equal right-run elements stay after the left element (stability).
-    /// </para>
-    /// <para>
-    /// <strong>Right &lt; Left case:</strong> Inserts right elements left-to-right. After each insertion
-    /// the sorted merged region [a, i+1) extends one position to the right. Binary search uses
-    /// upper_bound (≤) so equal left-run elements stay before the right element (stability).
-    /// </para>
+    /// Greatest common divisor by Euclid's algorithm. Used to count the independent cycles of the
+    /// GCD-cycle rotation.
     /// </summary>
-    private static void MergeAwareInsertion<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int a, int m, int b)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int Gcd(int a, int b)
     {
-        var leftLen = m - a;
-        var rightLen = b - m;
-
-        if (leftLen <= rightLen)
+        while (b != 0)
         {
-            // Insert left elements (smaller side) into the merged sequence, right to left.
-            // After each insertion, the sorted merged region [i+1, b) grows leftward.
-            for (var i = m - 1; i >= a; i--)
-            {
-                var tmp = s.Read(i);
-
-                // lower_bound in the merged region [i+1, b):
-                // left element should go before equal right elements (stability).
-                var ilo = i + 1;
-                var ihi = b;
-                while (ilo < ihi)
-                {
-                    var c = (int)((uint)(ilo + ihi) >> 1);
-                    if (s.IsElementLessThan(c, tmp))
-                        ilo = c + 1;
-                    else
-                        ihi = c;
-                }
-
-                // Shift s[i+1..ilo) one position to the left, then place tmp at ilo-1.
-                for (var j = i; j < ilo - 1; j++)
-                    s.Write(j, s.Read(j + 1));
-                s.Write(ilo - 1, tmp);
-            }
+            var t = b;
+            b = a % b;
+            a = t;
         }
-        else
-        {
-            // Insert right elements (smaller side) into the merged sequence, left to right.
-            // After each insertion, the sorted merged region [a, i+1) grows rightward.
-            for (var i = m; i < b; i++)
-            {
-                var tmp = s.Read(i);
-
-                // upper_bound in the merged region [a, i):
-                // right element should go after equal left elements (stability).
-                var ilo = a;
-                var ihi = i;
-                while (ilo < ihi)
-                {
-                    var c = (int)((uint)(ilo + ihi) >> 1);
-                    if (s.IsElementLessOrEqual(c, tmp))
-                        ilo = c + 1;
-                    else
-                        ihi = c;
-                }
-
-                // Shift s[ilo..i) one position to the right, then place tmp at ilo.
-                for (var j = i; j > ilo; j--)
-                    s.Write(j, s.Read(j - 1));
-                s.Write(ilo, tmp);
-            }
-        }
+        return a;
     }
 
     /// <summary>
     /// Swaps n consecutive elements starting at index a with n consecutive elements starting at index b.
-    /// Used by the GCD-based block-swap rotation algorithm.
+    /// Used by the equal-length branch of <see cref="Rotate"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SwapRange<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int a, int b, int n)
