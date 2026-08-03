@@ -31,6 +31,18 @@ public class TreeBenchmark
     }
 
     [Benchmark]
+    public void BTreeSort()
+    {
+        SortAlgorithm.Algorithms.BTreeSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
+    public void BPlusTreeSort()
+    {
+        SortAlgorithm.Algorithms.BPlusTreeSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void CartesianTreeSort()
     {
         SortAlgorithm.Algorithms.CartesianTreeSort.Sort(_buffers.Next().AsSpan());

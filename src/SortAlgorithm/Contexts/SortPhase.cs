@@ -14,6 +14,10 @@
 ///   <item><term>SelectionFindMin</term><description>i (sorted boundary) / last (last index)</description></item>
 ///   <item><term>TournamentBuild</term><description>n (element count) / size (leaf count = next power of 2 ≥ n)</description></item>
 ///   <item><term>TournamentExtract</term><description>sortedCount+1 (1-based extraction step) / n (total elements)</description></item>
+///   <item><term>BTreeInsert</term><description>i (index of element being inserted) / last (array last index) / maxKeys (node capacity)</description></item>
+///   <item><term>BTreeExtract</term><description>0 / 0 / maxKeys (node capacity)</description></item>
+///   <item><term>BPlusTreeInsert</term><description>i (index of element being inserted) / last (array last index) / maxKeys (node capacity)</description></item>
+///   <item><term>BPlusTreeScan</term><description>0 / 0 / maxKeys (node capacity)</description></item>
 ///   <item><term>BinomialHeapInsert</term><description>i (index of element being inserted) / last (array last index)</description></item>
 ///   <item><term>BinomialHeapExtract</term><description>step (1-based extraction step) / n (total elements)</description></item>
 ///   <item><term>PairingHeapInsert</term><description>i (index of element being inserted) / last (array last index)</description></item>
@@ -255,6 +259,48 @@ public enum SortPhase
     /// param1=step (1-based extraction step), param2=n (total elements)
     /// </summary>
     CartesianTreeExtract,
+
+    /// <summary>
+    /// B-Tree Sort insertion phase: inserting the element at index i into the B-tree. Distinct from
+    /// <see cref="TreeSortInsert"/>, which descends a binary search tree one key at a time: here a node
+    /// holds many keys, the descent searches inside each node before choosing a child, and a node that is
+    /// already full is split on the way down rather than after the fact.
+    /// <para>
+    /// param3 carries the node capacity because it is the one thing about a B-tree that its own theory
+    /// leaves free, and an observer needs it to know which keys belong to the same node — the key slots of
+    /// a node are a block of param3 consecutive indices in the tree buffer. Hard-coding it on the consumer
+    /// side would silently draw a different tree the moment the parameter is retuned.
+    /// </para>
+    /// param1=i (index of element being inserted), param2=last (array last index), param3=maxKeys (node capacity)
+    /// </summary>
+    BTreeInsert,
+
+    /// <summary>
+    /// B-Tree Sort extraction phase: in-order traversal of the multiway tree writing sorted elements back.
+    /// Distinct from <see cref="TreeSortExtract"/> only in that the traversal alternates children and keys
+    /// within each node; it is announced separately so that param3 keeps naming the node capacity for the
+    /// whole run.
+    /// param3=maxKeys (node capacity)
+    /// </summary>
+    BTreeExtract,
+
+    /// <summary>
+    /// B+Tree Sort insertion phase: inserting the element at index i into the B+ tree. Distinct from
+    /// <see cref="BTreeInsert"/> because the keys an internal node holds are separator <em>copies</em>
+    /// rather than elements: an observer that counts keys in the tree buffer would otherwise conclude the
+    /// sort had lost or duplicated elements.
+    /// param1=i (index of element being inserted), param2=last (array last index), param3=maxKeys (node capacity)
+    /// </summary>
+    BPlusTreeInsert,
+
+    /// <summary>
+    /// B+Tree Sort output phase: walking the linked list of leaves and writing the sorted elements back.
+    /// Distinct from <see cref="BTreeExtract"/> because nothing is traversed — every element lives in a
+    /// leaf and the leaves are already chained, so the phase is a linear scan with no stack and no
+    /// revisiting of internal nodes.
+    /// param3=maxKeys (node capacity)
+    /// </summary>
+    BPlusTreeScan,
 
     // Heap family
 
