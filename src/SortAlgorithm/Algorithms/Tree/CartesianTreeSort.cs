@@ -43,9 +43,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : Θ(n log n) - construction is always linear; extraction is bounded by n extract-min operations on a queue of at most n nodes</description></item>
 /// <item><description>Comparisons : Construction performs fewer than 2n comparisons (each element is pushed and popped at most once, plus one failed pop test).
 /// Extraction performs O(n log w) comparisons, where w is the largest number of simultaneously available nodes (w = 1 for a path, w = O(n) for a balanced tree)</description></item>
-/// <item><description>Index Reads : Θ(n) main + O(comparisons) tree - each element is read once from the input; each comparison and each child lookup reads a tree node</description></item>
-/// <item><description>Index Writes: Θ(2n) main+tree baseline - n node creations, at most 2n-2 child-pointer writes, and n writes back to the input</description></item>
 /// <item><description>Swaps       : 0 - elements are copied into tree nodes and written back during extraction; the priority queue permutes node indices, not elements</description></item>
+/// <item><description>Index Reads : Θ(n) main + O(comparisons) tree - each element is read once from the input; each comparison and each child lookup reads a tree node</description></item>
+/// <item><description>Index Writes: Θ(2n) elements + O(n) structure - n node creations and n writes back to the input, plus at most 2n-2 child-pointer writes</description></item>
 /// <item><description>Space       : O(n) - one struct node per element plus one int array of length n; both are rented from <see cref="System.Buffers.ArrayPool{T}"/></description></item>
 /// </list>
 /// <para><strong>Adaptivity:</strong></para>

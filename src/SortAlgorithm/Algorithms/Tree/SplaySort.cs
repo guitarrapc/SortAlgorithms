@@ -38,9 +38,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n) amortized - guaranteed by splay tree amortized analysis</description></item>
 /// <item><description>Worst case  : O(n log n) - the splay tree's amortized bound applied to a sequence of n insertions; a single insertion may still cost Θ(n)</description></item>
 /// <item><description>Comparisons : O(n log n) amortized, Ω(n) - one comparison per level of the descent</description></item>
+/// <item><description>Swaps       : 0 - no swapping; elements are copied to tree nodes and written back during traversal</description></item>
 /// <item><description>Index Reads : Θ(n) main + O(n log n) amortized tree - the descent and the splay that follows it each touch O(log n) nodes per insertion amortized, plus n traversal reads</description></item>
 /// <item><description>Index Writes: Θ(2n) elements + O(n log n) amortized structure - each element is written once to the tree (CreateNode) and once during in-order traversal; each splay rotation rewrites a constant number of child and parent pointers</description></item>
-/// <item><description>Swaps       : 0 - no swapping; elements are copied to tree nodes and written back during traversal</description></item>
 /// <item><description>Space       : O(n) - one node per element; each node holds value, left/right/parent indices</description></item>
 /// </list>
 /// <para><strong>Adaptive Behavior:</strong></para>

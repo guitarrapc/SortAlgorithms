@@ -38,9 +38,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n)</description></item>
 /// <item><description>Worst case  : Θ(n log n) - occupancy bounds the height at log_t((n+1)/2) + 1 for every input</description></item>
 /// <item><description>Comparisons : Θ(n log n) - a binary search inside a node of m keys costs ⌈log₂(m+1)⌉ and the descent visits Θ(log_t n) nodes, so the base t cancels</description></item>
+/// <item><description>Swaps       : 0 - elements move through node slots, never by swapping array slots</description></item>
 /// <item><description>Index Reads : Θ(n) main + Θ(n log n) tree</description></item>
 /// <item><description>Index Writes: Θ(n) main + O(n t) tree - each insertion shifts at most 2t-2 keys and each split moves about t</description></item>
-/// <item><description>Swaps       : 0 - elements move through node slots, never by swapping array slots</description></item>
 /// <item><description>Space       : O(n) - the leaves hold n keys and the internal levels add a fraction of that, all rented from <see cref="System.Buffers.ArrayPool{T}"/></description></item>
 /// </list>
 /// <para><strong>What a B+ tree buys over a B-tree:</strong></para>

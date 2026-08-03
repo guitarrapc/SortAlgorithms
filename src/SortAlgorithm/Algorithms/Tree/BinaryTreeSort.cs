@@ -34,12 +34,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Θ(n log n) - Balanced tree (e.g., random input or middle-out insertion)</description></item>
 /// <item><description>Average case: Θ(n log n) - Tree height is O(log n), each insertion takes O(log n) comparisons</description></item>
 /// <item><description>Worst case  : Θ(n²) - Completely unbalanced tree (e.g., sorted or reverse-sorted input forms a linear chain)</description></item>
-/// <item><description>Comparisons : Best Θ(n log n), Average Θ(n log n), Worst Θ(n²)</description></item>
-/// <item><description>  - Sorted input: n(n-1)/2 comparisons (each insertion compares with all previous elements)</description></item>
-/// <item><description>  - Random input: ~1.39n log n comparisons (empirically, for balanced trees)</description></item>
-/// <item><description>Index Reads : Θ(n) main + O(comparisons) tree - Each element is read once during tree construction; each comparison reads a tree node</description></item>
-/// <item><description>Index Writes: Θ(2n) - Each element is written once to the tree (CreateNode) and once during in-order traversal</description></item>
-/// <item><description>Swaps       : 0 (No swapping; elements are copied to tree nodes and then back to array)</description></item>
+/// <item><description>Comparisons : Best Θ(n log n), Average Θ(n log n), Worst Θ(n²) - sorted input costs n(n-1)/2, each insertion comparing against every previous element; random input averages ≈1.39 n log₂ n, the expected search path of a random BST being 2 ln n</description></item>
+/// <item><description>Swaps       : 0 - No swapping; elements are copied to tree nodes and then back to the array</description></item>
+/// <item><description>Index Reads : Θ(n) main + O(comparisons) tree - Each element is read once during tree construction; each comparison reads a tree node; the traversal reads every node again</description></item>
+/// <item><description>Index Writes: Θ(2n) elements + Θ(n) structure - Each element is written once to the tree (CreateNode) and once during in-order traversal; every node but the root is linked to its parent exactly once</description></item>
 /// <item><description>Space       : O(n) - One struct node per element; allocated via ArrayPool (no per-node GC allocation)</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>

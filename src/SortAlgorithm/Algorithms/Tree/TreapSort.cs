@@ -36,11 +36,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n) expected - guaranteed by random priority assignment</description></item>
 /// <item><description>Worst case  : O(n²) with astronomically low probability (when random priorities produce degenerate tree)</description></item>
 /// <item><description>Comparisons : O(n log n) expected</description></item>
+/// <item><description>Swaps       : 0 - no swapping; elements are copied to tree nodes and written back during traversal</description></item>
 /// <item><description>Index Reads : Θ(n) main + O(n log n) expected tree - each element read once from main array; each comparison reads a tree node; rotations read the nodes they relink; n traversal reads</description></item>
 /// <item><description>Index Writes: Θ(2n) elements + O(n) expected structure - each element is written once to the tree (CreateNode) and once during in-order traversal; an insertion performs O(1) expected rotations, each rewriting a constant number of child and parent pointers</description></item>
-/// <item><description>Rotations   : O(n) expected - the expected number of rotations per insertion is constant, independent of n</description></item>
-/// <item><description>Swaps       : 0 - no swapping; elements are copied to tree nodes and written back during traversal</description></item>
 /// <item><description>Space       : O(n) - one node per element; each node holds value, left/right/parent indices, and priority</description></item>
+/// <item><description>Rotations   : O(n) expected - the expected number of rotations per insertion is constant, independent of n</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">

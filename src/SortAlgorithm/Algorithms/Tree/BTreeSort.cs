@@ -41,9 +41,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n)</description></item>
 /// <item><description>Worst case  : Θ(n log n) - occupancy bounds the height at log_t((n+1)/2) + 1 for every input</description></item>
 /// <item><description>Comparisons : Θ(n log n) - searching a node of m keys by binary search costs ⌈log₂(m+1)⌉, and the descent visits Θ(log_t n) nodes, so the base t cancels</description></item>
+/// <item><description>Swaps       : 0 - elements move through node slots, never by swapping array slots</description></item>
 /// <item><description>Index Reads : Θ(n) main + Θ(n log n) tree</description></item>
 /// <item><description>Index Writes: Θ(n) main + O(n t) tree - each insertion shifts at most 2t-2 keys and each split moves t-1</description></item>
-/// <item><description>Swaps       : 0 - elements move through node slots, never by swapping array slots</description></item>
 /// <item><description>Space       : O(n) - at most n/(t-1) + 2 nodes, rented from <see cref="System.Buffers.ArrayPool{T}"/></description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>

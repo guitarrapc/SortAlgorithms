@@ -51,9 +51,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n) - Each of n insertions takes O(log n) comparisons</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by AVL balancing property</description></item>
 /// <item><description>Comparisons : O(n log n) - Each insertion performs at most 1.44 × log₂(n) comparisons</description></item>
+/// <item><description>Swaps       : 0 - No swaps performed; only tree node manipulations</description></item>
 /// <item><description>Index Reads : Θ(n log n) - Each element is read once from the array; every comparison and every retraced node reads tree nodes</description></item>
 /// <item><description>Index Writes: Θ(2n) elements + O(n) structure - Each element is written once to the tree (CreateNode) and once during in-order traversal, plus height and pointer updates</description></item>
-/// <item><description>Swaps       : 0 - No swaps performed; only tree node manipulations</description></item>
+/// <item><description>Space       : O(n) - One node per element holding value, left/right indices and height, rented from ArrayPool; the insertion path stack adds O(log n)</description></item>
 /// <item><description>Rotations   : O(n) - An insertion needs at most one rebalancing, i.e. a single or a double rotation</description></item>
 /// </list>
 /// <para><strong>Advantages over unbalanced BST:</strong></para>
@@ -664,11 +665,12 @@ public static class BalancedBinaryTreeSort
 /// <item><description>Best case   : Θ(n log n) - Already sorted or reversed, still requires building balanced tree</description></item>
 /// <item><description>Average case: Θ(n log n) - Each of n insertions takes O(log n) comparisons</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by AVL balancing property</description></item>
-/// <item><description>Comparisons : O(n log n) - Each insertion performs at most log₂(n) comparisons</description></item>
-/// <item><description>Index Reads : Θ(n) - Each element is read once during insertion</description></item>
-/// <item><description>Index Writes: Θ(n) - Each element is written once during in-order traversal</description></item>
+/// <item><description>Comparisons : O(n log n) - Each insertion performs at most 1.44 × log₂(n) comparisons</description></item>
 /// <item><description>Swaps       : 0 - No swaps performed; only tree node manipulations</description></item>
-/// <item><description>Rotations   : O(n log n) worst case - At most 2 rotations per insertion (amortized O(1))</description></item>
+/// <item><description>Index Reads : Θ(n) - Each element is read once during insertion; this reference version announces only the main span, so tree node access is not reported</description></item>
+/// <item><description>Index Writes: Θ(n) - Each element is written once during in-order traversal; node creation and linking are not reported</description></item>
+/// <item><description>Space       : O(n) - One node per element; unlike the arena version above, each node is a separate heap allocation</description></item>
+/// <item><description>Rotations   : O(n) - An insertion needs at most one rebalancing, i.e. a single or a double rotation</description></item>
 /// </list>
 /// <para><strong>Advantages over unbalanced BST:</strong></para>
 /// <list type="bullet">
