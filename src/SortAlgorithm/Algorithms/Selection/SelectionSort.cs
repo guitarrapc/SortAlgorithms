@@ -38,7 +38,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : Θ(n²) - Same comparison count; maximum n-1 swaps when reverse sorted</description></item>
 /// <item><description>Comparisons : Θ(n²) - Exactly n(n-1)/2 comparisons in all cases (input-independent)</description></item>
 /// <item><description>Swaps       : O(n) - At most n-1 swaps; best case 0 (already sorted), worst case n-1</description></item>
-/// <item><description>Writes      : O(n) - 2 writes per swap (via tuple deconstruction or temp variable)</description></item>
+/// <item><description>Index Writes: O(n) - 2 writes per swap (via tuple deconstruction or temp variable)</description></item>
 /// </list>
 /// <para><strong>Use Cases:</strong></para>
 /// <list type="bullet">

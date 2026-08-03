@@ -39,7 +39,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n log n) - Balanced recursion tree with n work per level</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed balanced partitioning regardless of input</description></item>
 /// <item><description>Comparisons : O(n log n) - At most n⌈log₂(n)⌉ - 2^⌈log₂(n)⌉ + 1 comparisons</description></item>
-/// <item><description>Writes      : O(n log n) - Each level writes all n elements, ⌈log₂(n)⌉ levels total</description></item>
+/// <item><description>Index Writes: O(n log n) - Each level writes all n elements, ⌈log₂(n)⌉ levels total</description></item>
 /// <item><description>Space       : O(n) - Auxiliary buffer of size n/2 for merging (this implementation uses ArrayPool for efficiency)</description></item>
 /// </list>
 /// <para><strong>Advantages of Merge Sort:</strong></para>

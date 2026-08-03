@@ -39,7 +39,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n) - Assumes uniform distribution, permutation phase is O(n)</description></item>
 /// <item><description>Worst case  : O(n²) - All elements in one class, degenerates to Insertion Sort</description></item>
 /// <item><description>Comparisons : O(n log(n/m)) on average - Each class sorted independently by Insertion Sort</description></item>
-/// <item><description>Memory      : O(m) - Two integer arrays of size m for counts and boundaries</description></item>
+/// <item><description>Space       : O(m) - Two integer arrays of size m for counts and boundaries</description></item>
 /// <item><description>Note        : クラス数は 0.43n (最小 2) に自動調整されます。キーの分布が偏るとパフォーマンスが低下します。128ビット整数型には対応していません。</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

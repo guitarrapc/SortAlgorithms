@@ -415,7 +415,7 @@ public static class RotateMergeSort
 /// <item><description>Average case: O(n log² n) - Binary search (log n) + rotation (n) per merge level (log n levels)</description></item>
 /// <item><description>Worst case  : O(n log² n) - Rotation adds O(n) factor to each merge operation</description></item>
 /// <item><description>Comparisons : Best O(n), Average/Worst O(n log² n)</description></item>
-/// <item><description>Writes      : Best O(n), Average/Worst O(n log² n) - k==1/k==n-1 fast paths use sequential writes; 3-reversal uses cache-friendly swaps</description></item>
+/// <item><description>Index Writes: Best O(n), Average/Worst O(n log² n) - k==1/k==n-1 fast paths use sequential writes; 3-reversal uses cache-friendly swaps</description></item>
 /// <item><description>Swaps       : 0 for k==1/k==n-1 fast paths; O(n/2) per rotation in general case (3-reversal)</description></item>
 /// <item><description>Space       : O(log n) - Recursion stack for sort + merge, no auxiliary buffer needed</description></item>
 /// </list>
@@ -737,7 +737,7 @@ public static class RotateMergeSortRecursive
 /// <item><description>Average case: O(n log² n) - Binary search (log n) + rotation (n) per merge level (log n levels)</description></item>
 /// <item><description>Worst case  : O(n log² n) - Rotation adds O(n) factor to each merge operation</description></item>
 /// <item><description>Comparisons : Best O(n), Average/Worst O(n log² n)</description></item>
-/// <item><description>Writes      : Best O(n), Average/Worst O(n² log n) - GCD-cycle rotation uses assignments only (no swaps)</description></item>
+/// <item><description>Index Writes: Best O(n), Average/Worst O(n² log n) - GCD-cycle rotation uses assignments only (no swaps)</description></item>
 /// <item><description>Swaps       : 0 - GCD-cycle rotation uses only write operations, no swaps needed</description></item>
 /// <item><description>Space       : O(log n) - Recursion stack for sort + merge, no auxiliary buffer needed</description></item>
 /// </list>

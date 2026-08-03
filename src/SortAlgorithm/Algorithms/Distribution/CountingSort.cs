@@ -43,12 +43,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n + k) - Independent of how the keys are distributed</description></item>
 /// <item><description>Comparisons : 0 - No comparison operations between keys (distribution sort)</description></item>
 /// <item><description>Swaps       : 0 - Elements are placed at a computed index, never exchanged</description></item>
-/// <item><description>IndexReads  : 3n - n to extract the keys, n to place the elements, n for the write-back.
+/// <item><description>Index Reads : 3n - n to extract the keys, n to place the elements, n for the write-back.
 /// Counting runs over the extracted keys, so it does not touch the elements a third time</description></item>
-/// <item><description>IndexWrites : 2n - n to place each element in the output, n for the write-back. Producing a
+/// <item><description>Index Writes: 2n - n to place each element in the output, n for the write-back. Producing a
 /// separate output is inherent to counting sort; returning it to the caller's span is what the in-place API adds,
 /// and it is issued as one range copy that an observer expands into n reads and n writes</description></item>
-/// <item><description>Memory      : O(n + k) - an n-element output plus a k-sized counter array</description></item>
+/// <item><description>Space       : O(n + k) - an n-element output plus a k-sized counter array</description></item>
 /// <item><description>Note        : A large key range leads to excessive memory usage. The maximum range is <c>MaxCountArraySize</c> (10,000,000).</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
@@ -259,12 +259,12 @@ public static class CountingSort
 /// <item><description>Comparisons : 2n+1 (n×2 for min/max scan, +1 for early-exit equality check) - the ordering
 /// step is comparison-free, but discovering the range is not, and the scan is real work the sort performs</description></item>
 /// <item><description>Swaps       : 0 - Elements are placed at a computed index, never exchanged</description></item>
-/// <item><description>IndexReads  : 4n - n to discover the range, n to count, n to place, n for the write-back. An
+/// <item><description>Index Reads : 4n - n to discover the range, n to count, n to place, n for the write-back. An
 /// element is its own key, so there is nothing to extract once and reuse; every pass reads the elements themselves</description></item>
-/// <item><description>IndexWrites : 2n - n to place each element in the output, n for the write-back. Producing a
+/// <item><description>Index Writes: 2n - n to place each element in the output, n for the write-back. Producing a
 /// separate output is inherent to counting sort; returning it to the caller's span is what the in-place API adds,
 /// and it is issued as one range copy that an observer expands into n reads and n writes</description></item>
-/// <item><description>Memory      : O(n + k) - an n-element output plus a k-sized counter array</description></item>
+/// <item><description>Space       : O(n + k) - an n-element output plus a k-sized counter array</description></item>
 /// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は <c>MaxCountArraySize</c> (10,000,000)、かつ range/n ≤ <c>MaxRangeFactor</c> (32) の制約があります。</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>

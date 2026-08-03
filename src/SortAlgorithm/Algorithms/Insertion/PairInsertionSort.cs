@@ -34,7 +34,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n²) - Similar to standard insertion sort but with lower constant factors</description></item>
 /// <item><description>Worst case  : O(n²) - Reverse sorted array</description></item>
 /// <item><description>Comparisons : ~n²/4 on average (fewer than standard insertion sort due to pair comparison)</description></item>
-/// <item><description>Writes      : Similar to standard insertion sort, but better cache behavior</description></item>
+/// <item><description>Index Writes: Similar to standard insertion sort, but better cache behavior</description></item>
 /// </list>
 /// <para><strong>Advantages over Standard Insertion Sort:</strong></para>
 /// <list type="bullet">

@@ -44,7 +44,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n²) - All elements in one bucket, degenerates to Insertion Sort</description></item>
 /// <item><description>Range limit : None - auxiliary space depends on n, not on the key range</description></item>
 /// <item><description>Comparisons : O(n log(n/k)) on average - Each bucket sorted independently</description></item>
-/// <item><description>Memory      : O(n + k) - k bucket lists plus n elements total</description></item>
+/// <item><description>Space       : O(n + k) - k bucket lists plus n elements total</description></item>
 /// <item><description>Note        : Bucket count is min(n, range); there is no cap on the key range, unlike CountingSort and PigeonholeSort. Skewed key distribution degrades performance.</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
@@ -318,7 +318,7 @@ public static class BucketSort
 /// <item><description>Worst case  : O(n²) - All elements in one bucket, degenerates to Insertion Sort</description></item>
 /// <item><description>Range limit : None - auxiliary space depends on n, not on the key range</description></item>
 /// <item><description>Comparisons : O(n log(n/k)) on average - Each bucket sorted independently</description></item>
-/// <item><description>Memory      : O(n + k) - k bucket lists plus n elements total</description></item>
+/// <item><description>Space       : O(n + k) - k bucket lists plus n elements total</description></item>
 /// <item><description>Note        : バケット数は min(n, 値域)。CountingSort / PigeonholeSort と違い値域の上限制約はありません。</description></item>
 /// </list>
 /// </remarks>

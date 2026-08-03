@@ -47,7 +47,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n log n) - Comparisons remain near-optimal, but data movement is O(n²)</description></item>
 /// <item><description>Worst case  : O(n²) - Due to insertion shifts, though comparison count remains O(n log n)</description></item>
 /// <item><description>Comparisons : Approximately n⌈log₂ n⌉ - 2^⌈log₂ n⌉ + 1, which is close to the information-theoretic minimum</description></item>
-/// <item><description>Writes      : O(n²) - Binary insertion still requires O(n²) element shifts in worst case</description></item>
+/// <item><description>Index Writes: O(n²) - Binary insertion still requires O(n²) element shifts in worst case</description></item>
 /// <item><description>Space       : O(n) - Additional arrays needed for tracking indices and pended elements</description></item>
 /// </list>
 /// <para><strong>Jacobsthal Sequence:</strong></para>

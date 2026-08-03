@@ -39,7 +39,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n√n) - Random input typically produces O(√n) strands</description></item>
 /// <item><description>Worst case  : O(n²) - Reverse-sorted input produces n strands of length 1</description></item>
 /// <item><description>Comparisons : O(n × passes) - one comparison per element per extraction pass plus merge work</description></item>
-/// <item><description>Writes      : O(n × passes) - each merge writes all accumulated elements</description></item>
+/// <item><description>Index Writes: O(n × passes) - each merge writes all accumulated elements</description></item>
 /// <item><description>Space       : O(n) - three flat ArrayPool buffers: remaining, strand, result</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

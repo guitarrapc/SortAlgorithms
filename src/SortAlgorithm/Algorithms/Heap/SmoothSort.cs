@@ -45,7 +45,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n) - Reverse sorted data requires maximum heap operations but bounded by Leonardo heap depth (log φ n)</description></item>
 /// <item><description>Comparisons : Best Ω(n), Average ~1.5n log n, Worst O(n log n) - Leonardo heap depth log φ n where φ = (1+√5)/2 ≈ 1.618 (golden ratio)</description></item>
 /// <item><description>Swaps       : Best 0 (sorted), Average O(n log n), Worst O(n log n) - Each swap involves 2 writes</description></item>
-/// <item><description>Writes      : Best 0 (sorted), Average O(n log n), Worst O(n log n) - Tracked separately from swaps for precise measurement</description></item>
+/// <item><description>Index Writes: Best 0 (sorted), Average O(n log n), Worst O(n log n) - Tracked separately from swaps for precise measurement</description></item>
 /// </list>
 /// <para><strong>Implementation Verification:</strong></para>
 /// <list type="bullet">

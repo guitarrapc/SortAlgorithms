@@ -38,7 +38,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log k) - where k is the average LIS length</description></item>
 /// <item><description>Worst case  : O(n log n) - Reverse-sorted input produces n piles</description></item>
 /// <item><description>Comparisons : O(n log k) - binary search per element + heap operations</description></item>
-/// <item><description>Writes      : O(n) - each element written once to merge buffer, then copied back</description></item>
+/// <item><description>Index Writes: O(n) - each element written once to merge buffer, then copied back</description></item>
 /// <item><description>Space       : O(n) - four flat ArrayPool buffers: pile links, pile heads, heap, merge output</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

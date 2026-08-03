@@ -54,7 +54,7 @@ namespace SortAlgorithm.Algorithms;
 /// 667,030 comparisons for uniform random input, 90,000 for already-sorted 0..n, and 0 for keys drawn from 0..999 and for all-equal input
 /// (there every leaf either ends at a single element or is settled by the range scan, so the fallback never runs)</description></item>
 /// <item><description>Digit Passes: 1 initial key range scan + d = ⌈log₁₀(max − min)⌉ levels examined; a level whose digit is uniform is counted but not distributed</description></item>
-/// <item><description>Memory      : O(n) for temporary buffer</description></item>
+/// <item><description>Space       : O(n) for temporary buffer</description></item>
 /// </list>
 /// <para><strong>MSD vs LSD (Decimal):</strong></para>
 /// <list type="bullet">

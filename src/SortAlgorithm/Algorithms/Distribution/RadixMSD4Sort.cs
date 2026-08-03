@@ -57,7 +57,7 @@ namespace SortAlgorithm.Algorithms;
 /// (there every leaf either ends at a single element or is settled by the range scan, so the fallback never runs)</description></item>
 /// <item><description>Digit Passes: d = ⌈bitWidth(max − min)/2⌉ examined, at most ⌈keyBits/2⌉ (4 for byte, 8 for short, 16 for int, 32 for long);
 /// a level whose digit is uniform is counted but not distributed</description></item>
-/// <item><description>Memory      : O(n) for temporary buffer</description></item>
+/// <item><description>Space       : O(n) for temporary buffer</description></item>
 /// </list>
 /// <para><strong>MSD vs LSD:</strong></para>
 /// <list type="bullet">

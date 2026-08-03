@@ -46,9 +46,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : Θ(d × n) - Performance depends on digit count, not comparisons</description></item>
 /// <item><description>Comparisons : 0 (Non-comparison sort; uses only arithmetic operations)</description></item>
 /// <item><description>Swaps       : 0 (Elements moved via bucket redistribution, not swaps)</description></item>
-/// <item><description>Writes      : e × n (one write per executed distribute pass) + optional final copy, where e ≤ d is the number of non-identity digits</description></item>
-/// <item><description>Reads       : 2 × n preprocessing (min/max scan, then one pass building every digit's histogram) + e × n (one read per executed distribute pass) + optional final copy</description></item>
-/// <item><description>Memory      : O(n) for temporary buffer + d × 11 stack counters</description></item>
+/// <item><description>Index Writes: e × n (one write per executed distribute pass) + optional final copy, where e ≤ d is the number of non-identity digits</description></item>
+/// <item><description>Index Reads : 2 × n preprocessing (min/max scan, then one pass building every digit's histogram) + e × n (one read per executed distribute pass) + optional final copy</description></item>
+/// <item><description>Space       : O(n) for temporary buffer + d × 11 stack counters</description></item>
 /// </list>
 /// <para><strong>Note:</strong> Uses decimal arithmetic (division and modulo), which may be slower than binary-based radix sorts (e.g., RadixLSD4Sort with bit shifts).
 /// However, it is more intuitive for understanding and debugging.</para>

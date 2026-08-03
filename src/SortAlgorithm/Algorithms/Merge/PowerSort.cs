@@ -41,7 +41,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n log n) - Optimal merge tree construction</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by power-based merge strategy</description></item>
 /// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - Exploits existing order</description></item>
-/// <item><description>Writes      : Best O(1), Average/Worst O(n log n) - Minimal for sorted data</description></item>
+/// <item><description>Index Writes: Best O(1), Average/Worst O(n log n) - Minimal for sorted data</description></item>
 /// <item><description>Space       : O(n/2) worst-case for temporary merge buffer</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>

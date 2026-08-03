@@ -63,10 +63,10 @@ namespace SortAlgorithm.Algorithms;
 /// (in those two every leaf either ends at a single element or stays above the cutoff, so the fallback never runs)</description></item>
 /// <item><description>Digit Passes: d = ⌈requiredBits/8⌉ from the key range, capped by the key width (1 for byte, 2 for short, 4 for int,
 /// 8 for long); levels below that can still terminate early when a bucket's digit turns out to be uniform</description></item>
-/// <item><description>Reads       : n (range scan) + one per element per digit level visited + the permutation and cutoff reads.
+/// <item><description>Index Reads : n (range scan) + one per element per digit level visited + the permutation and cutoff reads.
 /// Inputs at or below the cutoff skip the range scan entirely and go straight to <see cref="InsertionSort"/>,
 /// so a small array pays no radix overhead at all</description></item>
-/// <item><description>Memory      : O(1) auxiliary space, 2052 bytes of stack per recursion level (257 + 256 counters).
+/// <item><description>Space       : O(1) auxiliary space, 2052 bytes of stack per recursion level (257 + 256 counters).
 /// Recursion depth is bounded by the digit count (at most 4 for 32-bit keys, 8 for 64-bit,
 /// and less when the key range is narrow), because each level consumes exactly one digit — it does not depend on n, on the input order,
 /// or on how the buckets split</description></item>

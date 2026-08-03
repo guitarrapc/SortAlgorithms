@@ -60,7 +60,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n log n) — balanced recursion tree with n writes per level</description></item>
 /// <item><description>Worst case  : O(n log n) — guaranteed balanced partitioning regardless of input</description></item>
 /// <item><description>Comparisons : O(n log n) — at most n⌈log₂(n)⌉ comparisons</description></item>
-/// <item><description>Writes      : n(1 + ⌈log₂(n)⌉) — ~33% fewer than standard MergeSort's 1.5n⌈log₂(n)⌉ for large n</description></item>
+/// <item><description>Index Writes: n(1 + ⌈log₂(n)⌉) — ~33% fewer than standard MergeSort's 1.5n⌈log₂(n)⌉ for large n</description></item>
 /// <item><description>Space       : O(n) — full-size auxiliary buffer (uses ArrayPool for efficiency)</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>

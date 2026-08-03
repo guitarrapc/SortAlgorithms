@@ -46,9 +46,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n + k) - Linear in input size plus key range</description></item>
 /// <item><description>Worst case  : O(n + k) - Even with all elements having different keys</description></item>
 /// <item><description>Comparisons : 0 - No comparison operations between keys (distribution sort)</description></item>
-/// <item><description>IndexReads  : 3n - n reads for key extraction, n reads for copying to temp, n reads for writing back</description></item>
-/// <item><description>IndexWrites : 2n - n writes to temp, n writes back to original array</description></item>
-/// <item><description>Memory      : O(n + k) - Temporary arrays for elements, keys, next[] links, and hole head indices</description></item>
+/// <item><description>Index Reads : 3n - n reads for key extraction, n reads for copying to temp, n reads for writing back</description></item>
+/// <item><description>Index Writes: 2n - n writes to temp, n writes back to original array</description></item>
+/// <item><description>Space       : O(n + k) - Temporary arrays for elements, keys, next[] links, and hole head indices</description></item>
 /// <item><description>Note        : A large key range leads to excessive memory usage. The maximum range is <c>MaxHoleArraySize</c> (10,000,000).</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
@@ -245,9 +245,9 @@ public static class PigeonholeSort
 /// <item><description>Worst case  : O(n + k) - Even with all elements having different values</description></item>
 /// <item><description>Comparisons : 2n+1 (n×2 for min/max scan, +1 for early-exit equality check)</description></item>
 /// <item><description>Swaps       : 0</description></item>
-/// <item><description>IndexReads  : 2n - n for the min/max scan, n for the distribution pass</description></item>
-/// <item><description>IndexWrites : n - each element is written once, directly into its final position</description></item>
-/// <item><description>Memory      : O(k) - one hole array; no per-element auxiliary storage</description></item>
+/// <item><description>Index Reads : 2n - n for the min/max scan, n for the distribution pass</description></item>
+/// <item><description>Index Writes: n - each element is written once, directly into its final position</description></item>
+/// <item><description>Space       : O(k) - one hole array; no per-element auxiliary storage</description></item>
 /// <item><description>Note        : 値の範囲が大きいとメモリ使用量が膨大になります。最大範囲は <c>MaxHoleArraySize</c> (10,000,000)、かつ range/n ≤ <c>MaxRangeFactor</c> (32) の制約があります。</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>

@@ -33,7 +33,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n) - When data is already sorted (early detection)</description></item>
 /// <item><description>Average case: O(n √(log n)) - Hybrid distribution and comparison</description></item>
 /// <item><description>Worst case  : O(n * (K/S + S)) where K = log₂(range), S = max_splits</description></item>
-/// <item><description>Memory      : O(1) auxiliary metadata — both bin_sizes and bin_cache are bounded by the
+/// <item><description>Space       : O(1) auxiliary metadata — both bin_sizes and bin_cache are bounded by the
 /// key width and the tuning constants, independent of n (bin_sizes on stack, bin_cache via ArrayPool)</description></item>
 /// </list>
 /// <para><strong>Why SpreadSort over the other distribution sorts:</strong></para>

@@ -57,7 +57,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n) - Completely random or alternating data produces maximum runs (k ≈ ⌈n/2⌉)</description></item>
 /// <item><description>Comparisons : O(n log k) - Run detection: O(n), merging: O(n log k)</description></item>
 /// <item><description>Swaps       : O(n/2) worst case - only during run detection phase for in-place reversal of descending runs</description></item>
-/// <item><description>Writes      : O(n log k) - Shift-based merge operations (fewer than swap-based approaches)</description></item>
+/// <item><description>Index Writes: O(n log k) - Shift-based merge operations (fewer than swap-based approaches)</description></item>
 /// <item><description>Space       : O(n/2) - Maximum temporary buffer size for largest partition during merge, reused across operations</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>

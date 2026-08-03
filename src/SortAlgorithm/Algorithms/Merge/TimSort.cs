@@ -51,7 +51,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n log n) - Balanced run detection and merge tree with adaptive behavior</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by minRun calculation (ensures balanced merges) and stack invariants (ensures O(log n) depth)</description></item>
 /// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - Exploits existing order in data</description></item>
-/// <item><description>Writes      : Best O(1), Average/Worst O(n log n) - Minimal writes for sorted data due to run detection</description></item>
+/// <item><description>Index Writes: Best O(1), Average/Worst O(n log n) - Minimal writes for sorted data due to run detection</description></item>
 /// <item><description>Space       : O(n/2) worst-case for temporary merge buffer (smaller run is copied)</description></item>
 /// </list>
 /// <para><strong>Adaptive Behavior:</strong></para>

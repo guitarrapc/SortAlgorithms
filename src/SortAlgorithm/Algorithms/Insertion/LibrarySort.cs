@@ -72,7 +72,7 @@ namespace SortAlgorithm.Algorithms;
 /// how sorted the input is; sorted input merely adds no shifting on top</description></item>
 /// <item><description>Average case  : O(n log n) - With random input and good gap distribution</description></item>
 /// <item><description>Worst case    : O(n²) - Pathological gap clustering without randomization</description></item>
-/// <item><description>Space         : O(n) - Auxiliary array of (1+ε)n elements, an n-element staging
+/// <item><description>Space       : O(n) - Auxiliary array of (1+ε)n elements, an n-element staging
 /// buffer for rebalancing, and one occupancy bit per auxiliary slot</description></item>
 /// <item><description>Binary Search : O(log n) per insertion to find position</description></item>
 /// <item><description>Shift Cost    : O(log n) average per insertion with good gaps</description></item>

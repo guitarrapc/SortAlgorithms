@@ -30,7 +30,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case:    O(n) - Already sorted with partition detection</description></item>
 /// <item><description>Average case:  O(n log n) - Typical random data</description></item>
 /// <item><description>Worst case:    O(n log n) - Guaranteed by HeapSort fallback</description></item>
-/// <item><description>Space:         O(log n) - Recursion stack depth</description></item>
+/// <item><description>Space       : O(log n) - Recursion stack depth</description></item>
 /// <item><description>Stable:        No</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
