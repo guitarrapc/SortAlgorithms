@@ -1,4 +1,4 @@
-# SortAlgorithms
+﻿# SortAlgorithms
 
 This repository shows implementation for the Major Sort Algorithm.
 Aim not to use LINQ or similar ease to use, but memory unefficient technique.
@@ -2497,8 +2497,8 @@ UnrollFactor=1  WarmupCount=2
   - Recursive
 
 ### Tree
-- [B+Tree Sort](./src/SortAlgorithm/Algorithms/Tree/BPlusTreeSort.cs)
-- [B-Tree Sort](./src/SortAlgorithm/Algorithms/Tree/BTreeSort.cs)
+- [B Plus Tree Sort](./src/SortAlgorithm/Algorithms/Tree/BPlusTreeSort.cs)
+- [B Tree Sort](./src/SortAlgorithm/Algorithms/Tree/BTreeSort.cs)
 - [Binary Tree Sort (AVL)](./src/SortAlgorithm/Algorithms/Tree/BalancedBinaryTreeSort.cs)
 - [Binary Tree Sort (BST)](./src/SortAlgorithm/Algorithms/Tree/BinaryTreeSort.cs)
 - [Cartesian Tree Sort](./src/SortAlgorithm/Algorithms/Tree/CartesianTreeSort.cs)
