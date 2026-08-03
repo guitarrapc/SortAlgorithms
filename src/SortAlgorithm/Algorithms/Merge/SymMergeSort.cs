@@ -47,7 +47,7 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Family      : Hybrid (Merge + Insertion), Iterative</description></item>
 /// <item><description>Stable      : Yes (≥ comparison in binary search preserves relative order)</description></item>
-/// <item><description>In-place    : Yes (O(1) auxiliary space)</description></item>
+/// <item><description>In-place    : Yes (no external buffer; the symmetric recursion needs an O(log n) stack)</description></item>
 /// <item><description>Best case   : O(n) – Sorted data: insertion sort is O(n), all phase-2 merges are skipped</description></item>
 /// <item><description>Average case: O(n log² n) moves, O(n log n) comparisons</description></item>
 /// <item><description>Worst case  : O(n log² n) moves, O(n log n) comparisons</description></item>
