@@ -42,8 +42,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
 /// <item><description>Comparisons : ~n log n - Approximately 30-40% fewer comparisons than standard heap sort</description></item>
 /// <item><description>Swaps       : ~n log n - Similar to standard heap sort (dominated by extraction phase)</description></item>
-/// <item><description>Cache       : Poor locality - Heap structure causes frequent cache misses due to non-sequential access</description></item>
+/// <item><description>Index Reads : Θ(n log n) - the descent to a leaf and the climb back up each touch one node per level</description></item>
+/// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the heap occupies the input span itself; only a few temporary variables are used</description></item>
 /// </list>
+/// <para><strong>Cache behaviour:</strong> poor locality — the heap's parent/child index arithmetic jumps through memory, so extraction misses cache far more than a sequential algorithm.</para>
 /// <para><strong>Why "Bottom-Up"?:</strong></para>
 /// <para>
 /// The term "bottom-up" refers to the strategy of descending to a leaf level first (the "bottom" of the heap)

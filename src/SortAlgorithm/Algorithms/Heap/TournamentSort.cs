@@ -37,10 +37,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n)</description></item>
 /// <item><description>Comparisons : ~n log n — one winner comparison per node in each replay path</description></item>
-/// <item><description>Swaps       : ≤ n-1 — at most one swap per extraction step</description></item>
-/// <item><description>Auxiliary   : O(n) — integer winner tree allocated via ArrayPool</description></item>
-/// <item><description>Cache       : Poor — tree traversal jumps through non-sequential memory</description></item>
+/// <item><description>Swaps       : O(n) — at most one swap per extraction step</description></item>
+/// <item><description>Index Reads : Θ(n log n) — each extraction replays one root-to-leaf path, comparing and reading one node per level</description></item>
+/// <item><description>Index Writes: Θ(n log n) — each replayed path rewrites the winner at every level it climbs</description></item>
+/// <item><description>Space       : O(n) — integer winner tree allocated via ArrayPool; the sorted output stays in the caller's span</description></item>
 /// </list>
+/// <para><strong>Cache behaviour:</strong> poor — replaying a path jumps through non-sequential memory in the winner tree.</para>
 /// <para><strong>Difference from HeapSort:</strong></para>
 /// <list type="bullet">
 /// <item><description>Uses an explicit winner-tree (separate int[] array) instead of the in-place max-heap.</description></item>

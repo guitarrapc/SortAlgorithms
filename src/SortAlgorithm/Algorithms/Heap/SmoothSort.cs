@@ -39,13 +39,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Heap (Leonardo heap variant)</description></item>
 /// <item><description>Stable      : No (heap operations do not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space - only uses variables for heap size tracking)</description></item>
-/// <item><description>Adaptive    : Yes (recognizes sorted subsequences and achieves O(n) on sorted data)</description></item>
 /// <item><description>Best case   : Ω(n) - Already sorted data requires only O(n) comparisons during heap construction with no swaps</description></item>
 /// <item><description>Average case: Θ(n log n) - Typical random data requires O(n log n) comparisons and swaps</description></item>
 /// <item><description>Worst case  : O(n log n) - Reverse sorted data requires maximum heap operations but bounded by Leonardo heap depth (log φ n)</description></item>
 /// <item><description>Comparisons : Best Ω(n), Average ~1.5n log n, Worst O(n log n) - Leonardo heap depth log φ n where φ = (1+√5)/2 ≈ 1.618 (golden ratio)</description></item>
 /// <item><description>Swaps       : Best 0 (sorted), Average O(n log n), Worst O(n log n) - Each swap involves 2 writes</description></item>
-/// <item><description>Index Writes: Best 0 (sorted), Average O(n log n), Worst O(n log n) - Tracked separately from swaps for precise measurement</description></item>
+/// <item><description>Index Reads : Best Θ(n), Average/Worst O(n log n) - a sorted input only walks the Leonardo heap forest once without restoring anything</description></item>
+/// <item><description>Index Writes: Best 0 (sorted), Average O(n log n), Worst O(n log n) - reported separately from swaps, which each account for two writes of their own</description></item>
+/// <item><description>Space       : O(1) - the Leonardo heap forest occupies the input span; only the heap-size bitmap variables are kept aside</description></item>
 /// </list>
 /// <para><strong>Implementation Verification:</strong></para>
 /// <list type="bullet">

@@ -40,9 +40,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n) - extraction is O(log n) amortized; a single extraction may cost O(n)</description></item>
 /// <item><description>Comparisons : O(n log n) - one per insert, plus one per meld during the pairing passes</description></item>
+/// <item><description>Swaps       : 0 - elements move through heap nodes, never by swapping array slots</description></item>
 /// <item><description>Index Reads : Θ(n) main + O(n log n) heap - each element is read once from the input; the pointer walks are counted on the heap buffer</description></item>
 /// <item><description>Index Writes: Θ(n) main + O(n log n) heap - each element is written back once; node creation and pointer updates are counted on the heap buffer</description></item>
-/// <item><description>Swaps       : 0 - elements move through heap nodes, never by swapping array slots</description></item>
 /// <item><description>Space       : O(n) - one struct node per element, rented from <see cref="System.Buffers.ArrayPool{T}"/></description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>

@@ -38,8 +38,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
 /// <item><description>Comparisons : ~2n log n - Approximately 2 comparisons per heapify (left and right child checks)</description></item>
 /// <item><description>Swaps       : 0 - No swaps; extraction reads root+last, sifts last down, writes root to end</description></item>
-/// <item><description>Cache       : Poor locality - Heap structure causes frequent cache misses due to non-sequential access</description></item>
+/// <item><description>Index Reads : Θ(n log n) - every sift-down reads the children at each level it descends</description></item>
+/// <item><description>Index Writes: Θ(n log n) - every sift-down writes each level it descends, plus n root-to-end writes</description></item>
+/// <item><description>Space       : O(1) - the heap occupies the input span itself</description></item>
 /// </list>
+/// <para><strong>Cache behaviour:</strong> poor locality — the heap's parent/child index arithmetic jumps through memory, so extraction misses cache far more than a sequential algorithm.</para>
 /// <para><strong>Why "Heap / Selection" Family?:</strong></para>
 /// <para>
 /// HeapSort belongs to the Selection sort family. Like Selection Sort, it repeatedly
@@ -310,8 +313,11 @@ public static class HeapSort
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
 /// <item><description>Comparisons : ~2n log n - 2 comparisons per level during sift-down (left child check + right child check)</description></item>
 /// <item><description>Swaps       : ~n log n - One swap per level during sift-down, plus n-1 root-to-end swaps in extraction</description></item>
-/// <item><description>Cache       : Poor locality - Heap structure causes frequent cache misses due to non-sequential access</description></item>
+/// <item><description>Index Reads : Θ(n log n) - every sift-down reads the children at each level it descends</description></item>
+/// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(1) - the heap occupies the input span itself</description></item>
 /// </list>
+/// <para><strong>Cache behaviour:</strong> poor locality — the heap's parent/child index arithmetic jumps through memory, so extraction misses cache far more than a sequential algorithm.</para>
 /// <para><strong>Difference from <see cref="HeapSort"/>:</strong></para>
 /// <list type="bullet">
 /// <item><description>Build phase: Uses standard swap-based sift-down instead of Floyd's two-phase algorithm (more comparisons)</description></item>

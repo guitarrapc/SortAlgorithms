@@ -39,8 +39,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
 /// <item><description>Comparisons : ~2n log n - Approximately 2 comparisons per heapify (left and right child checks)</description></item>
 /// <item><description>Swaps       : ~n/2 - Only from the final reversal step; extraction uses Read+Heapify+Write pattern with 0 swaps</description></item>
-/// <item><description>Cache       : Poor locality - Heap structure causes frequent cache misses due to non-sequential access</description></item>
+/// <item><description>Index Reads : Θ(n log n) - every sift-down reads the children at each level it descends, plus n reads for the final reversal</description></item>
+/// <item><description>Index Writes: Θ(n log n) - every sift-down writes each level it descends, plus the reversal's n writes</description></item>
+/// <item><description>Space       : O(1) - the heap occupies the input span itself</description></item>
 /// </list>
+/// <para><strong>Cache behaviour:</strong> poor locality — the heap's parent/child index arithmetic jumps through memory, so extraction misses cache far more than a sequential algorithm.</para>
 /// <para><strong>Difference from <see cref="HeapSort"/>:</strong></para>
 /// <list type="bullet">
 /// <item><description>Uses min-heap (parent ≤ children) instead of max-heap (parent ≥ children)</description></item>

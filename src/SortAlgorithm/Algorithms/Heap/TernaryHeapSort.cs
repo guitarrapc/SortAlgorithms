@@ -33,8 +33,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
 /// <item><description>Comparisons : ~3n log₃ n - Approximately 3 comparisons per heapify (three child checks)</description></item>
 /// <item><description>Swaps       : 0 - No swaps; extraction reads root+last, sifts last down, writes root to end</description></item>
-/// <item><description>Cache       : Slightly better than binary heap due to shallower tree, but still poor compared to sequential algorithms</description></item>
+/// <item><description>Index Reads : Θ(n log₃ n) - every sift-down reads the three children at each level it descends</description></item>
+/// <item><description>Index Writes: Θ(n log₃ n) - every sift-down writes each level it descends, plus n root-to-end writes</description></item>
+/// <item><description>Space       : O(1) - the heap occupies the input span itself</description></item>
 /// </list>
+/// <para><strong>Cache behaviour:</strong> slightly better than a binary heap because the tree is shallower, but still poor compared to sequential algorithms.</para>
 /// <para><strong>Ternary Heap vs Binary Heap:</strong></para>
 /// <list type="bullet">
 /// <item><description>Tree Height: log₃ n vs log₂ n (ternary is shallower)</description></item>

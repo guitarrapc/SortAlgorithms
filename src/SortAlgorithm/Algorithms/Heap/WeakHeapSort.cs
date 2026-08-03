@@ -52,8 +52,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound for all inputs</description></item>
 /// <item><description>Comparisons : ~n log n - 0.9n - Significantly fewer than standard heap sort's ~2n log n</description></item>
 /// <item><description>Swaps       : ~n log n - Similar swap count to standard heap sort</description></item>
-/// <item><description>Cache       : Poor locality - Non-sequential access pattern similar to heap sort, frequent cache misses</description></item>
+/// <item><description>Index Reads : Θ(n log n) - the merge-forest climb touches one node per level</description></item>
+/// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Space       : O(n) bits - one reverse bit per element (n/64 ulongs ≈ n/8 bytes), not O(1) as in a plain binary heap</description></item>
 /// </list>
+/// <para><strong>Cache behaviour:</strong> poor locality — the access pattern is as non-sequential as heap sort's, so cache misses are frequent.</para>
 /// <para><strong>Why Fewer Comparisons?:</strong></para>
 /// <para>
 /// Weak heaps achieve fewer comparisons through two key mechanisms:
