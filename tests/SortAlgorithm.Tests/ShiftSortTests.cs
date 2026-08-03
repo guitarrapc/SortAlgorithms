@@ -151,6 +151,108 @@ public class ShiftSortTests : StableSortTestsBase
         await Assert.That(stats.IndexReadCount >= minCompares * 2).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minCompares * 2}");
     }
 
+    /// <summary>
+    /// Records the merge phases and the pointer roles announced around them.
+    /// </summary>
+    private sealed class MergeEventRecordingContext : ISortContext
+    {
+        public List<(int Left, int Mid, int Right)> Merges { get; } = [];
+        public List<(int Index, RoleType Role)> Roles { get; } = [];
+
+        public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0)
+        {
+            if (phase == SortPhase.MergeSortMerge) Merges.Add((param1, param2, param3));
+        }
+
+        public void OnRole(int index, int bufferId, RoleType role) => Roles.Add((index, role));
+
+        public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) { }
+        public void OnSwap(int i, int j, int bufferId) { }
+        public void OnIndexRead(int index, int bufferId) { }
+        public void OnIndexWrite(int index, int bufferId) { }
+        public void OnIndexWrite<T>(int index, int bufferId, T value) { }
+        public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId) { }
+        public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values) { }
+    }
+
+    /// <summary>
+    /// Every merge the algorithm performs must announce itself, including the ones at the bottom of the
+    /// merge tree. Two runs are the smallest input that merges at all; when that case was special-cased it
+    /// merged silently, so a consumer watching an input with few runs saw no merge phase whatsoever.
+    /// </summary>
+    [Test]
+    public async Task TwoRunInput_AnnouncesItsMerge()
+    {
+        var context = new MergeEventRecordingContext();
+        // Exactly two natural runs: [1,3,5,7] then [0,2,4,6].
+        var array = new[] { 1, 3, 5, 7, 0, 2, 4, 6 };
+
+        ShiftSort.Sort(array.AsSpan(), context);
+
+        await Assert.That(array).IsEquivalentTo(new[] { 0, 1, 2, 3, 4, 5, 6, 7 }, CollectionOrdering.Matching);
+        await Assert.That(context.Merges).IsEquivalentTo(new List<(int, int, int)> { (0, 3, 7) })
+            .Because("a silent merge leaves an observer with no way to know a merge happened at all");
+        await Assert.That(context.Roles).IsEquivalentTo(
+            new List<(int, RoleType)> { (0, RoleType.LeftPointer), (7, RoleType.RightPointer), (0, RoleType.None), (7, RoleType.None) })
+            .Because("a role that is set must be cleared over the same range");
+    }
+
+    /// <summary>
+    /// A k-run input performs exactly k-1 merges, and each one must be announced. Roughly half of them sit
+    /// at the bottom of the merge tree, which is where the silent path used to be.
+    /// </summary>
+    [Test]
+    [Arguments(4)]
+    [Arguments(7)]
+    [Arguments(16)]
+    [Arguments(33)]
+    public async Task EveryMergeIsAnnounced(int runCount)
+    {
+        var context = new MergeEventRecordingContext();
+        // Each pair (2i+1, 2i) is a descending run of length 2, giving exactly runCount runs.
+        var array = new int[runCount * 2];
+        for (var i = 0; i < runCount; i++)
+        {
+            array[i * 2] = i * 2 + 1;
+            array[i * 2 + 1] = i * 2;
+        }
+
+        ShiftSort.Sort(array.AsSpan(), context);
+
+        await Assert.That(array).IsEquivalentTo(Enumerable.Range(0, runCount * 2).ToArray(), CollectionOrdering.Matching);
+        await Assert.That(context.Merges.Count).IsEqualTo(runCount - 1)
+            .Because($"a binary merge tree over {runCount} runs performs {runCount - 1} merges");
+        // The last announced merge is the root: it must cover the whole span.
+        await Assert.That(context.Merges[^1]).IsEqualTo((0, context.Merges[^1].Mid, array.Length - 1));
+    }
+
+    /// <summary>
+    /// When one side of a merge runs out, the rest of the buffered run is moved as a range copy rather than
+    /// element by element. The counts must stay the same either way: the elements still move, and moving
+    /// them in bulk must not lose or duplicate a write.
+    /// </summary>
+    [Test]
+    [Arguments(64)]
+    [Arguments(256)]
+    [Arguments(1024)]
+    public async Task DisjointRunsProduceTheSameWriteCountAsElementwiseMovement(int blockSize)
+    {
+        var stats = new StatisticsContext();
+        // Alternating blocks where every element of one block outranks every element of the next, so each
+        // merge exhausts one side early and leaves a long tail.
+        var n = blockSize * 4;
+        var array = new int[n];
+        for (var i = 0; i < n; i++) array[i] = (i / blockSize) % 2 == 0 ? 100000 + i : i;
+
+        ShiftSort.Sort(array.AsSpan(), stats);
+
+        var expected = (int[])array.Clone();
+        Array.Sort(expected);
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+        // Each merge writes min(len1, len2) into the buffer plus at most the merged length back.
+        await Assert.That(stats.IndexWriteCount).IsBetween(1UL, (ulong)(n * Math.Log(n, 2) * 3));
+    }
+
     [Test]
     [Arguments(10)]
     [Arguments(20)]

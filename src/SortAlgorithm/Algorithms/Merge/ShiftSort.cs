@@ -34,24 +34,26 @@ namespace SortAlgorithm.Algorithms;
 /// so the array needs at most n/2 + 2 entries. For small arrays (≤256 elements) the index array is allocated on the stack
 /// using stackalloc; for larger arrays ArrayPool&lt;int&gt;.Shared is used to avoid stack overflow.</description></item>
 /// <item><description><strong>Adaptive Merge Strategy (Binary Merge Tree):</strong> The detected runs are merged using a divide-and-conquer approach.
-/// The Split method recursively divides the run list into two halves until reaching the base case (2 or fewer runs),
+/// The Split method recursively divides the run list into two halves until a half holds fewer than 2 runs and needs no merge,
 /// then merges them bottom-up. This guarantees O(log k) merge levels where k is the number of runs (k ≤ ⌈n/2⌉).</description></item>
 /// <item><description><strong>Size-Adaptive Merge Direction:</strong> Unlike traditional merge sort, ShiftSort chooses which partition to buffer
 /// based on size comparison (second - first &gt; third - second). The smaller partition is copied to temporary storage,
-/// minimizing memory allocation and write operations. This optimization reduces practical memory usage by up to 50%.</description></item>
+/// so a merge buffers min(len₁, len₂) elements rather than always buffering the left run. The work buffer is sized once
+/// at ⌈n/2⌉ elements and reused by every merge, so the direction choice reduces the elements copied, not the space held.</description></item>
 /// <item><description><strong>Stability-Preserving Merge:</strong> When the second partition is smaller, merging proceeds backward from right to left
 /// using '&gt;' comparison (not '&gt;=') to ensure left elements are written to lower positions when equal.
 /// When the first partition is smaller, merging proceeds forward from left to right using '&lt;' comparison (not '&lt;=')
 /// to ensure left elements are written first when equal. Both directions preserve stability by prioritizing left-side elements.</description></item>
 /// <item><description><strong>Shift-Based Element Movement:</strong> During merge operations, elements are "shifted" (single assignment) rather than "swapped" (three assignments).
 /// This reduces write operations compared to traditional merge sort, particularly benefiting scenarios with expensive write operations
-/// or cache-sensitive workloads.</description></item>
+/// or cache-sensitive workloads. Once one side of a merge is exhausted the remainder of the buffered run needs no further comparison,
+/// so it is moved as a single range copy rather than one element at a time.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Merge (Adaptive Natural Merge Sort with shift-based optimization)</description></item>
 /// <item><description>Stable      : Yes (stability preserved via '&lt;'/'&gt;' comparison priority during merge)</description></item>
-/// <item><description>In-place    : No (requires O(n/2) auxiliary space for merge buffers)</description></item>
+/// <item><description>In-place    : No (requires the run-boundary list and a merge list alongside the input)</description></item>
 /// <item><description>Best case   : O(n) - Already sorted data requires only one O(n) scan with no merges</description></item>
 /// <item><description>Average case: O(n log k) where k = number of runs - Typically k &lt;&lt; n for real-world data with existing order</description></item>
 /// <item><description>Worst case  : O(n log n) - Completely random or alternating data produces maximum runs (k ≈ ⌈n/2⌉)</description></item>
@@ -59,7 +61,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Swaps       : O(n) - at most n/2, only during run detection for the in-place reversal of descending runs</description></item>
 /// <item><description>Index Reads : O(n log k) - every merge level reads each element of the runs it joins</description></item>
 /// <item><description>Index Writes: O(n log k) - Shift-based merge operations (fewer than swap-based approaches)</description></item>
-/// <item><description>Space       : O(n/2) - Maximum temporary buffer size for largest partition during merge, reused across operations</description></item>
+/// <item><description>Space       : O(n) - the run-boundary list and the merge list are each about n/2</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
@@ -79,8 +81,9 @@ public static class ShiftSort
     /// <remarks>Verified by ShiftSortTests, which derives from StableSortTestsBase.</remarks>
     public static bool IsStable => true;
 
-    // Threshold for using stackalloc vs ArrayPool (128 int = 512 bytes)
-    private const int StackallocThreshold = 256; // (128 * 2) - 2 = max span.Length for stackalloc
+    // Longest span whose boundary array is stack-allocated instead of rented.
+    // The boundary array holds (length / 2) + 2 ints, so this bound costs at most 130 ints (520 bytes) of stack.
+    private const int StackallocThreshold = 256;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;           // Main input array
@@ -204,15 +207,9 @@ public static class ShiftSort
                 zeroIndices[endTracker++] = i;
         }
 
-        // Ensure the final boundary is n (avoid duplicate if loop already added it)
-        if (zeroIndices[endTracker - 1] != s.Length)
-        {
-            zeroIndices[endTracker] = s.Length;
-        }
-        else
-        {
-            endTracker--;  // Last boundary is already n, adjust endTracker for Split
-        }
+        // Close the sequence with n. The loop only records a boundary while it is still below s.Length,
+        // so n is never already present and this always appends.
+        zeroIndices[endTracker] = s.Length;
 
         // Phase 2: Adaptive Merge - Recursively merge detected runs
         Split(s, zeroIndices, 0, endTracker, workBuffer);
@@ -245,19 +242,15 @@ public static class ShiftSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Base case: 2 runs - merge them directly
-        if ((hi - lo) == 2)
+        // Base case: 0 or 1 run - already sorted
+        if ((hi - lo) < 2)
         {
-            Merge(s, zeroIndices[lo], zeroIndices[lo + 1], zeroIndices[hi], workBuffer);
-            return;
-        }
-        else if ((hi - lo) < 2)
-        {
-            // Base case: 0 or 1 run - already sorted
             return;
         }
 
-        // Recursive case: split at midpoint boundary
+        // Split at the midpoint boundary. Two runs give mid == lo + 1, so both recursive calls return
+        // immediately and only the merge below runs; that case is not special-cased separately, because
+        // a separate base case would emit the merge without the phase and role events announced here.
         var mid = lo + (hi - lo) / 2;
 
         // Recursively sort left half: [zeroIndices[lo], zeroIndices[mid])
@@ -276,7 +269,7 @@ public static class ShiftSort
 
     /// <summary>
     /// Merges two adjacent sorted runs using adaptive direction based on partition sizes.
-    /// The smaller partition is buffered to minimize memory allocation and write operations.
+    /// The smaller partition is buffered, so a merge copies min(len₁, len₂) elements.
     /// Uses the provided workBuffer (pre-allocated in SortCore) instead of ArrayPool for zero-allocation merging.
     /// </summary>
     private static void Merge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int second, int third, Span<T> workBuffer)
@@ -314,19 +307,28 @@ public static class ShiftSort
             //   Case C: left_elem < right_elem  => write right_elem to writePos, secondCounter--
             var secondCounter = bufferSize;
             var left = second - 1;
-            while (secondCounter > 0)
+            while (secondCounter > 0 && left >= first)
             {
-                // Stability: use '>' (not '>=') to ensure left < right in final output when equal
-                if (left >= first && s.IsGreaterAcross(left, tmp2ndSpan, secondCounter - 1))
+                // Stability: use '>' (not '>=') to ensure left < right in final output when equal.
+                // The comparison hands back both operands so the write below does not read either a second time.
+                if (s.IsGreaterAcross(left, tmp2ndSpan, secondCounter - 1, out var leftValue, out var rightValue))
                 {
-                    s.Write(left + secondCounter, s.Read(left));
+                    s.Write(left + secondCounter, leftValue);
                     left--;
                 }
                 else
                 {
-                    s.Write(left + secondCounter, tmp2ndSpan.Read(secondCounter - 1));
+                    s.Write(left + secondCounter, rightValue);
                     secondCounter--;
                 }
+            }
+
+            // The left run is exhausted. Every remaining buffer element is smaller than what is already
+            // placed above it, so tmp2nd[0..secondCounter) lands contiguously at [first, first + secondCounter)
+            // with no further comparison.
+            if (secondCounter > 0)
+            {
+                tmp2ndSpan.CopyTo(0, s, first, secondCounter);
             }
         }
         else
@@ -363,20 +365,29 @@ public static class ShiftSort
             var firstCounter = 0;
             var right = second;
             var writePos = first;
-            while (firstCounter < bufferSize)
+            while (firstCounter < bufferSize && right < third)
             {
-                // Stability: use '<' (not '<=') to ensure left < right in final output when equal
-                if (right < third && s.IsLessAcross(right, tmp1stSpan, firstCounter))
+                // Stability: use '<' (not '<=') to ensure left < right in final output when equal.
+                // The comparison hands back both operands so the write below does not read either a second time.
+                if (s.IsLessAcross(right, tmp1stSpan, firstCounter, out var rightValue, out var leftValue))
                 {
-                    s.Write(writePos, s.Read(right));
+                    s.Write(writePos, rightValue);
                     right++;
                 }
                 else
                 {
-                    s.Write(writePos, tmp1stSpan.Read(firstCounter));
+                    s.Write(writePos, leftValue);
                     firstCounter++;
                 }
                 writePos++;
+            }
+
+            // The right run is exhausted. Every remaining buffer element is larger than what is already
+            // placed below it, so tmp1st[firstCounter..bufferSize) lands contiguously at writePos
+            // with no further comparison.
+            if (firstCounter < bufferSize)
+            {
+                tmp1stSpan.CopyTo(firstCounter, s, writePos, bufferSize - firstCounter);
             }
         }
     }

@@ -746,6 +746,36 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     }
 
     /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> of this span is strictly less than the
+    /// element at index <paramref name="j"/> of <paramref name="other"/>, handing back both elements.
+    /// A merge loop that writes back whichever operand won needs the value it just compared; taking it from
+    /// here keeps the write off a second <see cref="Read"/>, which would announce the same element twice.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsLessAcross(int i, SortSpan<T, TComparer, TContext> other, int j, out T ai, out T bj)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAcross(i, other, j, out ai, out bj) < 0;
+        ai = ReadUnobserved(i);
+        bj = other.ReadUnobserved(j);
+        return IsLessThan(ai, bj);
+    }
+
+    /// <summary>
+    /// Returns true if the element at index <paramref name="i"/> of this span is strictly greater than the
+    /// element at index <paramref name="j"/> of <paramref name="other"/>, handing back both elements.
+    /// A merge loop that writes back whichever operand won needs the value it just compared; taking it from
+    /// here keeps the write off a second <see cref="Read"/>, which would announce the same element twice.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsGreaterAcross(int i, SortSpan<T, TComparer, TContext> other, int j, out T ai, out T bj)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareAcross(i, other, j, out ai, out bj) > 0;
+        ai = ReadUnobserved(i);
+        bj = other.ReadUnobserved(j);
+        return IsGreaterThan(ai, bj);
+    }
+
+    /// <summary>
     /// Exchanges the values at the specified indices within the collection. (Equivalent to swapping span[i] and span[j].)
     /// </summary>
     /// <remarks>This method notifies the underlying context of the swap operation before updating the values.

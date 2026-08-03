@@ -149,21 +149,21 @@ public class SortSpanTests
 
     private readonly record struct CompareEvent(int I, int J, int Result, int BufferI, int BufferJ);
 
-    /// <summary>比較イベントと読み取りイベントを記録するコンテキスト。</summary>
+    /// <summary>A context that records compare and read events.</summary>
     private static VisualizationContext Recording(List<CompareEvent> compares, List<(int Index, int BufferId)> reads)
         => new(
             onCompare: (i, j, r, bi, bj) => compares.Add(new CompareEvent(i, j, r, bi, bj)),
             onIndexRead: (i, b) => reads.Add((i, b)));
 
-    /// <summary>降順比較子。プリミティブ特殊化がカスタム比較子を迂回しないことの検証用。</summary>
+    /// <summary>A descending comparer, used to verify that the primitive specialization does not bypass a custom comparer.</summary>
     private readonly struct DescendingIntComparer : IComparer<int>
     {
         public int Compare(int x, int y) => y.CompareTo(x);
     }
 
     /// <summary>
-    /// index が左のオーバーロードは、左オペランドに実インデックスとバッファ ID を、
-    /// 右オペランド（バッファ上に無い値）に -1 を報告する。
+    /// The index-on-the-left overloads report the real index and buffer id for the left operand, and -1 for
+    /// the right operand, which is a value that lives in no buffer.
     /// </summary>
     [Test]
     public async Task IsElementGreaterThan_IndexOnLeft_ReportsIndexForTheOperandThatHasOne()
@@ -181,12 +181,12 @@ public class SortSpanTests
         await Assert.That(compares).HasCount(1);
         await Assert.That(compares[0].I).IsEqualTo(2);
         await Assert.That(compares[0].BufferI).IsEqualTo(7);
-        await Assert.That(compares[0].J).IsEqualTo(-1).Because("値はバッファ上に無い");
+        await Assert.That(compares[0].J).IsEqualTo(-1).Because("the value lives in no buffer");
         await Assert.That(compares[0].BufferJ).IsEqualTo(-1);
         await Assert.That(compares[0].Result).IsGreaterThan(0);
     }
 
-    /// <summary>value が左のオーバーロードはオペランド順を保つので、報告される符号が算法の見た符号と一致する。</summary>
+    /// <summary>The value-on-the-left overloads keep the operand order, so the reported sign matches the sign the algorithm saw.</summary>
     [Test]
     public async Task IsValueLessThan_ValueOnLeft_PreservesOperandOrderAndSign()
     {
@@ -203,10 +203,10 @@ public class SortSpanTests
         await Assert.That(compares[0].I).IsEqualTo(-1);
         await Assert.That(compares[0].BufferI).IsEqualTo(-1);
         await Assert.That(compares[0].J).IsEqualTo(1);
-        await Assert.That(compares[0].Result).IsLessThan(0).Because("符号は Compare(value, span[j]) の向き");
+        await Assert.That(compares[0].Result).IsLessThan(0).Because("the sign follows Compare(value, span[j])");
     }
 
-    /// <summary>スライスに対しては Offset を加えた絶対インデックスとスライスのバッファ ID で報告する。</summary>
+    /// <summary>A slice reports the absolute index (its offset plus the local index) and the slice's own buffer id.</summary>
     [Test]
     public async Task MixedComparisons_ReportSliceCoordinates()
     {
@@ -224,7 +224,7 @@ public class SortSpanTests
         await Assert.That(compares[0].BufferI).IsEqualTo(42);
     }
 
-    /// <summary>out 版は読み取った要素を返し、読み取りイベントは 1 回だけ。</summary>
+    /// <summary>The out variant hands back the element it read, and announces exactly one read.</summary>
     [Test]
     public async Task IsElementGreaterThan_OutVariant_YieldsElementWithASingleRead()
     {
@@ -238,14 +238,14 @@ public class SortSpanTests
 
         await Assert.That(result).IsTrue();
         await Assert.That(element).IsEqualTo(20);
-        await Assert.That(reads).HasCount(1).Because("要素を返すために読み直してはならない");
+        await Assert.That(reads).HasCount(1).Because("returning the element must not cost a second read");
         await Assert.That(compares).HasCount(1);
         await Assert.That(compares[0].I).IsEqualTo(1);
     }
 
     /// <summary>
-    /// 新オーバーロードは、置き換え対象である <c>IsGreaterThan(Read(i), value)</c> と
-    /// 読み取り数・比較数が完全に一致しなければならない。差が出れば統計の互換性が壊れる。
+    /// The new overloads must match the read and compare counts of the <c>IsGreaterThan(Read(i), value)</c>
+    /// form they replace, exactly. A difference would break the comparability of the published statistics.
     /// </summary>
     [Test]
     public async Task MixedComparisons_MatchOperationCountsOfTheInlineReadForm()
@@ -275,8 +275,8 @@ public class SortSpanTests
     }
 
     /// <summary>
-    /// クロスバッファ比較は両オペランドのインデックスとバッファ ID を報告する。
-    /// マージ系ではインデックスだけではどちらの配列か決まらない。
+    /// A cross-buffer comparison reports the index and buffer id of both operands. In the merge family an
+    /// index alone does not say which array the element came from.
     /// </summary>
     [Test]
     public async Task IsLessAcross_ReportsBothIndicesWithTheirOwnBufferIds()
@@ -293,17 +293,17 @@ public class SortSpanTests
 
         await Assert.That(result).IsTrue().Because("main[1]=20 < aux[1]=25");
         await Assert.That(reads).IsEquivalentTo(new List<(int, int)> { (1, 0), (1, 1) })
-            .Because("両バッファの読み取りが報告されること");
+            .Because("the read from each buffer must be reported");
         await Assert.That(compares).HasCount(1);
         await Assert.That(compares[0].I).IsEqualTo(1);
         await Assert.That(compares[0].BufferI).IsEqualTo(0);
         await Assert.That(compares[0].J).IsEqualTo(1);
-        await Assert.That(compares[0].BufferJ).IsEqualTo(1).Because("インデックスだけではバッファを区別できない");
+        await Assert.That(compares[0].BufferJ).IsEqualTo(1).Because("an index alone cannot tell the two buffers apart");
     }
 
     /// <summary>
-    /// プリミティブ特殊化はカスタム比較子を迂回してはならない。
-    /// 降順比較子では全オーバーロードの真偽が既定比較子と反転する。
+    /// The primitive specialization must not bypass a custom comparer. Under a descending comparer every
+    /// overload returns the opposite of what it returns under the default comparer.
     /// </summary>
     [Test]
     public async Task MixedComparisons_HonorACustomComparerUnderNullContext()
@@ -313,11 +313,11 @@ public class SortSpanTests
 
         var (asc, desc) = Evaluate(source, aux);
 
-        // 昇順: span[2]=30 > 15 は true、15 < span[1]=20 は true、main[2]=30 < aux[0]=20 は false
+        // Ascending: span[2]=30 > 15 is true, 15 < span[1]=20 is true, main[2]=30 < aux[0]=20 is false
         await Assert.That(asc).IsEquivalentTo(new List<bool> { true, true, false });
-        // 降順比較子では 3 つとも反転する
+        // A descending comparer flips all three
         await Assert.That(desc).IsEquivalentTo(new List<bool> { false, false, true })
-            .Because("プリミティブ特殊化が比較子を迂回すると昇順と同じ結果になる");
+            .Because("a specialization that bypassed the comparer would give the ascending result here");
 
         static (List<bool> Ascending, List<bool> Descending) Evaluate(int[] source, int[] aux)
         {
@@ -344,8 +344,8 @@ public class SortSpanTests
     }
 
     /// <summary>
-    /// 観測コンテキストでも同じ真偽でなければならない（観測経路は比較子を直接呼ぶため、
-    /// プリミティブ経路との食い違いがここで出る）。
+    /// An observing context must agree on every result: the observed path calls the comparer directly, so a
+    /// disagreement with the primitive path shows up here.
     /// </summary>
     [Test]
     public async Task MixedComparisons_AgreeBetweenObservedAndNullContextPaths()
@@ -358,7 +358,7 @@ public class SortSpanTests
             {
                 var (fast, observed) = Evaluate(source, i, value);
                 await Assert.That(observed).IsEquivalentTo(fast)
-                    .Because($"index {i} vs value {value}: 観測経路と NullContext 経路の結果が一致すること");
+                    .Because($"index {i} vs value {value}: the observed and NullContext paths must agree");
             }
         }
 
@@ -398,11 +398,12 @@ public class SortSpanTests
     }
 
     // ------------------------------------------------------------------
-    // 読んだ値を後でも使う呼び出し向けの out オーバーロード。
-    // span が読んで値を返すので、報告される位置は span 自身が出したものであり、誤りようがない。
+    // out overloads, for callers that still need the value they just compared.
+    // The span performs the read and hands the value back, so the reported location is the one the span
+    // itself produced and cannot be wrong.
     // ------------------------------------------------------------------
 
-    /// <summary>out オーバーロードは両インデックスを報告し、読み取りは各 1 回だけ。</summary>
+    /// <summary>The out overloads report both indices and read each operand exactly once.</summary>
     [Test]
     public async Task IsLessAt_OutVariant_ReportsBothIndicesAndReadsEachOnce()
     {
@@ -418,13 +419,13 @@ public class SortSpanTests
         await Assert.That(a0).IsEqualTo(10);
         await Assert.That(a2).IsEqualTo(30);
         await Assert.That(reads).IsEquivalentTo(new List<(int, int)> { (0, 4), (2, 4) })
-            .Because("値を返すために読み直してはならない");
+            .Because("returning the values must not cost a second read");
         await Assert.That(compares).HasCount(1);
         await Assert.That((compares[0].I, compares[0].J, compares[0].BufferI, compares[0].BufferJ))
             .IsEqualTo((0, 2, 4, 4));
     }
 
-    /// <summary>クロスバッファの out オーバーロードは各バッファーの ID を保つ。</summary>
+    /// <summary>The cross-buffer out overloads keep each operand's buffer id.</summary>
     [Test]
     public async Task IsLessOrEqualAcross_OutVariant_KeepsEachOperandsBuffer()
     {
@@ -447,7 +448,94 @@ public class SortSpanTests
     }
 
     /// <summary>
-    /// 新オーバーロードは、置き換え対象の手書き形と読み取り数・比較数が一致しなければならない。
+    /// The strict cross-buffer out overloads keep each operand's buffer identity and read each operand once.
+    /// A merge writes back the value returned here, so a re-read would announce the same element twice.
+    /// </summary>
+    [Test]
+    public async Task StrictAcross_OutVariants_KeepEachOperandsBufferAndReadEachOnce()
+    {
+        var main = new[] { 10, 20, 30 };
+        var aux = new[] { 5, 25 };
+
+        var lessCompares = new List<CompareEvent>();
+        var lessReads = new List<(int Index, int BufferId)>();
+        var lessContext = Recording(lessCompares, lessReads);
+        var lessResult = new SortSpan<int, ComparableComparer<int>, VisualizationContext>(main.AsSpan(), lessContext, new ComparableComparer<int>(), 0)
+            .IsLessAcross(1, new SortSpan<int, ComparableComparer<int>, VisualizationContext>(aux.AsSpan(), lessContext, new ComparableComparer<int>(), 1), 1, out var lessMain, out var lessAux);
+
+        await Assert.That(lessResult).IsTrue().Because("main[1]=20 < aux[1]=25");
+        await Assert.That((lessMain, lessAux)).IsEqualTo((20, 25));
+        await Assert.That(lessReads).IsEquivalentTo(new List<(int, int)> { (1, 0), (1, 1) })
+            .Because("returning the values must not cost a second read");
+        await Assert.That(lessCompares.Count).IsEqualTo(1);
+        await Assert.That((lessCompares[0].I, lessCompares[0].BufferI, lessCompares[0].J, lessCompares[0].BufferJ))
+            .IsEqualTo((1, 0, 1, 1));
+
+        var greaterCompares = new List<CompareEvent>();
+        var greaterReads = new List<(int Index, int BufferId)>();
+        var greaterContext = Recording(greaterCompares, greaterReads);
+        var greaterResult = new SortSpan<int, ComparableComparer<int>, VisualizationContext>(main.AsSpan(), greaterContext, new ComparableComparer<int>(), 0)
+            .IsGreaterAcross(2, new SortSpan<int, ComparableComparer<int>, VisualizationContext>(aux.AsSpan(), greaterContext, new ComparableComparer<int>(), 1), 1, out var greaterMain, out var greaterAux);
+
+        await Assert.That(greaterResult).IsTrue().Because("main[2]=30 > aux[1]=25");
+        await Assert.That((greaterMain, greaterAux)).IsEqualTo((30, 25));
+        await Assert.That(greaterReads).IsEquivalentTo(new List<(int, int)> { (2, 0), (1, 1) });
+        await Assert.That(greaterCompares.Count).IsEqualTo(1);
+        await Assert.That((greaterCompares[0].I, greaterCompares[0].BufferI, greaterCompares[0].J, greaterCompares[0].BufferJ))
+            .IsEqualTo((2, 0, 1, 1));
+    }
+
+    /// <summary>
+    /// A strict comparison must be false on equal operands. Merge stability rests on exactly that, so all
+    /// three equivalence classes (less / equal / greater) are pinned on both the observed and the NullContext path.
+    /// </summary>
+    [Test]
+    [Arguments(5, false, true)]   // main(20) > aux(5)
+    [Arguments(20, false, false)] // main == aux: neither strict comparison holds
+    [Arguments(30, true, false)]  // main(20) < aux(30)
+    public async Task StrictAcross_OutVariants_TreatEqualAsNeitherLessNorGreater(int auxValue, bool expectedLess, bool expectedGreater)
+    {
+        var main = new[] { 20 };
+        var aux = new[] { auxValue };
+
+        var fastLess = new SortSpan<int, ComparableComparer<int>, NullContext>(main.AsSpan(), NullContext.Default, new ComparableComparer<int>(), 0)
+            .IsLessAcross(0, new SortSpan<int, ComparableComparer<int>, NullContext>(aux.AsSpan(), NullContext.Default, new ComparableComparer<int>(), 1), 0, out var fastLessMain, out var fastLessAux);
+        var fastGreater = new SortSpan<int, ComparableComparer<int>, NullContext>(main.AsSpan(), NullContext.Default, new ComparableComparer<int>(), 0)
+            .IsGreaterAcross(0, new SortSpan<int, ComparableComparer<int>, NullContext>(aux.AsSpan(), NullContext.Default, new ComparableComparer<int>(), 1), 0, out _, out _);
+
+        var observedContext = new StatisticsContext();
+        var observedLess = new SortSpan<int, ComparableComparer<int>, StatisticsContext>(main.AsSpan(), observedContext, new ComparableComparer<int>(), 0)
+            .IsLessAcross(0, new SortSpan<int, ComparableComparer<int>, StatisticsContext>(aux.AsSpan(), observedContext, new ComparableComparer<int>(), 1), 0, out var observedLessMain, out var observedLessAux);
+        var observedGreater = new SortSpan<int, ComparableComparer<int>, StatisticsContext>(main.AsSpan(), observedContext, new ComparableComparer<int>(), 0)
+            .IsGreaterAcross(0, new SortSpan<int, ComparableComparer<int>, StatisticsContext>(aux.AsSpan(), observedContext, new ComparableComparer<int>(), 1), 0, out _, out _);
+
+        await Assert.That(fastLess).IsEqualTo(expectedLess);
+        await Assert.That(fastGreater).IsEqualTo(expectedGreater);
+        await Assert.That(observedLess).IsEqualTo(expectedLess).Because("the observed path calls the comparer directly and can disagree with the primitive path");
+        await Assert.That(observedGreater).IsEqualTo(expectedGreater);
+        await Assert.That((fastLessMain, fastLessAux)).IsEqualTo((20, auxValue));
+        await Assert.That((observedLessMain, observedLessAux)).IsEqualTo((20, auxValue));
+    }
+
+    /// <summary>The strict cross-buffer out overloads must not bypass a custom comparer.</summary>
+    [Test]
+    public async Task StrictAcross_OutVariants_HonorACustomComparer()
+    {
+        var main = new[] { 30 };
+        var aux = new[] { 20 };
+
+        var ascending = new SortSpan<int, ComparableComparer<int>, NullContext>(main.AsSpan(), NullContext.Default, new ComparableComparer<int>(), 0)
+            .IsLessAcross(0, new SortSpan<int, ComparableComparer<int>, NullContext>(aux.AsSpan(), NullContext.Default, new ComparableComparer<int>(), 1), 0, out _, out _);
+        var descending = new SortSpan<int, DescendingIntComparer, NullContext>(main.AsSpan(), NullContext.Default, new DescendingIntComparer(), 0)
+            .IsLessAcross(0, new SortSpan<int, DescendingIntComparer, NullContext>(aux.AsSpan(), NullContext.Default, new DescendingIntComparer(), 1), 0, out _, out _);
+
+        await Assert.That(ascending).IsFalse().Because("30 < 20 is false");
+        await Assert.That(descending).IsTrue()
+            .Because("a descending comparer orders 30 below 20; the same result on both would mean the primitive specialization bypassed the comparer");
+    }
+
+    /// <summary>
+    /// The new overloads must match the read and compare counts of the hand-written form they replace.
     /// </summary>
     [Test]
     public async Task ReadRetainingComparisons_MatchOperationCountsOfTheManualForm()
@@ -463,7 +551,7 @@ public class SortSpanTests
         await Assert.That(overloads.IndexReadCount).IsEqualTo(manual.IndexReadCount);
         await Assert.That(overloads.CompareCount).IsEqualTo(manual.CompareCount);
 
-        // 手書き: 2 回読んで 1 回比較、さらに 1 回読んで 1 回比較
+        // Hand-written: two reads and one compare, then one read and one compare
         static void RunManual(int[] source, StatisticsContext context)
         {
             var s = new SortSpan<int, ComparableComparer<int>, StatisticsContext>(source.AsSpan(), context, new ComparableComparer<int>(), 0);
@@ -482,7 +570,7 @@ public class SortSpanTests
         }
     }
 
-    /// <summary>カスタム比較子を迂回しないこと（プリミティブ特殊化を通る経路の確認）。</summary>
+    /// <summary>The out overloads must not bypass a custom comparer (checking the primitive-specialization path).</summary>
     [Test]
     public async Task ReadRetainingComparisons_HonorACustomComparer()
     {
@@ -492,7 +580,7 @@ public class SortSpanTests
 
         await Assert.That(asc).IsEquivalentTo(new List<bool> { true, true });
         await Assert.That(desc).IsEquivalentTo(new List<bool> { false, false })
-            .Because("降順比較子では 2 つとも反転する");
+            .Because("a descending comparer flips both");
 
         static (List<bool> Ascending, List<bool> Descending) Evaluate(int[] source)
         {
