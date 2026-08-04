@@ -44,6 +44,16 @@ A phase announcement replaces the previously announced phase at the same level; 
 
 Cores that other algorithms delegate to are leaves: none of them delegates onward to another phase-announcing core. Two levels therefore describe every sequence this library emits, and a consumer never needs an unbounded phase stack. An algorithm whose own phases are classified detail may also run at the top level, where no scope phase accompanies them.
 
+### Delegation Must Be Announced
+
+A hybrid that hands a subrange to another algorithm has to say so. Silence is not a neutral default: a consumer reconstructing the divide-and-conquer structure sees the recursion stop with no explanation, and the sub-problems below the threshold simply vanish from its model.
+
+`DualPivotQuickSort` and `Ipnsort` both delegated silently — the first to `InsertionSort.SortCore` below its threshold, the second to its own small sort. Every other hybrid in the library announced the same handoff, so the omission read as "these algorithms have no sub-problems" rather than as missing data. A downstream visualization filled the gap by guessing structure from swap positions, which produced sub-problems that never existed (overlapping sibling ranges, and a range invented from a pivot-selection swap that then made a live sibling look finished). The guess was the visible bug; the missing announcement was the cause.
+
+Announce the handoff with the range being delegated, before the delegated core runs. Where the target is not an insertion sort, the phase has to say what it actually is — `IpnsortSmallSort` exists rather than reusing `HybridToInsertionSort` because ipnsort's small sort is a sorting network for word-sized elements, and naming it InsertionSort would put a wrong label on the leaf.
+
+Announcing costs nothing on the unobserved path: `NullContext.OnPhase` is an empty method on a readonly struct reached through the generic context parameter, so the constrained call is devirtualized and inlined away. Measured on `PartitionBenchmark` (int, 256–8192, six patterns, 20 iterations), `DualPivotQuickSort` moved by +0.21% mean / −0.07% median and `Ipnsort` by +0.19% mean / +0.29% median against the same build without the announcements. Note that these figures only mean anything with the benchmark process pinned to one CCD: unpinned on a 7950X3D the same pair of runs produced swings of ±20–40% on individual cases that reversed sign between runs, purely from migration between the V-Cache and non-V-Cache dies.
+
 ## Consumer Responsibilities
 
 - Context implementations must tolerate the event volume of the selected algorithm.

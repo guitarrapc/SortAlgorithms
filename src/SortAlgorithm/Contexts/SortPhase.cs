@@ -35,6 +35,7 @@
 ///   <item><term>HybridToInsertionSort</term><description>left (inclusive) / right (inclusive) / threshold</description></item>
 ///   <item><term>HybridToHeapSort</term><description>left (inclusive) / right (inclusive)</description></item>
 ///   <item><term>HybridToMergeSort</term><description>left (inclusive) / right (inclusive) / threshold (SMALL_SORT when small; 0 when recursion budget exhausted)</description></item>
+///   <item><term>IpnsortSmallSort</term><description>start (inclusive) / end-1 (inclusive) / threshold</description></item>
 ///   <item><term>PDQPartialInsertionSort</term><description>begin (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>PDQPatternShuffle</term><description>begin (inclusive) / end-1 (inclusive) / badAllowed remaining</description></item>
 ///   <item><term>OddEvenMergeSortPass</term><description>p (merge group size, power of 2) / count</description></item>
@@ -636,6 +637,21 @@ public enum SortPhase
     /// param1=left (inclusive), param2=right (inclusive), param3=threshold (SMALL_SORT when small; 0 when budget exhausted)
     /// </summary>
     HybridToMergeSort,
+
+    /// <summary>
+    /// Ipnsort small sort of at most SmallSortThreshold elements (sorting network seed, guarded
+    /// insertion extension, and for the longer inputs a bidirectional merge through scratch).
+    /// Raised whenever a slice is handed to the small sort instead of being partitioned further.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=threshold
+    /// </summary>
+    /// <remarks>
+    /// Reported for the same reason as <see cref="HybridToInsertionSort"/>: a hybrid that hands a
+    /// range to another algorithm has to say so, or a consumer reconstructing the divide-and-conquer
+    /// structure sees the recursion stop with no explanation. It is a separate phase because the
+    /// small sort is not an insertion sort — for word-sized elements it is a sorting network — and
+    /// naming it InsertionSort would put a wrong label on the leaf.
+    /// </remarks>
+    IpnsortSmallSort,
 
     /// <summary>
     /// PDQSort: the partition appears already sorted; attempting PartialInsertionSort

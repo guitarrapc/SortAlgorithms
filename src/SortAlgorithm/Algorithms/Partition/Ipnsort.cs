@@ -715,6 +715,10 @@ public static class Ipnsort
     {
         if (end - start < 2) return;
 
+        // A hybrid that hands a range to another algorithm has to report it, or a consumer
+        // reconstructing the divide-and-conquer structure sees the recursion stop with no reason.
+        context.OnPhase(SortPhase.IpnsortSmallSort, start, end - 1, SmallSortThreshold<T>());
+
         if (UseNetworkSmallSort<T>())
         {
             SmallSortNetwork(s, t, start, end);

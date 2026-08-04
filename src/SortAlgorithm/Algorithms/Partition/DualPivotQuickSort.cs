@@ -232,6 +232,10 @@ public static class DualPivotQuickSort
             // For tiny arrays, use insertion sort (Yaroslavskiy 2009 optimization)
             if (length < InsertionSortThreshold)
             {
+                // Report the delegation. Every other hybrid in this library announces it, and without
+                // it a consumer reconstructing the divide-and-conquer structure sees the recursion
+                // stop with no explanation (the sub-problems below the threshold simply vanish).
+                s.Context.OnPhase(SortPhase.HybridToInsertionSort, left, right, InsertionSortThreshold);
                 InsertionSort.SortCore(s, left, right + 1);
                 return;
             }
@@ -262,7 +266,10 @@ public static class DualPivotQuickSort
             // This is more efficient than checking after partitioning
             // At this point, left and right hold pivot values with left <= right guaranteed
             var diffPivots = s.Compare(left, right) != 0;
-            s.Context.OnPhase(SortPhase.QuickSortPartition, left, right);
+            // param3 is the pivot index. Omitting it defaulted to 0, which told consumers the pivot
+            // was at index 0 of the whole array regardless of the range being partitioned.
+            // Dual-pivot holds two pivots, at left and right; report the left one.
+            s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, left);
             s.Context.OnRole(left, BUFFER_MAIN, RoleType.Pivot);
             s.Context.OnRole(right, BUFFER_MAIN, RoleType.Pivot);
 
