@@ -89,18 +89,20 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Dual-Pivot Partitioning:</strong> Separate handling for equal pivots vs. different pivots cases.</description></item>
 /// <item><description>Reference: https://web.archive.org/web/20151002230717/http://iaroslavski.narod.ru/quicksort/DualPivotQuicksort.pdf</description></item>
 /// </list>
-/// <para><strong>Differences from Java's DualPivotQuicksort (Java 7+):</strong></para>
+/// <para><strong>Differences from Java's DualPivotQuicksort:</strong></para>
 /// <list type="bullet">
 /// <item><description><strong>Core Algorithm:</strong> This implementation matches Yaroslavskiy's 2009 paper specification.</description></item>
-/// <item><description><strong>Adaptive Algorithm Selection:</strong> Java's implementation adaptively selects from multiple algorithms:
+/// <item><description><strong>Adaptive Algorithm Selection (JDK 7–13, @version 2011.02.11):</strong> Java's implementation selects among several algorithms:
 /// <list type="bullet">
-/// <item><description>Insertion Sort: Arrays &lt;47 elements (same threshold here, though Java uses pair insertion sort)</description></item>
-/// <item><description>Merge Sort: 47-286 elements with detected sorted runs (partial ordering)</description></item>
-/// <item><description>Dual-Pivot QuickSort: ≥286 elements (general case)</description></item>
-/// <item><description>Counting Sort: ≥3000 elements with small value range (e.g., byte arrays)</description></item>
+/// <item><description>Dual-Pivot QuickSort: ranges with right - left &lt; QUICKSORT_THRESHOLD (286), and longer ranges that contain MAX_RUN_COUNT (67) or more ascending/descending runs</description></item>
+/// <item><description>Merge Sort: ranges with right - left ≥ 286 and fewer than 67 runs (nearly sorted input)</description></item>
+/// <item><description>Insertion Sort: quicksort parts shorter than INSERTION_SORT_THRESHOLD (47) — traditional insertion sort for the leftmost part, pair insertion sort for the others</description></item>
+/// <item><description>Counting Sort: byte arrays with right - left &gt; 29 and short/char arrays with right - left &gt; 3200; int, long, float, and double arrays never use it</description></item>
 /// </list>
+/// JDK 14 replaced this with a rewrite (@version 2018.08.18, @since 1.7 * 14) that adds mixed insertion sort, a heap sort fallback when recursion gets too deep, and parallel merge sort.
 /// This implementation uses Yaroslavskiy's original algorithm without additional adaptive selection.</description></item>
-/// <item><description><strong>Duplicate Handling:</strong> Java uses 5-way partitioning to segregate elements equal to pivots.
+/// <item><description><strong>Duplicate Handling:</strong> JDK 7–13 uses two pivots only when the five samples are all distinct; otherwise it partitions around the middle sample with a single-pivot 3-way (Dutch National Flag) scheme.
+/// With two pivots and a large center part, it moves elements equal to the pivots out of the center part before recursing.
 /// This implementation uses Yaroslavskiy's 2009 approach with equal elements optimization.</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
