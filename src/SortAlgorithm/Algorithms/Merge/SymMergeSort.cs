@@ -49,10 +49,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Hybrid (Merge + Insertion), Iterative</description></item>
 /// <item><description>Stable      : Yes (≥ comparison in binary search preserves relative order)</description></item>
 /// <item><description>In-place    : Yes (no external buffer; the symmetric recursion needs an O(log n) stack)</description></item>
-/// <item><description>Best case   : O(n log n) – SymMerge is not adaptive: every pass still binary-searches each pair, even on input where no rotation would move an element</description></item>
+/// <item><description>Best case   : O(n) – Sorted data: insertion sort is linear on each block, and each pair's symmetric binary search ends at the run boundary, so nothing is rotated and the merge stops after that one search; a pass over runs of width w costs O((n/w)·log w) comparisons, which shrinks geometrically from pass to pass, so the passes sum to O(n) (this implementation skips those merges outright; see the implementation note)</description></item>
 /// <item><description>Average case: O(n log² n) moves, O(n log n) comparisons</description></item>
 /// <item><description>Worst case  : O(n log² n) moves, O(n log n) comparisons</description></item>
-/// <item><description>Comparisons : O(n log n) - each SymMerge locates its split by binary search, so a merge level costs O(n) comparisons</description></item>
+/// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - each SymMerge locates its split by binary search, so a merge level costs O(n) comparisons</description></item>
 /// <item><description>Swaps       : O(n log² n) - bounded by the rotations, but only the equal-length ones exchange blocks; every other rotation moves elements by assignment and is counted under Index Writes instead</description></item>
 /// <item><description>Index Reads : O(n log² n) - dominated by the rotations rather than by the binary searches</description></item>
 /// <item><description>Index Writes: O(n log² n) - each rotation writes every element it moves; this is what makes the move bound exceed the comparison bound</description></item>
@@ -60,13 +60,17 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Implementation note – already-sorted skip:</strong></para>
 /// <para>The Best case row above is SymMerge's own: neither Kim and Kutzner's algorithm nor Go's
-/// sort.stable is adaptive, and both pay their binary searches on every pass regardless of input.
+/// sort.stable has an already-sorted check, and both still run a symmetric binary search for every
+/// pair on every pass. On sorted input that search is all a pair costs, which is why the row is
+/// linear: Go's sort.stable, ported one for one, costs about 1.2n comparisons on sorted input (about
+/// 0.25n of them in the merges) and swaps nothing.
 /// This implementation adds a check Go does not have — a merge whose left run ends at or below the
 /// start of its right run is already merged, so it is skipped — at the top of each phase-2 pair and
 /// again at each SymMerge sub-problem. The check is identity-preserving: it never changes the output
-/// or the order of any operation, it only recognises a merge that has nothing to do. Its effect is
-/// that sorted input costs one comparison per pair instead of a binary search, which drops the
-/// measured cost on sorted and nearly-sorted input to O(n); it does not make SymMerge adaptive.</para>
+/// or the order of any operation, it only recognises a merge that has nothing to do. It replaces a
+/// pair's binary search with one comparison. On already-sorted input every merge is skipped, so the
+/// whole sort costs n - 1 comparisons (the insertion sort's and the checks' together), 2(n - 1) reads
+/// and no writes. That lowers the constant of the best case, not its order.</para>
 /// <para><strong>Implementation note – rotation cost:</strong></para>
 /// <para>Kim and Kutzner state the O((M+N)·log M) assignment bound for a rotation costing M+N+gcd(M+N)
 /// assignments, i.e. the GCD-cycle (juggling) rotation. Go's sort.symMerge substitutes a block-swap
@@ -87,7 +91,7 @@ namespace SortAlgorithm.Algorithms;
 /// constant factor, not an asymptotic one</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
-/// <para>Pok-Son Kim and Arne Kutzner, "Stable minimum storage merging by symmetric comparisons" (2004) https://link.springer.com/chapter/10.1007/978-3-540-30140-0_50</para>
+/// <para>Pok-Son Kim and Arne Kutzner, "Stable minimum storage merging by symmetric comparisons" (2004) https://link.springer.com/chapter/10.1007/978-3-540-30140-0_63</para>
 /// <para>Go standard library: sort.symMerge (src/sort/sort.go) https://github.com/golang/go/blob/go1.25.8/src/sort/zsortinterface.go#L378-L479 </para>
 /// </remarks>
 public static class SymMergeSort
