@@ -29,7 +29,6 @@ string[] categoryOrder =
     "Merge",
     "Heap",
     "Partition",
-    "Adaptive",
     "Distribution",
     "Network",
     "Tree",

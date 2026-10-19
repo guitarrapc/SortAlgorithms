@@ -482,7 +482,7 @@ public enum SortPhase
     /// </summary>
     FlatStableSortPreSortedBackward,
 
-    // Adaptive family
+    // Merge family: sorts that take sorted runs out of the input and merge them (Drop-Merge, Patience, Strand)
 
     /// <summary>
     /// Drop Merge Sort: LNS (Longest Nondecreasing Subsequence) detection scan.

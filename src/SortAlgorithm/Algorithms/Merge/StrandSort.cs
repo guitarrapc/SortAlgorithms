@@ -32,7 +32,7 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Adaptive merge</description></item>
+/// <item><description>Family      : Merge (each extracted strand is merged into the accumulated result)</description></item>
 /// <item><description>Stable      : Yes (a strand takes equal elements in input order, and the merge prefers the accumulated result on ties, so an element never passes one extracted before it)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space)</description></item>
 /// <item><description>Best case   : O(n) - Already sorted input produces one strand; merge is trivial</description></item>

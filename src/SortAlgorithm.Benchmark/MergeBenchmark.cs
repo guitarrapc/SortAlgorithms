@@ -79,6 +79,18 @@ public class MergeBenchmark
     }
 
     [Benchmark]
+    public void PatienceSort()
+    {
+        SortAlgorithm.Algorithms.PatienceSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
+    public void DropMergeSort()
+    {
+        SortAlgorithm.Algorithms.DropMergeSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void TimSort()
     {
         SortAlgorithm.Algorithms.TimSort.Sort(_buffers.Next().AsSpan());
@@ -118,5 +130,40 @@ public class MergeBenchmark
     public void FlatStableSort()
     {
         SortAlgorithm.Algorithms.FlatStableSort.Sort(_buffers.Next().AsSpan());
+    }
+}
+
+/// <summary>
+/// Merge sorts whose average or worst case is O(n²), kept to small sizes so the run stays short.
+/// Strand sort merges one extracted strand at a time; reverse-sorted input yields n strands.
+/// </summary>
+[MemoryDiagnoser]
+[RankColumn]
+public class MergeSlowBenchmark
+{
+    [Params(256, 1024)]
+    public int Size { get; set; }
+
+    [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan, DataPattern.ManyDuplicates)]
+    public DataPattern Pattern { get; set; }
+
+    private SortBuffers<int> _buffers = default!;
+
+    // Restore cost stays out of the timed region: [IterationSetup] refreshes a pool of
+    // pre-copied buffers and each invocation sorts a fresh one (see SortBuffers<T>).
+    // Program.cs pins the job's InvocationCount to the pool size.
+    [GlobalSetup]
+    public void Setup()
+    {
+        _buffers = new SortBuffers<int>(BenchmarkData.GenerateIntArray(Size, Pattern));
+    }
+
+    [IterationSetup]
+    public void IterationSetup() => _buffers.Reset();
+
+    [Benchmark(Baseline = true)]
+    public void StrandSort()
+    {
+        SortAlgorithm.Algorithms.StrandSort.Sort(_buffers.Next().AsSpan());
     }
 }

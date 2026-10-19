@@ -34,7 +34,7 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Insertion / Merge hybrid</description></item>
+/// <item><description>Family      : Merge (piles are dealt by binary search, then combined by a k-way merge)</description></item>
 /// <item><description>Stable      : No (relative order of equal elements may not be preserved)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space)</description></item>
 /// <item><description>Best case   : O(n) - Reverse-sorted (non-increasing) input produces 1 pile; merge is trivial</description></item>

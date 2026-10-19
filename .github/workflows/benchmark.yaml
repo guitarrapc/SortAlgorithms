@@ -9,12 +9,12 @@ on:
         default: "*"
         options:
           - "*"
-          - "*AdaptiveBenchmark*"
           - "*DistributionBenchmark*"
           - "*ExchangeBenchmark*"
           - "*HeapBenchmark*"
           - "*InsertionBenchmark*"
           - "*MergeBenchmark*"
+          - "*MergeSlowBenchmark*"
           - "*NetworkBenchmark*"
           - "*PartitionBenchmark*"
           - "*SelectionBenchmark*"

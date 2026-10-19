@@ -6,14 +6,13 @@ Aim not to use LINQ or similar ease to use, but memory unefficient technique.
 ## Table of Contents
 
 - [Benchmark](#benchmark)
-  - [AdaptiveBenchmark](#adaptivebenchmark)
-  - [AdaptiveSlowBenchmark](#adaptiveslowbenchmark)
   - [DistributionBenchmark](#distributionbenchmark)
   - [ExchangeBenchmark](#exchangebenchmark)
   - [HeapBenchmark](#heapbenchmark)
   - [InsertionBenchmark](#insertionbenchmark)
   - [IntKeyBenchmark](#intkeybenchmark)
   - [MergeBenchmark](#mergebenchmark)
+  - [MergeSlowBenchmark](#mergeslowbenchmark)
   - [NetworkBenchmark](#networkbenchmark)
   - [PartitionBenchmark](#partitionbenchmark)
   - [SelectionBenchmark](#selectionbenchmark)
@@ -26,7 +25,6 @@ Aim not to use LINQ or similar ease to use, but memory unefficient technique.
   - [Merge](#merge)
   - [Heap](#heap)
   - [Partition](#partition)
-  - [Adaptive](#adaptive)
   - [Distribution](#distribution)
   - [Network](#network)
   - [Tree](#tree)
@@ -2453,10 +2451,12 @@ UnrollFactor=1  WarmupCount=2
 - [Block Merge Sort](./src/SortAlgorithm/Algorithms/Merge/BlockMergeSort.cs)
 - [Bottom-Up Merge Sort](./src/SortAlgorithm/Algorithms/Merge/BottomupMergeSort.cs)
 - [Driftsort](./src/SortAlgorithm/Algorithms/Merge/Driftsort.cs)
+- [Drop-Merge Sort](./src/SortAlgorithm/Algorithms/Merge/DropMergeSort.cs)
 - [Flat Stable Sort](./src/SortAlgorithm/Algorithms/Merge/FlatStableSort.cs)
 - [Glidesort](./src/SortAlgorithm/Algorithms/Merge/Glidesort.cs)
 - [Merge Sort](./src/SortAlgorithm/Algorithms/Merge/MergeSort.cs)
 - [Natural Merge Sort](./src/SortAlgorithm/Algorithms/Merge/NaturalMergeSort.cs)
+- [Patience Sort](./src/SortAlgorithm/Algorithms/Merge/PatienceSort.cs)
 - [Pingpong Merge Sort](./src/SortAlgorithm/Algorithms/Merge/PingpongMergeSort.cs)
 - [Power Sort](./src/SortAlgorithm/Algorithms/Merge/PowerSort.cs)
 - [Rotate Merge Sort](./src/SortAlgorithm/Algorithms/Merge/RotateMergeSort.cs)
@@ -2465,6 +2465,7 @@ UnrollFactor=1  WarmupCount=2
 - [Shift Sort](./src/SortAlgorithm/Algorithms/Merge/ShiftSort.cs)
 - [Spin Sort](./src/SortAlgorithm/Algorithms/Merge/SpinSort.cs)
 - [std::stable_sort (LLVM)](./src/SortAlgorithm/Algorithms/Merge/StdStableSort.cs)
+- [Strand Sort](./src/SortAlgorithm/Algorithms/Merge/StrandSort.cs)
 - [SymMerge Sort](./src/SortAlgorithm/Algorithms/Merge/SymMergeSort.cs)
 - [Tim Sort](./src/SortAlgorithm/Algorithms/Merge/TimSort.cs)
 
@@ -2495,11 +2496,6 @@ UnrollFactor=1  WarmupCount=2
 - [Quick Sort (Median of 9)](./src/SortAlgorithm/Algorithms/Partition/QuickSortMedian9.cs)
 - [Quick Sort (Stable)](./src/SortAlgorithm/Algorithms/Partition/StableQuickSort.cs)
 - [std::sort (LLVM)](./src/SortAlgorithm/Algorithms/Partition/StdSort.cs)
-
-### Adaptive
-- [Drop-Merge Sort](./src/SortAlgorithm/Algorithms/Adaptive/DropMergeSort.cs)
-- [Patience Sort](./src/SortAlgorithm/Algorithms/Adaptive/PatienceSort.cs)
-- [Strand Sort](./src/SortAlgorithm/Algorithms/Adaptive/StrandSort.cs)
 
 ### Distribution
 - [American Flag Sort](./src/SortAlgorithm/Algorithms/Distribution/AmericanFlagSort.cs)
