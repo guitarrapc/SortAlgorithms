@@ -28,22 +28,30 @@ namespace SortAlgorithm.Algorithms;
 /// when both sides have equal values (using &lt;= comparison). This preserves the relative order of equal elements, ensuring stability.</description></item>
 /// <item><description><strong>Comparison Count:</strong> At each recursion level, merging n elements requires at most n-1 comparisons.
 /// With ⌈log₂(n)⌉ levels, total comparisons: n⌈log₂(n)⌉ - 2^⌈log₂(n)⌉ + 1 (worst case).
-/// Best case (sorted data): approximately n⌈log₂(n)⌉ / 2.</description></item>
+/// Best case (sorted data): approximately n⌈log₂(n)⌉ / 2.
+/// These are merge sort's own counts; this implementation adds one comparison per merge for the already-sorted check (see the implementation note).</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Merge</description></item>
 /// <item><description>Stable      : Yes (equal elements maintain relative order via &lt;= comparison during merge)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for merging)</description></item>
-/// <item><description>Best case   : O(n log n) - Even sorted data requires ⌈log₂(n)⌉ levels of merging</description></item>
+/// <item><description>Best case   : O(n log n) - Merge sort as defined runs every merge, so even sorted data goes through ⌈log₂(n)⌉ levels of merging (this implementation skips them; see the implementation note)</description></item>
 /// <item><description>Average case: O(n log n) - Balanced recursion tree with n work per level</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed balanced partitioning regardless of input</description></item>
-/// <item><description>Comparisons : O(n log n) - At most n⌈log₂(n)⌉ - 2^⌈log₂(n)⌉ + 1 comparisons</description></item>
+/// <item><description>Comparisons : O(n log n) - At most n⌈log₂(n)⌉ - 2^⌈log₂(n)⌉ + 1 in the merges, plus one per merge (n - 1 in all) for the already-sorted check</description></item>
 /// <item><description>Swaps       : 0 - elements move by copying between the input and the auxiliary buffer, never by exchange</description></item>
-/// <item><description>Index Reads : Θ(n log n) - Each level reads all n elements, ⌈log₂(n)⌉ levels total</description></item>
-/// <item><description>Index Writes: Θ(n log n) - Each level writes all n elements, ⌈log₂(n)⌉ levels total</description></item>
+/// <item><description>Index Reads : O(n log n) - A level whose merges all run reads all n elements, ⌈log₂(n)⌉ levels total; a skipped merge reads only the two elements the check compares</description></item>
+/// <item><description>Index Writes: O(n log n) - A level whose merges all run writes all n elements, ⌈log₂(n)⌉ levels total; a skipped merge writes nothing</description></item>
 /// <item><description>Space       : O(n) - Auxiliary buffer of size n/2 for merging (this implementation uses ArrayPool for efficiency)</description></item>
 /// </list>
+/// <para><strong>Implementation note – already-sorted skip:</strong></para>
+/// <para>The Best case row above is merge sort's own. This implementation adds a check before each merge: when the
+/// left half ends at or below the start of the right half (<c>s[mid] ≤ s[mid+1]</c>), the halves are already in order
+/// and the merge is skipped. Only a merge that would have changed nothing is removed; the output and the work of every
+/// merge that does run are unchanged. The check costs one comparison per merge decision, so the comparison count can
+/// exceed merge sort's own bound by up to n - 1. On already-sorted input every merge is skipped: n - 1 comparisons,
+/// 2(n - 1) reads and no writes, which is Θ(n). Without the check, sorted input still costs about n⌈log₂(n)⌉ / 2 comparisons.</para>
 /// <para><strong>Advantages of Merge Sort:</strong></para>
 /// <list type="bullet">
 /// <item><description>Predictable performance - O(n log n) guaranteed in all cases</description></item>

@@ -27,16 +27,19 @@ namespace SortAlgorithm.Algorithms;
 /// Repeatedly extract the global minimum, pop it from its pile, and re-heapify in O(log k) per step.
 /// The result is written to an auxiliary buffer, then copied back to the original span.</description></item>
 /// <item><description><strong>Number of Piles = LIS Length:</strong> The number of piles equals the length of the Longest Increasing Subsequence.
-/// Best case (already sorted): 1 pile → O(n). Worst case (reverse sorted): n piles → O(n log n).</description></item>
+/// Best case (non-increasing input, LIS = 1): every element lands on the first pile → 1 pile → O(n).
+/// Worst case (ascending input, LIS = n): no top is ≥ the next element, so every element starts a new pile → n piles → O(n log n).
+/// The Wikipedia article linked below states that pre-sorted input forms a single pile; under the dealing rule above
+/// it is the other way round, and PatienceSortTests measures the reversed input as the one-pile case.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Insertion / Merge hybrid</description></item>
 /// <item><description>Stable      : No (relative order of equal elements may not be preserved)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space)</description></item>
-/// <item><description>Best case   : O(n) - Already sorted input produces 1 pile; merge is trivial</description></item>
+/// <item><description>Best case   : O(n) - Reverse-sorted (non-increasing) input produces 1 pile; merge is trivial</description></item>
 /// <item><description>Average case: Θ(n log k) - where k is the average LIS length</description></item>
-/// <item><description>Worst case  : O(n log n) - Reverse-sorted input produces n piles</description></item>
+/// <item><description>Worst case  : O(n log n) - Already sorted (ascending) input produces n piles</description></item>
 /// <item><description>Comparisons : O(n log k) - binary search per element + heap operations</description></item>
 /// <item><description>Swaps       : 0 - elements move into piles and out through the merge heap by copying, never by exchange</description></item>
 /// <item><description>Index Reads : O(n log k) - the binary search over pile tops per element, plus the heap sift on each extraction</description></item>

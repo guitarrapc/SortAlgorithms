@@ -90,15 +90,22 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Hybrid (Partition (base) + Heap + Insertion)</description></item>
 /// <item><description>Stable      : No (QuickSort and HeapSort are unstable; element order is not preserved for equal values)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack, no additional arrays allocated)</description></item>
-/// <item><description>Best case   : Θ(n log n) - Occurs when QuickSort consistently creates balanced partitions and InsertionSort handles small subarrays efficiently</description></item>
+/// <item><description>Best case   : Θ(n log n) - Musser's introsort partitions every range, and its best input (sorted data under median-of-three) produces balanced partitions all the way down (this implementation can finish sorted input in Θ(n); see the implementation note)</description></item>
 /// <item><description>Average case: Θ(n log n) - Expected ~1.386n log₂ n comparisons from QuickSort with Hoare partition, reduced by InsertionSort optimization</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by HeapSort fallback when recursion depth exceeds 2⌊log₂(n)⌋</description></item>
 /// <item><description>Comparisons : ~1.2-1.4n log₂ n (average) - Lower than pure QuickSort due to InsertionSort handling small partitions</description></item>
 /// <item><description>Swaps       : ~0.33n log₂ n (average) - Hoare partition performs significantly fewer swaps than Lomuto partition</description></item>
-/// <item><description>Index Reads : Θ(n log n) - every partition level reads each element of the range it splits; the HeapSort fallback and InsertionSort leaves keep the same order</description></item>
-/// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Index Reads : O(n log n) - every partition level reads each element of the range it splits; the HeapSort fallback and InsertionSort leaves keep the same order; a range the nearly-sorted detection finishes is not split further</description></item>
+/// <item><description>Index Writes: O(n log n) - each swap writes two positions, so the writes follow the swap count (already-sorted input makes no swaps and no writes)</description></item>
 /// <item><description>Space       : O(log n) - recursion stack only, no additional arrays allocated</description></item>
 /// </list>
+/// <para><strong>Implementation note – nearly-sorted detection:</strong></para>
+/// <para>The Best case row above is Musser's introsort, which has no early exit: in his paper an already sorted
+/// sequence produces equal-length partitions in every range, so it still costs Θ(n log n). This implementation adds
+/// the nearly-sorted detection described above, after libc++'s <c>__insertion_sort_incomplete</c>: when a partition
+/// step makes no swaps, each side goes to InsertionSort.SortIncomplete, which gives up after 8 insertions. On
+/// already-sorted input the first partition makes no swaps and both sides are confirmed sorted, so the sort ends
+/// there: about 2n comparisons, 3n reads and no writes, which is Θ(n).</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Introsort</para>
 /// <para>Paper: David R Musser https://webpages.charlotte.edu/rbunescu/courses/ou/cs4040/introsort.pdf</para>
