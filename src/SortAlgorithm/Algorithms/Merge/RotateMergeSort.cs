@@ -52,16 +52,27 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Hybrid (Merge + Insertion), Iterative</description></item>
 /// <item><description>Stable      : Yes (lower/upper bound preserves relative order)</description></item>
 /// <item><description>In-place    : Yes (no external buffer; merge uses O(log n) explicit stack via stackalloc)</description></item>
-/// <item><description>Best case   : O(n) – Sorted data: insertion sort is O(n), all phase-2 merges are skipped</description></item>
+/// <item><description>Best case   : O(n) – Sorted data: insertion sort is linear on each block, and in the rotate merge every binary search lands on the run boundary, so no rotation moves anything and a merge of two runs of length m ends after O(log² m) comparisons; summed over the passes that is O(n) (this implementation skips those merges outright; see the implementation note)</description></item>
 /// <item><description>Average case: O(n log² n) – Binary search (log n) + rotation (n) per merge × log n passes</description></item>
 /// <item><description>Worst case  : O(n log² n)</description></item>
 /// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) – merging runs of length m ≤ n costs O(m log(n/m + 1)) comparisons (Dudziński–Dydek), which is O(width) for the equal-length runs a pass produces, so a pass costs O(n) and the sort costs O(n log n)</description></item>
-/// <item><description>Swaps       : O(n log² n) – equals the element moves, because the rotation is realized by exchange</description></item>
+/// <item><description>Swaps       : O(n log² n) – the 3-reversal rotations move elements by exchange; a rotation whose shorter side has at most 4 elements shifts them by assignment instead, and those moves are counted under Index Writes only</description></item>
 /// <item><description>Index Reads : Best O(n), Average/Worst O(n log² n) – dominated by the rotations rather than by the binary searches</description></item>
 /// <item><description>Index Writes: Best O(n), Average/Worst O(n log² n) – every rotation writes each element of the block it moves</description></item>
 /// <item><description>Space       : O(log n) – Explicit merge stack (stackalloc, no heap allocation or call-stack recursion)</description></item>
 /// <item><description>Rotations   : Best 0, Average/Worst O(n log n) – one per merge decomposition step, and a step costs at least one comparison</description></item>
 /// </list>
+/// <para><strong>Implementation note – already-sorted skip:</strong></para>
+/// <para>The Best case row above is rotate merge sort's own: Dudziński and Dydek's merge, in the form libstdc++'s
+/// __merge_without_buffer implements it, has no already-sorted check, and on sorted input it keeps halving one side and
+/// binary-searching the other until a side is empty. With this implementation's 16-element blocks and that check removed,
+/// sorted input costs about 3n comparisons (about 2n of them in the merges) and moves nothing. This implementation adds the
+/// check at the top of each phase-2 pair and again at each sub-problem of the merge: when the left run ends at or below the
+/// start of the right run (<c>s[mid] ≤ s[mid+1]</c>), the merge has nothing to do and is skipped. Only a merge that would
+/// have changed nothing is removed; the output and the work of every merge that does run are unchanged. The check costs one
+/// comparison per merge decision. On already-sorted input every merge is skipped, so the whole sort costs n - 1 comparisons
+/// (the insertion sort's and the checks' together), 2(n - 1) reads and no writes. That lowers the constant of the best case,
+/// not its order.</para>
 /// <para><strong>Fully Iterative Design:</strong></para>
 /// <list type="bullet">
 /// <item><description>The outer sort loop is iterative (bottom-up), eliminating O(log n) sort recursion depth</description></item>
@@ -70,6 +81,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Merge order differs from recursive variant: bottom-up processes fixed-width blocks rather than balanced halves,
 /// but total work and asymptotic complexity are identical</description></item>
 /// </list>
+/// <para><strong>Reference:</strong></para>
+/// <para>Divide-and-conquer in-place merge: Krzysztof Dudziński and Andrzej Dydek, "On a stable minimum storage merging algorithm", Information Processing Letters 12(1):5–8 (1981) https://doi.org/10.1016/0020-0190(81)90065-X</para>
+/// <para>libstdc++: std::__merge_without_buffer (bits/stl_algo.h) https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc++-v3/include/bits/stl_algo.h#L2431-L2480</para>
 /// </remarks>
 public static class RotateMergeSort
 {
@@ -470,19 +484,31 @@ public static class RotateMergeSort
 /// <item><description>Family      : Hybrid (Merge + Insertion)</description></item>
 /// <item><description>Stable      : Yes (lower/upper bound preserves relative order)</description></item>
 /// <item><description>In-place    : Yes (no external buffer, uses rotation for in-place merging)</description></item>
-/// <item><description>Best case   : O(n) - Sorted data with insertion sort optimization for small partitions</description></item>
+/// <item><description>Best case   : O(n) - Sorted data: insertion sort is linear on each small partition, and in the rotate merge every binary search lands on the run boundary, so no rotation moves anything and a merge of two halves of length m ends after O(log² m) comparisons; T(n) = 2T(n/2) + O(log² n) is O(n) (this implementation skips those merges outright; see the implementation note)</description></item>
 /// <item><description>Average case: O(n log² n) - Binary search (log n) + rotation (n) per merge level (log n levels)</description></item>
 /// <item><description>Worst case  : O(n log² n) - Rotation adds O(n) factor to each merge operation</description></item>
 /// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - merging runs of length m ≤ n costs O(m log(n/m + 1)) comparisons (Dudziński–Dydek), which is O(length) for the equal halves the divide step produces, so a level costs O(n) and the sort costs O(n log n)</description></item>
-/// <item><description>Swaps       : O(n log² n) - equals the element moves, because the rotation is realized by exchange</description></item>
+/// <item><description>Swaps       : O(n log² n) - the 3-reversal rotations move elements by exchange; a rotation whose shorter side has at most 4 elements shifts them by assignment instead, and those moves are counted under Index Writes only</description></item>
 /// <item><description>Index Reads : Best O(n), Average/Worst O(n log² n) - dominated by the rotations rather than by the binary searches</description></item>
 /// <item><description>Index Writes: Best O(n), Average/Worst O(n log² n) - every rotation writes each element of the block it moves</description></item>
 /// <item><description>Space       : O(log n) - Recursion stack for sort + merge, no auxiliary buffer needed</description></item>
 /// <item><description>Rotations   : Best 0, Average/Worst O(n log n) - one per merge decomposition step, and a step costs at least one comparison</description></item>
 /// </list>
+/// <para><strong>Implementation note – already-sorted skip:</strong></para>
+/// <para>The Best case row above is rotate merge sort's own: Dudziński and Dydek's merge, in the form libstdc++'s
+/// __merge_without_buffer implements it, has no already-sorted check, and on sorted input it keeps halving one side and
+/// binary-searching the other until a side is empty. With this implementation's 16-element leaves and that check removed,
+/// sorted input costs about 3n comparisons (about 2n of them in the merges) and moves nothing. This implementation adds the
+/// check before each merge and again at each sub-problem of the merge: when the left half ends at or below the start of the
+/// right half (<c>s[mid] ≤ s[mid+1]</c>), the merge has nothing to do and is skipped. Only a merge that would have changed
+/// nothing is removed; the output and the work of every merge that does run are unchanged. The check costs one comparison
+/// per merge decision. On already-sorted input every merge is skipped, so the whole sort costs n - 1 comparisons (the
+/// insertion sort's and the checks' together), 2(n - 1) reads and no writes. That lowers the constant of the best case, not
+/// its order.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Merge_sort#Variants</para>
-/// <para>Divide-and-conquer in-place merge: Dudziński, Dydek, "On a stable storage merging algorithm" (1981)</para>
+/// <para>Divide-and-conquer in-place merge: Krzysztof Dudziński and Andrzej Dydek, "On a stable minimum storage merging algorithm", Information Processing Letters 12(1):5–8 (1981) https://doi.org/10.1016/0020-0190(81)90065-X</para>
+/// <para>libstdc++: std::__merge_without_buffer (bits/stl_algo.h) https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc++-v3/include/bits/stl_algo.h#L2431-L2480</para>
 /// <para>Rotation-based in-place merge: Practical In-Place Merging (Geffert et al.)</para>
 /// </remarks>
 public static class RotateMergeSortRecursive
@@ -825,7 +851,7 @@ public static class RotateMergeSortRecursive
 /// <item><description>Family      : Hybrid (Merge + Insertion)</description></item>
 /// <item><description>Stable      : Yes (lower/upper bound preserves relative order)</description></item>
 /// <item><description>In-place    : Yes (no external buffer, uses rotation for in-place merging)</description></item>
-/// <item><description>Best case   : O(n) - Sorted data with insertion sort optimization for small partitions</description></item>
+/// <item><description>Best case   : O(n) - Sorted data: insertion sort is linear on each small partition, and in the rotate merge every binary search lands on the run boundary, so no rotation moves anything and a merge of two halves of length m ends after O(log² m) comparisons; T(n) = 2T(n/2) + O(log² n) is O(n) (this implementation skips those merges outright; see the implementation note)</description></item>
 /// <item><description>Average case: O(n log² n) - Binary search (log n) + rotation (n) per merge level (log n levels)</description></item>
 /// <item><description>Worst case  : O(n log² n) - Rotation adds O(n) factor to each merge operation</description></item>
 /// <item><description>Comparisons : Best O(n), Average/Worst O(n log n) - merging runs of length m ≤ n costs O(m log(n/m + 1)) comparisons (Dudziński–Dydek), which is O(length) for the equal halves the divide step produces, so a level costs O(n) and the sort costs O(n log n)</description></item>
@@ -835,9 +861,21 @@ public static class RotateMergeSortRecursive
 /// <item><description>Space       : O(log n) - Recursion stack for sort + merge, no auxiliary buffer needed</description></item>
 /// <item><description>Rotations   : Best 0, Average/Worst O(n log n) - one per merge decomposition step, and a step costs at least one comparison</description></item>
 /// </list>
+/// <para><strong>Implementation note – already-sorted skip:</strong></para>
+/// <para>The Best case row above is rotate merge sort's own: Dudziński and Dydek's merge, in the form libstdc++'s
+/// __merge_without_buffer implements it, has no already-sorted check, and on sorted input it keeps halving one side and
+/// binary-searching the other until a side is empty. With this implementation's 16-element leaves and that check removed,
+/// sorted input costs about 3n comparisons (about 2n of them in the merges) and moves nothing. This implementation adds the
+/// check before each merge and again at each sub-problem of the merge: when the left half ends at or below the start of the
+/// right half (<c>s[mid] ≤ s[mid+1]</c>), the merge has nothing to do and is skipped. Only a merge that would have changed
+/// nothing is removed; the output and the work of every merge that does run are unchanged. The check costs one comparison
+/// per merge decision. On already-sorted input every merge is skipped, so the whole sort costs n - 1 comparisons (the
+/// insertion sort's and the checks' together), 2(n - 1) reads and no writes. That lowers the constant of the best case, not
+/// its order.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Merge_sort#Variants</para>
-/// <para>Divide-and-conquer in-place merge: Dudziński, Dydek, "On a stable storage merging algorithm" (1981)</para>
+/// <para>Divide-and-conquer in-place merge: Krzysztof Dudziński and Andrzej Dydek, "On a stable minimum storage merging algorithm", Information Processing Letters 12(1):5–8 (1981) https://doi.org/10.1016/0020-0190(81)90065-X</para>
+/// <para>libstdc++: std::__merge_without_buffer (bits/stl_algo.h) https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc++-v3/include/bits/stl_algo.h#L2431-L2480</para>
 /// <para>Rotation-based in-place merge: Practical In-Place Merging (Geffert et al.)</para>
 /// </remarks>
 public static class RotateMergeSortNonOptimized

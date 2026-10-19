@@ -18,21 +18,22 @@ namespace SortAlgorithm.Algorithms;
 /// The search must maintain stability by placing equal elements after existing ones (using &lt;= comparison).</description></item>
 /// <item><description><strong>Stable Insertion:</strong> When inserting element at position pos, shift all elements in range [pos..i-1]
 /// one position to the right, then place the element at position pos. This preserves the relative order of equal elements.</description></item>
-/// <item><description><strong>Optimization for Sorted Elements:</strong> If binary search returns pos == i, the element is already
-/// in the correct position, so no shifts or writes are necessary. This optimization achieves O(n) best case for sorted arrays.</description></item>
+/// <item><description><strong>Empty Shift for Elements Already in Place:</strong> If binary search returns pos == i, the element is already
+/// in the correct position, so nothing is shifted or written. The search that found pos still costs about log₂ i comparisons,
+/// so this alone does not make sorted input linear.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Insertion</description></item>
 /// <item><description>Stable      : Yes (binary search uses &lt;= to preserve order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space, only temp variable for element being inserted)</description></item>
-/// <item><description>Best case   : O(n) - Already sorted array, no shifts needed (only n-1 reads + comparisons)</description></item>
+/// <item><description>Best case   : O(n log n) - Already sorted input moves nothing, but binary insertion sort still binary-searches each element's position, about n log₂ n comparisons in all (this implementation skips the search for an element that is already in place; see the implementation notes)</description></item>
 /// <item><description>Average case: O(n²) - Comparisons: O(n log n), Shifts: O(n²) dominate overall complexity</description></item>
 /// <item><description>Worst case  : O(n²) - Reverse sorted array, maximum shifts for each element</description></item>
-/// <item><description>Comparisons : O(n log n) - Binary search performs Σ(i=1 to n-1) ceiling(log₂(i+1)) comparisons ≈ n log n</description></item>
+/// <item><description>Comparisons : O(n log n) - each binary search over the i sorted elements costs at most ⌈log₂(i+1)⌉ comparisons, Σ(i=1 to n-1) ⌈log₂(i+1)⌉ ≈ n log₂ n in all, plus one per element (n - 1 in all) for the predecessor check; reverse-sorted input reaches both</description></item>
 /// <item><description>Swaps       : 0 - insertion shifts elements one position and drops the held value into the gap; nothing is exchanged</description></item>
-/// <item><description>Index Reads : O(n²) - Binary search reads: O(n log n), Shift reads: O(n²)</description></item>
-/// <item><description>Index Writes: O(n²) - Each element may require shifting up to i elements (Σ(i=1 to n-1) i = n(n-1)/2)</description></item>
+/// <item><description>Index Reads : O(n²) - the shifts read up to n(n-1)/2 elements; each search adds one read per comparison, and each element adds two reads for the predecessor check and, when the check fails, one for the held value</description></item>
+/// <item><description>Index Writes: O(n²) - an element that moves shifts up to i elements and is then written into the gap: n(n-1)/2 + (n - 1) on reverse-sorted input</description></item>
 /// <item><description>Space       : O(1) - only the temp variable holding the element being inserted</description></item>
 /// </list>
 /// <para><strong>Comparison with Standard Insertion Sort:</strong></para>
@@ -43,8 +44,12 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
-/// <item><description>Early continuation: If the element is already ≥ its predecessor, the binary search and the shift are skipped entirely,
-/// at the cost of one extra comparison when the check fails. This is what gives the O(n) best case.</description></item>
+/// <item><description>Predecessor check: before searching, each element is compared with its predecessor; when it is already ≥ it,
+/// the binary search and the shift are skipped. Binary insertion sort does not have this check — the Best case row above is its
+/// own — and the check never changes the output, because a skipped element is exactly one whose search would have returned its
+/// own position. On already-sorted input every element is skipped, so the sort costs n - 1 comparisons, 2(n - 1) reads and no
+/// writes, which is Θ(n); without the check the same input would still run every search, Σ(i=1 to n-1) ⌊log₂(i+1)⌋ comparisons
+/// (8,204 at n = 1,024). An element that fails the check pays one comparison and two reads on top of its search.</description></item>
 /// <item><description>Shift strategy: Under <c>NullContext</c> a shift of at least 32 elements becomes a single overlapping
 /// block move (memmove); shorter shifts, and every shift under an observing context, stay element-by-element so the
 /// shift remains visible one element at a time. Both perform the same number of element reads and writes.</description></item>
