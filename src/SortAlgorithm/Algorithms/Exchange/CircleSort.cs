@@ -37,8 +37,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(n log² n) worst case - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(log n) - recursion stack only; the pairing happens inside the input span</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>Bezemer and Oyelami present Circlesort as "a variant of MDIS" (Modified Diminishing Increment Sorting), which they call
+/// "the best of all the improvements on Shellsort in the worst case". Its ancestry therefore runs through Shellsort, not through
+/// bubble sort, even though both compare and exchange elements.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://sourceforge.net/p/forth-4th/wiki/Circle%20sort/</para>
+/// <para>Paper: Bezemer, H.; Oyelami, O. M. "A Variant of Modified Diminishing Increment Sorting: Circlesort and its Performance Comparison with some Established Sorting Algorithms". International Journal of Experimental Algorithms 6 (2): 14-24.</para>
 /// </remarks>
 public static class CircleSort
 {

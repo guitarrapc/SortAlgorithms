@@ -42,8 +42,13 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Note:</strong> The Pancake Sorting Problem asks for the minimum number of flips to sort any array.
 /// This implementation uses a simple greedy approach (not necessarily optimal) that guarantees at most 2(n-1) flips.
 /// The optimal bound is between (15n/14) and (18n/11) flips for worst-case inputs.</para>
+/// <para><strong>History:</strong></para>
+/// <para>The problem was posed in 1975 as Problem E2569 of the American Mathematical Monthly, under the pseudonym Harry Dweighter
+/// (Jacob E. Goodman). Gates and Papadimitriou (1979), often cited for pancake sorting, came later and proved bounds on the
+/// number of flips.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Pancake_sorting</para>
+/// <para>Gates, W. H.; Papadimitriou, C. H. (1979). "Bounds for Sorting by Prefix Reversal". Discrete Mathematics 27 (1): 47-57. https://doi.org/10.1016/0012-365X(79)90068-2</para>
 /// </remarks>
 public static class PancakeSort
 {

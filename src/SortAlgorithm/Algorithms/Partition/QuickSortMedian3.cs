@@ -75,8 +75,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>vs. Dual-Pivot QuickSort: Simpler implementation; dual-pivot can be faster on random data</description></item>
 /// <item><description>vs. IntroSort: This is the core algorithm; IntroSort adds HeapSort fallback for worst-case protection</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>Choosing the pivot as the median of the first, middle and last elements goes back to Singleton's Algorithm 347 (CACM, 1969).
+/// Sedgewick's "Implementing Quicksort Programs" (1978), often cited for it, came later and analyzes it.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
+/// <para>Singleton, R. C. (1969). "Algorithm 347: An Efficient Algorithm for Sorting with Minimal Storage". Communications of the ACM 12 (3): 185-187. https://doi.org/10.1145/362875.362901</para>
+/// <para>Sedgewick, R. (1978). "Implementing Quicksort Programs". Communications of the ACM 21 (10): 847-857. https://doi.org/10.1145/359619.359631</para>
 /// </remarks>
 public static class QuickSortMedian3
 {

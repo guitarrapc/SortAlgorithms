@@ -103,7 +103,12 @@ namespace SortAlgorithm.Algorithms;
 /// compared with the same right-on-equal rule. The result is that an element never overtakes an element inserted
 /// before it, which is exactly stability.
 /// </para>
+/// <para><strong>History:</strong></para>
+/// <para>The structure is older than its name. Comer (1979) describes it as a "very popular variation of B-trees also suggested
+/// by Knuth" and says he will "use the term B+-tree for Knuth's unnamed implementation". The structure therefore goes back to
+/// Knuth (TAOCP Vol. 3, 1973), and the name to Comer.</para>
 /// <para><strong>Reference:</strong></para>
+/// <para>Knuth, D. E. (1973). The Art of Computer Programming, Vol. 3: Sorting and Searching, §6.2.4.</para>
 /// <para>Comer, Douglas (1979). "The Ubiquitous B-Tree". ACM Computing Surveys 11 (2): 121-137.</para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/B%2B_tree</para>
 /// </remarks>

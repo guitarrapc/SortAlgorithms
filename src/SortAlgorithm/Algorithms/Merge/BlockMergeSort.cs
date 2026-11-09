@@ -47,6 +47,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(n log n) - every merge level writes each element it moves, through exchanges or the fixed cache</description></item>
 /// <item><description>Space       : O(1) — fixed 512-element cache rented from ArrayPool (no per-call allocation once the pool is warm)</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>Kim and Kutzner's "Ratio Based Stable In-Place Merging" (2008) does not build on their earlier SymMerge (2004): it does not
+/// cite it. Its references include Hwang and Lin's merging and Dudziński and Dydek's rotation-based merge, and it uses "the rotation
+/// based variant of Hwang and Lin's algorithm" for local merges. WikiSort then adapted the method "to work efficiently with a
+/// bottom-up merge sort", which is the outer loop here.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Block_sort</para>
 /// <para>Paper: Ratio Based Stable In-Place Merging by Pok-Son Kim & Arne Kutzner https://link.springer.com/chapter/10.1007/978-3-540-79228-4_22</para>

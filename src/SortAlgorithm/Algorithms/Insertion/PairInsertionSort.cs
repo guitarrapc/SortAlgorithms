@@ -53,8 +53,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Non-leftmost partitions in quicksort (where sentinel is guaranteed)</description></item>
 /// <item><description>Nearly sorted data where insertion sort excels</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>The earliest source found is JDK 7's <c>DualPivotQuicksort</c> (version 2011.02.11, by Vladimir Yaroslavskiy, Jon Bentley
+/// and Josh Bloch). It sorts the non-leftmost parts with "the more optimized algorithm, so called pair insertion sort". The name
+/// suggests the technique may be older, but no earlier source was found. It is not Ford and Johnson's merge-insertion (1959).</para>
 /// <para><strong>Reference:</strong></para>
-/// <para>Based on pair insertion optimization techniques used in modern sorting libraries</para>
+/// <para>JDK 7 DualPivotQuicksort: https://github.com/openjdk/jdk7u/blob/master/jdk/src/share/classes/java/util/DualPivotQuicksort.java</para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Insertion_sort</para>
 /// </remarks>
 public static class PairInsertionSort

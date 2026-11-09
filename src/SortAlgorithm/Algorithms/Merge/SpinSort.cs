@@ -54,6 +54,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(n log n) - every merge level writes each element it moves, into the half buffer or back; Θ(n) when the input is one run</description></item>
 /// <item><description>Space       : O(ceil(n/2))</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>Spinsort is a top-down merge sort, not a natural merge sort. Boost's <c>range_sort</c> splits the range into two halves,
+/// sorts them, and merges them while moving the elements into the buffer. Its only adaptive step checks a large range for a sorted
+/// or reverse-sorted prefix; it does not detect and merge the natural runs of the input.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Boost.Sort SpinSort: https://github.com/boostorg/sort/blob/develop/include/boost/sort/spinsort/spinsort.hpp</para>
 /// <para>Author: Francisco José Tapia (2016), Boost Software License 1.0</para>

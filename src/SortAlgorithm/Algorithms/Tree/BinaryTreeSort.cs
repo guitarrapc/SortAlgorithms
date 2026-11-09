@@ -56,9 +56,13 @@ namespace SortAlgorithm.Algorithms;
 /// <para>Floyd's "Algorithm 113: Treesort" (CACM, 1962) is a different algorithm. NIST's Dictionary of Algorithms and Data
 /// Structures separates the two. Treesort (1) is this sort (build a binary search tree, then traverse it in order), and NIST
 /// gives it no origin. Treesort (2) covers the algorithms Floyd named treesort: NIST lists them as variants of heapsort and
-/// cites Algorithm 113 and Algorithm 245 "Treesort 3" (1964). Floyd's work leads to heapsort, not to search-tree sorting.</para>
+/// cites Algorithm 113 and Algorithm 245 "Treesort 3" (1964). Floyd's work leads to heapsort, not to search-tree sorting.
+/// The earliest description of this sort found is Windley (1960). Hibbard (1962) notes, in a footnote added in proof, that
+/// Windley "has examined the explicit construction of the tree as a sorting technique".</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Tree_sort</para>
+/// <para>Windley, P. F. (1960). "Trees, Forests and Rearranging". The Computer Journal 3 (2): 84-88. https://doi.org/10.1093/comjnl/3.2.84</para>
+/// <para>Hibbard, T. N. (1962). "Some Combinatorial Properties of Certain Trees With Applications to Searching and Sorting". Journal of the ACM 9 (1): 13-28. https://doi.org/10.1145/321105.321108</para>
 /// <para>NIST DADS: https://xlinux.nist.gov/dads/HTML/treesort1.html (this sort), https://xlinux.nist.gov/dads/HTML/treesort2.html (Floyd's treesort)</para>
 /// </remarks>
 public static class BinaryTreeSort

@@ -52,7 +52,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Inner group check <c>(j+i)/(p+p) == (j+i+k)/(p+p)</c> ensures comparisons stay within the same merge block.</description></item>
 /// <item><description>Generates fewer total comparisons than Bitonic Sort for the same input size.</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>Odd-even merging is not derived from bitonic sorting; the two are siblings. Batcher (1968) presents odd-even merging first
+/// and then introduces bitonic sorters as "another way of constructing merging networks". He builds a full sorter from either one
+/// "using the well-known sorting-by-merging scheme".</para>
 /// <para><strong>Reference:</strong></para>
+/// <para>Batcher, K. E. (1968). "Sorting networks and their applications". AFIPS Spring Joint Computer Conference. https://www.cs.kent.edu/~batcher/sort.pdf</para>
 /// <para>Knuth, D.E., The Art of Computer Programming Vol. 3: Sorting and Searching, Algorithm 5.3.4N.</para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Batcher_odd%E2%80%93even_mergesort</para>
 /// </remarks>

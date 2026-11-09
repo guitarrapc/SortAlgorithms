@@ -74,8 +74,17 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Space       : O(n) total auxiliary across all active recursion levels + O(log n) recursion stack</description></item>
 /// <item><description>Copies      : ~2n log₂ n (average) - Each element copied to/from temporary storage at each recursion level</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>The earliest description of this partition found is the stable quicksort in Rust's driftsort (Bergdoll and Peters, 2024).
+/// Its <c>stable_partition</c> writes the elements less than the pivot to the left side of scratch, and the others "go to the right
+/// side of scratch in reverse". It does not come from Wegner's "Quicksort for Equal Keys" (1985): that paper presents six algorithms
+/// that are unstable and work on arrays. Glidesort's stable quicksort is also a different scheme, despite its header
+/// "Bidirectional partitioning": it writes into a destination and a scratch area from both ends, which is
+/// <see cref="DestswapStableQuickSort"/>.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
+/// <para>Rust: https://github.com/rust-lang/rust/blob/master/library/core/src/slice/sort/stable/quicksort.rs (stable_partition)</para>
+/// <para>Wegner, L. (1985). "Quicksort for Equal Keys". IEEE Transactions on Computers C-34(4): 362-367. https://doi.org/10.1109/TC.1985.5009387</para>
 /// </remarks>
 public static class BidirectionalStableQuickSort
 {

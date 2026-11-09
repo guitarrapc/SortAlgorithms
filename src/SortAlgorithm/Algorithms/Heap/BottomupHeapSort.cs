@@ -89,6 +89,11 @@ namespace SortAlgorithm.Algorithms;
 /// comparison-efficient variants of heap sort, though it remains primarily of theoretical interest due to
 /// poor cache behavior inherent in heap structures.
 /// </para>
+/// <para>
+/// The idea is older than the 1993 paper. D. J. Bernstein notes that it "is the same as Floyd's bottom-up algorithm in Knuth
+/// exercise 5.2.3-18" (TAOCP Vol. 3, 1973), and Carlsson published a related variant in 1987 ("A variant of heapsort with almost
+/// optimal number of comparisons", Information Processing Letters 24 (4)).
+/// </para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Heapsort</para>
 /// <para>Paper: https://pdf.sciencedirectassets.com/271538/1-s2.0-S0304397500X04148/1-s2.0-030439759390364Y/main.pdf</para>
