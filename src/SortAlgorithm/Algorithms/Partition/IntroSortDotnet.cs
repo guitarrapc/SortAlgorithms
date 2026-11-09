@@ -35,8 +35,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(log n) - recursion stack only, no additional arrays allocated</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>The algorithm is Musser's introsort (1997). .NET adopted it in .NET Framework 4.5 (2012): "Beginning in .NET Framework 4.5",
+/// the sort algorithm "has changed (to be an introspective sort instead of a quick sort)".</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>dotnet runtime: https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Collections/Generic/ArraySortHelper.cs</para>
+/// <para>.NET compatibility note: https://github.com/microsoft/dotnet/blob/main/Documentation/compatibility/list_sort-algorithm-changed.md</para>
 /// </remarks>
 public static class IntroSortDotnet
 {

@@ -55,7 +55,8 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>History:</strong></para>
 /// <para>Odd-even merging is not derived from bitonic sorting; the two are siblings. Batcher (1968) presents odd-even merging first
 /// and then introduces bitonic sorters as "another way of constructing merging networks". He builds a full sorter from either one
-/// "using the well-known sorting-by-merging scheme".</para>
+/// "using the well-known sorting-by-merging scheme". The 1968 paper cites his earlier Goodyear Aerospace report GER-11759
+/// "A new internal sorting method" (1964) for odd-even merging; that report was not found online.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Batcher, K. E. (1968). "Sorting networks and their applications". AFIPS Spring Joint Computer Conference. https://www.cs.kent.edu/~batcher/sort.pdf</para>
 /// <para>Knuth, D.E., The Art of Computer Programming Vol. 3: Sorting and Searching, Algorithm 5.3.4N.</para>

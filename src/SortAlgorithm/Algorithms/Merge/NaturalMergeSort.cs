@@ -48,8 +48,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Non-recursive - Iterative bottom-up approach avoids stack overflow on large inputs</description></item>
 /// <item><description>Fewer merges - Exploits pre-existing order, skipping unnecessary work</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>Natural merging was in production use before Knuth's TAOCP (1973), which is often cited for it. Marilyn M. Jensen's
+/// IBM "A Survey of Sorting Techniques" (1963) describes "the von Neumann, or natural, merge", which "takes full advantage of
+/// all ordering existing" in the input, and notes that Sort 90 for the IBM 7070 uses it. 1963 is a lower bound, not a proven
+/// origin.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Merge_sort#Natural_merge_sort</para>
+/// <para>Jensen, M. M. (1963). "A Survey of Sorting Techniques". IBM Z77-3013. https://cassini.mirrorservice.org/sites/www.bitsavers.org/pdf/ibm/technical_information_exchange/Z77-3013_Jensen_-_A_Survey_of_Sorting_Techniques_19630718.pdf</para>
 /// </remarks>
 public static class NaturalMergeSort
 {

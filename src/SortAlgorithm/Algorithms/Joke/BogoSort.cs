@@ -34,8 +34,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(n × n!) on average - each shuffle writes every element through its n-1 swaps</description></item>
 /// <item><description>Space       : O(1) - the shuffle permutes the input span</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>No inventor is known; the Jargon File treats its origin as folklore. "bogo-sort" first appears in Jargon File version 2.4.1
+/// (14 January 1991) and is absent from version 2.3.1 (3 January 1991).</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Bogosort</para>
+/// <para>Jargon File 2.4.1: http://www.catb.org/jargon/oldversions/jarg241.txt</para>
 /// </remarks>
 public static class BogoSort
 {

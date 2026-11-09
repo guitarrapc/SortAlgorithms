@@ -49,8 +49,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Educational purposes to teach fundamental sorting concepts</description></item>
 /// <item><description>When memory writes are costly but comparisons are cheap</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>No inventor is known. It is described in 1956 both by Edward H. Friend ("Sorting on Electronic Computer Systems", JACM,
+/// July 1956) and by Howard B. Demuth's thesis "Electronic Data Sorting" (Stanford, 1956).</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Selection_sort</para>
+/// <para>Friend, E. H. (1956). "Sorting on Electronic Computer Systems". Journal of the ACM 3 (3): 134-168. https://doi.org/10.1145/320831.320833</para>
 /// </remarks>
 public static class SelectionSort
 {

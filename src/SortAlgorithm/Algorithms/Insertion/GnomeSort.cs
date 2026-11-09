@@ -40,8 +40,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: Best: 0 | Average: ~n²/2 | Worst: n(n-1) (2 writes per swap)</description></item>
 /// <item><description>Space       : O(1) - the gnome walks the array with a single position variable</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>The method is older than its names. Michael Singer's "PDP-11 Assembler Language Programming and Machine Organization"
+/// (1980, §2.3) describes it exactly: compare each number with its successor, and if they are out of order, "interchange the two
+/// numbers, and move one step to the left". Hamid Sarbazi-Azad published it as "Stupid Sort" in 2000, and Dick Grune named it
+/// gnome sort.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Gnome_sort</para>
+/// <para>Singer, M. (1980). PDP-11 Assembler Language Programming and Machine Organization. Wiley. https://archive.org/details/pdp11assemblerlanguageprogrammingandmachineorganization/page/n60/mode/1up</para>
 /// </remarks>
 public static class GnomeSort
 {

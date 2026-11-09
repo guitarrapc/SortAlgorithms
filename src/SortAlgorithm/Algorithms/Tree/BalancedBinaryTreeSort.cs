@@ -87,6 +87,10 @@ namespace SortAlgorithm.Algorithms;
 /// equal one. The same reasoning is what makes <see cref="SplaySort"/> and <see cref="TreapSort"/> stable, and it is independent of how
 /// each of them decides to restructure.
 /// </para>
+/// <para><strong>History:</strong></para>
+/// <para>Adelson-Velsky and Landis (1962) introduced the balanced tree in "An algorithm for the organization of information", a
+/// structure for storing and looking up information. Sorting by inserting into a search tree and reading it in order is older
+/// (Windley, 1960; see <see cref="BinaryTreeSort"/>), so this sort applies their tree to that idea rather than being their invention.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Tree_sort</para>
 /// </remarks>

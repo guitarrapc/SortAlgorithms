@@ -44,8 +44,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(n × passes) - each merge writes all accumulated elements</description></item>
 /// <item><description>Space       : O(n) - three flat ArrayPool buffers: remaining, strand, result</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>The earliest documented source found is a November 1997 newsgroup message about "J sort": NIST's Dictionary of Algorithms
+/// and Data Structures says that "John Cohen says in a message posted in November 1997 that he invented this algorithm". Later
+/// textbook citations (2008 and after) are not the origin.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Strand_sort</para>
+/// <para>NIST DADS: https://xlinux.nist.gov/dads/HTML/strandSort.html, https://xlinux.nist.gov/dads/HTML/j_sort.html</para>
 /// </remarks>
 public static class StrandSort
 {

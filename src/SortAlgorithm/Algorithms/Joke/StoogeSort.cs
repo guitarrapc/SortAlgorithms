@@ -43,6 +43,10 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Note:</strong> Stooge Sort is a deliberately inefficient algorithm used for educational purposes to demonstrate
 /// that not all recursive divide-and-conquer algorithms are efficient. The "multiply and surrender" strategy (triple recursion on overlapping 2/3 segments)
 /// leads to excessive redundant work, making it impractical for any real-world use.</para>
+/// <para><strong>History:</strong></para>
+/// <para>It is known from a problem in Cormen, Leiserson, Rivest and Stein's "Introduction to Algorithms" (2nd ed., 2001), which
+/// attributes it in jest to fictional professors. The book is its first known mention, not a claim of invention. Whether the
+/// 1st edition (1990) already contains it was not confirmed.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Stooge_sort</para>
 /// </remarks>

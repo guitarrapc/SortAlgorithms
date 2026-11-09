@@ -58,6 +58,10 @@ namespace SortAlgorithm.Algorithms;
 /// minRun (32-64) where shifts average roughly minRun/4. Gating on the shift length keeps the large-input win without
 /// the short-shift regression.</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>Like straight insertion, it goes back to John Mauchly's 1946 Moore School lecture, the first published discussion of
+/// computer sorting, where Knuth (TAOCP Vol. 3, p. 82) says insertion sorting "was mentioned". That is a first mention, not a
+/// claim of invention.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Insertion_sort</para>
 /// </remarks>

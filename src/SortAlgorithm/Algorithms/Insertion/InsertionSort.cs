@@ -57,6 +57,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>As the final step in hybrid algorithms (e.g., Timsort, Introsort)</description></item>
 /// <item><description>When stability is required with minimal memory overhead</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>No inventor is known. Knuth (TAOCP Vol. 3, p. 82) writes that insertion sorting "was mentioned by John Mauchly as early as
+/// 1946, in the first published discussion of computer sorting" (the Moore School Lectures, July-August 1946). Knuth says
+/// "mentioned", not "invented".</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Insertion_sort</para>
 /// </remarks>

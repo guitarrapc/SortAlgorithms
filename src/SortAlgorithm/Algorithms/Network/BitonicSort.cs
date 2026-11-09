@@ -80,8 +80,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Educational purposes to demonstrate oblivious sorting algorithms</description></item>
 /// <item><description>Scenarios where input size is guaranteed to be a power of 2 and zero allocation is required</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>Batcher published bitonic sorters in "Sorting networks and their applications" (AFIPS SJCC, 1968). The paper cites his
+/// earlier Goodyear Aerospace report GER-11869 "Bitonic sorting" (1964), which was not found online.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Bitonic_sorter</para>
+/// <para>Batcher, K. E. (1968). "Sorting networks and their applications". AFIPS Spring Joint Computer Conference. https://doi.org/10.1145/1468075.1468121</para>
 /// </remarks>
 public static class BitonicSort
 {

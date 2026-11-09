@@ -343,8 +343,8 @@ public static class ShellSortSedgewick1986
 /// <para><strong>Theoretical Conditions for Correct Shell Sort (Tokuda 1992):</strong></para>
 /// <list type="number">
 /// <item><description><strong>Gap Sequence Property:</strong> The gap sequence must contain 1 as the final gap.
-/// Tokuda sequence: h_k = ⌈(9/4)^k⌉, or equivalently h_{k+1} = ⌊(9h_k + 1)/4⌋ starting from h_1 = 1:
-/// {1, 4, 9, 20, 46, 103, 233, 525, 1182, 2660, 5985, 13467, 30301, ...}
+/// Tokuda sequence: h_k = ⌊(4/5)·((9/4)^(k+1) - 1)⌋ for k ≥ 0:
+/// {1, 3, 8, 19, 45, 102, 232, 524, 1181, 2659, 5984, 13466, 30300, ...}
 /// The ratio between consecutive gaps is approximately 2.25.</description></item>
 /// <item><description><strong>h-Sorting Invariant:</strong> For each gap h, the array must be h-sorted.
 /// This is achieved by applying gap-based insertion sort that ensures elements h positions apart are in relative order.</description></item>
@@ -369,7 +369,12 @@ public static class ShellSortSedgewick1986
 /// </list>
 /// <para><strong>Gap Sequence Characteristics (Tokuda 1992):</strong></para>
 /// <list type="bullet">
-/// <item><description>Formula: h_k = ⌈(9/4)^k⌉ or h_{k+1} = ⌊(9h_k + 1)/4⌋</description></item>
+/// <item><description>Formula: h_k = ⌊(4/5)·((9/4)^(k+1) - 1)⌋ (OEIS A361506)</description></item>
+/// <item><description>History: the widely quoted {1, 4, 9, 20, 46, ...} (the ceiling form, OEIS A108870) is a misquote. OEIS notes that
+/// its old name, "Tokuda's good set of increments for Shell sort", "seems to be false", and Knuth's TAOCP Vol. 3 errata (2023-03-12)
+/// replace "⌊2.25h_s⌋" with the floor formula above. This implementation used the ceiling form until 2026-11-10.</description></item>
+/// <item><description>Reference: N. Tokuda, "An Improved Shellsort", IFIP Transactions A-12 (1992), 449-457; https://oeis.org/A361506;
+/// https://cs.stanford.edu/~knuth/err3.textxt</description></item>
 /// <item><description>Empirically optimized through extensive testing on various data sets</description></item>
 /// <item><description>Better practical performance than Knuth's sequence</description></item>
 /// <item><description>Ratio between consecutive gaps ≈ 2.25 (optimal for minimizing comparisons)</description></item>
@@ -465,8 +470,8 @@ public static class ShellSortTokuda1992
         var length = last - first;
         if (length < 2) return;
 
-        // Tokuda's sequence: empirically optimized gap sequence
-        ReadOnlySpan<int> tokudaSequence = [1, 4, 9, 20, 46, 103, 233, 525, 1182, 2660, 5985, 13467, 30301, 68178, 153401, 345152, 776591];
+        // Tokuda's sequence: h_k = floor((4/5) * ((9/4)^(k+1) - 1)) (OEIS A361506).
+        ReadOnlySpan<int> tokudaSequence = [1, 3, 8, 19, 45, 102, 232, 524, 1181, 2659, 5984, 13466, 30300, 68177, 153400, 345151, 776590];
 
         // Find the largest gap index where gap <= (length/2)
         int gapIndex = tokudaSequence.Length - 1;

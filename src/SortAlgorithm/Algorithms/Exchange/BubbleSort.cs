@@ -37,8 +37,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(n²) - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(1) - the sort exchanges neighbours inside the input span</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>No inventor is known. The earliest description is Edward H. Friend's "Sorting on Electronic Computer Systems" (JACM, 1956),
+/// which calls it sorting by exchange. Astrachan (2003) finds the name "bubble sort" first in print in Iverson's "A Programming
+/// Language" (1962).</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Bubble_sort</para>
+/// <para>Friend, E. H. (1956). "Sorting on Electronic Computer Systems". Journal of the ACM 3 (3): 134-168. https://doi.org/10.1145/320831.320833</para>
+/// <para>Astrachan, O. (2003). "Bubble Sort: An Archaeological Algorithmic Analysis". https://users.cs.duke.edu/~ola/papers/bubble.pdf</para>
 /// </remarks>
 /// <typeparam name="T"></typeparam>
 public static class BubbleSort

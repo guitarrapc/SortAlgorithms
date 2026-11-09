@@ -39,8 +39,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(log n) - Recursion stack depth</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>libc++'s <c>std::sort</c> was not an introsort from the start. The initial import by Howard Hinnant (2010) was a quicksort
+/// without a depth limit or a heapsort fallback. The introsort fallback this port follows was added by Nilay Vaish in 2021
+/// ("[libc++] Add introsort to avoid O(n^2) behavior"), which is the year the registry gives this variant.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>LLVM libc++: https://github.com/llvm/llvm-project/blob/llvmorg-21.1.8/libcxx/include/__algorithm/sort.h</para>
+/// <para>libc++ introsort commit: https://github.com/llvm/llvm-project/commit/7f287390d78d301956e8e925a84349fd4408a11e</para>
 /// <para>Danila Kutenin: Changing std::sort at Google’s Scale and Beyond https://danlark.org/2022/04/20/changing-stdsort-at-googles-scale-and-beyond/comment-page-1/</para>
 /// </remarks>
 public static class StdSort

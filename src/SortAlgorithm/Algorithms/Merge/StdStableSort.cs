@@ -61,8 +61,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(n log n) - every merge level writes each element it moves, into the auxiliary buffer or back</description></item>
 /// <item><description>Space       : O(n) auxiliary buffer + O(log n) stack for recursion</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>libc++ was written by Howard Hinnant. Its initial import (2010-05-11) already contains this top-down <c>__stable_sort</c>
+/// with a buffer and an insertion-sort cutoff. The C++ standard (1998) only fixes the interface and complexity of
+/// <c>std::stable_sort</c>, so the standard's year does not date this implementation.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>LLVM libcxx: https://github.com/llvm/llvm-project/blob/llvmorg-22.1.2/libcxx/include/__algorithm/stable_sort.h</para>
+/// <para>libc++ initial import: https://github.com/llvm/llvm-project/commit/3e519524c118651123eecf60c2bbc5d65ad9bac3</para>
 /// </remarks>
 public static class StdStableSort
 {

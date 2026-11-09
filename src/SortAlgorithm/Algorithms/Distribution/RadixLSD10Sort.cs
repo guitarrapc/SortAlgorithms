@@ -76,8 +76,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Practical Rarity:</strong> Sorting 128-bit integers is uncommon in typical applications.
 /// For such cases, comparison-based sorts (e.g., QuickSort, MergeSort) remain practical alternatives.</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>Least-significant-digit-first sorting predates computers: it was done on punched-card sorters. Knuth (TAOCP Vol. 3, §5.5)
+/// calls a remark by L. J. Comrie (1930) "the first known mention of this right-to-left technique". Seward's 1954 thesis brought
+/// it to the computer with a counting pass per digit (the counting sort), which is the form implemented here and in
+/// <see cref="RadixLSD4Sort"/> and <see cref="RadixLSD256Sort"/>.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Radix_sort#Least_significant_digit</para>
+/// <para>Seward, H. H. (1954). "Information Sorting in the Application of Electronic Digital Computers to Business Operations". MIT Report R-232.</para>
 /// </remarks>
 public static class RadixLSD10Sort
 {

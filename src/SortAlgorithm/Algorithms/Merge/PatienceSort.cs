@@ -46,8 +46,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(n) - each element written once to merge buffer, then copied back</description></item>
 /// <item><description>Space       : O(n) - four flat ArrayPool buffers: pile links, pile heads, heap, merge output</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>The name comes from C. L. Mallows (SIAM Review, 1962 and 1963), but he did not claim the method. Aldous and Diaconis (1999)
+/// write that Mallows "credits A.S.C. Ross for its invention".</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Patience_sorting</para>
+/// <para>Mallows, C. L. (1962). "Patience Sorting". SIAM Review 4 (2): 148-149. https://doi.org/10.1137/1004036</para>
+/// <para>Aldous, D.; Diaconis, P. (1999). "Longest increasing subsequences: from patience sorting to the Baik-Deift-Johansson theorem". Bulletin of the AMS 36 (4): 413-432.</para>
 /// </remarks>
 public static class PatienceSort
 {
