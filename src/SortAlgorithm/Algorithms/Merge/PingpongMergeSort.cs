@@ -71,8 +71,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>vs BottomupMergeSort: Both use ping-pong buffering; BottomupMergeSort is iterative (bottom-up), PingpongMergeSort is recursive (top-down)</description></item>
 /// <item><description>vs NaturalMergeSort : NaturalMergeSort achieves O(n) on pre-sorted data; PingpongMergeSort is always O(n log n) writes but simpler</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>The name comes from Chandramouli and Goldstein (SIGMOD 2014), who present "ping-pong merge" as a new technique for
+/// merging sorted runs in main memory. Alternating merge passes between the array and a buffer is older: the SGI STL
+/// <c>algo.h</c> (copyright Hewlett-Packard 1994, Silicon Graphics 1996) already merges array → buffer → array in
+/// <c>__merge_sort_with_buffer</c>, the routine <see cref="StdStableSort"/> describes for libstdc++.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Merge_sort#Top-down_implementation</para>
+/// <para>Paper: "Patience is a Virtue: Revisiting Merge and Sort on Modern Processors" by Badrish Chandramouli and Jonathan Goldstein (SIGMOD 2014) https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/patsort-sigmod14.pdf</para>
 /// </remarks>
 public static class PingpongMergeSort
 {

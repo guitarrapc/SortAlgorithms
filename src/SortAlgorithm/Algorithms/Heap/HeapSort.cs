@@ -64,6 +64,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Comparison-based algorithm: requires O(n log n) comparisons in all cases</description></item>
 /// <item><description>Despite O(n log n) guarantee, often slower than Quicksort in practice due to poor cache performance</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>Tree selection (<see cref="TournamentSort"/>) came first: Friend described it in 1956, and Williams published heapsort
+/// in 1964. Knuth, TAOCP Vol. 3 (2nd ed.) §5.2.3, pp. 143-145, introduces heapsort as the way to remove the -∞ "holes"
+/// that tree selection leaves behind, and the separate output area it needs. On p. 144 he credits J. W. J. Williams
+/// (CACM 7 (1964), 347-348) with the discovery. That order is how Knuth explains it. No record shows that Williams started
+/// from tree selection. So heapsort borrows the idea of selecting the winner with a tree; it is not a direct descendant
+/// of tournament sort.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Heapsort</para>
 /// </remarks>

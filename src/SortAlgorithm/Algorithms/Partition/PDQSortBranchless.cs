@@ -64,6 +64,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: Θ(n log n) average, O(1) best - each swap writes two positions; an already ordered input is never partitioned</description></item>
 /// <item><description>Space       : O(log n) recursion stack + O(1) offset buffers (128 bytes per partition call)</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>The block partition was added to pdqsort later; it is not part of the original design. orlp/pdqsort was first
+/// committed in February 2015. The BlockQuicksort paper appeared on arXiv in April 2016, and the block partition was
+/// committed to orlp/pdqsort in July 2016 ("Experimental promising version using block quicksort"). BlockQuicksort
+/// therefore shaped this branchless variant, not the original <see cref="PDQSort"/>.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Paper: https://arxiv.org/abs/2106.05123 (pdqsort), https://arxiv.org/abs/1604.06697 (BlockQuicksort)</para>
 /// <para>YouTube: https://www.youtube.com/watch?v=jz-PBiWwNjc</para>

@@ -85,6 +85,12 @@ namespace SortAlgorithm.Algorithms;
 /// construction, the adaptivity and the bounds above are unchanged. The min-at-root form is also the one the
 /// Wikipedia article documents, and is what any reader comparing this code against either source will expect.
 /// </para>
+/// <para><strong>History:</strong></para>
+/// <para>The Cartesian tree is not a search tree, but the sort keeps the pattern of tree sorting: build a tree, then read
+/// the elements out of it. It is not derived from the treap. The Cartesian tree (Vuillemin, 1980) is older than the treap
+/// (Seidel and Aragon, 1989). The paper's title, "Heapsort - Adapted for Presorted Files", names the other ancestor.
+/// The heapsort skeleton of repeatedly extracting the minimum stays. What changes is where the minimum is taken from:
+/// the frontier of a tree that copies the input order, not the whole array.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Cartesian_tree</para>
 /// <para>The sorting algorithm: Levcopoulos, C.; Petersson, O. (1989). "Heapsort - Adapted for Presorted Files". WADS 1989, LNCS 382, pp. 499-509.</para>

@@ -101,6 +101,10 @@ namespace SortAlgorithm.Algorithms;
 /// child it was about to enter: the promoted median now sits on the path, and the element takes the right side when
 /// it compares equal, which is the same rule applied to a key that has just moved.
 /// </para>
+/// <para><strong>History:</strong></para>
+/// <para>A B-tree generalizes the binary search tree to several keys per node. It belongs to the same line as the AVL tree
+/// (<see cref="BalancedBinaryTreeSort"/>): both are search trees that guarantee their height, so that sorted input does not
+/// make them degenerate. The means differ. The AVL tree rotates, and the B-tree splits a full node and pushes its median up.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Bayer, R.; McCreight, E. (1972). "Organization and Maintenance of Large Ordered Indexes". Acta Informatica 1 (3): 173-189.</para>
 /// <para>Cormen, Leiserson, Rivest, Stein. "Introduction to Algorithms", chapter 18 (B-Trees).</para>

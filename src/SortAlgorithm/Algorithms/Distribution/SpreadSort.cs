@@ -152,6 +152,11 @@ namespace SortAlgorithm.Algorithms;
 /// order calls equal; a selector that split <c>-0.0</c> from <c>+0.0</c> for this sort alone would make it
 /// the only sort in the library that distinguishes them. A caller who needs <c>totalOrder</c> can pass a
 /// custom <see cref="IRadixKeySelector{T}"/> to the <c>SortBy</c> overloads.</para>
+/// <para><strong>History:</strong></para>
+/// <para>The comparison fallback has changed over time. The Boost.Sort 1.66 documentation says "there is a fallback in
+/// spreadsort to std::sort if the input size is less than 1000"; the Boost 1.76 headers say all variants fall back to
+/// <c>boost::sort::pdqsort</c> below <c>detail::min_sort_size</c>. This implementation follows current Boost, so it uses
+/// <see cref="PDQSort"/>, an algorithm published in 2015, after Spreadsort itself (2002).</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Boost.Sort SpreadSort: https://www.boost.org/doc/libs/release/libs/sort/doc/html/sort/sort_hpp/spreadsort.html</para>
 /// <para>Paper: "Spreadsort: A Cache-Friendly Sorting Algorithm" by Steven Ross (2002) https://github.com/boostorg/sort/blob/develop/doc/papers/original_spreadsort06_2002.pdf</para>

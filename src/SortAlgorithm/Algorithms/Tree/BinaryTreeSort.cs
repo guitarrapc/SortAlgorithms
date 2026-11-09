@@ -52,8 +52,14 @@ namespace SortAlgorithm.Algorithms;
 /// right from each, landing after all of them in in-order. Sending equal keys left instead would reverse them and make the sort unstable.</description></item>
 /// <item><description>No tree balancing is performed; for guaranteed O(n log n) performance, consider using AVL or Red-Black tree variants</description></item>
 /// </list>
+/// <para><strong>History:</strong></para>
+/// <para>Floyd's "Algorithm 113: Treesort" (CACM, 1962) is a different algorithm. NIST's Dictionary of Algorithms and Data
+/// Structures separates the two. Treesort (1) is this sort (build a binary search tree, then traverse it in order), and NIST
+/// gives it no origin. Treesort (2) covers the algorithms Floyd named treesort: NIST lists them as variants of heapsort and
+/// cites Algorithm 113 and Algorithm 245 "Treesort 3" (1964). Floyd's work leads to heapsort, not to search-tree sorting.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Tree_sort</para>
+/// <para>NIST DADS: https://xlinux.nist.gov/dads/HTML/treesort1.html (this sort), https://xlinux.nist.gov/dads/HTML/treesort2.html (Floyd's treesort)</para>
 /// </remarks>
 public static class BinaryTreeSort
 {

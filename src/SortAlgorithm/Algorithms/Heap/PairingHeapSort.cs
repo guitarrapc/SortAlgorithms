@@ -73,6 +73,11 @@ namespace SortAlgorithm.Algorithms;
 /// reorder that list again. Three equal keys are enough to see it: inserting <c>1a, 1b, 1c</c> leaves <c>1a</c> as the
 /// root with children <c>[1c, 1b]</c>, and extraction returns <c>1a, 1c, 1b</c>.
 /// </para>
+/// <para><strong>History:</strong></para>
+/// <para>The pairing heap was proposed as a self-adjusting heap, as the original paper's title says. It shares the idea of the
+/// splay tree (Sleator and Tarjan, 1985): no balance information is stored, and the structure is reorganized on every access.
+/// Wikipedia notes that the analysis of its time complexity "was initially inspired by that of splay trees". The idea came from
+/// the splay tree itself, not from Splaysort (Moffat, Eddy and Petersson, 1996), which was published ten years later.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Fredman, M. L.; Sedgewick, R.; Sleator, D. D.; Tarjan, R. E. (1986). "The pairing heap: a new form of self-adjusting heap". Algorithmica 1 (1): 111-129.</para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Pairing_heap</para>

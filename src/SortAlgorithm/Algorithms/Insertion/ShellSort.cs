@@ -703,6 +703,8 @@ public static class ShellSortCiura2001
 /// <item><description>Empirically yields 5-10% fewer comparisons than Tokuda on average</description></item>
 /// <item><description>State-of-the-art gap sequence for Shell sort</description></item>
 /// <item><description>Recommended for modern implementations and research</description></item>
+/// <item><description>Lineage: generalizes Tokuda's formula by replacing its base 9/4 with an empirically tuned γ, as the paper's title says.
+/// It does not extend Ciura's sequence; it borrows Ciura's (2001) approach of finding increments by experiment.</description></item>
 /// <item><description>Reference: Ying Wai Lee, "Empirically Improved Tokuda Gap Sequence in Shellsort" (arXiv:2112.11112, 2021)</description></item>
 /// </list>
 /// </remarks>
