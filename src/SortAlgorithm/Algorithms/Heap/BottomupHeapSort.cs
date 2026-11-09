@@ -83,20 +83,22 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Historical Context:</strong></para>
 /// <para>
-/// Bottom-up heap sort was introduced by Ingo Wegener in 1993 as an improvement over Floyd's heap construction algorithm.
+/// Bottom-up heap sort was presented by Ingo Wegener at MFCS 1990, with the journal version in Theoretical Computer Science
+/// in 1993, as an improvement over Floyd's heap construction algorithm.
 /// While Floyd (1964) optimized the heap construction phase, Wegener extended the bottom-up principle to the
 /// extraction phase as well, achieving further comparison savings. This makes it one of the most
 /// comparison-efficient variants of heap sort, though it remains primarily of theoretical interest due to
 /// poor cache behavior inherent in heap structures.
 /// </para>
 /// <para>
-/// The idea is older than the 1993 paper. D. J. Bernstein notes that it "is the same as Floyd's bottom-up algorithm in Knuth
+/// The idea is older than Wegener's papers. D. J. Bernstein notes that it "is the same as Floyd's bottom-up algorithm in Knuth
 /// exercise 5.2.3-18" (TAOCP Vol. 3, 1973), and Carlsson published a related variant in 1987 ("A variant of heapsort with almost
 /// optimal number of comparisons", Information Processing Letters 24 (4)).
 /// </para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Heapsort</para>
-/// <para>Paper: https://pdf.sciencedirectassets.com/271538/1-s2.0-S0304397500X04148/1-s2.0-030439759390364Y/main.pdf</para>
+/// <para>Paper: Wegener, I. (1990). "Bottom-up-heap sort, a new variant of heap sort beating on average quick sort (if n is not very small)". MFCS 1990, LNCS 452: 516-522. https://doi.org/10.1007/BFb0029650</para>
+/// <para>Paper: Wegener, I. (1993). "BOTTOM-UP-HEAPSORT, a new variant of HEAPSORT beating, on an average, QUICKSORT (if n is not very small)". Theoretical Computer Science 118 (1): 81-98. https://doi.org/10.1016/0304-3975(93)90364-Y</para>
 /// </remarks>
 public static class BottomupHeapSort
 {
