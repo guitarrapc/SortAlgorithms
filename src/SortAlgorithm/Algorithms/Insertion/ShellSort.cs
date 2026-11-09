@@ -179,8 +179,9 @@ public static class ShellSortKnuth1973
 /// <para><strong>Theoretical Conditions for Correct Shell Sort (Sedgewick 1986):</strong></para>
 /// <list type="number">
 /// <item><description><strong>Gap Sequence Property:</strong> The gap sequence must contain 1 as the final gap.
-/// Sedgewick sequence: h_k = 4^k + 3·2^(k-1) + 1 for k ≥ 0: {1, 5, 19, 41, 109, 209, 505, 929, ...}
-/// Alternative formula: 9·4^k - 9·2^k + 1 or 4^{k+1} + 3·2^k + 1</description></item>
+/// Sedgewick sequence: h_k = 9·(2^k - 2^(k/2)) + 1 for even k, 8·2^k - 6·2^((k+1)/2) + 1 for odd k (k ≥ 0):
+/// {1, 5, 19, 41, 109, 209, 505, 929, ...}. Equivalently, 9·4^i - 9·2^i + 1 interleaved with 4^(i+2) - 3·2^(i+2) + 1.
+/// Sedgewick's other sequence, 4^k + 3·2^(k-1) + 1 prefixed with 1 ({1, 8, 23, 77, 281, ...}), is not the one used here.</description></item>
 /// <item><description><strong>h-Sorting Invariant:</strong> For each gap h, the array must be h-sorted.
 /// This is achieved by applying gap-based insertion sort for all positions i where i mod h forms an arithmetic sequence.</description></item>
 /// <item><description><strong>Decreasing Gap Sequence:</strong> Gaps must be applied in strictly decreasing order.
@@ -204,7 +205,8 @@ public static class ShellSortKnuth1973
 /// </list>
 /// <para><strong>Gap Sequence Characteristics (Sedgewick 1986):</strong></para>
 /// <list type="bullet">
-/// <item><description>Formula: h_k = 4^k + 3·2^(k-1) + 1, or 9·(4^k - 2^k) + 1</description></item>
+/// <item><description>Formula: 9·4^i - 9·2^i + 1 interleaved with 4^(i+2) - 3·2^(i+2) + 1 (1, 5, 19, 41, 109, ...)</description></item>
+/// <item><description>Reference: Wikipedia "Shellsort", gap sequence table (Sedgewick 1986: 1, 5, 19, 41, 109, ...; the 4^k + 3·2^(k-1) + 1 sequence is listed separately)</description></item>
 /// <item><description>Theoretically proven to achieve O(n^{4/3}) worst-case complexity</description></item>
 /// <item><description>Avoids problematic arithmetic progressions between gaps</description></item>
 /// <item><description>Better theoretical bounds than Knuth sequence</description></item>

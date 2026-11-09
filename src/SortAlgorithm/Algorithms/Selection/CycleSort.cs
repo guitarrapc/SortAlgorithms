@@ -46,7 +46,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Educational purposes to demonstrate cycle detection in permutations</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
-/// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
+/// <para>Wiki: https://en.wikipedia.org/wiki/Cycle_sort</para>
+/// <para>Paper: Haddon, B. K. (1990). "Cycle-Sort: A Linear Sorting Method". The Computer Journal 33 (4): 365-367. https://doi.org/10.1093/comjnl/33.4.365</para>
 /// </remarks>
 public static class CycleSort
 {
