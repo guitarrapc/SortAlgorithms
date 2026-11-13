@@ -451,7 +451,12 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #endif
     }
 
+    // NetWasm 0.13 benefits from inlining the reporting helpers. Keep standard .NET
+    // heuristics: forcing these helpers inline regressed the measured SortVivo API.
     /// <summary>Announces the reads and the comparison for two indices of this span.</summary>
+#if NETWASM
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
     private int ReportCompareAt(int i, int j, out T ai, out T aj)
     {
         ai = _span[i];
@@ -467,6 +472,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     /// Announces the read and the comparison for an element of this span against a value that is not
     /// in any buffer, which is reported as -1.
     /// </summary>
+#if NETWASM
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
     private int ReportCompareElement(int i, T value, out T element)
     {
         element = _span[i];
@@ -480,6 +488,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     /// As <see cref="ReportCompareElement"/> with the operands the other way round, so a consumer sees
     /// the same sign the algorithm did.
     /// </summary>
+#if NETWASM
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
     private int ReportCompareValue(T value, int j, out T element)
     {
         element = _span[j];
@@ -493,6 +504,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     /// Announces the reads and the comparison for one index of this span and one of another. Both
     /// operands keep their own buffer identity, which is what an index alone cannot express.
     /// </summary>
+#if NETWASM
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
     private int ReportCompareAcross(int i, SortSpan<T, TComparer, TContext> other, int j, out T ai, out T bj)
     {
         ai = _span[i];
