@@ -1,4 +1,5 @@
 ﻿using SortAlgorithm.Contexts;
+using System.Runtime.CompilerServices;
 using System.Diagnostics;
 
 namespace SortAlgorithm.Algorithms;
@@ -198,84 +199,11 @@ public static class QuickSort
                 var i = left;
                 var j = right;
 
-                if (typeof(T) == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(Half))
-                {
-                    if (s.IsNaturalFloatingNaN(pivot))
-                    {
-                        while (i <= j)
-                        {
-                            // Move i forward while elements are less than pivot
-                            while (s.IsElementLessThanWithNaNState(i, pivot, true))
-                            {
-                                i++;
-                            }
+                var partition = new PartitionLoop<T, TComparer, TContext> { I = i, J = j };
+                s.WithPreparedKey(pivot, ref partition);
+                i = partition.I;
+                j = partition.J;
 
-                            // Move j backward while elements are greater than pivot
-                            while (s.IsValueLessThanWithNaNState(pivot, j, true))
-                            {
-                                j--;
-                            }
-
-                            // Swap if pointers haven't crossed
-                            if (i <= j)
-                            {
-                                s.Swap(i, j);
-                                i++;
-                                j--;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        while (i <= j)
-                        {
-                            // Move i forward while elements are less than pivot
-                            while (s.IsElementLessThanWithNaNState(i, pivot, false))
-                            {
-                                i++;
-                            }
-
-                            // Move j backward while elements are greater than pivot
-                            while (s.IsValueLessThanWithNaNState(pivot, j, false))
-                            {
-                                j--;
-                            }
-
-                            // Swap if pointers haven't crossed
-                            if (i <= j)
-                            {
-                                s.Swap(i, j);
-                                i++;
-                                j--;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    while (i <= j)
-                    {
-                        // Move i forward while elements are less than pivot
-                        while (s.IsElementLessThan(i, pivot))
-                        {
-                            i++;
-                        }
-
-                        // Move j backward while elements are greater than pivot
-                        while (s.IsValueLessThan(pivot, j))
-                        {
-                            j--;
-                        }
-
-                        // Swap if pointers haven't crossed
-                        if (i <= j)
-                        {
-                            s.Swap(i, j);
-                            i++;
-                            j--;
-                        }
-                    }
-                }
 
                 s.Context.OnRole(pivotIdx, BUFFER_MAIN, RoleType.None);
 
@@ -309,6 +237,40 @@ public static class QuickSort
                 if (top < 0) break;
                 left = stackL[top];
                 right = stackR[top--];
+            }
+        }
+    }
+
+    struct PartitionLoop<T, TComparer, TContext> : IPreparedKeyLoop<T, TComparer, TContext>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        public static PreparedKeyKind Kind => PreparedKeyKind.Partition;
+        public int I;
+        public int J;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Run<TOrder>(SortSpan<T, TComparer, TContext> s, T pivot)
+            where TOrder : struct, IKeyOrder
+        {
+            while (I <= J)
+            {
+                while (s.IsElementLessThan<TOrder>(I, pivot))
+                {
+                    I++;
+                }
+
+                while (s.IsValueLessThan<TOrder>(pivot, J))
+                {
+                    J--;
+                }
+
+                if (I <= J)
+                {
+                    s.Swap(I, J);
+                    I++;
+                    J--;
+                }
             }
         }
     }

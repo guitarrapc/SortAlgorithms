@@ -253,56 +253,43 @@ public static class BinaryInsertionSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var left = first;
-        var right = index;
-        if (typeof(T) == typeof(float))
+        var search = new BinarySearchLoop<T, TComparer, TContext> { Left = first, Right = index };
+        s.WithPreparedKey(tmp, ref search);
+        return search.Left;
+    }
+
+    /// <summary>Returns the midpoint of two nonnegative indices.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static int GetMidpoint(int left, int right)
+    {
+        // The unsigned sum fits even when the signed sum would overflow.
+        return (int)(((uint)left + (uint)right) >> 1);
+    }
+
+    struct BinarySearchLoop<T, TComparer, TContext> : IPreparedKeyLoop<T, TComparer, TContext>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        public static PreparedKeyKind Kind => PreparedKeyKind.BinarySearch;
+        public int Left;
+        public int Right;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Run<TOrder>(SortSpan<T, TComparer, TContext> s, T key)
+            where TOrder : struct, IKeyOrder
         {
-            if (s.IsNaturalFloatingNaN(tmp))
+            while (Left < Right)
             {
-                while (left < right)
+                var mid = GetMidpoint(Left, Right);
+                if (s.IsElementLessOrEqual<TOrder>(mid, key))
                 {
-                    var mid = (left + right) / 2;
-                    if (s.IsElementLessOrEqualWithNaNState(mid, tmp, true))
-                    {
-                        left = mid + 1;
-                    }
-                    else
-                    {
-                        right = mid;
-                    }
-                }
-            }
-            else
-            {
-                while (left < right)
-                {
-                    var mid = (left + right) / 2;
-                    if (s.IsElementLessOrEqualWithNaNState(mid, tmp, false))
-                    {
-                        left = mid + 1;
-                    }
-                    else
-                    {
-                        right = mid;
-                    }
-                }
-            }
-        }
-        else
-        {
-            while (left < right)
-            {
-                var mid = (left + right) / 2;
-                if (s.IsElementLessOrEqual(mid, tmp))
-                {
-                    left = mid + 1;
+                    Left = mid + 1;
                 }
                 else
                 {
-                    right = mid;
+                    Right = mid;
                 }
             }
         }
-        return left;
     }
 }

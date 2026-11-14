@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using SortAlgorithm.Contexts;
@@ -410,7 +410,6 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         return _comparer.Compare(a, b) >= 0;
 #endif
     }
-
 
     // ------------------------------------------------------------------
     // Located comparisons.
@@ -900,7 +899,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         return IsLessOrEqual(element, value);
     }
 
-    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    /// <summary>Uses a cached NaN classification while preserving other comparison paths.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsElementLessThanWithNaNState(int i, T value, bool valueIsNaN)
     {
@@ -915,7 +914,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         return IsLessThan(element, value);
     }
 
-    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    /// <summary>Uses a cached NaN classification while preserving other comparison paths.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsElementLessOrEqualWithNaNState(int i, T value, bool valueIsNaN)
     {
@@ -930,7 +929,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         return IsLessOrEqual(element, value);
     }
 
-    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    /// <summary>Uses a cached NaN classification while preserving other comparison paths.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsValueLessThanWithNaNState(T value, int i, bool valueIsNaN)
     {
@@ -945,7 +944,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         return IsLessThan(value, element);
     }
 
-    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    /// <summary>Uses a cached NaN classification while preserving other comparison paths.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsValueLessOrEqualWithNaNState(T value, int i, bool valueIsNaN)
     {
@@ -960,7 +959,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         return IsLessOrEqual(value, element);
     }
 
-    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    /// <summary>Uses a cached NaN classification while preserving other comparison paths.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsValueGreaterThanWithNaNState(T value, int i, bool valueIsNaN)
     {
@@ -975,7 +974,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         return IsGreaterThan(value, element);
     }
 
-    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    /// <summary>Uses a cached NaN classification while preserving other comparison paths.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsValueGreaterOrEqualWithNaNState(T value, int i, bool valueIsNaN)
     {
@@ -990,4 +989,55 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         return IsGreaterOrEqual(value, element);
     }
 
+    /// <summary>Runs an invariant-key loop with a natural-order specialization when available.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void WithPreparedKey<TLoop>(T key, ref TLoop loop)
+        where TLoop : struct, IPreparedKeyLoop<T, TComparer, TContext>
+    {
+        if (typeof(TContext) != typeof(NullContext) || _comparer is not IComparableComparer ||
+            !KeyPreparation<T>.Enabled(TLoop.Kind))
+            loop.Run<ComparerKeyOrder>(this, key);
+        else if (IsPreparedKeyNaN(key, TLoop.Kind))
+            loop.Run<NaNKeyOrder>(this, key);
+        else
+            loop.Run<NonNaNKeyOrder>(this, key);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementLessThan<TOrder>(int i, T key) where TOrder : struct, IKeyOrder
+        => typeof(TOrder) == typeof(ComparerKeyOrder) ? IsElementLessThan(i, key)
+            : IsElementLessThanWithNaNState(i, key, typeof(TOrder) == typeof(NaNKeyOrder));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsValueLessThan<TOrder>(T key, int i) where TOrder : struct, IKeyOrder
+        => typeof(TOrder) == typeof(ComparerKeyOrder) ? IsValueLessThan(key, i)
+            : IsValueLessThanWithNaNState(key, i, typeof(TOrder) == typeof(NaNKeyOrder));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementLessOrEqual<TOrder>(int i, T key) where TOrder : struct, IKeyOrder
+        => typeof(TOrder) == typeof(ComparerKeyOrder) ? IsElementLessOrEqual(i, key)
+            : IsElementLessOrEqualWithNaNState(i, key, typeof(TOrder) == typeof(NaNKeyOrder));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static bool IsPreparedKeyNaN(T key, PreparedKeyKind kind)
+    {
+        if (kind == PreparedKeyKind.BinarySearch && typeof(T) == typeof(float))
+            return float.IsNaN(Unsafe.As<T, float>(ref key));
+
+        // An ordered self-comparison is false only for NaN.
+        if (typeof(T) == typeof(float))
+        {
+            var value = Unsafe.As<T, float>(ref key);
+            var copy = value;
+            return !(value >= copy);
+        }
+        if (typeof(T) == typeof(double))
+        {
+            var value = Unsafe.As<T, double>(ref key);
+            var copy = value;
+            return !(value >= copy);
+        }
+        if (typeof(T) == typeof(Half)) return Half.IsNaN(Unsafe.As<T, Half>(ref key));
+        return false;
+    }
 }
