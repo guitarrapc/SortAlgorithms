@@ -15,10 +15,13 @@ public abstract class StableSortTestsBase : SortTestsBase
     [MethodDataSource(typeof(MockStabilityData), nameof(MockStabilityData.Generate))]
     public async Task StabilityTest(StabilityTestItem[] items)
     {
+        var optimized = items.ToArray();
         // Test stability: equal elements should maintain relative order
         var stats = new StatisticsContext();
 
         Sort(items.AsSpan(), stats);
+        Sort(optimized.AsSpan(), NullContext.Default);
+        await Assert.That(optimized).IsEquivalentTo(items, CollectionOrdering.Matching);
 
         // Verify sorting correctness - values should be in ascending order
         await Assert.That(items.Select(x => x.Value).ToArray()).IsEquivalentTo(MockStabilityData.Sorted, CollectionOrdering.Matching);
@@ -37,10 +40,13 @@ public abstract class StableSortTestsBase : SortTestsBase
     [MethodDataSource(typeof(MockStabilityWithIdData), nameof(MockStabilityWithIdData.Generate))]
     public async Task StabilityTestWithComplex(StabilityTestItemWithId[] items)
     {
+        var optimized = items.ToArray();
         // Test stability with more complex scenario - multiple equal values
         var stats = new StatisticsContext();
 
         Sort(items.AsSpan(), stats);
+        Sort(optimized.AsSpan(), NullContext.Default);
+        await Assert.That(optimized).IsEquivalentTo(items, CollectionOrdering.Matching);
 
         // Keys are sorted, and elements with the same key maintain original order
         for (var i = 0; i < items.Length; i++)
@@ -54,10 +60,13 @@ public abstract class StableSortTestsBase : SortTestsBase
     [MethodDataSource(typeof(MockStabilityAllEqualsData), nameof(MockStabilityAllEqualsData.Generate))]
     public async Task StabilityTestWithAllEqual(StabilityTestItem[] items)
     {
+        var optimized = items.ToArray();
         // All elements equal: original order must be fully preserved
         var stats = new StatisticsContext();
 
         Sort(items.AsSpan(), stats);
+        Sort(optimized.AsSpan(), NullContext.Default);
+        await Assert.That(optimized).IsEquivalentTo(items, CollectionOrdering.Matching);
 
         foreach (var item in items) await Assert.That(item.Value).IsEqualTo(1);
         await Assert.That(items.Select(x => x.OriginalIndex).ToArray()).IsEquivalentTo(MockStabilityAllEqualsData.Sorted, CollectionOrdering.Matching);

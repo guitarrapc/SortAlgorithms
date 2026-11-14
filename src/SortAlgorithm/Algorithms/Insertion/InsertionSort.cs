@@ -171,8 +171,8 @@ public static class InsertionSort
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="start">The position from which to start inserting elements. Elements before this are already sorted.</param>
     /// <remarks>
-    /// The aggressive inlining is load-bearing, not decorative: at IL size 221 this body is well past
-    /// the JIT's default budget, and without the attribute it is jitted standalone and called. Measured
+    /// Historical measurement of the original core: at IL size 221 its body was well past
+    /// the JIT's default budget, and without the attribute it was jitted standalone and called. Measured
     /// with DOTNET_JitDisasmSummary on the int/ComparableComparer/NullContext instantiation
     /// (see sandbox/DotnetFiles/InsertionSortInlineProbe.cs), native code size with vs. without:
     ///
@@ -213,18 +213,49 @@ public static class InsertionSort
             // Shift elements larger than tmp to the right
             // Use strict inequality (>) to maintain stability
             var j = i - 1;
-            while (j >= first)
+            // Only shifted keys need a prepared NaN state for the remaining comparisons.
+            if (j < first || s.IsElementLessOrEqual(j, tmp, out var head))
             {
-                // The out-overload reports the read of j and a comparison whose left operand is j,
-                // and hands back the element so the shift below needs no second read.
-                if (s.IsElementGreaterThan(j, tmp, out var a))
+                s.Context.OnRole(s.Offset + i, s.BufferId, RoleType.None);
+                continue;
+            }
+            s.Write(j + 1, head);
+            j--;
+            if (j >= first)
+            {
+                if (s.IsNaturalFloatingNaN(tmp))
                 {
-                    s.Write(j + 1, a);
-                    j--;
+                    while (j >= first)
+                    {
+                        // The out-overload reports the read of j and a comparison whose left operand is j,
+                        // and hands back the element so the shift below needs no second read.
+                        if (s.IsElementGreaterThanWithNaNState(j, tmp, true, out var a))
+                        {
+                            s.Write(j + 1, a);
+                            j--;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
                 }
                 else
                 {
-                    break;
+                    while (j >= first)
+                    {
+                        // The out-overload reports the read of j and a comparison whose left operand is j,
+                        // and hands back the element so the shift below needs no second read.
+                        if (s.IsElementGreaterThanWithNaNState(j, tmp, false, out var a))
+                        {
+                            s.Write(j + 1, a);
+                            j--;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -253,8 +284,8 @@ public static class InsertionSort
     /// This precondition is guaranteed by IntroSort's partitioning scheme.
     /// Violating this precondition will cause out-of-bounds access.
     ///
-    /// The only difference from <see cref="SortCore{T, TComparer, TContext}(SortSpan{T, TComparer, TContext}, int, int)"/>
-    /// is that the inner loop drops the (j >= first) test, leaving one loop-carried condition instead of two.
+    /// The sentinel removes the guarded algorithm's (j >= first) test from the inner loop.
+    /// This core retains the ordinary pairwise predicates; the guarded core separately prepares a floating-point key's NaN state.
     /// Write counts are identical. An element that travels all the way to <paramref name="first"/> costs one
     /// extra read and one extra comparison here, because the loop stops by comparing against the sentinel
     /// rather than by running out of range; every other element costs the same as in the guarded core.

@@ -13,6 +13,8 @@ Every algorithm must be tested against the ordering produced by a trusted compar
 
 Tests must also demonstrate custom-comparer behavior when overloads or shared comparison infrastructure change. Stable algorithms require separate evidence that equal keys retain their input order.
 
+Run ordering and stability checks with both `StatisticsContext` and `NullContext`. In particular, floating-point cases must include NaN in either operand, both operands NaN, infinities, and signed zeros. A passing observable path does not validate the separately specialized NullContext path.
+
 ## Observation Evidence
 
 Changes to `SortSpan`, contexts, copying, auxiliary buffers, phases, or roles must verify both the sorted result and the affected callbacks. Optimized and observable paths are behaviorally equivalent with respect to output ordering, but callback counts and sequences are only compared where a specific contract requires them.

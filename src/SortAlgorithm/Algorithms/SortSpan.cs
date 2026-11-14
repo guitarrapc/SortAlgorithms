@@ -254,11 +254,8 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     /// <summary>
     /// Returns true if <paramref name="a"/> is strictly less than <paramref name="b"/>.
     /// For <see cref="ComparableComparer{T}"/> with primitive <typeparamref name="T"/> and <see cref="NullContext"/>,
-    /// uses a direct primitive comparison, avoiding IComparer dispatch.
+    /// uses a direct comparison; floating-point predicates retain CompareTo ordering for NaN.
     /// For non-primitive types or instrumented contexts, delegates to the comparer.
-    /// Note: for <c>float</c>, <c>double</c>, and <c>Half</c>, the specialized path uses IEEE 754 <c>&lt;</c>,
-    /// which treats NaN as unordered (always returns false), unlike <see cref="IComparable{T}.CompareTo"/>.
-    /// Callers that may encounter NaN should handle it separately (e.g., with a NaN pre-pass).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsLessThan(T a, T b)
@@ -287,9 +284,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref a) < Unsafe.As<T, long>(ref b);
             if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref a) < Unsafe.As<T, nuint>(ref b);
             if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref a) < Unsafe.As<T, nint>(ref b);
-            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) < Unsafe.As<T, float>(ref b);
-            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) < Unsafe.As<T, double>(ref b);
-            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) < Unsafe.As<T, Half>(ref b);
+            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) < Unsafe.As<T, float>(ref b) || float.IsNaN(Unsafe.As<T, float>(ref a)) && !float.IsNaN(Unsafe.As<T, float>(ref b));
+            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) < Unsafe.As<T, double>(ref b) || double.IsNaN(Unsafe.As<T, double>(ref a)) && !double.IsNaN(Unsafe.As<T, double>(ref b));
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) < Unsafe.As<T, Half>(ref b) || Half.IsNaN(Unsafe.As<T, Half>(ref a)) && !Half.IsNaN(Unsafe.As<T, Half>(ref b));
         }
         return _comparer.Compare(a, b) < 0;
 #endif
@@ -298,11 +295,8 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     /// <summary>
     /// Returns true if <paramref name="a"/> is less than or equal to <paramref name="b"/>.
     /// For <see cref="ComparableComparer{T}"/> with primitive <typeparamref name="T"/> and <see cref="NullContext"/>,
-    /// uses a direct primitive comparison, avoiding IComparer dispatch.
+    /// uses a direct comparison; floating-point predicates retain CompareTo ordering for NaN.
     /// For non-primitive types or instrumented contexts, delegates to the comparer.
-    /// Note: for <c>float</c>, <c>double</c>, and <c>Half</c>, the specialized path uses IEEE 754 <c>&lt;=</c>,
-    /// which treats NaN as unordered (always returns false), unlike <see cref="IComparable{T}.CompareTo"/>.
-    /// Callers that may encounter NaN should handle it separately (e.g., with a NaN pre-pass).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsLessOrEqual(T a, T b)
@@ -331,9 +325,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref a) <= Unsafe.As<T, long>(ref b);
             if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref a) <= Unsafe.As<T, nuint>(ref b);
             if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref a) <= Unsafe.As<T, nint>(ref b);
-            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) <= Unsafe.As<T, float>(ref b);
-            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) <= Unsafe.As<T, double>(ref b);
-            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) <= Unsafe.As<T, Half>(ref b);
+            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) <= Unsafe.As<T, float>(ref b) || float.IsNaN(Unsafe.As<T, float>(ref a));
+            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) <= Unsafe.As<T, double>(ref b) || double.IsNaN(Unsafe.As<T, double>(ref a));
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) <= Unsafe.As<T, Half>(ref b) || Half.IsNaN(Unsafe.As<T, Half>(ref a));
         }
         return _comparer.Compare(a, b) <= 0;
 #endif
@@ -344,7 +338,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     /// Equivalent to <c>Compare(a, b) &gt; 0</c> and logically identical to <c>!IsLessOrEqual(a, b)</c>,
     /// but provided for readability at call sites that naturally express "greater than" semantics.
     /// For <see cref="ComparableComparer{T}"/> with primitive <typeparamref name="T"/> and <see cref="NullContext"/>,
-    /// uses a direct primitive comparison, avoiding IComparer dispatch.
+    /// uses a direct comparison; floating-point predicates retain CompareTo ordering for NaN.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsGreaterThan(T a, T b)
@@ -370,9 +364,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref a) > Unsafe.As<T, long>(ref b);
             if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref a) > Unsafe.As<T, nuint>(ref b);
             if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref a) > Unsafe.As<T, nint>(ref b);
-            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) > Unsafe.As<T, float>(ref b);
-            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) > Unsafe.As<T, double>(ref b);
-            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) > Unsafe.As<T, Half>(ref b);
+            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) > Unsafe.As<T, float>(ref b) || float.IsNaN(Unsafe.As<T, float>(ref b)) && !float.IsNaN(Unsafe.As<T, float>(ref a));
+            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) > Unsafe.As<T, double>(ref b) || double.IsNaN(Unsafe.As<T, double>(ref b)) && !double.IsNaN(Unsafe.As<T, double>(ref a));
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) > Unsafe.As<T, Half>(ref b) || Half.IsNaN(Unsafe.As<T, Half>(ref b)) && !Half.IsNaN(Unsafe.As<T, Half>(ref a));
         }
         return _comparer.Compare(a, b) > 0;
 #endif
@@ -383,7 +377,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     /// Equivalent to <c>Compare(a, b) &gt;= 0</c> and logically identical to <c>!IsLessThan(a, b)</c>,
     /// but provided for readability at call sites that naturally express "greater or equal" semantics.
     /// For <see cref="ComparableComparer{T}"/> with primitive <typeparamref name="T"/> and <see cref="NullContext"/>,
-    /// uses a direct primitive comparison, avoiding IComparer dispatch.
+    /// uses a direct comparison; floating-point predicates retain CompareTo ordering for NaN.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsGreaterOrEqual(T a, T b)
@@ -409,9 +403,9 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             if (typeof(T) == typeof(long)) return Unsafe.As<T, long>(ref a) >= Unsafe.As<T, long>(ref b);
             if (typeof(T) == typeof(nuint)) return Unsafe.As<T, nuint>(ref a) >= Unsafe.As<T, nuint>(ref b);
             if (typeof(T) == typeof(nint)) return Unsafe.As<T, nint>(ref a) >= Unsafe.As<T, nint>(ref b);
-            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) >= Unsafe.As<T, float>(ref b);
-            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) >= Unsafe.As<T, double>(ref b);
-            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) >= Unsafe.As<T, Half>(ref b);
+            if (typeof(T) == typeof(float)) return Unsafe.As<T, float>(ref a) >= Unsafe.As<T, float>(ref b) || float.IsNaN(Unsafe.As<T, float>(ref b));
+            if (typeof(T) == typeof(double)) return Unsafe.As<T, double>(ref a) >= Unsafe.As<T, double>(ref b) || double.IsNaN(Unsafe.As<T, double>(ref b));
+            if (typeof(T) == typeof(Half)) return Unsafe.As<T, Half>(ref a) >= Unsafe.As<T, Half>(ref b) || Half.IsNaN(Unsafe.As<T, Half>(ref b));
         }
         return _comparer.Compare(a, b) >= 0;
 #endif
@@ -859,5 +853,50 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             _context.OnRangeCopy<T>(_offset + sourceIndex, destinationIndex, length, _bufferId, -1, _span.Slice(sourceIndex, length));
         }
         _span.Slice(sourceIndex, length).CopyTo(destination.Slice(destinationIndex, length));
+    }
+    /// <summary>Classifies a cached value for the unobserved natural floating-point comparison path.</summary>
+    /// <remarks>After clearing the sign bit, NaN encodings exceed positive infinity.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsNaturalFloatingNaN(T value)
+    {
+        if (typeof(TContext) == typeof(NullContext) && _comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(float)) return (Unsafe.As<T, uint>(ref value) & 0x7fff_ffffU) > 0x7f80_0000U;
+            if (typeof(T) == typeof(double)) return (Unsafe.As<T, ulong>(ref value) & 0x7fff_ffff_ffff_ffffUL) > 0x7ff0_0000_0000_0000UL;
+            if (typeof(T) == typeof(Half)) return (Unsafe.As<T, ushort>(ref value) & 0x7fff) > 0x7c00;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Compares with a cached value whose NaN state was prepared by IsNaturalFloatingNaN.
+    /// Other comparers and observing contexts retain their ordinary comparison and callbacks.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementGreaterThanWithNaNState(int i, T value, bool valueIsNaN, out T element)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out element) > 0;
+        element = ReadUnobserved(i);
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(float)) return valueIsNaN
+                ? !float.IsNaN(Unsafe.As<T, float>(ref element))
+                : Unsafe.As<T, float>(ref element) > Unsafe.As<T, float>(ref value);
+            if (typeof(T) == typeof(double)) return valueIsNaN
+                ? !double.IsNaN(Unsafe.As<T, double>(ref element))
+                : Unsafe.As<T, double>(ref element) > Unsafe.As<T, double>(ref value);
+            if (typeof(T) == typeof(Half)) return valueIsNaN
+                ? !Half.IsNaN(Unsafe.As<T, Half>(ref element))
+                : Unsafe.As<T, Half>(ref element) > Unsafe.As<T, Half>(ref value);
+        }
+        return IsGreaterThan(element, value);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementLessOrEqual(int i, T value, out T element)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out element) <= 0;
+        element = ReadUnobserved(i);
+        return IsLessOrEqual(element, value);
     }
 }

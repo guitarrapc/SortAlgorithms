@@ -58,7 +58,7 @@ This decision would need revisiting only if shared concurrent mutation became a 
 | Contiguous input | Algorithms sort `Span<T>` through an internal `readonly ref struct` | Avoid ownership and slicing allocations; expose contiguous storage | `SortSpan` remains synchronous and stack-only |
 | Comparer dispatch | `TComparer : IComparer<T>` is propagated as a concrete generic type | Permit value-type comparer specialization and avoid mandatory boxing/interface dispatch | Hot helpers must not erase it to `IComparer<T>` |
 | Observation dispatch | `TContext : ISortContext` and value-type `NullContext` propagate through the full call chain | Allow the JIT to remove unobserved callback branches | A real context must receive every logical event |
-| Primitive comparisons | Natural ordering specializes 13 primitive types through `typeof(T)` and `Unsafe.As` | Produce direct boolean comparisons rather than `CompareTo` followed by an integer-result test | Enabled only for `IComparableComparer`; custom comparers are never bypassed |
+| Primitive comparisons | Natural ordering specializes 13 primitive types through `typeof(T)` and `Unsafe.As` | Produce boolean comparisons; floating-point predicates include NaN ordering | Enabled only for `IComparableComparer`; custom comparers are never bypassed |
 | Release element access | `MemoryMarshal.GetReference` and `Unsafe.Add(ref, (nint)(uint)index)` back `SortSpan` access | Avoid repeated bounds checks and the sign-extension observed with an `int` index | Algorithm logic must establish valid indices |
 | Debug element access | Normal `Span<T>` indexing remains in Debug | Detect out-of-range algorithm defects during development | Debug and Release remain equivalent for valid input |
 | Inlining | Small access, comparison, comparer, context, and utility methods use `AggressiveInlining` | Expose constants and generic types to callers and reduce hot call overhead when accepted by the JIT | Inlining is verified, not assumed |
@@ -69,7 +69,9 @@ This decision would need revisiting only if shared concurrent mutation became a 
 | Bulk movement | `Span.CopyTo` performs overlap-safe range movement | Use the BCL's optimized generic copy rather than hand-written loops | Observable copies also account for logical reads/writes |
 | Hot/cold shaping | Small hot helpers use `AggressiveInlining`; `IntroSortDotnet` marks its recursive core `NoInlining` | Balance specialization opportunities against caller code size | Applied locally from measurement or structural need |
 
-The primitive set is `byte`, `sbyte`, `ushort`, `short`, `uint`, `int`, `ulong`, `long`, `nuint`, `nint`, `float`, `double`, and `Half`. Direct floating-point relational operators treat NaN as unordered, unlike `CompareTo`; algorithms using these helpers preserve their documented NaN handling.
+The primitive set is `byte`, `sbyte`, `ushort`, `short`, `uint`, `int`, `ulong`, `long`, `nuint`, `nint`, `float`, `double`, and `Half`. Floating-point predicates preserve comparer ordering: NaN precedes numbers, NaNs compare equal, and signed zeros compare equal. Direct relational operators alone do not meet this contract.
+
+InsertionSort prepares the NaN state of a cached key only after a shift is required, and reuses that state for the remaining comparisons. Already-ordered elements retain a short path. Other comparers and observing contexts retain their comparison results and event sequence. The [follow-up measurements](nan-comparison-optimization-2026-11-14.md) record the evidence; no prescan or different sorting algorithm is introduced.
 
 ### Why unchecked by-reference access is selective
 

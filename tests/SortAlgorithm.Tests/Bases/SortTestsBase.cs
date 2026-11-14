@@ -66,12 +66,15 @@ public abstract class SortTestsBase
 
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
+        var optimized = inputSample.Samples.ToArray();
 
         Sort(array.AsSpan(), stats);
+        Sort(optimized.AsSpan(), NullContext.Default);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+        await Assert.That(optimized).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
     [Test]
@@ -82,12 +85,15 @@ public abstract class SortTestsBase
 
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
+        var optimized = inputSample.Samples.ToArray();
 
         Sort(array.AsSpan(), stats);
+        Sort(optimized.AsSpan(), NullContext.Default);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+        await Assert.That(optimized).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
     [Test]
@@ -98,12 +104,15 @@ public abstract class SortTestsBase
 
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
+        var optimized = inputSample.Samples.ToArray();
 
         Sort(array.AsSpan(), stats);
+        Sort(optimized.AsSpan(), NullContext.Default);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+        await Assert.That(optimized).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
     [Test]
@@ -114,12 +123,15 @@ public abstract class SortTestsBase
 
         var stats = new StatisticsContext();
         var array = inputSample.Samples.ToArray();
+        var optimized = inputSample.Samples.ToArray();
 
         Sort(array.AsSpan(), stats);
+        Sort(optimized.AsSpan(), NullContext.Default);
 
         // Check is sorted
         Array.Sort(inputSample.Samples);
         await Assert.That(array).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
+        await Assert.That(optimized).IsEquivalentTo(inputSample.Samples, CollectionOrdering.Matching);
     }
 
     [Test]
