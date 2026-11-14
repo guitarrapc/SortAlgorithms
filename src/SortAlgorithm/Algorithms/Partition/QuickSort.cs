@@ -198,26 +198,82 @@ public static class QuickSort
                 var i = left;
                 var j = right;
 
-                while (i <= j)
+                if (typeof(T) == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(Half))
                 {
-                    // Move i forward while elements are less than pivot
-                    while (s.IsElementLessThan(i, pivot))
+                    if (s.IsNaturalFloatingNaN(pivot))
                     {
-                        i++;
-                    }
+                        while (i <= j)
+                        {
+                            // Move i forward while elements are less than pivot
+                            while (s.IsElementLessThanWithNaNState(i, pivot, true))
+                            {
+                                i++;
+                            }
 
-                    // Move j backward while elements are greater than pivot
-                    while (s.IsValueLessThan(pivot, j))
-                    {
-                        j--;
-                    }
+                            // Move j backward while elements are greater than pivot
+                            while (s.IsValueLessThanWithNaNState(pivot, j, true))
+                            {
+                                j--;
+                            }
 
-                    // Swap if pointers haven't crossed
-                    if (i <= j)
+                            // Swap if pointers haven't crossed
+                            if (i <= j)
+                            {
+                                s.Swap(i, j);
+                                i++;
+                                j--;
+                            }
+                        }
+                    }
+                    else
                     {
-                        s.Swap(i, j);
-                        i++;
-                        j--;
+                        while (i <= j)
+                        {
+                            // Move i forward while elements are less than pivot
+                            while (s.IsElementLessThanWithNaNState(i, pivot, false))
+                            {
+                                i++;
+                            }
+
+                            // Move j backward while elements are greater than pivot
+                            while (s.IsValueLessThanWithNaNState(pivot, j, false))
+                            {
+                                j--;
+                            }
+
+                            // Swap if pointers haven't crossed
+                            if (i <= j)
+                            {
+                                s.Swap(i, j);
+                                i++;
+                                j--;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    while (i <= j)
+                    {
+                        // Move i forward while elements are less than pivot
+                        while (s.IsElementLessThan(i, pivot))
+                        {
+                            i++;
+                        }
+
+                        // Move j backward while elements are greater than pivot
+                        while (s.IsValueLessThan(pivot, j))
+                        {
+                            j--;
+                        }
+
+                        // Swap if pointers haven't crossed
+                        if (i <= j)
+                        {
+                            s.Swap(i, j);
+                            i++;
+                            j--;
+                        }
                     }
                 }
 

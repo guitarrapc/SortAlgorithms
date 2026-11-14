@@ -223,11 +223,35 @@ public static class TernaryHeapSort
 
         // Phase 2: Sift up the original root value to its correct position
         var parent = offset + (hole - offset - 1) / 3;
-        while (hole > root && s.IsValueGreaterThan(rootValue, parent))
+        if (typeof(T) == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(Half))
         {
-            s.Write(hole, s.Read(parent));
-            hole = parent;
-            parent = offset + (hole - offset - 1) / 3;
+            if (s.IsNaturalFloatingNaN(rootValue))
+            {
+                while (hole > root && s.IsValueGreaterThanWithNaNState(rootValue, parent, true))
+                {
+                    s.Write(hole, s.Read(parent));
+                    hole = parent;
+                    parent = offset + (hole - offset - 1) / 3;
+                }
+            }
+            else
+            {
+                while (hole > root && s.IsValueGreaterThanWithNaNState(rootValue, parent, false))
+                {
+                    s.Write(hole, s.Read(parent));
+                    hole = parent;
+                    parent = offset + (hole - offset - 1) / 3;
+                }
+            }
+        }
+        else
+        {
+            while (hole > root && s.IsValueGreaterThan(rootValue, parent))
+            {
+                s.Write(hole, s.Read(parent));
+                hole = parent;
+                parent = offset + (hole - offset - 1) / 3;
+            }
         }
         s.Write(hole, rootValue);
     }
@@ -257,31 +281,95 @@ public static class TernaryHeapSort
     {
         var hole = root;
 
-        while (true)
+        if (typeof(T) == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(Half))
         {
-            var child1 = 3 * (hole - offset) + 1 + offset; // First child
-            var child2 = 3 * (hole - offset) + 2 + offset; // Second child
-            var child3 = 3 * (hole - offset) + 3 + offset; // Third child
-
-            if (child1 >= offset + size) break;
-
-            // Find largest among three children
-            var largest = child1;
-            if (child2 < offset + size && s.IsGreaterAt(child2, largest))
+            if (s.IsNaturalFloatingNaN(value))
             {
-                largest = child2;
+                while (true)
+                {
+                    var child1 = 3 * (hole - offset) + 1 + offset; // First child
+                    var child2 = 3 * (hole - offset) + 2 + offset; // Second child
+                    var child3 = 3 * (hole - offset) + 3 + offset; // Third child
+
+                    if (child1 >= offset + size) break;
+
+                    // Find largest among three children
+                    var largest = child1;
+                    if (child2 < offset + size && s.IsGreaterAt(child2, largest))
+                    {
+                        largest = child2;
+                    }
+                    if (child3 < offset + size && s.IsGreaterAt(child3, largest))
+                    {
+                        largest = child3;
+                    }
+
+                    // If value is already >= largest child, heap property is satisfied
+                    if (s.IsValueGreaterOrEqualWithNaNState(value, largest, true)) break;
+
+                    // Move largest child up to fill the hole
+                    s.Write(hole, s.Read(largest));
+                    hole = largest;
+                }
             }
-            if (child3 < offset + size && s.IsGreaterAt(child3, largest))
+            else
             {
-                largest = child3;
+                while (true)
+                {
+                    var child1 = 3 * (hole - offset) + 1 + offset; // First child
+                    var child2 = 3 * (hole - offset) + 2 + offset; // Second child
+                    var child3 = 3 * (hole - offset) + 3 + offset; // Third child
+
+                    if (child1 >= offset + size) break;
+
+                    // Find largest among three children
+                    var largest = child1;
+                    if (child2 < offset + size && s.IsGreaterAt(child2, largest))
+                    {
+                        largest = child2;
+                    }
+                    if (child3 < offset + size && s.IsGreaterAt(child3, largest))
+                    {
+                        largest = child3;
+                    }
+
+                    // If value is already >= largest child, heap property is satisfied
+                    if (s.IsValueGreaterOrEqualWithNaNState(value, largest, false)) break;
+
+                    // Move largest child up to fill the hole
+                    s.Write(hole, s.Read(largest));
+                    hole = largest;
+                }
             }
+        }
+        else
+        {
+            while (true)
+            {
+                var child1 = 3 * (hole - offset) + 1 + offset; // First child
+                var child2 = 3 * (hole - offset) + 2 + offset; // Second child
+                var child3 = 3 * (hole - offset) + 3 + offset; // Third child
 
-            // If value is already >= largest child, heap property is satisfied
-            if (s.IsValueGreaterOrEqual(value, largest)) break;
+                if (child1 >= offset + size) break;
 
-            // Move largest child up to fill the hole
-            s.Write(hole, s.Read(largest));
-            hole = largest;
+                // Find largest among three children
+                var largest = child1;
+                if (child2 < offset + size && s.IsGreaterAt(child2, largest))
+                {
+                    largest = child2;
+                }
+                if (child3 < offset + size && s.IsGreaterAt(child3, largest))
+                {
+                    largest = child3;
+                }
+
+                // If value is already >= largest child, heap property is satisfied
+                if (s.IsValueGreaterOrEqual(value, largest)) break;
+
+                // Move largest child up to fill the hole
+                s.Write(hole, s.Read(largest));
+                hole = largest;
+            }
         }
 
         s.Write(hole, value);

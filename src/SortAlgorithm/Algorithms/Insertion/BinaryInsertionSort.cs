@@ -255,16 +255,52 @@ public static class BinaryInsertionSort
     {
         var left = first;
         var right = index;
-        while (left < right)
+        if (typeof(T) == typeof(float))
         {
-            var mid = (left + right) / 2;
-            if (s.IsElementLessOrEqual(mid, tmp))
+            if (s.IsNaturalFloatingNaN(tmp))
             {
-                left = mid + 1;
+                while (left < right)
+                {
+                    var mid = (left + right) / 2;
+                    if (s.IsElementLessOrEqualWithNaNState(mid, tmp, true))
+                    {
+                        left = mid + 1;
+                    }
+                    else
+                    {
+                        right = mid;
+                    }
+                }
             }
             else
             {
-                right = mid;
+                while (left < right)
+                {
+                    var mid = (left + right) / 2;
+                    if (s.IsElementLessOrEqualWithNaNState(mid, tmp, false))
+                    {
+                        left = mid + 1;
+                    }
+                    else
+                    {
+                        right = mid;
+                    }
+                }
+            }
+        }
+        else
+        {
+            while (left < right)
+            {
+                var mid = (left + right) / 2;
+                if (s.IsElementLessOrEqual(mid, tmp))
+                {
+                    left = mid + 1;
+                }
+                else
+                {
+                    right = mid;
+                }
             }
         }
         return left;

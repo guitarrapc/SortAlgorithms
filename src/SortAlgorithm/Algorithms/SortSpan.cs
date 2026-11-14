@@ -899,4 +899,95 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         element = ReadUnobserved(i);
         return IsLessOrEqual(element, value);
     }
+
+    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementLessThanWithNaNState(int i, T value, bool valueIsNaN)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out _) < 0;
+        var element = ReadUnobserved(i);
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(float)) return valueIsNaN ? false : !(Unsafe.As<T, float>(ref element) >= Unsafe.As<T, float>(ref value));
+            if (typeof(T) == typeof(double)) return valueIsNaN ? false : !(Unsafe.As<T, double>(ref element) >= Unsafe.As<T, double>(ref value));
+            if (typeof(T) == typeof(Half)) return valueIsNaN ? false : !(Unsafe.As<T, Half>(ref element) >= Unsafe.As<T, Half>(ref value));
+        }
+        return IsLessThan(element, value);
+    }
+
+    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementLessOrEqualWithNaNState(int i, T value, bool valueIsNaN)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out _) <= 0;
+        var element = ReadUnobserved(i);
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(float)) return valueIsNaN ? float.IsNaN(Unsafe.As<T, float>(ref element)) : !(Unsafe.As<T, float>(ref element) > Unsafe.As<T, float>(ref value));
+            if (typeof(T) == typeof(double)) return valueIsNaN ? double.IsNaN(Unsafe.As<T, double>(ref element)) : !(Unsafe.As<T, double>(ref element) > Unsafe.As<T, double>(ref value));
+            if (typeof(T) == typeof(Half)) return valueIsNaN ? Half.IsNaN(Unsafe.As<T, Half>(ref element)) : !(Unsafe.As<T, Half>(ref element) > Unsafe.As<T, Half>(ref value));
+        }
+        return IsLessOrEqual(element, value);
+    }
+
+    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsValueLessThanWithNaNState(T value, int i, bool valueIsNaN)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareValue(value, i, out _) < 0;
+        var element = ReadUnobserved(i);
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(float)) return valueIsNaN ? !float.IsNaN(Unsafe.As<T, float>(ref element)) : Unsafe.As<T, float>(ref value) < Unsafe.As<T, float>(ref element);
+            if (typeof(T) == typeof(double)) return valueIsNaN ? !double.IsNaN(Unsafe.As<T, double>(ref element)) : Unsafe.As<T, double>(ref value) < Unsafe.As<T, double>(ref element);
+            if (typeof(T) == typeof(Half)) return valueIsNaN ? !Half.IsNaN(Unsafe.As<T, Half>(ref element)) : Unsafe.As<T, Half>(ref value) < Unsafe.As<T, Half>(ref element);
+        }
+        return IsLessThan(value, element);
+    }
+
+    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsValueLessOrEqualWithNaNState(T value, int i, bool valueIsNaN)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareValue(value, i, out _) <= 0;
+        var element = ReadUnobserved(i);
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(float)) return valueIsNaN ? true : Unsafe.As<T, float>(ref value) <= Unsafe.As<T, float>(ref element);
+            if (typeof(T) == typeof(double)) return valueIsNaN ? true : Unsafe.As<T, double>(ref value) <= Unsafe.As<T, double>(ref element);
+            if (typeof(T) == typeof(Half)) return valueIsNaN ? true : Unsafe.As<T, Half>(ref value) <= Unsafe.As<T, Half>(ref element);
+        }
+        return IsLessOrEqual(value, element);
+    }
+
+    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsValueGreaterThanWithNaNState(T value, int i, bool valueIsNaN)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareValue(value, i, out _) > 0;
+        var element = ReadUnobserved(i);
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(float)) return valueIsNaN ? false : !(Unsafe.As<T, float>(ref value) <= Unsafe.As<T, float>(ref element));
+            if (typeof(T) == typeof(double)) return valueIsNaN ? false : !(Unsafe.As<T, double>(ref value) <= Unsafe.As<T, double>(ref element));
+            if (typeof(T) == typeof(Half)) return valueIsNaN ? false : !(Unsafe.As<T, Half>(ref value) <= Unsafe.As<T, Half>(ref element));
+        }
+        return IsGreaterThan(value, element);
+    }
+
+    /// <summary>Compares with a key classified by IsNaturalFloatingNaN, preserving other comparison paths.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsValueGreaterOrEqualWithNaNState(T value, int i, bool valueIsNaN)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareValue(value, i, out _) >= 0;
+        var element = ReadUnobserved(i);
+        if (_comparer is IComparableComparer)
+        {
+            if (typeof(T) == typeof(float)) return valueIsNaN ? float.IsNaN(Unsafe.As<T, float>(ref element)) : !(Unsafe.As<T, float>(ref value) < Unsafe.As<T, float>(ref element));
+            if (typeof(T) == typeof(double)) return valueIsNaN ? double.IsNaN(Unsafe.As<T, double>(ref element)) : !(Unsafe.As<T, double>(ref value) < Unsafe.As<T, double>(ref element));
+            if (typeof(T) == typeof(Half)) return valueIsNaN ? Half.IsNaN(Unsafe.As<T, Half>(ref element)) : !(Unsafe.As<T, Half>(ref value) < Unsafe.As<T, Half>(ref element));
+        }
+        return IsGreaterOrEqual(value, element);
+    }
+
 }

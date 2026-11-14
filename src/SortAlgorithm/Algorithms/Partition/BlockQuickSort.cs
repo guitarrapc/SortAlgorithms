@@ -277,7 +277,7 @@ public static class BlockQuickSort
             if (depthLimit == 0)
             {
                 s.Context.OnPhase(SortPhase.HybridToHeapSort, left, right);
-                HeapSort.SortCore(s, left, right + 1);
+                HeapSort.SortFallbackCore(s, left, right + 1);
                 return;
             }
 

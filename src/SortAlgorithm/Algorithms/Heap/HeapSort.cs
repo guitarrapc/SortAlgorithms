@@ -172,8 +172,7 @@ public static class HeapSort
         // Build heap.
         // Read/Write/Compare report through the span they were given, so a caller that hands this core
         // a slice already gets its own Offset and BufferId on every element operation. Index-valued phase
-        // parameters and roles must use the same coordinates, or they name a different element. The
-        // introsort family passes the whole span today, which makes the two agree only by coincidence.
+        // parameters and roles must use the same coordinates, or they name a different element.
         // HeapExtract's parameters are step counts rather than indices, so they are reported as-is.
         s.Context.OnPhase(SortPhase.HeapBuild, s.Offset + first, s.Offset + last - 1);
         for (var i = first + n / 2; i-- > first;)
@@ -240,11 +239,35 @@ public static class HeapSort
 
         // Phase 2: Sift up the original root value to its correct position
         var parent = offset + (hole - offset - 1) / 2;
-        while (hole > root && s.IsValueGreaterThan(rootValue, parent))
+        if (typeof(T) == typeof(Half))
         {
-            s.Write(hole, s.Read(parent));
-            hole = parent;
-            parent = offset + (hole - offset - 1) / 2;
+            if (s.IsNaturalFloatingNaN(rootValue))
+            {
+                while (hole > root && s.IsValueGreaterThanWithNaNState(rootValue, parent, true))
+                {
+                    s.Write(hole, s.Read(parent));
+                    hole = parent;
+                    parent = offset + (hole - offset - 1) / 2;
+                }
+            }
+            else
+            {
+                while (hole > root && s.IsValueGreaterThanWithNaNState(rootValue, parent, false))
+                {
+                    s.Write(hole, s.Read(parent));
+                    hole = parent;
+                    parent = offset + (hole - offset - 1) / 2;
+                }
+            }
+        }
+        else
+        {
+            while (hole > root && s.IsValueGreaterThan(rootValue, parent))
+            {
+                s.Write(hole, s.Read(parent));
+                hole = parent;
+                parent = offset + (hole - offset - 1) / 2;
+            }
         }
         s.Write(hole, rootValue);
     }
@@ -265,25 +288,145 @@ public static class HeapSort
     {
         var hole = root;
 
-        while (true)
+        if (typeof(T) == typeof(Half))
         {
-            var left = 2 * (hole - offset) + 1 + offset;
-            var right = left + 1;
+            if (s.IsNaturalFloatingNaN(value))
+            {
+                while (true)
+                {
+                    var left = 2 * (hole - offset) + 1 + offset;
+                    var right = left + 1;
 
-            if (left >= offset + size) break;
+                    if (left >= offset + size) break;
 
-            // Find larger child
-            var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
+                    // Find larger child
+                    var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
 
-            // If value is already >= largest child, heap property is satisfied
-            if (s.IsValueGreaterOrEqual(value, largest)) break;
+                    // If value is already >= largest child, heap property is satisfied
+                    if (s.IsValueGreaterOrEqualWithNaNState(value, largest, true)) break;
 
-            // Move larger child up to fill the hole
-            s.Write(hole, s.Read(largest));
-            hole = largest;
+                    // Move larger child up to fill the hole
+                    s.Write(hole, s.Read(largest));
+                    hole = largest;
+                }
+            }
+            else
+            {
+                while (true)
+                {
+                    var left = 2 * (hole - offset) + 1 + offset;
+                    var right = left + 1;
+
+                    if (left >= offset + size) break;
+
+                    // Find larger child
+                    var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
+
+                    // If value is already >= largest child, heap property is satisfied
+                    if (s.IsValueGreaterOrEqualWithNaNState(value, largest, false)) break;
+
+                    // Move larger child up to fill the hole
+                    s.Write(hole, s.Read(largest));
+                    hole = largest;
+                }
+            }
+        }
+        else
+        {
+            if (typeof(T) == typeof(float) || typeof(T) == typeof(double))
+            {
+                while (true)
+                {
+                    var left = 2 * (hole - offset) + 1 + offset;
+                    var right = left + 1;
+
+                    if (left >= offset + size) { s.Write(hole, value); return; }
+
+                    // Find larger child
+                    var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
+
+                    // If value is already >= largest child, heap property is satisfied
+                    if (s.IsValueGreaterOrEqual(value, largest)) { s.Write(hole, value); return; }
+
+                    // Move larger child up to fill the hole
+                    s.Write(hole, s.Read(largest));
+                    hole = largest;
+                    break;
+                }
+                if (s.IsNaturalFloatingNaN(value))
+                {
+                    while (true)
+                    {
+                        var left = 2 * (hole - offset) + 1 + offset;
+                        var right = left + 1;
+
+                        if (left >= offset + size) break;
+
+                        // Find larger child
+                        var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
+
+                        // If value is already >= largest child, heap property is satisfied
+                        if (s.IsValueGreaterOrEqualWithNaNState(value, largest, true)) break;
+
+                        // Move larger child up to fill the hole
+                        s.Write(hole, s.Read(largest));
+                        hole = largest;
+                    }
+                }
+                else
+                {
+                    while (true)
+                    {
+                        var left = 2 * (hole - offset) + 1 + offset;
+                        var right = left + 1;
+
+                        if (left >= offset + size) break;
+
+                        // Find larger child
+                        var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
+
+                        // If value is already >= largest child, heap property is satisfied
+                        if (s.IsValueGreaterOrEqualWithNaNState(value, largest, false)) break;
+
+                        // Move larger child up to fill the hole
+                        s.Write(hole, s.Read(largest));
+                        hole = largest;
+                    }
+                }
+            }
+            else
+            {
+                while (true)
+                {
+                    var left = 2 * (hole - offset) + 1 + offset;
+                    var right = left + 1;
+
+                    if (left >= offset + size) break;
+
+                    // Find larger child
+                    var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
+
+                    // If value is already >= largest child, heap property is satisfied
+                    if (s.IsValueGreaterOrEqual(value, largest)) break;
+
+                    // Move larger child up to fill the hole
+                    s.Write(hole, s.Read(largest));
+                    hole = largest;
+                }
+            }
         }
 
         s.Write(hole, value);
+    }
+
+    /// <summary>Runs a heap fallback without expanding its sift loops into the calling partition sort.</summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static void SortFallbackCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var length = last - first;
+        SortCore(s.Slice(first, length, s.BufferId), 0, length);
     }
 }
 

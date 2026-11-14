@@ -298,7 +298,7 @@ public static class PDQSort
                 if (--badAllowed == 0)
                 {
                     s.Context.OnPhase(SortPhase.HybridToHeapSort, begin, end - 1);
-                    HeapSort.SortCore(s, begin, end);
+                    HeapSort.SortFallbackCore(s, begin, end);
                     return;
                 }
 

@@ -472,7 +472,7 @@ public static class StdSort
             if (depth == 0)
             {
                 s.Context.OnPhase(SortPhase.HybridToHeapSort, first, last - 1);
-                HeapSort.SortCore(s, first, last);
+                HeapSort.SortFallbackCore(s, first, last);
                 return;
             }
             depth--;
