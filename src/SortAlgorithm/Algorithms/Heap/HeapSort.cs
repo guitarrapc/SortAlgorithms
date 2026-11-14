@@ -239,30 +239,18 @@ public static class HeapSort
 
         // Phase 2: Sift up the original root value to its correct position
         var parent = offset + (hole - offset - 1) / 2;
-        if (typeof(T) == typeof(Half))
+        if (s.IsNaturalFloatingNaN(rootValue))
         {
-            if (s.IsNaturalFloatingNaN(rootValue))
+            while (hole > root && s.IsValueGreaterThanWithNaNState(rootValue, parent, true))
             {
-                while (hole > root && s.IsValueGreaterThanWithNaNState(rootValue, parent, true))
-                {
-                    s.Write(hole, s.Read(parent));
-                    hole = parent;
-                    parent = offset + (hole - offset - 1) / 2;
-                }
-            }
-            else
-            {
-                while (hole > root && s.IsValueGreaterThanWithNaNState(rootValue, parent, false))
-                {
-                    s.Write(hole, s.Read(parent));
-                    hole = parent;
-                    parent = offset + (hole - offset - 1) / 2;
-                }
+                s.Write(hole, s.Read(parent));
+                hole = parent;
+                parent = offset + (hole - offset - 1) / 2;
             }
         }
         else
         {
-            while (hole > root && s.IsValueGreaterThan(rootValue, parent))
+            while (hole > root && s.IsValueGreaterThanWithNaNState(rootValue, parent, false))
             {
                 s.Write(hole, s.Read(parent));
                 hole = parent;
@@ -288,131 +276,67 @@ public static class HeapSort
     {
         var hole = root;
 
-        if (typeof(T) == typeof(Half))
+        if (KeyPreparation<T>.PeelHeapFirstStep)
         {
-            if (s.IsNaturalFloatingNaN(value))
+            while (true)
             {
-                while (true)
-                {
-                    var left = 2 * (hole - offset) + 1 + offset;
-                    var right = left + 1;
 
-                    if (left >= offset + size) break;
+                var left = 2 * (hole - offset) + 1 + offset;
+                var right = left + 1;
 
-                    // Find larger child
-                    var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
+                if (left >= offset + size) { s.Write(hole, value); return; }
 
-                    // If value is already >= largest child, heap property is satisfied
-                    if (s.IsValueGreaterOrEqualWithNaNState(value, largest, true)) break;
+                // Find larger child
+                var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
 
-                    // Move larger child up to fill the hole
-                    s.Write(hole, s.Read(largest));
-                    hole = largest;
-                }
+                // If value is already >= largest child, heap property is satisfied
+                if (s.IsValueGreaterOrEqual(value, largest)) { s.Write(hole, value); return; }
+
+                // Move larger child up to fill the hole
+                s.Write(hole, s.Read(largest));
+                hole = largest;
+
+                break;
             }
-            else
+        }
+        if (s.IsNaturalFloatingNaN(value))
+        {
+            while (true)
             {
-                while (true)
-                {
-                    var left = 2 * (hole - offset) + 1 + offset;
-                    var right = left + 1;
+                var left = 2 * (hole - offset) + 1 + offset;
+                var right = left + 1;
 
-                    if (left >= offset + size) break;
+                if (left >= offset + size) break;
 
-                    // Find larger child
-                    var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
+                // Find larger child
+                var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
 
-                    // If value is already >= largest child, heap property is satisfied
-                    if (s.IsValueGreaterOrEqualWithNaNState(value, largest, false)) break;
+                // If value is already >= largest child, heap property is satisfied
+                if (s.IsValueGreaterOrEqualWithNaNState(value, largest, true)) break;
 
-                    // Move larger child up to fill the hole
-                    s.Write(hole, s.Read(largest));
-                    hole = largest;
-                }
+                // Move larger child up to fill the hole
+                s.Write(hole, s.Read(largest));
+                hole = largest;
             }
         }
         else
         {
-            if (typeof(T) == typeof(float) || typeof(T) == typeof(double))
+            while (true)
             {
-                while (true)
-                {
-                    var left = 2 * (hole - offset) + 1 + offset;
-                    var right = left + 1;
+                var left = 2 * (hole - offset) + 1 + offset;
+                var right = left + 1;
 
-                    if (left >= offset + size) { s.Write(hole, value); return; }
+                if (left >= offset + size) break;
 
-                    // Find larger child
-                    var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
+                // Find larger child
+                var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
 
-                    // If value is already >= largest child, heap property is satisfied
-                    if (s.IsValueGreaterOrEqual(value, largest)) { s.Write(hole, value); return; }
+                // If value is already >= largest child, heap property is satisfied
+                if (s.IsValueGreaterOrEqualWithNaNState(value, largest, false)) break;
 
-                    // Move larger child up to fill the hole
-                    s.Write(hole, s.Read(largest));
-                    hole = largest;
-                    break;
-                }
-                if (s.IsNaturalFloatingNaN(value))
-                {
-                    while (true)
-                    {
-                        var left = 2 * (hole - offset) + 1 + offset;
-                        var right = left + 1;
-
-                        if (left >= offset + size) break;
-
-                        // Find larger child
-                        var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
-
-                        // If value is already >= largest child, heap property is satisfied
-                        if (s.IsValueGreaterOrEqualWithNaNState(value, largest, true)) break;
-
-                        // Move larger child up to fill the hole
-                        s.Write(hole, s.Read(largest));
-                        hole = largest;
-                    }
-                }
-                else
-                {
-                    while (true)
-                    {
-                        var left = 2 * (hole - offset) + 1 + offset;
-                        var right = left + 1;
-
-                        if (left >= offset + size) break;
-
-                        // Find larger child
-                        var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
-
-                        // If value is already >= largest child, heap property is satisfied
-                        if (s.IsValueGreaterOrEqualWithNaNState(value, largest, false)) break;
-
-                        // Move larger child up to fill the hole
-                        s.Write(hole, s.Read(largest));
-                        hole = largest;
-                    }
-                }
-            }
-            else
-            {
-                while (true)
-                {
-                    var left = 2 * (hole - offset) + 1 + offset;
-                    var right = left + 1;
-
-                    if (left >= offset + size) break;
-
-                    // Find larger child
-                    var largest = (right < offset + size && s.IsGreaterAt(right, left)) ? right : left;
-
-                    // If value is already >= largest child, heap property is satisfied
-                    if (s.IsValueGreaterOrEqual(value, largest)) break;
-
-                    // Move larger child up to fill the hole
-                    s.Write(hole, s.Read(largest));
-                    hole = largest;
-                }
+                // Move larger child up to fill the hole
+                s.Write(hole, s.Read(largest));
+                hole = largest;
             }
         }
 
