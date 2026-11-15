@@ -45,7 +45,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Termination:</strong> Each call reduces the active region by at least the size
 /// of the equal partition (≥1, the pivot itself). The inner scans stop on the pivot value (present in the range,
 /// with the left-end pivot acting as the j-scan sentinel) and carry explicit boundary guards. The base cases are
-/// handled by the insertion sort threshold and the outer while loop guard (right &gt; left).</description></item>
+/// handled by the outer while loop guard (right &gt; left).</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -86,8 +86,6 @@ public static class QuickSort3way
     /// <remarks>Verified by QuickSort3wayTests, which derives from SortTestsBase.</remarks>
     public static bool IsStable => false;
 
-    // Threshold for switching to insertion sort
-    private const int InsertionSortThreshold = 16;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -184,14 +182,9 @@ public static class QuickSort3way
     {
         while (right > left)
         {
-            int length = right - left + 1;
 
-            // For small subarrays, use insertion sort
-            if (length <= InsertionSortThreshold)
-            {
-                InsertionSort.SortCore(s, left, right + 1);
-                return;
-            }
+
+
 
             // Median-of-3 pivot selection: sort left, mid, right in place, then use a[mid] as the pivot VALUE
             // without relocating it. Sorting the samples (rather than just picking the median index) absorbs

@@ -16,74 +16,30 @@ namespace SortAlgorithm.Algorithms;
 /// gaps evenly to maintain efficient insertion performance.
 /// </summary>
 /// <remarks>
-/// <para><strong>Core Principles of Library Sort:</strong></para>
-/// <list type="number">
-/// <item><description><strong>Gap Allocation:</strong> Uses (1 + ε)n space where ε is the gap ratio.
-/// The extra εn positions serve as gaps, allowing insertions without shifting all subsequent elements.
-/// Typical values: ε = 0.5 to 1.0, trading memory for performance.</description></item>
-/// <item><description><strong>Binary Search for Position:</strong> Each new element's position is found
-/// by bisecting the gapped array itself in O(log n) time. There is no separate rank index: a probe
-/// that lands on a gap snaps to the next element to its right, which is O(1) while gaps stay short.</description></item>
-/// <item><description><strong>Limited Shift Range:</strong> When inserting, shift elements right only
-/// until the nearest gap is reached. With well-distributed gaps, average shift distance is O(log n)
-/// rather than O(n), reducing insertion cost from O(n) to O(log n) per element.</description></item>
-/// <item><description><strong>Periodic Rebalancing:</strong> A round ends when its gaps are used up,
-/// at which point the whole array is respread uniformly. With ε=1 that is the paper's doubling
-/// schedule, and the amortized rebalancing cost is O(1) per insertion.</description></item>
-/// <item><description><strong>Randomization (Theoretical):</strong> The O(n log n) guarantee assumes
-/// random insertion order, which spreads gap consumption evenly. This implementation does not
-/// shuffle, because reordering equal keys would destroy stability, so the worst case stays O(n²)
-/// on input that drives every insertion into the same region - reversed input above all.</description></item>
-/// </list>
-/// <para><strong>Algorithm Overview:</strong></para>
-/// <list type="number">
-/// <item><description><strong>Initialization:</strong> Create auxiliary array of size (1+ε)n.
-/// Mark every slot as a gap in the occupancy bitset. Start with small sorted region using standard insertion sort.</description></item>
-/// <item><description><strong>Insertion Loop:</strong> For each new element:
-/// - Bisect the gapped array to find the neighbouring pair it belongs between
-/// - If that interval holds a gap, write into the one nearest the target; otherwise shift right until a gap is reached
-/// - Equal elements are placed after their equals (upper bound), which keeps the sort stable</description></item>
-/// <item><description><strong>Rebalancing:</strong> When the round's gaps are exhausted, at (1+ε)*count elements:
-/// - Collect all non-gap elements
-/// - Redistribute over (1+ε) times the new count, with evenly spaced gaps
-/// - Reset counters and continue insertion</description></item>
-/// <item><description><strong>Final Extraction:</strong> After all insertions, extract non-gap elements
-/// back to original array in sorted order.</description></item>
-/// </list>
-/// <para><strong>Where the cost goes:</strong> the binary search is O(log n) per insertion, the shift that follows it averages
-/// O(log n) while the gaps hold, and a rebalance costs O(n) — triggered at each round end or when a shift runs long.</para>
-/// <para><strong>Gap Management Strategy:</strong></para>
-/// <list type="bullet">
-/// <item><description>Gap Ratio (ε): 1.0, i.e. 2n total space with n gaps. ε is the only tuning knob:
-/// it fixes both the space and the round length, because a round can only run as long as its gaps last</description></item>
-/// <item><description>Initial Size: Start small (e.g., 32 elements) with standard insertion sort</description></item>
-/// <item><description>Growth Factor: A round ends at (1+ε)*count elements, so ε=1 gives the paper's doubling</description></item>
-/// <item><description>Gap Representation: Occupancy is tracked in a separate bitset, not by a sentinel value
-/// inside the auxiliary buffer. The auxiliary buffer therefore holds plain elements,
-/// so its writes carry real element values to an observing context and marking a slot as a gap
-/// costs no element write at all. Word-at-a-time bit scans give the nearest element or gap in O(1)
-/// per 64 slots, which is what makes bisecting the gapped array practical.</description></item>
-/// <item><description>Spacing: After rebalancing, distribute elements uniformly with gap:element ratio = ε:1</description></item>
-/// </list>
+/// <para>Starts with one support element. A round inserts up to the current support count, then doubles it.
+/// Before the next round, c support elements are spread over min((2+2ε)c, (1+ε)n) slots.
+/// Rebalancing occurs only at doubling boundaries. An insertion uses an adjacent gap or shifts toward
+/// the closest gap on either side, without triggering an early rebalance.</para>
+/// <para>The O(n log n) expected bound assumes random arrival order. Input is not shuffled,
+/// preserving stable order for equal keys. Ordered and adversarial arrivals may take O(n²).</para>
+/// <para>Occupancy bits are metadata. Element buffer 1 contains the gapped sequence; buffer 2
+/// stages its elements during redistribution. Extraction writes the final sequence to buffer 0.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Insertion (gap-based variant)</description></item>
-/// <item><description>Stable      : Yes (equal keys are inserted after their equals and never shift past one another)</description></item>
-/// <item><description>In-place    : No (requires (1+ε)n auxiliary space for gaps)</description></item>
-/// <item><description>Best case   : O(n log n) - Every element costs a binary search regardless of
-/// how sorted the input is; sorted input merely adds no shifting on top</description></item>
-/// <item><description>Average case: O(n log n) - With random input and good gap distribution</description></item>
-/// <item><description>Worst case  : O(n²) - Pathological gap clustering without randomization</description></item>
-/// <item><description>Comparisons : Θ(n log n) - one binary search per insertion, at O(log n) comparisons each, whatever the input order</description></item>
-/// <item><description>Swaps       : 0 - elements are placed into gaps and shifted within the auxiliary array, never exchanged</description></item>
-/// <item><description>Index Reads : O(n log n) average, O(n²) worst - the binary searches plus the shifting, which stays short only while the gaps hold</description></item>
-/// <item><description>Index Writes: O(n log n) average, O(n²) worst - the per-insertion shifting plus the rebalances that redistribute the gaps</description></item>
-/// <item><description>Space       : O(n) - Auxiliary array of (1+ε)n elements, an n-element staging
-/// buffer for rebalancing, and one occupancy bit per auxiliary slot</description></item>
+/// <item><description>Family      : Insertion (gapped array)</description></item>
+/// <item><description>Stable      : Yes - upper-bound insertion and ordered redistribution</description></item>
+/// <item><description>In-place    : No - gapped element storage and dense staging</description></item>
+/// <item><description>Best case   : Θ(n log n) - binary searches with short shifts</description></item>
+/// <item><description>Average case: O(n log n) - random arrival order</description></item>
+/// <item><description>Worst case  : O(n²) - clustered insertions can require long shifts</description></item>
+/// <item><description>Comparisons : O(n log n) - binary search for each insertion</description></item>
+/// <item><description>Swaps       : 0 - shifts and placement move elements</description></item>
+/// <item><description>Index Reads : O(n log n) average, O(n²) worst - search, shifts, and redistribution</description></item>
+/// <item><description>Index Writes: O(n log n) average, O(n²) worst - placement, shifts, and redistribution</description></item>
+/// <item><description>Space       : O(n) - gapped array, staging, and occupancy bits</description></item>
 /// </list>
-/// <para><strong>Reference:</strong></para>
-/// <para>Paper: https://arxiv.org/abs/cs/0407003 "Insertion Sort is O(n log n)" by Michael A. Bender, Martín Farach-Colton, and Miguel Mosteiro</para>
-/// <para>Conference: Proceedings of the Third International Conference on Fun With Algorithms (FUN 2004)</para>
+/// <para>Reference: Bender, Farach-Colton, and Mosteiro, "Insertion Sort is O(n log n)",
+/// https://arxiv.org/abs/cs/0407003.</para>
 /// </remarks>
 public static class LibrarySort
 {
@@ -103,35 +59,8 @@ public static class LibrarySort
     // Gap ratio: ε = 1.0 means (1+ε)n = 2n space
     private const double GapRatio = 1.0;
 
-    // Small array threshold for fallback to InsertionSort
-    private const int SmallSortThreshold = 32;
-
-    // Trigger early rebalance if the shift distance exceeds this threshold.
-    //
-    // This is the one mechanism here that the paper does not have. The paper reaches O(n log n) by
-    // inserting in random order, which spreads gap consumption evenly; this implementation cannot
-    // shuffle because that would destroy stability, so a run of insertions into the same region can
-    // exhaust that region's gaps long before the round ends. Rebalancing when a shift gets long
-    // restores the uniform spacing that randomization would have maintained. Removing it measures
-    // 1.5x slower on both reversed and random input at n=131,072.
-    private const int MaxShiftDistanceBeforeRebalance = 64;
-
-    /// <summary>
-    /// Element count that ends the current round, i.e. when the next rebalance is due.
-    /// </summary>
-    /// <remarks>
-    /// A round starts with <paramref name="count"/> elements spread over (1+ε)*count slots, so it
-    /// starts with ε*count gaps, and every insertion consumes exactly one gap. The round therefore
-    /// runs until the gaps are used up, at (1+ε)*count elements - the round length is a consequence
-    /// of ε, not a free parameter. With ε=1 that is the paper's doubling schedule.
-    /// <para>
-    /// Letting a round run longer than its gaps last is what makes gap-based insertion degrade:
-    /// once a region is full, every further insertion there shifts its way to a gap that keeps
-    /// getting further away. The original ε=0.5 with 4x rounds inserted 3*count elements into
-    /// 0.5*count gaps, and measured 998 ms on pipe-organ input at n=131,072 where this ends at 7 ms.
-    /// </para>
-    /// </remarks>
-    private static int RoundEnd(int count) => (int)(count * (1 + GapRatio));
+    // A round doubles the support count, independently of the gap ratio.
+    private static int RoundEnd(int count, int length) => (int)Math.Min(2L * count, length);
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -171,13 +100,6 @@ public static class LibrarySort
         var length = span.Length;
         if (length <= 1) return;
 
-        // For very small arrays, use standard insertion sort
-        if (length <= SmallSortThreshold)
-        {
-            InsertionSort.Sort(span, 0, span.Length, comparer, context);
-            return;
-        }
-
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, length, comparer, context);
     }
@@ -196,9 +118,8 @@ public static class LibrarySort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Auxiliary array size: exactly (1+ε)n, which is 2n at ε=1. No slack is needed on top:
-        // a round that starts with c elements spreads them over (1+ε)c slots and appends at most
-        // (n-c) more past that spread, and (1+ε)c + (n-c) never exceeds (1+ε)n for c <= n.
+        // The active prefix is (1+ε)*min(2c,n) for c support elements, so every round fits
+        // within the full (1+ε)n allocation without appending beyond its active prefix.
         var auxSize = (int)Math.Ceiling(length * (1 + GapRatio));
         var wordCount = (auxSize + 63) >> 6;
 
@@ -218,16 +139,16 @@ public static class LibrarySort
             // A pooled array arrives with arbitrary content: every slot starts as a gap.
             bits.Clear();
 
-            // Phase 1: Initial sort
+            // Phase 1: Seed one support element
             context.OnPhase(SortPhase.LibrarySortPhase, 1);
-            var initSize = Math.Min(SmallSortThreshold, length);
-            InsertionSort.SortCore(s, 0, initSize);
+            const int initSize = 1;
 
             // Spread the sorted prefix over the auxiliary buffer with uniform gaps
             var auxEnd = PlaceWithGaps(aux, s, 0, initSize, auxSize, bits);
 
             var sorted = initSize;
-            var nextRebalance = RoundEnd(initSize);
+            var nextRebalance = RoundEnd(initSize, length);
+            var activeSize = SpreadRange(initSize, auxSize);
 
             // Phase 2: Insert remaining
             context.OnPhase(SortPhase.LibrarySortPhase, 2);
@@ -236,32 +157,17 @@ public static class LibrarySort
                 if (sorted >= nextRebalance)
                 {
                     auxEnd = Rebalance(aux, auxSize, bits, auxEnd, sorted, temp);
-                    nextRebalance = RoundEnd(sorted);
+                    nextRebalance = RoundEnd(sorted, length);
+                    activeSize = SpreadRange(sorted, auxSize);
                 }
 
                 context.OnRole(i, BUFFER_MAIN, RoleType.Inserting);
                 var elem = s.Read(i);
 
-                if (!TryInsert(aux, ref auxEnd, auxSize, elem, bits, out var largeShift))
-                {
-                    // Gaps have clustered away from the insertion point. Rebalancing restores a
-                    // uniform gap every few slots, so the retry is guaranteed to find one. It moves
-                    // every element, so TryInsert re-runs its own search rather than reusing bounds.
-                    auxEnd = Rebalance(aux, auxSize, bits, auxEnd, sorted, temp);
-                    nextRebalance = RoundEnd(sorted);
-
-                    if (!TryInsert(aux, ref auxEnd, auxSize, elem, bits, out largeShift))
-                        throw new InvalidOperationException($"No gap available after rebalance (count={sorted}, auxSize={auxSize})");
-                }
+                if (!TryInsert(aux, ref auxEnd, activeSize, elem, bits))
+                    throw new InvalidOperationException("No gap in the active library-sort round.");
                 context.OnRole(i, BUFFER_MAIN, RoleType.None);
                 sorted++;
-
-                // Early rebalance if large shift was detected (gaps are clustering)
-                if (largeShift && sorted < nextRebalance)
-                {
-                    auxEnd = Rebalance(aux, auxSize, bits, auxEnd, sorted, temp);
-                    nextRebalance = RoundEnd(sorted);
-                }
             }
 
             // Phase 3: Extract. Verify the occupancy count first: the write loop below trusts it to
@@ -331,16 +237,13 @@ public static class LibrarySort
 
     /// <summary>
     /// Inserts <paramref name="value"/> into the gapped auxiliary buffer.
-    /// Returns false when no usable gap exists at or after the insertion point; the caller must then
-    /// rebalance and call again. <paramref name="largeShift"/> reports that a long shift was needed,
-    /// suggesting an early rebalance.
+    /// Returns false only if the active prefix contains no gap.
     /// </summary>
     private static bool TryInsert<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> aux, ref int auxEnd, int maxSize,
-        T value, Span<ulong> bits, out bool largeShift)
+        T value, Span<ulong> bits)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        largeShift = false;
 
         // Bisect slot indices over [0, auxEnd] for the smallest boundary `lo` such that the first
         // element at or after `lo` compares strictly greater than value. The predicate is monotone
@@ -393,33 +296,31 @@ public static class LibrarySort
             return true;
         }
 
-        // The interval between the neighbours is completely full. Shift succ and everything packed
-        // behind it one slot right, into the nearest gap, and take succ's slot.
-        //
-        // This branch is unreachable when succ is absent: then pred is the last element overall, so
-        // slot pred+1 is a gap and the search above would have used it. targetPos is therefore an
-        // occupied slot, and NextGap guarantees [targetPos, shiftGap) is fully occupied too.
+        // With no gap between the neighbours, shift toward the closest available gap.
+        // A left shift also handles appends when the active prefix ends in occupied slots.
         var targetPos = succ >= 0 ? succ : searchStart;
-        var shiftGap = NextGap(bits, targetPos, maxSize);
-        if (shiftGap < 0) return false;
-
-        largeShift = shiftGap - targetPos > MaxShiftDistanceBeforeRebalance;
-
-        for (var i = shiftGap; i > targetPos; i--)
+        var rightGap = NextGap(bits, targetPos, maxSize);
+        var leftGap = PrevGap(bits, targetPos - 1, 0);
+        if (rightGap >= 0 && (leftGap < 0 || rightGap - targetPos <= targetPos - leftGap - 1))
         {
-            aux.Write(i, aux.Read(i - 1));
+            for (var i = rightGap; i > targetPos; i--)
+                aux.Write(i, aux.Read(i - 1));
+            SetOccupied(bits, rightGap);
+            aux.Write(targetPos, value);
+            if (rightGap >= auxEnd) auxEnd = rightGap + 1;
+            return true;
         }
-        // Only the consumed gap changes state; every slot the shift walked over was already occupied.
-        SetOccupied(bits, shiftGap);
-
-        aux.Write(targetPos, value);
-        if (shiftGap >= auxEnd) auxEnd = shiftGap + 1;
+        if (leftGap < 0) return false;
+        for (var i = leftGap; i < targetPos - 1; i++)
+            aux.Write(i, aux.Read(i + 1));
+        SetOccupied(bits, leftGap);
+        aux.Write(targetPos - 1, value);
         return true;
     }
 
     /// <summary>
     /// Collects every element in slot order and redistributes it with uniform spacing over
-    /// range = min((1+ε)*count, auxSize). Element order is preserved, so the sort stays stable.
+    /// range = min((2+2ε)*count, auxSize). Element order is preserved, so the sort stays stable.
     /// Returns the maximum used position + 1 for auxEnd tracking.
     /// </summary>
     private static int Rebalance<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> aux, int auxSize,
@@ -480,15 +381,10 @@ public static class LibrarySort
     }
 
     /// <summary>
-    /// Number of slots <paramref name="count"/> elements are spread over at the start of a round.
+    /// Spreads the support elements over the prefix available after the round doubles their count.
     /// </summary>
-    /// <remarks>
-    /// The paper's invariant is that the elements present occupy a (1+ε)-sized region, so a round
-    /// starts with count elements spread over (1+ε)*count slots and therefore ε*count gaps.
-    /// <see cref="RoundEnd"/> derives the round length from exactly those gaps.
-    /// </remarks>
     private static int SpreadRange(int count, int auxSize)
-        => Math.Min((int)Math.Ceiling(count * (1 + GapRatio)), auxSize);
+        => (int)Math.Min(Math.Ceiling(count * (2 + 2 * GapRatio)), auxSize);
 
     /// <summary>
     /// Returns the gap closest to <paramref name="target"/> within [start, end), preferring the

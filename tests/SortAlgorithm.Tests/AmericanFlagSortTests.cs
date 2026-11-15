@@ -11,7 +11,6 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
         => AmericanFlagSort.Sort(span, context);
 
     // No knob overrides: in-place permutation on sorted input may skip writes/swaps,
-    // and per-bucket insertion sort makes compares data-dependent.
 
     // AmericanFlagSort is UNSTABLE: the in-place permutation may reorder equal keys,
     // so keySelector tests assert key order and permutation integrity only.
@@ -97,9 +96,8 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
     }
 
     [Test]
-    public async Task InsertionSortCutoffTest()
+    public async Task SmallInputRadixPassTest()
     {
-        // Test with array smaller than insertion sort cutoff (64)
         var array = new[] { 10, 5, 3, 8, 1, 9, 2, 7, 4, 6 };
         var expected = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
         AmericanFlagSort.Sort(array.AsSpan());
@@ -229,8 +227,6 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
     {
         var stats = new StatisticsContext();
         // Verify that the sort is performed in-place (no auxiliary array).
-        // The array must exceed InsertionSortCutoff (64), otherwise the range never reaches the
-        // in-place permutation and this test would silently be an InsertionSort test.
         var random = new Random(42);
         var array = Enumerable.Range(11, 200).OrderBy(_ => random.Next()).ToArray();
         var expected = Enumerable.Range(11, 200).ToArray();
@@ -256,7 +252,6 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
         // American Flag Sort is an in-place MSD Radix Sort variant
         // For sorted data:
         // - Elements distribute into buckets
-        // - Small buckets (<=64) use insertion sort
         // - In-place permutation minimizes writes
         await Assert.That((ulong)sorted.Length).IsEqualTo((ulong)n);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
@@ -278,7 +273,6 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
 
         // American Flag Sort on reversed data:
         // - In-place permutation requires swaps to rearrange elements
-        // - Insertion sort for small buckets has more operations
         await Assert.That((ulong)reversed.Length).IsEqualTo((ulong)n);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
         await Assert.That(IsSorted(reversed)).IsTrue();
@@ -299,17 +293,11 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
         // American Flag Sort on random data:
         // - Bucket distribution varies
         // - In-place permutation requires swaps
-        // - Combination of MSD partitioning and insertion sort
         await Assert.That((ulong)array.Length).IsEqualTo((ulong)n);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
         await Assert.That(IsSorted(array)).IsTrue();
 
-        // Random data should require swap operations when n > InsertionSortCutoff (64).
-        // At or below the cutoff the range never reaches the in-place permutation: InsertionSort
-        // shifts with Write, so SwapCount legitimately stays 0 there.
-        if (n > 64)
-        {
-            await Assert.That(stats.SwapCount).IsNotEqualTo(0UL);
-        }
+        await Assert.That(stats.CompareCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(2 * stats.SwapCount);
     }
 }

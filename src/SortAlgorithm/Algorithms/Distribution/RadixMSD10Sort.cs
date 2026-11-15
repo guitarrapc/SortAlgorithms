@@ -1,4 +1,4 @@
-﻿using SortAlgorithm.Contexts;
+using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -15,93 +15,26 @@ namespace SortAlgorithm.Algorithms;
 /// This decimal-based algorithm is easy for humans to understand and is suitable for debugging and educational purposes.
 /// </summary>
 /// <remarks>
-/// <para><strong>Theoretical Conditions for Correct MSD Radix Sort (Decimal Base):</strong></para>
-/// <list type="number">
-/// <item><description><strong>Order-Preserving Key Mapping:</strong> Elements are mapped to fixed-width unsigned keys through
-/// <see cref="IRadixKeySelector{T}"/>. Signed integers flip the sign bit (e.g. 32-bit: key = (uint)value ^ 0x8000_0000),
-/// floating-point values use the IEEE 754 bit transform (-0 and +0 tie), and key-selector overloads extract an int key from arbitrary elements.
-/// This ensures ordering correctness without separate sign handling and avoids the MinValue overflow issue with Abs().</description></item>
-/// <item><description><strong>Dynamic Starting Digit (MSD Optimization):</strong> Before sorting, performs a single O(n) pass to find the minimum and maximum
-/// key values and derives the digit count from (max − min), the keys then being normalized by the minimum. This eliminates empty high-order
-/// digit passes, which is critical for MSD performance when the values span far less than the type's capacity. Deriving it from the maximum alone
-/// is not enough: the digit count then follows where the keys sit rather than how far apart they are, and an order-preserving key mapping can place
-/// them anywhere (sign-flipped non-negative ints all start above 2,147,483,648 — ten decimal digits whatever the values were).</description></item>
-/// <item><description><strong>Digit Extraction Consistency:</strong> For a given position from most significant digit, extract the digit using (key / divisor) % 10
-/// where divisor = 10^(digitCount - 1 - d) for digit position d.</description></item>
-/// <item><description><strong>MSD Processing Order:</strong> Digits must be processed from most significant (d=digitCount-1) to least significant (d=0).
-/// This top-down approach partitions the array into buckets recursively, processing each bucket independently for subsequent digits.</description></item>
-/// <item><description><strong>Recursive Bucket Processing:</strong> After distributing elements based on the current digit, each bucket must be recursively sorted for the remaining digits.
-/// Base cases: buckets with 0 or 1 elements are already sorted; buckets where all remaining digits are the same are also sorted.</description></item>
-/// <item><description><strong>Identity Levels Are Skippable:</strong> If every element in a range shares the same value at the
-/// current digit, the stable distribution for that digit writes them out in the order they already are — the distribution and the
-/// copy back are both the identity and can be skipped, and the range descends to the next digit untouched. This is orthogonal to the
-/// data-derived digit count above, which only trims uniform digits above the most significant one; a digit anywhere below it can be
-/// uniform too, in any bucket of the recursion (a shared prefix among the elements that reached it).</description></item>
-/// <item><description><strong>Cutoff to Insertion Sort:</strong> Below a bucket size the recursion stops splitting and insertion-sorts the range instead,
-/// because emptying a small bucket by distribution costs more levels than sorting it outright. The definition leaves the threshold free; the value
-/// this implementation uses was measured, and is recorded on the <c>InsertionSortCutoff</c> constant.</description></item>
-/// </list>
+/// <para>Processes the most significant differing digit first, using radix R=10.
+/// A key-range scan normalizes keys by their minimum and determines d, the number of relevant digits.
+/// Uniform digits do not permute elements; singleton buckets and exhausted digits terminate recursion.
+/// Every nontrivial bucket is processed by radix distribution, without a comparison-sort cutoff.</para>
+/// <para>The SortBy key defines the complete order. Natural floating keys tie signed zeros and map every NaN
+/// to the first key. Custom key selectors define their own equivalence classes.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Distribution (Radix Sort, MSD variant)</description></item>
-/// <item><description>Stable      : Yes (maintains relative order of elements with equal keys)</description></item>
-/// <item><description>In-place    : No (O(n) auxiliary space for temporary buffer)</description></item>
-/// <item><description>Best case   : Θ(n) - When all keys are equal (early termination on range == 0, after the single key scan)</description></item>
-/// <item><description>Average case: Θ(n + d × n) - One O(n) key range scan + d levels, d = number of decimal digits of (max − min), not of the type maximum</description></item>
-/// <item><description>Worst case  : Θ(n + d × n) - Same complexity regardless of input order</description></item>
-/// <item><description>Comparisons : O(n) - the digit passes use arithmetic operations only, so comparisons come solely from the cutoff
-/// <see cref="InsertionSort"/> that finishes short ranges; a range at the cutoff is bounded by a constant, so the leaves cost O(n) together</description></item>
-/// <item><description>Swaps       : 0 - elements move by distribution into the temp buffer, never by exchange</description></item>
-/// <item><description>Index Reads : Θ(d × n) - one range scan plus one read per element at every level that distributes, plus the cutoff sort's reads</description></item>
-/// <item><description>Index Writes: Θ(d × n) - one write per element at every level that distributes, plus the cutoff sort's shifts</description></item>
-/// <item><description>Space       : O(n) for temporary buffer</description></item>
-/// <item><description>Digit Passes: 1 initial key range scan + d = ⌈log₁₀(max − min)⌉ levels examined; a level whose digit is uniform is counted but not distributed</description></item>
+/// <item><description>Family      : Distribution (MSD radix)</description></item>
+/// <item><description>Stable      : Yes - stable bucket distribution</description></item>
+/// <item><description>In-place    : No - element scratch storage</description></item>
+/// <item><description>Best case   : Θ(n) - equal keys need only a range scan</description></item>
+/// <item><description>Average case: O(n + d × n) - radix levels over the normalized key range</description></item>
+/// <item><description>Worst case  : O(n + d × n) - bounded by the digit count</description></item>
+/// <item><description>Comparisons : 0 - keys and digits determine the order without element comparisons</description></item>
+/// <item><description>Swaps       : 0 - distribution and copies move elements</description></item>
+/// <item><description>Index Reads : O(n + d × n) - range scan and digit levels</description></item>
+/// <item><description>Index Writes: O(d × n) - distribution; uniform digits do not move elements</description></item>
+/// <item><description>Space       : O(n + d × R) - element scratch and radix counters</description></item>
 /// </list>
-/// <para><strong>Implementation Note — how much the cutoff actually compares:</strong></para>
-/// <para>
-/// The comparison count is data-dependent even though the row above is O(n), because whether a leaf reaches the cutoff at all
-/// depends on how the keys split. Measured with <c>StatisticsContext</c> at n = 100,000 <c>int</c>: 667,030 comparisons for uniform
-/// random input, 90,000 for already-sorted 0..n, and 0 both for keys drawn from 0..999 and for all-equal input — in those two every
-/// leaf either ends at a single element or is settled by the range scan, so the fallback never runs.
-/// </para>
-/// <para><strong>MSD vs LSD (Decimal):</strong></para>
-/// <list type="bullet">
-/// <item><description>MSD processes high-order digits first, enabling early termination when buckets are fully sorted</description></item>
-/// <item><description>MSD dynamically computes starting digit from data, avoiding unnecessary passes for small values in large types</description></item>
-/// <item><description>MSD is cache-friendlier for partially sorted data as it localizes accesses within buckets</description></item>
-/// <item><description>MSD requires recursive processing of buckets, adding overhead compared to LSD's iterative approach</description></item>
-/// <item><description>Both MSD and LSD can be implemented as stable sorts (this implementation maintains stability)</description></item>
-/// </list>
-/// <para><strong>Note:</strong> Uses decimal arithmetic (division and modulo), which may be slower than binary-based radix sorts (e.g., RadixMSD4Sort with bit shifts).
-/// However, it is more intuitive for understanding and debugging.</para>
-/// <para><strong>Supported Key Mappings (via <see cref="IRadixKeySelector{T}"/>):</strong></para>
-/// <list type="bullet">
-/// <item><description><strong>Integers:</strong> byte, sbyte, short, ushort, int, uint, long, ulong, nint, nuint (up to 64-bit); Int128/UInt128/BigInteger are rejected (64-bit key ceiling, see below)</description></item>
-/// <item><description><strong>Floating point:</strong> Half, float, double via IEEE 754 bit transform (all NaN values sort first, matching <see cref="IComparable{T}"/> semantics; <c>-0.0</c> and <c>+0.0</c> are a tie and keep their input order, this sort being stable)</description></item>
-/// <item><description><strong>Key selector:</strong> arbitrary element types via an extracted <c>int</c> key; equal keys retain input order, making stability observable</description></item>
-/// </list>
-/// <para><strong>Why 128-bit Types Are Not Supported:</strong></para>
-/// <list type="bullet">
-/// <item><description><strong>Key Storage Limitation:</strong> Keys are stored as <c>ulong</c> (64-bit).
-/// Supporting 128-bit would require <c>UInt128</c> keys, significantly increasing memory usage and complexity.</description></item>
-/// <item><description><strong>Performance Trade-offs:</strong> 128-bit operations are significantly slower than 64-bit on most architectures,
-/// negating the performance benefits of radix sort.</description></item>
-/// <item><description><strong>Practical Rarity:</strong> Sorting 128-bit integers is uncommon in typical applications.
-/// For such cases, comparison-based sorts (e.g., QuickSort, MergeSort) remain practical alternatives.</description></item>
-/// </list>
-/// <para><strong>Why the floating-point overloads compare by key:</strong></para>
-/// <para>Every range that reaches the insertion-sort cutoff is ordered by <c>TComparer</c>, not by the digit
-/// it never extracts, so the two orders have to agree or the answer depends on where the cutoff happens to
-/// fall. For integers and for the key-selector overloads they agree by construction. For floating point they
-/// did not: the element overloads passed <see cref="ComparableComparer{T}"/>, which
-/// <see cref="SortSpan{T, TComparer, TContext}"/> specializes to the raw IEEE 754 operators on the
-/// <see cref="NullContext"/> path, and under those NaN is unordered — an insertion sort cannot move it, while
-/// the digit passes place it first from its key of 0. A range holding NaN alongside ordered values therefore
-/// came out wrong whenever it fell to the cutoff, and only on that path: the same input sorted with an
-/// observation context attached, or in a Debug build, went through <c>CompareTo</c> and came out right.
-/// These overloads now pass <see cref="RadixKeyComparer{T, TRadixKey}"/>, which orders by exactly the key the
-/// digit passes use, so the fallback and the distribution cannot disagree for any selector.</para>/// <para><strong>Reference:</strong></para>
-/// <para>Wiki: https://en.wikipedia.org/wiki/Radix_sort#Most_significant_digit</para>
 /// </remarks>
 public static class RadixMSD10Sort
 {
@@ -112,20 +45,6 @@ public static class RadixMSD10Sort
     public static bool IsStable => true;
 
     private const int RadixBase = 10;       // Decimal base
-    // Switch to insertion sort for small buckets. The textbook constant is 15-16 (Sedgewick's MSD string
-    // sort, American flag sort), but those are radix-256 string sorts and nothing in the MSD definition
-    // fixes the number, so it was measured here rather than inherited. Same sweep and protocol as
-    // <see cref="RadixMSD4Sort"/> — ratios for 48 against 16, minimum of 41-71 repetitions with
-    // DOTNET_TieredCompilation=0, best of three interleaved A/B cycles per case:
-    //   n=4096     full 1.00   narrow 0.94   dup32 1.00
-    //   n=65536    full 0.96   narrow 0.92   dup32 0.96
-    //   n=1048576  not resolvable on this machine
-    // Up to n=65536 the win is small but consistent, and 16 measured worst or joint-worst everywhere.
-    // At n=1048576 it cannot be called: this sort's wall clock swings about ±40% run to run on an
-    // identical binary (one configuration spanned 13-18 ms, another 33-46 ms), and two independent
-    // sample sets disagreed on the sign. 48 is taken there to match RadixMSD4Sort rather than because
-    // the measurement chose it. Do not read any 1M-scale difference under ~40% here as real.
-    private const int InsertionSortCutoff = 48;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -255,15 +174,6 @@ public static class RadixMSD10Sort
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // Below the cutoff the recursion would insertion-sort the whole range without extracting a single
-        // digit, so the range scan below would be pure overhead — n extra reads and n key extractions on an
-        // input that never reaches a digit pass. Take the fallback directly, before renting a buffer no
-        // digit pass would use.
-        if (s.Length <= InsertionSortCutoff)
-        {
-            InsertionSort.SortCore(s, 0, s.Length);
-            return;
-        }
 
         // Announce the range scan: without it a consumer sees n reads with no phase attached, and the
         // label from whatever ran before stays on screen through the whole scan. KeyRangeScan rather than
@@ -288,8 +198,7 @@ public static class RadixMSD10Sort
         // is >= minKey).
         var range = maxKey - minKey;
 
-        // Every key is equal, so the input is already sorted whatever order it is in. This is the only path
-        // that is linear in n: the digit passes below are always Θ(digitCount × n).
+        // Equal mapped keys are already in the requested order.
         if (range == 0) return;
 
         // Pre-computed powers of 10 for O(1) divisor lookup
@@ -350,21 +259,13 @@ public static class RadixMSD10Sort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Base case: every digit has been consumed, so every normalized key in this range is equal and any
-        // order it is in is sorted. Checked before the cutoff: below it this range would be handed to
-        // insertion sort, which can only confirm at a cost of length-1 comparisons what reaching digit < 0
-        // already proves, and would report a sort phase for work that changes nothing.
+        // No lower digit remains once the normalized keys are exhausted.
         if (digit < 0)
         {
             return;
         }
 
-        // Base case: if length is small, use insertion sort
-        if (length <= InsertionSortCutoff)
-        {
-            InsertionSort.SortCore(s, start, start + length);
-            return;
-        }
+        if (length <= 1) return;
 
         s.Context.OnPhase(SortPhase.RadixPass, digit, digitCount);
         var divisor = pow10[digit];

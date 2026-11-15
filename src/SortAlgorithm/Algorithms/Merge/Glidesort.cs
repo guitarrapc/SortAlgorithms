@@ -592,7 +592,7 @@ public static class Glidesort
                 var right0End = curMid + rsplit;
                 MergeLeftGap(s, t, left1Len, right0End, curRightEnd - right0End, curMid);
 
-                return;
+                break;
             }
             else
             {

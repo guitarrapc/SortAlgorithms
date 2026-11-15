@@ -49,7 +49,7 @@ public class PhaseScopeNotificationTests
         return events;
     }
 
-    /// <summary>ハイブリッド経路が必ず走るサイズと、その呼び出し方をまとめたケース。</summary>
+    /// <summary>相の契約を確認するサイズと、その呼び出し方をまとめたケース。</summary>
     public sealed record PhaseCase(string Name, Action<int[], VisualizationContext> Sort, int Size)
     {
         public override string ToString() => $"{Name}(n={Size})";
@@ -57,7 +57,7 @@ public class PhaseScopeNotificationTests
 
     public static IEnumerable<Func<PhaseCase>> PhaseCases()
     {
-        // 委譲先が InsertionSort.SortCore のもの
+        // InsertionSortへ委譲する実装と、自身の相だけを通知する実装
         yield return () => new PhaseCase("IntroSort", static (a, c) => IntroSort.Sort(a.AsSpan(), c), 200);
         yield return () => new PhaseCase("StdSort", static (a, c) => StdSort.Sort(a.AsSpan(), c), 200);
         yield return () => new PhaseCase("PDQSort", static (a, c) => PDQSort.Sort(a.AsSpan(), c), 200);
@@ -133,9 +133,18 @@ public class PhaseScopeNotificationTests
     /// </summary>
     [Test]
     [MethodDataSource(nameof(PhaseCases))]
-    public async Task DelegatedCoreReportsDetailUnderScope(PhaseCase testCase)
+    public async Task PhasesMatchTheDelegationContract(PhaseCase testCase)
     {
         var events = RecordEvents(MakeArray(testCase.Size), testCase.Sort);
+
+        if (testCase.Name is "QuickSort3way" or "LibrarySort")
+        {
+            await Assert.That(events.Where(e => e.Phase.IsDetailPhase()).ToArray()).IsEmpty()
+                .Because("These pure algorithms do not delegate a range to another sorting core.");
+            var scope = testCase.Name == "QuickSort3way" ? SortPhase.QuickSort3wayPartition : SortPhase.LibrarySortPhase;
+            await Assert.That(events.Any(e => e.Phase == scope)).IsTrue();
+            return;
+        }
 
         var currentScope = SortPhase.None;
         var pairs = new List<(SortPhase Scope, SortPhase Detail)>();

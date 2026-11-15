@@ -56,7 +56,6 @@ public static class FlashSort
     /// <remarks>See the stability note in this type's summary.</remarks>
     public static bool IsStable => false;
 
-    private const int InsertionSortThreshold = 16;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;           // Main input array
@@ -93,12 +92,7 @@ public static class FlashSort
         var n = span.Length;
         var bitSize = GetBitSize<T>();
 
-        // Small arrays go directly to insertion sort
-        if (n <= InsertionSortThreshold)
-        {
-            InsertionSort.Sort(span, new ComparableComparer<T>(), context);
-            return;
-        }
+
 
         var s = new SortSpan<T, NullComparer<T>, TContext>(span, context, default, BUFFER_MAIN);
 

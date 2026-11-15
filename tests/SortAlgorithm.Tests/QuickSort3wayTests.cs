@@ -10,8 +10,7 @@ public class QuickSort3wayTests : SortTestsBase
     protected override void Sort<T, TContext>(Span<T> span, TContext context)
         => QuickSort3way.Sort(span, context);
 
-    // 3-way partition performs pivot placement and classification swaps even on sorted input
-    // (MockSortedData sizes exceed the InsertionSort threshold, so the 3-way path runs).
+    // Partitioning performs writes even when the input is ordered.
     protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
     protected override CountExpectation SortedInputSwaps => CountExpectation.NonZero;
 
@@ -52,26 +51,10 @@ public class QuickSort3wayTests : SortTestsBase
         var sorted = Enumerable.Range(1, n).ToArray();
         QuickSort3way.Sort(sorted.AsSpan(), stats);
 
-        // QuickSort 3-way (Bentley-McIlroy) on sorted data:
-        // - n < 16 (e.g. n=10): InsertionSort fallback
-        //   Sorted array → each element compared once with predecessor, no shifts → n-1 comparisons, 0 swaps
-        // - n >= 16: 3-way partition with median-of-3 pivot
-        //   Median of (left, mid, right) = mid → balanced partition
-        //   Equal region has exactly 1 element per level (all values distinct)
-        //   Recursion depth: O(log n); each level does n comparisons → O(n log n) total
-        //
-        // Comparisons:
-        // - InsertionSort path (n=10): n-1 = 9
-        // - 3-way path: median-of-3 (2-3) + partition scan (n-1) per level × log₂(n) levels
-        //
-        // Swaps:
-        // - InsertionSort path: 0 (uses Write, not Swap; sorted input needs no writes)
-        // - 3-way path: ~n/2 per level × log₂(n) levels
-
-        var minCompares = (ulong)(n - 1); // InsertionSort sorted: n-1; 3-way: >= n-1
+        var minCompares = (ulong)(n - 1);
         var maxCompares = (ulong)(3 * n * Math.Log(n, 2)); // Upper bound
 
-        var minSwaps = 0UL; // InsertionSort uses Write not Swap; sorted 3-way starts with pivot placement
+        var minSwaps = 0UL;
         var maxSwaps = (ulong)(1.5 * n * Math.Log(n, 2)); // Upper bound
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
@@ -97,22 +80,10 @@ public class QuickSort3wayTests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         QuickSort3way.Sort(reversed.AsSpan(), stats);
 
-        // QuickSort 3-way (Bentley-McIlroy) on reversed data:
-        // - n < 16 (e.g. n=10): InsertionSort fallback
-        //   Reversed array → each element shifts to front → n(n-1)/2 comparisons, 0 Swaps (uses Write)
-        // - n >= 16: 3-way partition with median-of-3 pivot
-        //   Median of (first, middle, last) selects a reasonable pivot → balanced partition
-        //   All values distinct → equal region = 1 element per level
-        //   O(n log n) comparisons and swaps; more swaps than sorted since elements need rearranging
-        //
-        // Swaps:
-        // - InsertionSort path: 0 (uses Write not Swap, even for reversed input)
-        // - 3-way path: O(n log n)
-
         var minCompares = (ulong)(n - 1);
         var maxCompares = (ulong)(3 * n * Math.Log(n, 2));
 
-        var minSwaps = 0UL; // n=10 uses InsertionSort (SwapCount=0); n>=16 uses 3-way (SwapCount>0)
+        var minSwaps = 0UL;
         var maxSwaps = (ulong)(2 * n * Math.Log(n, 2));
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
@@ -139,13 +110,6 @@ public class QuickSort3wayTests : SortTestsBase
         var stats = new StatisticsContext();
         var random = TestHelpers.ShuffledRange(n, seed);
         QuickSort3way.Sort(random.AsSpan(), stats);
-
-        // QuickSort 3-way (Bentley-McIlroy) on random data:
-        // - n < 16: InsertionSort fallback; O(n²) worst but small constant for tiny n
-        // - n >= 16: 3-way QuickSort
-        //   Average case O(n log n); median-of-3 provides good pivot selection
-        //   3-way advantage appears when duplicates exist; for random distinct data behavior
-        //   is similar to standard QuickSort
 
         var minCompares = (ulong)(n - 1);
         var maxCompares = (ulong)(3 * n * Math.Log(n, 2));
@@ -174,27 +138,10 @@ public class QuickSort3wayTests : SortTestsBase
         var sameValues = Enumerable.Repeat(42, n).ToArray();
         QuickSort3way.Sort(sameValues.AsSpan(), stats);
 
-        // QuickSort 3-way (Bentley-McIlroy) key advantage: all-equal input is Θ(n) — one partition pass
-        // classifies the whole array as the equal region and recursion ends immediately.
-        //
-        // - n < 16 (n=5, n=10): InsertionSort fallback
-        //   All equal → each element already in place → n-1 comparisons, 0 swaps, 0 writes
-        //
-        // - n >= 16 (n=20, n=50): one Bentley-McIlroy partition
-        //   Median-of-3: 3 comparisons, no sample swaps; 1 Swap(mid, left) for pivot placement
-        //   Crossing scans: each element is compared once per scan direction (~n), and each exchanged
-        //   pair is equality-checked for parking (~n more) → ~2n comparisons total
-        //   Parking + swap-back move the equal elements to the ends and back → ~1.5n swaps
-        //   Both sub-partitions are empty → NO further recursion
-        //   Observed: n=20 → 42 compares / ~29 swaps; n=50 → 102 compares / ~74 swaps
-        //
-        // Unlike the previous Dijkstra DNF loop (O(n) compares, O(1) swaps on all-equal), Bentley-McIlroy
-        // spends Θ(n) swaps here — the trade-off that lets sorted runs survive partitioning on sorted input.
+        var minCompares = (ulong)(n - 1);
+        var maxCompares = (ulong)(2 * n + 5); // Θ(n) — NOT O(n log n)
 
-        var minCompares = (ulong)(n - 1); // InsertionSort: n-1; BM partition: ~2n
-        var maxCompares = (ulong)(2.5 * n); // Θ(n) — NOT O(n log n)
-
-        var minSwaps = 0UL; // InsertionSort: 0 (equal elements are already in place)
+        var minSwaps = 0UL;
         var maxSwaps = (ulong)(2 * n); // BM: crossing exchanges + parking + swap-back ≈ 1.5n
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);

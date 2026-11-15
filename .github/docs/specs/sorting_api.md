@@ -67,10 +67,14 @@ order (a bucketing hint) never changes the name.
 The 64-bit key width is the abstraction's ceiling by design — wider keys (Int128, BigInteger) and
 selectors declaring `KeyBits` outside 1..64 are rejected rather than degraded.
 
-Comparison fallbacks inside these algorithms (insertion-sort cutoffs, pdqsort fallback) receive a
-comparer from the public overload that must order consistently with the key mapping: built-in
-element overloads pass the element's natural comparer, key-selector overloads pass a comparer over
-the extracted key.
+RadixMSD4Sort, RadixMSD10Sort, and AmericanFlagSort process nontrivial buckets by radix
+partitioning until the remaining digits are exhausted or the bucket has at most one element.
+They do not switch small inputs or child buckets to a comparison sort. Uniform-digit pruning
+and early completion for equal mapped keys preserve the radix definition.
+
+SpreadSort is a hybrid. Its comparison stages receive a comparer consistent with the key
+mapping: built-in element overloads use the natural comparer, and key-selector overloads use a
+comparer over the extracted key.
 
 NaN-prefix preprocessing applies only to the internal natural floating-point comparer. Explicit
 comparers and key selectors retain control over every element, including NaN payloads and signed
@@ -170,3 +174,19 @@ Invalid algorithm-specific arguments fail through normal .NET argument exception
 
 Static, span-based APIs avoid ownership ambiguity and make mutation explicit. Generic comparer and context types allow the runtime to specialize calls without giving up custom ordering or observation.
 
+
+## Algorithm Identity
+
+QuickSort3way uses its Bentley–McIlroy three-way partition for every range with more than one
+element. It does not replace small partitions with insertion sort.
+
+LibrarySort starts with one support element and inserts in doubling rounds. Support elements
+are redistributed between rounds, with the active gapped prefix capped by the allocated
+(1+ε)n storage. An insertion shifts toward a nearby gap rather than triggering early
+redistribution. Equal keys retain their input order. The expected O(n log n) bound assumes
+random arrival order; the implementation does not shuffle the input, and adversarial arrivals
+may require quadratic work.
+
+FlashSort retains its classification, permutation, and insertion-finishing stages. Its
+insertion finish is part of the algorithm; a small nonconstant input does not bypass the
+classification and permutation stages.
