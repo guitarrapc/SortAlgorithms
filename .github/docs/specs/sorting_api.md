@@ -57,6 +57,10 @@ the `Sort` name — the order source is visible in the signature. That overload'
 that the key is order-consistent with the comparer (`comparer.Compare(x, y) <= 0` implies
 `key(x) <= key(y)`); an inconsistent hint produces unsorted output.
 
+Equal bucket keys do not imply equal comparer results. When every key is the same,
+the explicit-comparer overload still sorts the single bucket stably by that comparer.
+`SortBy` can finish after the key scan because equal keys define equal sort positions.
+
 In short: the method name states what defines the order; a parameter that does not define the
 order (a bucketing hint) never changes the name.
 

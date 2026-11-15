@@ -168,8 +168,8 @@ public static class BucketSort
                 if (key > max) max = key;
             }
 
-            // If all keys are the same, no need to sort
-            if (min == max) return;
+            // Equal keys need no sorting only when those keys also define the comparison order.
+            if (min == max && typeof(TComparer) == typeof(KeySelectorComparer<T, TKeySelector>)) return;
 
             long range = (long)max - (long)min + 1;
 
