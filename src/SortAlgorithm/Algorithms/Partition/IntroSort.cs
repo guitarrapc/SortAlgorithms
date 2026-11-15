@@ -204,9 +204,7 @@ public static class IntroSort
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // For floating-point types, move NaN values to the front
-        // This optimization is based on dotnet/runtime's ArraySortHelper implementation
-        // Reference: https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Collections/Generic/ArraySortHelper.cs
+        // A natural-order NaN prefix needs no further partitioning.
         int nanEnd = FloatingPointUtils.MoveNaNsToFront(s, first, last);
 
         if (nanEnd >= last)
@@ -215,7 +213,7 @@ public static class IntroSort
             return;
         }
 
-        // Sort the non-NaN portion
+        // Sort the remaining range.
         var depthLimit = 2 * (BitOperations.Log2((uint)(last - nanEnd)) + 1);
         IntroSortInternal(s, nanEnd, last - 1, depthLimit, true);
     }

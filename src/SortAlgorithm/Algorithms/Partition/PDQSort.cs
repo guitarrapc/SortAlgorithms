@@ -189,8 +189,7 @@ public static class PDQSort
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // For floating-point types, move NaN values to the front
-        // This improves performance and enhances PDQSort's pattern detection
+        // A natural-order NaN prefix needs no further partitioning.
         int nanEnd = FloatingPointUtils.MoveNaNsToFront(s, first, last);
 
         if (nanEnd >= last)
@@ -199,7 +198,7 @@ public static class PDQSort
             return;
         }
 
-        // Sort the non-NaN portion
+        // Sort the remaining range.
         var badAllowed = Log2(last - nanEnd);
         PDQSortLoop(s, nanEnd, last, badAllowed, true);
     }

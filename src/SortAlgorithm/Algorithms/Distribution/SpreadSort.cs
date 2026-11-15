@@ -114,22 +114,13 @@ namespace SortAlgorithm.Algorithms;
 /// <para>Boost's <c>is_sorted_or_find_extremes</c> locates the min and max with <c>operator&lt;</c>,
 /// which is safe there because <c>operator&lt;</c> and <c>operator&gt;&gt;</c> are assumed to agree.
 /// Here the bin index is <c>(key &gt;&gt; log_divisor) - div_min</c>, so it only lands inside
-/// <c>[0, binCount)</c> when <c>div_min</c>/<c>div_max</c> are the extremes <em>by key</em>. NaN breaks
-/// the assumption: <see cref="SortSpan{T, TComparer, TContext}"/> specializes
-/// <see cref="ComparableComparer{T}"/> to raw IEEE 754 operators, under which NaN is unordered and so is
-/// never selected as the minimum even though its key is 0, and the comparison-derived minimum then fails
-/// to bound the keys.</para>
-/// <para><c>-0.0</c> used to be a second reason — it is equal to <c>+0.0</c> under both comparison paths
-/// while the raw IEEE 754 <c>totalOrder</c> transform gave it a strictly smaller key. That divergence was
-/// removed where it started, in <see cref="DoubleRadixKey"/> and its siblings, which now map <c>-0.0</c>
-/// and <c>+0.0</c> to the same key. So on this path the comparer and the key now agree on everything
-/// except NaN.</para>
-/// <para>Only the extremes need this treatment. The already-sorted check keeps using the comparer, which
-/// is both faster and still sound: after the NaN pre-pass the comparer order and the key order coincide.</para>
-/// <para>That leaves the per-bin PDQSort fallback, which does use <c>TComparer</c>. NaN would still
-/// be unordered there (its key is 0, so it shares the lowest bin with the most negative values), so
-/// the floating-point overloads partition NaN to the front first — the same pre-pass PDQSort and
-/// IntroSort use — and spread only the ordered tail.</para>
+/// <c>[0, binCount)</c> when <c>div_min</c>/<c>div_max</c> are the extremes <em>by key</em>.</para>
+/// <para>The built-in floating-point mapping agrees with natural comparison: NaNs share key 0,
+/// and <c>-0.0</c> and <c>+0.0</c> share a key. Custom selectors instead define their own order,
+/// including where NaNs belong. Their comparison paths use the extracted keys.</para>
+/// <para>The already-sorted check uses the comparer, while bucket bounds use the keys. Natural
+/// floating-point overloads may isolate NaNs before sorting the remaining range. This preprocessing
+/// is disabled for custom key comparers, so no element is excluded from their declared key order.</para>
 /// <para><c>-0.0</c> and <c>+0.0</c> are a genuine tie: equal under IEEE 754, under
 /// <see cref="IComparable{T}"/>, and now by key as well, so they always share a bin. SpreadSort is
 /// unstable, so their relative order is unspecified, exactly as in <c>Array.Sort</c>.</para>
@@ -319,14 +310,13 @@ public static class SpreadSort
 
     /// <summary>
     /// Entry point for the floating-point overloads. Identical to <see cref="SortCore"/> apart from
-    /// NaN handling: NaN maps to key 0 and therefore shares the lowest bin with the most negative
-    /// values, where the comparisons <c>TComparer</c> performs leave it unordered.
+    /// NaN handling: the built-in key mapping places all NaNs before non-NaN values.
     /// </summary>
     /// <remarks>
-    /// The spread path needs no NaN pre-pass here — <see cref="SpreadSortRec"/> detects NaN from the
-    /// extremes it already computes — so NaN-free and already-sorted input pays nothing for this.
-    /// The small-input path does need one, because <see cref="PDQSort.SortCore"/> is the internal
-    /// entry and, unlike PDQSort's public entry, does not partition NaN itself.
+    /// The spread path uses the key extremes to decide whether natural-order NaN preprocessing applies.
+    /// NaN-free ranges do not require a separate NaN scan.
+    /// Small ranges use the same natural-order preprocessing before entering
+    /// <see cref="PDQSort.SortCore"/>, which does not perform this preprocessing itself.
     /// </remarks>
     static void SortFloatCore<T, TRadixKey, TContext>(Span<T> span, TRadixKey radixKey, TContext context)
         where T : IComparable<T>
@@ -427,15 +417,10 @@ public static class SpreadSort
 
         // Boost: is_sorted_or_find_extremes — combined sorted check + min/max finding
         if (!IsSortedOrFindExtremes(s, radixKey, first, last, out var minKey, out var maxKey))
-            return; // Already sorted. A comparer-sorted verdict also rules out NaN: NaN is unordered
-                    // under the comparisons SortSpan performs, so any NaN breaks the ascending walk.
+            return; // Already sorted in the comparer order.
 
-        // NaN maps to key 0 and no non-NaN floating-point value does (the smallest non-NaN key is -∞'s;
-        // -0.0 shares +0.0's key, which is mid-range),
-        // so the extremes pass has already detected NaN — no dedicated scan needed. NaN cannot be
-        // ordered by TComparer, so partition it to the front and re-derive the extremes over what is
-        // left. Folded away for non-floating-point T, where key 0 is an ordinary value and
-        // MoveNaNsToFront compiles to `return first`.
+        // Only the natural floating-point order permits removing a NaN prefix from further sorting.
+        // Custom selectors may assign key 0 to another value and place NaNs elsewhere.
         if (minKey == 0)
         {
             var nanEnd = FloatingPointUtils.MoveNaNsToFront(s, first, last);

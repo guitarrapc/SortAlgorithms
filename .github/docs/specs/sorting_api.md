@@ -68,6 +68,10 @@ comparer from the public overload that must order consistently with the key mapp
 element overloads pass the element's natural comparer, key-selector overloads pass a comparer over
 the extracted key.
 
+NaN-prefix preprocessing applies only to the internal natural floating-point comparer. Explicit
+comparers and key selectors retain control over every element, including NaN payloads and signed
+zeros. Their NaNs are not removed from the range being sorted. See the [F01 correction](f01-nan-preprocessing-fix-2026-11-15.md).
+
 Lesson learned: routing the fallback comparer through the key mapping unconditionally regressed
 SpreadSort's sorted-input early detection by ~67% (key transform on every comparison); passing the
 natural comparer for built-in element types recovered baseline performance while the key-selector

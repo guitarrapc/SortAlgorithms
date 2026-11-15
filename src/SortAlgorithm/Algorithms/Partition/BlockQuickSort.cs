@@ -221,10 +221,7 @@ public static class BlockQuickSort
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // For floating-point types, move NaN values to the front.
-        // Required because SortSpan's NullContext fast path compares primitives with IEEE operators,
-        // which treat NaN as unordered and would break the partitioning invariants.
-        // Same approach as IntroSort/PDQSort and dotnet/runtime's ArraySortHelper.
+        // A natural-order NaN prefix needs no further partitioning.
         var nanEnd = FloatingPointUtils.MoveNaNsToFront(s, first, last);
 
         if (nanEnd >= last)

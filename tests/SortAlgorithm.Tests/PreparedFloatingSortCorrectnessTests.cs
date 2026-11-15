@@ -25,6 +25,12 @@ public class PreparedFloatingSortCorrectnessTests
     [Arguments("BottomupHeapSort")]
     [Arguments("TernaryHeapSort")]
     [Arguments("SmoothSort")]
+    [Arguments("IntroSort")]
+    [Arguments("BlockQuickSort")]
+    [Arguments("PDQSort")]
+    [Arguments("PDQSortBranchless")]
+    [Arguments("Ipnsort")]
+    [Arguments("StdSort")]
     public void FloatingSortsPreserveOrderBitsAndDeclaredStability(string algorithm)
     {
         Verify<Half>(algorithm);
@@ -38,6 +44,7 @@ public class PreparedFloatingSortCorrectnessTests
             T.NegativeInfinity, T.PositiveInfinity, -T.Epsilon, T.Epsilon, -T.One, T.One];
         foreach (var n in new[] { 0, 1, 2, 3, 7, 13, 21, 31, 32, 33, 55, 89, 257, 1009 })
         foreach (var kind in new[] { 0, 1, 2 })
+        foreach (var observed in new[] { false, true })
         {
             var random = new Random(2026 + n);
             var input = Enumerable.Range(0, n).Select(_ => edges[random.Next(edges.Length)]).ToArray();
@@ -46,7 +53,8 @@ public class PreparedFloatingSortCorrectnessTests
             var actual = new T[n + 4];
             Array.Fill(actual, T.CreateChecked(987));
             input.CopyTo(actual, 2);
-            Run(algorithm, actual.AsSpan(), 2, n + 2, comparer, kind);
+            if (observed) Run(algorithm, actual.AsSpan(), 2, n + 2, comparer, kind, new StatisticsContext());
+            else Run(algorithm, actual.AsSpan(), 2, n + 2, comparer, kind, NullContext.Default);
             var output = actual.AsSpan(2, n);
             if (actual[0] != T.CreateChecked(987) || actual[1] != T.CreateChecked(987)
                 || actual[^2] != T.CreateChecked(987) || actual[^1] != T.CreateChecked(987))
@@ -67,10 +75,10 @@ public class PreparedFloatingSortCorrectnessTests
         }
     }
 
-    static string Bits<T>(T value) where T : unmanaged
+    internal static string Bits<T>(T value) where T : unmanaged
         => Convert.ToHexString(MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref value, 1)));
 
-    static T NaN<T>(int index) where T : unmanaged, IFloatingPointIeee754<T>
+    internal static T NaN<T>(int index) where T : unmanaged, IFloatingPointIeee754<T>
     {
         if (typeof(T) == typeof(float))
         {
@@ -89,38 +97,64 @@ public class PreparedFloatingSortCorrectnessTests
         return Unsafe.As<Half, T>(ref half);
     }
 
-    static void Run<T>(string algorithm, Span<T> span, int first, int last, FloatingComparer<T> comparer, int kind)
+    internal static void Run<T, TComparer, TContext>(string algorithm, Span<T> span, int first, int last, TComparer comparer, int kind, TContext context)
         where T : unmanaged, IFloatingPointIeee754<T>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         switch (algorithm)
         {
             case "QuickSort":
-                if (kind == 0) QuickSort.Sort(span, first, last, NullContext.Default);
-                else QuickSort.Sort(span, first, last, comparer, NullContext.Default);
+                if (kind == 0) QuickSort.Sort(span, first, last, context);
+                else QuickSort.Sort(span, first, last, comparer, context);
                 break;
             case "BinaryInsertionSort":
-                if (kind == 0) BinaryInsertionSort.Sort(span, first, last, NullContext.Default);
-                else BinaryInsertionSort.Sort(span, first, last, comparer, NullContext.Default);
+                if (kind == 0) BinaryInsertionSort.Sort(span, first, last, context);
+                else BinaryInsertionSort.Sort(span, first, last, comparer, context);
                 break;
             case "HeapSort":
-                if (kind == 0) HeapSort.Sort(span, first, last, NullContext.Default);
-                else HeapSort.Sort(span, first, last, comparer, NullContext.Default);
+                if (kind == 0) HeapSort.Sort(span, first, last, context);
+                else HeapSort.Sort(span, first, last, comparer, context);
                 break;
             case "MinHeapSort":
-                if (kind == 0) MinHeapSort.Sort(span, first, last, NullContext.Default);
-                else MinHeapSort.Sort(span, first, last, comparer, NullContext.Default);
+                if (kind == 0) MinHeapSort.Sort(span, first, last, context);
+                else MinHeapSort.Sort(span, first, last, comparer, context);
                 break;
             case "BottomupHeapSort":
-                if (kind == 0) BottomupHeapSort.Sort(span, first, last, NullContext.Default);
-                else BottomupHeapSort.Sort(span, first, last, comparer, NullContext.Default);
+                if (kind == 0) BottomupHeapSort.Sort(span, first, last, context);
+                else BottomupHeapSort.Sort(span, first, last, comparer, context);
                 break;
             case "TernaryHeapSort":
-                if (kind == 0) TernaryHeapSort.Sort(span, first, last, NullContext.Default);
-                else TernaryHeapSort.Sort(span, first, last, comparer, NullContext.Default);
+                if (kind == 0) TernaryHeapSort.Sort(span, first, last, context);
+                else TernaryHeapSort.Sort(span, first, last, comparer, context);
                 break;
             case "SmoothSort":
-                if (kind == 0) SmoothSort.Sort(span.Slice(first, last - first), NullContext.Default);
-                else SmoothSort.Sort(span.Slice(first, last - first), comparer, NullContext.Default);
+                if (kind == 0) SmoothSort.Sort(span.Slice(first, last - first), context);
+                else SmoothSort.Sort(span.Slice(first, last - first), comparer, context);
+                break;
+            case "IntroSort":
+                if (kind == 0) IntroSort.Sort(span, first, last, context);
+                else IntroSort.Sort(span, first, last, comparer, context);
+                break;
+            case "BlockQuickSort":
+                if (kind == 0) BlockQuickSort.Sort(span, first, last, context);
+                else BlockQuickSort.Sort(span, first, last, comparer, context);
+                break;
+            case "PDQSort":
+                if (kind == 0) PDQSort.Sort(span, first, last, context);
+                else PDQSort.Sort(span, first, last, comparer, context);
+                break;
+            case "PDQSortBranchless":
+                if (kind == 0) PDQSortBranchless.Sort(span, first, last, context);
+                else PDQSortBranchless.Sort(span, first, last, comparer, context);
+                break;
+            case "Ipnsort":
+                if (kind == 0) Ipnsort.Sort(span, first, last, context);
+                else Ipnsort.Sort(span, first, last, comparer, context);
+                break;
+            case "StdSort":
+                if (kind == 0) StdSort.Sort(span, first, last, context);
+                else StdSort.Sort(span, first, last, comparer, context);
                 break;
         }
     }

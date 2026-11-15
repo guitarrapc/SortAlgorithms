@@ -158,12 +158,7 @@ public static class StdSort
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // For floating-point types, move NaN values to the front.
-        // Required because SortSpan's NullContext fast path compares primitives with IEEE operators,
-        // which treat NaN as unordered and would break the partitioning invariants.
-        // Same approach as IntroSort/PDQSort/BlockQuickSort and dotnet/runtime's ArraySortHelper.
-        // (libc++ itself declares NaN input UB via the strict-weak-ordering requirement; this repository
-        // instead matches Array.Sort's total order, which places NaN first.)
+        // A natural-order NaN prefix needs no further partitioning.
         var nanEnd = FloatingPointUtils.MoveNaNsToFront(s, first, last);
 
         if (nanEnd >= last)

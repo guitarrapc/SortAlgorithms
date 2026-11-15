@@ -60,9 +60,9 @@ namespace SortAlgorithm.Algorithms;
 /// reference's Freeze/Copy type distinctions collapse to element-size checks.</description></item>
 /// <item><description><strong>Cyclic permutation:</strong> expressed with SortSpan reads/writes and an explicit final
 /// gap iteration instead of raw pointers and drop guards; the move sequence is identical.</description></item>
-/// <item><description><strong>NaN handling:</strong> a NaN pre-pass moves NaN values to the front for floating-point
-/// element types (same approach as the PDQSort family here), since the optimized primitive comparisons treat
-/// NaN as unordered.</description></item>
+/// <item><description><strong>NaN handling:</strong> the internal natural floating-point comparer permits a NaN
+/// prefix to be separated before partitioning and registerized networks. Custom comparers instead order
+/// the complete range.</description></item>
 /// <item><description><strong>Registerized network kernel (beyond the reference):</strong> under NullContext the
 /// 9/13-element networks load the whole region into locals and run branchless min/max exchanges in registers
 /// (the reference uses cmov exchanges on memory). Micro-benchmarked on Zen 4 (.NET 10, int, per-segment distinct
@@ -182,8 +182,7 @@ public static class Ipnsort
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
-        // For floating-point types, move NaN values to the front. The optimized primitive
-        // comparisons treat NaN as unordered, which would otherwise break the sort.
+        // A natural-order NaN prefix needs no further partitioning.
         var nanEnd = FloatingPointUtils.MoveNaNsToFront(s, first, last);
         if (last - nanEnd <= 1) return;
         first = nanEnd;
