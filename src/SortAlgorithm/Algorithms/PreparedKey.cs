@@ -35,16 +35,4 @@ internal static class KeyPreparation<T>
         PreparedKeyKind.BinarySearch => typeof(T) == typeof(float),
         _ => typeof(T) == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(Half),
     };
-
-    public static bool PeelHeapFirstStep
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => typeof(T) == typeof(float) || typeof(T) == typeof(double);
-    }
-
-    public static bool MinHeapBuildEnabled
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => typeof(T) == typeof(Half);
-    }
 }

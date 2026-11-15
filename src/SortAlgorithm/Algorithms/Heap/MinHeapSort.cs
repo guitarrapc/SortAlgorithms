@@ -228,7 +228,7 @@ public static class MinHeapSort
 
         // Phase 2: Sift up the original root value to its correct position
         var parent = offset + (hole - offset - 1) / 2;
-        if (KeyPreparation<T>.MinHeapBuildEnabled)
+        if (typeof(T) == typeof(Half))
         {
             if (s.IsNaturalFloatingNaN(rootValue))
             {
@@ -279,24 +279,47 @@ public static class MinHeapSort
     {
         var hole = root;
 
-        if (s.IsNaturalFloatingNaN(value))
+        if (typeof(T) == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(Half))
         {
-            while (true)
+            if (s.IsNaturalFloatingNaN(value))
             {
-                var left = 2 * (hole - offset) + 1 + offset;
-                var right = left + 1;
+                while (true)
+                {
+                    var left = 2 * (hole - offset) + 1 + offset;
+                    var right = left + 1;
 
-                if (left >= offset + size) break;
+                    if (left >= offset + size) break;
 
-                // Find smaller child
-                var smallest = (right < offset + size && s.IsLessAt(right, left)) ? right : left;
+                    // Find smaller child
+                    var smallest = (right < offset + size && s.IsLessAt(right, left)) ? right : left;
 
-                // If value is already <= smallest child, min-heap property is satisfied
-                if (s.IsValueLessOrEqualWithNaNState(value, smallest, true)) break;
+                    // If value is already <= smallest child, min-heap property is satisfied
+                    if (s.IsValueLessOrEqualWithNaNState(value, smallest, true)) break;
 
-                // Move smaller child up to fill the hole
-                s.Write(hole, s.Read(smallest));
-                hole = smallest;
+                    // Move smaller child up to fill the hole
+                    s.Write(hole, s.Read(smallest));
+                    hole = smallest;
+                }
+            }
+            else
+            {
+                while (true)
+                {
+                    var left = 2 * (hole - offset) + 1 + offset;
+                    var right = left + 1;
+
+                    if (left >= offset + size) break;
+
+                    // Find smaller child
+                    var smallest = (right < offset + size && s.IsLessAt(right, left)) ? right : left;
+
+                    // If value is already <= smallest child, min-heap property is satisfied
+                    if (s.IsValueLessOrEqualWithNaNState(value, smallest, false)) break;
+
+                    // Move smaller child up to fill the hole
+                    s.Write(hole, s.Read(smallest));
+                    hole = smallest;
+                }
             }
         }
         else
@@ -312,7 +335,7 @@ public static class MinHeapSort
                 var smallest = (right < offset + size && s.IsLessAt(right, left)) ? right : left;
 
                 // If value is already <= smallest child, min-heap property is satisfied
-                if (s.IsValueLessOrEqualWithNaNState(value, smallest, false)) break;
+                if (s.IsValueLessOrEqual(value, smallest)) break;
 
                 // Move smaller child up to fill the hole
                 s.Write(hole, s.Read(smallest));
