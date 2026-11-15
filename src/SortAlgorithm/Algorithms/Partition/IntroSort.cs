@@ -20,22 +20,19 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>InsertionSort when partition size ≤ 30 (optimized via benchmarking for best performance)</description></item>
 /// <item><description>HeapSort when recursion depth exceeds depthLimit = 2⌊log₂(n)⌋</description></item>
-/// <item><description>QuickSort (median-of-three + Hoare partition) for all other cases</description></item>
+/// <item><description>QuickSort (sample median + Hoare partition) for all other cases</description></item>
 /// </list>
 /// This adaptive selection ensures O(n log n) worst-case while maintaining QuickSort's average-case performance.</description></item>
 /// <item><description><strong>Depth Limit Calculation:</strong> The depth limit must be set to 2⌊log₂(n)⌋ where n is the partition size.
 /// This value is derived from the expected depth of a balanced binary tree (⌊log₂(n)⌋) multiplied by 2 to allow for some imbalance.
 /// When this limit is exceeded, it indicates pathological QuickSort behavior (e.g., adversarial input patterns),
 /// triggering a switch to HeapSort which guarantees O(n log n) regardless of input.</description></item>
-/// <item><description><strong>QuickSort Phase - Median-of-Three Pivot Selection:</strong> To avoid worst-case QuickSort behavior on sorted/reverse-sorted inputs,
-/// the pivot is selected adaptively based on array size:
+/// <item><description><strong>QuickSort Phase - Sampled Pivot Selection:</strong> The sample size depends on the partition size:
 /// <list type="bullet">
 /// <item><description>For arrays &lt; 1000 elements: median of three quartile positions (q1 = left + n/4, mid = left + n/2, q3 = left + 3n/4)</description></item>
-/// <item><description>For arrays ≥ 1000 elements: <strong>Ninther</strong> (median-of-5) using positions: left, left+delta/2, mid, mid+delta/2, right (where delta = n/2)</description></item>
+/// <item><description>For arrays ≥ 1000 elements: median of five using positions: left, left+delta/2, mid, mid+delta/2, right (where delta = n/2)</description></item>
 /// </list>
-/// The quartile-based sampling provides better pivot quality than simple left/mid/right sampling.
-/// The Ninther (median-of-5) further improves pivot selection for large arrays, reducing the probability of unbalanced partitions.
-/// This adaptive approach is similar to C++ std::introsort's __sort5 optimization.</description></item>
+/// Five-point sampling selects the third element in the comparer order of those five samples.</description></item>
 /// <item><description><strong>QuickSort Phase - Hoare Partition Scheme:</strong> Partitioning uses bidirectional scanning:
 /// <list type="bullet">
 /// <item><description>Left pointer l advances while s[l] &lt; pivot (with boundary check l &lt; right)</description></item>
@@ -272,14 +269,13 @@ public static class IntroSort
             depthLimit--;
 
             // QuickSort with adaptive pivot selection:
-            // - For large arrays (>= 1000): use Ninther (median-of-5) for better pivot quality
+            // - For large arrays (>= 1000): use median-of-5
             // - For smaller arrays: use median-of-3 (quartile-based)
             var length = right - left + 1;
             int pivotIndex;
 
             if (length >= 1000)
             {
-                // Ninther: 5-point sampling for large arrays (similar to C++ std::introsort)
                 var delta = length / 2;
                 var mid = left + delta;
                 var q1 = left + delta / 2;
@@ -491,54 +487,29 @@ public static class IntroSort
 
     /// <summary>
     /// Returns the median index among five elements at specified indices.
-    /// This implements "Ninther" - median-of-medians using 5 samples for better pivot quality on large arrays.
-    /// Performs 6-8 comparisons to determine the median index.
+    /// Performs six comparisons without moving the sampled elements.
     /// </summary>
     /// <remarks>
-    /// This is based on C++ std::introsort's __sort5 optimization for arrays >= 1000 elements.
     /// The five samples are: left, left+delta/2, mid, mid+delta/2, right (where delta = length/2).
-    /// This provides better pivot selection than simple 3-point sampling, especially for large arrays
-    /// with patterns like partially-sorted or mountain-shaped distributions.
     /// </remarks>
     private static int MedianOf5Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i1, int i2, int i3, int i4, int i5)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Sort the 5 indices using a sorting network (6 comparisons minimum for 5 elements)
-        // We'll use a simplified approach: sort pairs, then find median
-
-        // First, sort pairs: (i1, i2), (i3, i4)
         if (s.IsGreaterAt(i1, i2)) (i1, i2) = (i2, i1);
         if (s.IsGreaterAt(i3, i4)) (i3, i4) = (i4, i3);
-
-        // Now i1 <= i2 and i3 <= i4
-        // Find median of i2, i3, i5 (this will be in the middle range)
-        if (s.IsGreaterAt(i2, i5)) (i2, i5) = (i5, i2);
-        if (s.IsGreaterAt(i2, i3)) (i2, i3) = (i3, i2);
-
-        // Now we need the median of the remaining elements
-        // We know: i1 <= i2, i3 <= i4, and i2 is constrained
-        // The median is the 3rd element when sorted
-
-        if (s.IsGreaterAt(i1, i3)) (i1, i3) = (i3, i1);
-        // i1 is now the minimum of {i1, i3}
-
-        if (s.IsGreaterAt(i2, i3)) (i2, i3) = (i3, i2);
-        // i2 is now <= i3
-
-        if (s.IsGreaterAt(i2, i4))
+        if (s.IsGreaterAt(i1, i3))
         {
-            if (s.IsGreaterAt(i3, i4))
-            {
-                return i4;
-            }
-            else
-            {
-                return i3;
-            }
+            (i1, i3) = (i3, i1);
+            (i2, i4) = (i4, i2);
         }
 
-        return i2;
+        // The minimum of the first four samples has rank at most two among all five.
+        // Removing it leaves the median as the second element of two ordered pairs.
+        if (s.IsGreaterAt(i2, i5)) (i2, i5) = (i5, i2);
+        return s.IsGreaterAt(i2, i3)
+            ? (s.IsGreaterAt(i2, i4) ? i4 : i2)
+            : (s.IsGreaterAt(i3, i5) ? i5 : i3);
     }
 
     /// <summary>

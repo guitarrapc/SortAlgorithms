@@ -1,6 +1,6 @@
 param(
     [string]$Artifacts = 'output/sort-audit/baseline/results',
-    [string]$Destination = '.github/docs/specs/sort-audit-2026-11-14-matrix.md'
+    [string]$Destination = '.github/docs/reports/sort-audit-2026-11-14-matrix.md'
 )
 
 $ErrorActionPreference = 'Stop'

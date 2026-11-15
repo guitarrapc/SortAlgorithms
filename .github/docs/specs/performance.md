@@ -6,9 +6,9 @@ SortAlgorithms is both an algorithm study library and a performance-oriented imp
 
 Correctness, comparer semantics, observation accuracy, and memory safety take precedence over speed. An optimization is retained only when its applicable input class and trade-offs are understood.
 
-## Measurement Baseline
+## Runtime Scope
 
-The optimization decisions, benchmark ratios, and disassembly observations recorded in this specification are based on **.NET 10 with RyuJIT** unless a section states otherwise. They describe verified behavior for that runtime generation, not a promise that an earlier or later .NET runtime, NativeAOT, another JIT, or another CPU will emit identical instructions or preserve the same crossover points. Runtime upgrades require revalidation of claims that depend on generated code.
+Generated code depends on the runtime, JIT, build configuration, element type, comparer, context, and CPU. Runtime upgrades require revalidation of claims that depend on instruction selection or crossover points. Measurements and implementation decisions are kept in [reports](../reports/README.md), separately from this contract.
 
 ## Execution Modes
 
@@ -28,28 +28,12 @@ A real `TContext` receives the callbacks defined by [observation.md](observation
 - a statistics instance belongs to one sort, or one thread, and must not be shared by concurrent sorts; and
 - swaps and range copies update aggregate counters directly rather than replaying individual callback operations.
 
-The project replaced atomic increments after measuring their lock-prefixed read-modify-write and ordering cost as dominant in instrumented runs. The source note records a 10–20× increment-cost difference for the measured environment; this is motivation, not a portable ratio guarantee.
 
-### Why statistics counters are non-atomic
+### Statistics ownership
 
-This choice follows from both the execution model and the generated-code cost.
+Sorting is synchronous. A StatisticsContext has one owner during a sort and does not support concurrent mutation. Atomic updates provide no additional correctness under this ownership model. Adding internal parallelism must not silently reuse the current context.
 
-All sorting implementations in this library execute synchronously on one thread; the repository contains no `Parallel`, `Task`, or `Thread` execution inside an algorithm. A context is caller-owned, and the supported statistics usage is one `StatisticsContext` per sort or per thread. Atomicity therefore provides no correctness benefit for the supported ownership model.
-
-On the analyzed .NET 10 x64 RyuJIT build, `Interlocked.Increment`/`Add` lowered to lock-prefixed atomic read-modify-write operations (`lock xadd` or an equivalent locked instruction). Such an operation must obtain exclusive ownership of the counter's cache line and provides ordering stronger than this counter needs. It also forces a memory RMW on every update, restricting register promotion, combination of adjacent additions, store-buffer freedom, and out-of-order overlap. The analyzed cost was approximately 20 cycles versus an approximately one-cycle ordinary add, with an observed 10–20× per-update difference. Exact instruction selection and cycle counts vary by JIT, CPU, contention, and whether the return value is consumed; the invariant reason for avoiding it is the unnecessary atomic RMW and memory ordering in a single-owner hot path.
-
-One logical `OnSwap` updates three counters: swap count, index-read count by two, and index-write count by two. The former atomic implementation consequently issued three atomic RMW operations per swap. For insertion-style algorithms, where these callbacks execute in the inner loop, synchronization rather than sorting or observation semantics became the dominant measured cost.
-
-The same-run InsertionSort comparison that justified the change recorded:
-
-| Case | Atomic counters | Plain `++`/`+=` | Improvement |
-|---|---:|---:|---:|
-| Statistics, `n=256` | 73.3 µs | 10.5 µs | 7.0× |
-| Statistics, `n=1024` | 1,352 µs | 177 µs | 7.6× |
-
-Relative to `NullContext`, instrumented overhead fell from 10–14× to 2.5–2.7×. The result attributes approximately 87% of the former instrumented time to atomic-counter cost in that workload, consistent with the generated-code hypothesis. Counter values remained identical for single-threaded execution, and the recorded validation run completed 6,711 tests with zero failures without changing statistics expectations.
-
-This decision would need revisiting only if shared concurrent mutation became a supported `StatisticsContext` contract. Adding internal parallelism to an algorithm must not silently reuse the current non-atomic context.
+One logical swap updates the swap count and accounts for two reads and two writes. Counter implementation changes must preserve those values. Historical atomic-counter measurements are retained in the [performance evidence record](../reports/performance-evidence-before-f03-2026-11-15.md).
 
 ## Implemented Runtime-Level Optimizations
 
@@ -71,15 +55,15 @@ This decision would need revisiting only if shared concurrent mutation became a 
 
 The primitive set is `byte`, `sbyte`, `ushort`, `short`, `uint`, `int`, `ulong`, `long`, `nuint`, `nint`, `float`, `double`, and `Half`. Floating-point predicates preserve comparer ordering: NaN precedes numbers, NaNs compare equal, and signed zeros compare equal. Direct relational operators alone do not meet this contract.
 
-InsertionSort prepares the NaN state of a cached key only after a shift is required, and reuses that state for the remaining comparisons. Already-ordered elements retain a short path. Other comparers and observing contexts retain their comparison results and event sequence. The [follow-up measurements](nan-comparison-optimization-2026-11-14.md) record the evidence; no prescan or different sorting algorithm is introduced.
+InsertionSort prepares the NaN state of a cached key only after a shift is required, and reuses that state for the remaining comparisons. Already-ordered elements retain a short path. Other comparers and observing contexts retain their comparison results and event sequence. The [follow-up measurements](../reports/nan-comparison-optimization-2026-11-14.md) record the evidence; no prescan or different sorting algorithm is introduced.
 
 ### Why unchecked by-reference access is selective
 
 RyuJIT already removes many bounds checks from simple forward loops through range analysis. Replacing every span access with `Unsafe` would therefore add risk without a guaranteed benefit. The retained `SortSpan` Release path was selected because one centralized implementation covers the irregular, backward, and runtime-indexed accesses where range proof is weakest, while Debug retains checked indexing.
 
-The .NET 10 local comparison at `n=4096` recorded roughly 1% improvement for a sequential scan, 5% for an adjacent-element comparison loop, and 10% for InsertionSort's irregular backward scan. This gradient matched the theory: the simpler the index progression, the more likely the original check was already eliminated. The `(nint)(uint)index` address form was retained after .NET 10 RyuJIT disassembly showed that it avoided the repeated sign-extension associated with the measured `int` address calculation. These figures explain the design choice but are not portable performance guarantees.
+The validation of unchecked access must cover irregular indices as well as sequential scans. Historical access-loop measurements and address-generation observations are kept in the [performance evidence record](../reports/performance-evidence-before-f03-2026-11-15.md).
 
-The same evidence rule applies to offset buffers in `PDQSortBranchless`: their store index is data-dependent, so the measured JIT could not prove it in range, making the unchecked first-element-ref path materially different from ordinary sequential indexing.
+The same validation rule applies to offset buffers in `PDQSortBranchless`: their store index is data-dependent, so each unchecked write needs a valid range established by the algorithm.
 
 ## Implemented Algorithm-Level Optimizations
 
@@ -87,23 +71,23 @@ The same evidence rule applies to offset buffers in `PDQSortBranchless`: their s
 
 `PDQSortBranchless` is a scalar block-partition implementation, not an unimplemented SIMD proposal. It preserves PDQSort's pivot selection, duplicate handling, pattern detection, heapsort fallback, and tail-recursion elimination while replacing the data-dependent partition branch with two 64-byte offset buffers.
 
-The implementation uses techniques selected from BenchmarkDotNet and `DisassemblyDiagnoser` results:
+The partition preserves the following structure:
 
-- boolean classification is converted with `Unsafe.As<bool, byte>` so .NET 10 RyuJIT emits a flag-producing comparison (`setcc`) and addition rather than a data-dependent classification branch;
-- runtime-indexed offset-buffer writes use first-element refs plus `Unsafe.Add`, because checked span indexing retained a bounds check in the measured loop and cost 5–15%;
-- classification is manually unrolled eight times because the measured .NET 10 RyuJIT did not perform the desired unroll; the retained version improved the many-duplicate case by about 13%; and
+- boolean classification is converted with `Unsafe.As<bool, byte>` and accumulated into offset counts;
+- runtime-indexed offset-buffer writes use first-element refs plus `Unsafe.Add` within the buffer bounds;
+- classification is manually unrolled eight times; and
 - cyclic permutation exchanges misplaced pairs in blocks, reducing branch-predictor pressure on random and duplicate-heavy inputs.
 
-This is a trade-off rather than a universal replacement for branchy PDQSort. The retained .NET 10 / Ryzen 9 7950X3D measurements showed branchless PDQSort faster for sufficiently large random and low-cardinality inputs, but slower at `n=256` and on reverse/pipe-organ inputs where branches are predictable. The crossover was approximately `n=512–1024` in that environment.
+The extra classification bookkeeping makes this a trade-off rather than a universal replacement for branchy PDQSort. Input predictability, size, runtime, and CPU affect the result. Measurements and crossover observations are kept in the [performance evidence record](../reports/performance-evidence-before-f03-2026-11-15.md).
 
 ### Branch reduction and guarded loops
 
 The repository also applies branch-sensitive structure where an algorithm justifies it:
 
-- `BlockQuickSort` classifies elements into block index buffers so the partition inner loop stores an offset unconditionally and folds the comparison outcome into a counter increment, leaving no branch that depends on a comparison. Writing the conditional form (`if (matches) { buffer[n] = j; n++; }`) compiles to a data-dependent `jl` and measured roughly twice the total sort time at `n >= 10^6`; the unconditional-store form compiles to `setcc` + `add`. The unconditional store is confined to the `NullContext` path, because an observing context must not be told about index-buffer writes the algorithm did not logically perform;
+- `BlockQuickSort` classifies elements into block index buffers. Unconditional offset stores are confined to the `NullContext` path, because an observing context must not be told about index-buffer writes the algorithm did not logically perform;
 - `Glidesort` contains branchless small sorting-network stages; its bidirectional stable partition uses a write-both kernel (unconditional stores to both candidate slots, the reference implementation's technique) and an AVX-512 compress kernel under `NullContext`, because RyuJIT compiles conditional-destination writes to data-dependent branches rather than cmov;
 - `InsertionSort` and `StdSort` use guarded/unguarded inner-loop variants where a sentinel or established boundary removes repeated boundary work;
-- `StdSort` mirrors libc++'s `__use_branchless_sort` gate: for primitive types with the natural-order comparer it partitions with 64-element blocks whose comparison outcomes are packed into ulong bitsets (setcc + shlx + or; positions extracted via TrailingZeroCount/blsr) and sorts 3-5 elements with cmov-style conditional-move networks that write both slots unconditionally. Bitsets are kept in ulong locals returned by value — a byref accumulator forced a load-modify-store roundtrip per element in the measured codegen. The gate deliberately ignores TContext, so observed statistics describe the same algorithm the fast path runs; classification state never touches an observable buffer. Measured on random int against a same-run `Array.Sort` anchor (tiering disabled), this took StdSort from ~1.02-1.05x of `Array.Sort` to ~0.50-0.61x at n = 10^4..10^7; and
+- `StdSort` uses a natural-order primitive-type gate for 64-element bitset partitions and small conditional-move networks. Bitsets are local values. The gate does not depend on `TContext`, so observed statistics describe the same algorithm the fast path runs; classification state never touches an observable buffer; and
 - PDQ variants use partial insertion-sort exits, already-partitioned detection, duplicate blocks, pattern-defeating shuffles, and heapsort fallback to avoid expensive work on favorable or adversarial inputs.
 
 Branchless source syntax alone is not sufficient evidence. A ternary may still compile to a branch, and branch removal may increase instruction count or code size. The project validates relevant generated code and benchmarks multiple input patterns.
@@ -112,7 +96,7 @@ Branchless source syntax alone is not sufficient evidence. A ternary may still c
 
 - Selected classification and copy loops are manually unrolled only when the JIT did not produce the desired shape and measurement justified it.
 - Several quicksort and merge implementations use tail-recursion elimination or bounded explicit `stackalloc` work stacks to reduce call-stack growth and keep hot iteration local.
-- Hybrid algorithms switch to insertion sort or sorting networks below algorithm-specific thresholds. Thresholds are benchmark decisions, not a package-wide constant; `IntroSort`, for example, records a measured threshold of 30.
+- Hybrid algorithms switch to insertion sort or sorting networks below algorithm-specific thresholds. Thresholds are local implementation decisions and do not define a package-wide constant.
 - Cached pivot and element values reduce repeated observable reads and memory traffic.
 - Distribution algorithms prefer shifts and masks for power-of-two radices and use compact count/offset buffers.
 
@@ -133,7 +117,7 @@ Performance changes are evaluated in Release with BenchmarkDotNet. The repositor
 
 - prepares fresh input buffers outside the measured region so a benchmark does not repeatedly sort an already-sorted array;
 - pins invocation count to the prepared buffer count and uses `UnrollFactor=1`;
-- disables tiered compilation for the short fixed job because tier transitions previously produced bimodal 10–15× iteration changes; and
+- records explicit tiering settings so runtime transitions do not silently change the measurement conditions; and
 - uses a fixed CI CPU model unless explicitly overridden, improving comparability across runs.
 
 | Claim | Required evidence |
@@ -177,7 +161,6 @@ The following are not repository-wide strategies: ISA-specific SIMD (`Vector128/
 
 - Generic `TContext` is essential: an interface-typed context prevents the unobserved path from specializing cleanly.
 - Atomic statistics counters made observation disproportionately expensive; per-sort ownership enabled plain increments without weakening the intended usage model.
-- The atomic-counter result was not merely a benchmark correlation: three locked RMW operations per swap explained the observed 7.0–7.6× instrumented speedup, while unchanged counts and 6,711 passing tests established semantic equivalence for the supported single-threaded model.
 - Fresh input per benchmark invocation matters. Re-sorting one array trains predictors and can hide the advantage of branchless partitioning.
 - Bounds-check removal matters most for irregular or runtime-indexed access. Simple forward loops are often already optimized by the JIT.
 - Manual unrolling is justified only after disassembly shows the JIT did not unroll and benchmarks show an input-relevant benefit.
@@ -185,19 +168,17 @@ The following are not repository-wide strategies: ISA-specific SIMD (`Vector128/
 - `SkipLocalsInit` turns an implicit runtime guarantee into a repository-wide audit obligation; increment-before-initialize buffers are easy to miss.
 - A primitive fast path needs a natural-comparer marker. `typeof(T)` alone would silently violate reverse or domain-specific ordering.
 - Generated code is a property of the closed generic instantiation, build configuration, JIT, and CPU; documentation describes the measured context.
-- Preparing an invariant floating-point key can remove repeated NaN checks, but the measured element types and calling context determine whether it helps. Shared fallbacks need caller measurements as well as direct sort measurements. See the [2026-11-14 optimization record](prepared-floating-key-optimization-2026-11-14.md).
-- A generic comparison policy can keep one source loop while retaining specialized native code. Helper boundaries still need measurement: the tested heap refactors left comparison and write calls in hot loops or regressed other inputs, so they were not adopted. See the [policy specialization record](prepared-key-policy-tuning-2026-11-14.md).
-- Moving a type condition into a helper needs measurement even when it can specialize to a constant. The [heap policy review](prepared-key-policy-review-2026-11-15.md) records the direct-loop refactor, rejected selectors, instruction comparisons, and timing controls used to reduce source duplication.
-- Floating-point and integer measurements do not cover wider value types. The [heap policy re-review](heap-policy-rereview-2026-11-15.md) found a 34–36% natural-order decimal regression after commonizing HeapSort and MinHeapSort, caused by remaining comparison calls and value copies. A proposed wide-value repair also changed Half inlining and regressed it, so both algorithms returned to their previous type branches; only TernaryHeapSort retained the refactor.
-- Benchmark parity between sibling algorithms can mean no input exercises the difference rather than no difference existing. Every distribution pattern was a permutation or held each value twice, so a bucket never grew past two elements and the cost of collection stayed invisible; adding a duplicate-heavy pattern showed `PigeonholeSortInteger` running at 2.5x `CountingSortInteger` where it had looked identical. Before concluding two implementations are equally good, check that some input actually separates them.
+- Preparing an invariant floating-point key can remove repeated NaN checks, but the measured element types and calling context determine whether it helps. Shared fallbacks need caller measurements as well as direct sort measurements. See the [2026-11-14 optimization record](../reports/prepared-floating-key-optimization-2026-11-14.md).
+- Generic comparison policies can retain a common source loop. Helper boundaries and all shared callers still require correctness and performance validation.
+- Type conditions that specialize to constants can still change inlining and code layout. Validate the generated code and all affected callers.
+- Floating-point and integer measurements do not cover wider value types. Validate large structs separately before sharing a hot path.
+- Before concluding two implementations have equivalent performance, include inputs that exercise their different work and memory traffic.
 - Storing what a position already determines is a cost, not a safeguard. See the distribution auxiliary structure rule in `sorting_api.md`.
 
 ## Compiler-Specific Reporting Helper Inlining
 
 The four observed-comparison reporting helpers in `SortSpan` request aggressive inlining only when compiled with `NETWASM`. NetWasm SDK 0.13.0 supplies that symbol automatically. Standard .NET builds retain the compiler's existing inlining heuristics. The condition changes method implementation hints, not comparisons, callback ordering, buffer identities, or bounds checks.
 
-This restriction follows the 2026-11-14 SortVivo integration measurements. With a fixed recorder, the NetWasm exploration reduced HeapSort recording from 5.70 to 4.58 ms for 8192 random integers after adding the four hints. The larger final PoC improvement also included recorder changes and must not be attributed to inlining alone. Compiling the conditional source produced a code section identical to the measured NetWasm shipping candidate and passed 384 output/trace/replay cases.
-
-The same unconditional hints did not transfer safely to official .NET WASM. An isolated harness using SortVivo's observers showed improvements, but the actual `SortExecutor.ExecuteAndRecord` API, including its timing workload, encoding, and JavaScript transfer, regressed. With the browser processes on the same logical CPU, three launches with 15 samples each measured HeapSort at 173.7 versus 196.5 ms, TimSort at 161.0 versus 171.9 ms, and PDQSort at 105.4 versus 112.9 ms. These are API times, not pure sorting times. The cause of the end-to-end reversal was not fully attributed, so the measurement subsystem was not changed to compensate.
+Compiler-specific measurements and rejected alternatives are retained in the [performance evidence record](../reports/performance-evidence-before-f03-2026-11-15.md). They do not promise the same behavior on another runtime or compiler.
 
 A consumer must build the library sources with the NetWasm SDK to obtain these hints; consuming an ordinary precompiled .NET assembly does not retroactively apply the condition. Do not define `NETWASM` for the standard .NET browser runtime merely to force these hints. Revalidate this compiler-specific decision when upgrading the runtime or changing the call/recording path.
