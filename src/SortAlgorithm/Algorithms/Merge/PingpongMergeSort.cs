@@ -6,13 +6,11 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// 配列を再帰的に半分に分割し、各再帰レベルで送信元バッファ（ping）と書き込み先バッファ（pong）を交互に入れ替えながらマージするトップダウン型マージソートです。
-/// 標準的なMergeSortが「左半分を補助バッファにコピーして元配列に書き戻す（1レベルあたり1.5n回の書き込み）」のに対し、
-/// Pingpong方式では各レベルの全要素を一方向にコピーするだけ（1レベルあたりn回の書き込み）で済み、余分な書き戻しコピーが発生しません。
+/// 各マージの結果を、その階層の書き込み先バッファへ直接格納します。
 /// 安定ソートであり、最悪・平均・最良のすべてのケースでO(n log n)の性能を保証します。
 /// <br/>
 /// A top-down recursive merge sort that alternates source (ping) and destination (pong) buffers at each recursion level.
-/// Unlike standard MergeSort which copies the left half to an auxiliary buffer and writes back (1.5n writes per level),
-/// the ping-pong strategy writes all n elements in one direction per level (n writes per level), eliminating the copy-back step.
+/// Each merge writes its result directly into the destination buffer for that recursion level.
 /// Stable and guarantees O(n log n) performance in all cases.
 /// </summary>
 /// <remarks>
@@ -43,13 +41,11 @@ namespace SortAlgorithm.Algorithms;
 /// which is exactly what the merge step needs to read from.</description></item>
 /// <item><description><strong>Merge Step (Pure Ping-Pong):</strong> Merges src[left..mid] and src[mid+1..right] into dst[left..right].
 /// Reads exclusively from src and writes exclusively to dst — no extra buffer needed within the merge itself.
-/// This is the key advantage: standard merge sort copies the left half first, requiring 1.5n writes per level;
-/// ping-pong merge requires only n writes per level.</description></item>
+/// Each merge writes its result directly to the destination buffer.</description></item>
 /// <item><description><strong>Stability Preservation:</strong> During merge, elements from the left half are taken first on equal values
 /// (using &lt;= comparison), preserving the original relative order of equal elements.</description></item>
-/// <item><description><strong>Write Count:</strong> Total writes = n (initial copy) + n × ⌈log₂(n)⌉ (recursion levels) = n(1 + ⌈log₂(n)⌉).
-/// Standard MergeSort requires 1.5n × ⌈log₂(n)⌉ writes.
-/// For n &gt; 4, pingpong is strictly fewer writes (~33% reduction for large n).</description></item>
+/// <item><description><strong>Element Movement:</strong> The bootstrap, singleton leaves, and merges all copy elements.
+/// Sorted subranges still copy from the source to the destination buffer.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -62,12 +58,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Comparisons : O(n log n) — at most n⌈log₂(n)⌉ comparisons</description></item>
 /// <item><description>Swaps       : 0 — elements move by copying between the input and the auxiliary buffer, never by exchange</description></item>
 /// <item><description>Index Reads : Θ(n log n) — each merge level reads all n elements</description></item>
-/// <item><description>Index Writes: Θ(n log n) — n(1 + ⌈log₂(n)⌉), the four-way ping-pong saving the copy-back that a two-way merge needs at every level</description></item>
+/// <item><description>Index Writes: Θ(n log n) — bootstrap and leaf copies plus the output of every merge level</description></item>
 /// <item><description>Space       : O(n) — full-size auxiliary buffer (uses ArrayPool for efficiency)</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
 /// <list type="bullet">
-/// <item><description>vs MergeSort       : Same top-down recursion, but writes ~33% fewer elements by eliminating copy-back</description></item>
+/// <item><description>vs MergeSort       : Source and destination buffers alternate between recursion levels</description></item>
 /// <item><description>vs BottomupMergeSort: Both use ping-pong buffering; BottomupMergeSort is iterative (bottom-up), PingpongMergeSort is recursive (top-down)</description></item>
 /// <item><description>vs NaturalMergeSort : NaturalMergeSort achieves O(n) on pre-sorted data; PingpongMergeSort is always O(n log n) writes but simpler</description></item>
 /// </list>
@@ -130,10 +126,9 @@ public static class PingpongMergeSort
             // Copy span into buffer (b becomes the initial source / "ping" buffer).
             // Both s and b carry the original data so that leaf copies (dst[i] = src[i])
             // are always correct regardless of which buffer is src at that recursion depth.
-            span.CopyTo(buffer.AsSpan(0, span.Length));
-
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var b = new SortSpan<T, TComparer, TContext>(buffer.AsSpan(0, span.Length), context, comparer, BUFFER_MERGE);
+            s.CopyTo(0, b, 0, span.Length);
 
             // Sort b[0..n-1] into s[0..n-1]: b is the source (ping), s is the destination (pong).
             // The result lands in s (the original span) — no copy-back needed.

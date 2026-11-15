@@ -71,6 +71,7 @@ public static class MergeInsertionSort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_CHAIN = 1;      // Evolving sorted chain (Ford-Johnson chain construction)
+    private const int BUFFER_SNAPSHOT = 2;   // Original values used for final index permutation
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -140,15 +141,15 @@ public static class MergeInsertionSort
         var rentedChain = needsChain ? ArrayPool<T>.Shared.Rent(n) : [];
         try
         {
-            var values = rentedValues.AsSpan(0, n);
+            var values = new SortSpan<T, TComparer, TContext>(rentedValues.AsSpan(0, n), s.Context, s.Comparer, BUFFER_SNAPSHOT);
             var chainSpan = new SortSpan<T, TComparer, TContext>(needsChain ? rentedChain.AsSpan(0, n) : default, s.Context, s.Comparer, BUFFER_CHAIN);
             var sorted = rentedSorted.AsSpan(0, n);
             var indices = rentedIndices.AsSpan(0, n);
 
-            // Copy all values to plain temp buffer (untracked) and build initial identity indices
+            // Keep the original values separate because writing the permutation overwrites s.
             for (var i = 0; i < n; i++)
             {
-                values[i] = s.Read(i);
+                values.Write(i, s.Read(i));
                 indices[i] = i;
             }
 
@@ -159,7 +160,7 @@ public static class MergeInsertionSort
             s.Context.OnPhase(SortPhase.MergeInsertionRearrange, 0, n - 1);
             for (var i = 0; i < n; i++)
             {
-                s.Write(i, values[sorted[i]]);
+                s.Write(i, values.Read(sorted[i]));
             }
         }
         finally

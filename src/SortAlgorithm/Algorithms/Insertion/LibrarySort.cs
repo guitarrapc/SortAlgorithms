@@ -96,6 +96,7 @@ public static class LibrarySort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;        // Main input array
     private const int BUFFER_AUX = 1;         // Auxiliary array with gaps
+    private const int BUFFER_STAGING = 2;      // Dense elements during rebalance
     // Note: the occupancy bitset is algorithm metadata rather than element storage, so it carries
     // no buffer identifier and is not reported to the context.
 
@@ -212,7 +213,7 @@ public static class LibrarySort
             // the element buffer means a gap is created by clearing a bit, not by writing a sentinel
             // element, so gap bookkeeping produces no observable element operations.
             var bits = bitsArray.AsSpan(0, wordCount);
-            var temp = tempArray.AsSpan(0, length);
+            var temp = new SortSpan<T, TComparer, TContext>(tempArray.AsSpan(0, length), context, comparer, BUFFER_STAGING);
 
             // A pooled array arrives with arbitrary content: every slot starts as a gap.
             bits.Clear();
@@ -422,7 +423,7 @@ public static class LibrarySort
     /// Returns the maximum used position + 1 for auxEnd tracking.
     /// </summary>
     private static int Rebalance<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> aux, int auxSize,
-        Span<ulong> bits, int auxEnd, int expectedCount, Span<T> tempBuffer)
+        Span<ulong> bits, int auxEnd, int expectedCount, SortSpan<T, TComparer, TContext> tempBuffer)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -432,7 +433,7 @@ public static class LibrarySort
         {
             if (count == expectedCount)
                 throw new InvalidOperationException($"Rebalance found more than the expected {expectedCount} occupied slots below auxEnd={auxEnd}");
-            tempBuffer[count++] = aux.Read(p);
+            tempBuffer.Write(count++, aux.Read(p));
         }
 
         if (count != expectedCount)
@@ -468,7 +469,7 @@ public static class LibrarySort
                     $"(i={i}, count={count}, range={range})");
             }
 
-            aux.Write(pos, tempBuffer[i]);
+            aux.Write(pos, tempBuffer.Read(i));
             SetOccupied(bits, pos);
             maxUsedPos = pos;
         }

@@ -33,6 +33,22 @@ Nor is one root, or one connected structure, guaranteed. An algorithm whose stru
 
 A callback added to the contract carries a no-op default implementation so that existing implementations keep compiling, but value-type contexts override it explicitly: a constrained call that falls through to a default interface implementation boxes the receiver, which would put an allocation on the otherwise zero-cost `NullContext` path.
 
+## Auxiliary Element Buffers
+
+Element storage in an auxiliary buffer follows the same observation contract as the input.
+Writes or range copies initialize its elements before reads consume them. Buffer identifiers
+remain attached to the same storage during a sort, including when source and destination roles alternate.
+Index arrays and occupancy bitsets are algorithm metadata and do not become element buffers.
+
+| Algorithm | Buffer 1 | Buffer 2 |
+|---|---|---|
+| PingpongMergeSort | Auxiliary merge buffer, initialized by the input copy | None |
+| LibrarySort | Auxiliary elements with gaps | Dense staging elements during rebalance |
+| MergeInsertionSort | Evolving Ford–Johnson chain | Original element snapshot for the final permutation |
+
+Element copies contribute their full length to read and write counts. These counts include
+bootstrap copies, leaf copies, snapshot storage, and staging operations when the algorithm performs them.
+
 ## Phase Levels
 
 A phase announcement replaces the previously announced phase at the same level; there is no exit event, and a phase remains current until the next announcement at its level. Announcements occur at two levels, and a consumer must keep one slot per level:
