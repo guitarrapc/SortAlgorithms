@@ -362,7 +362,7 @@ public static class BlockQuickSort
         {
             // For small arrays, use simple median-of-3
             // Duplicate detection happens inside MedianOf3 during comparison network
-            var mid = (left + right) / 2;
+            var mid = Midpoint(left, right);
             pivotIndex = MedianOf3(s, left, mid, right, out hasDuplicatePivot);
         }
 
@@ -810,7 +810,7 @@ public static class BlockQuickSort
         var length = right - left + 1;
 
         if (length < k + 3)
-            return MedianOf3(s, left, (left + right) / 2, right);
+            return MedianOf3(s, left, Midpoint(left, right), right);
 
         var step = length / (k + 3);
         var searchLeft = left + step;
@@ -837,7 +837,7 @@ public static class BlockQuickSort
         }
 
         // Add middle element
-        var mid = (left + right) / 2;
+        var mid = Midpoint(left, right);
         if (placeIt != mid)
         {
             s.Swap(placeIt, mid);
@@ -862,7 +862,7 @@ public static class BlockQuickSort
         while (right > left)
         {
             // Use median-of-3 for pivot (discard duplicate flag in QuickSelect)
-            var pivotIdx = MedianOf3(s, left, (left + right) / 2, right - 1);
+            var pivotIdx = MedianOf3(s, left, Midpoint(left, right), right - 1);
 
             // Partition
             s.Swap(pivotIdx, right - 1);
@@ -995,4 +995,7 @@ public static class BlockQuickSort
             return new PartitionResult(pivotPos, equalRight);
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static int Midpoint(int left, int right) => left + ((right - left) >> 1);
 }

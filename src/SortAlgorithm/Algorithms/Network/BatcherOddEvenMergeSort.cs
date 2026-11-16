@@ -120,7 +120,6 @@ public static class BatcherOddEvenMergeSort
     /// The comparison pattern is data-oblivious and determined solely by the network structure.
     /// </summary>
     /// <param name="s">The span to sort.</param>
-    /// <param name="low">The starting index of the sequence.</param>
     /// <param name="count">The length of the sequence.</param>
     private static void SortCoreIterative<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int count)
         where TComparer : IComparer<T>
@@ -128,32 +127,33 @@ public static class BatcherOddEvenMergeSort
     {
         // Iterative Batcher odd-even merge sorting network. iterative formulation (Knuth TAOCP Vol. 3, Algorithm 5.3.4N).
         // Repeatedly merges adjacent sorted blocks using data-oblivious compare-exchange stages.
-        for (var p = 1; p < count; p <<= 1)
+        // The next pass and group offset can exceed int.MaxValue before the loop exits.
+        for (uint p = 1; p < (uint)count; p = NextPass(p))
         {
-            s.Context.OnPhase(SortPhase.OddEvenMergeSortPass, p, count);
+            s.Context.OnPhase(SortPhase.OddEvenMergeSortPass, (int)p, count);
 
             // Inner loop: k is the comparison distance within the odd-even merge network.
             // Starts at p (full merge distance) and halves down to 1.
             for (var k = p; k >= 1; k >>= 1)
             {
-                s.Context.OnPhase(SortPhase.OddEvenMergeSortStage, k, p, count);
+                s.Context.OnPhase(SortPhase.OddEvenMergeSortStage, (int)k, (int)p, count);
 
                 // j iterates over the starting positions of each comparison group.
                 // k % p gives the correct starting offset for each stage.
-                for (var j = k % p; j < count - k; j += k + k)
+                for (var j = k % p; j < (uint)count - k; j = NextGroup(j, k))
                 {
                     // i iterates within each comparison group of size k.
-                    for (var i = 0; i < k; i++)
+                    for (uint i = 0; i < k; i++)
                     {
                         // Bounds check: j+i+k must be a valid index.
                         // Group check: both elements must belong to the same merge block (size 2p).
                         // The bounds and block-membership checks avoid invalid compare-exchanges
                         // for incomplete blocks near the end of the array.
-                        int left = j + i;
-                        int right = left + k;
-                        if (right < count && left / (p << 1) == right / (p << 1))
+                        var left = j + i;
+                        var right = left + k;
+                        if (IsValidPair(left, right, p, (uint)count))
                         {
-                            CompareAndSwap(s, left, right);
+                            CompareAndSwap(s, (int)left, (int)right);
                         }
                     }
                 }
@@ -171,4 +171,14 @@ public static class BatcherOddEvenMergeSort
             s.Swap(i, j);
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static uint NextPass(uint pass) => pass << 1;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static uint NextGroup(uint start, uint distance) => start + (distance << 1);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool IsValidPair(uint left, uint right, uint pass, uint count)
+        => right < count && left / (pass << 1) == right / (pass << 1);
 }

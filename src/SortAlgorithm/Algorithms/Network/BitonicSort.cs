@@ -157,15 +157,16 @@ public static class BitonicSort
     {
         // Outer loop: bitonic sequence size k (2, 4, 8, ..., count)
         // This determines which "level" of the bitonic network we're building
-        for (int k = 2; k <= count; k <<= 1) // Level
+        // The next level is 2^31 after the largest valid network.
+        for (uint k = 2; k <= (uint)count; k = NextLevel(k)) // Level
         {
-            s.Context.OnPhase(SortPhase.BitonicLevel, k, count);
+            s.Context.OnPhase(SortPhase.BitonicLevel, (int)k, count);
 
             // Middle loop: comparison distance j (k/2, k/4, ..., 1)
             // This determines the "stage" within each level
-            for (int j = k >> 1; j > 0; j >>= 1) // Stage
+            for (int j = (int)(k >> 1); j > 0; j >>= 1) // Stage
             {
-                s.Context.OnPhase(SortPhase.BitonicStage, j, k, count);
+                s.Context.OnPhase(SortPhase.BitonicStage, j, (int)k, count);
                 // Inner loop: use 0-based local index for network structure
                 for (int i = 0; i < count; i++) // Local index
                 {
@@ -182,7 +183,7 @@ public static class BitonicSort
                         // Direction is determined by (i & k) in local index space:
                         // - (i & k) == 0: ascending order (first half of bitonic sequence)
                         // - (i & k) != 0: descending order (second half of bitonic sequence)
-                        bool ascending = (i & k) == 0; // direction
+                        bool ascending = ((uint)i & k) == 0; // direction
 
                         // Map local indices to actual array indices
                         int a = low + i;
@@ -248,6 +249,9 @@ public static class BitonicSort
     {
         return n > 0 && (n & (n - 1)) == 0;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static uint NextLevel(uint level) => level << 1;
 }
 
 /// <summary>

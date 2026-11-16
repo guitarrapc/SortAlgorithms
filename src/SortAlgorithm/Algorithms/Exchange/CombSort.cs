@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 ﻿using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
@@ -110,14 +111,7 @@ public static class CombSort
 
         while (gap != 1 || swapped)
         {
-            gap = gap * 10 / 13;
-            if (gap < 1) gap = 1;
-
-            // Apply Comb11 optimization
-            if (gap == 9 || gap == 10)
-            {
-                gap = 11;
-            }
+            gap = ShrinkGap(gap);
 
             swapped = false;
 
@@ -152,5 +146,14 @@ public static class CombSort
                 }
             }
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static int ShrinkGap(int gap)
+    {
+        // The product can exceed int.MaxValue while the reduced gap still fits.
+        var next = (int)((long)gap * 10 / 13);
+        if (next < 1) return 1;
+        return next is 9 or 10 ? 11 : next;
     }
 }
