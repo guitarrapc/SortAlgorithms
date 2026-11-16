@@ -1,5 +1,5 @@
 ﻿#:sdk Microsoft.NET.Sdk
-#:property TargetFramework=net10.0
+#:property TargetFramework=net11.0
 
 var big = Enumerable.Range(1, 100).ToArray();
 var src = 75; var dst = 10;

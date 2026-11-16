@@ -55,8 +55,7 @@ namespace SortAlgorithm.Algorithms;
 /// dispatches to a write-both branchless kernel (elements up to 16 bytes; the reference's
 /// <c>partition_one_forward</c> technique, needed explicitly because RyuJIT does not compile conditional-destination
 /// writes to cmov) or an AVX-512 vpcompressd kernel (int with the default comparer). Observing contexts always
-/// use the reference-shaped loop so operation counts stay accurate. Measured on Zen 4 (.NET 10): partition
-/// 3.7x (branchless) to 16x (AVX-512) faster than the branchy loop on unpredictable data.</description></item>
+/// use the reference-shaped loop so operation counts stay accurate. Measured faster than the branchy loop on unpredictable data.</description></item>
 /// </list>
 /// <para><strong>References:</strong></para>
 /// <para>GitHub: https://github.com/orlp/glidesort</para>
@@ -1440,8 +1439,7 @@ public static class Glidesort
             // Forward scan through left: less → s[destFront++], geq → t[scrFront++]
             // Backward scan through right (reverse): geq → s[destBack--], less → t[scrBack--]
             //
-            // Kernel tiers (micro-benchmarked on Zen 4, .NET 10; all gate conditions are JIT
-            // constants per instantiation). The fast kernels are restricted to NullContext:
+            // The fast kernels are restricted to NullContext:
             // the write-both kernel physically writes each element to both candidate slots
             // (matching the reference partition_one_forward) and the SIMD kernel bypasses
             // per-element operations, either of which would corrupt observed operation counts.

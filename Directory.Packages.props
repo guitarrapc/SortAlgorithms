@@ -6,7 +6,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="BenchmarkDotNet" Version="0.15.6" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.16.0-preview.2" />
     <PackageVersion Include="Microsoft.Testing.Platform" Version="2.5.1" />
     <PackageVersion Include="TUnit" Version="1.76.28" />
   </ItemGroup>

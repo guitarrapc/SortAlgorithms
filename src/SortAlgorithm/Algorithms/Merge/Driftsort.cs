@@ -63,14 +63,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Partition kernels (beyond the reference):</strong> under NullContext the stable partition
 /// dispatches to a branchless two-cursor kernel (elements up to 16 bytes) or an AVX-512 vpcompressd kernel
 /// (int with the default comparer). Observing contexts always use the reference-shaped loop so operation
-/// counts stay accurate. Micro-benchmarked on Zen 4 (.NET 10): the partition kernel is 4x (branchless)
-/// to 14-17x (AVX-512) faster than the reference loop on unpredictable data.</description></item>
+/// counts stay accurate.</description></item>
 /// <item><description><strong>Branch-free bidirectional merge:</strong> under NullContext the small-sort merge
 /// matches the reference's branchless merge_up/merge_down via bool-arithmetic cursor advance and mask-select of
 /// the taken element (RyuJIT's if-conversion is heuristic in this loop shape, so ternaries and standalone
-/// Math.Min/Max compile to branches — verified by disassembly). Measured on Zen 4: ~3x faster on randomly
-/// interleaved runs and data-independent in time; 1.1-1.4x slower when one run entirely precedes the other (the
-/// reference makes the same trade). The tie rules of the branchy loop are kept exactly (forward consumes the
+/// Math.Min/Max compile to branches — verified by disassembly). Measured faster on randomly interleaved runs and
+/// data-independent in time, but slower when one run entirely precedes the other (the reference makes the same
+/// trade). The tie rules of the branchy loop are kept exactly (forward consumes the
 /// left run on ties, backward the right run), so stability is unaffected. Observing contexts keep the
 /// reference-shaped conditional loop.</description></item>
 /// </list>
@@ -676,16 +675,14 @@ public static class Driftsort
     /// The pivot element itself is placed without a self-comparison.
     /// <para>With <paramref name="equalGoesLeft"/> false, elements &lt; pivot go left;
     /// with it true, elements &lt;= pivot go left (used by the equal-partition pass).</para>
-    /// <para><strong>Kernel tiers</strong> (micro-benchmarked on Zen 4, .NET 10, per-invocation
-    /// distinct permutations so the branch predictor cannot learn the data): the fast kernels are
+    /// <para><strong>Kernel tiers:</strong> the fast kernels are
     /// gated on NullContext because the branchless kernel physically writes each element to two
     /// candidate slots and the SIMD kernel bypasses per-element operations, either of which would
     /// corrupt observed operation counts. Observing contexts always take the reference loop below.</para>
     /// <list type="number">
-    /// <item><description>AVX-512 vpcompressd kernel: int + ComparableComparer + NullContext
-    /// (baseline ratio 0.06-0.20 on 1024-16384 partitions).</description></item>
-    /// <item><description>Branchless two-cursor kernel: NullContext and sizeof(T) &lt;= 16
-    /// (ratio 0.24-0.65). RyuJIT compiles the ternary store index of the reference loop to a
+    /// <item><description>AVX-512 vpcompressd kernel: int + ComparableComparer + NullContext.</description></item>
+    /// <item><description>Branchless two-cursor kernel: NullContext and sizeof(T) &lt;= 16.
+    /// RyuJIT compiles the ternary store index of the reference loop to a
     /// data-dependent branch, so the reference loop mispredicts ~50% on random data.</description></item>
     /// <item><description>Reference loop: observing contexts and large elements.</description></item>
     /// </list>
@@ -849,8 +846,9 @@ public static class Driftsort
     /// the lanes selected by a comparison mask in lane order (order-preserving, so stability
     /// holds): left lanes are compressed to the bottom and stored at the left cursor; right
     /// lanes are compressed, whole-vector reversed, and stored so their real lanes end at the
-    /// right cursor. Both are compress-to-REGISTER plus a plain full-width store — on Zen 4 the
-    /// memory form (vpcompressd to memory) is microcoded and 4x slower. Each full-width store
+    /// right cursor. Both are compress-to-REGISTER plus a plain full-width store — the memory
+    /// form (vpcompressd to memory) is microcoded on some CPUs, such as AMD Zen 4, and much
+    /// slower there. Each full-width store
     /// writes its unused lanes as garbage into the open gap between the cursors, so the vector
     /// loop requires gap >= 31 (the two stores' real regions then cannot overlap each other's
     /// garbage); the tail and narrow-gap remainder run the scalar branchless step. The right
@@ -1215,11 +1213,7 @@ public static class Driftsort
     /// The tie rules match the branchy loop exactly (forward consumes the left run on ties,
     /// backward the right run) and the select returns exactly one of the two loaded values,
     /// so stability is preserved.
-    /// Measured on Zen 4 (.NET 10, int): ~3x faster than the branchy loop on randomly
-    /// interleaved runs (and data-independent in time), 1.1-1.4x slower when one run entirely
-    /// precedes the other — the same trade the reference makes; merge inputs here are
-    /// small-sort halves of quicksort leaves and eager runs, which are dominated by random
-    /// interleavings.
+    /// Merge inputs here are small-sort halves of quicksort leaves and eager runs, which are dominated by random interleavings.
     /// </summary>
     private static void BidirectionalMergeBranchless<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> src, int srcStart, int len,
@@ -1273,7 +1267,7 @@ public static class Driftsort
     /// For primitive types with the default comparer the selection is an XOR mask on the value's
     /// bit pattern (pure bit select, so float/double reinterpret safely regardless of value):
     /// RyuJIT's if-conversion of ternaries and standalone Math.Min/Max is heuristic and falls
-    /// back to a data-dependent branch in this loop shape (verified by disassembly on Zen 4),
+    /// back to a data-dependent branch in this loop shape (verified by disassembly),
     /// while setcc + neg/and/xor is branch-free by construction. Other element types use the
     /// ternary fallback.
     /// </summary>

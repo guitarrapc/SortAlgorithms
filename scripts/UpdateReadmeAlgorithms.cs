@@ -1,5 +1,5 @@
 ﻿#:sdk Microsoft.NET.Sdk
-#:property TargetFramework=net10.0
+#:property TargetFramework=net11.0
 // Update the algorithm list section in README.md from the source tree.
 //
 // The script replaces everything between the two HTML comment markers:
