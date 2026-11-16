@@ -16,7 +16,7 @@ public static class SortAuditVerification
             var count = 0;
             foreach (var size in new[] { 0, 1, 2, 3, 5, 7, 8, 16, 31, 32, 33, 64, 255, 256, 257, 999, 1000, 1001 })
             {
-                if (name == "BogoSort" && size > 7 || name == "SlowSort" && size > 32 || name == "StoogeSort" && size > 64)
+                if (name is "BogoSort" or "BozoSort" && size > 7 || name == "SlowSort" && size > 32 || name == "StoogeSort" && size > 64)
                     continue;
                 foreach (var seed in new[] { 42, 123, 2026 })
                 foreach (var pattern in Enum.GetValues<DataPattern>())

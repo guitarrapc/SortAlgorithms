@@ -4,7 +4,7 @@ namespace SortAlgorithm.Tests;
 
 /// <summary>
 /// Small deterministic inputs for factorial/exponential-time joke sorts
-/// (BogoSort, SlowSort, StoogeSort). The standard mocks start at 100 elements,
+/// (BogoSort, BozoSort, SlowSort, StoogeSort). The standard mocks start at 100 elements,
 /// which these algorithms cannot finish in reasonable time, so sizes here stay
 /// at or below 10 to keep the mock-driven tests actually running.
 /// </summary>

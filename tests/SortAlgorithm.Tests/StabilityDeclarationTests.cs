@@ -45,7 +45,7 @@ public class StabilityDeclarationTests
         // a handful of elements for the joke sorts, a key selector for the distribution sorts),
         // so they do not derive from the shared bases at all.
         "BatcherOddEvenMergeSort", "BitonicSort", "BitonicSortNonOptimized", "BogoSort",
-        "BucketSort", "CountingSort", "PigeonholeSort", "SlowSort", "StoogeSort",
+        "BozoSort", "BucketSort", "CountingSort", "PigeonholeSort", "SlowSort", "StoogeSort",
     ];
 
     private static IEnumerable<Type> AlgorithmTypes()

@@ -686,4 +686,13 @@ public enum SortPhase
     /// param1=first (range start index), param2=end (unsorted region last index, inclusive)
     /// </summary>
     BingoPass,
+
+    // Joke family (appended rather than placed in the section above: inserting a member there
+    // would renumber every later phase, and the numeric values are part of the recorded event stream)
+
+    /// <summary>
+    /// Bozo Sort random transposition, announced before the swap.
+    /// param1=attempt number (1-based), param2=i, param3=j (the two distinct positions about to be swapped)
+    /// </summary>
+    BozoSwap,
 }

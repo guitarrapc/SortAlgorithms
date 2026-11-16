@@ -2531,6 +2531,7 @@ UnrollFactor=1  WarmupCount=2
 
 ### Joke
 - [Bogo Sort](./src/SortAlgorithm/Algorithms/Joke/BogoSort.cs)
+- [Bozo Sort](./src/SortAlgorithm/Algorithms/Joke/BozoSort.cs)
 - [Slow Sort](./src/SortAlgorithm/Algorithms/Joke/SlowSort.cs)
 - [Stooge Sort](./src/SortAlgorithm/Algorithms/Joke/StoogeSort.cs)
 <!-- ALGORITHMS_END -->

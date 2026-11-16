@@ -25,6 +25,7 @@ public static class SortAuditAlgorithms
         ("BogoSort", static values => BogoSort.Sort(values, NullContext.Default)),
         ("BottomupHeapSort", static values => BottomupHeapSort.Sort(values, NullContext.Default)),
         ("BottomupMergeSort", static values => BottomupMergeSort.Sort(values, NullContext.Default)),
+        ("BozoSort", static values => BozoSort.Sort(values, NullContext.Default)),
         ("BPlusTreeSort", static values => BPlusTreeSort.Sort(values, NullContext.Default)),
         ("BTreeSort", static values => BTreeSort.Sort(values, NullContext.Default)),
         ("BubbleSort", static values => BubbleSort.Sort(values, NullContext.Default)),

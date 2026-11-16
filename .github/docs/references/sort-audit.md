@@ -11,7 +11,7 @@ dotnet run -c Release --project tests/SortAlgorithm.Tests
 
 `--audit` selects three warmups, fifteen measurement iterations, sixty-four fresh buffers per iteration, and disabled tiering. Do not override invocation count or unroll factor: each invocation consumes one restored buffer. Array restoration is in iteration setup. Each method returns the middle element of its output. Setup checks the selected workload against natural ordering before timing.
 
-The separate verification command checks every registered public sorting type, rejects missing registrations, verifies supported inputs inside sentinel-protected slices, and checks documented rejection of non-power-of-two Bitonic inputs and excessive integer counting/pigeonhole ranges. BogoSort is limited to seven elements, SlowSort to thirty-two, and StoogeSort to sixty-four. These limits bound the audit, not the algorithms.
+The separate verification command checks every registered public sorting type, rejects missing registrations, verifies supported inputs inside sentinel-protected slices, and checks documented rejection of non-power-of-two Bitonic inputs and excessive integer counting/pigeonhole ranges. BogoSort and BozoSort are limited to seven elements, SlowSort to thirty-two, and StoogeSort to sixty-four. These limits bound the audit, not the algorithms.
 
 The machine-level experiments are self-contained under `D:/github/guitarrapc/MicroBenchmarks/SortAlgorithms/NullContextAudit`. Original library copies remain unchanged. Corrected copies change only their namespace and the comparison behavior under test. The project stores source hashes, BenchmarkDotNet JSON, disassembly, a Rust reference, and its findings log. Use the commands recorded there for the selected experiment.
 

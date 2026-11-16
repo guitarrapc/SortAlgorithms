@@ -1086,6 +1086,17 @@ public class SortAuditJokeBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(BozoSort))]
+    public void SetupBozoSort() => Setup(nameof(BozoSort));
+
+    [Benchmark]
+    public int BozoSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.BozoSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(SlowSort))]
     public void SetupSlowSort() => Setup(nameof(SlowSort));
 
