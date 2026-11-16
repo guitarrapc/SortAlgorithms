@@ -106,6 +106,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(BingoSort))]
+    public void SetupBingoSort() => Setup(nameof(BingoSort));
+
+    [Benchmark]
+    public int BingoSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.BingoSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(BinomialHeapSort))]
     public void SetupBinomialHeapSort() => Setup(nameof(BinomialHeapSort));
 
@@ -667,6 +678,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(PoplarHeapSort))]
+    public void SetupPoplarHeapSort() => Setup(nameof(PoplarHeapSort));
+
+    [Benchmark]
+    public int PoplarHeapSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.PoplarHeapSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(PowerSort))]
     public void SetupPowerSort() => Setup(nameof(PowerSort));
 
@@ -774,6 +796,28 @@ public class SortAuditBenchmark : SortAuditBase
     {
         var values = buffers.Next();
         SortAlgorithm.Algorithms.RadixMSD4Sort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
+    [GlobalSetup(Target = nameof(Radsort))]
+    public void SetupRadsort() => Setup(nameof(Radsort));
+
+    [Benchmark]
+    public int Radsort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.Radsort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
+    [GlobalSetup(Target = nameof(RotateLSDRadixSort))]
+    public void SetupRotateLSDRadixSort() => Setup(nameof(RotateLSDRadixSort));
+
+    [Benchmark]
+    public int RotateLSDRadixSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.RotateLSDRadixSort.Sort(values.AsSpan(), NullContext.Default);
         return values[values.Length / 2];
     }
 
