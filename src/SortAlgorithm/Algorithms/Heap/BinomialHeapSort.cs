@@ -1,4 +1,4 @@
-using System.Buffers;
+﻿using System.Buffers;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -33,7 +33,7 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Heap</description></item>
+/// <item><description>Family      : Heap / Selection</description></item>
 /// <item><description>Stable      : No (equal keys are ordered by root-list position, which is degree order rather than insertion order; see the stability note below)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for the node arena)</description></item>
 /// <item><description>Best case   : Θ(n log n) - every extraction pays for the root-list scan and the union, regardless of input order</description></item>

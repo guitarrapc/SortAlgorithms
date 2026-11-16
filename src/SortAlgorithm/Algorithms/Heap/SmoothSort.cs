@@ -6,9 +6,8 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// Leonardo数列に基づくヒープソートの変種で、ソート済みデータに対して適応的に高速に動作する高度なソートアルゴリズムです。
-/// 通常のヒープソートは二分ヒープを使用しますが、SmoothSortはLeonardo数列(L(k) = L(k-1) + L(k-2) + 1, L(0)=1, L(1)=1)に基づく
-/// 複数のLeonardo木を組み合わせたヒープ構造を使用します。この特性により、既にソートされた部分列を効率的に認識し、
-/// 不要な操作を回避することで、ソート済みデータに対してO(n)の最良計算量を達成します。
+/// 通常のヒープソートは二分ヒープを使用しますが、SmoothSortはLeonardo数列(L(k) = L(k-1) + L(k-2) + 1, L(0)=1, L(1)=1)に基づく複数のLeonardo木を組み合わせたヒープ構造を使用します。
+/// この特性により、既にソートされた部分列を効率的に認識し、不要な操作を回避することで、ソート済みデータに対してO(n)の最良計算量を達成します。
 /// <br/>
 /// A sophisticated heap-based sorting algorithm using Leonardo heaps that adaptively achieves O(n) time for already-sorted data.
 /// Unlike traditional heapsort which uses binary heaps, Smoothsort employs multiple Leonardo trees based on the Leonardo sequence
@@ -104,7 +103,6 @@ public static class SmoothSort
         where TContext : ISortContext
     {
         if (span.Length <= 1) return;
-
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 

@@ -2475,6 +2475,7 @@ UnrollFactor=1  WarmupCount=2
 - [Heap Sort](./src/SortAlgorithm/Algorithms/Heap/HeapSort.cs)
 - [Min-Heap Sort](./src/SortAlgorithm/Algorithms/Heap/MinHeapSort.cs)
 - [Pairing Heap Sort](./src/SortAlgorithm/Algorithms/Heap/PairingHeapSort.cs)
+- [Poplar Heap Sort](./src/SortAlgorithm/Algorithms/Heap/PoplarHeapSort.cs)
 - [Smooth Sort](./src/SortAlgorithm/Algorithms/Heap/SmoothSort.cs)
 - [Ternary Heap Sort](./src/SortAlgorithm/Algorithms/Heap/TernaryHeapSort.cs)
 - [Tournament Sort](./src/SortAlgorithm/Algorithms/Heap/TournamentSort.cs)

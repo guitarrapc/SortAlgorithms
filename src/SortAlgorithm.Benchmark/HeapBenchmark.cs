@@ -61,6 +61,12 @@ public class HeapBenchmark
     }
 
     [Benchmark]
+    public void PoplarHeapSort()
+    {
+        SortAlgorithm.Algorithms.PoplarHeapSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void TournamentSort()
     {
         SortAlgorithm.Algorithms.TournamentSort.Sort(_buffers.Next().AsSpan());

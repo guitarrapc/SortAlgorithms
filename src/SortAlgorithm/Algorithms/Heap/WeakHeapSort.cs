@@ -44,7 +44,7 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
-/// <item><description>Family      : Heap / Selection (optimized variant)</description></item>
+/// <item><description>Family      : Heap / Selection</description></item>
 /// <item><description>Stable      : No (element order changes arbitrarily during heap operations)</description></item>
 /// <item><description>In-place    : Nearly (requires O(n) bits for reverse array ≈ n/64 ulongs = n/8 bytes overhead)</description></item>
 /// <item><description>Best case   : Ω(n log n) - Heap construction and extraction always required regardless of input</description></item>
