@@ -40,6 +40,20 @@ jobs:
           lscpu
           echo "=== AVX512 info ==="
           grep -o 'avx512[a-z0-9_]*' /proc/cpuinfo | sort -u | tr '\n' ' '; echo
+      # Fail before setup-dotnet and build when the runner has the wrong CPU.
+      # Program.cs repeats this check (RequiredCpu); keep the two values in sync.
+      - name: Check runner CPU
+        if: ${{ !inputs.allow-any-cpu }}
+        run: |
+          model=$(sed -n '/^model name/{s/^[^:]*:[[:space:]]*//p;q;}' /proc/cpuinfo)
+          shopt -s nocasematch
+          if [[ "${model}" != *"${REQUIRED_CPU}"* ]]; then
+            echo "::error::Benchmark requires a CPU containing '${REQUIRED_CPU}', but this runner has '${model:-(unknown)}'. Re-run the job to get another runner, or run the workflow with allow-any-cpu checked."
+            exit 1
+          fi
+          echo "CPU OK: ${model}"
+        env:
+          REQUIRED_CPU: EPYC 9V45
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
