@@ -62,7 +62,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>InsertionSort has lower constant factors than QuickSort for small arrays</description></item>
 /// <item><description>Reduces recursion overhead (30-element partition would require ~5 recursion levels)</description></item>
 /// <item><description>Improves cache locality by processing small contiguous regions (fits in L1 cache)</description></item>
-/// <item><description>Benchmark results showed 10-30% performance improvement for threshold 30 vs. 16 across primitive and reference types</description></item>
+/// <item><description>Threshold 30 measured faster than 16 across primitive and reference types</description></item>
 /// <item><description>Threshold of 30 matches C++ std::introsort for trivially copyable types</description></item>
 /// </list>
 /// This hybrid approach achieves better constant factors than pure QuickSort while maintaining O(n log n) worst-case.</description></item>

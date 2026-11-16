@@ -53,8 +53,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Shift strategy: Under <c>NullContext</c> a shift of at least 32 elements becomes a single overlapping
 /// block move (memmove); shorter shifts, and every shift under an observing context, stay element-by-element so the
 /// shift remains visible one element at a time. Both perform the same number of element reads and writes.</description></item>
-/// <item><description>Why the threshold: measured on int arrays, an unconditional block move was 3.5-4.5x faster for
-/// shift-heavy patterns at n=1024, but 12-36% slower for <c>TimSort</c>, which only ever calls this sort on ranges of
+/// <item><description>Why the threshold: measured on int arrays, an unconditional block move was much faster for
+/// shift-heavy patterns at n=1024, but slower for <c>TimSort</c>, which only ever calls this sort on ranges of
 /// minRun (32-64) where shifts average roughly minRun/4. Gating on the shift length keeps the large-input win without
 /// the short-shift regression.</description></item>
 /// </list>

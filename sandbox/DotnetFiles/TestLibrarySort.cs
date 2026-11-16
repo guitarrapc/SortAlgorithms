@@ -1,4 +1,4 @@
-﻿//css_reference ../../src/SortAlgorithm/bin/Debug/net10.0/SortAlgorithm.dll
+﻿//css_reference ../../src/SortAlgorithm/bin/Debug/net11.0/SortAlgorithm.dll
 using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 

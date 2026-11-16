@@ -65,16 +65,15 @@ namespace SortAlgorithm.Algorithms;
 /// the complete range.</description></item>
 /// <item><description><strong>Registerized network kernel (beyond the reference):</strong> under NullContext the
 /// 9/13-element networks load the whole region into locals and run branchless min/max exchanges in registers
-/// (the reference uses cmov exchanges on memory). Micro-benchmarked on Zen 4 (.NET 10, int, per-segment distinct
-/// permutations): ~5-7.5x faster than the branchy network on random data, 1.4-1.6x on descending, matching on
-/// ascending — a win or tie in every scenario. Observing contexts always use the reference-shaped conditional
+/// (the reference uses cmov exchanges on memory). Measured faster than the branchy network on random and
+/// descending data and matching it on ascending data — a win or tie in every scenario. Observing contexts always use the reference-shaped conditional
 /// exchange so compare/swap counts stay accurate.</description></item>
 /// <item><description><strong>Branch-free bidirectional merge:</strong> under NullContext the merge matches the
 /// reference's branchless merge_up/merge_down via bool-arithmetic cursor advance and mask-select of the taken
 /// element (RyuJIT's if-conversion is heuristic in this loop shape, so ternaries and standalone Math.Min/Max
-/// compile to branches — verified by disassembly). Measured on Zen 4: ~3x faster on randomly interleaved runs
-/// and data-independent in time; 1.1-1.4x slower when one run entirely precedes the other (the reference makes
-/// the same trade). Observing contexts keep the reference-shaped conditional loop.</description></item>
+/// compile to branches — verified by disassembly). Measured faster on randomly interleaved runs and
+/// data-independent in time, but slower when one run entirely precedes the other (the reference makes the same
+/// trade). Observing contexts keep the reference-shaped conditional loop.</description></item>
 /// </list>
 /// <para><strong>References:</strong></para>
 /// <para>GitHub: https://github.com/Voultapher/sort-research-rs (ipnsort)</para>
@@ -432,8 +431,8 @@ public static class Ipnsort
     /// an index increment, so no data-dependent branch is required for placement. The first
     /// element is lifted into the gap temporary up front and processed as the final iteration.
     /// <para>The loop is manually unrolled 2x for elements up to 16 bytes as in the reference
-    /// (UNROLL_LEN = 2): RyuJIT does not unroll it by itself, and the unroll measured 4-7% faster
-    /// on 1024+ element partitions (Zen 4, .NET 10). The whole loop compiles branch-free — see
+    /// (UNROLL_LEN = 2): RyuJIT does not unroll it by itself, and the unroll measured faster
+    /// on partitions of 1024+ elements. The whole loop compiles branch-free — see
     /// the note in <see cref="PartitionLoopBody"/>.</para>
     /// </summary>
     private static int PartitionLomutoBranchlessCyclic<T, TComparer, TContext>(
@@ -495,8 +494,8 @@ public static class Ipnsort
         s.Write(left, value);
         gapPos = right;
 
-        // RyuJIT (.NET 10) compiles this add-of-condition ternary to setcc + add — no
-        // data-dependent branch (verified by disassembly on Zen 4; the store side is
+        // RyuJIT compiles this add-of-condition ternary to setcc + add — no
+        // data-dependent branch (verified by disassembly; the store side is
         // unconditional, so the whole loop body is branch-free like the reference's
         // `num_lt += right_is_lt as usize`). Do not "fix" this into bit tricks: the
         // branchless-increment rewrite measured identical code and identical time.
@@ -980,9 +979,8 @@ public static class Ipnsort
     // random data, and even a branchless memory-operand exchange (the reference's cmov-selected
     // swap_if_less) leaves 2 loads + 2 stores per exchange with dependent exchanges chained
     // through store-to-load forwarding. Loading the whole region into locals once, running the
-    // network as register-register min/max exchanges, and storing once removes both. Measured on
-    // Zen 4 (.NET 10, int, per-segment distinct permutations): ~5-7.5x faster than the branchy
-    // network on random data, 1.4-1.6x faster on descending data, and matching it on already
+    // network as register-register min/max exchanges, and storing once removes both. Measured
+    // faster than the branchy network on random and descending data, and matching it on already
     // sorted data (the branchy best case) - a win or tie in every scenario, so no dispatch on
     // data pattern or size is needed. Gated on NullContext because the register form has no
     // per-element operations to report; observing contexts keep the SwapIfLess network.
@@ -1083,7 +1081,7 @@ public static class Ipnsort
     /// Branchless local exchange: leaves min(a, b) in <paramref name="a"/> and max in
     /// <paramref name="b"/>, preserving the order of equal elements (no exchange).
     /// For primitive types with the default comparer this uses Math.Min/Math.Max, which RyuJIT
-    /// compiles to one cmp whose flags feed both cmovs — measured 1.4-1.5x faster than two
+    /// compiles to one cmp whose flags feed both cmovs — measured faster than two
     /// value-select ternaries, which materialize the bool and re-test it. Other types fall back
     /// to value-select ternaries via the comparer (branch-free where RyuJIT emits cmov, and the
     /// locals still avoid the per-exchange memory round-trips either way).
@@ -1264,10 +1262,7 @@ public static class Ipnsort
     /// Branch-free twin of <see cref="BidirectionalMerge"/> matching the reference's
     /// merge_up/merge_down: cursors advance by bool arithmetic and the taken element is picked
     /// with a mask select from the already-loaded pair, so the loop has no data-dependent branch.
-    /// Measured on Zen 4 (.NET 10, int): ~3x faster than the branchy loop on randomly
-    /// interleaved runs (and data-independent in time), 1.1-1.4x slower when one run entirely
-    /// precedes the other — the same trade the reference makes; merge inputs here are
-    /// quicksort-leaf halves, which are dominated by random interleavings.
+    /// Merge inputs here are quicksort-leaf halves, which are dominated by random interleavings.
     /// </summary>
     private static void BidirectionalMergeBranchless<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> src, int srcStart, int len,
@@ -1321,7 +1316,7 @@ public static class Ipnsort
     /// For primitive types with the default comparer the selection is an XOR mask on the value's
     /// bit pattern (pure bit select, so float/double reinterpret safely regardless of value):
     /// RyuJIT's if-conversion of ternaries and standalone Math.Min/Max is heuristic and falls
-    /// back to a data-dependent branch in this loop shape (verified by disassembly on Zen 4),
+    /// back to a data-dependent branch in this loop shape (verified by disassembly),
     /// while setcc + neg/and/xor is branch-free by construction. Other element types use the
     /// ternary fallback.
     /// </summary>

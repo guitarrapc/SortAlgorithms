@@ -16,7 +16,7 @@ namespace SortAlgorithm.Tests;
 /// The arrays are built once and handed out as copies. Every test mutates its sample in place, so
 /// a fresh array per invocation is required - but building one is no longer free: the killer
 /// adversary is derived by running QuickSort against it, so it costs the quadratic work it
-/// provokes (~90 ms at 10,000 elements). Regenerating that once per test dominated the suite.
+/// provokes. Regenerating that once per test dominated the suite.
 /// </para>
 /// </remarks>
 public static class MockQuickSortWorstCaseData

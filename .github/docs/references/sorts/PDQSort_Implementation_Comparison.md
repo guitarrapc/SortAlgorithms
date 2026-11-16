@@ -516,4 +516,4 @@ private static (int pivotPos, bool alreadyPartitioned) PartitionRight<T, TCompar
 
 **作成日:** 2026-01-02
 **作成者:** GitHub Copilot Analysis
-**対象バージョン:** C# (.NET 10), C++ (orlp/pdqsort), Go 1.19+
+**対象バージョン:** C# (本リポジトリの実装), C++ (orlp/pdqsort), Go 1.19+

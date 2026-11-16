@@ -660,8 +660,8 @@ public static class StdSort
     /// The bitset is internal classification state, never an observable element buffer.
     /// <para>
     /// Not vectorized on purpose: libc++ leaves this loop to the C++ compiler's auto-vectorization
-    /// ("Possible vectorization" in the reference), but the measured .NET 10 RyuJIT emits a scalar
-    /// setcc loop here. An explicit Vector256 compare + MoveMask kernel could build the bitset
+    /// ("Possible vectorization" in the reference), but the RyuJIT disassembly inspected for this
+    /// loop is a scalar setcc loop. An explicit Vector256 compare + MoveMask kernel could build the bitset
     /// 8-16 elements at a time, but that would go beyond source correspondence with the reference
     /// implementation, so it is intentionally left as a possible future extension.
     /// </para>

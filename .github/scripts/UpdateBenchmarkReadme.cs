@@ -59,9 +59,11 @@ static void AppendReport(StringBuilder builder, ReportFile report)
     builder.AppendLine();
 
     var lines = File.ReadAllLines(report.FilePath);
+    // The header ends where the result table begins. Its line count varies with the
+    // BenchmarkDotNet version (0.16 added a "Memory:" line) and with the job count.
     var machineInfo = lines
-        .Take(9)
-        .Where(line => !string.IsNullOrWhiteSpace(line))
+        .TakeWhile(static line => !line.Contains('|', StringComparison.Ordinal))
+        .Where(static line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("```", StringComparison.Ordinal))
         .ToList();
 
     if (machineInfo.Count > 0)

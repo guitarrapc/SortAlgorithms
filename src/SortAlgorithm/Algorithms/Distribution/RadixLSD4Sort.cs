@@ -59,13 +59,13 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Why Keys Are Recomputed Rather Than Memoized:</strong></para>
 /// <para>At radix 4 a 32-bit key takes up to 16 passes, more than any other radix here, so memoizing each
 /// element's normalized key in a <c>ulong[]</c> looks like the obvious trade: compute it once, then read it
-/// back 16 times. That version existed and was measured against this one, and it is 17-26% slower across
+/// back 16 times. That version existed and was measured against this one, and it is slower across
 /// n = 1024/8192/65536 for both narrow and full-range <c>int</c> keys — including the 16-pass case, where the
 /// memoization has the most to amortize (same-run comparison, 20 iterations). A memoized key has to be
 /// permuted along with its element, so every distribute pass gains a second scattered write, of 8 bytes,
 /// into a second array; recomputing costs two ALU ops on a value the pass has already read. The same effect
 /// decided the corresponding question in <see cref="RadixLSD10Sort"/>, where carrying a running quotient
-/// cost about 2.2x at n = 8192.</para>
+/// was clearly slower at n = 8192.</para>
 /// <para><strong>Radix-4 Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>More passes than radix-256: 16 passes for 32-bit vs 4 passes for radix-256</description></item>
