@@ -290,6 +290,44 @@ public class BatcherOddEvenMergeSortTests
     }
 
     /// <summary>
+    /// The steps that end the pass loop and the group loops are the largest values the loop control computes, and for
+    /// counts above 2^30 they reach 2^31, past int.MaxValue. Sorting that many elements is too slow for a test, so this
+    /// replays the loop bounds in 64-bit arithmetic and checks that each helper returns the exact step instead of a
+    /// wrapped value: the step after every pass, and the step from each stage's last group start below count - k
+    /// (earlier group steps of the same stage are smaller).
+    /// </summary>
+    [Test]
+    [Arguments((1 << 30) + 1)]
+    [Arguments(int.MaxValue - 1)]
+    [Arguments(int.MaxValue)]
+    public async Task LargeCountIndexArithmeticDoesNotWrapTest(int count)
+    {
+        var wrapped = new List<string>();
+        long largestStep = 0;
+        for (long p = 1; p < count; p *= 2)
+        {
+            long nextPass = BatcherOddEvenMergeSort.NextPass((uint)p);
+            if (nextPass != 2 * p) wrapped.Add($"NextPass({p}) = {nextPass}");
+            largestStep = Math.Max(largestStep, nextPass);
+
+            for (var k = p; k >= 1; k /= 2)
+            {
+                var rightLimit = count - k;
+                var last = k % p;
+                if (last >= rightLimit) continue;
+                last += (rightLimit - 1 - last) / (2 * k) * (2 * k);
+
+                long nextGroup = BatcherOddEvenMergeSort.NextGroup((uint)last, (uint)k);
+                if (nextGroup != last + 2 * k) wrapped.Add($"NextGroup({last}, {k}) = {nextGroup}");
+                largestStep = Math.Max(largestStep, nextGroup);
+            }
+        }
+
+        await Assert.That(wrapped).IsEmpty();
+        await Assert.That(largestStep).IsEqualTo(1L << 31);
+    }
+
+    /// <summary>
     /// Records phase announcements and comparisons, in the order they happen, as text.
     /// </summary>
     sealed class NetworkEventRecorder : ISortContext
