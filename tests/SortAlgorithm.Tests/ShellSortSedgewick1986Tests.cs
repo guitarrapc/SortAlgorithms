@@ -118,12 +118,9 @@ public class ShellSortSedgewick1986Tests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         ShellSortSedgewick1986.Sort(reversed.AsSpan(), stats);
 
-        // Shell Sort with reversed data (worst case):
-        // - Gap sequence determines exact behavior
-        // - With Sedgewick sequence (h = 4^k + 3*2^(k-1) + 1):
-        //   * Comparisons: O(n^1.33) typically
-        //   * Swaps: O(n^1.33) typically
-        // - Each swap writes 2 elements
+        // Reversed input with the merged Sedgewick sequence (1, 5, 19, 41, ...).
+        // These checks bound the observed operations; they do not establish a tight exponent.
+        // Each swap writes 2 elements.
         var minSwaps = 1UL; // At least 1 swap is needed
         var maxSwaps = (ulong)(n * n); // Upper bound (pessimistic)
         var minCompares = (ulong)n; // At least n comparisons
@@ -155,12 +152,8 @@ public class ShellSortSedgewick1986Tests : SortTestsBase
         var random = TestHelpers.ShuffledRange(n, seed);
         ShellSortSedgewick1986.Sort(random.AsSpan(), stats);
 
-        // Shell Sort with random data (average case):
-        // - Gap sequence determines performance
-        // - With Sedgewick sequence:
-        //   * Comparisons: O(n^1.33) to O(n^1.25)
-        //   * Swaps: Similar to comparisons
-        // - Better theoretical bounds than Knuth
+        // Random input checks operation bounds and read/write accounting.
+        // A finite sample does not establish an average-case exponent or rank gap sequences.
         var minSwaps = 0UL; // Could be sorted by chance
         var maxSwaps = (ulong)(n * n); // Upper bound
         var minCompares = (ulong)(n - 1); // At least n-1 comparisons in final pass

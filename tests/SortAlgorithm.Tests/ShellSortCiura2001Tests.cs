@@ -118,13 +118,9 @@ public class ShellSortCiura2001Tests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         ShellSortCiura2001.Sort(reversed.AsSpan(), stats);
 
-        // Shell Sort with reversed data (worst case):
-        // - Gap sequence determines exact behavior
-        // - With Knuth sequence (1, 4, 13, 40, ...):
-        //   * Many swaps needed at each gap level
-        //   * Comparisons: O(n^1.5) typically
-        //   * Swaps: O(n^1.5) typically
-        // - Each swap writes 2 elements
+        // Reversed input with the Ciura prefix (1, 4, 10, 23, ...).
+        // These checks bound the observed operations; they do not establish a tight exponent.
+        // Each swap writes 2 elements.
         var minSwaps = 1UL; // At least 1 swap is needed
         var maxSwaps = (ulong)(n * n); // Upper bound (pessimistic)
         var minCompares = (ulong)n; // At least n comparisons
@@ -156,12 +152,8 @@ public class ShellSortCiura2001Tests : SortTestsBase
         var random = TestHelpers.ShuffledRange(n, seed);
         ShellSortCiura2001.Sort(random.AsSpan(), stats);
 
-        // Shell Sort with random data (average case):
-        // - Gap sequence determines performance
-        // - With good gap sequences (Knuth, Tokuda, Ciura):
-        //   * Comparisons: O(n log n) to O(n^1.3)
-        //   * Swaps: Similar to comparisons
-        // - Performance is better than O(n^2) but depends on gap sequence
+        // Random input checks operation bounds and read/write accounting.
+        // A finite sample does not establish an average-case exponent or rank gap sequences.
         var minSwaps = 0UL; // Could be sorted by chance
         var maxSwaps = (ulong)(n * n); // Upper bound
         var minCompares = (ulong)(n - 1); // At least n-1 comparisons in final pass

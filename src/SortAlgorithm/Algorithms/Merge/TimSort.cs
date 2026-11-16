@@ -270,22 +270,8 @@ public static class TimSort
     private static T[] EnsureTmpCapacity<T>(ref T[]? tmpBuffer, int length)
     {
         var buffer = tmpBuffer;
-        if (buffer is null)
-        {
-            buffer = ArrayPool<T>.Shared.Rent(length);
-        }
-        else if (buffer.Length < length)
-        {
-            ArrayPool<T>.Shared.Return(buffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            buffer = ArrayPool<T>.Shared.Rent(length);
-        }
-        else
-        {
-            return buffer;
-        }
-
-        tmpBuffer = buffer;
-        return buffer;
+        if (buffer is not null && buffer.Length >= length) return buffer;
+        return MergeBuffer.EnsureCapacity(ref tmpBuffer, length, ArrayPool<T>.Shared);
     }
 
     /// <summary>

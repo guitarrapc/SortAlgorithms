@@ -118,12 +118,8 @@ public class ShellSortTokuda1992Tests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         ShellSortTokuda1992.Sort(reversed.AsSpan(), stats);
 
-        // Shell Sort with reversed data (worst case):
-        // - Gap sequence determines exact behavior
-        // - With Tokuda sequence (h_k = ⌈(9/4)^k⌉):
-        //   * Comparisons: O(n^1.25) typically
-        //   * Swaps: O(n^1.25) typically
-        // - Better than Knuth, especially for reversed data
+        // Reversed input with the adopted floor((4/5)*((9/4)^(k+1)-1)) sequence.
+        // These checks bound the observed operations; they do not establish a tight exponent.
         var minSwaps = 1UL; // At least 1 swap is needed
         var maxSwaps = (ulong)(n * n); // Upper bound (pessimistic)
         var minCompares = (ulong)n; // At least n comparisons
@@ -155,12 +151,8 @@ public class ShellSortTokuda1992Tests : SortTestsBase
         var random = TestHelpers.ShuffledRange(n, seed);
         ShellSortTokuda1992.Sort(random.AsSpan(), stats);
 
-        // Shell Sort with random data (average case):
-        // - Gap sequence determines performance
-        // - With Tokuda sequence (empirically optimized):
-        //   * Comparisons: O(n^1.25)
-        //   * Swaps: Similar to comparisons
-        // - Better practical performance than Knuth
+        // Random input checks operation bounds and read/write accounting.
+        // A finite sample does not establish an average-case exponent or rank gap sequences.
         var minSwaps = 0UL; // Could be sorted by chance
         var maxSwaps = (ulong)(n * n); // Upper bound
         var minCompares = (ulong)(n - 1); // At least n-1 comparisons in final pass

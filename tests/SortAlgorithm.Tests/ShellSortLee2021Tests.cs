@@ -4,7 +4,7 @@ using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
-// Tests using Lee2021 - state-of-the-art improved Tokuda sequence
+// Tests using the fixed-decimal Lee2021 gap sequence
 [InheritsTests]
 public class ShellSortLee2021Tests : SortTestsBase
 {
@@ -118,12 +118,8 @@ public class ShellSortLee2021Tests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         ShellSortLee2021.Sort(reversed.AsSpan(), stats);
 
-        // Shell Sort with reversed data (worst case):
-        // - Gap sequence determines exact behavior
-        // - With Lee sequence (improved Tokuda):
-        //   * Comparisons: O(n^1.25) typically
-        //   * Swaps: O(n^1.25) typically
-        // - Fewer comparisons on average than Tokuda
+        // Reversed input with the fixed-gamma Lee sequence.
+        // These checks bound the observed operations; they do not establish a tight exponent.
         var minSwaps = 1UL; // At least 1 swap is needed
         var maxSwaps = (ulong)(n * n); // Upper bound (pessimistic)
         var minCompares = (ulong)n; // At least n comparisons
@@ -155,12 +151,8 @@ public class ShellSortLee2021Tests : SortTestsBase
         var random = TestHelpers.ShuffledRange(n, seed);
         ShellSortLee2021.Sort(random.AsSpan(), stats);
 
-        // Shell Sort with random data (average case):
-        // - Gap sequence determines performance
-        // - With Lee sequence (state-of-the-art):
-        //   * Comparisons: O(n^1.25) with fewer average comparisons than Tokuda
-        //   * Swaps: Similar to comparisons
-        // - Best empirical performance among tested sequences
+        // Random input checks operation bounds and read/write accounting.
+        // A finite sample does not establish an average-case exponent or rank gap sequences.
         var minSwaps = 0UL; // Could be sorted by chance
         var maxSwaps = (ulong)(n * n); // Upper bound
         var minCompares = (ulong)(n - 1); // At least n-1 comparisons in final pass

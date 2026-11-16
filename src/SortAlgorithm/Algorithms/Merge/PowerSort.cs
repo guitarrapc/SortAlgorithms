@@ -462,8 +462,7 @@ public static class PowerSort
         // return and re-rent an array from the same bucket that already fits.
         if (tmpBuffer.Length < len1)
         {
-            ArrayPool<T>.Shared.Return(tmpBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            tmpBuffer = ArrayPool<T>.Shared.Rent(len1);
+            MergeBuffer.EnsureCapacity(ref tmpBuffer, len1, ArrayPool<T>.Shared);
         }
 
         // Copy first run to temp buffer
@@ -516,8 +515,7 @@ public static class PowerSort
         // the rented array's actual length rather than the length that was requested.
         if (tmpBuffer.Length < len2)
         {
-            ArrayPool<T>.Shared.Return(tmpBuffer, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            tmpBuffer = ArrayPool<T>.Shared.Rent(len2);
+            MergeBuffer.EnsureCapacity(ref tmpBuffer, len2, ArrayPool<T>.Shared);
         }
 
         // Copy second run to temp buffer

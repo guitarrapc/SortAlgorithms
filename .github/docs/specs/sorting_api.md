@@ -190,3 +190,36 @@ may require quadratic work.
 FlashSort retains its classification, permutation, and insertion-finishing stages. Its
 insertion finish is part of the algorithm; a small nonconstant input does not bypass the
 classification and permutation stages.
+## Large Index Ranges
+
+BlockQuickSort, BitonicSort, BatcherOddEvenMergeSort, and CombSort do not impose a smaller
+input-size limit solely to avoid overflow in midpoint, stage, group, or gap calculations.
+Their algorithm-specific preconditions still apply, including BitonicSort's power-of-two
+length requirement. Allocation limits and the work required to sort a large input are
+separate from whether its indices can be represented correctly.
+
+## Shell Gap Sequences
+
+The named Shell sorts use their defined gap sequence in descending order, selecting gaps
+no greater than half the requested range length and ending at 1. The tables cover every
+selectable gap for an `int` length; they do not introduce an arbitrary smaller maximum.
+All five algorithms remain unstable, swap-based gapped insertion sorts.
+
+- Knuth uses `h[0] = 1`, `h[k+1] = 3h[k] + 1`.
+- Sedgewick uses `9(2^k - 2^(k/2)) + 1` for even k and
+  `8*2^k - 6*2^((k+1)/2) + 1` for odd k, starting at k = 0.
+- Tokuda retains the library's floor variant,
+  `floor((4/5)*((9/4)^(k+1) - 1))`, starting at k = 0.
+- Ciura retains the prefix `1, 4, 10, 23, 57, 132, 301, 701, 1750`, then extends it with
+  `h[next] = floor(9h/4)`.
+- Lee uses `ceil((gamma^k - 1)/(gamma - 1))`, k >= 1, with the fixed decimal
+  `gamma = 2.243609061420001`. This decimal is treated exactly when defining the table;
+  runtime floating-point rounding does not select the gaps.
+
+## Merge Scratch Ownership
+
+TimSort and PowerSort retain ownership of their current pooled scratch array until a
+replacement has been rented successfully. A failed rent propagates the exception while
+leaving the current lease available for the enclosing cleanup. Successful growth may
+temporarily hold both arrays. Arrays whose elements contain references are cleared when
+returned. No transactional guarantee is made for the input after a sorting exception.
