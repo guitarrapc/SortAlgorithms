@@ -78,6 +78,7 @@ Dictionary<string, string> displayNames = new()
     ["RadixLSD256Sort"] = "Radix LSD Sort (Base 256)",
     ["RadixMSD4Sort"] = "Radix MSD Sort (Base 4)",
     ["RadixMSD10Sort"] = "Radix MSD Sort (Base 10)",
+    ["RotateLSDRadixSort"] = "Rotate LSD Radix Sort (Base 4)",
     ["RotateMergeSort"] = "Rotate Merge Sort",
     ["StableQuickSort"] = "Quick Sort (Stable)",
     ["StdSort"] = "std::sort (LLVM)",

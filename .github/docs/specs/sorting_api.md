@@ -72,6 +72,12 @@ partitioning until the remaining digits are exhausted or the bucket has at most 
 They do not switch small inputs or child buckets to a comparison sort. Uniform-digit pruning
 and early completion for equal mapped keys preserve the radix definition.
 
+RotateLSDRadixSort runs the same range-derived LSD passes as RadixLSD4Sort, but sorts each digit
+inside the input instead of distributing it into a second array: a stable merge sort whose merge
+bisects the digit range and rotates the blocks that straddle the split. It needs no element buffer
+and pays a log n factor per pass for it. Its digit tests are integer operations on the mapped key,
+so it reports no comparisons, and every element movement is a swap.
+
 SpreadSort is a hybrid. Its comparison stages receive a comparer consistent with the key
 mapping: built-in element overloads use the natural comparer, and key-selector overloads use a
 comparer over the extracted key.

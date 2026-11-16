@@ -33,6 +33,7 @@ public class NegativeZeroTieTests
         yield return () => new DoubleSortCase("RadixLSD256Sort", a => RadixLSD256Sort.Sort(a.AsSpan()));
         yield return () => new DoubleSortCase("RadixMSD4Sort", a => RadixMSD4Sort.Sort(a.AsSpan()));
         yield return () => new DoubleSortCase("RadixMSD10Sort", a => RadixMSD10Sort.Sort(a.AsSpan()));
+        yield return () => new DoubleSortCase("RotateLSDRadixSort", a => RotateLSDRadixSort.Sort(a.AsSpan()));
     }
 
     /// <summary>キーで順序を決めるが不安定なソート。tie 順は未規定だが、値を書き換えてはならない。</summary>

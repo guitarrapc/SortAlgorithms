@@ -73,6 +73,12 @@ public class DistributionBenchmark
     }
 
     [Benchmark]
+    public void RotateLSDRadixSort()
+    {
+        SortAlgorithm.Algorithms.RotateLSDRadixSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void RadixLSD256Sort()
     {
         SortAlgorithm.Algorithms.RadixLSD256Sort.Sort(_buffers.Next().AsSpan());

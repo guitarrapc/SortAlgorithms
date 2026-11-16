@@ -76,6 +76,7 @@ Announcing costs nothing on the unobserved path: `NullContext.OnPhase` is an emp
 - A mutable context is not implicitly safe for concurrent use.
 - A context that throws interrupts the sort and may leave the span partially sorted.
 - Consumers must not assume that two different algorithms produce identical event sequences for the same input.
+- Consumers must not assume that a `RadixPass` is followed by `DistributionBucket` reports. `RotateLSDRadixSort` sorts each digit by merging in place, so no bucket occupies a known span until the pass has finished moving elements, and it reports none.
 
 ## Lessons Learned
 
