@@ -47,4 +47,10 @@ public class SelectionBenchmark
     {
         SortAlgorithm.Algorithms.PancakeSort.Sort(_buffers.Next().AsSpan());
     }
+
+    [Benchmark]
+    public void BingoSort()
+    {
+        SortAlgorithm.Algorithms.BingoSort.Sort(_buffers.Next().AsSpan());
+    }
 }

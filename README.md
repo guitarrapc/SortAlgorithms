@@ -2428,6 +2428,7 @@ UnrollFactor=1  WarmupCount=2
 - [Odd-Even Sort](./src/SortAlgorithm/Algorithms/Exchange/OddEvenSort.cs)
 
 ### Selection
+- [Bingo Sort](./src/SortAlgorithm/Algorithms/Selection/BingoSort.cs)
 - [Cycle Sort](./src/SortAlgorithm/Algorithms/Selection/CycleSort.cs)
 - [Double Selection Sort](./src/SortAlgorithm/Algorithms/Selection/DoubleSelectionSort.cs)
 - [Pancake Sort](./src/SortAlgorithm/Algorithms/Selection/PancakeSort.cs)

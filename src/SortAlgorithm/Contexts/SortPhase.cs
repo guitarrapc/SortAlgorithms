@@ -5,6 +5,9 @@
 /// Provides type information for the tutorial side to construct phase text.
 /// </summary>
 /// <remarks>
+/// New members are appended at the end of the enum, not placed in their family section: the numeric values are part of
+/// the recorded event stream (PreparedFloatingSortEventTests hashes them), so inserting a member renumbers every later phase.
+/// <para/>
 /// Parameter meanings for each phase:
 /// <list type="table">
 ///   <listheader><term>Phase</term><description>param1 / param2 / param3</description></listheader>
@@ -25,6 +28,8 @@
 ///   <item><term>DoubleSelectionFindMinMax</term><description>left (left boundary) / right (right boundary)</description></item>
 ///   <item><term>CycleSortCycle</term><description>cycleStart (cycle start index) / last (last index)</description></item>
 ///   <item><term>PancakeFindMax</term><description>first (head index) / currentSize (current subarray last index, inclusive)</description></item>
+///   <item><term>BingoFindMax</term><description>first (range start index) / end (range last index, inclusive)</description></item>
+///   <item><term>BingoPass</term><description>first (range start index) / end (unsorted region last index, inclusive)</description></item>
 ///   <item><term>CocktailForwardPass</term><description>pass (current pass number) / min (left boundary) / max (right boundary)</description></item>
 ///   <item><term>CocktailBackwardPass</term><description>pass (current pass number) / min (left boundary) / max (right boundary)</description></item>
 ///   <item><term>CombGapPass</term><description>gap (current gap value) / len (array length)</description></item>
@@ -666,4 +671,19 @@ public enum SortPhase
     /// param1=begin (inclusive), param2=end-1 (inclusive), param3=badAllowed remaining
     /// </summary>
     PDQPatternShuffle,
+
+    // Selection family (appended rather than placed in the section above: inserting a member there
+    // would renumber every later phase, and the numeric values are part of the recorded event stream)
+
+    /// <summary>
+    /// Bingo Sort first pass: find the maximum of the range without moving anything.
+    /// param1=first (range start index), param2=end (range last index, inclusive)
+    /// </summary>
+    BingoFindMax,
+
+    /// <summary>
+    /// Bingo Sort pass: move every copy of the previous maximum to the end of the unsorted region while finding the next maximum.
+    /// param1=first (range start index), param2=end (unsorted region last index, inclusive)
+    /// </summary>
+    BingoPass,
 }
