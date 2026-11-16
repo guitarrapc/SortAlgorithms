@@ -48,6 +48,7 @@ public static class SortAuditAlgorithms
         ("DualPivotQuickSort", static values => DualPivotQuickSort.Sort(values, NullContext.Default)),
         ("FlashSort", static values => FlashSort.Sort(values, NullContext.Default)),
         ("FlatStableSort", static values => FlatStableSort.Sort(values, NullContext.Default)),
+        ("FunSort", static values => FunSort.Sort(values, NullContext.Default)),
         ("Glidesort", static values => Glidesort.Sort(values, NullContext.Default)),
         ("GnomeSort", static values => GnomeSort.Sort(values, NullContext.Default)),
         ("GnomeSortNonOptimized", static values => GnomeSortNonOptimized.Sort(values, NullContext.Default)),

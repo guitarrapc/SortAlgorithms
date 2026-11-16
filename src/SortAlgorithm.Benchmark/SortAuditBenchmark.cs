@@ -403,6 +403,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(FunSort))]
+    public void SetupFunSort() => Setup(nameof(FunSort));
+
+    [Benchmark]
+    public int FunSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.FunSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(Glidesort))]
     public void SetupGlidesort() => Setup(nameof(Glidesort));
 

@@ -725,4 +725,14 @@ public enum SortPhase
     /// param1=left (range start, inclusive), param2=right (range end, inclusive), param3=sampleCount (2^k − 1)
     /// </summary>
     SampleSortSample,
+
+    // Joke family (appended rather than placed in the section above: inserting a member there
+    // would renumber every later phase, and the numeric values are part of the recorded event stream)
+
+    /// <summary>
+    /// Fun-Sort phase i: repeatedly binary-searching the whole, possibly unsorted, array for the content of cell i and swapping the
+    /// out-of-order pair each failed search identifies, until a search lands on cell i. Cells 0..i-1 are in order among themselves when it starts.
+    /// param1=i (cell being settled), param2=n-1 (last index)
+    /// </summary>
+    FunSortPhase,
 }
