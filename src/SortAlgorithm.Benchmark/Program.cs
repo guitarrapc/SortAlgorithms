@@ -9,7 +9,7 @@ using BenchmarkDotNet.Reports;
 using SortAlgorithm.Benchmark;
 using System.Reflection;
 
-const string RequiredCpu = "EPYC 9V74";
+const string RequiredCpu = "EPYC 9V45";
 
 if (args.Contains("--audit-verify"))
 {
