@@ -85,6 +85,12 @@ public class DistributionBenchmark
     }
 
     [Benchmark]
+    public void Radsort()
+    {
+        SortAlgorithm.Algorithms.Radsort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void RadixLSD10Sort()
     {
         SortAlgorithm.Algorithms.RadixLSD10Sort.Sort(_buffers.Next().AsSpan());

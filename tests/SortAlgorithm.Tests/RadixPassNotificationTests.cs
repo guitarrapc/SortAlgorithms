@@ -44,6 +44,7 @@ public class RadixPassNotificationTests
         yield return () => new RadixSortCase("RadixLSD10Sort", static (a, c) => RadixLSD10Sort.Sort(a.AsSpan(), c), HasRangeScan: true);
         yield return () => new RadixSortCase("RadixLSD256Sort", static (a, c) => RadixLSD256Sort.Sort(a.AsSpan(), c), HasRangeScan: true);
         yield return () => new RadixSortCase("RotateLSDRadixSort", static (a, c) => RotateLSDRadixSort.Sort(a.AsSpan(), c), HasRangeScan: true);
+        yield return () => new RadixSortCase("Radsort", static (a, c) => Radsort.Sort(a.AsSpan(), c), HasRangeScan: true);
     }
 
     /// <summary>

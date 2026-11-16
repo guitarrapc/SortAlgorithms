@@ -45,6 +45,7 @@ Index arrays and occupancy bitsets are algorithm metadata and do not become elem
 | PingpongMergeSort | Auxiliary merge buffer, initialized by the input copy | None |
 | LibrarySort | Auxiliary elements with gaps | Dense staging elements during rebalance |
 | MergeInsertionSort | Evolving Ford–Johnson chain | Original element snapshot for the final permutation |
+| Radsort | Scratch blocks: the head-start output blocks and the input's tail, initialized by the tail copy and by pass writes | None |
 
 Element copies contribute their full length to read and write counts. These counts include
 bootstrap copies, leaf copies, snapshot storage, and staging operations when the algorithm performs them.
@@ -76,7 +77,8 @@ Announcing costs nothing on the unobserved path: `NullContext.OnPhase` is an emp
 - A mutable context is not implicitly safe for concurrent use.
 - A context that throws interrupts the sort and may leave the span partially sorted.
 - Consumers must not assume that two different algorithms produce identical event sequences for the same input.
-- Consumers must not assume that a `RadixPass` is followed by `DistributionBucket` reports. `RotateLSDRadixSort` sorts each digit by merging in place, so no bucket occupies a known span until the pass has finished moving elements, and it reports none.
+- Consumers must not assume that a `RadixPass` is followed by `DistributionBucket` reports. `RotateLSDRadixSort` sorts each digit by merging in place, so no bucket occupies a known span until the pass has finished moving elements, and it reports none. `Radsort` reports none either: a bucket is a chain of blocks scattered over the span and the scratch buffer, never a contiguous range.
+- Consumers must not assume that the buffers hold the elements in their current order between passes. `Radsort` keeps that order in a block permutation, which is bookkeeping rather than an element operation, so its passes write each element into whichever block its bucket drew, and the span becomes ordered only during the closing `DistributionWrite` phase, which copies the blocks back.
 
 ## Lessons Learned
 

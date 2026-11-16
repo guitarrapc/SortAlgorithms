@@ -78,6 +78,17 @@ bisects the digit range and rotates the blocks that straddle the split. It needs
 and pays a log n factor per pass for it. Its digit tests are integer operations on the mapped key,
 so it reports no comparisons, and every element movement is a swap.
 
+Radsort runs the same range-derived LSD passes as RadixLSD256Sort with O(√n) auxiliary space
+instead of an n-element second array. It treats the input as blocks, reuses each consumed input
+block as an output block, and records the resulting order in a block permutation, so a pass moves
+every element once and nothing moves between passes; the blocks return to the span once, at the
+end. The O(√n) bound requires the block size to grow as Θ(√n); the paper's experiments and the
+authors' benchmarked code fix it at 512, which turns the overhead into a constant and gives the
+bound up. Any block size sorts correctly, so the size is a tuning choice, not part of the
+contract. Radsort has no counting pass, so unlike RadixLSD256Sort it cannot know a pass is the
+identity and runs every pass. The paper's parallel variant is not provided: the observation
+contract is a single ordered stream of operations.
+
 SpreadSort is a hybrid. Its comparison stages receive a comparer consistent with the key
 mapping: built-in element overloads use the natural comparer, and key-selector overloads use a
 comparer over the extracted key.

@@ -2509,6 +2509,7 @@ UnrollFactor=1  WarmupCount=2
 - [Radix LSD Sort (Base 4)](./src/SortAlgorithm/Algorithms/Distribution/RadixLSD4Sort.cs)
 - [Radix MSD Sort (Base 10)](./src/SortAlgorithm/Algorithms/Distribution/RadixMSD10Sort.cs)
 - [Radix MSD Sort (Base 4)](./src/SortAlgorithm/Algorithms/Distribution/RadixMSD4Sort.cs)
+- [Radsort](./src/SortAlgorithm/Algorithms/Distribution/Radsort.cs)
 - [Rotate LSD Radix Sort (Base 4)](./src/SortAlgorithm/Algorithms/Distribution/RotateLSDRadixSort.cs)
 - [Spread Sort](./src/SortAlgorithm/Algorithms/Distribution/SpreadSort.cs)
 

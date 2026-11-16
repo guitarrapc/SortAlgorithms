@@ -40,7 +40,7 @@ public class StabilityDeclarationTests
     [
         "AmericanFlagSort", "BucketSortInteger", "CountingSortInteger", "FlashSort",
         "PigeonholeSortInteger", "RadixLSD10Sort", "RadixLSD256Sort", "RadixLSD4Sort",
-        "RadixMSD10Sort", "RadixMSD4Sort", "RotateLSDRadixSort", "SpreadSort",
+        "RadixMSD10Sort", "RadixMSD4Sort", "Radsort", "RotateLSDRadixSort", "SpreadSort",
         // Standalone suites: their inputs are constrained (power-of-two widths for the networks,
         // a handful of elements for the joke sorts, a key selector for the distribution sorts),
         // so they do not derive from the shared bases at all.
