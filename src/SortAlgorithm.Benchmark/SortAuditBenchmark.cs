@@ -601,6 +601,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(PairwiseSortingNetwork))]
+    public void SetupPairwiseSortingNetwork() => Setup(nameof(PairwiseSortingNetwork));
+
+    [Benchmark]
+    public int PairwiseSortingNetwork()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.PairwiseSortingNetwork.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(PancakeSort))]
     public void SetupPancakeSort() => Setup(nameof(PancakeSort));
 

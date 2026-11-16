@@ -66,6 +66,7 @@ public static class SortAuditAlgorithms
         ("OddEvenSort", static values => OddEvenSort.Sort(values, NullContext.Default)),
         ("PairingHeapSort", static values => PairingHeapSort.Sort(values, NullContext.Default)),
         ("PairInsertionSort", static values => PairInsertionSort.Sort(values, NullContext.Default)),
+        ("PairwiseSortingNetwork", static values => PairwiseSortingNetwork.Sort(values, NullContext.Default)),
         ("PancakeSort", static values => PancakeSort.Sort(values, NullContext.Default)),
         ("PatienceSort", static values => PatienceSort.Sort(values, NullContext.Default)),
         ("PDQSort", static values => PDQSort.Sort(values, NullContext.Default)),

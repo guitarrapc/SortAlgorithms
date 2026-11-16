@@ -41,4 +41,10 @@ public class NetworkBenchmark
     {
         SortAlgorithm.Algorithms.BatcherOddEvenMergeSort.Sort(_buffers.Next().AsSpan());
     }
+
+    [Benchmark]
+    public void PairwiseSortingNetwork()
+    {
+        SortAlgorithm.Algorithms.PairwiseSortingNetwork.Sort(_buffers.Next().AsSpan());
+    }
 }

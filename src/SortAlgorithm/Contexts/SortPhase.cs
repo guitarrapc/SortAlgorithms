@@ -45,6 +45,8 @@
 ///   <item><term>PDQPatternShuffle</term><description>begin (inclusive) / end-1 (inclusive) / badAllowed remaining</description></item>
 ///   <item><term>OddEvenMergeSortPass</term><description>p (merge group size, power of 2) / count</description></item>
 ///   <item><term>OddEvenMergeSortStage</term><description>k (comparison distance within merge) / p (current merge group size) / count</description></item>
+///   <item><term>PairwisePairLayer</term><description>distance (comparison distance, power of 2) / count</description></item>
+///   <item><term>PairwiseSortedPairsLayer</term><description>distance (comparison distance, stride × (2s − 1)) / stride (subsequence stride, power of 2) / count</description></item>
 ///   <item><term>Reverse</term><description>lo (start index, inclusive) / hi (end index, inclusive)</description></item>
 ///   <item><term>StdStableSortSort</term><description>left (abs start of buffer's left half) / mid (abs start of buffer's right half) / right (abs end of buffer, inclusive)</description></item>
 ///   <item><term>StdStableSortMove</term><description>left (abs start of span's left half) / mid (abs start of span's right half) / right (abs end of span, inclusive)</description></item>
@@ -695,4 +697,20 @@ public enum SortPhase
     /// param1=attempt number (1-based), param2=i, param3=j (the two distinct positions about to be swapped)
     /// </summary>
     BozoSwap,
+
+    // Network family (appended rather than placed in the section above: inserting a member there
+    // would renumber every later phase, and the numeric values are part of the recorded event stream)
+
+    /// <summary>
+    /// Pairwise Sorting Network pair layer: sorting the pairs of positions that are distance apart (Parberry's Step 1 at stride = distance).
+    /// param1=distance (comparison distance, power of 2), param2=count
+    /// </summary>
+    PairwisePairLayer,
+
+    /// <summary>
+    /// Pairwise Sorting Network sorted-pairs layer: comparing each pair's larger element with the smaller element of the pair s ahead,
+    /// within the interleaved subsequences of the given stride (Parberry's Step 3). distance = stride × (2s − 1).
+    /// param1=distance (comparison distance), param2=stride (subsequence stride, power of 2), param3=count
+    /// </summary>
+    PairwiseSortedPairsLayer,
 }

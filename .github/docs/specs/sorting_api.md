@@ -209,8 +209,9 @@ insertion finish is part of the algorithm; a small nonconstant input does not by
 classification and permutation stages.
 ## Large Index Ranges
 
-BlockQuickSort, BitonicSort, BatcherOddEvenMergeSort, and CombSort do not impose a smaller
-input-size limit solely to avoid overflow in midpoint, stage, group, or gap calculations.
+BlockQuickSort, BitonicSort, BatcherOddEvenMergeSort, PairwiseSortingNetwork, and CombSort
+do not impose a smaller input-size limit solely to avoid overflow in midpoint, stage, group,
+layer, or gap calculations.
 Their algorithm-specific preconditions still apply, including BitonicSort's power-of-two
 length requirement. Allocation limits and the work required to sort a large input are
 separate from whether its indices can be represented correctly.

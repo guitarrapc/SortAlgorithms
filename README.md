@@ -2519,6 +2519,7 @@ UnrollFactor=1  WarmupCount=2
 - [Bitonic Sort](./src/SortAlgorithm/Algorithms/Network/BitonicSort.cs)
   - Iterative
   - Recursive
+- [Pairwise Sorting Network](./src/SortAlgorithm/Algorithms/Network/PairwiseSortingNetwork.cs)
 
 ### Tree
 - [B Plus Tree Sort](./src/SortAlgorithm/Algorithms/Tree/BPlusTreeSort.cs)
