@@ -81,7 +81,7 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Yaroslavskiy 2009 Optimizations Implemented:</strong></para>
 /// <list type="bullet">
 /// <item><description><strong>Insertion Sort Fallback (threshold = 47):</strong> Arrays smaller than 47 elements are sorted using insertion sort for better constant-factor performance.
-/// The 2009 paper uses TINY_SIZE = 17; this implementation follows Java 7's INSERTION_SORT_THRESHOLD = 47, which measured uniformly faster here (2-3x on ordered patterns, ~7-20% on random).</description></item>
+/// The 2009 paper uses TINY_SIZE = 17; this implementation follows Java 7's INSERTION_SORT_THRESHOLD = 47, which measured uniformly faster here (most on ordered patterns, less on random).</description></item>
 /// <item><description><strong>5-Sample Pivot Selection:</strong> For arrays ≥47 elements, uses 5-sample method to select pivots, reducing worst-case probability.</description></item>
 /// <item><description><strong>Inner While Loop:</strong> Partitioning uses inner while loop to scan from right when element &gt; pivot2, matching Yaroslavskiy's specification.</description></item>
 /// <item><description><strong>Equal Elements Optimization (DIST_SIZE = 13):</strong> When center region is large (&gt; length - 13) and pivots are different,
@@ -122,8 +122,8 @@ public static class DualPivotQuickSort
     // Yaroslavskiy's 2009 paper uses TINY_SIZE = 17; Java 7's DualPivotQuicksort raised it to 47
     // (INSERTION_SORT_THRESHOLD), which this implementation follows.
     // Measured in this codebase (int, NullContext): 47 is uniformly faster than 17 —
-    // Sorted/Reversed/SingleElementMoved improve 2-3x (insertion sort handles ordered leaves in
-    // O(n) instead of run-destroying dual-pivot partitions), Random improves ~7-20%,
+    // Sorted/Reversed/SingleElementMoved improve the most (insertion sort handles ordered leaves in
+    // O(n) instead of run-destroying dual-pivot partitions), Random improves less,
     // duplicate-heavy patterns are unchanged within noise.
     // Every range reaching pivot selection therefore has length >= 47, which guarantees
     // seventh >= 6 and keeps all 5 sample points e1..e5 inside [left, right] with

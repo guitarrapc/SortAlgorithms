@@ -277,8 +277,8 @@ public static class FlatStableSort
     /// Deliberately not <c>AggressiveInlining</c>: with the MIN_CHECK probe below the body is large
     /// enough that forcing it into the mutually recursive <see cref="RangeSortData"/> /
     /// <see cref="RangeSortBuffer"/> callers degraded the fall-through merge loop. Measured on
-    /// MergeBenchmark (int, 5 interleaved passes) the forced-inline variant cost ~+26% on
-    /// 2048/PipeOrgan and ~+12% on 4096/PipeOrgan — the patterns where the probe does not fire —
+    /// MergeBenchmark (int, 5 interleaved passes) the forced-inline variant was slower on
+    /// 2048/PipeOrgan and 4096/PipeOrgan — the patterns where the probe does not fire —
     /// while letting the JIT decide is at or better than the pre-probe baseline on every case.
     /// </para>
     /// </remarks>

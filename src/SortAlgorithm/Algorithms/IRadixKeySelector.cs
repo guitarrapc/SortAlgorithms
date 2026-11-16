@@ -241,13 +241,10 @@ public readonly struct DoubleRadixKey : IRadixKeySelector<double>
         if (double.IsNaN(value)) return 0UL;
         var bits = BitConverter.DoubleToUInt64Bits(value);
         // Give -0 the bits of +0, so the two tie. Shifting the sign bit out leaves zero for exactly the
-        // two zeros and for nothing else, so the test needs no 64-bit sign constant. That matters: the
-        // three forms measured 1.3%/1.4%, 5.2%/4.8% and 11.8%/12.2% over an unnormalized key on
-        // RadixLSD256Sort<double> at n = 65536/1048576 (minimum of 71/41 repetitions,
-        // DOTNET_TieredCompilation=0, an int sort in the same run as drift anchor):
-        //   this shift test                        1.3% / 1.4%   (inside the anchor's own drift)
-        //   comparing bits to the sign constant    5.2% / 4.8%
-        //   (value + 0.0) before taking the bits  11.8% / 12.2%
+        // two zeros and for nothing else, so the test needs no 64-bit sign constant. That matters:
+        // measured against an unnormalized key on RadixLSD256Sort<double> (same-run comparison with an
+        // int sort as drift anchor), this shift test stayed within the anchor's own drift, comparing
+        // the bits to the sign constant cost more, and adding 0.0 before taking the bits cost the most.
         if (bits << 1 == 0) bits = 0;
         return (bits & 0x8000_0000_0000_0000) != 0 ? ~bits : bits ^ 0x8000_0000_0000_0000;
     }

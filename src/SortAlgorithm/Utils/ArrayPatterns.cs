@@ -2196,12 +2196,12 @@ public static class ArrayPatterns
     /// QuickSort最悪ケース（中央値 pivot 系を O(n²) 化する）
     /// McIlroy の遅延評価 adversary を QuickSort 自身に対して走らせ、選ばれる pivot が常に極値になる順列を得る。
     /// 中央要素を pivot にする系（QuickSort / QuickSortMedian3 / QuickSort3way）が対象で、ninther や四分位 pivot は対象外。
-    /// 生成コストは誘発する二次時間そのもの（n=32,768 で約 800ms）なので、大きいサイズで繰り返し使う場合はキャッシュすること。
+    /// 生成コストは誘発する二次時間そのものなので、大きいサイズで繰り返し使う場合はキャッシュすること。
     /// <br/>
     /// Generate QuickSort adversary (drives the middle-pivot family into O(n²))
     /// Derived by running QuickSort itself against McIlroy's lazy-evaluation adversary, so every pivot it selects turns out to be an extreme value.
     /// Targets the middle-pivot family (QuickSort / QuickSortMedian3 / QuickSort3way); ninther and quartile-pivot variants have different killers.
-    /// Generation costs the quadratic work it provokes (~800ms at n = 32,768), so cache the result when materializing it repeatedly at large sizes.
+    /// Generation costs the quadratic work it provokes, so cache the result when materializing it repeatedly at large sizes.
     /// <br/>
     /// ref: M. D. McIlroy, "A Killer Adversary for Quicksort", Software - Practice and Experience 29(4), 1999. https://www.cs.dartmouth.edu/~doug/mdmspe.pdf
     /// </summary>

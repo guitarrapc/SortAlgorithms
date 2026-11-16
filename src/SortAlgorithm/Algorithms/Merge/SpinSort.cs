@@ -517,7 +517,7 @@ public static class SpinSort
 
         // Boost util::merge's MIN_CHECK short-circuit: on large merges, one comparison can prove the
         // two runs are already in order (or fully inverted), turning the merge into bulk copies.
-        // Keeping this inline matters: extracting it into a non-inlined helper cost ~9% on random input.
+        // Keeping this inline matters: extracting it into a non-inlined helper measured slower on random input.
         if (len1 + len2 >= MIN_CHECK && len1 != 0 && len2 != 0)
         {
             // src[left2] >= src[leftEnd - 1]: the runs concatenate as-is.

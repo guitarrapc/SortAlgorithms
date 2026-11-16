@@ -29,8 +29,8 @@ internal interface IComparableComparer { }
 /// </para>
 /// <para>
 /// Performance comparison (for int array sorting):
-/// - Using Comparer&lt;int&gt;.Default (class): ~3-5ns overhead per comparison due to virtual dispatch
-/// - Using ComparableComparer&lt;int&gt; (struct): ~0ns overhead, same as direct CompareTo
+/// - Using Comparer&lt;int&gt;.Default (class): per-comparison overhead from virtual dispatch
+/// - Using ComparableComparer&lt;int&gt; (struct): no dispatch overhead, same as direct CompareTo
 /// </para>
 /// </remarks>
 internal readonly struct ComparableComparer<T> : IComparer<T>, IComparableComparer where T : IComparable<T>

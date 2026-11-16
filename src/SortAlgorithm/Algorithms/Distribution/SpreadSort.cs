@@ -98,7 +98,7 @@ namespace SortAlgorithm.Algorithms;
 /// The order-preserving key transform used here removes that need entirely.</para>
 /// <para>Measured: the constants only diverge where <c>log_divisor</c> is small enough to reach the
 /// one-pass-completion branch, which depends on key width. At 32/64 bits it is never reached, so
-/// float and double are unaffected; at 16 bits <see cref="Half"/> is 1.1x-2.5x faster with the
+/// float and double are unaffected; at 16 bits <see cref="Half"/> measured faster with the
 /// <c>float_*</c> constants. The same branch measured neutral on the integer path at the same key
 /// width (<c>short</c>), so integer_sort keeps Boost's setting.</para>
 /// <para><strong>Supported Key Mappings (via <see cref="IRadixKeySelector{T}"/>):</strong></para>

@@ -33,7 +33,7 @@ namespace SortAlgorithm.Utils;
 /// <para><strong>Cost:</strong></para>
 /// <para>
 /// Generation runs <see cref="QuickSort"/> once against the adversary, so it costs the quadratic
-/// work it is designed to provoke: ~3 ms at n = 2,048 and ~775 ms at n = 32,768. Callers that
+/// work it is designed to provoke, which grows quadratically with n. Callers that
 /// materialize this pattern repeatedly at large sizes should cache it - it is deterministic, so
 /// the result depends on nothing but the length.
 /// </para>

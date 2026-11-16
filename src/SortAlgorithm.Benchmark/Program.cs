@@ -66,9 +66,8 @@ else
 // invocation count also skips the pilot stage, so per-case time stays bounded.
 //
 // DOTNET_TieredCompilation=0: with the short fixed warmup, tier-1 background compilation
-// can land in the middle of the measured iterations (observed as a sharp 10-15x drop,
-// e.g. PDQSort 8192/SingleElementMoved: iterations 1-6 at ~350us, iteration 8 at ~25us),
-// producing bimodal rows where Median << Mean. Disabling tiering makes the first
+// can land in the middle of the measured iterations (observed as a sharp drop partway
+// through the iterations, e.g. PDQSort 8192/SingleElementMoved), producing bimodal rows where Median << Mean. Disabling tiering makes the first
 // invocation run fully optimized code, so every iteration measures steady state.
 // In Local environment, run the short benchmark.
 if (!audit && !IsCiEnvironment())

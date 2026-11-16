@@ -29,23 +29,23 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Offset buffers are stackalloc'd and accessed via <see cref="MemoryMarshal.GetReference{T}(Span{T})"/> +
 /// <see cref="Unsafe.Add{T}(ref T, int)"/>: the store index is a runtime value the JIT cannot prove in-range,
-/// so Span indexing would emit a bounds check per classified element (measured 5-15% loss).</description></item>
+/// so Span indexing would emit a bounds check per classified element (measured slower).</description></item>
 /// <item><description><c>Unsafe.As&lt;bool, byte&gt;</c> converts the comparison result to an addend, which RyuJIT
 /// compiles to setcc (no data-dependent branch). A ternary (b ? 1 : 0) is not guaranteed branch-free.</description></item>
 /// <item><description>The classification loops are manually unrolled 8x like orlp's implementation;
-/// RyuJIT does not unroll them automatically (measured -13% on many-duplicates inputs).</description></item>
+/// RyuJIT does not unroll them automatically (without the unroll, many-duplicates inputs measured slower).</description></item>
 /// </list>
-/// <para><strong>Measured trade-offs vs <see cref="PDQSort"/> (int keys, Ryzen 9 7950X3D, .NET 10):</strong></para>
+/// <para><strong>Measured trade-offs vs <see cref="PDQSort"/> (int keys; direction only, magnitudes depend on the machine):</strong></para>
 /// <list type="bullet">
-/// <item><description>Random n=8192: 0.62x (38% faster), n=65536: 0.59x. Measured against fresh arrays per
+/// <item><description>Random input: faster at n=8192 and n=65536. Measured against fresh arrays per
 /// invocation; re-sorting one identical array lets the branch predictor memorize small inputs and
 /// understates the branchless advantage.</description></item>
-/// <item><description>16 distinct values n=65536: 0.40x (2.5x faster)</description></item>
+/// <item><description>Few distinct values (16 at n=65536): faster, by a wider margin than on random input.</description></item>
 /// <item><description>Sorted / nearly-sorted: unchanged (alreadyPartitioned path skips the block machinery)</description></item>
-/// <item><description>Reversed / pipe-organ: ~1.5x slower than branchy PDQSort (classification is pure overhead
-/// when branches are perfectly predictable) - still several times faster than IntroSort on these
+/// <item><description>Reversed / pipe-organ: slower than branchy PDQSort (classification is pure overhead
+/// when branches are perfectly predictable) - still faster than IntroSort on these
 /// patterns thanks to pattern detection. This is the same trade-off orlp/pdqsort accepts.</description></item>
-/// <item><description>n=256 random: ~1.2x slower (block machinery fixed costs); crossover is around n≈512-1024.</description></item>
+/// <item><description>Small random input (n=256): slower, because the block machinery's fixed costs dominate.</description></item>
 /// </list>
 /// <para>All other components (ninther pivot selection, equal-block skip, partition_left for duplicates,
 /// partial insertion sort pattern detection, pattern-defeating shuffles, heapsort fallback, tail recursion

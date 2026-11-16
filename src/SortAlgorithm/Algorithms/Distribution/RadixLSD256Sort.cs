@@ -62,7 +62,7 @@ namespace SortAlgorithm.Algorithms;
 /// current digit at the start of its own pass (2 × d × n reads, used here), or spend one preprocessing pass
 /// building every digit's histogram at once so a pass only distributes (2 × n + d × n reads). The second
 /// reads strictly less, and <see cref="RadixLSD10Sort"/> uses it — but it was implemented for this radix too
-/// and measured slower: 16–38% across n = 1024/8192 and d = 1..4 over <c>int</c> keys, with no trend toward
+/// and measured slower across n = 1024/8192 and d = 1..4 over <c>int</c> keys, with no trend toward
 /// breaking even at higher d (same-run comparison, 20 iterations). What the hoisted form saves here is a
 /// sequential, prefetched span read whose key costs two ALU ops; what it adds is a per-element inner loop
 /// incrementing into d interleaved 257-counter blocks rather than one. The decimal sort makes the opposite

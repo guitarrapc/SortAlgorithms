@@ -1769,7 +1769,7 @@ public static class Glidesort
     /// <summary>
     /// AVX-512 bidirectional partition for int + ComparableComparer + NullContext.
     /// vpcompressd in the compress-to-REGISTER + plain full-width store form (the memory form
-    /// is microcoded and ~4x slower on Zen 4). Forward: less lanes compress to the bottom and
+    /// is microcoded on some CPUs, such as AMD Zen 4, and much slower there). Forward: less lanes compress to the bottom and
     /// store at destFront (main), geq lanes at scrFront (scratch); the unused top lanes write
     /// stale values into the open gap. Backward: lanes are loaded reversed into processing
     /// order (descending index), compressed, reversed again so real lanes sit at the TOP, and

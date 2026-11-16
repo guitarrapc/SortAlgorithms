@@ -57,8 +57,8 @@ namespace SortAlgorithm.Algorithms;
 /// one arithmetic operation on this path the hardware is bad at. It can be removed: carry each element's running
 /// quotient beside it, and its digit becomes a remainder, with the next pass continuing from quotient / 10 —
 /// every division then by a literal 10, which the JIT lowers to a multiply and a shift. That was implemented and
-/// measured against this version, and it is about 2.2× slower at n = 8192 (3 to 10 decimal digits), though only
-/// ~10% slower at n = 1024 where every buffer still fits in L1. The quotient has to be permuted alongside its
+/// measured against this version, and it is clearly slower at n = 8192 (3 to 10 decimal digits), though only
+/// slightly slower at n = 1024 where every buffer still fits in L1. The quotient has to be permuted alongside its
 /// element, so the distribute loop gains a second scattered write, of 8 bytes, into a second array — twice the
 /// randomly-addressed write streams. The division is real but it is not what this sort is bound by.</para>
 /// <para><strong>Supported Key Mappings (via <see cref="IRadixKeySelector{T}"/>):</strong></para>
@@ -300,8 +300,8 @@ public static class RadixLSD10Sort
             //
             // The distribute pass below still divides by pow10[d], whose divisor is only known at run
             // time. Removing that too — by carrying each element's running quotient through the passes
-            // so its digit is just a remainder — was implemented and measured: it makes this sort about
-            // 2.2x slower at n = 8192 (and ~10% at n = 1024, where everything fits in L1). The quotient
+            // so its digit is just a remainder — was implemented and measured: it makes this sort clearly
+            // slower at n = 8192 (and slightly slower at n = 1024, where everything fits in L1). The quotient
             // has to be permuted alongside its element, so the distribute loop gains a second scattered
             // write, of 8 bytes, into a second array; that costs far more than the division it removes.
             //
