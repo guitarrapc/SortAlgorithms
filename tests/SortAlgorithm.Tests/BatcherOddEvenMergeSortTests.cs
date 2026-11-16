@@ -247,6 +247,73 @@ public class BatcherOddEvenMergeSortTests
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
     }
 
+    public static IEnumerable<int> SequenceSizes() => [.. Enumerable.Range(0, 301), 511, 512, 513, 1000, 1023, 1024, 1025, 4097];
+
+    /// <summary>
+    /// The phases announced, the comparators run, their order and their orientation are exactly those of the
+    /// textbook enumeration: for p = 1, 2, 4, ...; k = p, p/2, ..., 1; j = k mod p, stepping 2k; i = 0, ..., k - 1,
+    /// compare (i + j, i + j + k) when both lie inside the array and in the same block of size 2p. The reference
+    /// below transcribes that definition with its per-pair division check and 64-bit arithmetic, independently of
+    /// how the implementation enumerates the same pairs.
+    /// </summary>
+    [Test]
+    [MethodDataSource(nameof(SequenceSizes))]
+    public async Task EventSequenceMatchesTextbookEnumerationTest(int n)
+    {
+        var recorder = new NetworkEventRecorder();
+        BatcherOddEvenMergeSort.Sort(TestHelpers.ShuffledRange(n, 42).AsSpan(), recorder);
+
+        var expected = new List<string>();
+        if (n > 1)
+        {
+            for (long p = 1; p < n; p *= 2)
+            {
+                expected.Add($"pass {p} {n}");
+                for (var k = p; k >= 1; k /= 2)
+                {
+                    expected.Add($"stage {k} {p} {n}");
+                    for (var j = k % p; j + k < n; j += 2 * k)
+                    {
+                        for (long i = 0; i < k; i++)
+                        {
+                            var left = i + j;
+                            var right = left + k;
+                            if (right < n && left / (2 * p) == right / (2 * p))
+                                expected.Add($"compare {left} {right}");
+                        }
+                    }
+                }
+            }
+        }
+
+        await Assert.That(recorder.Events).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    /// <summary>
+    /// Records phase announcements and comparisons, in the order they happen, as text.
+    /// </summary>
+    sealed class NetworkEventRecorder : ISortContext
+    {
+        public List<string> Events { get; } = [];
+
+        public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0)
+            => Events.Add(phase switch
+            {
+                SortPhase.OddEvenMergeSortPass => $"pass {param1} {param2}",
+                SortPhase.OddEvenMergeSortStage => $"stage {param1} {param2} {param3}",
+                _ => $"unexpected {phase}",
+            });
+
+        public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) => Events.Add($"compare {i} {j}");
+        public void OnSwap(int i, int j, int bufferId) { }
+        public void OnIndexRead(int index, int bufferId) { }
+        public void OnIndexWrite(int index, int bufferId) { }
+        public void OnIndexWrite<T>(int index, int bufferId, T value) { }
+        public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId) { }
+        public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values) { }
+        public void OnRole(int index, int bufferId, RoleType role) { }
+    }
+
     /// <summary>
     /// Calculates the theoretical number of comparisons for Batcher's Odd-Even Merge Sort.
     /// For n = 2^k, the formula is: n * k * (k-1) / 4 + n - 1, where k = log2(n).

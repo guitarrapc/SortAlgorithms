@@ -43,7 +43,8 @@ namespace SortAlgorithm.Algorithms;
 /// is data-independent (oblivious). The same comparisons are performed regardless of input values, making it ideal for parallel hardware
 /// implementations, SIMD optimizations, and worst-case guarantees.</description></item>
 /// <item><description><strong>Iteration Termination:</strong> Base case: sequences of length 1 are trivially sorted. The iterative implementation
-/// processes stages up to log₂ n levels, and at each level, O(n) comparisons are performed, yielding O(n log² n) total comparisons.</description></item>
+/// processes log₂ n levels k = 2, 4, ..., n. Level k has log₂ k stages of n/2 comparisons each, so the total is
+/// n/2 × (1 + 2 + ... + log₂ n) = n × log n × (log n + 1) / 4 comparisons, which is Θ(n log² n).</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -52,13 +53,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>In-place    : Yes (O(1) auxiliary space - sorts directly on input array)</description></item>
 /// <item><description>Best case   : Θ(n log² n) - Data-independent comparison count (same as worst case)</description></item>
 /// <item><description>Average case: Θ(n log² n) - Performs the same comparisons for all inputs</description></item>
-/// <item><description>Worst case  : Θ(n log² n) - Comparison count: ½ × n × log² n for n = 2^k</description></item>
-/// <item><description>Comparisons : Θ(n log² n) - Exactly (log² n × (log n + 1)) / 4 × n comparisons for n = 2^k</description></item>
+/// <item><description>Worst case  : Θ(n log² n) - For n = 2^k: n × log n × (log n + 1) / 4 comparisons</description></item>
+/// <item><description>Comparisons : Θ(n log² n) - Exactly n × log n × (log n + 1) / 4 for n = 2^k (28,160 for n = 1024, the figure in Batcher's paper)</description></item>
 /// <item><description>Swaps       : O(n log² n) - At most equal to comparison count; depends on input disorder</description></item>
 /// <item><description>Index Reads : Θ(n log² n) - every comparator reads the two positions it tests, and the network runs the same comparators whatever the input</description></item>
 /// <item><description>Index Writes: O(n log² n) - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(1) - the comparators act directly on the input span</description></item>
-/// <item><description>Depth       : O(log² n) - Network depth allows O(log² n) parallel time with O(n log n) processors</description></item>
+/// <item><description>Depth       : O(log² n) - For n = 2^k: log n × (log n + 1) / 2 layers of n/2 comparators each, so O(log² n) parallel time with n/2 comparators</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
@@ -288,8 +289,9 @@ public static class BitonicSort
 /// <item><description><strong>Comparison Network Property:</strong> Bitonic sort is a comparison network, meaning the sequence of comparisons
 /// is data-independent (oblivious). The same comparisons are performed regardless of input values, making it ideal for parallel hardware
 /// implementations, SIMD optimizations, and worst-case guarantees.</description></item>
-/// <item><description><strong>Recursion Termination:</strong> Base case: sequences of length 1 are trivially sorted. Recursion depth is log₂ n,
-/// and at each level, O(n) comparisons are performed, yielding O(n log² n) total comparisons.</description></item>
+/// <item><description><strong>Recursion Termination:</strong> Base case: sequences of length 1 are trivially sorted. Recursion depth is log₂ n.
+/// A bitonic merge of m elements runs log₂ m stages of m/2 comparisons each, so the merges at recursion level i (blocks of n/2^i)
+/// cost n/2 × log₂(n/2^i). Summed over the levels this is n × log n × (log n + 1) / 4 comparisons, which is Θ(n log² n).</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -298,13 +300,13 @@ public static class BitonicSort
 /// <item><description>In-place    : Yes (O(1) auxiliary space - sorts directly on input array)</description></item>
 /// <item><description>Best case   : Θ(n log² n) - Data-independent comparison count (same as worst case)</description></item>
 /// <item><description>Average case: Θ(n log² n) - Performs the same comparisons for all inputs</description></item>
-/// <item><description>Worst case  : Θ(n log² n) - Comparison count: ½ × n × log² n for n = 2^k</description></item>
-/// <item><description>Comparisons : Θ(n log² n) - Exactly (log² n × (log n + 1)) / 4 × n comparisons for n = 2^k</description></item>
+/// <item><description>Worst case  : Θ(n log² n) - For n = 2^k: n × log n × (log n + 1) / 4 comparisons</description></item>
+/// <item><description>Comparisons : Θ(n log² n) - Exactly n × log n × (log n + 1) / 4 for n = 2^k (28,160 for n = 1024, the figure in Batcher's paper)</description></item>
 /// <item><description>Swaps       : O(n log² n) - At most equal to comparison count; depends on input disorder</description></item>
 /// <item><description>Index Reads : Θ(n log² n) - every comparator reads the two positions it tests, and the network runs the same comparators whatever the input</description></item>
 /// <item><description>Index Writes: O(n log² n) - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(1) - the comparators act directly on the input span</description></item>
-/// <item><description>Depth       : O(log² n) - Network depth allows O(log² n) parallel time with O(n log n) processors</description></item>
+/// <item><description>Depth       : O(log² n) - For n = 2^k: log n × (log n + 1) / 2 layers of n/2 comparators each, so O(log² n) parallel time with n/2 comparators</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">

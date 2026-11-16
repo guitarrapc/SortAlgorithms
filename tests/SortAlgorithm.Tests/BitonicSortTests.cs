@@ -122,7 +122,7 @@ public class BitonicSortTests
         BitonicSort.Sort(sorted.AsSpan(), stats);
 
         // Bitonic sort performs the same number of comparisons regardless of input order
-        // For n = 2^k, the number of comparisons is (k(k+1)/2) * n where k = log2(n)
+        // For n = 2^k, the number of comparisons is (k(k+1)/2) * (n/2) where k = log2(n)
         var expectedCompares = CalculateBitonicComparisons(n);
 
         // For sorted data, fewer swaps but not necessarily 0 due to data-oblivious nature
