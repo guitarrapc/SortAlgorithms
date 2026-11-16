@@ -49,6 +49,12 @@ public class PartitionBenchmark
     }
 
     [Benchmark]
+    public void SampleSort()
+    {
+        SortAlgorithm.Algorithms.SampleSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void DualPivotQuickSort()
     {
         SortAlgorithm.Algorithms.DualPivotQuickSort.Sort(_buffers.Next().AsSpan());

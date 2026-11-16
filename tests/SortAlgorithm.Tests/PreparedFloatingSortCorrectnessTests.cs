@@ -19,6 +19,7 @@ public class PreparedFloatingSortCorrectnessTests
 
     [Test]
     [Arguments("QuickSort")]
+    [Arguments("SampleSort")]
     [Arguments("BinaryInsertionSort")]
     [Arguments("HeapSort")]
     [Arguments("MinHeapSort")]
@@ -107,6 +108,10 @@ public class PreparedFloatingSortCorrectnessTests
             case "QuickSort":
                 if (kind == 0) QuickSort.Sort(span, first, last, context);
                 else QuickSort.Sort(span, first, last, comparer, context);
+                break;
+            case "SampleSort":
+                if (kind == 0) SampleSort.Sort(span, first, last, context);
+                else SampleSort.Sort(span, first, last, comparer, context);
                 break;
             case "BinaryInsertionSort":
                 if (kind == 0) BinaryInsertionSort.Sort(span, first, last, context);

@@ -2496,6 +2496,7 @@ UnrollFactor=1  WarmupCount=2
 - [Quick Sort (3-Way)](./src/SortAlgorithm/Algorithms/Partition/QuickSort3way.cs)
 - [Quick Sort (Median of 3)](./src/SortAlgorithm/Algorithms/Partition/QuickSortMedian3.cs)
 - [Quick Sort (Median of 9)](./src/SortAlgorithm/Algorithms/Partition/QuickSortMedian9.cs)
+- [Sample Sort](./src/SortAlgorithm/Algorithms/Partition/SampleSort.cs)
 - [Quick Sort (Stable)](./src/SortAlgorithm/Algorithms/Partition/StableQuickSort.cs)
 - [std::sort (LLVM)](./src/SortAlgorithm/Algorithms/Partition/StdSort.cs)
 

@@ -90,6 +90,7 @@ public static class SortAuditAlgorithms
         ("RotateMergeSort", static values => RotateMergeSort.Sort(values, NullContext.Default)),
         ("RotateMergeSortNonOptimized", static values => RotateMergeSortNonOptimized.Sort(values, NullContext.Default)),
         ("RotateMergeSortRecursive", static values => RotateMergeSortRecursive.Sort(values, NullContext.Default)),
+        ("SampleSort", static values => SampleSort.Sort(values, NullContext.Default)),
         ("SelectionSort", static values => SelectionSort.Sort(values, NullContext.Default)),
         ("ShellSortCiura2001", static values => ShellSortCiura2001.Sort(values, NullContext.Default)),
         ("ShellSortKnuth1973", static values => ShellSortKnuth1973.Sort(values, NullContext.Default)),

@@ -37,6 +37,7 @@
 ///   <item><term>OddEvenOddPhase</term><description>pass (current pass number)</description></item>
 ///   <item><term>OddEvenEvenPhase</term><description>pass (current pass number)</description></item>
 ///   <item><term>QuickSortPartition</term><description>left / right / pivotIndex</description></item>
+///   <item><term>SampleSortSample</term><description>left (inclusive) / right (inclusive) / sampleCount</description></item>
 ///   <item><term>HybridToInsertionSort</term><description>left (inclusive) / right (inclusive) / threshold</description></item>
 ///   <item><term>HybridToHeapSort</term><description>left (inclusive) / right (inclusive)</description></item>
 ///   <item><term>HybridToMergeSort</term><description>left (inclusive) / right (inclusive) / threshold (SMALL_SORT when small; 0 when recursion budget exhausted)</description></item>
@@ -713,4 +714,15 @@ public enum SortPhase
     /// param1=distance (comparison distance), param2=stride (subsequence stride, power of 2), param3=count
     /// </summary>
     PairwiseSortedPairsLayer,
+
+    // Partition family (appended rather than placed in the section above: inserting a member there
+    // would renumber every later phase, and the numeric values are part of the recorded event stream)
+
+    /// <summary>
+    /// Sample Sort drawing a random sample of a range without a presorted sample: the drawn elements are swapped to the front
+    /// of the range, which is then sorted as its own range before any of its elements serves as a pivot.
+    /// Announced only when the draw moves an element, so the phase always covers at least one swap.
+    /// param1=left (range start, inclusive), param2=right (range end, inclusive), param3=sampleCount (2^k − 1)
+    /// </summary>
+    SampleSortSample,
 }

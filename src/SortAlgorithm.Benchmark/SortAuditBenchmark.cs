@@ -865,6 +865,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(SampleSort))]
+    public void SetupSampleSort() => Setup(nameof(SampleSort));
+
+    [Benchmark]
+    public int SampleSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.SampleSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(SelectionSort))]
     public void SetupSelectionSort() => Setup(nameof(SelectionSort));
 
