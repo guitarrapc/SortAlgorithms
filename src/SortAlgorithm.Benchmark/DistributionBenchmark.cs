@@ -12,10 +12,7 @@ public class DistributionBenchmark
 
     private SortBuffers<int> _buffers = default!;
 
-    // Restore cost stays out of the timed region: [IterationSetup] refreshes a pool of
-    // pre-copied buffers and each invocation sorts a fresh one, each generated from its own
-    // seed, so a seeded pattern never repeats within an iteration (see SortBuffers<T>).
-    // Program.cs pins the job's InvocationCount to the pool size.
+    // Each invocation sorts its own pre-copied buffer, so the copy is not timed (see SortBuffers<T>).
     [GlobalSetup]
     public void Setup()
     {

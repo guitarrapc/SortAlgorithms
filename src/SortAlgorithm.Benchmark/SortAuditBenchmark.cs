@@ -14,7 +14,7 @@ public abstract class SortAuditBase
     {
         buffers = new SortBuffers<int>(seed => BenchmarkData.GenerateIntArray(Size, Pattern, seed));
 
-        // Every input an invocation will sort passes the correctness gate, not just the first.
+        // Check every input in the pool, not just the first.
         var sort = SortAuditAlgorithms.All.Single(a => a.Name == name).Sort;
         foreach (var input in buffers.Sources)
         {

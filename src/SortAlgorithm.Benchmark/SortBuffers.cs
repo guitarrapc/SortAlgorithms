@@ -1,40 +1,28 @@
 ﻿namespace SortAlgorithm.Benchmark;
 
-/// <summary>
-/// Holds the invocation batch size shared between the benchmark job configuration
-/// (Program.cs) and the buffer pools used by every benchmark class.
-/// </summary>
+/// <summary>Constants shared by the jobs in Program.cs and every <see cref="SortBuffers{T}"/> pool.</summary>
 public static class SortBuffers
 {
     /// <summary>
-    /// Number of invocations BenchmarkDotNet runs per measured iteration, and therefore
-    /// the number of pre-copied buffers each pool must hold. Every job in Program.cs
-    /// must set WithInvocationCount(InvocationsPerIteration) and WithUnrollFactor(1);
-    /// running these benchmarks with a job that invokes more often than this throws
-    /// IndexOutOfRangeException from <see cref="SortBuffers{T}.Next"/> (loud failure
-    /// instead of silently sorting already-sorted data).
+    /// Invocations per measured iteration, and so the number of buffers in each pool.
+    /// Every job must use WithInvocationCount(InvocationsPerIteration) and WithUnrollFactor(1).
+    /// If a job invokes more often, <see cref="SortBuffers{T}.Next"/> throws instead of sorting sorted data.
     /// </summary>
     public const int InvocationsPerIteration = 64;
 
-    /// <summary>
-    /// Seed of the input behind the pool's first buffer; buffer <c>i</c> uses <c>FirstSeed + i</c>.
-    /// The first buffer therefore holds the input every buffer used to share.
-    /// </summary>
+    /// <summary>Seed for buffer 0. Buffer <c>i</c> uses <c>FirstSeed + i</c>.</summary>
     public const int FirstSeed = 42;
 }
 
 /// <summary>
-/// A pool of pre-copied work buffers that keeps the restore cost (Array.Copy) out of the
-/// measured region. <see cref="Reset"/> is called from [IterationSetup] to refresh all
-/// buffers from their sources; each benchmark invocation then takes a fresh,
-/// unsorted buffer via <see cref="Next"/> with zero copy inside the timed code.
+/// Pre-copied input buffers that keep the copy out of the timed code.
+/// Call <see cref="Reset"/> from [IterationSetup], then take one buffer per invocation with <see cref="Next"/>.
 /// </summary>
 /// <remarks>
-/// Every buffer has its own source, generated from its own seed. When all buffers held the same
-/// input, the branch predictor learned that input across the invocations of an iteration, and
-/// branchy sorts measured much faster on "random" data of a few thousand elements than
-/// on data they had not seen. Patterns that do not depend on the seed (sorted, reversed, pipe organ)
-/// still produce the same input in every buffer; they are as predictable as their definition.
+/// Each buffer gets its own seed, so the branch predictor cannot learn the input across invocations.
+/// Seed-independent patterns (sorted, reversed, pipe organ) are still identical in every buffer.
+/// On pipe organ this makes branchy sorts look faster. Shifting the peak far enough to avoid that
+/// also weakens pipe organ as a median-of-three worst case, so the pattern stays as defined.
 /// </remarks>
 /// <typeparam name="T">Element type of the arrays being sorted.</typeparam>
 public sealed class SortBuffers<T>
@@ -43,8 +31,8 @@ public sealed class SortBuffers<T>
     private readonly T[][] _buffers;
     private int _next;
 
-    /// <param name="generate">Produces the input for a seed; called once per buffer with
-    /// <see cref="SortBuffers.FirstSeed"/> + the buffer's index. Every input must have the same length.</param>
+    /// <param name="generate">Returns the input for a seed. Called once per buffer with
+    /// <see cref="SortBuffers.FirstSeed"/> + its index. All inputs must have the same length.</param>
     public SortBuffers(Func<int, T[]> generate)
     {
         _sources = new T[SortBuffers.InvocationsPerIteration][];
@@ -58,10 +46,10 @@ public sealed class SortBuffers<T>
         }
     }
 
-    /// <summary>The inputs behind the buffers, in invocation order. Not to be modified.</summary>
+    /// <summary>The source inputs, in invocation order. Do not modify them.</summary>
     public IReadOnlyList<T[]> Sources => _sources;
 
-    /// <summary>Refreshes every buffer from its own source. Call from [IterationSetup].</summary>
+    /// <summary>Copies each source into its buffer. Call from [IterationSetup].</summary>
     public void Reset()
     {
         for (var i = 0; i < _buffers.Length; i++)
@@ -71,6 +59,6 @@ public sealed class SortBuffers<T>
         _next = 0;
     }
 
-    /// <summary>Returns the next fresh (unsorted) buffer for this iteration.</summary>
+    /// <summary>Returns the next unsorted buffer.</summary>
     public T[] Next() => _buffers[_next++];
 }
