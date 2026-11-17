@@ -32,7 +32,7 @@ public static class SortPhaseExtensions
     /// <param name="phase">The phase to classify.</param>
     /// <returns>
     /// True for phases emitted by <c>InsertionSort.SortCore</c>, <c>BinaryInsertionSort.SortCore</c>,
-    /// and <c>HeapSort.SortCore</c>; false for every other phase, including <see cref="SortPhase.None"/>.
+    /// <c>HeapSort.SortCore</c>, and quadsort's cores; false for every other phase, including <see cref="SortPhase.None"/>.
     /// </returns>
     /// <remarks>
     /// Keep this in sync with the set of cores called across algorithm boundaries. A core that starts
@@ -48,6 +48,12 @@ public static class SortPhaseExtensions
         // HeapSort.SortCore — the depth-limit fallback of IntroSort, StdSort, PDQSort, PDQSortBranchless and BlockQuickSort.
         SortPhase.HeapBuild => true,
         SortPhase.HeapExtract => true,
+        // QuadSort.SortCore / SortSwap — FluxSort hands small inputs, streaky quarters, short partitions and its pivot sample to quadsort.
+        SortPhase.QuadSortTailSwap => true,
+        SortPhase.QuadSortQuadSwap => true,
+        SortPhase.QuadSortQuadMerge => true,
+        SortPhase.QuadSortTailMerge => true,
+        SortPhase.QuadSortRotateMerge => true,
         _ => false,
     };
 

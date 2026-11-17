@@ -192,6 +192,7 @@ public class ObservationCoordinateTests
         yield return () => new AlgorithmCase("PDQSortBranchless", static (a, c) => PDQSortBranchless.Sort(a.AsSpan(), c));
         yield return () => new AlgorithmCase("HeapSort", static (a, c) => HeapSort.Sort(a.AsSpan(), c));
         yield return () => new AlgorithmCase("SymMergeSort", static (a, c) => SymMergeSort.Sort(a.AsSpan(), c));
+        yield return () => new AlgorithmCase("QuadSort", static (a, c) => QuadSort.Sort(a.AsSpan(), c));
         yield return () => new AlgorithmCase("CycleSort", static (a, c) => CycleSort.Sort(a.AsSpan(), c));
     }
 

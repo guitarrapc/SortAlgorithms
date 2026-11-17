@@ -58,6 +58,17 @@
 ///   <item><term>DriftsortSmallSort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>BlockMergeSortNetwork</term><description>n (total array length)</description></item>
 ///   <item><term>BlockMergeSortLevel</term><description>levelWidth (current merge run size) / passNum (1-based) / blockSize (√levelWidth)</description></item>
+///   <item><term>QuadSortTailSwap</term><description>start (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>QuadSortQuadSwap</term><description>start (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>QuadSortQuadMerge</term><description>start (inclusive) / end-1 (inclusive) / block</description></item>
+///   <item><term>QuadSortTailMerge</term><description>start (inclusive) / end-1 (inclusive) / block</description></item>
+///   <item><term>QuadSortRotateMerge</term><description>start (inclusive) / end-1 (inclusive) / block</description></item>
+///   <item><term>FluxSortAnalyze</term><description>start (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>FluxSortPartition</term><description>start (inclusive) / end-1 (inclusive) / source buffer</description></item>
+///   <item><term>FluxSortReversePartition</term><description>start (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>FluxSortPivotSample</term><description>start (inclusive) / end-1 (inclusive) / sampleCount</description></item>
+///   <item><term>FluxSortQuadsort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>FluxSortMerge</term><description>start (inclusive) / end of first half (inclusive) / end-1 (inclusive)</description></item>
 /// </list>
 /// </remarks>
 public enum SortPhase
@@ -735,4 +746,82 @@ public enum SortPhase
     /// param1=i (cell being settled), param2=n-1 (last index)
     /// </summary>
     FunSortPhase,
+
+    // Merge family (appended rather than placed in the section above: inserting a member there
+    // would renumber every later phase, and the numeric values are part of the recorded event stream)
+
+    /// <summary>
+    /// Quadsort tail swap: sorting a short range (fewer than 32 elements at the top level, up to 96 when FluxSort hands one over)
+    /// by sorting its four quarters recursively and parity merging them, with fixed parity swap networks below eight elements.
+    /// Detail phase: FluxSort delegates to quadsort.
+    /// param1=start (inclusive), param2=end-1 (inclusive), in the coordinates of the buffer that holds the range
+    /// </summary>
+    QuadSortTailSwap,
+
+    /// <summary>
+    /// Quadsort quad swap: classifying each group of eight as ordered, strictly descending or neither, reversing descending stretches
+    /// and sorting the rest into blocks of eight, then parity merging those into blocks of 32. Detail phase.
+    /// param1=start (inclusive), param2=end-1 (inclusive), in the coordinates of the buffer that holds the range
+    /// </summary>
+    QuadSortQuadSwap,
+
+    /// <summary>
+    /// Quadsort quad merge level: merging four adjacent sorted blocks at a time, pairwise into swap memory and back as one. Detail phase.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=block (length of the blocks being merged)
+    /// </summary>
+    QuadSortQuadMerge,
+
+    /// <summary>
+    /// Quadsort tail merge level: merging adjacent runs pairwise by a backward merge that copies the right run to swap memory. Detail phase.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=block (length of the left runs being merged)
+    /// </summary>
+    QuadSortTailMerge,
+
+    /// <summary>
+    /// Quadsort rotate merge level: merging adjacent runs in place with rotations and binary searches once the runs outgrow swap memory.
+    /// Detail phase.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=block (length of the left runs being merged)
+    /// </summary>
+    QuadSortRotateMerge,
+
+    // Partition family (appended rather than placed in the section above: inserting a member there
+    // would renumber every later phase, and the numeric values are part of the recorded event stream)
+
+    /// <summary>
+    /// FluxSort analysis: counting descending pairs and streaks in each quarter, detecting sorted input, and reversing strictly descending quarters.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    FluxSortAnalyze,
+
+    /// <summary>
+    /// FluxSort partition: copying the elements not greater than the pivot to the front of the range in buffer 0 and the greater ones to
+    /// swap memory, both in scan order. The pivot is on the stack at the end of swap memory and carries <see cref="RoleType.Pivot"/>.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=source buffer (0 = main, 1 = swap memory)
+    /// </summary>
+    FluxSortPartition,
+
+    /// <summary>
+    /// FluxSort reverse partition: separating the elements less than the pivot from those equal to it, which are then in their final place.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    FluxSortReversePartition,
+
+    /// <summary>
+    /// FluxSort pivot sample: copying an evenly spaced sample of the range into the other buffer and sorting its two halves with quadsort,
+    /// whose median becomes the pivot.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=sampleCount
+    /// </summary>
+    FluxSortPivotSample,
+
+    /// <summary>
+    /// FluxSort handing a range to quadsort: a small input, a streaky quarter, a short or unbalanced partition, or low-cardinality data.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    FluxSortQuadsort,
+
+    /// <summary>
+    /// FluxSort merging the sorted quarters: pairwise into swap memory and back as one, skipping merges whose boundary is in order.
+    /// param1=start (inclusive), param2=start of the second half - 1 (inclusive end of the first half), param3=end-1 (inclusive)
+    /// </summary>
+    FluxSortMerge,
 }

@@ -2324,6 +2324,7 @@ UnrollFactor=1  WarmupCount=2
 - [Patience Sort](./src/SortAlgorithm/Algorithms/Merge/PatienceSort.cs)
 - [Pingpong Merge Sort](./src/SortAlgorithm/Algorithms/Merge/PingpongMergeSort.cs)
 - [Power Sort](./src/SortAlgorithm/Algorithms/Merge/PowerSort.cs)
+- [Quad Sort](./src/SortAlgorithm/Algorithms/Merge/QuadSort.cs)
 - [Rotate Merge Sort](./src/SortAlgorithm/Algorithms/Merge/RotateMergeSort.cs)
   - Iterative
   - Recursive
@@ -2351,6 +2352,7 @@ UnrollFactor=1  WarmupCount=2
 - [Block Quick Sort](./src/SortAlgorithm/Algorithms/Partition/BlockQuickSort.cs)
 - [Quick Sort (Destswap Stable)](./src/SortAlgorithm/Algorithms/Partition/DestswapStableQuickSort.cs)
 - [Quick Sort (Dual Pivot)](./src/SortAlgorithm/Algorithms/Partition/DualPivotQuickSort.cs)
+- [Flux Sort](./src/SortAlgorithm/Algorithms/Partition/FluxSort.cs)
 - [Intro Sort](./src/SortAlgorithm/Algorithms/Partition/IntroSort.cs)
 - [Intro Sort (Dotnet)](./src/SortAlgorithm/Algorithms/Partition/IntroSortDotnet.cs)
 - [Ipnsort](./src/SortAlgorithm/Algorithms/Partition/Ipnsort.cs)

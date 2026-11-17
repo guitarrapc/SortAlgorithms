@@ -86,6 +86,7 @@ The repository also applies branch-sensitive structure where an algorithm justif
 
 - `BlockQuickSort` classifies elements into block index buffers. Unconditional offset stores are confined to the `NullContext` path, because an observing context must not be told about index-buffer writes the algorithm did not logically perform;
 - `Glidesort` contains branchless small sorting-network stages; its bidirectional stable partition uses a write-both kernel (unconditional stores to both candidate slots, the reference implementation's technique) and an AVX-512 compress kernel under `NullContext`, because RyuJIT compiles conditional-destination writes to data-dependent branches rather than cmov;
+- `QuadSort` and `FluxSort` port quadsort's and fluxsort's branchless merge and partition steps in the reference's gcc form, which writes both candidates and advances the cursors arithmetically. The clang form selects the value to write, and RyuJIT compiled that selection inside the merge loop to a data-dependent branch (verified by disassembly), which made random input measurably slower. Unlike Glidesort the write-both form runs under every context, so observed counts describe the code the unobserved path runs;
 - `InsertionSort` and `StdSort` use guarded/unguarded inner-loop variants where a sentinel or established boundary removes repeated boundary work;
 - `StdSort` uses a natural-order primitive-type gate for 64-element bitset partitions and small conditional-move networks. Bitsets are local values. The gate does not depend on `TContext`, so observed statistics describe the same algorithm the fast path runs; classification state never touches an observable buffer; and
 - PDQ variants use partial insertion-sort exits, already-partitioned detection, duplicate blocks, pattern-defeating shuffles, and heapsort fallback to avoid expensive work on favorable or adversarial inputs.
@@ -116,6 +117,7 @@ Allocation claims identify the algorithm, overload, element type, input size and
 Performance changes are evaluated in Release with BenchmarkDotNet. The repository harness:
 
 - prepares fresh input buffers outside the measured region so a benchmark does not repeatedly sort an already-sorted array;
+- generates each of an iteration's input buffers from its own seed, so no invocation of a seeded pattern sorts an input another invocation has already sorted (patterns that do not depend on a seed, such as sorted or pipe organ, are the same in every buffer by definition);
 - pins invocation count to the prepared buffer count and uses `UnrollFactor=1`;
 - records explicit tiering settings so runtime transitions do not silently change the measurement conditions; and
 - uses a fixed CI CPU model unless explicitly overridden, improving comparability across runs.
@@ -147,6 +149,8 @@ An optimization without this chain is a candidate, not an established project de
 
 The following are not repository-wide strategies: ISA-specific SIMD (`Vector128/256`, AVX, AdvSimd), portable `Vector<T>` sorting paths, `GC.AllocateUninitializedArray<T>`, `Unsafe.CopyBlock`, `CollectionsMarshal.AsSpan`, `Unsafe.BitCast`, and inline-array buffers. They remain outside the performance contract until correctness, portability, maintenance cost, generated code, and benchmarks justify adoption.
 
+One local exception: `QuadSort` holds the 32-element stack array that quadsort's definition merges through (`VAR swap[32]` in the reference) in an `[InlineArray(32)]` struct of `T`, because `stackalloc` cannot hold an arbitrary generic `T`. The runtime tracks reference fields of an inline array, so the buffer is safe for reference-containing `T`; tests cover strings and records. It is the algorithm's own fixed-size stack storage, not shared infrastructure, and other algorithms do not reuse it.
+
 ## Non-goals
 
 - Identical machine code across .NET versions, JIT modes, architectures, or NativeAOT
@@ -162,6 +166,7 @@ The following are not repository-wide strategies: ISA-specific SIMD (`Vector128/
 - Generic `TContext` is essential: an interface-typed context prevents the unobserved path from specializing cleanly.
 - Atomic statistics counters made observation disproportionately expensive; per-sort ownership enabled plain increments without weakening the intended usage model.
 - Fresh input per benchmark invocation matters. Re-sorting one array trains predictors and can hide the advantage of branchless partitioning.
+- A fresh copy of the same input is not fresh input. The harness restored every buffer from one source array until 2026-11-18; the predictor learned that array across the 64 invocations of an iteration, and branchy sorts on "random" data looked several times faster at a few thousand elements than at 8,192, where the input outgrew what the predictor could hold (`PDQSort`: 29 µs at 4,096 against 202 µs at 8,192; with one input per buffer, 108 µs and 234 µs). The symptom to look for is a jump in time between adjacent sizes far larger than n log n predicts. See the [2026-11-18 report](../reports/quadsort-fluxsort-vs-pdqsort-2026-11-18.md).
 - Bounds-check removal matters most for irregular or runtime-indexed access. Simple forward loops are often already optimized by the JIT.
 - Manual unrolling is justified only after disassembly shows the JIT did not unroll and benchmarks show an input-relevant benefit.
 - Branchless classification helps unpredictable data but can lose on small or predictable inputs because extra bookkeeping remains.
@@ -174,6 +179,8 @@ The following are not repository-wide strategies: ISA-specific SIMD (`Vector128/
 - Floating-point and integer measurements do not cover wider value types. Validate large structs separately before sharing a hot path.
 - Before concluding two implementations have equivalent performance, include inputs that exercise their different work and memory traffic.
 - Storing what a position already determines is a cost, not a safeguard. See the distribution auxiliary structure rule in `sorting_api.md`.
+- A value select that RyuJIT turns into `cmov` outside a loop can still become a branch inside one. QuadSort's merge step was written as `dst = gt ? r : l`; outside the loop it compiled to `cmov`, inside the merge loop to `test`/`je`, and random input paid for the mispredictions (QuadSort at n = 100,000 random `int` went from 4.6 ms to 1.9 ms once the step wrote both candidates). Check the loop body, not the first unrolled step.
+- A port that reproduces a reference's comparison counts exactly on identical inputs is the strongest fidelity evidence available for an adaptive sort, whose branching depends on the data. QuadSort and FluxSort were checked that way against the C sources, with the reference's address-derived sample offset replaced by the port's deterministic one.
 
 ## Compiler-Specific Reporting Helper Inlining
 
