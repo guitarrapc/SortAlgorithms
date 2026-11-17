@@ -42,13 +42,13 @@ Workflow run: https://github.com/guitarrapc/SortAlgorithms/actions/runs/43912034
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V45 4.27GHz, 1 CPU, 4 logical and 2 physical cores
+AMD EPYC 9V74 4.27GHz, 1 CPU, 4 logical and 2 physical cores
 Memory: 15.61 GB Total, 12.48 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method              | Size | Pattern            | Mean           | Error        | StdDev       | Ratio  | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -465,13 +465,13 @@ UnrollFactor=1  WarmupCount=2
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V45 4.27GHz, 1 CPU, 4 logical and 2 physical cores
+AMD EPYC 9V74 4.27GHz, 1 CPU, 4 logical and 2 physical cores
 Memory: 15.61 GB Total, 12.48 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method             | Size | Pattern            | Mean         | Error        | StdDev       | Ratio  | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -552,13 +552,13 @@ UnrollFactor=1  WarmupCount=2
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V45 4.27GHz, 1 CPU, 4 logical and 2 physical cores
+AMD EPYC 9V74 4.27GHz, 1 CPU, 4 logical and 2 physical cores
 Memory: 15.61 GB Total, 12.48 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method           | Size | Pattern            | Mean           | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -831,13 +831,13 @@ UnrollFactor=1  WarmupCount=2
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V45 4.27GHz, 1 CPU, 4 logical and 2 physical cores
+AMD EPYC 9V74 4.27GHz, 1 CPU, 4 logical and 2 physical cores
 Memory: 15.61 GB Total, 12.48 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                 | Size | Pattern            | Mean         | Error        | StdDev       | Ratio  | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -990,13 +990,13 @@ UnrollFactor=1  WarmupCount=2
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V45 4.27GHz, 1 CPU, 4 logical and 2 physical cores
+AMD EPYC 9V74 4.27GHz, 1 CPU, 4 logical and 2 physical cores
 Memory: 15.61 GB Total, 12.48 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                   | Size | Pattern            | Mean            | Error         | StdDev        | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -1461,13 +1461,13 @@ UnrollFactor=1  WarmupCount=2
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V45 4.27GHz, 1 CPU, 4 logical and 2 physical cores
+AMD EPYC 9V74 4.27GHz, 1 CPU, 4 logical and 2 physical cores
 Memory: 15.61 GB Total, 12.48 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method     | Size | Pattern            | Mean         | Error        | StdDev      | Ratio | Rank | Allocated | Alloc Ratio |
@@ -1500,13 +1500,13 @@ UnrollFactor=1  WarmupCount=2
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V45 4.27GHz, 1 CPU, 4 logical and 2 physical cores
+AMD EPYC 9V74 4.27GHz, 1 CPU, 4 logical and 2 physical cores
 Memory: 15.61 GB Total, 12.48 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                  | Size | Pattern            | Mean           | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -1635,13 +1635,13 @@ UnrollFactor=1  WarmupCount=2
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V45 4.27GHz, 1 CPU, 4 logical and 2 physical cores
+AMD EPYC 9V74 4.27GHz, 1 CPU, 4 logical and 2 physical cores
 Memory: 15.61 GB Total, 12.48 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                       | Size | Pattern            | Mean            | Error         | StdDev        | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -2082,13 +2082,13 @@ UnrollFactor=1  WarmupCount=2
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V45 4.27GHz, 1 CPU, 4 logical and 2 physical cores
+AMD EPYC 9V74 4.27GHz, 1 CPU, 4 logical and 2 physical cores
 Memory: 15.61 GB Total, 12.48 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method              | Size | Pattern            | Mean           | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -2169,13 +2169,13 @@ UnrollFactor=1  WarmupCount=2
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V45 4.27GHz, 1 CPU, 4 logical and 2 physical cores
+AMD EPYC 9V74 4.27GHz, 1 CPU, 4 logical and 2 physical cores
 Memory: 15.61 GB Total, 12.48 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                 | Size | Pattern            | Mean         | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |

@@ -23,7 +23,7 @@ on:
           - "*StringBenchmark*"
       allow-any-cpu:
         type: boolean
-        description: Skip the AMD EPYC 9V45 CPU requirement check.
+        description: Skip the AMD EPYC 9V74 CPU requirement check.
         default: false
 
 jobs:
@@ -53,7 +53,7 @@ jobs:
           fi
           echo "CPU OK: ${model}"
         env:
-          REQUIRED_CPU: EPYC 9V45
+          REQUIRED_CPU: EPYC 9V74
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
