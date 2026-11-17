@@ -26,9 +26,9 @@ public enum DataPattern
 
 public static class BenchmarkData
 {
-    public static int[] GenerateIntArray(int size, DataPattern pattern)
+    public static int[] GenerateIntArray(int size, DataPattern pattern, int seed = SortBuffers.FirstSeed)
     {
-        var random = new Random(42);
+        var random = new Random(seed);
         return pattern switch
         {
             DataPattern.Random => ArrayPatterns.GenerateRandom(size, random),
@@ -42,9 +42,9 @@ public static class BenchmarkData
         };
     }
 
-    public static IntKey[] GenerateIntKeyArray(int size, DataPattern pattern)
+    public static IntKey[] GenerateIntKeyArray(int size, DataPattern pattern, int seed = SortBuffers.FirstSeed)
     {
-        var random = new Random(42);
+        var random = new Random(seed);
         return pattern switch
         {
             DataPattern.Random => ArrayPatterns.GenerateRandomIntKey(size, random),
@@ -58,9 +58,9 @@ public static class BenchmarkData
         };
     }
 
-    public static string[] GenerateStringArray(int size, DataPattern pattern)
+    public static string[] GenerateStringArray(int size, DataPattern pattern, int seed = SortBuffers.FirstSeed)
     {
-        var random = new Random(42);
+        var random = new Random(seed);
 
         var baseArray = pattern switch
         {

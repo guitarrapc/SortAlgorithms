@@ -12,13 +12,18 @@ public abstract class SortAuditBase
 
     protected void Setup(string name)
     {
-        var input = BenchmarkData.GenerateIntArray(Size, Pattern);
-        var expected = input.Order().ToArray();
-        var actual = (int[])input.Clone();
-        SortAuditAlgorithms.All.Single(a => a.Name == name).Sort(actual);
-        if (!actual.AsSpan().SequenceEqual(expected))
-            throw new InvalidOperationException($"{name}: {Size}/{Pattern} failed correctness gate.");
-        buffers = new SortBuffers<int>(input);
+        buffers = new SortBuffers<int>(seed => BenchmarkData.GenerateIntArray(Size, Pattern, seed));
+
+        // Every input an invocation will sort passes the correctness gate, not just the first.
+        var sort = SortAuditAlgorithms.All.Single(a => a.Name == name).Sort;
+        foreach (var input in buffers.Sources)
+        {
+            var expected = input.Order().ToArray();
+            var actual = (int[])input.Clone();
+            sort(actual);
+            if (!actual.AsSpan().SequenceEqual(expected))
+                throw new InvalidOperationException($"{name}: {Size}/{Pattern} failed correctness gate.");
+        }
     }
 
     [IterationSetup]
@@ -403,6 +408,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(FluxSort))]
+    public void SetupFluxSort() => Setup(nameof(FluxSort));
+
+    [Benchmark]
+    public int FluxSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.FluxSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(FunSort))]
     public void SetupFunSort() => Setup(nameof(FunSort));
 
@@ -719,6 +735,17 @@ public class SortAuditBenchmark : SortAuditBase
     {
         var values = buffers.Next();
         SortAlgorithm.Algorithms.PowerSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
+    [GlobalSetup(Target = nameof(QuadSort))]
+    public void SetupQuadSort() => Setup(nameof(QuadSort));
+
+    [Benchmark]
+    public int QuadSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.QuadSort.Sort(values.AsSpan(), NullContext.Default);
         return values[values.Length / 2];
     }
 

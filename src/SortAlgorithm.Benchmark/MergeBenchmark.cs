@@ -13,12 +13,13 @@ public class MergeBenchmark
     private SortBuffers<int> _buffers = default!;
 
     // Restore cost stays out of the timed region: [IterationSetup] refreshes a pool of
-    // pre-copied buffers and each invocation sorts a fresh one (see SortBuffers<T>).
+    // pre-copied buffers and each invocation sorts a fresh one, each generated from its own
+    // seed, so a seeded pattern never repeats within an iteration (see SortBuffers<T>).
     // Program.cs pins the job's InvocationCount to the pool size.
     [GlobalSetup]
     public void Setup()
     {
-        _buffers = new SortBuffers<int>(BenchmarkData.GenerateIntArray(Size, Pattern));
+        _buffers = new SortBuffers<int>(seed => BenchmarkData.GenerateIntArray(Size, Pattern, seed));
     }
 
     [IterationSetup]
@@ -131,6 +132,12 @@ public class MergeBenchmark
     {
         SortAlgorithm.Algorithms.FlatStableSort.Sort(_buffers.Next().AsSpan());
     }
+
+    [Benchmark]
+    public void QuadSort()
+    {
+        SortAlgorithm.Algorithms.QuadSort.Sort(_buffers.Next().AsSpan());
+    }
 }
 
 /// <summary>
@@ -150,12 +157,13 @@ public class MergeSlowBenchmark
     private SortBuffers<int> _buffers = default!;
 
     // Restore cost stays out of the timed region: [IterationSetup] refreshes a pool of
-    // pre-copied buffers and each invocation sorts a fresh one (see SortBuffers<T>).
+    // pre-copied buffers and each invocation sorts a fresh one, each generated from its own
+    // seed, so a seeded pattern never repeats within an iteration (see SortBuffers<T>).
     // Program.cs pins the job's InvocationCount to the pool size.
     [GlobalSetup]
     public void Setup()
     {
-        _buffers = new SortBuffers<int>(BenchmarkData.GenerateIntArray(Size, Pattern));
+        _buffers = new SortBuffers<int>(seed => BenchmarkData.GenerateIntArray(Size, Pattern, seed));
     }
 
     [IterationSetup]

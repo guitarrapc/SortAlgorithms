@@ -15,37 +15,58 @@ public static class SortBuffers
     /// instead of silently sorting already-sorted data).
     /// </summary>
     public const int InvocationsPerIteration = 64;
+
+    /// <summary>
+    /// Seed of the input behind the pool's first buffer; buffer <c>i</c> uses <c>FirstSeed + i</c>.
+    /// The first buffer therefore holds the input every buffer used to share.
+    /// </summary>
+    public const int FirstSeed = 42;
 }
 
 /// <summary>
 /// A pool of pre-copied work buffers that keeps the restore cost (Array.Copy) out of the
 /// measured region. <see cref="Reset"/> is called from [IterationSetup] to refresh all
-/// buffers from the pristine source; each benchmark invocation then takes a fresh,
+/// buffers from their sources; each benchmark invocation then takes a fresh,
 /// unsorted buffer via <see cref="Next"/> with zero copy inside the timed code.
 /// </summary>
+/// <remarks>
+/// Every buffer has its own source, generated from its own seed. When all buffers held the same
+/// input, the branch predictor learned that input across the invocations of an iteration, and
+/// branchy sorts measured much faster on "random" data of a few thousand elements than
+/// on data they had not seen. Patterns that do not depend on the seed (sorted, reversed, pipe organ)
+/// still produce the same input in every buffer; they are as predictable as their definition.
+/// </remarks>
 /// <typeparam name="T">Element type of the arrays being sorted.</typeparam>
 public sealed class SortBuffers<T>
 {
-    private readonly T[] _pristine;
+    private readonly T[][] _sources;
     private readonly T[][] _buffers;
     private int _next;
 
-    public SortBuffers(T[] pristine)
+    /// <param name="generate">Produces the input for a seed; called once per buffer with
+    /// <see cref="SortBuffers.FirstSeed"/> + the buffer's index. Every input must have the same length.</param>
+    public SortBuffers(Func<int, T[]> generate)
     {
-        _pristine = pristine;
+        _sources = new T[SortBuffers.InvocationsPerIteration][];
         _buffers = new T[SortBuffers.InvocationsPerIteration][];
         for (var i = 0; i < _buffers.Length; i++)
         {
-            _buffers[i] = new T[pristine.Length];
+            _sources[i] = generate(SortBuffers.FirstSeed + i);
+            if (_sources[i].Length != _sources[0].Length)
+                throw new ArgumentException("Every generated input must have the same length.", nameof(generate));
+            _buffers[i] = new T[_sources[i].Length];
         }
     }
 
-    /// <summary>Refreshes every buffer from the pristine source. Call from [IterationSetup].</summary>
+    /// <summary>The inputs behind the buffers, in invocation order. Not to be modified.</summary>
+    public IReadOnlyList<T[]> Sources => _sources;
+
+    /// <summary>Refreshes every buffer from its own source. Call from [IterationSetup].</summary>
     public void Reset()
     {
-        foreach (var buffer in _buffers)
+        for (var i = 0; i < _buffers.Length; i++)
         {
-            Array.Copy(_pristine, buffer, _pristine.Length);
+            Array.Copy(_sources[i], _buffers[i], _sources[i].Length);
         }
         _next = 0;
     }
