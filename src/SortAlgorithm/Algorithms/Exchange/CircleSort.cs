@@ -37,6 +37,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(n log² n) worst case - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(log n) - recursion stack only; the pairing happens inside the input span</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>Each swap exchanges an inverted pair, so under a consistent comparer at most n(n - 1) / 2 passes can swap. A comparer that keeps
+/// swapping after that makes it throw <see cref="InvalidOperationException"/> instead of passing forever. Reaching that bound can take many
+/// passes, so such a comparer can still make a large sort run for a long time. Either way the range keeps its elements, and nothing outside
+/// it is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>Bezemer and Oyelami present Circlesort as "a variant of MDIS" (Modified Diminishing Increment Sorting), which they call
 /// "the best of all the improvements on Shellsort in the worst case". Its ancestry therefore runs through Shellsort, not through
@@ -95,12 +100,17 @@ public static class CircleSort
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
+        // Every swap exchanges an inverted pair, which a consistent comparer counts as at least one inversion fewer. So at most
+        // n(n - 1) / 2 passes can swap, and another one means the comparer is not consistent and the passes would never end. The natural
+        // order of a primitive type is consistent, so the check folds away for it.
+        var swappingPasses = (long)s.Length * (s.Length - 1) / 2;
         var pass = 1;
         bool swapped;
         do
         {
             context.OnPhase(SortPhase.CircleSortPass, pass, 0, 0);
             swapped = CircleSortCore(s, 0, s.Length - 1, 0);
+            if (!s.UsesNaturalPrimitiveOrder && swapped && --swappingPasses < 0) ThrowHelper.ThrowInconsistentComparer();
             pass++;
         }
         while (swapped);

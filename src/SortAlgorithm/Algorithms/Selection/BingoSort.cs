@@ -55,6 +55,10 @@ namespace SortAlgorithm.Algorithms;
 /// <para>This follows the Wikipedia pseudocode, which collects maxima at the end of the range; the NIST definition states the mirror image that
 /// collects minima at the front. The candidate is held by value, as in the pseudocode, so the scan reads one element per comparison.
 /// The <c>CurrentMax</c> role marks the element that holds the candidate value and follows it when a swap moves it.</para>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>A consistent comparer places at least one element in any two rounds in a row, so the sort needs at most about 2n rounds. A
+/// comparer that never finds an element equal to the maximum makes it throw <see cref="InvalidOperationException"/> instead of repeating
+/// rounds forever. Either way the range keeps its elements, and nothing outside it is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>Paul E. Black's entry in NIST's Dictionary of Algorithms and Data Structures gives the definition used here, names no inventor,
 /// and points to Berman and Paul (1996), §4.6, for more information. The name refers to the exclamation "Bingo!" when an item with the right value is found.</para>
@@ -183,8 +187,15 @@ public static class BingoSort
             end--;
         }
 
+        // A consistent comparer places at least one element in any two rounds in a row: a round that places nothing leaves its maximum
+        // inside the region, where the next round finds and places it. More rounds than that mean the comparer is not consistent, and the
+        // region would never shrink. The natural order of a primitive type is consistent, so the count folds away for it.
+        var checkProgress = !s.UsesNaturalPrimitiveOrder;
+        var rounds = 2L * (end - first) + 2;
         while (end > first)
         {
+            if (checkProgress && --rounds < 0) ThrowHelper.ThrowInconsistentComparer();
+
             // Collect every copy of the previous maximum at the end while finding the next maximum.
             s.Context.OnPhase(SortPhase.BingoPass, s.Offset + first, s.Offset + end);
             var prevMax = nextMax;

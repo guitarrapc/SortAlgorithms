@@ -34,6 +34,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(n × n!) on average - each shuffle writes every element through its n-1 swaps</description></item>
 /// <item><description>Space       : O(1) - the shuffle permutes the input span</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The sort shuffles until the comparer reports every neighbouring pair in order, so a comparer that never does keeps it shuffling
+/// forever. No bound on the shuffles is applied, because even with a consistent comparer a random shuffle has no worst case.</para>
 /// <para><strong>History:</strong></para>
 /// <para>No inventor is known; the Jargon File treats its origin as folklore. "bogo-sort" first appears in Jargon File version 2.4.1
 /// (14 January 1991) and is absent from version 2.3.1 (3 January 1991).</para>

@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -48,6 +49,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Non-recursive - Iterative bottom-up approach avoids stack overflow on large inputs</description></item>
 /// <item><description>Fewer merges - Exploits pre-existing order, skipping unnecessary work</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>With a consistent comparer each merge pass at least halves the number of runs, so the sort needs at most ceil(log2 n) merge
+/// passes. A comparer that keeps run detection finding runs after that makes it throw <see cref="InvalidOperationException"/> instead of
+/// merging forever. Either way the range keeps its elements, and nothing outside it is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>Natural merging was in production use before Knuth's TAOCP (1973), which is often cited for it. Marilyn M. Jensen's
 /// IBM "A Survey of Sorting Techniques" (1963) describes "the von Neumann, or natural, merge", which "takes full advantage of
@@ -133,6 +138,11 @@ public static class NaturalMergeSort
         where TContext : ISortContext
     {
         var length = s.Length;
+
+        // With a consistent comparer each merge pass at least halves the number of runs, so ceil(log2 n) passes merge everything.
+        // Another pass means the comparer is not consistent, and run detection would keep finding runs forever. The natural order of a
+        // primitive type is consistent, so the check folds away for it.
+        var mergePasses = length > 1 ? BitOperations.Log2((uint)(length - 1)) + 1 : 0;
         while (true)
         {
             // Phase 1: Detect all natural runs
@@ -144,6 +154,8 @@ public static class NaturalMergeSort
             {
                 break;
             }
+
+            if (!s.UsesNaturalPrimitiveOrder && --mergePasses < 0) ThrowHelper.ThrowInconsistentComparer();
 
             // Phase 2: Merge adjacent pairs of runs using fixed boundaries
             // Odd run at the end is carried forward unmerged to the next pass

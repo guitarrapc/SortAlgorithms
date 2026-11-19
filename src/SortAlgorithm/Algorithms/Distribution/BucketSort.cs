@@ -1,5 +1,6 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -332,6 +333,11 @@ public static class BucketSort
 /// <item><description>Space       : O(n + k) - k bucket lists plus n elements total</description></item>
 /// <item><description>Range limit : None - auxiliary space depends on n, not on the key range</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The comparer finds the minimum and the maximum, but the buckets cover numeric ranges between them, so the comparer must order the
+/// values the way their numeric values do. A comparer that does not, whether consistent or not, can make the sort throw
+/// <see cref="InvalidOperationException"/> or leave the range in an order that is not the comparer's. Nothing outside the range is read
+/// or written either way.</para>
 /// <para><strong>Note:</strong> バケット数は min(n, 値域)。CountingSort / PigeonholeSort と違い値域の上限制約はありません。</para>
 /// </remarks>
 public static class BucketSortInteger
@@ -490,8 +496,11 @@ public static class BucketSortInteger
             var bucketIndex = (int)((ulong)(valueLong - min) / bucketSize);
 
             // Handle edge case where value == max
-            if (bucketIndex >= bucketCount)
+            // A comparer that orders the values by their numeric value keeps every value between its minimum and maximum. Any other
+            // comparer can leave a value far outside them, whose distance wraps to a negative index. The unsigned test catches both.
+            if ((uint)bucketIndex >= (uint)bucketCount)
             {
+                if (bucketIndex < 0) ThrowComparerDisagreesWithValues();
                 bucketIndex = bucketCount - 1;
             }
 
@@ -539,6 +548,11 @@ public static class BucketSortInteger
         // Write sorted data back to original span using CopyTo for better performance
         tempSpan.CopyTo(0, source, 0, source.Length);
     }
+
+    /// <summary>Reports a comparer whose minimum and maximum do not bound the numeric values of the elements.</summary>
+    [DoesNotReturn]
+    static void ThrowComparerDisagreesWithValues()
+        => throw new InvalidOperationException("The comparer does not order the values by their numeric value.");
 
     /// <summary>
     /// Throws <see cref="NotSupportedException"/> if <typeparamref name="T"/> is not supported.

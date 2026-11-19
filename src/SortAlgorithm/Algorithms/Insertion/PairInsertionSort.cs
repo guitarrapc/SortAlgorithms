@@ -53,6 +53,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Non-leftmost partitions in quicksort (where sentinel is guaranteed)</description></item>
 /// <item><description>Nearly sorted data where insertion sort excels</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The larger element of each pair stops at the smaller one, which only a consistent comparer guarantees. Element access is
+/// unchecked, so that shift is also checked against the range. The natural order of a primitive type is always consistent, and the check
+/// is compiled out for it. A comparer that is not a consistent total order can make the sort throw
+/// <see cref="InvalidOperationException"/>. Either way the range keeps its elements, in an unspecified order, and nothing outside the range
+/// is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>The earliest source found is JDK 7's <c>DualPivotQuicksort</c> (version 2011.02.11, by Vladimir Yaroslavskiy, Jon Bentley
 /// and Josh Bloch). It sorts the non-leftmost parts with "the more optimized algorithm, so called pair insertion sort". The name
@@ -191,6 +197,9 @@ public static class PairInsertionSort
             j = i; // Start from position after 'a' was inserted
             while (s.IsElementGreaterThan(j, b))
             {
+                // Only a consistent comparer stops at 'a', and element access is unchecked. A shift at first would read below the range
+                // next. The natural order of a primitive type is consistent, so the check folds away for it.
+                if (!s.UsesNaturalPrimitiveOrder && j == first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, j + 1, b);
                 s.Write(j + 1, s.Read(j));
                 j--;
             }
@@ -233,13 +242,12 @@ public static class PairInsertionSort
     /// This precondition is guaranteed by partitioning schemes in algorithms like IntroSort.
     ///
     /// Optimization strategy:
-    /// - Element 'a' (smaller): unguarded insertion using s[first-1] as sentinel
-    /// - Element 'b' (larger): guarded insertion (j >= first check) using inserted 'a' as sentinel
+    /// - Element 'a' (smaller): insertion that stops at the sentinel s[first-1]
+    /// - Element 'b' (larger): insertion that stops at 'a', which is already in place
     ///
-    /// This hybrid approach provides:
-    /// - Safety: Prevents memory corruption if precondition is violated
-    /// - Performance: Still eliminates boundary check for 'a' insertion (half of insertions)
-    /// - Correctness: 'b' insertion correctly uses 'a' as sentinel without accessing [first-1]
+    /// Only a consistent comparer stops these loops at their sentinel. Element access is unchecked, so a shift that would pass s[first-1]
+    /// throws <see cref="InvalidOperationException"/> and leaves the range a permutation of its input. The natural order of a primitive type
+    /// is consistent, and the checks fold away for it.
     /// </remarks>
     internal static void UnguardedSortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
@@ -254,7 +262,8 @@ public static class PairInsertionSort
         while (i + 1 < last)
         {
             // Ensure a <= b
-            if (s.IsGreaterAt(i, i + 1, out var a, out var b))
+            var swapped = s.IsGreaterAt(i, i + 1, out var a, out var b);
+            if (swapped)
             {
                 (a, b) = (b, a);
             }
@@ -263,6 +272,8 @@ public static class PairInsertionSort
             var j = i - 1;
             while (s.IsElementGreaterThan(j, a))
             {
+                // The first shift overwrote the element from i, and s[i + 1] still holds the other one, so the element from i fills the gap.
+                if (!s.UsesNaturalPrimitiveOrder && j < first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, j + 1, swapped ? b : a);
                 s.Write(j + 1, s.Read(j));
                 j--;
             }
@@ -273,6 +284,7 @@ public static class PairInsertionSort
             j = i;
             while (s.IsElementGreaterThan(j, b))
             {
+                if (!s.UsesNaturalPrimitiveOrder && j < first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, j + 1, b);
                 s.Write(j + 1, s.Read(j));
                 j--;
             }
@@ -288,6 +300,7 @@ public static class PairInsertionSort
             var j = i - 1;
             while (s.IsElementGreaterThan(j, tmp))
             {
+                if (!s.UsesNaturalPrimitiveOrder && j < first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, j + 1, tmp);
                 s.Write(j + 1, s.Read(j));
                 j--;
             }

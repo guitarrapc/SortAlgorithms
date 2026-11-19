@@ -45,6 +45,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Systems where memory writes are significantly more expensive than comparisons</description></item>
 /// <item><description>Educational purposes to demonstrate cycle detection in permutations</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The duplicate skip stops before the end of the range, and the rotations take at most n steps in total, only with a consistent
+/// comparer. Both are checked. A comparer that is not a consistent total order can make the sort throw
+/// <see cref="InvalidOperationException"/>. Either way the range keeps its elements, and nothing outside it is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>Haddon (1990) named the method and its idea of placing each element by following cycles; his paper's title calls it
 /// "A Linear Sorting Method". The form implemented here finds each element's position by counting the smaller elements, which costs
@@ -97,6 +101,11 @@ public static class CycleSort
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
+        // A consistent comparer writes each element to its final cell at most once over the whole sort, so the rotations take at most n
+        // steps in total. More steps mean the comparer is not consistent, and a rotation might never return to its start. The natural order
+        // of a primitive type is consistent, so this check and the two below fold away for it.
+        var steps = span.Length;
+
         for (var cycleStart = 0; cycleStart < span.Length - 1; cycleStart++)
         {
             context.OnPhase(SortPhase.CycleSortCycle, cycleStart, span.Length - 1);
@@ -113,7 +122,10 @@ public static class CycleSort
             }
 
             // Skip duplicates
+            // With a consistent comparer the skip stops before the end, because the positions from pos onwards outnumber the copies of the
+            // item. Element access is unchecked, so a skip that reaches the end throws. Nothing has been written yet.
             pos = SkipDuplicates(ref s, item, pos);
+            if (!s.UsesNaturalPrimitiveOrder && pos == s.Length) ThrowHelper.ThrowInconsistentComparer();
 
             // Put the item at its correct position
             var temp = s.Read(pos);
@@ -123,8 +135,13 @@ public static class CycleSort
             // Rotate the rest of the cycle
             while (pos != cycleStart)
             {
+                if (!s.UsesNaturalPrimitiveOrder && --steps < 0) ThrowHelper.RestoreAndThrowInconsistentComparer(s, cycleStart, item);
+
                 pos = FindPosition(ref s, item, cycleStart);
                 pos = SkipDuplicates(ref s, item, pos);
+
+                // The cell at cycleStart still holds a copy of the first item, so the held item goes there before throwing.
+                if (!s.UsesNaturalPrimitiveOrder && pos == s.Length) ThrowHelper.RestoreAndThrowInconsistentComparer(s, cycleStart, item);
 
                 temp = s.Read(pos);
                 s.Write(pos, item);

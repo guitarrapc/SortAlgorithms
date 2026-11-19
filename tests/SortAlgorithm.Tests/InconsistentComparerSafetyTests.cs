@@ -17,7 +17,7 @@ public class InconsistentComparerSafetyTests
     enum Sorter
     {
         Quad, QuadLimitedSwap, Flux, Pdq, PdqBranchless, Intro, IntroDotnet, Std,
-        Quick, QuickMedian3, QuickMedian9, Quick3way, Stable, BidirectionalStable,
+        Quick, QuickMedian3, QuickMedian9, Quick3way, Stable, BidirectionalStable, PairInsertion,
     }
 
     /// <summary>
@@ -186,6 +186,7 @@ public class InconsistentComparerSafetyTests
             case Sorter.Quick3way: QuickSort3way.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.Stable: StableQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.BidirectionalStable: BidirectionalStableQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.PairInsertion: PairInsertionSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             default: throw new ArgumentOutOfRangeException(nameof(sorter));
         }
     }
@@ -497,6 +498,178 @@ public class InconsistentComparerSafetyTests
         var span = scratch.AsSpan(0, data.Length);
         if (sorter == Sorter.Stable) StableQuickSort.SortCore(s, 0, data.Length - 1, span);
         else BidirectionalStableQuickSort.SortCore(s, 0, data.Length - 1, span);
+    }
+
+    /// <summary>
+    /// The unguarded core of PairInsertionSort relies on the element before the range as a sentinel. Guard cells lie below that sentinel,
+    /// so a shift that passes it reads a guard cell. Pairs start after the first element, so only even lengths leave a last element alone.
+    /// </summary>
+    [Test]
+    public async Task PairInsertionUnguardedCoreStopsAtItsSentinel()
+    {
+        foreach (var n in new[] { 7, 8, 31, 32, 133 })
+        {
+            for (var seed = 1; seed <= 40; seed++)
+            {
+                var data = FullRangeInts(n, seed);
+                IComparer<int>[] comparers = [new ConstantComparer(-1), new ConstantComparer(1), new StickyIntComparer(new Random(seed)), new CoinFlipComparer(new Random(seed)), new ReversingComparer(seed * n / 8)];
+                foreach (var comparer in comparers)
+                {
+                    await Assert.That(PairInsertionUnguarded(data, comparer)).IsNull().Because($"n={n} seed={seed} {comparer.GetType().Name}");
+                }
+            }
+        }
+    }
+
+    static string? PairInsertionUnguarded(int[] data, IComparer<int> comparer)
+    {
+        const int sentinel = int.MinValue + 1;
+        var buffer = new int[GuardLength + 1 + data.Length + GuardLength];
+        Array.Fill(buffer, int.MinValue);
+        buffer[GuardLength] = sentinel;
+        data.CopyTo(buffer, GuardLength + 1);
+        var watch = new GuardWatch();
+        var s = new SortSpan<int, WatchingComparer<int, IComparer<int>>, NullContext>(buffer, NullContext.Default, new WatchingComparer<int, IComparer<int>>(comparer, int.MinValue, watch), 0);
+        try
+        {
+            PairInsertionSort.UnguardedSortCore(s, GuardLength + 1, GuardLength + 1 + data.Length);
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (GuardCellReadException)
+        {
+        }
+
+        if (watch.SawGuard) return "the comparer was shown a guard cell";
+        if (buffer.Take(GuardLength).Concat(buffer.Skip(GuardLength + 1 + data.Length)).Any(v => v != int.MinValue)) return "a guard cell was overwritten";
+        var expected = data.Append(sentinel).Order();
+        var actual = buffer.Skip(GuardLength).Take(data.Length + 1).Order();
+        return expected.SequenceEqual(actual) ? null : "the range and its sentinel are no longer a permutation of the input";
+    }
+
+    /// <summary>Answers from a table indexed by the two values, so its answers repeat but need not be consistent.</summary>
+    sealed class TableComparer(int[][] table) : IComparer<int>
+    {
+        public int Compare(int x, int y) => table[x - 1][y - 1];
+    }
+
+    public static IEnumerable<Func<(string Name, int[] Input, int[][] Table)>> CycleSkipCases()
+    {
+        // x > y answers "equal" and anything else "less", which finds the 3 a place past both other values and then skips to the end.
+        yield return () => ("first skip", [3, 1, 2], [[-1, -1, -1], [0, -1, -1], [0, 0, -1]]);
+        // Found by a search over random tables. The skip reaches the end inside the rotation, after the first item has been placed.
+        yield return () => ("rotation skip", [3, 1, 2], [[1, -1, -1], [1, 0, 0], [0, -1, -1]]);
+    }
+
+    /// <summary>
+    /// The duplicate skip of CycleSort runs to the end of the range with these comparers. Guard cells follow the range and hold a value the
+    /// table does not cover, so reading one throws from the comparer. The sort must stop with the range a permutation of its input.
+    /// </summary>
+    [Test]
+    [MethodDataSource(nameof(CycleSkipCases))]
+    public async Task CycleSortSkipStopsAtTheEndOfTheRange(string name, int[] input, int[][] table)
+    {
+        const int guard = -1;
+        var buffer = input.Concat(Enumerable.Repeat(guard, GuardLength)).ToArray();
+        var (finished, error) = RunWithin(() => CycleSort.Sort(buffer.AsSpan(0, input.Length), new TableComparer(table), NullContext.Default));
+
+        await Assert.That(finished).IsTrue().Because(name);
+        await Assert.That(error).IsTypeOf<InvalidOperationException>().Because($"{name}: {error}");
+        await Assert.That(buffer.Skip(input.Length).All(v => v == guard)).IsTrue().Because($"{name}: a guard cell was overwritten");
+        await Assert.That(buffer.Take(input.Length).Order().SequenceEqual(input.Order())).IsTrue().Because($"{name}: the range is no longer a permutation");
+    }
+
+    /// <summary>Sorts that stop only once their comparisons report order, and so count their progress against a bound.</summary>
+    enum Bounded { OddEven, Circle, Gnome, GnomeNonOptimized, NaturalMerge, Fun, Bingo, Cycle }
+
+    public static IEnumerable<string> BoundedSorters() => Enum.GetNames<Bounded>();
+
+    static void SortBounded(Bounded sorter, int[] data, IComparer<int> comparer)
+    {
+        var span = data.AsSpan();
+        switch (sorter)
+        {
+            case Bounded.OddEven: OddEvenSort.Sort(span, comparer, NullContext.Default); break;
+            case Bounded.Circle: CircleSort.Sort(span, comparer, NullContext.Default); break;
+            case Bounded.Gnome: GnomeSort.Sort(span, comparer, NullContext.Default); break;
+            case Bounded.GnomeNonOptimized: GnomeSortNonOptimized.Sort(span, comparer, NullContext.Default); break;
+            case Bounded.NaturalMerge: NaturalMergeSort.Sort(span, comparer, NullContext.Default); break;
+            case Bounded.Fun: FunSort.Sort(span, comparer, NullContext.Default); break;
+            case Bounded.Bingo: BingoSort.Sort(span, comparer, NullContext.Default); break;
+            default: CycleSort.Sort(span, comparer, NullContext.Default); break;
+        }
+    }
+
+    /// <summary>
+    /// Each of these sorts repeats work until its comparisons report order, and counts that work against a bound that a consistent comparer
+    /// never reaches. These comparers never report a consistent order, and each made one of the sorts run forever before it had a bound.
+    /// The sorts must stop with the range a permutation of the input. Each runs on its own thread, so a missing bound fails the test instead
+    /// of hanging the run.
+    /// </summary>
+    [Test]
+    [MethodDataSource(nameof(BoundedSorters))]
+    public async Task SortsThatWaitForOrderStillFinish(string sorterName)
+    {
+        var sorter = Enum.Parse<Bounded>(sorterName);
+        foreach (var n in new[] { 3, 17, 40, 100 })
+        {
+            for (var seed = 1; seed <= 8; seed++)
+            {
+                var input = FullRangeInts(n, seed);
+                IComparer<int>[] comparers =
+                [
+                    new ConstantComparer(-1), new ConstantComparer(1), new CoinFlipComparer(new Random(seed)), new StickyIntComparer(new Random(seed)),
+                    new OverflowingComparer(),
+                ];
+                foreach (var comparer in comparers)
+                {
+                    var label = $"{sorter} n={n} seed={seed} {comparer.GetType().Name}";
+                    var data = input.ToArray();
+                    var (finished, error) = RunWithin(() => SortBounded(sorter, data, comparer));
+
+                    await Assert.That(finished).IsTrue().Because(label);
+                    await Assert.That(error is null or InvalidOperationException).IsTrue().Because($"{label}: {error}");
+                    await Assert.That(data.Order().SequenceEqual(input.Order())).IsTrue().Because($"{label}: the range is no longer a permutation");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// BucketSortInteger takes its minimum and maximum from the comparer but its buckets from the numeric values. Ordering by absolute value
+    /// is consistent, yet it leaves -1 numerically below the minimum 1. That disagreement, and the broken comparers that once indexed outside
+    /// the buckets, must be reported, and the range is not written before the report.
+    /// </summary>
+    [Test]
+    public async Task BucketSortIntegerReportsAComparerThatDisagreesWithTheValues()
+    {
+        int[] absolute = [1, 2, -1];
+        var (_, error) = RunWithin(() => BucketSortInteger.Sort(absolute.AsSpan(), Comparer<int>.Create((a, b) => Math.Abs(a).CompareTo(Math.Abs(b))), NullContext.Default));
+        await Assert.That(error).IsTypeOf<InvalidOperationException>();
+        await Assert.That(absolute.SequenceEqual([1, 2, -1])).IsTrue();
+
+        foreach (var n in new[] { 3, 17, 100, 1000 })
+        {
+            for (var seed = 1; seed <= 8; seed++)
+            {
+                var input = FullRangeInts(n, seed);
+                IComparer<int>[] comparers =
+                [
+                    new ConstantComparer(-1), new ConstantComparer(1), new CoinFlipComparer(new Random(seed)), new StickyIntComparer(new Random(seed)),
+                    new OverflowingComparer(),
+                ];
+                foreach (var comparer in comparers)
+                {
+                    var label = $"n={n} seed={seed} {comparer.GetType().Name}";
+                    var data = input.ToArray();
+                    (_, error) = RunWithin(() => BucketSortInteger.Sort(data.AsSpan(), comparer, NullContext.Default));
+
+                    await Assert.That(error is null or InvalidOperationException).IsTrue().Because($"{label}: {error}");
+                    await Assert.That(data.Order().SequenceEqual(input.Order())).IsTrue().Because($"{label}: the range is no longer a permutation");
+                }
+            }
+        }
     }
 
     [Test]

@@ -49,6 +49,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>vs Cocktail Sort: Cocktail Sort uses bidirectional passes; Odd-Even Sort uses alternating pair phases</description></item>
 /// <item><description>vs Insertion Sort: Insertion Sort is typically faster in sequential execution for small arrays</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>A consistent comparer sorts any input within n phases, two per pass, so a pass after the n-th never swaps. A comparer that still
+/// swaps there makes it throw <see cref="InvalidOperationException"/> instead of passing forever. Either way the range keeps its elements,
+/// and nothing outside it is read or written.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Odd%E2%80%93even_sort</para>
 /// </remarks>
@@ -123,6 +127,10 @@ public static class OddEvenSort
                     sorted = false;
                 }
             }
+            // A consistent comparer sorts any input within n phases, two per pass, so a pass after the n-th never swaps. One that still
+            // swaps can only come from a comparer that is not consistent, which would keep the passes going forever. The natural order
+            // of a primitive type is consistent, so the check folds away for it.
+            if (!s.UsesNaturalPrimitiveOrder && !sorted && pass > s.Length) ThrowHelper.ThrowInconsistentComparer();
             pass++;
         }
     }

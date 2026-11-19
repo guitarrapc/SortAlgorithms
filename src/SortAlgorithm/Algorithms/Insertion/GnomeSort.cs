@@ -40,6 +40,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: Best: 0 | Average: ~n²/2 | Worst: n(n-1) (2 writes per swap)</description></item>
 /// <item><description>Space       : O(1) - the gnome walks the array with a single position variable</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>Each swap exchanges an adjacent inverted pair, so under a consistent comparer the sort makes at most n(n - 1) / 2 swaps. A
+/// comparer that drives it past that makes it throw <see cref="InvalidOperationException"/> instead of walking forever. The natural order
+/// of a primitive type is always consistent, and the count is compiled out for it. Either way the range keeps its elements, and nothing
+/// outside it is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>The method is older than its names. Michael Singer's "PDP-11 Assembler Language Programming and Machine Organization"
 /// (1980, §2.3) describes it exactly: compare each number with its successor, and if they are out of order, "interchange the two
@@ -99,11 +104,17 @@ public static class GnomeSort
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
+        // Every swap exchanges an adjacent inverted pair, so a consistent comparer allows at most n(n - 1) / 2 of them. More can only come
+        // from a comparer that is not consistent, which would keep the gnome walking forever. The count sits on the swap, so a step that
+        // swaps nothing pays nothing, and it folds away for the natural order of a primitive type.
+        var checkProgress = !s.UsesNaturalPrimitiveOrder;
+        var swapBudget = (long)s.Length * (s.Length - 1) / 2;
         for (var i = 0; i < s.Length; i++)
         {
             context.OnPhase(SortPhase.GnomePass, i, s.Length - 1);
             while (i > 0 && s.IsGreaterAt(i - 1, i))
             {
+                if (checkProgress && --swapBudget < 0) ThrowHelper.ThrowInconsistentComparer();
                 s.Swap(i - 1, i);
                 i--;
             }
@@ -148,6 +159,10 @@ public static class GnomeSort
 /// <item><description>Index Writes: Best: 0 | Average: ~n²/2 | Worst: n(n-1) (2 writes per swap)</description></item>
 /// <item><description>Space       : O(1) - the gnome walks the array with a single position variable</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>As in <see cref="GnomeSort"/>, a comparer that drives the sort past n(n - 1) / 2 swaps makes it throw
+/// <see cref="InvalidOperationException"/> instead of walking forever. Either way the range keeps its elements, and nothing outside it is
+/// read or written.</para>
 /// </remarks>
 public static class GnomeSortNonOptimized
 {
@@ -189,6 +204,10 @@ public static class GnomeSortNonOptimized
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
 
+        // As in GnomeSort, a consistent comparer allows at most n(n - 1) / 2 swaps, and the count folds away for the natural order of a
+        // primitive type.
+        var checkProgress = !s.UsesNaturalPrimitiveOrder;
+        var swapBudget = (long)s.Length * (s.Length - 1) / 2;
         var i = 0;
         while (i < s.Length)
         {
@@ -199,6 +218,7 @@ public static class GnomeSortNonOptimized
             }
             else
             {
+                if (checkProgress && --swapBudget < 0) ThrowHelper.ThrowInconsistentComparer();
                 s.Swap(i, i - 1);
                 --i;
             }

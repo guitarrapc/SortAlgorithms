@@ -54,6 +54,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Each phase announces <see cref="SortPhase.FunSortPhase"/> with param1 = i and param2 = n - 1, and cell i carries <see cref="RoleType.Inserting"/> until the phase ends.
 /// The key is read once per search and compared as a value, so each probe of the search shows up as a comparison against cell m.</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>Each swap exchanges a strictly inverted pair, so under a consistent comparer the sort makes at most n(n - 1) / 2 swaps. A comparer
+/// that drives it past that makes it throw <see cref="InvalidOperationException"/> instead of searching forever. Either way the range keeps
+/// its elements, and nothing outside it is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>Biedl, Chan, Demaine, Fleischer, Golin and Munro presented Fun-Sort at FUN with Algorithms 2001, named after the conference series. The 2004 journal version,
 /// with King, adds the observation that for n = 2^k - 1 a binary search for the element of rank i in a random permutation ends, on average, exactly at cell i,
@@ -114,6 +118,12 @@ public static class FunSort
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         var last = span.Length - 1;
 
+        // Every swap exchanges a strictly inverted pair, so a consistent comparer allows at most n(n - 1) / 2 of them. More can only come
+        // from a comparer that is not consistent, which would keep the searches going forever. The natural order of a primitive type is
+        // consistent, so the count folds away for it.
+        var checkProgress = !s.UsesNaturalPrimitiveOrder;
+        var swapBudget = (long)span.Length * (span.Length - 1) / 2;
+
         for (var i = 0; i <= last; i++)
         {
             context.OnPhase(SortPhase.FunSortPhase, i, last);
@@ -123,6 +133,7 @@ public static class FunSort
             {
                 var h = Search(s, i);
                 if (h == i) break;
+                if (checkProgress && --swapBudget < 0) ThrowHelper.ThrowInconsistentComparer();
 
                 if (h > i)
                 {

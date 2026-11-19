@@ -48,6 +48,9 @@ namespace SortAlgorithm.Algorithms;
 /// swaps, which keeps statistics, visualizations, and benchmarks reproducible. The <c>seed</c> parameter selects another sequence; 0 falls back to the default.</description></item>
 /// <item><description>Each transposition announces <see cref="SortPhase.BozoSwap"/> with param1 = attempt number (1-based), param2 = i, param3 = j, before the swap.</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The sort swaps random pairs until the comparer reports every neighbouring pair in order, so a comparer that never does keeps it
+/// swapping forever. No bound on the swaps is applied, because even with a consistent comparer random swaps have no worst case.</para>
 /// <para><strong>History:</strong></para>
 /// <para>Gruber, Holzer and Ruepp (2007) present bozo-sort as a variation of bogo-sort that replaces the shuffle with a random transposition and bound its cost.
 /// The expected swap count rests on the hitting-time result for random transpositions by Flatto, Odlyzko and Wales (1985).</para>
