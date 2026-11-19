@@ -18,7 +18,8 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Theoretical Conditions for Correct Iterative Rotate Merge Sort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Phase 1 – Insertion Sort Seeding:</strong> Every contiguous block of size
-/// InsertionSortThreshold is sorted independently with insertion sort.
+/// InsertionSortThreshold (14) is sorted independently with insertion sort. libstdc++'s __inplace_stable_sort, which
+/// pairs this merge with a merge sort, insertion-sorts every range shorter than 15 elements; 14 is the longest such range.
 /// The last block may be shorter; its size is clamped to the remaining element count.</description></item>
 /// <item><description><strong>Phase 2 – Bottom-Up Merge Passes:</strong> Starting from
 /// <c>width = InsertionSortThreshold</c>, each pass merges adjacent run pairs
@@ -30,10 +31,6 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Already-Sorted Skip:</strong> Before each merge, if
 /// <c>s[mid] ≤ s[mid+1]</c> the two runs are already in order and the merge is skipped,
 /// reducing work on nearly-sorted inputs.</description></item>
-/// <item><description><strong>Completely-Disjoint Skip:</strong> Before each merge, if
-/// <c>s[left] &gt; s[right]</c> every element of the left run exceeds every element of the right run.
-/// The entire pair is resolved with a single rotation, bypassing all divide-and-conquer work.
-/// Reverse-order inputs produce run pairs exactly in this form after Phase 1, turning O(n log² n) merge work into O(n log n) rotations.</description></item>
 /// <item><description><strong>Divide-and-Conquer In-Place Merge (Explicit Stack):</strong> Each merge picks the median of
 /// the larger side, binary searches (lower_bound or upper_bound) for its position in the opposite side,
 /// rotates the overlapping region, then pushes the two resulting sub-problems onto an explicit worklist (stackalloc).
@@ -65,8 +62,8 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Implementation note – already-sorted skip:</strong></para>
 /// <para>The Best case row above is rotate merge sort's own: Dudziński and Dydek's merge, in the form libstdc++'s
 /// __merge_without_buffer implements it, has no already-sorted check, and on sorted input it keeps halving one side and
-/// binary-searching the other until a side is empty. With this implementation's 16-element blocks and that check removed,
-/// sorted input costs about 3n comparisons (about 2n of them in the merges) and moves nothing. This implementation adds the
+/// binary-searching the other until a side is empty. With this implementation's 14-element blocks and that check removed,
+/// sorted input costs about 2.8n comparisons (about 1.8n of them in the merges) and moves nothing. This implementation adds the
 /// check at the top of each phase-2 pair and again at each sub-problem of the merge: when the left run ends at or below the
 /// start of the right run (<c>s[mid] ≤ s[mid+1]</c>), the merge has nothing to do and is skipped. Only a merge that would
 /// have changed nothing is removed; the output and the work of every merge that does run are unchanged. The check costs one
@@ -84,6 +81,7 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Reference:</strong></para>
 /// <para>Divide-and-conquer in-place merge: Krzysztof Dudziński and Andrzej Dydek, "On a stable minimum storage merging algorithm", Information Processing Letters 12(1):5–8 (1981) https://doi.org/10.1016/0020-0190(81)90065-X</para>
 /// <para>libstdc++: std::__merge_without_buffer (bits/stl_algo.h) https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc++-v3/include/bits/stl_algo.h#L2431-L2480</para>
+/// <para>libstdc++: std::__inplace_stable_sort (bits/stl_algo.h), the insertion-sort limit https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc++-v3/include/bits/stl_algo.h#L2741-L2758</para>
 /// </remarks>
 public static class RotateMergeSort
 {
@@ -93,8 +91,8 @@ public static class RotateMergeSort
     /// <remarks>Verified by RotateMergeSortTests, which derives from StableSortTestsBase.</remarks>
     public static bool IsStable => true;
 
-    // Threshold for using insertion sort instead of rotation-based merge
-    private const int InsertionSortThreshold = 16;
+    // Length of the blocks seeded by insertion sort: libstdc++'s __inplace_stable_sort insertion-sorts ranges shorter than 15.
+    private const int InsertionSortThreshold = 14;
 
     // Maximum small-side length for the shift-based Rotate fast path.
     // The saved side is held in local variables, so this bound is the number of those locals.
@@ -150,8 +148,8 @@ public static class RotateMergeSort
     {
         // n is a span length, so it can be as large as int.MaxValue. Every index expression below is
         // therefore written so that it cannot overflow: none of them forms a sum that exceeds n.
-        // The natural spellings do overflow — `width * 2` once width passes 2^30 (reached from 20 at
-        // n > 20*2^26 = 1,342,177,280), and `i + InsertionSortThreshold` at the very top of the range.
+        // The natural spellings do overflow — `width * 2` once width passes 2^30 (reached from 14 at
+        // n > 14*2^27 = 1,879,048,192), and `i + InsertionSortThreshold` at the very top of the range.
         // Because the project compiles unchecked, such a sum wraps negative instead of throwing, and a
         // negative index reaches SortSpan's Unsafe.Add unbounded. Comparing against a difference
         // (n - i, n - mid, n - width) keeps both operands inside the span and needs no guard.
@@ -185,12 +183,7 @@ public static class RotateMergeSort
                 // Already-sorted skip: left run's max ≤ right run's min → no merge needed.
                 if (!s.IsLessOrEqualAt(mid, mid + 1))
                 {
-                    // Completely disjoint in reverse order: every left element > every right element → rotate entire run pair.
-                    // Reverse-array inputs produce run pairs exactly in this form after Phase 1, so this skips all recursive merge work.
-                    if (s.IsGreaterAt(left, right))
-                        Rotate(s, left, right, mid - left + 1);
-                    else
-                        MergeInPlace(s, left, mid, right);
+                    MergeInPlace(s, left, mid, right);
                 }
 
                 // right is the inclusive min(left + 2*width - 1, n - 1), so right + 1 is the
@@ -245,13 +238,6 @@ public static class RotateMergeSort
             // Already-sorted skip: left run's max ≤ right run's min → merge is a no-op.
             // This catches trivial sub-problems produced by rotation (one side already in place).
             if (s.IsLessOrEqualAt(m, m + 1)) continue;
-
-            // Completely disjoint in reverse order: every left element > every right element → rotate sub-problem into place.
-            if (s.IsGreaterAt(l, r))
-            {
-                Rotate(s, l, r, len1);
-                continue;
-            }
 
             // Two single elements: the only possible action is a swap
             if (len1 == 1 && len2 == 1)
@@ -439,20 +425,20 @@ public static class RotateMergeSort
 /// 最適化した再帰呼び出しなRotate Merge Sortです。
 /// 配列を再帰的に半分に分割し、それぞれをソートした後、分割統治型の再帰的インプレースマージ（大きい側の中央を取り、反対側をbinary searchし、rotateして左右を再帰）でマージします。
 /// 安定ソートであり、外部バッファを使用せずに典型的にはO(n log² n)の性能を達成します。
-/// 小さい配列（≤16要素）ではInsertionSortを使用する実用的な最適化を含みます。
+/// libstdc++ の __inplace_stable_sort と同じく、15要素未満の範囲はInsertionSortでソートします。
 /// <br/>
 /// Optimized recursive Rotate Merge Sort.
 /// Recursively divides the array in half, sorts each part, then merges sorted subarrays in-place using
 /// divide-and-conquer rotation merge: pick the median of the larger side, binary search in the opposite side,
 /// rotate, then recursively merge both halves.
 /// This algorithm is stable and typically achieves O(n log² n) performance without requiring an external buffer.
-/// Includes practical optimization: insertion sort for small subarrays (≤16 elements).
+/// As in libstdc++'s __inplace_stable_sort, ranges shorter than 15 elements are sorted by insertion sort.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Rotate Merge Sort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Hybrid Optimization:</strong> For subarrays with ≤16 elements, insertion sort is used instead of rotation-based merge.
-/// This is a practical optimization similar to TimSort and IntroSort, reducing overhead for small sizes.</description></item>
+/// <item><description><strong>Insertion Sort Leaves:</strong> A range shorter than 15 elements is sorted by insertion sort
+/// instead of being divided further, as libstdc++'s __inplace_stable_sort does.</description></item>
 /// <item><description><strong>Divide Step (Binary Partitioning):</strong> The array must be divided into two roughly equal halves at each recursion level.
 /// The midpoint is calculated as mid = (left + right) / 2, ensuring balanced subdivision.
 /// This guarantees a recursion depth of ⌈log₂(n)⌉.</description></item>
@@ -466,10 +452,6 @@ public static class RotateMergeSort
 /// Picking the larger side guarantees progress (the median index is always ≥ 1).</description></item>
 /// <item><description><strong>Already-Sorted Skip:</strong> Before each merge, if
 /// <c>s[mid] ≤ s[mid+1]</c> the two runs are already in order and the merge is skipped.</description></item>
-/// <item><description><strong>Completely-Disjoint Skip:</strong> Before each merge, if
-/// <c>s[left] &gt; s[right]</c> every element of the left run exceeds every element of the right run.
-/// The entire pair is resolved with a single rotation, bypassing all recursive merge work.
-/// Reverse-order inputs produce run pairs exactly in this form, turning O(n log² n) merge work into O(n log n) rotations.</description></item>
 /// <item><description><strong>Rotation Algorithm (Left-Rotate by k, 3-Reversal):</strong>
 /// Reverse(A[left..left+k-1]), Reverse(A[left+k..right]), Reverse(A[left..right]).
 /// All three phases are linear scans, enabling hardware prefetching and eliminating GCD/modulo overhead.
@@ -497,8 +479,9 @@ public static class RotateMergeSort
 /// <para><strong>Implementation note – already-sorted skip:</strong></para>
 /// <para>The Best case row above is rotate merge sort's own: Dudziński and Dydek's merge, in the form libstdc++'s
 /// __merge_without_buffer implements it, has no already-sorted check, and on sorted input it keeps halving one side and
-/// binary-searching the other until a side is empty. With this implementation's 16-element leaves and that check removed,
-/// sorted input costs about 3n comparisons (about 2n of them in the merges) and moves nothing. This implementation adds the
+/// binary-searching the other until a side is empty. With this implementation's leaves of fewer than 15 elements and that
+/// check removed, sorted input costs 3.5n comparisons at 10,000 elements and 3.1n at 100,000 (2.6n and 2.2n of them in the
+/// merges) and moves nothing. This implementation adds the
 /// check before each merge and again at each sub-problem of the merge: when the left half ends at or below the start of the
 /// right half (<c>s[mid] ≤ s[mid+1]</c>), the merge has nothing to do and is skipped. Only a merge that would have changed
 /// nothing is removed; the output and the work of every merge that does run are unchanged. The check costs one comparison
@@ -510,6 +493,7 @@ public static class RotateMergeSort
 /// <para>Divide-and-conquer in-place merge: Krzysztof Dudziński and Andrzej Dydek, "On a stable minimum storage merging algorithm", Information Processing Letters 12(1):5–8 (1981) https://doi.org/10.1016/0020-0190(81)90065-X</para>
 /// <para>libstdc++: std::__merge_without_buffer (bits/stl_algo.h) https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc++-v3/include/bits/stl_algo.h#L2431-L2480</para>
 /// <para>Rotation-based in-place merge: Practical In-Place Merging (Geffert et al.)</para>
+/// <para>libstdc++: std::__inplace_stable_sort (bits/stl_algo.h) https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc++-v3/include/bits/stl_algo.h#L2741-L2758</para>
 /// </remarks>
 public static class RotateMergeSortRecursive
 {
@@ -519,9 +503,8 @@ public static class RotateMergeSortRecursive
     /// <remarks>Verified by RotateMergeSortRecursiveTests, which derives from StableSortTestsBase.</remarks>
     public static bool IsStable => true;
 
-    // Threshold for using insertion sort instead of rotation-based merge
-    // Small subarrays benefit from insertion sort's lower overhead
-    private const int InsertionSortThreshold = 16;
+    // Longest range sorted by insertion sort: libstdc++'s __inplace_stable_sort does so below 15 elements.
+    private const int InsertionSortThreshold = 14;
 
     // Maximum small-side length for the shift-based Rotate fast path.
     // The saved side is held in local variables, so this bound is the number of those locals.
@@ -582,8 +565,7 @@ public static class RotateMergeSortRecursive
 
         var length = right - left + 1;
 
-        // Optimization: Use insertion sort for small subarrays
-        // Rotation overhead is too high for small sizes, and insertion sort has better cache locality
+        // A range shorter than 15 elements is sorted by insertion sort, as in libstdc++'s __inplace_stable_sort.
         if (length <= InsertionSortThreshold)
         {
             // Reuse existing InsertionSort.SortCore
@@ -608,14 +590,6 @@ public static class RotateMergeSortRecursive
         // 観測側は「どの区間とどの区間をマージ中か」を表示できる。
         s.Context.OnPhase(SortPhase.MergeSortMerge, left, mid, right);
 
-        // Completely disjoint in reverse order: every left element > every right element → rotate entire run pair.
-        // Reverse-array inputs produce run pairs exactly in this form, so this skips all recursive merge work.
-        if (s.IsGreaterAt(left, right))
-        {
-            Rotate(s, left, right, mid - left + 1);
-            return;
-        }
-
         // Merge: Combine two sorted halves in-place using rotation
         MergeInPlace(s, left, mid, right);
     }
@@ -636,13 +610,6 @@ public static class RotateMergeSortRecursive
 
         // Already-sorted skip: left run's max ≤ right run's min → merge is a no-op.
         if (s.IsLessOrEqualAt(mid, mid + 1)) return;
-
-        // Completely disjoint in reverse order: every left element > every right element → rotate sub-problem into place.
-        if (s.IsGreaterAt(left, right))
-        {
-            Rotate(s, left, right, len1);
-            return;
-        }
 
         if (len1 == 1 && len2 == 1)
         {
@@ -826,8 +793,8 @@ public static class RotateMergeSortRecursive
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Rotate Merge Sort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Hybrid Optimization:</strong> For subarrays with ≤16 elements, insertion sort is used instead of rotation-based merge.
-/// This is a practical optimization similar to TimSort and IntroSort, reducing overhead for small sizes.</description></item>
+/// <item><description><strong>Insertion Sort Leaves:</strong> A range shorter than 15 elements is sorted by insertion sort
+/// instead of being divided further, as libstdc++'s __inplace_stable_sort does.</description></item>
 /// <item><description><strong>Divide Step (Binary Partitioning):</strong> The array must be divided into two roughly equal halves at each recursion level.
 /// The midpoint is calculated as mid = (left + right) / 2, ensuring balanced subdivision.
 /// This guarantees a recursion depth of ⌈log₂(n)⌉.</description></item>
@@ -864,8 +831,9 @@ public static class RotateMergeSortRecursive
 /// <para><strong>Implementation note – already-sorted skip:</strong></para>
 /// <para>The Best case row above is rotate merge sort's own: Dudziński and Dydek's merge, in the form libstdc++'s
 /// __merge_without_buffer implements it, has no already-sorted check, and on sorted input it keeps halving one side and
-/// binary-searching the other until a side is empty. With this implementation's 16-element leaves and that check removed,
-/// sorted input costs about 3n comparisons (about 2n of them in the merges) and moves nothing. This implementation adds the
+/// binary-searching the other until a side is empty. With this implementation's leaves of fewer than 15 elements and that
+/// check removed, sorted input costs 3.5n comparisons at 10,000 elements and 3.1n at 100,000 (2.6n and 2.2n of them in the
+/// merges) and moves nothing. This implementation adds the
 /// check before each merge and again at each sub-problem of the merge: when the left half ends at or below the start of the
 /// right half (<c>s[mid] ≤ s[mid+1]</c>), the merge has nothing to do and is skipped. Only a merge that would have changed
 /// nothing is removed; the output and the work of every merge that does run are unchanged. The check costs one comparison
@@ -877,6 +845,7 @@ public static class RotateMergeSortRecursive
 /// <para>Divide-and-conquer in-place merge: Krzysztof Dudziński and Andrzej Dydek, "On a stable minimum storage merging algorithm", Information Processing Letters 12(1):5–8 (1981) https://doi.org/10.1016/0020-0190(81)90065-X</para>
 /// <para>libstdc++: std::__merge_without_buffer (bits/stl_algo.h) https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc++-v3/include/bits/stl_algo.h#L2431-L2480</para>
 /// <para>Rotation-based in-place merge: Practical In-Place Merging (Geffert et al.)</para>
+/// <para>libstdc++: std::__inplace_stable_sort (bits/stl_algo.h) https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc++-v3/include/bits/stl_algo.h#L2741-L2758</para>
 /// </remarks>
 public static class RotateMergeSortNonOptimized
 {
@@ -886,9 +855,8 @@ public static class RotateMergeSortNonOptimized
     /// <remarks>Verified by RotateMergeSortNonOptimizedTests, which derives from StableSortTestsBase.</remarks>
     public static bool IsStable => true;
 
-    // Threshold for using insertion sort instead of rotation-based merge
-    // Small subarrays benefit from insertion sort's lower overhead
-    private const int InsertionSortThreshold = 16;
+    // Longest range sorted by insertion sort: libstdc++'s __inplace_stable_sort does so below 15 elements.
+    private const int InsertionSortThreshold = 14;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array (in-place operations only)
@@ -942,8 +910,7 @@ public static class RotateMergeSortNonOptimized
 
         var length = right - left + 1;
 
-        // Optimization: Use insertion sort for small subarrays
-        // Rotation overhead is too high for small sizes, and insertion sort has better cache locality
+        // A range shorter than 15 elements is sorted by insertion sort, as in libstdc++'s __inplace_stable_sort.
         if (length <= InsertionSortThreshold)
         {
             // Reuse existing InsertionSort.SortCore

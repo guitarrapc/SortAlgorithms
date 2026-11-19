@@ -60,20 +60,20 @@ public class RotateMergeSortTests : StableSortTestsBase
 
         // Bottom-up RotateMergeSort on reversed data:
         //
-        // Phase 1 (InsertionSort blocks): n ≤ 16 → single block, all work done here.
+        // Phase 1 (InsertionSort blocks): n ≤ 14 → single block, all work done here.
         //   n*(n-1)/2 comparisons and writes, 0 swaps (InsertionSort uses Write, not Swap).
         //
         // Phase 2 (divide-and-conquer merge): picks median of smaller side, binary search
         //   in opposite side, rotate, recurse. 3-reversal uses Swap; k==1/k==n-1 fast paths use Write.
         var logN = Math.Log2(n);
-        var minCompares = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 0.9);
-        var maxCompares = n <= 16 ? (ulong)(n * 5.5) : (ulong)(n * logN * 2.0);
+        var minCompares = n <= 14 ? (ulong)(n * 4.0) : (ulong)(n * logN * 0.9);
+        var maxCompares = n <= 14 ? (ulong)(n * 5.5) : (ulong)(n * logN * 2.0);
 
-        var minWrites = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 1.0);
-        var maxWrites = n <= 16 ? (ulong)(n * 6.0) : (ulong)(n * logN * 20.0);
+        var minWrites = n <= 14 ? (ulong)(n * 4.0) : (ulong)(n * logN * 1.0);
+        var maxWrites = n <= 14 ? (ulong)(n * 6.0) : (ulong)(n * logN * 20.0);
 
         var minSwaps = 0UL;
-        var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
+        var maxSwaps = n <= 14 ? 0UL : (ulong)(n * logN * 2.0);
 
         var minReads = (ulong)(stats.CompareCount * 1.2);
 
@@ -100,18 +100,18 @@ public class RotateMergeSortTests : StableSortTestsBase
 
         // Bottom-up RotateMergeSort on random data:
         //
-        // Phase 1 (InsertionSort blocks): n ≤ 16 → single block, variance depends on order.
+        // Phase 1 (InsertionSort blocks): n ≤ 14 → single block, variance depends on order.
         // Phase 2 (divide-and-conquer merge): picks median of smaller side, binary search
         //   in opposite side, rotate, recurse.
         var logN = Math.Log2(n);
-        var minCompares = n <= 16 ? (ulong)(n * 1.5) : (ulong)(n * logN * 0.7);
-        var maxCompares = n <= 16 ? (ulong)(n * 4.8) : (ulong)(n * logN * 2.0);
+        var minCompares = n <= 14 ? (ulong)(n * 1.5) : (ulong)(n * logN * 0.7);
+        var maxCompares = n <= 14 ? (ulong)(n * 4.8) : (ulong)(n * logN * 2.0);
 
-        var minWrites = n <= 16 ? (ulong)(n * 0.9) : (ulong)(n * logN * 0.5);
-        var maxWrites = n <= 16 ? (ulong)(n * 4.8) : (ulong)(n * logN * 15.0);
+        var minWrites = n <= 14 ? (ulong)(n * 0.9) : (ulong)(n * logN * 0.5);
+        var maxWrites = n <= 14 ? (ulong)(n * 4.8) : (ulong)(n * logN * 15.0);
 
         var minSwaps = 0UL;
-        var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
+        var maxSwaps = n <= 14 ? 0UL : (ulong)(n * logN * 2.0);
 
         var minReads = (ulong)(stats.CompareCount * 1.2);
 
@@ -119,5 +119,36 @@ public class RotateMergeSortTests : StableSortTestsBase
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
         await Assert.That(stats.IndexReadCount >= minReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minReads}");
+    }
+
+    /// <summary>
+    /// With two blocks, the bottom-up sort and RotateMergeSortNonOptimized build the same tree: two 14-element insertion-sorted
+    /// leaves joined by one merge. Both must then compare equally often, whichever order the input is in. A comparison
+    /// shortcut outside Dudziński and Dydek's merge, such as rotating a pair whose runs do not overlap in one step, would
+    /// make them differ; reversed input produces exactly such a pair.
+    /// </summary>
+    [Test]
+    [Arguments("reversed")]
+    [Arguments("random")]
+    [Arguments("duplicates")]
+    public async Task TwoBlocksCompareAsOftenAsNonOptimizedTest(string pattern)
+    {
+        const int n = 28;
+        var random = new Random(n);
+        var input = pattern switch
+        {
+            "reversed" => [.. Enumerable.Range(0, n).Reverse()],
+            "random" => TestHelpers.ShuffledRange(n, 42),
+            _ => Enumerable.Range(0, n).Select(_ => random.Next(4)).ToArray(),
+        };
+
+        var bottomUp = new StatisticsContext();
+        var sorted = input.ToArray();
+        RotateMergeSort.Sort(sorted.AsSpan(), bottomUp);
+        var reference = new StatisticsContext();
+        RotateMergeSortNonOptimized.Sort(input.ToArray().AsSpan(), reference);
+
+        await Assert.That(sorted.SequenceEqual(input.Order())).IsTrue();
+        await Assert.That(bottomUp.CompareCount).IsEqualTo(reference.CompareCount);
     }
 }

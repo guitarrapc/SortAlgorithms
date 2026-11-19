@@ -76,22 +76,22 @@ public class RotateMergeSortNonOptimizedTests : StableSortTestsBase
 
         // Rotate Merge Sort comparisons for reversed data:
         // Reversed data requires all merge operations with binary search + rotation.
-        // n ≤ 16: entirely handled by InsertionSort
-        // n > 16: divide-and-conquer merge with binary search + GCD-cycle rotation
+        // n ≤ 14: entirely handled by InsertionSort
+        // n > 14: divide-and-conquer merge with binary search + GCD-cycle rotation
         var logN = Math.Log2(n);
-        var minCompares = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 0.8);
-        var maxCompares = n <= 16 ? (ulong)(n * 5.5) : (ulong)(n * logN * 2.5);
+        var minCompares = n <= 14 ? (ulong)(n * 4.0) : (ulong)(n * logN * 0.8);
+        var maxCompares = n <= 14 ? (ulong)(n * 5.5) : (ulong)(n * logN * 2.5);
 
         // Writes: GCD-cycle rotation uses Write operations only
-        // n ≤ 16: InsertionSort writes only
-        // n > 16: GCD-cycle rotation adds many writes
-        var minWrites = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 1.4);
-        var maxWrites = n <= 16 ? (ulong)(n * 6.0) : (ulong)(n * logN * 20.0);
+        // n ≤ 14: InsertionSort writes only
+        // n > 14: GCD-cycle rotation adds many writes
+        var minWrites = n <= 14 ? (ulong)(n * 4.0) : (ulong)(n * logN * 1.4);
+        var maxWrites = n <= 14 ? (ulong)(n * 6.0) : (ulong)(n * logN * 20.0);
 
         // Swaps: GCD-cycle rotation uses Write only, but divide-and-conquer merge
-        // base case (len1==1 && len2==1) uses Swap. For n ≤ 16 InsertionSort does 0 swaps.
+        // base case (len1==1 && len2==1) uses Swap. For n ≤ 14 InsertionSort does 0 swaps.
         var minSwaps = 0UL;
-        var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
+        var maxSwaps = n <= 14 ? 0UL : (ulong)(n * logN * 2.0);
 
         // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
         // Expected: approximately 1.2x comparisons (down from 2x)
@@ -122,25 +122,25 @@ public class RotateMergeSortNonOptimizedTests : StableSortTestsBase
         // This version uses divide-and-conquer merge (median of smaller side + binary search + rotate),
         // InsertionSort for small subarrays, and GCD-cycle rotation.
         //
-        // For n ≤ 16: entirely handled by InsertionSort (no merge occurs)
-        // For n > 16: divide-and-conquer merge with binary search + rotation
+        // For n ≤ 14: entirely handled by InsertionSort (no merge occurs)
+        // For n > 14: divide-and-conquer merge with binary search + rotation
         //
-        // Pattern for random: approximately 0.8 * n * log₂(n) to 2.5 * n * log₂(n) for n > 16
-        // For n ≤ 16: InsertionSort profile applies
+        // Pattern for random: approximately 0.8 * n * log₂(n) to 2.5 * n * log₂(n) for n > 14
+        // For n ≤ 14: InsertionSort profile applies
         var logN = Math.Log2(n);
-        var minCompares = n <= 16 ? (ulong)(n * 1.0) : (ulong)(n * logN * 0.4);
-        var maxCompares = n <= 16 ? (ulong)(n * 5.0) : (ulong)(n * logN * 2.5);
+        var minCompares = n <= 14 ? (ulong)(n * 1.0) : (ulong)(n * logN * 0.4);
+        var maxCompares = n <= 14 ? (ulong)(n * 5.0) : (ulong)(n * logN * 2.5);
 
         // Writes vary based on how much rotation is needed
-        // n ≤ 16: InsertionSort writes only, can be low for partially sorted data
-        // n > 16: GCD-cycle rotation adds many writes
-        var minWrites = n <= 16 ? (ulong)(n * 0.5) : (ulong)(n * logN * 0.5);
-        var maxWrites = n <= 16 ? (ulong)(n * 5.0) : (ulong)(n * logN * 15.0);
+        // n ≤ 14: InsertionSort writes only, can be low for partially sorted data
+        // n > 14: GCD-cycle rotation adds many writes
+        var minWrites = n <= 14 ? (ulong)(n * 0.5) : (ulong)(n * logN * 0.5);
+        var maxWrites = n <= 14 ? (ulong)(n * 5.0) : (ulong)(n * logN * 15.0);
 
         // Swaps: GCD-cycle rotation uses Write only; however the divide-and-conquer merge
-        // base case (len1==1 && len2==1) uses Swap. For n ≤ 16 InsertionSort does 0 swaps.
+        // base case (len1==1 && len2==1) uses Swap. For n ≤ 14 InsertionSort does 0 swaps.
         var minSwaps = 0UL;  // Could be low if data is partially sorted
-        var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 8.0);
+        var maxSwaps = n <= 14 ? 0UL : (ulong)(n * logN * 8.0);
 
         // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
         // Expected: approximately 1.2x comparisons (down from 2x)

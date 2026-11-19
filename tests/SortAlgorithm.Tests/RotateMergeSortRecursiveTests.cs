@@ -74,24 +74,24 @@ public class RotateMergeSortRecursiveTests : StableSortTestsBase
 
         // Rotate Merge Sort with divide-and-conquer merge for reversed data:
         // Picks median of smaller side, binary search in opposite side, rotate, recurse.
-        // Small subarrays (≤16) use insertion sort.
+        // Small subarrays (≤14) use insertion sort.
         // Completely-disjoint skip: when every left element > every right element, a single rotation
         // resolves the merge, reducing comparisons noticeably on reversed inputs.
         //
-        // n≤16: ~4.0n to ~5.5n (insertion sort)
-        // n>16: ~0.8 * n * log₂(n) to ~2.0 * n * log₂(n)
+        // n≤14: ~4.0n to ~5.5n (insertion sort)
+        // n>14: ~0.8 * n * log₂(n) to ~2.0 * n * log₂(n)
         var logN = Math.Log2(n);
-        var minCompares = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 0.8);
-        var maxCompares = n <= 16 ? (ulong)(n * 5.5) : (ulong)(n * logN * 2.0);
+        var minCompares = n <= 14 ? (ulong)(n * 4.0) : (ulong)(n * logN * 0.8);
+        var maxCompares = n <= 14 ? (ulong)(n * 5.5) : (ulong)(n * logN * 2.0);
 
         // Writes: 3-reversal rotation and merge base case
-        var minWrites = n <= 16 ? (ulong)(n * 4.0) : (ulong)(n * logN * 1.0);
-        var maxWrites = n <= 16 ? (ulong)(n * 6.0) : (ulong)(n * logN * 20.0);
+        var minWrites = n <= 14 ? (ulong)(n * 4.0) : (ulong)(n * logN * 1.0);
+        var maxWrites = n <= 14 ? (ulong)(n * 6.0) : (ulong)(n * logN * 20.0);
 
         // Swaps: 3-reversal rotation uses swaps; merge base case (len1==1 && len2==1) uses Swap
-        // n≤16: insertion sort handles everything - 0 swaps
+        // n≤14: insertion sort handles everything - 0 swaps
         var minSwaps = 0UL;
-        var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
+        var maxSwaps = n <= 14 ? 0UL : (ulong)(n * logN * 2.0);
 
         // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
         // Expected: approximately 1.2x comparisons (down from 2x)
@@ -120,20 +120,20 @@ public class RotateMergeSortRecursiveTests : StableSortTestsBase
 
         // Rotate Merge Sort with divide-and-conquer merge for random data:
         // Picks median of smaller side, binary search in opposite side, rotate, recurse.
-        // Small subarrays (≤16) use insertion sort.
+        // Small subarrays (≤14) use insertion sort.
         // Performance varies based on initial order.
         var logN = Math.Log2(n);
-        var minCompares = n <= 16 ? (ulong)(n * 1.5) : (ulong)(n * logN * 0.7);
-        var maxCompares = n <= 16 ? (ulong)(n * 4.0 * 1.2) : (ulong)(n * logN * 2.0);
+        var minCompares = n <= 14 ? (ulong)(n * 1.5) : (ulong)(n * logN * 0.7);
+        var maxCompares = n <= 14 ? (ulong)(n * 4.0 * 1.2) : (ulong)(n * logN * 2.0);
 
         // Writes vary based on how much rotation is needed
-        var minWrites = n <= 16 ? (ulong)(n * 1.5 * 0.6) : (ulong)(n * logN * 0.5);
-        var maxWrites = n <= 16 ? (ulong)(n * 4.0 * 1.2) : (ulong)(n * logN * 15.0);
+        var minWrites = n <= 14 ? (ulong)(n * 1.5 * 0.6) : (ulong)(n * logN * 0.5);
+        var maxWrites = n <= 14 ? (ulong)(n * 4.0 * 1.2) : (ulong)(n * logN * 15.0);
 
         // Swaps: 3-reversal rotation uses swaps; merge base case uses Swap
-        // n≤16: insertion sort handles everything - 0 swaps
+        // n≤14: insertion sort handles everything - 0 swaps
         var minSwaps = 0UL;
-        var maxSwaps = n <= 16 ? 0UL : (ulong)(n * logN * 2.0);
+        var maxSwaps = n <= 14 ? 0UL : (ulong)(n * logN * 2.0);
 
         // IndexReads: Reduced due to InsertionSort optimization (caching values to reduce repeated reads)
         // Expected: approximately 1.2x comparisons (down from 2x)
@@ -143,5 +143,34 @@ public class RotateMergeSortRecursiveTests : StableSortTestsBase
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
         await Assert.That(stats.IndexReadCount >= minReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minReads}");
+    }
+
+    /// <summary>
+    /// This sort differs from RotateMergeSortNonOptimized only in how it rotates, so the two must compare equally often.
+    /// A comparison shortcut outside Dudziński and Dydek's merge, such as rotating a pair whose runs do not overlap in one step,
+    /// would make them differ. Reversed input is where such a shortcut pays most.
+    /// </summary>
+    [Test]
+    [Arguments(100)]
+    [Arguments(1000)]
+    public async Task ComparesAsOftenAsNonOptimizedTest(int n)
+    {
+        var random = new Random(n);
+        int[][] inputs =
+        [
+            [.. Enumerable.Range(0, n).Reverse()],
+            TestHelpers.ShuffledRange(n, 42),
+            [.. Enumerable.Range(0, n).Select(i => i < n / 2 ? i : n - i)],
+            [.. Enumerable.Range(0, n).Select(_ => random.Next(16))],
+        ];
+        foreach (var input in inputs)
+        {
+            var optimized = new StatisticsContext();
+            RotateMergeSortRecursive.Sort(input.ToArray().AsSpan(), optimized);
+            var reference = new StatisticsContext();
+            RotateMergeSortNonOptimized.Sort(input.ToArray().AsSpan(), reference);
+
+            await Assert.That(optimized.CompareCount).IsEqualTo(reference.CompareCount);
+        }
     }
 }
