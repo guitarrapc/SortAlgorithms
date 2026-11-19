@@ -25,17 +25,17 @@ namespace SortAlgorithm.Algorithms;
 ///   SortCore(dst=b, src=s, mid+1, right)   // right half sorted into b
 ///   Merge b[left..mid] + b[mid+1..right] → s[left..right]   // pure ping-pong
 /// </code>
-/// <para>Initial setup copies the original span into b so both buffers carry valid data at recursion leaves,
-/// ensuring every leaf copy <c>dst[i] = src[i]</c> is always correct regardless of recursion depth parity.</para>
+/// <para>Initial setup copies the original span into b, so both buffers hold every element at the recursion leaves
+/// regardless of recursion depth parity, and a leaf has nothing to copy.</para>
 /// <para><strong>Theoretical Conditions for Correct Pingpong Merge Sort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Initial Copy (Bootstrap):</strong> Before recursion, the original span is copied into the auxiliary buffer b.
-/// Because recursion alternates which buffer is the source, leaves at even depths read from b and leaves at odd depths read from s.
-/// Having valid data in both ensures correct initialization at any depth.</description></item>
+/// Because recursion alternates which buffer is the destination, a leaf's destination is b at some depths and s at others.
+/// Having the input in both means the element is already in the destination at any depth.</description></item>
 /// <item><description><strong>Divide Step (Binary Partitioning):</strong> The range is divided at mid = left + (right - left) / 2,
 /// giving a balanced recursion tree of depth ⌈log₂(n)⌉, same as standard top-down merge sort.</description></item>
-/// <item><description><strong>Base Case (Termination):</strong> When left == right, the single element is copied from src to dst
-/// (dst[left] = src[left]) and the function returns.</description></item>
+/// <item><description><strong>Base Case (Termination):</strong> When left == right, the function returns. No merge writes a slot
+/// before the leaf that holds it returns, so the slot still holds the input element in both buffers.</description></item>
 /// <item><description><strong>Conquer Step with Buffer Alternation:</strong> Both recursive calls swap dst and src.
 /// This guarantees that after both calls, the sorted halves reside in src (the current call's source buffer),
 /// which is exactly what the merge step needs to read from.</description></item>
@@ -44,7 +44,7 @@ namespace SortAlgorithm.Algorithms;
 /// Each merge writes its result directly to the destination buffer.</description></item>
 /// <item><description><strong>Stability Preservation:</strong> During merge, elements from the left half are taken first on equal values
 /// (using &lt;= comparison), preserving the original relative order of equal elements.</description></item>
-/// <item><description><strong>Element Movement:</strong> The bootstrap, singleton leaves, and merges all copy elements.
+/// <item><description><strong>Element Movement:</strong> The bootstrap and the merges copy elements.
 /// Sorted subranges still copy from the source to the destination buffer.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -55,10 +55,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : O(n log n) writes, O(n) comparisons — sorted data skips merges but still propagates through levels</description></item>
 /// <item><description>Average case: O(n log n) — balanced recursion tree with n writes per level</description></item>
 /// <item><description>Worst case  : O(n log n) — guaranteed balanced partitioning regardless of input</description></item>
-/// <item><description>Comparisons : O(n log n) — at most n⌈log₂(n)⌉ comparisons</description></item>
+/// <item><description>Comparisons : O(n log n) — at most n⌈log₂(n)⌉ - 2^⌈log₂(n)⌉ + 1 in the merges, plus one per merge (n - 1 in all) for the already-sorted check</description></item>
 /// <item><description>Swaps       : 0 — elements move by copying between the input and the auxiliary buffer, never by exchange</description></item>
 /// <item><description>Index Reads : Θ(n log n) — each merge level reads all n elements</description></item>
-/// <item><description>Index Writes: Θ(n log n) — bootstrap and leaf copies plus the output of every merge level</description></item>
+/// <item><description>Index Writes: Θ(n log n) — the bootstrap copy plus the output of every merge level</description></item>
 /// <item><description>Space       : O(n) — full-size auxiliary buffer (uses ArrayPool for efficiency)</description></item>
 /// </list>
 /// <para><strong>Comparison with Related Algorithms:</strong></para>
@@ -124,8 +124,7 @@ public static class PingpongMergeSort
         try
         {
             // Copy span into buffer (b becomes the initial source / "ping" buffer).
-            // Both s and b carry the original data so that leaf copies (dst[i] = src[i])
-            // are always correct regardless of which buffer is src at that recursion depth.
+            // With the input in both buffers, a leaf's element is already in its destination at any recursion depth.
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var b = new SortSpan<T, TComparer, TContext>(buffer.AsSpan(0, span.Length), context, comparer, BUFFER_MERGE);
             s.CopyTo(0, b, 0, span.Length);
@@ -154,12 +153,9 @@ public static class PingpongMergeSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (left == right)
-        {
-            // Base case: copy single element from src to dst
-            dst.Write(left, src.Read(left));
-            return;
-        }
+        // Base case: a single element is already in dst. The bootstrap gave both buffers the input,
+        // and no merge touches this slot before its leaf returns.
+        if (left == right) return;
 
         var mid = left + (right - left) / 2;
 
@@ -204,30 +200,32 @@ public static class PingpongMergeSort
         var r = mid + 1;   // pointer into right half src[mid+1..right]
         var k = left;      // pointer into dst
 
-        // Merge: compare elements from left and right halves, write to dst
-        while (l <= mid && r <= right)
+        // The head that was not taken stays in its local instead of being read again.
+        var leftValue = src.Read(l);
+        var rightValue = src.Read(r);
+        while (true)
         {
-            var leftValue = src.Read(l);
-            var rightValue = src.Read(r);
-
             // Stability: use <= to take from left when equal
             if (src.IsLessOrEqual(leftValue, rightValue))
             {
-                dst.Write(k, leftValue);
-                l++;
+                dst.Write(k++, leftValue);
+                if (++l > mid)
+                {
+                    src.CopyTo(r, dst, k, right - r + 1);
+                    return;
+                }
+                leftValue = src.Read(l);
             }
             else
             {
-                dst.Write(k, rightValue);
-                r++;
+                dst.Write(k++, rightValue);
+                if (++r > right)
+                {
+                    src.CopyTo(l, dst, k, mid - l + 1);
+                    return;
+                }
+                rightValue = src.Read(r);
             }
-            k++;
         }
-
-        // Copy remaining elements from whichever half is not exhausted
-        if (l <= mid)
-            src.CopyTo(l, dst, k, mid - l + 1);
-        else if (r <= right)
-            src.CopyTo(r, dst, k, right - r + 1);
     }
 }

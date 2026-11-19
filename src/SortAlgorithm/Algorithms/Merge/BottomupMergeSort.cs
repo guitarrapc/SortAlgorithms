@@ -46,15 +46,20 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Merge</description></item>
 /// <item><description>Stable      : Yes (equal elements maintain relative order via &lt;= comparison during merge)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for merging)</description></item>
-/// <item><description>Best case   : O(n log n) - Even sorted data requires ⌈log₂(n)⌉ passes of merging</description></item>
+/// <item><description>Best case   : O(n log n) - Even sorted data requires ⌈log₂(n)⌉ passes of merging (this implementation skips the comparisons of a merge already in order, but each pass still copies all n elements; see the implementation note)</description></item>
 /// <item><description>Average case: O(n log n) - ⌈log₂(n)⌉ passes with n work per pass</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed performance regardless of input</description></item>
-/// <item><description>Comparisons : O(n log n) - At most n⌈log₂(n)⌉ - 2^⌈log₂(n)⌉ + 1 comparisons</description></item>
+/// <item><description>Comparisons : O(n log n) - At most n⌈log₂(n)⌉ - 2^⌈log₂(n)⌉ + 1 in the merges, plus one per merge (n - 1 in all) for the already-sorted check</description></item>
 /// <item><description>Swaps       : 0 - elements move by copying between the input and the auxiliary buffer, never by exchange</description></item>
 /// <item><description>Index Reads : Θ(n log n) - Each pass reads all n elements, ⌈log₂(n)⌉ passes total</description></item>
 /// <item><description>Index Writes: Θ(n log n) - Each pass writes all n elements, ⌈log₂(n)⌉ passes total</description></item>
 /// <item><description>Space       : O(n) - Full-size auxiliary buffer for ping-pong passes (uses ArrayPool for efficiency); no recursion, so the stack stays O(1) unlike top-down merge sort's O(log n)</description></item>
 /// </list>
+/// <para><strong>Implementation note – already-sorted skip:</strong></para>
+/// <para>Before each merge, a pair whose left half ends at or below the start of its right half (<c>src[mid-1] ≤ src[mid]</c>) is
+/// already in order and is copied to the destination without merging. The check costs one comparison per merge, so the comparison
+/// count can exceed bottom-up merge sort's own bound by up to n - 1. Sorted input costs n - 1 comparisons, but every pass still
+/// reads and writes all n elements, because the next pass reads from the other buffer.</para>
 /// <para><strong>Advantages Over Top-Down Merge Sort:</strong></para>
 /// <list type="bullet">
 /// <item><description>No recursion overhead - Eliminates function call stack and return address management</description></item>
@@ -239,30 +244,33 @@ public static class BottomupMergeSort
         var r = mid;   // pointer into right half src[mid..right)
         var k = left;  // pointer into dst
 
-        // Merge: compare elements from left and right halves, write to dst
-        while (l < mid && r < right)
+        // Merge: compare elements from left and right halves, write to dst.
+        // The head that was not taken stays in its local instead of being read again.
+        var leftValue = src.Read(l);
+        var rightValue = src.Read(r);
+        while (true)
         {
-            var leftValue = src.Read(l);
-            var rightValue = src.Read(r);
-
             // Stability: use <= to take from left when equal
             if (src.IsLessOrEqual(leftValue, rightValue))
             {
-                dst.Write(k, leftValue);
-                l++;
+                dst.Write(k++, leftValue);
+                if (++l == mid)
+                {
+                    src.CopyTo(r, dst, k, right - r);
+                    return;
+                }
+                leftValue = src.Read(l);
             }
             else
             {
-                dst.Write(k, rightValue);
-                r++;
+                dst.Write(k++, rightValue);
+                if (++r == right)
+                {
+                    src.CopyTo(l, dst, k, mid - l);
+                    return;
+                }
+                rightValue = src.Read(r);
             }
-            k++;
         }
-
-        // Copy remaining elements from whichever half is not exhausted
-        if (l < mid)
-            src.CopyTo(l, dst, k, mid - l);
-        else if (r < right)
-            src.CopyTo(r, dst, k, right - r);
     }
 }

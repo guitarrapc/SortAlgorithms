@@ -43,7 +43,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Swaps       : 0 - elements move by copying between the input and the auxiliary buffer, never by exchange</description></item>
 /// <item><description>Index Reads : O(n log n) - A level whose merges all run reads all n elements, ⌈log₂(n)⌉ levels total; a skipped merge reads only the two elements the check compares</description></item>
 /// <item><description>Index Writes: O(n log n) - A level whose merges all run writes all n elements, ⌈log₂(n)⌉ levels total; a skipped merge writes nothing</description></item>
-/// <item><description>Space       : O(n) - Auxiliary buffer of size n/2 for merging (this implementation uses ArrayPool for efficiency)</description></item>
+/// <item><description>Space       : O(n) - Auxiliary buffer of ⌈n/2⌉ elements for the left half of a merge (this implementation uses ArrayPool for efficiency)</description></item>
 /// </list>
 /// <para><strong>Implementation note – already-sorted skip:</strong></para>
 /// <para>The Best case row above is merge sort's own. This implementation adds a check before each merge: when the
@@ -112,12 +112,13 @@ public static class MergeSort
     {
         if (span.Length <= 1) return;
 
-        // Rent buffer from ArrayPool for O(n) auxiliary space (instead of O(n log n) stack allocations)
-        var buffer = ArrayPool<T>.Shared.Rent(span.Length);
+        // A merge buffers its left half, and the largest left half is the top level's ceil(n/2) elements.
+        var bufferLength = (span.Length + 1) / 2;
+        var buffer = ArrayPool<T>.Shared.Rent(bufferLength);
         try
         {
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-            var b = new SortSpan<T, TComparer, TContext>(buffer.AsSpan(0, span.Length), context, comparer, BUFFER_MERGE);
+            var b = new SortSpan<T, TComparer, TContext>(buffer.AsSpan(0, bufferLength), context, comparer, BUFFER_MERGE);
             SortCore(s, b, 0, span.Length - 1);
         }
         finally
@@ -182,32 +183,29 @@ public static class MergeSort
         var r = mid + 1;     // Index in span (right partition starts after mid)
         var k = left;        // Index in result (span, starts at left)
 
-        // Merge: compare elements from buffer (left) and right partition
-        while (l < leftLength && r <= right)
+        // Merge: compare elements from buffer (left) and right partition.
+        // The head that was not taken stays in its local instead of being read again.
+        var leftValue = b.Read(l);
+        var rightValue = s.Read(r);
+        while (true)
         {
-            var leftValue = b.Read(l);
-            var rightValue = s.Read(r);
-
             // Stability: use <= to take from left when equal
             if (s.IsLessOrEqual(leftValue, rightValue))
             {
-                s.Write(k, leftValue);
-                l++;
+                s.Write(k++, leftValue);
+                // Right partition elements are already in place, no need to copy
+                if (++l == leftLength) return;
+                leftValue = b.Read(l);
             }
             else
             {
-                s.Write(k, rightValue);
-                r++;
+                s.Write(k++, rightValue);
+                if (++r > right) break;
+                rightValue = s.Read(r);
             }
-            k++;
         }
 
-        // Copy remaining elements from buffer (left partition) if any
-        if (l < leftLength)
-        {
-            b.CopyTo(l, s, k, leftLength - l);
-        }
-
-        // Right partition elements are already in place, no need to copy
+        // Copy remaining elements from buffer (left partition)
+        b.CopyTo(l, s, k, leftLength - l);
     }
 }

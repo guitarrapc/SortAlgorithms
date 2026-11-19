@@ -136,4 +136,21 @@ public class BottomupMergeSortTests : StableSortTestsBase
         await Assert.That(stats.IndexReadCount >= minReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minReads}");
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
+
+    [Test]
+    public async Task MergeReadsEachHeadOnceTest()
+    {
+        var stats = new StatisticsContext();
+        int[] data = [0, 2, 1, 3];
+        BottomupMergeSort.Sort(data.AsSpan(), stats);
+
+        // Pass 1: [0, 2] and [1, 3] pass their skip checks (2 comparisons, 4 reads) and are copied to the buffer (4 reads, 4 writes).
+        // Pass 2: the check fails (1 comparison, 2 reads). The merge reads both heads (2), then takes 0, 1 and 2, reading only the
+        // replacement head after the first two (2 reads, 3 comparisons, 3 writes), and copies the remaining 3 (1 read, 1 write).
+        // Two passes leave the result in the input, so nothing is copied back.
+        await Assert.That(data).IsEquivalentTo([0, 1, 2, 3], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(stats.CompareCount).IsEqualTo(6UL);
+        await Assert.That(stats.IndexReadCount).IsEqualTo(15UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(8UL);
+    }
 }

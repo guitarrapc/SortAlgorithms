@@ -7,7 +7,7 @@ namespace SortAlgorithm.Tests;
 public class AuxiliaryObservationTests
 {
     [Test]
-    public void PingpongWritesIncludeBootstrapLeavesAndEveryMergeLevel()
+    public void PingpongWritesIncludeBootstrapAndEveryMergeLevel()
     {
         foreach (var n in new[] { 2, 3, 4, 5, 8, 9, 16, 33 })
         foreach (var sorted in new[] { false, true })
@@ -16,8 +16,10 @@ public class AuxiliaryObservationTests
             if (!sorted) Array.Reverse(input);
             var context = new StatisticsContext();
             PingpongMergeSort.Sort(input.AsSpan(), context);
+            // The bootstrap writes n, and every merge node writes its whole range, merged or copied: n(h + 1) - 2^h.
+            // Leaves write nothing, because the bootstrap already put their element in both buffers.
             var height = BitOperations.Log2((uint)(n - 1)) + 1;
-            var expected = (ulong)(n * (height + 3) - (1 << height));
+            var expected = (ulong)(n * (height + 2) - (1 << height));
             if (context.IndexWriteCount != expected)
                 throw new InvalidOperationException("Pingpong structural writes were omitted.");
         }

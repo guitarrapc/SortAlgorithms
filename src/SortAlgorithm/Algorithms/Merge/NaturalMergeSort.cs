@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -19,30 +18,38 @@ namespace SortAlgorithm.Algorithms;
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Natural Merge Sort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Run Detection:</strong> Scan the array to identify maximal runs.
+/// <item><description><strong>Run Detection:</strong> Scan the array once to identify maximal runs.
 /// Ascending runs are non-decreasing subsequences where s[i] &lt;= s[i+1].
 /// Strictly descending runs (s[i] &gt; s[i+1]) are detected and reversed in-place.
 /// Using strict descent for detection preserves stability when reversing.</description></item>
-/// <item><description><strong>Pairwise Merging:</strong> In each pass, merge adjacent pairs of runs.
-/// If an odd number of runs exists, the last run is carried forward unmerged.</description></item>
+/// <item><description><strong>Pairwise Merging:</strong> In each pass, merge adjacent pairs of runs, as bottom-up merge sort does
+/// with runs of one element. If an odd number of runs exists, the last run is carried forward unmerged.</description></item>
 /// <item><description><strong>Termination:</strong> Repeat passes until only a single run remains, covering the entire array.</description></item>
 /// <item><description><strong>Stability Preservation:</strong> During merge, when elements from both runs are equal,
-/// the element from the left run is taken first, preserving relative order.</description></item>
+/// the element from the left run is placed first, preserving relative order.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Merge</description></item>
-/// <item><description>Stable      : Yes (equal elements maintain relative order via &lt;= comparison during merge)</description></item>
+/// <item><description>Stable      : Yes (equal elements maintain relative order: the left run's element is placed first)</description></item>
 /// <item><description>In-place    : No (requires O(n) auxiliary space for merging)</description></item>
 /// <item><description>Best case   : O(n) - Already sorted or fully reversed data is a single run; only one detection scan needed</description></item>
 /// <item><description>Average case: O(n log n) - Random data has ~n/2 runs, requiring ~log₂(n) merge passes</description></item>
 /// <item><description>Worst case  : O(n log n) - Alternating up/down data produces many small runs, requiring full merge passes</description></item>
-/// <item><description>Comparisons : Θ(n) best, O(n log r) for r natural runs, O(n log n) worst - run detection costs n-1 comparisons and each merge level costs O(n)</description></item>
+/// <item><description>Comparisons : Θ(n) best, O(n log r) for r natural runs, O(n log n) worst - run detection costs n-1 comparisons, and a merge pass costs at most n, counting the in-order check before each merge</description></item>
 /// <item><description>Swaps       : O(n) - only the reversal that turns a detected descending run ascending; merging moves elements by copying</description></item>
-/// <item><description>Index Reads : O(n log r) - every merge level reads each element of the runs it joins; Θ(n) when the input is a single run</description></item>
-/// <item><description>Index Writes: O(n log r) - every merge level writes each element it moves; Θ(n) when the input is a single run</description></item>
-/// <item><description>Space       : O(n) - Auxiliary buffer for merging (this implementation uses ArrayPool for efficiency)</description></item>
+/// <item><description>Index Reads : O(n log r) - a merge reads each element of its two runs a bounded number of times; Θ(n) when the input is a single run</description></item>
+/// <item><description>Index Writes: O(n log r) - a merge writes its shorter run into the buffer and every element it moves into place; O(n) when the input is a single run</description></item>
+/// <item><description>Space       : O(n) - the buffer holds the shorter run of a merge, at most n/2 elements, and the run boundaries take at most ⌈n/2⌉ + 1 ints (both rented from ArrayPool)</description></item>
 /// </list>
+/// <para><strong>Implementation note – recorded run boundaries:</strong></para>
+/// <para>Tape-era natural merging finds the runs again on every pass, at n - 1 comparisons a pass. This implementation scans
+/// once and keeps the boundaries, so each pass merges the runs the previous pass produced. A merge can leave two runs whose
+/// boundary is already in order; one comparison before each merge finds that and skips the merge.</para>
+/// <para><strong>Implementation note – shorter-run buffering:</strong></para>
+/// <para>Each merge copies only the shorter of its two runs into the buffer, as Rust's slice merge and libstdc++'s
+/// __merge_adaptive do. A buffered left run is merged front to back and a buffered right run back to front, and whatever is
+/// left of the run that stayed in place is already in its final position.</para>
 /// <para><strong>Advantages over Standard Merge Sort:</strong></para>
 /// <list type="bullet">
 /// <item><description>Adaptive - O(n) on already-sorted or fully-reversed data (standard merge sort is always O(n log n))</description></item>
@@ -50,9 +57,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Fewer merges - Exploits pre-existing order, skipping unnecessary work</description></item>
 /// </list>
 /// <para><strong>Comparer contract:</strong></para>
-/// <para>With a consistent comparer each merge pass at least halves the number of runs, so the sort needs at most ceil(log2 n) merge
-/// passes. A comparer that keeps run detection finding runs after that makes it throw <see cref="InvalidOperationException"/> instead of
-/// merging forever. Either way the range keeps its elements, and nothing outside it is read or written.</para>
+/// <para>Every merge pass halves the number of recorded runs whatever the comparer answers, so the sort ends after ⌈log₂ r⌉ passes.
+/// The range keeps its elements, and nothing outside it is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>Natural merging was in production use before Knuth's TAOCP (1973), which is often cited for it. Marilyn M. Jensen's
 /// IBM "A Survey of Sorting Techniques" (1963) describes "the von Neumann, or natural, merge", which "takes full advantage of
@@ -105,14 +111,15 @@ public static class NaturalMergeSort
     {
         if (span.Length <= 1) return;
 
-        // Rent buffer from ArrayPool for O(n) auxiliary space
-        var buffer = ArrayPool<T>.Shared.Rent(span.Length);
-        // Rent buffer for run boundaries (worst case: n runs of size 1 + 1 sentinel)
-        var runsBuffer = ArrayPool<int>.Shared.Rent(span.Length + 1);
+        // A merge buffers the shorter of its two runs, which never exceeds half the span.
+        var bufferLength = span.Length / 2;
+        var buffer = ArrayPool<T>.Shared.Rent(bufferLength);
+        // Every run but the last holds at least two elements, so there are at most ceil(n/2) runs, plus the sentinel.
+        var runsBuffer = ArrayPool<int>.Shared.Rent((span.Length + 1) / 2 + 1);
         try
         {
             var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-            var b = new SortSpan<T, TComparer, TContext>(buffer.AsSpan(0, span.Length), context, comparer, BUFFER_MERGE);
+            var b = new SortSpan<T, TComparer, TContext>(buffer.AsSpan(0, bufferLength), context, comparer, BUFFER_MERGE);
             SortCore(s, b, runsBuffer.AsSpan());
         }
         finally
@@ -124,54 +131,51 @@ public static class NaturalMergeSort
 
     /// <summary>
     /// Core iterative natural merge sort implementation.
-    /// Each pass consists of two phases:
-    /// 1. Detect all natural runs (maximal non-decreasing subsequences)
-    /// 2. Merge adjacent pairs of runs using the fixed run boundaries
-    /// Repeats until only a single run remains.
+    /// Detects the natural runs once, then merges adjacent pairs of runs pass by pass, using the recorded boundaries,
+    /// until a single run remains.
     /// </summary>
     /// <param name="s">The SortSpan wrapping the span to sort</param>
     /// <param name="b">The SortSpan wrapping the auxiliary buffer for merging</param>
     /// <param name="runs">Buffer to store run boundary indices. runs[i] is the start index of run i; runs[runCount] = length (sentinel).</param>
-    /// <param name="length">The number of elements to sort</param>
     private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b, Span<int> runs)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var length = s.Length;
 
-        // With a consistent comparer each merge pass at least halves the number of runs, so ceil(log2 n) passes merge everything.
-        // Another pass means the comparer is not consistent, and run detection would keep finding runs forever. The natural order of a
-        // primitive type is consistent, so the check folds away for it.
-        var mergePasses = length > 1 ? BitOperations.Log2((uint)(length - 1)) + 1 : 0;
-        while (true)
+        s.Context.OnPhase(SortPhase.MergeRunDetect);
+        var runCount = DetectNaturalRuns(s, runs, length);
+
+        // Each pass merges run 2j with run 2j+1 and keeps the start of run 2j as the boundary of the merged run.
+        // An odd run at the end is carried forward unmerged. The count halves every pass whatever the comparer answers.
+        while (runCount > 1)
         {
-            // Phase 1: Detect all natural runs
-            s.Context.OnPhase(SortPhase.MergeRunDetect);
-            var runCount = DetectNaturalRuns(s, runs, length);
-
-            // If only one run covers the entire array, sorting is complete
-            if (runCount <= 1)
-            {
-                break;
-            }
-
-            if (!s.UsesNaturalPrimitiveOrder && --mergePasses < 0) ThrowHelper.ThrowInconsistentComparer();
-
-            // Phase 2: Merge adjacent pairs of runs using fixed boundaries
-            // Odd run at the end is carried forward unmerged to the next pass
-            for (var i = 0; i + 1 < runCount; i += 2)
+            var merged = 0;
+            for (var i = 0; i < runCount; i += 2)
             {
                 var left = runs[i];
-                var mid = runs[i + 1] - 1;  // inclusive end of left run
-                var right = runs[i + 2] - 1; // inclusive end of right run
+                // merged <= i, so this never overwrites a boundary the pass has not read yet.
+                runs[merged++] = left;
+                if (i + 1 == runCount) break;
 
-                s.Context.OnPhase(SortPhase.MergeSortMerge, left, mid, right);
+                var mid = runs[i + 1];   // start of the right run
+                var right = runs[i + 2]; // exclusive end of the right run
+
+                // Every pair the pass joins is announced, including one the check below finds already in order,
+                // so a consumer that tracks runs sees each join.
+                s.Context.OnPhase(SortPhase.MergeSortMerge, left, mid - 1, right - 1);
                 s.Context.OnRole(left, BUFFER_MAIN, RoleType.LeftPointer);
-                s.Context.OnRole(mid + 1, BUFFER_MAIN, RoleType.RightPointer);
-                Merge(s, b, left, mid, right);
+                s.Context.OnRole(mid, BUFFER_MAIN, RoleType.RightPointer);
+                // Two runs whose boundary is in order are already one run. A reversed descending run can leave such a pair, and so can a merge.
+                if (!s.IsLessOrEqualAt(mid - 1, mid))
+                {
+                    Merge(s, b, left, mid, right);
+                }
                 s.Context.OnRole(left, BUFFER_MAIN, RoleType.None);
-                s.Context.OnRole(mid + 1, BUFFER_MAIN, RoleType.None);
+                s.Context.OnRole(mid, BUFFER_MAIN, RoleType.None);
             }
+            runs[merged] = length;
+            runCount = merged;
         }
     }
 
@@ -198,9 +202,13 @@ public static class NaturalMergeSort
 
             if (runEnd < length)
             {
+                // The first pair decides the direction and already belongs to the run, so each scan continues after it.
+                // Each branch steps past it on its own: incrementing inside the comparison's argument added a register copy
+                // to the scan loop (verified by disassembly) and measured slower on sorted input.
                 if (s.IsGreaterAt(i, runEnd))
                 {
                     // Strictly descending run
+                    runEnd++;
                     while (runEnd < length && s.IsGreaterAt(runEnd - 1, runEnd))
                     {
                         runEnd++;
@@ -212,6 +220,7 @@ public static class NaturalMergeSort
                 else
                 {
                     // Ascending run (non-decreasing, allowing equals for stability)
+                    runEnd++;
                     while (runEnd < length && s.IsLessOrEqualAt(runEnd - 1, runEnd))
                     {
                         runEnd++;
@@ -247,52 +256,77 @@ public static class NaturalMergeSort
     }
 
     /// <summary>
-    /// Merges two sorted subarrays [left..mid] and [mid+1..right] using buffer as auxiliary space.
+    /// Merges the sorted runs [left, mid) and [mid, right), both non-empty, buffering only the shorter one.
+    /// A buffered left run is merged front to back and a buffered right run back to front, so the run that stays
+    /// in place is always read before its slots are overwritten.
     /// </summary>
     /// <param name="s">The SortSpan wrapping the main array</param>
     /// <param name="b">The SortSpan wrapping the auxiliary buffer</param>
-    /// <param name="left">The inclusive start index of the left subarray</param>
-    /// <param name="mid">The inclusive end index of the left subarray</param>
-    /// <param name="right">The inclusive end index of the right subarray</param>
+    /// <param name="left">The inclusive start index of the left run</param>
+    /// <param name="mid">The inclusive start index of the right run</param>
+    /// <param name="right">The exclusive end index of the right run</param>
     private static void Merge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> b, int left, int mid, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var leftLength = mid - left + 1;
+        var leftLength = mid - left;
+        var rightLength = right - mid;
 
-        // Copy left partition to buffer to avoid overwriting during merge
-        s.CopyTo(left, b, 0, leftLength);
-
-        var l = 0;           // Index in buffer (left partition copy, 0-based)
-        var r = mid + 1;     // Index in span (right partition starts after mid)
-        var k = left;        // Index in result (span, starts at left)
-
-        // Merge: compare elements from buffer (left) and right partition
-        while (l < leftLength && r <= right)
+        if (leftLength <= rightLength)
         {
+            s.CopyTo(left, b, 0, leftLength);
+
+            var l = 0;      // next element of the buffered left run
+            var r = mid;    // next element of the right run, still in place
+            var k = left;   // next output slot
             var leftValue = b.Read(l);
             var rightValue = s.Read(r);
-
-            // Stability: use <= to take from left when equal
-            if (s.IsLessOrEqual(leftValue, rightValue))
+            while (true)
             {
-                s.Write(k, leftValue);
-                l++;
+                // Stability: take the left element when equal
+                if (s.IsLessOrEqual(leftValue, rightValue))
+                {
+                    s.Write(k++, leftValue);
+                    // The rest of the right run is already in place
+                    if (++l == leftLength) return;
+                    leftValue = b.Read(l);
+                }
+                else
+                {
+                    s.Write(k++, rightValue);
+                    if (++r == right) break;
+                    rightValue = s.Read(r);
+                }
             }
-            else
-            {
-                s.Write(k, rightValue);
-                r++;
-            }
-            k++;
-        }
-
-        // Copy remaining elements from buffer (left partition) if any
-        if (l < leftLength)
-        {
             b.CopyTo(l, s, k, leftLength - l);
         }
+        else
+        {
+            s.CopyTo(mid, b, 0, rightLength);
 
-        // Right partition elements are already in place, no need to copy
+            var l = mid - 1;          // last element of the left run, still in place
+            var r = rightLength - 1;  // last element of the buffered right run
+            var k = right - 1;        // next output slot, filled from the back
+            var leftValue = s.Read(l);
+            var rightValue = b.Read(r);
+            while (true)
+            {
+                // Stability: place the right element at the back when equal
+                if (s.IsLessOrEqual(leftValue, rightValue))
+                {
+                    s.Write(k--, rightValue);
+                    // The rest of the left run is already in place
+                    if (--r < 0) return;
+                    rightValue = b.Read(r);
+                }
+                else
+                {
+                    s.Write(k--, leftValue);
+                    if (--l < left) break;
+                    leftValue = s.Read(l);
+                }
+            }
+            b.CopyTo(0, s, left, r + 1);
+        }
     }
 }

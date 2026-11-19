@@ -581,7 +581,7 @@ public class InconsistentComparerSafetyTests
     }
 
     /// <summary>Sorts that stop only once their comparisons report order, and so count their progress against a bound.</summary>
-    enum Bounded { OddEven, Circle, Gnome, GnomeNonOptimized, NaturalMerge, Fun, Bingo, Cycle }
+    enum Bounded { OddEven, Circle, Gnome, GnomeNonOptimized, Fun, Bingo, Cycle }
 
     public static IEnumerable<string> BoundedSorters() => Enum.GetNames<Bounded>();
 
@@ -594,7 +594,6 @@ public class InconsistentComparerSafetyTests
             case Bounded.Circle: CircleSort.Sort(span, comparer, NullContext.Default); break;
             case Bounded.Gnome: GnomeSort.Sort(span, comparer, NullContext.Default); break;
             case Bounded.GnomeNonOptimized: GnomeSortNonOptimized.Sort(span, comparer, NullContext.Default); break;
-            case Bounded.NaturalMerge: NaturalMergeSort.Sort(span, comparer, NullContext.Default); break;
             case Bounded.Fun: FunSort.Sort(span, comparer, NullContext.Default); break;
             case Bounded.Bingo: BingoSort.Sort(span, comparer, NullContext.Default); break;
             default: CycleSort.Sort(span, comparer, NullContext.Default); break;

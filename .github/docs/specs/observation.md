@@ -51,7 +51,7 @@ Index arrays and occupancy bitsets are algorithm metadata and do not become elem
 | TournamentSort | Winner tree of element indices (metadata: reported as index writes carrying the index) | Output area: each winner is written to the next position, and the whole area is copied back over the input at the end |
 
 Element copies contribute their full length to read and write counts. These counts include
-bootstrap copies, leaf copies, snapshot storage, and staging operations when the algorithm performs them.
+bootstrap copies, snapshot storage, and staging operations when the algorithm performs them.
 
 ## Phase Levels
 

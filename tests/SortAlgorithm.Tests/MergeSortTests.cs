@@ -88,7 +88,9 @@ public class MergeSortTests : StableSortTestsBase
         var minWrites = (ulong)(n * logN * 0.3);
         var maxWrites = (ulong)(n * Math.Ceiling(logN) * 1.5);
 
-        var minReads = stats.CompareCount * 2;
+        // Every comparison reads at least one element it has not read before: a skip check reads two,
+        // and each merge step reads only the head that replaces the one just taken.
+        var minReads = stats.CompareCount;
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
@@ -130,11 +132,30 @@ public class MergeSortTests : StableSortTestsBase
         var minWrites = (ulong)(n * logN * 0.3);
         var maxWrites = (ulong)(n * Math.Ceiling(logN) * 1.5);
 
-        var minReads = stats.CompareCount * 2;
+        // Every comparison reads at least one element it has not read before: a skip check reads two,
+        // and each merge step reads only the head that replaces the one just taken.
+        var minReads = stats.CompareCount;
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minReads}");
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+    }
+
+    [Test]
+    public async Task MergeReadsEachHeadOnceTest()
+    {
+        var stats = new StatisticsContext();
+        int[] data = [0, 2, 1, 3];
+        MergeSort.Sort(data.AsSpan(), stats);
+
+        // [0, 2] and [1, 3] pass their skip checks (2 comparisons, 4 reads); the top check fails (1, 2).
+        // The merge copies [0, 2] to the buffer (2 reads, 2 writes), reads both heads (2), then takes
+        // 0, 1 and 2, reading only the replacement head after the first two (2 reads, 3 comparisons, 3 writes).
+        // When the left half runs out, 3 is already in place.
+        await Assert.That(data).IsEquivalentTo([0, 1, 2, 3], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(stats.CompareCount).IsEqualTo(6UL);
+        await Assert.That(stats.IndexReadCount).IsEqualTo(12UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(5UL);
     }
 }
