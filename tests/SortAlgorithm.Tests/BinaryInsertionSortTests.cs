@@ -13,7 +13,7 @@ public class BinaryInsertionSortTests : StableSortTestsBase
     // O(n^2) shifts: keep data-driven inputs small.
     protected override int MaxOrderTestSize => 512;
 
-    // Early continuation on sorted input skips binary search and insertion: no writes, no swaps.
+    // On sorted input every search returns the element's own position: no writes, no swaps.
     protected override CountExpectation SortedInputWrites => CountExpectation.Zero;
     protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
@@ -92,22 +92,15 @@ public class BinaryInsertionSortTests : StableSortTestsBase
         var sorted = Enumerable.Range(0, n).ToArray();
         BinaryInsertionSort.Sort(sorted.AsSpan(), stats);
 
-        // With early continuation optimization:
-        // For sorted data, each element at position i is compared with element at i-1
-        // If comparison shows i-1 <= i (sorted), we skip binary search and insertion
-        // This results in exactly (n-1) comparisons for sorted data
-        //
-        // Early continuation check: if (i > first && s.Compare(i - 1, i) <= 0) continue;
-        // - For sorted data, all elements pass this check
-        // - Each element from position 1 to n-1 requires exactly 1 comparison
-        var expectedCompares = (ulong)(n - 1);
+        // Every element is binary-searched, even when it is already in place.
+        // On sorted input each search over i elements goes right at every step: floor(log2(i+1)) comparisons.
+        var expectedCompares = SearchComparisons(n, sorted: true);
 
         // Sorted data: no shifts needed (all elements are already in correct positions)
         var expectedWrites = 0UL;
 
-        // IndexReadCount: 2 reads per comparison (read i-1 and i)
-        // For sorted data with early continuation, (n-1) comparisons × 2 reads = 2(n-1) reads
-        var expectedIndexReads = (ulong)(2 * (n - 1));
+        // IndexReadCount: the held element, plus one read per comparison
+        var expectedIndexReads = expectedCompares + (ulong)(n - 1);
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
@@ -125,32 +118,24 @@ public class BinaryInsertionSortTests : StableSortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         BinaryInsertionSort.Sort(reversed.AsSpan(), stats);
 
-        // Binary Insertion Sort comparisons: at most ceiling(log2(i+1)) per search
-        // For reversed data, binary search may take more comparisons than sorted data
-        var expectedCompares = CalculateBinaryInsertSortComparisons(n);
-
-        // Reversed data can cause more comparisons, allow wider range (50% to 200%)
-        var minCompares = expectedCompares / 2;
-        var maxCompares = expectedCompares * 2;
+        // On reversed input each search over i elements goes left at every step: ceiling(log2(i+1)) comparisons.
+        var expectedCompares = SearchComparisons(n, sorted: false);
 
         // Reversed data: worst case for shifts
         // Element at position i needs to be shifted to position 0, requiring i shifts
         // For each element at position i (from 1 to n-1):
         // - Shift i elements to the right (i writes)
         // - Write the current element at position 0 (1 write)
-        // Total: sum from i=1 to n-1 of (i+1) = n(n+1)/2 - 1
-        var minWrites = (ulong)((n * (n + 1)) / 2 - 2);
-        var maxWrites = (ulong)((n * (n + 1)) / 2 + 1);
+        // Total: n(n-1)/2 + (n-1)
+        var shifts = (ulong)(n * (n - 1) / 2);
+        var expectedWrites = shifts + (ulong)(n - 1);
 
-        // IndexReadCount: Each comparison reads 1 element during binary search
-        // Plus reads during shifting: each shift reads the element being moved
-        // Total shift reads = n(n-1)/2
-        var minShiftReads = (ulong)(n * (n - 1) / 2);
-        var minIndexReads = minCompares + minShiftReads;
+        // IndexReadCount: the held element, one read per comparison, and one per shifted element
+        var expectedIndexReads = (ulong)(n - 1) + expectedCompares + shifts;
 
-        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedIndexReads);
     }
 
     [Test]
@@ -168,11 +153,10 @@ public class BinaryInsertionSortTests : StableSortTestsBase
         var random = TestHelpers.ShuffledRange(n, seed);
         BinaryInsertionSort.Sort(random.AsSpan(), stats);
 
-        // Binary Insertion Sort comparisons: at most ceiling(log2(i+1)) per search
-        // Random data can vary widely, allow very wide range
-        var expectedCompares = CalculateBinaryInsertSortComparisons(n);
-        var minCompares = expectedCompares / 2;
-        var maxCompares = expectedCompares * 2;
+        // A search over i elements costs floor(log2(i+1)) or ceiling(log2(i+1)) comparisons,
+        // so the total lies between the sorted and the reversed counts.
+        var minCompares = SearchComparisons(n, sorted: true);
+        var maxCompares = SearchComparisons(n, sorted: false);
 
         // Random data: varies significantly based on arrangement
         // Best case: nearly sorted (minimal shifts, close to 0 writes)
@@ -186,22 +170,17 @@ public class BinaryInsertionSortTests : StableSortTestsBase
     }
 
     /// <summary>
-    /// Calculate theoretical number of comparisons for Binary Insertion Sort
-    /// Uses the maximum number of comparisons per binary search (worst case)
-    /// For a range of size n, binary search takes at most ceiling(log2(n+1)) comparisons
+    /// Total comparisons of the searches over 1..n-1 sorted elements: floor(log2(i+1)) each when every step goes right,
+    /// ceiling(log2(i+1)) each when every step goes left.
     /// </summary>
-    private ulong CalculateBinaryInsertSortComparisons(int n)
+    static ulong SearchComparisons(int n, bool sorted)
     {
-        ulong totalCompares = 0;
-        for (int i = 1; i < n; i++)
+        ulong total = 0;
+        for (var i = 1; i < n; i++)
         {
-            // Binary search in range [0..i) can take up to ceiling(log2(i+1)) comparisons
-            // This is the worst-case number of iterations for the while loop
-            if (i == 1)
-                totalCompares += 1;
-            else
-                totalCompares += (ulong)Math.Ceiling(Math.Log2(i + 1));
+            var floor = (ulong)System.Numerics.BitOperations.Log2((uint)(i + 1));
+            total += sorted || System.Numerics.BitOperations.IsPow2(i + 1) ? floor : floor + 1;
         }
-        return totalCompares;
+        return total;
     }
 }

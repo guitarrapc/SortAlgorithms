@@ -37,7 +37,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n²) - Reverse sorted array, maximum shifts: n(n-1)/2 comparisons and writes</description></item>
 /// <item><description>Comparisons : Best n-1, Average/Worst O(n²) - Sum of comparisons for each insertion, worst case: n(n-1)/2</description></item>
 /// <item><description>Swaps       : 0 - insertion shifts elements one position and drops the held value into the gap; nothing is exchanged</description></item>
-/// <item><description>Index Reads : O(n²) - Each comparison reads one element, each shift reads the element being moved</description></item>
+/// <item><description>Index Reads : O(n²) - One per element for the held value and one per comparison; a shift writes the element its comparison already read: (n-1) + n(n-1)/2 on reverse-sorted input</description></item>
 /// <item><description>Index Writes: O(n²) - Each shift writes one element, worst case: n(n-1)/2 shifts + (n-1) final insertions</description></item>
 /// <item><description>Space       : O(1) - only the temp variable holding the element being inserted</description></item>
 /// </list>
@@ -577,7 +577,7 @@ public static class InsertionSort
 /// <item><description>Worst case  : O(n²) - Reverse sorted array, maximum swaps: n(n-1)/2 comparisons and swaps</description></item>
 /// <item><description>Comparisons : Best n-1, Average/Worst O(n²) - Same as the shift-based version: worst case n(n-1)/2</description></item>
 /// <item><description>Swaps       : O(n²) - this variant walks the element down by exchanging neighbours instead of shifting</description></item>
-/// <item><description>Index Reads : O(n²) - Each comparison reads one element, and each swap reads both of its operands</description></item>
+/// <item><description>Index Reads : O(n²) - Each comparison reads both neighbours, and each swap reads both of its operands</description></item>
 /// <item><description>Index Writes: O(n²) - Approximately 2x the shift-based version, since a swap writes two positions where a shift writes one</description></item>
 /// <item><description>Space       : O(1) - no temporary storage for the element being moved</description></item>
 /// </list>

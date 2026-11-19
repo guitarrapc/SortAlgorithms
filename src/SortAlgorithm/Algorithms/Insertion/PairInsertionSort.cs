@@ -3,68 +3,50 @@
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// Pair Insertion Sort（ペア挿入ソート）は、2要素を一度に挿入することで効率を向上させた挿入ソートの最適化版です。
-/// 左端以外のパーティションでは2要素を同時に処理し、下限チェックが不要で高速に動作します。
+/// Pair Insertion Sort（ペア挿入ソート）は、隣り合う2要素を1組として挿入する挿入ソートです。
+/// 組を1回の比較で並べ、大きい方を先に挿入して両方より大きい要素を2つずつ後ろへずらし、小さい方はその停止位置から続けて挿入します。
 /// <br/>
-/// Pair Insertion Sort is an optimized variant of insertion sort that processes two elements at once,
-/// improving efficiency by reducing boundary checks for non-leftmost partitions.
+/// Pair Insertion Sort is an insertion sort that inserts two adjacent elements per step.
+/// One comparison orders the pair. The larger element is inserted first, moving every element greater than it two places up,
+/// and the smaller element continues down from where the larger one stopped.
 /// </summary>
 /// <remarks>
-/// <para><strong>Algorithm Overview:</strong></para>
-/// <para>
-/// Traditional insertion sort processes one element at a time. Pair insertion sort optimizes this by:
-/// 1. Processing elements in pairs (two at a time)
-/// 2. Comparing the two elements and sorting them
-/// 3. Inserting the smaller element first, then the larger element
-/// 4. Using the smaller element as a sentinel to eliminate boundary checks for the larger element
-/// </para>
-/// <para><strong>Key Optimizations:</strong></para>
-/// <list type="bullet">
-/// <item><description>Reduced Comparisons: By comparing pair elements first, we can determine insertion order efficiently</description></item>
-/// <item><description>Eliminated Boundary Checks: After inserting the smaller element, it acts as a sentinel for the larger element</description></item>
-/// <item><description>Better Cache Locality: Processing consecutive elements improves CPU cache usage</description></item>
-/// <item><description>Fewer Branches: Unguarded insertion reduces conditional branches in the inner loop</description></item>
+/// <para><strong>Theoretical Conditions for Correct Pair Insertion Sort:</strong></para>
+/// <list type="number">
+/// <item><description><strong>Sorted Prefix:</strong> Before each step the elements to the left of the pair are sorted.</description></item>
+/// <item><description><strong>Larger Element First:</strong> The pair is ordered with one comparison. The larger element scans the prefix
+/// from the right, and each element greater than it moves two places up, which leaves two free slots below them.</description></item>
+/// <item><description><strong>Smaller Element Continues:</strong> The smaller element scans on from the element that stopped the larger one,
+/// moving elements one place up. Elements greater than both are compared and moved once per pair, where straight insertion would compare
+/// and move them once for each element.</description></item>
+/// <item><description><strong>Stability:</strong> On a tie the later element of the pair counts as the larger one, and both scans stop at an
+/// equal element, so equal keys keep their order.</description></item>
+/// <item><description><strong>Unpaired Element:</strong> The first element is a sorted prefix of one, so an even length leaves the last element
+/// without a partner. It is inserted on its own.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Insertion</description></item>
-/// <item><description>Stable      : Yes (careful ordering preserves stability)</description></item>
+/// <item><description>Stable      : Yes (the later element of a tied pair is inserted above the earlier one, and no scan passes an equal key)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space)</description></item>
-/// <item><description>Best case   : O(n) - Already sorted array</description></item>
-/// <item><description>Average case: O(n²) - Similar to standard insertion sort but with lower constant factors</description></item>
-/// <item><description>Worst case  : O(n²) - Reverse sorted array</description></item>
-/// <item><description>Comparisons : Best n-1, Average ~n²/4, Worst O(n²) - inserting two elements per pass saves roughly half the comparisons of a single insertion sort</description></item>
-/// <item><description>Swaps       : 0 - insertion shifts elements one position and drops the held values into the gap; nothing is exchanged</description></item>
-/// <item><description>Index Reads : O(n²) - each comparison reads one element, and each shift reads the element being moved</description></item>
-/// <item><description>Index Writes: O(n²) - same order as a single insertion sort; the pair pass shares the shifting between the two elements it places</description></item>
-/// <item><description>Space       : O(1) - only the two temp variables holding the pair being inserted</description></item>
-/// </list>
-/// <para><strong>Advantages over Standard Insertion Sort:</strong></para>
-/// <list type="bullet">
-/// <item><description>10-30% fewer comparisons on average due to pair pre-sorting</description></item>
-/// <item><description>Reduced boundary checks improve performance on modern CPUs</description></item>
-/// <item><description>Better instruction pipelining due to fewer conditional branches</description></item>
-/// <item><description>Improved cache locality from processing consecutive elements together</description></item>
-/// </list>
-/// <para><strong>Use Cases:</strong></para>
-/// <list type="bullet">
-/// <item><description>Small to medium arrays (n &lt; 50-100)</description></item>
-/// <item><description>Final sorting step in hybrid algorithms (IntroSort, Timsort)</description></item>
-/// <item><description>Non-leftmost partitions in quicksort (where sentinel is guaranteed)</description></item>
-/// <item><description>Nearly sorted data where insertion sort excels</description></item>
+/// <item><description>Best case   : O(n) - sorted input costs three comparisons per pair and moves nothing</description></item>
+/// <item><description>Average case: O(n²) - about n²/6 comparisons and writes on random input, against n²/4 for straight insertion</description></item>
+/// <item><description>Worst case  : O(n²) - reverse-sorted input: the larger element of each pair passes the whole prefix, about n²/4 comparisons and writes</description></item>
+/// <item><description>Comparisons : O(n²) - one per pair, then one per element greater than the smaller element of the pair, plus the elements that stop each scan; about 3n/2 on sorted input, n²/6 on random input and n²/4 on reverse-sorted input</description></item>
+/// <item><description>Swaps       : 0 - elements move up and the held pair drops into the slots left free; nothing is exchanged</description></item>
+/// <item><description>Index Reads : O(n²) - one per comparison, plus one per pair and one for an unpaired last element; a moved element is written from the read its comparison made</description></item>
+/// <item><description>Index Writes: O(n²) - one per element moved up and one per held element that does not stay in its slot; none on sorted input, about n²/4 on reverse-sorted input</description></item>
+/// <item><description>Space       : O(1) - only the two held elements of the pair</description></item>
 /// </list>
 /// <para><strong>Comparer contract:</strong></para>
-/// <para>The larger element of each pair stops at the smaller one, which only a consistent comparer guarantees. Element access is
-/// unchecked, so that shift is also checked against the range. The natural order of a primitive type is always consistent, and the check
-/// is compiled out for it. A comparer that is not a consistent total order can make the sort throw
-/// <see cref="InvalidOperationException"/>. Either way the range keeps its elements, in an unspecified order, and nothing outside the range
-/// is read or written.</para>
+/// <para>Both scans of the public sort stop at the lower end of the range, so a comparer that is not a consistent total order cannot move
+/// them outside it. The range keeps its elements, in an unspecified order, and nothing outside it is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>The earliest source found is JDK 7's <c>DualPivotQuicksort</c> (version 2011.02.11, by Vladimir Yaroslavskiy, Jon Bentley
-/// and Josh Bloch). It sorts the non-leftmost parts with "the more optimized algorithm, so called pair insertion sort". The name
-/// suggests the technique may be older, but no earlier source was found. It is not Ford and Johnson's merge-insertion (1959).</para>
+/// and Josh Bloch). It sorts the non-leftmost parts with "the more optimized algorithm, so called pair insertion sort", where the element
+/// before the part stops both scans. The name suggests the technique may be older, but no earlier source was found. It is not Ford and
+/// Johnson's merge-insertion (1959).</para>
 /// <para><strong>Reference:</strong></para>
-/// <para>JDK 7 DualPivotQuicksort: https://github.com/openjdk/jdk7u/blob/master/jdk/src/share/classes/java/util/DualPivotQuicksort.java</para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Insertion_sort</para>
 /// </remarks>
 public static class PairInsertionSort
@@ -162,61 +144,65 @@ public static class PairInsertionSort
         var length = last - first;
         if (length <= 1) return;
 
-        // First element is trivially sorted
-        // Start processing from second element in pairs
+        // The first element is a sorted prefix of one; pairs start after it.
         var i = first + 1;
-
-        // Process pairs of elements
         while (i + 1 < last)
         {
             s.Context.OnPhase(SortPhase.PairInsertionPass, i, last - 1);
-            // Read the pair of elements
-            // Ensure a <= b (swap if necessary)
-            // This pre-sorting of the pair reduces comparisons later.
-            // The out-overload performs both reads and reports the comparison against i and i+1,
-            // where the value-based form named neither operand.
-            if (s.IsGreaterAt(i, i + 1, out var a, out var b))
+
+            // On a tie the later element is the larger one, so equal keys keep their order.
+            var swapped = s.IsGreaterAt(i, i + 1, out var small, out var large);
+            if (swapped)
             {
-                // Swap so that a is smaller
-                (a, b) = (b, a);
+                (small, large) = (large, small);
             }
 
-            // Insert the smaller element (a) first
-            // This uses guarded insertion (with boundary check)
+            // The larger element goes in first. Every element above it moves two places, which leaves room for both.
+            // The prefix is never empty, so its top element needs no range check.
             var j = i - 1;
-            while (j >= first && s.IsElementGreaterThan(j, a))
+            if (s.IsElementGreaterThan(j, large, out var e))
             {
-                s.Write(j + 1, s.Read(j));
-                j--;
+                do
+                {
+                    s.Write(j + 2, e);
+                    j--;
+                }
+                while (j >= first && s.IsElementGreaterThan(j, large, out e));
+                s.Write(j + 2, large);
             }
-            s.Write(j + 1, a);
-
-            // Insert the larger element (b)
-            // Since 'a' is already inserted and a <= b, we can use unguarded insertion
-            // The element 'a' acts as a sentinel, guaranteeing the loop will terminate
-            j = i; // Start from position after 'a' was inserted
-            while (s.IsElementGreaterThan(j, b))
+            else if (swapped)
             {
-                // Only a consistent comparer stops at 'a', and element access is unchecked. A shift at first would read below the range
-                // next. The natural order of a primitive type is consistent, so the check folds away for it.
-                if (!s.UsesNaturalPrimitiveOrder && j == first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, j + 1, b);
-                s.Write(j + 1, s.Read(j));
-                j--;
+                s.Write(i + 1, large);
             }
-            s.Write(j + 1, b);
 
-            // Move to next pair
+            // The smaller element continues down from where the larger one stopped, moving elements one place.
+            var k = j;
+            if (k >= first && s.IsElementGreaterThan(k, small, out e))
+            {
+                do
+                {
+                    s.Write(k + 1, e);
+                    k--;
+                }
+                while (k >= first && s.IsElementGreaterThan(k, small, out e));
+                s.Write(k + 1, small);
+            }
+            else if (swapped || k != i - 1)
+            {
+                s.Write(k + 1, small);
+            }
+
             i += 2;
         }
 
-        // Handle remaining odd element if array length is odd
+        // An even length leaves the last element without a partner.
         if (i < last)
         {
             var tmp = s.Read(i);
             var j = i - 1;
-            while (j >= first && s.IsElementGreaterThan(j, tmp))
+            while (j >= first && s.IsElementGreaterThan(j, tmp, out var e))
             {
-                s.Write(j + 1, s.Read(j));
+                s.Write(j + 1, e);
                 j--;
             }
             if (j != i - 1)
@@ -227,10 +213,9 @@ public static class PairInsertionSort
     }
 
     /// <summary>
-    /// Semi-unguarded pair insertion sort: assumes that there is an element at position (first - 1)
+    /// Unguarded pair insertion sort: assumes that there is an element at position (first - 1)
     /// that is less than or equal to all elements in the range [first, last).
-    /// This allows the smaller element (a) to be inserted without boundary checks,
-    /// while the larger element (b) uses the inserted 'a' as a guaranteed sentinel.
+    /// That element stops both scans of every pair, so neither tests the lower end of the range.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <typeparam name="TComparer">The type of comparer to use. Must implement <see cref="IComparer{T}"/>.</typeparam>
@@ -239,11 +224,8 @@ public static class PairInsertionSort
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <remarks>
     /// PRECONDITION: first > 0 and s[first-1] <= s[i] for all i in [first, last)
-    /// This precondition is guaranteed by partitioning schemes in algorithms like IntroSort.
-    ///
-    /// Optimization strategy:
-    /// - Element 'a' (smaller): insertion that stops at the sentinel s[first-1]
-    /// - Element 'b' (larger): insertion that stops at 'a', which is already in place
+    /// This is the form pair insertion sort was published in: a quicksort partition that is not the leftmost one has such an element.
+    /// Comparisons and writes are the same as in <see cref="SortCore{T, TComparer, TContext}"/>.
     ///
     /// Only a consistent comparer stops these loops at their sentinel. Element access is unchecked, so a shift that would pass s[first-1]
     /// throws <see cref="InvalidOperationException"/> and leaves the range a permutation of its input. The natural order of a primitive type
@@ -257,54 +239,60 @@ public static class PairInsertionSort
         if (length <= 1) return;
 
         var i = first + 1;
-
-        // Process pairs of elements without boundary checks
         while (i + 1 < last)
         {
-            // Ensure a <= b
-            var swapped = s.IsGreaterAt(i, i + 1, out var a, out var b);
+            var swapped = s.IsGreaterAt(i, i + 1, out var small, out var large);
             if (swapped)
             {
-                (a, b) = (b, a);
+                (small, large) = (large, small);
             }
 
-            // Insert smaller element (a) - unguarded
             var j = i - 1;
-            while (s.IsElementGreaterThan(j, a))
+            while (s.IsElementGreaterThan(j, large, out var e))
             {
-                // The first shift overwrote the element from i, and s[i + 1] still holds the other one, so the element from i fills the gap.
-                if (!s.UsesNaturalPrimitiveOrder && j < first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, j + 1, swapped ? b : a);
-                s.Write(j + 1, s.Read(j));
+                // Passing the sentinel would leave the two slots above it empty.
+                if (!s.UsesNaturalPrimitiveOrder && j < first)
+                {
+                    s.Write(j + 1, small);
+                    ThrowHelper.RestoreAndThrowInconsistentComparer(s, j + 2, large);
+                }
+                s.Write(j + 2, e);
                 j--;
             }
-            s.Write(j + 1, a);
+            if (swapped || j != i - 1)
+            {
+                s.Write(j + 2, large);
+            }
 
-            // Insert larger element (b) - unguarded
-            // 'a' is now in place and acts as additional sentinel
-            j = i;
-            while (s.IsElementGreaterThan(j, b))
+            var k = j;
+            while (s.IsElementGreaterThan(k, small, out var e))
             {
-                if (!s.UsesNaturalPrimitiveOrder && j < first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, j + 1, b);
-                s.Write(j + 1, s.Read(j));
-                j--;
+                if (!s.UsesNaturalPrimitiveOrder && k < first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, k + 1, small);
+                s.Write(k + 1, e);
+                k--;
             }
-            s.Write(j + 1, b);
+            if (swapped || k != i - 1)
+            {
+                s.Write(k + 1, small);
+            }
 
             i += 2;
         }
 
-        // Handle odd element - unguarded
         if (i < last)
         {
             var tmp = s.Read(i);
             var j = i - 1;
-            while (s.IsElementGreaterThan(j, tmp))
+            while (s.IsElementGreaterThan(j, tmp, out var e))
             {
                 if (!s.UsesNaturalPrimitiveOrder && j < first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, j + 1, tmp);
-                s.Write(j + 1, s.Read(j));
+                s.Write(j + 1, e);
                 j--;
             }
-            s.Write(j + 1, tmp);
+            if (j != i - 1)
+            {
+                s.Write(j + 1, tmp);
+            }
         }
     }
 }

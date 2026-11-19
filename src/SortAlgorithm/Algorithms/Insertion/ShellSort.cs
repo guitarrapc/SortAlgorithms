@@ -13,8 +13,9 @@ namespace SortAlgorithm.Algorithms;
 /// </summary>
 /// <remarks>
 /// <para>Uses h[0] = 1 and h[k+1] = 3h[k] + 1.</para>
-/// <para>Each pass applies swap-based gapped insertion sort. Gaps are used in decreasing order,
-/// ending at 1. Equal keys may move past one another, so this algorithm is unstable.</para>
+/// <para>Each pass is a straight insertion sort of the elements h apart: it holds an element, moves larger ones h places up and writes it
+/// into the slot left free (Knuth's Algorithm D). Gaps are used in decreasing order, ending at 1. Equal keys may move past one another,
+/// so this algorithm is unstable.</para>
 /// <para>Implementation note: the immutable table covers every gap selectable for an int-sized
 /// range using gap &lt;= length/2. Gap selection uses the requested subrange length.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -26,9 +27,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Unknown; O(n^{3/2}) upper bound</description></item>
 /// <item><description>Worst case  : Θ(n^{3/2})</description></item>
 /// <item><description>Comparisons : O(n^{3/2}) worst-case upper bound</description></item>
-/// <item><description>Swaps       : O(n^{3/2}) worst-case upper bound</description></item>
-/// <item><description>Index Reads : O(n^{3/2}) worst-case upper bound - comparisons and swaps</description></item>
-/// <item><description>Index Writes: O(n^{3/2}) worst-case upper bound - two per swap</description></item>
+/// <item><description>Swaps       : 0 - elements move h places up and the held element drops into the slot left free; nothing is exchanged</description></item>
+/// <item><description>Index Reads : O(n^{3/2}) worst-case upper bound - one per comparison and one per element a pass holds</description></item>
+/// <item><description>Index Writes: O(n^{3/2}) worst-case upper bound - one per moved element and one per held element that leaves its slot</description></item>
 /// <item><description>Space       : O(1) per call - immutable gaps and scalar indices</description></item>
 /// </list>
 /// <para>Average-case exponents and relative performance are not asserted as general guarantees.</para>
@@ -113,38 +114,10 @@ public static class ShellSortKnuth1973
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
-    /// <remarks>
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext
-    {
-        var length = last - first;
-        if (length < 2) return;
-
-        var knuthSequence = ShellGapSequences.Knuth;
-        var gapIndex = knuthSequence.Length - 1;
-        ShellGapSequences.FindLast(knuthSequence, length, ref gapIndex);
-
-        // Count usable gaps for display
-        int totalGaps = gapIndex + 1;
-
-        // Decrease gap by moving to previous index
-        for (; gapIndex >= 0; gapIndex--)
-        {
-            var h = knuthSequence[gapIndex];
-            s.Context.OnPhase(SortPhase.ShellGapPass, h, totalGaps - gapIndex, totalGaps);
-
-            // Swap based Insertion sort with gap h.
-            for (var i = first + h; i < last; i++)
-            {
-                // Ensure j >= first + h to stay within the subrange.
-                for (int j = i; j >= first + h && s.IsGreaterAt(j - h, j); j -= h)
-                {
-                    s.Swap(j, j - h);
-                }
-            }
-        }
-    }
+        => ShellSortPasses.SortCore(s, first, last, ShellGapSequences.Knuth);
 }
 
 /// <summary>
@@ -158,8 +131,9 @@ public static class ShellSortKnuth1973
 /// </summary>
 /// <remarks>
 /// <para>Uses 9(2^k - 2^(k/2)) + 1 for even k and 8·2^k - 6·2^((k+1)/2) + 1 for odd k. This is the merged sequence 1, 5, 19, 41, 109, ... .</para>
-/// <para>Each pass applies swap-based gapped insertion sort. Gaps are used in decreasing order,
-/// ending at 1. Equal keys may move past one another, so this algorithm is unstable.</para>
+/// <para>Each pass is a straight insertion sort of the elements h apart: it holds an element, moves larger ones h places up and writes it
+/// into the slot left free (Knuth's Algorithm D). Gaps are used in decreasing order, ending at 1. Equal keys may move past one another,
+/// so this algorithm is unstable.</para>
 /// <para>Implementation note: the immutable table covers every gap selectable for an int-sized
 /// range using gap &lt;= length/2. Gap selection uses the requested subrange length.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -171,9 +145,9 @@ public static class ShellSortKnuth1973
 /// <item><description>Average case: Unknown; O(n²) upper bound</description></item>
 /// <item><description>Worst case  : O(n²) - general upper bound</description></item>
 /// <item><description>Comparisons : O(n²) worst-case upper bound</description></item>
-/// <item><description>Swaps       : O(n²) worst-case upper bound</description></item>
-/// <item><description>Index Reads : O(n²) worst-case upper bound - comparisons and swaps</description></item>
-/// <item><description>Index Writes: O(n²) worst-case upper bound - two per swap</description></item>
+/// <item><description>Swaps       : 0 - elements move h places up and the held element drops into the slot left free; nothing is exchanged</description></item>
+/// <item><description>Index Reads : O(n²) worst-case upper bound - one per comparison and one per element a pass holds</description></item>
+/// <item><description>Index Writes: O(n²) worst-case upper bound - one per moved element and one per held element that leaves its slot</description></item>
 /// <item><description>Space       : O(1) per call - immutable gaps and scalar indices</description></item>
 /// </list>
 /// <para>Average-case exponents and relative performance are not asserted as general guarantees.</para>
@@ -259,37 +233,10 @@ public static class ShellSortSedgewick1986
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
-    /// <remarks>
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext
-    {
-        var length = last - first;
-        if (length < 2) return;
-
-        var sedgewickSequence = ShellGapSequences.Sedgewick;
-        var gapIndex = sedgewickSequence.Length - 1;
-        ShellGapSequences.FindLast(sedgewickSequence, length, ref gapIndex);
-
-        int totalGaps = gapIndex + 1;
-
-        // Decrease gap by moving to previous index
-        for (; gapIndex >= 0; gapIndex--)
-        {
-            var h = sedgewickSequence[gapIndex];
-            s.Context.OnPhase(SortPhase.ShellGapPass, h, totalGaps - gapIndex, totalGaps);
-
-            // Swap based Insertion sort with gap h.
-            for (var i = first + h; i < last; i++)
-            {
-                // Ensure j >= first + h to stay within the subrange.
-                for (var j = i; j >= first + h && s.IsGreaterAt(j - h, j); j -= h)
-                {
-                    s.Swap(j, j - h);
-                }
-            }
-        }
-    }
+        => ShellSortPasses.SortCore(s, first, last, ShellGapSequences.Sedgewick);
 }
 
 /// <summary>
@@ -303,8 +250,9 @@ public static class ShellSortSedgewick1986
 /// </summary>
 /// <remarks>
 /// <para>Uses floor((4/5)((9/4)^(k+1) - 1)), starting at k = 0. This floor variant starts 1, 3, 8, 19, ... and is distinct from the ceiling variant.</para>
-/// <para>Each pass applies swap-based gapped insertion sort. Gaps are used in decreasing order,
-/// ending at 1. Equal keys may move past one another, so this algorithm is unstable.</para>
+/// <para>Each pass is a straight insertion sort of the elements h apart: it holds an element, moves larger ones h places up and writes it
+/// into the slot left free (Knuth's Algorithm D). Gaps are used in decreasing order, ending at 1. Equal keys may move past one another,
+/// so this algorithm is unstable.</para>
 /// <para>Implementation note: the immutable table covers every gap selectable for an int-sized
 /// range using gap &lt;= length/2. Gap selection uses the requested subrange length.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -316,9 +264,9 @@ public static class ShellSortSedgewick1986
 /// <item><description>Average case: Unknown; O(n²) upper bound</description></item>
 /// <item><description>Worst case  : O(n²) - general upper bound</description></item>
 /// <item><description>Comparisons : O(n²) worst-case upper bound</description></item>
-/// <item><description>Swaps       : O(n²) worst-case upper bound</description></item>
-/// <item><description>Index Reads : O(n²) worst-case upper bound - comparisons and swaps</description></item>
-/// <item><description>Index Writes: O(n²) worst-case upper bound - two per swap</description></item>
+/// <item><description>Swaps       : 0 - elements move h places up and the held element drops into the slot left free; nothing is exchanged</description></item>
+/// <item><description>Index Reads : O(n²) worst-case upper bound - one per comparison and one per element a pass holds</description></item>
+/// <item><description>Index Writes: O(n²) worst-case upper bound - one per moved element and one per held element that leaves its slot</description></item>
 /// <item><description>Space       : O(1) per call - immutable gaps and scalar indices</description></item>
 /// </list>
 /// <para>Average-case exponents and relative performance are not asserted as general guarantees.</para>
@@ -404,37 +352,10 @@ public static class ShellSortTokuda1992
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
-    /// <remarks>
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext
-    {
-        var length = last - first;
-        if (length < 2) return;
-
-        var tokudaSequence = ShellGapSequences.Tokuda;
-        var gapIndex = tokudaSequence.Length - 1;
-        ShellGapSequences.FindLast(tokudaSequence, length, ref gapIndex);
-
-        int totalGaps = gapIndex + 1;
-
-        // Decrease gap by moving to previous index
-        for (; gapIndex >= 0; gapIndex--)
-        {
-            var h = tokudaSequence[gapIndex];
-            s.Context.OnPhase(SortPhase.ShellGapPass, h, totalGaps - gapIndex, totalGaps);
-
-            // Swap based Insertion sort with gap h.
-            for (int i = first + h; i < last; i++)
-            {
-                // Ensure j >= first + h to stay within the subrange.
-                for (int j = i; j >= first + h && s.IsGreaterAt(j - h, j); j -= h)
-                {
-                    s.Swap(j, j - h);
-                }
-            }
-        }
-    }
+        => ShellSortPasses.SortCore(s, first, last, ShellGapSequences.Tokuda);
 }
 
 /// <summary>
@@ -448,8 +369,9 @@ public static class ShellSortTokuda1992
 /// </summary>
 /// <remarks>
 /// <para>Retains the prefix 1, 4, 10, 23, 57, 132, 301, 701, 1750. After 1750, the chosen empirical extension is h[k+1] = floor(9h[k]/4). The extension is not a uniquely defined infinite sequence from the original study.</para>
-/// <para>Each pass applies swap-based gapped insertion sort. Gaps are used in decreasing order,
-/// ending at 1. Equal keys may move past one another, so this algorithm is unstable.</para>
+/// <para>Each pass is a straight insertion sort of the elements h apart: it holds an element, moves larger ones h places up and writes it
+/// into the slot left free (Knuth's Algorithm D). Gaps are used in decreasing order, ending at 1. Equal keys may move past one another,
+/// so this algorithm is unstable.</para>
 /// <para>Implementation note: the immutable table covers every gap selectable for an int-sized
 /// range using gap &lt;= length/2. Gap selection uses the requested subrange length.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -461,17 +383,14 @@ public static class ShellSortTokuda1992
 /// <item><description>Average case: Unknown; O(n²) upper bound</description></item>
 /// <item><description>Worst case  : O(n²) - general upper bound</description></item>
 /// <item><description>Comparisons : O(n²) worst-case upper bound</description></item>
-/// <item><description>Swaps       : O(n²) worst-case upper bound</description></item>
-/// <item><description>Index Reads : O(n²) worst-case upper bound - comparisons and swaps</description></item>
-/// <item><description>Index Writes: O(n²) worst-case upper bound - two per swap</description></item>
+/// <item><description>Swaps       : 0 - elements move h places up and the held element drops into the slot left free; nothing is exchanged</description></item>
+/// <item><description>Index Reads : O(n²) worst-case upper bound - one per comparison and one per element a pass holds</description></item>
+/// <item><description>Index Writes: O(n²) worst-case upper bound - one per moved element and one per held element that leaves its slot</description></item>
 /// <item><description>Space       : O(1) per call - immutable gaps and scalar indices</description></item>
 /// </list>
 /// <para>Average-case exponents and relative performance are not asserted as general guarantees.</para>
 /// <para>Reference: Ciura, Best Increments for the Average Case of Shellsort (2001).</para>
 /// </remarks>
-/// <typeparam name="T"></typeparam>
-/// </remarks>
-/// <typeparam name="T"></typeparam>
 public static class ShellSortCiura2001
 {
     /// <summary>
@@ -551,37 +470,10 @@ public static class ShellSortCiura2001
     /// <param name="s">The SortSpan wrapping the span to sort.</param>
     /// <param name="first">The zero-based index of the first element in the range to sort.</param>
     /// <param name="last">The exclusive upper bound of the range to sort (one past the last element).</param>
-    /// <remarks>
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext
-    {
-        var length = last - first;
-        if (length < 2) return;
-
-        var ciuraSequence = ShellGapSequences.Ciura;
-        var gapIndex = ciuraSequence.Length - 1;
-        ShellGapSequences.FindLast(ciuraSequence, length, ref gapIndex);
-
-        int totalGaps = gapIndex + 1;
-
-        // Decrease gap by moving to previous index
-        for (; gapIndex >= 0; gapIndex--)
-        {
-            var h = ciuraSequence[gapIndex];
-            s.Context.OnPhase(SortPhase.ShellGapPass, h, totalGaps - gapIndex, totalGaps);
-
-            // Swap based Insertion sort with gap h.
-            for (var i = first + h; i < last; i++)
-            {
-                // Ensure j >= first + h to stay within the subrange.
-                for (var j = i; j >= first + h && s.IsGreaterAt(j - h, j); j -= h)
-                {
-                    s.Swap(j, j - h);
-                }
-            }
-        }
-    }
+        => ShellSortPasses.SortCore(s, first, last, ShellGapSequences.Ciura);
 }
 
 /// <summary>
@@ -595,8 +487,9 @@ public static class ShellSortCiura2001
 /// </summary>
 /// <remarks>
 /// <para>Uses ceil((γ^k - 1)/(γ - 1)) for k >= 1, with γ fixed to the displayed decimal 2.243609061420001. The decimal is interpreted exactly when deriving the rounded gaps.</para>
-/// <para>Each pass applies swap-based gapped insertion sort. Gaps are used in decreasing order,
-/// ending at 1. Equal keys may move past one another, so this algorithm is unstable.</para>
+/// <para>Each pass is a straight insertion sort of the elements h apart: it holds an element, moves larger ones h places up and writes it
+/// into the slot left free (Knuth's Algorithm D). Gaps are used in decreasing order, ending at 1. Equal keys may move past one another,
+/// so this algorithm is unstable.</para>
 /// <para>Implementation note: the immutable table covers every gap selectable for an int-sized
 /// range using gap &lt;= length/2. Gap selection uses the requested subrange length.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -608,9 +501,9 @@ public static class ShellSortCiura2001
 /// <item><description>Average case: Unknown; O(n²) upper bound</description></item>
 /// <item><description>Worst case  : O(n²) - general upper bound</description></item>
 /// <item><description>Comparisons : O(n²) worst-case upper bound</description></item>
-/// <item><description>Swaps       : O(n²) worst-case upper bound</description></item>
-/// <item><description>Index Reads : O(n²) worst-case upper bound - comparisons and swaps</description></item>
-/// <item><description>Index Writes: O(n²) worst-case upper bound - two per swap</description></item>
+/// <item><description>Swaps       : 0 - elements move h places up and the held element drops into the slot left free; nothing is exchanged</description></item>
+/// <item><description>Index Reads : O(n²) worst-case upper bound - one per comparison and one per element a pass holds</description></item>
+/// <item><description>Index Writes: O(n²) worst-case upper bound - one per moved element and one per held element that leaves its slot</description></item>
 /// <item><description>Space       : O(1) per call - immutable gaps and scalar indices</description></item>
 /// </list>
 /// <para>Average-case exponents and relative performance are not asserted as general guarantees.</para>
@@ -706,31 +599,52 @@ public static class ShellSortLee2021
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext
+        => ShellSortPasses.SortCore(s, first, last, ShellGapSequences.Lee);
+}
+
+/// <summary>
+/// The gap passes the Shell sort classes share. They differ only in their gap sequence.
+/// </summary>
+internal static class ShellSortPasses
+{
+    /// <summary>
+    /// Sorts [first..last) with one gapped straight insertion pass per gap, from the largest gap no greater than half the range down to 1.
+    /// </summary>
+    /// <remarks>
+    /// Each pass holds an element, moves the larger elements of its chain h places up, and writes it into the slot left free, as in
+    /// Knuth's Algorithm D. Exchanging neighbours in the chain instead makes the same comparisons but two writes per move.
+    /// </remarks>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, ReadOnlySpan<int> gaps)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
     {
         var length = last - first;
         if (length < 2) return;
 
-        // Lee's empirically determined sequence based on gamma = 2.243609061420001
-        var leeSequence = ShellGapSequences.Lee;
-        var gapIndex = leeSequence.Length - 1;
-        ShellGapSequences.FindLast(leeSequence, length, ref gapIndex);
+        var gapIndex = gaps.Length - 1;
+        ShellGapSequences.FindLast(gaps, length, ref gapIndex);
+        var totalGaps = gapIndex + 1;
 
-        int totalGaps = gapIndex + 1;
-
-        // Decrease gap by moving to previous index
         for (; gapIndex >= 0; gapIndex--)
         {
-            var h = leeSequence[gapIndex];
+            var h = gaps[gapIndex];
             s.Context.OnPhase(SortPhase.ShellGapPass, h, totalGaps - gapIndex, totalGaps);
 
-            // Swap based Insertion sort with gap h.
             for (var i = first + h; i < last; i++)
             {
-                // Ensure j >= first + h to stay within the subrange.
-                for (var j = i; j >= first + h && s.IsGreaterAt(j - h, j); j -= h)
+                var tmp = s.Read(i);
+                // An element no smaller than the one h below it stays where it is.
+                if (s.IsElementLessOrEqual(i - h, tmp, out var e)) continue;
+
+                var j = i;
+                do
                 {
-                    s.Swap(j, j - h);
+                    s.Write(j, e);
+                    j -= h;
                 }
+                // j - h >= first keeps the chain inside the subrange.
+                while (j - h >= first && s.IsElementGreaterThan(j - h, tmp, out e));
+                s.Write(j, tmp);
             }
         }
     }

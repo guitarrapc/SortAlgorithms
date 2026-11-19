@@ -27,12 +27,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Insertion</description></item>
 /// <item><description>Stable      : Yes (binary search uses &lt;= to preserve order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space, only temp variable for element being inserted)</description></item>
-/// <item><description>Best case   : O(n log n) - Already sorted input moves nothing, but binary insertion sort still binary-searches each element's position, about n log₂ n comparisons in all (this implementation skips the search for an element that is already in place; see the implementation notes)</description></item>
+/// <item><description>Best case   : O(n log n) - Already sorted input moves nothing, but every element is still binary-searched: Σ(i=1 to n-1) ⌊log₂(i+1)⌋ comparisons</description></item>
 /// <item><description>Average case: O(n²) - Comparisons: O(n log n), Shifts: O(n²) dominate overall complexity</description></item>
 /// <item><description>Worst case  : O(n²) - Reverse sorted array, maximum shifts for each element</description></item>
-/// <item><description>Comparisons : O(n log n) - each binary search over the i sorted elements costs at most ⌈log₂(i+1)⌉ comparisons, Σ(i=1 to n-1) ⌈log₂(i+1)⌉ ≈ n log₂ n in all, plus one per element (n - 1 in all) for the predecessor check; reverse-sorted input reaches both</description></item>
+/// <item><description>Comparisons : O(n log n) - the search over the i sorted elements costs ⌊log₂(i+1)⌋ or ⌈log₂(i+1)⌉ comparisons; sorted input takes the lower count for every element and reverse-sorted input the upper one, about n log₂ n in all</description></item>
 /// <item><description>Swaps       : 0 - insertion shifts elements one position and drops the held value into the gap; nothing is exchanged</description></item>
-/// <item><description>Index Reads : O(n²) - the shifts read up to n(n-1)/2 elements; each search adds one read per comparison, and each element adds two reads for the predecessor check and, when the check fails, one for the held value</description></item>
+/// <item><description>Index Reads : O(n²) - one per element for the held value, one per comparison, and one per shifted element, up to n(n-1)/2 of them on reverse-sorted input</description></item>
 /// <item><description>Index Writes: O(n²) - an element that moves shifts up to i elements and is then written into the gap: n(n-1)/2 + (n - 1) on reverse-sorted input</description></item>
 /// <item><description>Space       : O(1) - only the temp variable holding the element being inserted</description></item>
 /// </list>
@@ -44,12 +44,6 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
-/// <item><description>Predecessor check: before searching, each element is compared with its predecessor; when it is already ≥ it,
-/// the binary search and the shift are skipped. Binary insertion sort does not have this check — the Best case row above is its
-/// own — and the check never changes the output, because a skipped element is exactly one whose search would have returned its
-/// own position. On already-sorted input every element is skipped, so the sort costs n - 1 comparisons, 2(n - 1) reads and no
-/// writes, which is Θ(n); without the check the same input would still run every search, Σ(i=1 to n-1) ⌊log₂(i+1)⌋ comparisons
-/// (8,204 at n = 1,024). An element that fails the check pays one comparison and two reads on top of its search.</description></item>
 /// <item><description>Shift strategy: Under <c>NullContext</c> a shift of at least 32 elements becomes a single overlapping
 /// block move (memmove); shorter shifts, and every shift under an observing context, stay element-by-element so the
 /// shift remains visible one element at a time. Both perform the same number of element reads and writes.</description></item>
@@ -169,11 +163,7 @@ public static class BinaryInsertionSort
     /// <param name="first">The inclusive start index of the sorted range.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="start">The position from which to start inserting elements. Elements before this are already sorted.</param>
-    /// <param name="checkInOrderFirst">
-    /// When true, an element is first compared with its predecessor and left in place if it is not smaller.
-    /// TimSort passes false: its binary insertion searches for every element without that extra comparison.
-    /// </param>
-    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int start, bool checkInOrderFirst = true)
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int start)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -189,15 +179,6 @@ public static class BinaryInsertionSort
         {
             s.Context.OnPhase(SortPhase.BinaryInsertionPass, s.Offset + i, s.Offset + first, s.Offset + last - 1);
             s.Context.OnRole(s.Offset + i, s.BufferId, RoleType.RightPointer);
-
-            // Early termination: if element is already in correct position, skip everything
-            // Compare indices directly to avoid reading tmp unnecessarily
-            // This optimization significantly improves performance on sorted or nearly-sorted data
-            if (checkInOrderFirst && i > first && s.IsLessOrEqualAt(i - 1, i))
-            {
-                // Element is already in the correct position (greater than or equal to previous element)
-                continue;
-            }
 
             var tmp = s.Read(i);
 

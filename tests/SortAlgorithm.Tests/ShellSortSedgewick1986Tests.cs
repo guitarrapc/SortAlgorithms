@@ -88,23 +88,15 @@ public class ShellSortSedgewick1986Tests : SortTestsBase
     {
         var stats = new StatisticsContext();
         var sorted = Enumerable.Range(0, n).ToArray();
+        var expected = ShellSortSwapForm.Count(sorted, ShellGapSequences.Sedgewick);
         ShellSortSedgewick1986.Sort(sorted.AsSpan(), stats);
 
-        // Shell Sort with sorted data:
-        // - No swaps needed (all elements already in correct positions)
-        // - Comparisons depend on gap sequence, but final h=1 pass requires at least n-1 comparisons
-        // - Each comparison reads 2 elements
-        var expectedSwaps = 0UL;
-        var expectedWrites = 0UL; // No swaps = no writes
-        var minCompares = (ulong)(n - 1); // Final h=1 pass minimum
-
-        await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-        await Assert.That(stats.CompareCount >= minCompares).IsTrue().Because($"CompareCount ({stats.CompareCount}) should be >= {minCompares}");
-
-        // Each comparison reads 2 elements, each swap also reads 2 elements
-        var expectedReads = stats.CompareCount * 2 + stats.SwapCount * 2;
-        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        // Every held element stops at its first comparison, so nothing moves and each comparison pairs with one held element.
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
+        await Assert.That(stats.CompareCount).IsEqualTo(expected.Compares);
+        await Assert.That(stats.CompareCount >= (ulong)(n - 1)).IsTrue().Because($"CompareCount ({stats.CompareCount}) should cover the final h=1 pass");
+        await Assert.That(stats.IndexReadCount).IsEqualTo(stats.CompareCount * 2);
     }
 
     [Test]
@@ -116,25 +108,17 @@ public class ShellSortSedgewick1986Tests : SortTestsBase
     {
         var stats = new StatisticsContext();
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
+        var expected = ShellSortSwapForm.Count(reversed, ShellGapSequences.Sedgewick);
         ShellSortSedgewick1986.Sort(reversed.AsSpan(), stats);
 
-        // Reversed input with the merged Sedgewick sequence (1, 5, 19, 41, ...).
-        // These checks bound the observed operations; they do not establish a tight exponent.
-        // Each swap writes 2 elements.
-        var minSwaps = 1UL; // At least 1 swap is needed
-        var maxSwaps = (ulong)(n * n); // Upper bound (pessimistic)
-        var minCompares = (ulong)n; // At least n comparisons
-
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
-        await Assert.That(stats.CompareCount >= minCompares).IsTrue().Because($"CompareCount ({stats.CompareCount}) should be >= {minCompares}");
-
-        // Each swap writes 2 elements
-        var expectedWrites = stats.SwapCount * 2;
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-
-        // Each comparison reads 2 elements, each swap also reads 2 elements
-        var expectedReads = stats.CompareCount * 2 + stats.SwapCount * 2;
-        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        // These checks pin the operations of each pass; they do not identify a worst-case input.
+        // Holding the element makes the comparisons of the exchanging form, but writes once per move and once to place the element.
+        await Assert.That(stats.CompareCount).IsEqualTo(expected.Compares);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(expected.Exchanges + expected.Moved);
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expected.Compares + expected.Held);
+        await Assert.That(expected.Exchanges >= 1UL).IsTrue();
+        await Assert.That(reversed).IsEquivalentTo(Enumerable.Range(0, n), CollectionOrdering.Matching);
     }
 
     [Test]
@@ -150,23 +134,15 @@ public class ShellSortSedgewick1986Tests : SortTestsBase
     {
         var stats = new StatisticsContext();
         var random = TestHelpers.ShuffledRange(n, seed);
+        var expected = ShellSortSwapForm.Count(random, ShellGapSequences.Sedgewick);
         ShellSortSedgewick1986.Sort(random.AsSpan(), stats);
 
-        // Random input checks operation bounds and read/write accounting.
+        // Random input checks read/write accounting.
         // A finite sample does not establish an average-case exponent or rank gap sequences.
-        var minSwaps = 0UL; // Could be sorted by chance
-        var maxSwaps = (ulong)(n * n); // Upper bound
-        var minCompares = (ulong)(n - 1); // At least n-1 comparisons in final pass
-
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
-        await Assert.That(stats.CompareCount >= minCompares).IsTrue().Because($"CompareCount ({stats.CompareCount}) should be >= {minCompares}");
-
-        // Each swap writes 2 elements
-        var expectedWrites = stats.SwapCount * 2;
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-
-        // Each comparison reads 2 elements, each swap also reads 2 elements
-        var expectedReads = stats.CompareCount * 2 + stats.SwapCount * 2;
-        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
+        await Assert.That(stats.CompareCount).IsEqualTo(expected.Compares);
+        await Assert.That(stats.CompareCount >= (ulong)(n - 1)).IsTrue().Because($"CompareCount ({stats.CompareCount}) should cover the final h=1 pass");
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(expected.Exchanges + expected.Moved);
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expected.Compares + expected.Held);
     }
 }

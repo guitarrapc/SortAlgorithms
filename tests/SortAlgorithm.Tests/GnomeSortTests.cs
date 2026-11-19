@@ -35,13 +35,13 @@ public class GnomeSortTests : StableSortTestsBase
         var expectedSwaps = 0UL;
         var expectedWrites = 0UL;
 
-        // Each comparison reads 2 elements
-        var minIndexReads = expectedCompares * 2;
+        // Each comparison reads both neighbours
+        var expectedIndexReads = expectedCompares * 2;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedIndexReads);
     }
 
     [Test]
@@ -56,21 +56,56 @@ public class GnomeSortTests : StableSortTestsBase
         GnomeSort.Sort(reversed.AsSpan(), stats);
 
         // GnomeSort (optimized) - Reversed case (worst case):
-        // Swaps: 1 + 2 + 3 + ... + (n-1) = n(n-1)/2
-        // Compares: Each swap requires 1 compare before swap + 1 compare in while condition check
-        //           Total compares = 2 * n(n-1)/2 = n(n-1)
-        // Each swap writes 2 elements, so total writes = n(n-1)
+        // Every pot is carried to the front, one swap per step: 1 + 2 + ... + (n-1) = n(n-1)/2 swaps.
+        // Each step costs the one comparison that called for its swap, and no walk back ends above the front,
+        // so the comparisons equal the swaps. The plain walk would compare once more per swap on the way back up.
         var expectedSwaps = (ulong)(n * (n - 1) / 2);
-        var expectedCompares = (ulong)(n * (n - 1));
+        var expectedCompares = (ulong)(n * (n - 1) / 2);
         var expectedWrites = (ulong)(n * (n - 1));
 
-        // Each comparison reads 2 elements
-        var minIndexReads = expectedCompares * 2;
+        // Each comparison reads both neighbours, and each swap reads its two operands
+        var expectedIndexReads = expectedCompares * 2 + expectedSwaps * 2;
 
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await Assert.That(stats.IndexReadCount).IsEqualTo(expectedIndexReads);
+    }
+
+    /// <summary>
+    /// Position memory removes exactly the forward steps of the plain walk: one comparison for every swap, with the same swaps.
+    /// </summary>
+    [Test]
+    [Arguments(10, 42)]
+    [Arguments(50, 1234)]
+    [Arguments(100, 42)]
+    public async Task PositionMemorySavesOneComparisonPerSwap(int n, int seed)
+    {
+        var input = TestHelpers.ShuffledRange(n, seed);
+        var remembered = new StatisticsContext();
+        var plain = new StatisticsContext();
+        GnomeSort.Sort(input.ToArray().AsSpan(), remembered);
+        GnomeSortNonOptimized.Sort(input.ToArray().AsSpan(), plain);
+
+        await Assert.That(remembered.SwapCount).IsEqualTo(plain.SwapCount);
+        await Assert.That(remembered.CompareCount).IsEqualTo(plain.CompareCount - plain.SwapCount);
+    }
+
+    /// <summary>
+    /// Each walk back ends at the front at the latest, so a comparer that never reports order still lets the sort finish.
+    /// </summary>
+    [Test]
+    public async Task FinishesWhenTheComparerNeverReportsOrder()
+    {
+        const int n = 40;
+        var stats = new StatisticsContext();
+        var data = Enumerable.Range(0, n).ToArray();
+        GnomeSort.Sort(data.AsSpan(), Comparer<int>.Create(static (_, _) => 1), stats);
+
+        // Every pot is carried all the way to the front.
+        await Assert.That(stats.SwapCount).IsEqualTo((ulong)(n * (n - 1) / 2));
+        await Assert.That(stats.CompareCount).IsEqualTo((ulong)(n * (n - 1) / 2));
+        await Assert.That(data.Order().SequenceEqual(Enumerable.Range(0, n))).IsTrue();
     }
 
     [Test]
@@ -91,9 +126,9 @@ public class GnomeSortTests : StableSortTestsBase
         // GnomeSort - Random case:
         // Average comparisons: O(n^2)
         // Minimum: n-1 (best case, already sorted by chance)
-        // Maximum: n(n-1) (worst case, reversed - each swap causes 2 compares)
+        // Maximum: n(n-1)/2 (worst case, reversed - one comparison per swap)
         var minCompares = (ulong)(n - 1);
-        var maxCompares = (ulong)(n * (n - 1));
+        var maxCompares = (ulong)(n * (n - 1) / 2);
 
         // Swaps vary depending on initial disorder
         var minSwaps = 0UL;

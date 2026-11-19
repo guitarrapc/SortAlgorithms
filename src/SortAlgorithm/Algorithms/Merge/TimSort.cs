@@ -175,7 +175,7 @@ public static class TimSort
         {
             var sortSpan = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var initRunLen = CountRunAndMakeAscending(sortSpan, first, last);
-            BinaryInsertionSort.SortCore(sortSpan, first, last, first + initRunLen, checkInOrderFirst: false);
+            BinaryInsertionSort.SortCore(sortSpan, first, last, first + initRunLen);
             return;
         }
 
@@ -229,7 +229,7 @@ public static class TimSort
                 if (runLength < minRun)
                 {
                     var force = Math.Min(minRun, last - i);
-                    BinaryInsertionSort.SortCore(s, i, i + force, i + runLength, checkInOrderFirst: false);
+                    BinaryInsertionSort.SortCore(s, i, i + force, i + runLength);
                     runEnd = i + force;
                     runLength = force;
                 }

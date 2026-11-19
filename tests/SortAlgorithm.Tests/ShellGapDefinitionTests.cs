@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 
@@ -68,7 +68,13 @@ public class ShellGapDefinitionTests
             var phases = new List<(int, int, int)>();
             long compares = 0, reads = 0;
             var context = new VisualizationContext(
-                onCompare: (i, j, _, bi, bj) => { CheckIndex(i, bi); CheckIndex(j, bj); compares++; },
+                // Each comparison sets an element of the chain against the held element, which no buffer holds (-1).
+                onCompare: (i, j, _, bi, bj) =>
+                {
+                    CheckIndex(i, bi);
+                    if (j != -1 || bj != -1) throw new InvalidOperationException("The second operand was not the held element.");
+                    compares++;
+                },
                 onIndexRead: (i, b) => { CheckIndex(i, b); reads++; },
                 onSwap: (_, _, _) => throw new InvalidOperationException("Ordered input was swapped."),
                 onIndexWrite: (_, _, _) => throw new InvalidOperationException("Ordered input was written."),

@@ -58,7 +58,6 @@ public class GnomeSortNonOptimizedTests : StableSortTestsBase
         GnomeSortNonOptimized.Sort(reversed.AsSpan(), stats);
 
         // GnomeSortNonOptimized - Reversed case (worst case):
-        // This implementation is actually the same algorithm as GnomeSort
         // Swaps: 1 + 2 + 3 + ... + (n-1) = n(n-1)/2
         // Compares: Each swap requires 1 compare before swap + 1 compare in while/if condition check
         //           Total compares = 2 * n(n-1)/2 = n(n-1)
