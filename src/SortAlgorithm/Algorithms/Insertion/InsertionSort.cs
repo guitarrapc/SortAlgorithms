@@ -1,4 +1,5 @@
 ﻿using SortAlgorithm.Contexts;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -272,7 +273,7 @@ public static class InsertionSort
     /// <summary>
     /// Unguarded insertion sort: assumes that there is an element at position (first - 1)
     /// that is less than or equal to all elements in the range [first, last).
-    /// This assumption allows us to skip boundary checks in the inner loop, improving performance.
+    /// This assumption lets the inner loop stop by comparison, and under the natural order of a primitive type it has no boundary check.
     /// This is used by IntroSort for sorting non-leftmost partitions where the pivot acts as a sentinel.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
@@ -282,9 +283,11 @@ public static class InsertionSort
     /// <remarks>
     /// PRECONDITION: first > 0 and s[first-1] <= s[i] for all i in [first, last)
     /// This precondition is guaranteed by IntroSort's partitioning scheme.
-    /// Violating this precondition will cause out-of-bounds access.
+    /// A comparer that is not a consistent total order can break it. The shift that would pass the sentinel then throws
+    /// <see cref="InvalidOperationException"/> and leaves the range a permutation of its input.
     ///
-    /// The sentinel removes the guarded algorithm's (j >= first) test from the inner loop.
+    /// Under the natural order of a primitive type, the sentinel removes the guarded algorithm's (j >= first) test from the inner loop.
+    /// Any other comparer tests j after each shift instead.
     /// This core retains the ordinary pairwise predicates; the guarded core separately prepares a floating-point key's NaN state.
     /// Write counts are identical. An element that travels all the way to <paramref name="first"/> costs one
     /// extra read and one extra comparison here, because the loop stops by comparing against the sentinel
@@ -312,6 +315,9 @@ public static class InsertionSort
                 // and hands back the element so the shift below needs no second read.
                 if (s.IsElementGreaterThan(j, tmp, out var a))
                 {
+                    // Only a consistent comparer stops at the sentinel, and element access is unchecked. The natural order of a
+                    // primitive type is consistent, so the check folds away for it.
+                    if (!s.UsesNaturalPrimitiveOrder && j < first) RestoreAndThrow(s, first, tmp);
                     s.Write(j + 1, a);
                     j--;
                 }
@@ -456,6 +462,8 @@ public static class InsertionSort
                     {
                         if (s.IsElementGreaterThan(j, tmp, out var a))
                         {
+                            // As in UnguardedSortCore, only a consistent comparer stops at the sentinel.
+                            if (!s.UsesNaturalPrimitiveOrder && j < first) RestoreAndThrow(s, first, tmp);
                             s.Write(j + 1, a);
                             j--;
                         }
@@ -471,6 +479,19 @@ public static class InsertionSort
         }
 
         return true; // Successfully sorted without exceeding insertion limit
+    }
+
+    /// <summary>
+    /// Reports a comparer that moved an element past the sentinel of an unguarded insertion. The shifts have left a gap at
+    /// <paramref name="first"/>, and filling it with the element being inserted keeps the range a permutation of its input.
+    /// </summary>
+    [DoesNotReturn]
+    static void RestoreAndThrow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, T value)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        s.Write(first, value);
+        throw new InvalidOperationException("Comparison method violates its general contract.");
     }
 
     /// <summary>

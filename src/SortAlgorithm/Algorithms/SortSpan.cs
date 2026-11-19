@@ -67,6 +67,20 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     public TContext Context => _context;
 
     /// <summary>
+    /// Whether comparisons use the natural order of one of the primitive types that this span compares directly. That order is a
+    /// consistent total order. The JIT folds the value to a constant for each instantiation.
+    /// </summary>
+    public bool UsesNaturalPrimitiveOrder
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => typeof(TComparer).IsValueType && default(TComparer) is IComparableComparer &&
+            (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte) || typeof(T) == typeof(ushort) || typeof(T) == typeof(short) ||
+             typeof(T) == typeof(uint) || typeof(T) == typeof(int) || typeof(T) == typeof(ulong) || typeof(T) == typeof(long) ||
+             typeof(T) == typeof(nuint) || typeof(T) == typeof(nint) || typeof(T) == typeof(float) || typeof(T) == typeof(double) ||
+             typeof(T) == typeof(Half));
+    }
+
+    /// <summary>
     /// Exposes the underlying span without any operation tracking.
     /// Only for NullContext-gated fast paths (e.g. SIMD kernels) where no observer exists.
     /// The getter enforces the contract: any access with an observing <typeparamref name="TContext"/>

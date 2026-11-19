@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -90,6 +91,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: Θ(n log n) average, O(1) best - each swap writes two positions; an already ordered input is never partitioned</description></item>
 /// <item><description>Space       : O(log n) - recursion stack only</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The unguarded partition scans and the unguarded insertion sort stop at elements that earlier comparisons put in their way, which
+/// only a consistent comparer guarantees. Element access is unchecked, so those cursors are also checked against their range. The natural
+/// order of a primitive type is always consistent, and the checks are compiled out for it. A comparer that is not a consistent total order
+/// can make the sort throw <see cref="InvalidOperationException"/>. Either way the range keeps its elements, in an unspecified order, and
+/// nothing outside the range is read or written.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Paper: https://arxiv.org/abs/2106.05123</para>
 /// <para>Other implementation: https://github.com/orlp/pdqsort</para>
@@ -422,8 +429,13 @@ public static class PDQSort
         var first = begin;
         var last = end;
 
+        // The unguarded scans stop at elements that earlier comparisons put in their way. Only a consistent comparer guarantees that,
+        // and element access is unchecked, so they also check their cursor against the range. The natural order of a primitive type is
+        // consistent, so the checks fold away for it.
+        var checkCursors = !s.UsesNaturalPrimitiveOrder;
+
         // Find the first element greater than or equal to the pivot (the median of 3 guarantees this exists).
-        do { first++; } while (s.IsElementLessThan(first, pivot));
+        do { first++; if (checkCursors && first == end) ThrowInconsistentComparer(); } while (s.IsElementLessThan(first, pivot));
 
         // Find the first element strictly smaller than the pivot. We have to guard this search if
         // there was no element before *first.
@@ -433,7 +445,7 @@ public static class PDQSort
         }
         else
         {
-            do { last--; } while (s.IsElementGreaterOrEqual(last, pivot));
+            do { last--; if (checkCursors && last < begin) ThrowInconsistentComparer(); } while (s.IsElementGreaterOrEqual(last, pivot));
         }
 
         // If the first pair of elements that should be swapped to partition are the same element,
@@ -446,8 +458,8 @@ public static class PDQSort
         while (first < last)
         {
             s.Swap(first, last);
-            do { first++; } while (s.IsElementLessThan(first, pivot));
-            do { last--; } while (s.IsElementGreaterOrEqual(last, pivot));
+            do { first++; if (checkCursors && first == end) ThrowInconsistentComparer(); } while (s.IsElementLessThan(first, pivot));
+            do { last--; if (checkCursors && last < begin) ThrowInconsistentComparer(); } while (s.IsElementGreaterOrEqual(last, pivot));
         }
 
         // Put the pivot in the right place
@@ -472,9 +484,12 @@ public static class PDQSort
         var first = begin;
         var last = end;
 
+        // As in PartitionRight, the unguarded scans also check their cursor against the range.
+        var checkCursors = !s.UsesNaturalPrimitiveOrder;
+
         // Find the first element less than or equal to pivot from the right.
         // *begin == pivot, so the scan is guaranteed to terminate at begin at the latest.
-        do { last--; } while (s.IsValueLessThan(pivot, last));
+        do { last--; if (checkCursors && last < begin) ThrowInconsistentComparer(); } while (s.IsValueLessThan(pivot, last));
 
         // Find the first element strictly greater than pivot from the left. We have to guard
         // this search if there was no element after *last.
@@ -484,15 +499,15 @@ public static class PDQSort
         }
         else
         {
-            do { first++; } while (s.IsValueGreaterOrEqual(pivot, first));
+            do { first++; if (checkCursors && first == end) ThrowInconsistentComparer(); } while (s.IsValueGreaterOrEqual(pivot, first));
         }
 
         // Keep swapping pairs. Previously swapped pairs guard the searches.
         while (first < last)
         {
             s.Swap(first, last);
-            do { last--; } while (s.IsValueLessThan(pivot, last));
-            do { first++; } while (s.IsValueGreaterOrEqual(pivot, first));
+            do { last--; if (checkCursors && last < begin) ThrowInconsistentComparer(); } while (s.IsValueLessThan(pivot, last));
+            do { first++; if (checkCursors && first == end) ThrowInconsistentComparer(); } while (s.IsValueGreaterOrEqual(pivot, first));
         }
 
         var pivotPos = last;
@@ -540,6 +555,11 @@ public static class PDQSort
 
         return true;
     }
+
+    /// <summary>Reports a comparer whose answers would move a partition cursor out of its range.</summary>
+    [DoesNotReturn]
+    static void ThrowInconsistentComparer()
+        => throw new InvalidOperationException("Comparison method violates its general contract.");
 
     /// <summary>
     /// Sorts 3 elements at positions a, b, c.

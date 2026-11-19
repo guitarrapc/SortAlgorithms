@@ -601,4 +601,66 @@ public class SortSpanTests
             return (ascending, descending);
         }
     }
+
+    /// <summary>Orders exactly as the natural comparer does, but is not the library's own comparer.</summary>
+    private readonly struct NaturalOrderCopy<T> : IComparer<T> where T : IComparable<T>
+    {
+        public int Compare(T? x, T? y) => x!.CompareTo(y!);
+    }
+
+    static bool UsesNaturalPrimitiveOrder<T, TComparer, TContext>(TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => new SortSpan<T, TComparer, TContext>(Span<T>.Empty, context, comparer, 0).UsesNaturalPrimitiveOrder;
+
+    static bool Natural<T>() where T : IComparable<T>
+        => UsesNaturalPrimitiveOrder<T, ComparableComparer<T>, NullContext>(default, NullContext.Default);
+
+    /// <summary>
+    /// Sorts drop range checks that only an inconsistent comparer could trip when this flag is set. It must therefore hold only for the
+    /// library's own comparer on the primitive types it compares directly, whatever the context. A user comparer counts as untrusted even
+    /// when it orders the same way, and so does the library's comparer on any other type.
+    /// </summary>
+    [Test]
+    public async Task UsesNaturalPrimitiveOrder_HoldsOnlyForTheLibraryComparerOnAPrimitive()
+    {
+        (string Case, bool Value)[] trusted =
+        [
+            ("byte", Natural<byte>()),
+            ("sbyte", Natural<sbyte>()),
+            ("ushort", Natural<ushort>()),
+            ("short", Natural<short>()),
+            ("uint", Natural<uint>()),
+            ("int", Natural<int>()),
+            ("ulong", Natural<ulong>()),
+            ("long", Natural<long>()),
+            ("nuint", Natural<nuint>()),
+            ("nint", Natural<nint>()),
+            ("float", Natural<float>()),
+            ("double", Natural<double>()),
+            ("Half", Natural<Half>()),
+            ("int observed", UsesNaturalPrimitiveOrder<int, ComparableComparer<int>, StatisticsContext>(default, new StatisticsContext())),
+        ];
+        (string Case, bool Value)[] untrusted =
+        [
+            ("char", Natural<char>()),
+            ("bool", Natural<bool>()),
+            ("decimal", Natural<decimal>()),
+            ("Int128", Natural<Int128>()),
+            ("DateTime", Natural<DateTime>()),
+            ("string", Natural<string>()),
+            ("int descending", UsesNaturalPrimitiveOrder<int, DescendingIntComparer, NullContext>(default, NullContext.Default)),
+            ("int copy", UsesNaturalPrimitiveOrder<int, NaturalOrderCopy<int>, NullContext>(default, NullContext.Default)),
+            ("long copy", UsesNaturalPrimitiveOrder<long, NaturalOrderCopy<long>, NullContext>(default, NullContext.Default)),
+            ("nint copy", UsesNaturalPrimitiveOrder<nint, NaturalOrderCopy<nint>, NullContext>(default, NullContext.Default)),
+            ("double copy", UsesNaturalPrimitiveOrder<double, NaturalOrderCopy<double>, NullContext>(default, NullContext.Default)),
+            ("Half copy", UsesNaturalPrimitiveOrder<Half, NaturalOrderCopy<Half>, NullContext>(default, NullContext.Default)),
+            ("int class", UsesNaturalPrimitiveOrder<int, Comparer<int>, NullContext>(Comparer<int>.Default, NullContext.Default)),
+            ("double class", UsesNaturalPrimitiveOrder<double, Comparer<double>, NullContext>(Comparer<double>.Default, NullContext.Default)),
+            ("byte interface", UsesNaturalPrimitiveOrder<byte, IComparer<byte>, NullContext>(Comparer<byte>.Default, NullContext.Default)),
+        ];
+
+        foreach (var (name, value) in trusted) await Assert.That(value).IsTrue().Because(name);
+        foreach (var (name, value) in untrusted) await Assert.That(value).IsFalse().Because(name);
+    }
 }

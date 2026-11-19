@@ -103,6 +103,12 @@ namespace SortAlgorithm.Algorithms;
 /// step makes no swaps, each side goes to InsertionSort.SortIncomplete, which gives up after 8 insertions. On
 /// already-sorted input the first partition makes no swaps and both sides are confirmed sorted, so the sort ends
 /// there: about 2n comparisons, 3n reads and no writes, which is Θ(n).</para>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The Hoare partition checks its cursors against the range. The insertion sorts of ranges that are not leftmost rely on the element
+/// before the range to stop their scan instead. Only a consistent comparer guarantees that, so their cursor is also checked. The natural
+/// order of a primitive type is always consistent, and that check is compiled out for it. A comparer that is not a consistent total order can
+/// make the sort throw <see cref="InvalidOperationException"/>. Either way the range keeps its elements, in an unspecified order, and
+/// nothing outside the range is read or written.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Introsort</para>
 /// <para>Paper: David R Musser https://webpages.charlotte.edu/rbunescu/courses/ou/cs4040/introsort.pdf</para>

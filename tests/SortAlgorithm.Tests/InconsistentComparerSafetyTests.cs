@@ -4,16 +4,20 @@ using SortAlgorithm.Contexts;
 namespace SortAlgorithm.Tests;
 
 /// <summary>
-/// The merges of QuadSort and FluxSort advance their cursors on the strength of earlier comparisons, and Release builds do not check
-/// element access. Guard cells surround each buffer under test. The comparers report every guard cell they are shown, which reveals a
-/// read that only feeds a comparison, and the cells must keep their value, which reveals a stray write.
+/// The merges of QuadSort and FluxSort and the partition scans of PDQSort and IntroSort advance their cursors on the strength of earlier
+/// comparisons, and Release builds do not check element access. Guard cells surround each range under test. The comparers report every
+/// guard cell they are shown, which reveals a read that only feeds a comparison, and the cells must keep their value, which reveals a stray
+/// write.
 /// </summary>
 public class InconsistentComparerSafetyTests
 {
     const int GuardLength = 64;
     const long GuardKey = long.MinValue;
 
-    enum Sorter { Quad, QuadLimitedSwap, Flux }
+    enum Sorter { Quad, QuadLimitedSwap, Flux, Pdq, Intro }
+
+    /// <summary>Thrown by a watching comparer, so that a cursor that has left the range stops before it can leave the buffer too.</summary>
+    sealed class GuardCellReadException : Exception;
 
     sealed class GuardWatch
     {
@@ -25,9 +29,46 @@ public class InconsistentComparerSafetyTests
     {
         public int Compare(T? x, T? y)
         {
-            if (EqualityComparer<T>.Default.Equals(x, guard) || EqualityComparer<T>.Default.Equals(y, guard)) watch.SawGuard = true;
+            if (EqualityComparer<T>.Default.Equals(x, guard) || EqualityComparer<T>.Default.Equals(y, guard))
+            {
+                watch.SawGuard = true;
+                throw new GuardCellReadException();
+            }
             return inner.Compare(x, y);
         }
+    }
+
+    readonly struct ConstantComparer(int answer) : IComparer<int>
+    {
+        public int Compare(int x, int y) => answer;
+    }
+
+    /// <summary>Keeps giving the same answer and changes it rarely, which runs one cursor far past the elements that should stop it.</summary>
+    sealed class StickyIntComparer(Random random) : IComparer<int>
+    {
+        bool greater = random.Next(2) == 0;
+
+        public int Compare(int x, int y)
+        {
+            if (random.Next(64) == 0) greater = !greater;
+            return greater ? 1 : -1;
+        }
+    }
+
+    /// <summary>Answers truthfully, then reverses its order part way through the sort, so earlier answers no longer hold.</summary>
+    sealed class ReversingComparer(int honestCalls) : IComparer<int>
+    {
+        int calls;
+
+        public int Compare(int x, int y) => ++calls > honestCalls ? y.CompareTo(x) : x.CompareTo(y);
+    }
+
+    /// <summary>Answers truthfully for a number of calls and then gives one answer for good. <see cref="Calls"/> counts every call.</summary>
+    sealed class HonestThenConstantComparer(int honestCalls, int answer) : IComparer<int>
+    {
+        public int Calls;
+
+        public int Compare(int x, int y) => ++Calls > honestCalls ? answer : x.CompareTo(y);
     }
 
     readonly struct OverflowingComparer : IComparer<int>
@@ -85,21 +126,28 @@ public class InconsistentComparerSafetyTests
         }
     }
 
-    static void Sort<T, TComparer, TContext>(Sorter sorter, Span<T> span, TComparer comparer, TContext context)
+    /// <summary>
+    /// Sorts [first, last) of the buffer. The range overloads keep the guard cells inside the span, so a cursor below the range reads a
+    /// guard cell instead of an address far outside the buffer.
+    /// </summary>
+    static void Sort<T, TComparer, TContext>(Sorter sorter, T[] buffer, int first, int last, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         switch (sorter)
         {
-            case Sorter.Quad: QuadSort.Sort(span, comparer, context); break;
-            case Sorter.QuadLimitedSwap: QuadSort.SortWithSwapSize(span, 64, comparer, context); break;
-            default: FluxSort.Sort(span, comparer, context); break;
+            case Sorter.Quad: QuadSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.QuadLimitedSwap: QuadSort.SortWithSwapSize(buffer.AsSpan(first, last - first), 64, comparer, context); break;
+            case Sorter.Flux: FluxSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Pdq: PDQSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            default: IntroSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
         }
     }
 
     /// <summary>
-    /// Sorts between guard cells. The sort may finish or report the broken comparer, and either way the span may hold only values of the
-    /// input. Returns a description of the violation, if any.
+    /// Sorts between guard cells. The sort may finish or report the broken comparer, and either way the range may hold only values of the
+    /// input. PDQSort and IntroSort document that the range keeps its elements, so for them it must also stay a permutation of the input.
+    /// Returns a description of the violation, if any.
     /// </summary>
     static string? Exercise<T, TComparer, TContext>(Sorter sorter, T[] input, T guard, TComparer comparer, TContext context)
         where T : notnull
@@ -113,11 +161,15 @@ public class InconsistentComparerSafetyTests
 
         try
         {
-            Sort(sorter, buffer.AsSpan(GuardLength, input.Length), new WatchingComparer<T, TComparer>(comparer, guard, watch), context);
+            Sort(sorter, buffer, GuardLength, GuardLength + input.Length, new WatchingComparer<T, TComparer>(comparer, guard, watch), context);
         }
         catch (InvalidOperationException)
         {
             // The documented report of a comparer that is not a consistent total order.
+        }
+        catch (GuardCellReadException)
+        {
+            // The watch has recorded the read, and it is reported below.
         }
 
         if (watch.SawGuard) return "the comparer was shown a guard cell";
@@ -128,6 +180,13 @@ public class InconsistentComparerSafetyTests
             var inside = i >= GuardLength && i < GuardLength + input.Length;
             if (inside && !allowed.Contains(buffer[i])) return $"index {i - GuardLength} holds {buffer[i]}, which is not an input value";
             if (!inside && !EqualityComparer<T>.Default.Equals(buffer[i], guard)) return $"guard cell {i} was overwritten";
+        }
+
+        if (sorter is Sorter.Pdq or Sorter.Intro)
+        {
+            var expected = input.Order().ToArray();
+            var actual = buffer.AsSpan(GuardLength, input.Length).ToArray().Order().ToArray();
+            if (!expected.SequenceEqual(actual)) return "the range is no longer a permutation of the input";
         }
         return null;
     }
@@ -256,6 +315,61 @@ public class InconsistentComparerSafetyTests
             await Assert.That(Exercise(sorter, ints, int.MinValue, new OverflowingComparer(), new StatisticsContext())).IsNull().Because($"{label} overflow observed");
             await Assert.That(Exercise(sorter, ints, int.MinValue, new CoinFlipComparer(new Random(seed)), NullContext.Default)).IsNull().Because($"{label} coin flip");
             await Assert.That(Exercise(sorter, doubles, 12345.5, new IeeeComparer(), NullContext.Default)).IsNull().Because($"{label} NaN");
+        }
+    }
+
+    /// <summary>
+    /// A constant answer drives every unguarded scan to one end of its range, and a sticky one does so part way through a sort. The
+    /// reversing comparer is honest until the sort has come to rely on its answers.
+    /// </summary>
+    [Test]
+    [MethodDataSource(nameof(Cases))]
+    public async Task CursorsStayInsideTheRangeWhateverTheAnswers(string sorterName, int n)
+    {
+        var sorter = Enum.Parse<Sorter>(sorterName);
+        var ints = FullRangeInts(n, n);
+
+        await Assert.That(Exercise(sorter, ints, int.MinValue, new ConstantComparer(-1), NullContext.Default)).IsNull().Because($"{sorter} n={n} always less");
+        await Assert.That(Exercise(sorter, ints, int.MinValue, new ConstantComparer(1), NullContext.Default)).IsNull().Because($"{sorter} n={n} always greater");
+
+        for (var seed = 1; seed <= 40; seed++)
+        {
+            var label = $"{sorter} n={n} seed={seed}";
+            await Assert.That(Exercise(sorter, ints, int.MinValue, new StickyIntComparer(new Random(seed)), NullContext.Default)).IsNull().Because($"{label} sticky");
+            await Assert.That(Exercise(sorter, ints, int.MinValue, new ReversingComparer(seed * n / 8), NullContext.Default)).IsNull().Because($"{label} reversing");
+        }
+    }
+
+    /// <summary>
+    /// Turns to a constant answer after every possible number of truthful calls, so each scan is stranded at each point it can reach. A
+    /// truthful sort of each of these inputs reaches the PDQSort partition that puts equal elements on the left, and between them they reach
+    /// both forms of its first scan from the left. A comparer has to answer truthfully to get there.
+    /// </summary>
+    [Test]
+    [Arguments(nameof(Sorter.Quad))]
+    [Arguments(nameof(Sorter.QuadLimitedSwap))]
+    [Arguments(nameof(Sorter.Flux))]
+    [Arguments(nameof(Sorter.Pdq))]
+    [Arguments(nameof(Sorter.Intro))]
+    public async Task ConstantAnswersFromAnyPointStayInsideTheRange(string sorterName)
+    {
+        var sorter = Enum.Parse<Sorter>(sorterName);
+
+        foreach (var (n, distinct) in new[] { (133, 4), (100, 8), (200, 3) })
+        {
+            var random = new Random(n);
+            var keys = Enumerable.Range(0, n).Select(_ => random.Next(distinct)).ToArray();
+            var honest = new HonestThenConstantComparer(int.MaxValue, 0);
+            Sort(sorter, keys.ToArray(), 0, n, honest, NullContext.Default);
+
+            for (var k = 0; k <= honest.Calls; k++)
+            {
+                foreach (var answer in new[] { -1, 1 })
+                {
+                    await Assert.That(Exercise(sorter, keys, int.MinValue, new HonestThenConstantComparer(k, answer), NullContext.Default))
+                        .IsNull().Because($"{sorter} n={n} after {k} calls always {answer}");
+                }
+            }
         }
     }
 
