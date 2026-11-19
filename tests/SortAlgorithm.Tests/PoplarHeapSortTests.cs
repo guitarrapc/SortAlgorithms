@@ -1,4 +1,4 @@
-using SortAlgorithm.Algorithms;
+﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 using TUnit.Assertions.Enums;
 
@@ -168,20 +168,37 @@ public class PoplarHeapSortTests : SortTestsBase
     }
 
     /// <summary>
-    /// Elements move only by swapping, and every comparison and swap announces its reads through SortSpan,
-    /// so the four counters are tied exactly. This is the check behind the Index Reads and Index Writes rows.
+    /// The sift and the root exchange move elements through a hole and never swap. Every write stores an element
+    /// read earlier, so writes cannot outnumber reads.
     /// </summary>
     [Test]
     [Arguments(100, 42)]
     [Arguments(1000, 1234)]
-    public async Task ReadsAndWritesFollowComparisonsAndSwaps(int n, int seed)
+    public async Task ElementsMoveThroughAHole(int n, int seed)
     {
         var stats = new StatisticsContext();
         var random = TestHelpers.ShuffledRange(n, seed);
         PoplarHeapSort.Sort(random.AsSpan(), stats);
 
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(2 * stats.SwapCount);
-        await Assert.That(stats.IndexReadCount).IsEqualTo(2 * stats.CompareCount + 2 * stats.SwapCount);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsLessThanOrEqualTo(stats.IndexReadCount);
+    }
+
+    /// <summary>
+    /// Holding the sinking element aside changes how a sift moves elements, not what it compares. The counts are
+    /// those of the swapping sift on the same inputs, recorded before the change.
+    /// </summary>
+    [Test]
+    [Arguments(100, 42, 926UL)]
+    [Arguments(1000, 1234, 17848UL)]
+    public async Task ComparisonsMatchTheSwappingSift(int n, int seed, ulong expected)
+    {
+        var stats = new StatisticsContext();
+        var random = TestHelpers.ShuffledRange(n, seed);
+        PoplarHeapSort.Sort(random.AsSpan(), stats);
+
+        await Assert.That(stats.CompareCount).IsEqualTo(expected);
     }
 
     [Test]
@@ -239,8 +256,8 @@ public class PoplarHeapSortTests : SortTestsBase
         var maxCompares = (ulong)(n * Math.Log2(n) * 3);
 
         await Assert.That(stats.CompareCount).IsBetween((ulong)(n - 1), maxCompares);
-        await Assert.That(stats.SwapCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(2 * stats.SwapCount);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
     }
 
     [Test]

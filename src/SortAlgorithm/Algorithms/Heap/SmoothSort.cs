@@ -39,10 +39,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Stable      : No (heap operations do not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space - only uses variables for heap size tracking)</description></item>
 /// <item><description>Best case   : Ω(n) - Already sorted data requires only O(n) comparisons during heap construction with no swaps</description></item>
-/// <item><description>Average case: Θ(n log n) - Typical random data requires O(n log n) comparisons and swaps</description></item>
-/// <item><description>Worst case  : O(n log n) - Reverse sorted data requires maximum heap operations but bounded by Leonardo heap depth (log φ n)</description></item>
-/// <item><description>Comparisons : Best Ω(n), Average ~1.5n log n, Worst O(n log n) - Leonardo heap depth log φ n where φ = (1+√5)/2 ≈ 1.618 (golden ratio)</description></item>
-/// <item><description>Swaps       : Best 0 (sorted), Average O(n log n), Worst O(n log n) - Each swap involves 2 writes</description></item>
+/// <item><description>Average case: Θ(n log n) - Typical random data requires O(n log n) comparisons and element moves</description></item>
+/// <item><description>Worst case  : O(n log n) - every sift and trinkle is bounded by the depth of the Leonardo trees, about log_φ n</description></item>
+/// <item><description>Comparisons : Best Θ(n) (sorted), Average/Worst O(n log n) - two per level of a Leonardo tree, whose depth is about log_φ n ≈ 1.44 log₂ n (φ = (1+√5)/2), so the constant exceeds heapsort's</description></item>
+/// <item><description>Swaps       : Best 0 (sorted), Average/Worst O(n) - only semitrinkle swaps, at most twice per extraction; sift and trinkle move elements through a hole</description></item>
 /// <item><description>Index Reads : Best Θ(n), Average/Worst O(n log n) - a sorted input only walks the Leonardo heap forest once without restoring anything</description></item>
 /// <item><description>Index Writes: Best 0 (sorted), Average O(n log n), Worst O(n log n) - reported separately from swaps, which each account for two writes of their own</description></item>
 /// <item><description>Space       : O(1) - the Leonardo heap forest occupies the input span; only the heap-size bitmap variables are kept aside</description></item>
@@ -54,7 +54,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>✓ Trinkle operation maintains ascending order of heap roots across the forest</description></item>
 /// <item><description>✓ Shift operation properly sifts elements down within Leonardo trees</description></item>
 /// <item><description>✓ Extraction phase correctly splits L(k) heaps into L(k-1) and L(k-2) components</description></item>
-/// <item><description>✓ Achieves O(n) performance on sorted data (verified: n=100 → 0 swaps, 188 comparisons vs theoretical ~100)</description></item>
+/// <item><description>✓ Achieves O(n) performance on sorted data (n = 100: 0 swaps and 188 comparisons, about one per element in each phase)</description></item>
 /// <item><description>✓ Achieves O(n log n) on random/reversed data (verified within expected bounds)</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>

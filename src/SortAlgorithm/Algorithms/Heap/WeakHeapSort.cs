@@ -7,10 +7,10 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// 弱ヒープ（Weak Heap）という特殊なヒープ構造を使用するソートアルゴリズムです。
-/// 通常のヒープソートより比較回数が少なく、理論的には約 n log n - 0.9n 回の比較で済みます。
+/// 通常のヒープソートより比較回数が少なく、n log n + O(n) 回の比較で済みます。
 /// <br/>
 /// Uses a special heap structure called a weak heap, which requires fewer comparisons than standard heap sort—
-/// theoretically about n log n - 0.9n comparisons.
+/// n log n + O(n) comparisons.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct WeakHeapSort:</strong></para>
@@ -47,13 +47,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Heap / Selection</description></item>
 /// <item><description>Stable      : No (element order changes arbitrarily during heap operations)</description></item>
 /// <item><description>In-place    : Nearly (requires O(n) bits for reverse array ≈ n/64 ulongs = n/8 bytes overhead)</description></item>
-/// <item><description>Best case   : Ω(n log n) - Heap construction and extraction always required regardless of input</description></item>
+/// <item><description>Best case   : Ω(n log n) - every extraction merges the root with each node of the distinguished path, whatever the input</description></item>
 /// <item><description>Average case: Θ(n log n) - Build weak heap O(n) + extract phase O(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound for all inputs</description></item>
-/// <item><description>Comparisons : ~n log n - 0.9n - Significantly fewer than standard heap sort's ~2n log n</description></item>
-/// <item><description>Swaps       : ~n log n - Similar swap count to standard heap sort</description></item>
+/// <item><description>Comparisons : ~n log n - exactly n - 1 to build, then one per node of the distinguished path, at most ⌈log₂ m⌉ for a heap of m elements; n log₂ n + O(n) in total (Dutton), against ~2n log n for standard heap sort</description></item>
+/// <item><description>Swaps       : O(n) - at most n - 1 in the build, plus the final swap; extraction moves elements without swapping</description></item>
 /// <item><description>Index Reads : Θ(n log n) - the merge-forest climb touches one node per level</description></item>
-/// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Index Writes: Θ(n log n) - two per build swap, and per extraction one per merge that moves an element plus the root and the end position</description></item>
 /// <item><description>Space       : O(n) bits - one reverse bit per element (n/64 ulongs ≈ n/8 bytes), not O(1) as in a plain binary heap</description></item>
 /// </list>
 /// <para><strong>Cache behaviour:</strong> poor locality — the access pattern is as non-sequential as heap sort's, so cache misses are frequent.</para>
@@ -71,7 +71,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Distinguished ancestor follows the right spine upward based on parity vs. parent's reverse bit</description></item>
 /// <item><description>Merge is the only comparison operation; all other logic composes merges</description></item>
 /// <item><description>Space overhead: n bits = n/8 bytes (e.g., 1000 elements → 125 bytes)</description></item>
-/// <item><description>Final swap(0,1) is unconditional in classic implementations; here it's conditional to avoid redundant work</description></item>
+/// <item><description>Extraction carries out Swap(a[0], a[m]) and the merges that follow with the new root element held in a local:
+/// every one of those merges involves the root, so a merge that moves an element writes once instead of swapping, and the root is written once at the end.
+/// The comparisons and their order are those of the swapping form.</description></item>
+/// <item><description>The final swap of a[0] and a[1] is unconditional, as in the definition: the last merge has already put the larger of the two at the root</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Heapsort</para>
@@ -193,8 +196,11 @@ public static class WeakHeapSort
             {
                 s.Context.OnPhase(SortPhase.HeapExtract, n - m, totalExtractions);
 
-                // Move current max (at offset+0) to position offset+m
-                s.Swap(offset, offset + m);
+                // Swap(a[0], a[m]): the max moves to offset+m, and the element it displaces becomes the root.
+                // That element is held in a local until the merges below are done, because every one of them
+                // involves the root: a merge that moves an element then writes once instead of swapping.
+                var top = s.Read(offset + m);
+                s.Write(offset + m, s.Read(offset));
 
                 // Index offset+m now holds the confirmed max value
                 s.Context.OnRole(offset + m, BUFFER_MAIN, RoleType.CurrentMax);
@@ -216,18 +222,17 @@ public static class WeakHeapSort
                 // This propagates the new root value down and restores the weak heap property
                 while (node > 0)
                 {
-                    Merge(s, offset, r, 0, node);
+                    top = MergeWithRoot(s, offset, r, node, top);
                     node >>= 1;
                 }
+                s.Write(offset, top);
 
                 s.Context.OnRole(offset + m, BUFFER_MAIN, RoleType.None);
             }
 
-            // Final step: Sort the last two elements (guaranteed n >= 2 here)
-            if (s.IsLessAt(offset + 1, offset))
-            {
-                s.Swap(offset, offset + 1);
-            }
+            // Final step: the last merge left the larger of the two remaining elements at the root,
+            // so the swap is unconditional, as in the definition (guaranteed n >= 2 here)
+            s.Swap(offset, offset + 1);
         }
         finally
         {
@@ -254,6 +259,23 @@ public static class WeakHeapSort
             s.Swap(offset + i, offset + j);
             FlipBit(r, j);
         }
+    }
+
+    /// <summary>
+    /// Merge(0, j) while the root's element is held in <paramref name="top"/> rather than at offset+0.
+    /// If a[j] > top, a[j] takes top, the former a[j] becomes the new root element, and r[j] flips.
+    /// </summary>
+    /// <returns>The root element after the merge.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static T MergeWithRoot<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int offset, Span<ulong> r, int j, T top)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        Debug.Assert(j > 0, "j must be > 0 in MergeWithRoot (FlipBit requires j>0).");
+        if (!s.IsElementGreaterThan(offset + j, top, out var element)) return top;
+        s.Write(offset + j, top);
+        FlipBit(r, j);
+        return element;
     }
 
     /// <summary>
@@ -295,20 +317,12 @@ public static class WeakHeapSort
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool GetBit(Span<ulong> bits, int index)
-    {
-        var ulongIndex = index / 64;
-        var bitIndex = index % 64;
-        return ((bits[ulongIndex] >> bitIndex) & 1) == 1;
-    }
+        => ((bits[index >> 6] >> (index & 63)) & 1) == 1;
 
     /// <summary>
     /// Flips a bit in the bit-packed array at the specified index.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void FlipBit(Span<ulong> bits, int index)
-    {
-        var ulongIndex = index / 64;
-        var bitIndex = index % 64;
-        bits[ulongIndex] ^= 1UL << bitIndex;
-    }
+        => bits[index >> 6] ^= 1UL << (index & 63);
 }

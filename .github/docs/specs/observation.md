@@ -48,6 +48,7 @@ Index arrays and occupancy bitsets are algorithm metadata and do not become elem
 | Radsort | Scratch blocks: the head-start output blocks and the input's tail, initialized by the tail copy and by pass writes | None |
 | QuadSort | Swap memory for the merges, initialized by merge writes and range copies | The 32-element stack array the quad swap and the small-input tail swap merge through |
 | FluxSort | Swap memory: the side each partition sets aside, pivot samples, merge space for quadsort and the quarter merges, and the pivot stack | Quadsort's 32-element stack array |
+| TournamentSort | Winner tree of element indices (metadata: reported as index writes carrying the index) | Output area: each winner is written to the next position, and the whole area is copied back over the input at the end |
 
 Element copies contribute their full length to read and write counts. These counts include
 bootstrap copies, leaf copies, snapshot storage, and staging operations when the algorithm performs them.

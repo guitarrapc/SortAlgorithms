@@ -38,9 +38,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: Θ(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n)</description></item>
 /// <item><description>Comparisons : O(n log n) - two per sift level, plus one per poplar root walked during each extraction</description></item>
-/// <item><description>Swaps       : Best 0 (sorted), Average/Worst O(n log n) - one per sift level that moves, plus one root exchange per extraction that needs it</description></item>
-/// <item><description>Index Reads : O(n log n) - two per comparison and per swap</description></item>
-/// <item><description>Index Writes: Best 0 (sorted), Average/Worst O(n log n) - two per swap; elements move only by swapping</description></item>
+/// <item><description>Swaps       : 0 - the sift and the root exchange move elements through a hole</description></item>
+/// <item><description>Index Reads : O(n log n) - two per comparison of two roots, one per comparison with the held element, one per moved element</description></item>
+/// <item><description>Index Writes: Best 0 (sorted), Average/Worst O(n log n) - one per sift level that moves, plus one per sift that moved and two per root exchange</description></item>
 /// <item><description>Space       : O(1) - the forest occupies the input span and its shape is recomputed from the element count</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
@@ -54,6 +54,9 @@ namespace SortAlgorithm.Algorithms;
 /// stops when no element is left to serve as the root.</description></item>
 /// <item><description>Poplar sizes come from <see cref="BitOperations.Log2(uint)"/>, so the first poplar of a heap is found in O(1)
 /// and walking all roots in one extraction is O(log n).</description></item>
+/// <item><description>The sift holds the sinking element aside and moves the bigger subpoplar roots up into the hole it leaves,
+/// writing the element once where it stops; the root exchange of an extraction does the same. The comparisons and their order
+/// are those of the swapping sift.</description></item>
 /// </list>
 /// <para><strong>Difference from SmoothSort:</strong></para>
 /// <list type="bullet">
@@ -232,8 +235,11 @@ public static class PoplarHeapSort
 
         if (bigger != lastRoot)
         {
-            s.Swap(bigger, lastRoot);
-            Sift(s, bigger - (int)(biggerSize - 1), biggerSize);
+            // Exchange the two roots and sift the poplar that received the smaller one. That element is held
+            // aside while it sinks, so the exchange costs one write at each end instead of a swap.
+            var value = s.Read(lastRoot);
+            s.Write(lastRoot, s.Read(bigger));
+            s.Write(SiftHole(s, bigger, biggerSize, value), value);
         }
 
         s.Context.OnRole(s.Offset + bigger, s.BufferId, RoleType.None);
@@ -244,6 +250,10 @@ public static class PoplarHeapSort
     /// While a subpoplar root is bigger than the root, swap the root with the bigger subpoplar root
     /// and continue in that subpoplar, whose size is size / 2.
     /// </summary>
+    /// <remarks>
+    /// The root's element is held aside while bigger subpoplar roots move up into the hole it leaves, and it is
+    /// written once where it stops, or not at all when it does not move. The comparisons are those of the swaps.
+    /// </remarks>
     private static void Sift<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, uint size)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -251,26 +261,44 @@ public static class PoplarHeapSort
         if (size < 2) return;
 
         var root = first + (int)size - 1;
-        var rightRoot = root - 1;                      // root of the right subpoplar
-        var leftRoot = first + (int)(size / 2) - 1;    // root of the left subpoplar
+        var value = s.Read(root);
+        var hole = SiftHole(s, root, size, value);
+        if (hole != root) s.Write(hole, value);
+    }
 
-        while (true)
+    /// <summary>
+    /// Sifts <paramref name="value"/> into the poplar of <paramref name="size"/> elements whose root position
+    /// <paramref name="root"/> is a hole, and returns the position where <paramref name="value"/> belongs.
+    /// The caller writes it there.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="value"/> stands in for the root, so each level compares it with the right subpoplar root,
+    /// then the larger of the two with the left subpoplar root, as the swapping sift does.
+    /// </remarks>
+    private static int SiftHole<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, uint size, T value)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var hole = root;
+        while (size >= 2)
         {
-            var maxRoot = root;
-            if (s.IsLessAt(maxRoot, rightRoot)) maxRoot = rightRoot;
-            if (s.IsLessAt(maxRoot, leftRoot)) maxRoot = leftRoot;
-            if (maxRoot == root) return;
+            // The subpoplars of the poplar rooted at the hole span [hole - size + 1 .. hole - 1]
+            var rightRoot = hole - 1;
+            var leftRoot = hole - (int)(size - size / 2);
 
-            s.Swap(root, maxRoot);
+            int maxRoot;
+            if (s.IsValueLessThan(value, rightRoot))
+                maxRoot = s.IsLessAt(rightRoot, leftRoot) ? leftRoot : rightRoot;
+            else if (s.IsValueLessThan(value, leftRoot))
+                maxRoot = leftRoot;
+            else
+                return hole;
 
+            s.Write(hole, s.Read(maxRoot));
+            hole = maxRoot;
             size /= 2;
-            if (size < 2) return;
-
-            // Continue in the subpoplar rooted at maxRoot, which spans [maxRoot - size + 1 .. maxRoot]
-            root = maxRoot;
-            rightRoot = root - 1;
-            leftRoot = root - (int)(size - size / 2);
         }
+        return hole;
     }
 
     /// <summary>

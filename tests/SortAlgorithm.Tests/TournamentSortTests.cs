@@ -5,12 +5,14 @@ using TUnit.Assertions.Enums;
 namespace SortAlgorithm.Tests;
 
 [InheritsTests]
-public class TournamentSortTests : SortTestsBase
+public class TournamentSortTests : StableSortTestsBase
 {
     protected override void Sort<T, TContext>(Span<T> span, TContext context)
         => TournamentSort.Sort(span, context);
 
-    // Old StatisticsSortedTest asserted only IndexReadCount/CompareCount; writes and swaps stay unasserted.
+    // Winners are written to the output area and copied back, so even sorted input is written, but nothing is swapped.
+    protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
+    protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
     [Test]
     public async Task RangeSortTest()
@@ -61,10 +63,7 @@ public class TournamentSortTests : SortTestsBase
         var sorted = Enumerable.Range(0, n).ToArray();
         TournamentSort.Sort(sorted.AsSpan(), stats);
 
-        // Loose bounds: a comparison sort needs at least n - 1 comparisons to
-        // establish order, and TournamentSort stays far below the quadratic ceiling.
-        await Assert.That(stats.CompareCount).IsBetween((ulong)(n - 1), (ulong)(n * n));
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
+        await AssertTournamentCounts(stats, n);
         await Assert.That(sorted).IsEquivalentTo(Enumerable.Range(0, n).ToArray(), CollectionOrdering.Matching);
     }
 
@@ -79,9 +78,7 @@ public class TournamentSortTests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         TournamentSort.Sort(reversed.AsSpan(), stats);
 
-        await Assert.That(stats.CompareCount).IsBetween((ulong)(n - 1), (ulong)(n * n));
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
+        await AssertTournamentCounts(stats, n);
         await Assert.That(reversed).IsEquivalentTo(Enumerable.Range(0, n).ToArray(), CollectionOrdering.Matching);
     }
 
@@ -100,9 +97,28 @@ public class TournamentSortTests : SortTestsBase
         var random = TestHelpers.ShuffledRange(n, seed);
         TournamentSort.Sort(random.AsSpan(), stats);
 
-        await Assert.That(stats.CompareCount).IsBetween((ulong)(n - 1), (ulong)(n * n));
-        await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
+        await AssertTournamentCounts(stats, n);
         await Assert.That(random).IsEquivalentTo(Enumerable.Range(0, n).ToArray(), CollectionOrdering.Matching);
+    }
+
+    /// <summary>
+    /// The build is a knockout of n contestants, so it compares exactly n - 1 times. Every later round replays one
+    /// leaf-to-root path, comparing at most once per level, and the last winner needs no replay.
+    /// </summary>
+    static async Task AssertTournamentCounts(StatisticsContext stats, int n)
+    {
+        var size = (int)System.Numerics.BitOperations.RoundUpToPowerOf2((uint)n);
+        var levels = System.Numerics.BitOperations.Log2((uint)size);
+
+        await Assert.That(stats.CompareCount).IsBetween((ulong)(n - 1), (ulong)(n - 1 + (n - 1) * levels));
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+
+        // Tree: size leaves and size - 1 internal nodes to build, then per replay the retired leaf and one node per level.
+        // Elements: one output write per winner and one write per element copied back.
+        var treeWrites = 2 * size - 1 + (n - 1) * (1 + levels);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo((ulong)(treeWrites + 2 * n));
+
+        // Each comparison reads both contestants; each winner is read once, and the copy back reads the output area.
+        await Assert.That(stats.IndexReadCount).IsEqualTo(2 * stats.CompareCount + (ulong)(2 * n));
     }
 }

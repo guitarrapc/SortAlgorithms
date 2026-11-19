@@ -6,10 +6,10 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// 入力配列からトーナメントツリー（勝者木）を構築し、最小値を繰り返し取り出すことで昇順ソートを行います。
+/// 入力配列からトーナメントツリー（勝者木）を構築し、最小値を繰り返し取り出して出力領域へ順に書き出すことで昇順ソートを行います。
 /// ヒープソートと同じ選択系ソートファミリーですが、ヒープの代わりに勝者木（外部ソートで使われる木構造）を用います。
 /// <br/>
-/// Builds a tournament tree (winner tree) from the input array, then repeatedly extracts the minimum element to produce an ascending sort.
+/// Builds a tournament tree (winner tree) from the input array, then repeatedly extracts the minimum element into an output area to produce an ascending sort.
 /// This is the same Selection-family as HeapSort, but uses a winner tree — the structure found in external sort merge phases — instead of a heap.
 /// </summary>
 /// <remarks>
@@ -21,35 +21,43 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Build Phase:</strong> Bottom-up construction starting from the last internal node down to the root.
 /// Each internal node is set to the winner of its two children. Total cost: O(n).</description></item>
 /// <item><description><strong>Extract Phase:</strong> The root always holds the index of the current global minimum.
-/// The minimum is swapped to its final sorted position, the now-sorted leaf is replaced with the sentinel,
-/// and the tournament is replayed only along the two affected leaf-to-root paths in O(log n).</description></item>
-/// <item><description><strong>In-Place Strategy:</strong> After extracting the minimum at index <c>p</c> for sorted position <c>s</c>:
-/// (1) Swap span[p] with span[s] if p ≠ s. (2) Set leaf[s] = Sentinel and replay its path to root.
-/// (3) If p ≠ s, replay leaf[p]'s path to root because the value at that position changed after the swap.
-/// This keeps the tree consistent without allocating a separate output buffer.</description></item>
+/// The minimum is written to the next position of the output area, its leaf is replaced with the sentinel,
+/// and the tournament is replayed along that one leaf-to-root path in O(log n).</description></item>
+/// <item><description><strong>Output Area:</strong> Tree selection writes its output to an area separate from the input
+/// (Knuth, TAOCP Vol. 3, §5.2.3), and the sorted output is copied back at the end. The input elements never move while they compete.
+/// Sorting in place instead would have to move a still-competing element into the winner's slot, which changes a second leaf
+/// and doubles the replays; removing that output area is what heapsort was introduced for.</description></item>
+/// <item><description><strong>Stability:</strong> A tie goes to the left contestant, and the leaves of a left subtree hold earlier elements,
+/// so among equal keys the earliest one always wins first.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Heap / Selection</description></item>
-/// <item><description>Stable      : No (swaps during extraction do not preserve relative order)</description></item>
-/// <item><description>In-place    : Yes (O(1) sorted output in span; O(n) auxiliary for the winner tree)</description></item>
-/// <item><description>Best case   : Ω(n log n)</description></item>
+/// <item><description>Stable      : Yes (a tie goes to the left contestant, which holds the earlier element)</description></item>
+/// <item><description>In-place    : No (O(n) output area in addition to the O(n) winner tree)</description></item>
+/// <item><description>Best case   : Θ(n log n) - every extraction replays a leaf-to-root path</description></item>
 /// <item><description>Average case: Θ(n log n)</description></item>
-/// <item><description>Worst case  : O(n log n)</description></item>
-/// <item><description>Comparisons : ~n log n — one winner comparison per node in each replay path</description></item>
-/// <item><description>Swaps       : O(n) — at most one swap per extraction step</description></item>
-/// <item><description>Index Reads : Θ(n log n) — each extraction replays one root-to-leaf path, comparing and reading one node per level</description></item>
-/// <item><description>Index Writes: Θ(n log n) — each replayed path rewrites the winner at every level it climbs</description></item>
-/// <item><description>Space       : O(n) — integer winner tree allocated via ArrayPool; the sorted output stays in the caller's span</description></item>
+/// <item><description>Worst case  : Θ(n log n)</description></item>
+/// <item><description>Comparisons : ~n log n - at most n - 1 to build, then at most log₂ size per extraction; a comparison is skipped when one contestant is the sentinel</description></item>
+/// <item><description>Swaps       : 0 - winners are written to the output area and copied back</description></item>
+/// <item><description>Index Reads : Θ(n log n) - each comparison reads both contestants, plus one read per winner and n for the copy back</description></item>
+/// <item><description>Index Writes: Θ(n log n) - each replay rewrites the winner tree at every level it climbs, plus n output writes and n copied back</description></item>
+/// <item><description>Space       : O(n) - integer winner tree and output area, both rented from ArrayPool</description></item>
 /// </list>
 /// <para><strong>Cache behaviour:</strong> poor — replaying a path jumps through non-sequential memory in the winner tree.</para>
 /// <para><strong>Difference from HeapSort:</strong></para>
 /// <list type="bullet">
-/// <item><description>Uses an explicit winner-tree (separate int[] array) instead of the in-place max-heap.</description></item>
+/// <item><description>Uses an explicit winner tree (separate int[] array) and an output area instead of the in-place max-heap.</description></item>
 /// <item><description>Extracts the minimum each round (ascending sort) rather than the maximum.</description></item>
 /// <item><description>Requires O(n) auxiliary memory; HeapSort is fully in-place (O(1) aux).</description></item>
-/// <item><description>Replay cost is exactly <c>log2(size)</c> comparisons per extraction vs. ~2 log n for sift-down.</description></item>
+/// <item><description>Replay cost is at most <c>log2(size)</c> comparisons per extraction vs. ~2 log n for sift-down.</description></item>
+/// <item><description>Stable, because a tie in a winner tree can be resolved by position; a heap's sift moves equal keys past each other.</description></item>
 /// <item><description>Historically used as the merge-phase structure in external sorting (tape/disk merge).</description></item>
+/// </list>
+/// <para><strong>Implementation Notes:</strong></para>
+/// <list type="bullet">
+/// <item><description>Buffer 1 is the winner tree, whose entries are element indices; buffer 2 is the output area.</description></item>
+/// <item><description>The last winner needs no replay: once it is written, the tree is empty.</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Tournament_sort</para>
@@ -59,12 +67,13 @@ public static class TournamentSort
     /// <summary>
     /// Whether this algorithm preserves the relative order of elements that compare equal.
     /// </summary>
-    /// <remarks>Verified by TournamentSortTests, which derives from SortTestsBase.</remarks>
-    public static bool IsStable => false;
+    /// <remarks>Verified by TournamentSortTests, which derives from StableSortTestsBase.</remarks>
+    public static bool IsStable => true;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TREE = 1;       // Winner tree (stores span indices, not values)
+    private const int BUFFER_OUTPUT = 2;     // Output area the winners are written to in order
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -155,10 +164,13 @@ public static class TournamentSort
 
         const int Sentinel = int.MaxValue; // "no element" / infinity marker
 
-        int[]? rentedArray = null;
+        int[]? rentedTree = null;
+        T[]? rentedOutput = null;
         try
         {
-            var tree = (rentedArray = ArrayPool<int>.Shared.Rent(treeSize)).AsSpan(0, treeSize);
+            var tree = (rentedTree = ArrayPool<int>.Shared.Rent(treeSize)).AsSpan(0, treeSize);
+            rentedOutput = ArrayPool<T>.Shared.Rent(n);
+            var output = new SortSpan<T, TComparer, TContext>(rentedOutput.AsSpan(0, n), s.Context, s.Comparer, BUFFER_OUTPUT);
 
             // Build
             s.Context.OnPhase(SortPhase.TournamentBuild, n, size);
@@ -175,41 +187,39 @@ public static class TournamentSort
                 WriteTree(s, tree, i, TournamentWinner(s, first, tree[i << 1], tree[(i << 1) | 1], Sentinel));
 
             // Extract
-            // Repeat n-1 times: extract min → place at sorted position → replay two paths.
-            for (var sortedCount = 0; sortedCount < n - 1; sortedCount++)
+            // Each round writes the winner to the output area, retires its leaf and replays that one path.
+            for (var k = 0; k < n; k++)
             {
-                s.Context.OnPhase(SortPhase.TournamentExtract, sortedCount + 1, n);
+                s.Context.OnPhase(SortPhase.TournamentExtract, k + 1, n);
 
                 var winner = tree[1]; // root = index of current global minimum
                 s.Context.OnRole(first + winner, BUFFER_MAIN, RoleType.CurrentMin);
-
-                // Move the minimum to its final sorted position.
-                if (winner != sortedCount)
-                    s.Swap(first + winner, first + sortedCount);
-
+                output.Write(k, s.Read(first + winner));
                 s.Context.OnRole(first + winner, BUFFER_MAIN, RoleType.None);
-                if (winner != sortedCount)
-                    s.Context.OnRole(first + sortedCount, BUFFER_MAIN, RoleType.None);
 
-                // Retire the sorted leaf and restore the tournament tree.
-                WriteTree(s, tree, size + sortedCount, Sentinel);
-                ReplayPath(s, first, tree, size + sortedCount, Sentinel);
+                // The last winner leaves the tree empty, so there is nothing left to replay.
+                if (k == n - 1) break;
 
-                // When winner ≠ sortedCount the swap changed span[winner]; replay its path too.
-                if (winner != sortedCount)
-                    ReplayPath(s, first, tree, size + winner, Sentinel);
+                WriteTree(s, tree, size + winner, Sentinel);
+                ReplayPath(s, first, tree, size + winner, Sentinel);
             }
+
+            // The output area holds the sorted sequence; copy it back over the input range.
+            output.CopyTo(0, s, first, n);
         }
         finally
         {
-            if (rentedArray != null)
-                ArrayPool<int>.Shared.Return(rentedArray);
+            if (rentedTree != null)
+                ArrayPool<int>.Shared.Return(rentedTree);
+            if (rentedOutput != null)
+                ArrayPool<T>.Shared.Return(rentedOutput, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 
     /// <summary>
     /// Returns the index of the winner (smaller element) between two tournament contestants.
-    /// Returns the non-sentinel index when one contestant is exhausted.
+    /// Returns the non-sentinel index when one contestant is exhausted. A tie goes to <paramref name="a"/>,
+    /// the left contestant, which is what makes the sort stable.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int TournamentWinner<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int a, int b, int sentinel)

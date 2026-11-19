@@ -10,7 +10,7 @@ public class WeakHeapSortTests : SortTestsBase
     protected override void Sort<T, TContext>(Span<T> span, TContext context)
         => WeakHeapSort.Sort(span, context);
 
-    // Weak heap merges and extraction swap elements even for sorted input.
+    // The build swaps whenever a node beats its distinguished ancestor, and the final swap is unconditional.
     protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
     protected override CountExpectation SortedInputSwaps => CountExpectation.NonZero;
 
@@ -89,37 +89,7 @@ public class WeakHeapSortTests : SortTestsBase
         var sorted = Enumerable.Range(0, n).ToArray();
         WeakHeapSort.Sort(sorted.AsSpan(), stats);
 
-        // Weak Heap Sort characteristics:
-        // Theoretical comparisons: ~n log n - 0.9n (fewer than standard heap sort)
-        // Build weak heap phase: (n-1) merges, each with 1 comparison
-        // Extract phase: (n-2) extractions, each requiring path descent and merges
-        //
-        // WeakHeapSort uses fewer comparisons than HeapSort due to:
-        // - Only one comparison per merge (not two like standard heap)
-        // - Reverse bits encode structure, eliminating redundant comparisons
-        //
-        // Expected pattern: approximately n * log2(n) - 0.9n comparisons
-
-        var logN = Math.Log(n + 1, 2);
-        // WeakHeapSort has fewer comparisons than HeapSort
-        var minCompares = (ulong)(n * logN * 0.4);
-        var maxCompares = (ulong)(n * logN * 2.0 + n);
-
-        // Swaps are similar to HeapSort
-        var minSwaps = (ulong)(n * logN * 0.3);
-        var maxSwaps = (ulong)(n * logN * 1.5);
-
-        // Each swap writes 2 elements
-        var minWrites = minSwaps * 2;
-        var maxWrites = maxSwaps * 2;
-
-        // Each comparison reads 2 elements
-        var minIndexReads = minCompares * 2;
-
-        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
-        await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await AssertWeakHeapCounts(stats, n);
     }
 
     [Test]
@@ -133,31 +103,7 @@ public class WeakHeapSortTests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         WeakHeapSort.Sort(reversed.AsSpan(), stats);
 
-        // Weak Heap Sort has O(n log n) time complexity regardless of input order
-        // Reversed data shows similar patterns to sorted data
-        //
-        // Expected pattern: approximately n * log2(n) - 0.9n comparisons
-
-        var logN = Math.Log(n + 1, 2);
-        // WeakHeapSort has fewer comparisons than HeapSort
-        var minCompares = (ulong)(n * logN * 0.4);
-        var maxCompares = (ulong)(n * logN * 2.0 + n);
-
-        // Swaps are similar to HeapSort
-        var minSwaps = (ulong)(n * logN * 0.3);
-        var maxSwaps = (ulong)(n * logN * 1.5);
-
-        // Each swap writes 2 elements
-        var minWrites = minSwaps * 2;
-        var maxWrites = maxSwaps * 2;
-
-        // Each comparison reads 2 elements
-        var minIndexReads = minCompares * 2;
-
-        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
-        await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await AssertWeakHeapCounts(stats, n);
     }
 
     [Test]
@@ -175,31 +121,45 @@ public class WeakHeapSortTests : SortTestsBase
         var random = TestHelpers.ShuffledRange(n, seed);
         WeakHeapSort.Sort(random.AsSpan(), stats);
 
-        // Weak Heap Sort has consistent O(n log n) time complexity for random data
-        // The comparison count is approximately n * log2(n) - 0.9n
-        // This is fewer than standard HeapSort (~2n log n)
-        //
-        // Expected pattern: approximately n * log2(n) - 0.9n, with variation due to randomness
-
-        var logN = Math.Log(n + 1, 2);
-        // WeakHeapSort has fewer comparisons than HeapSort
-        var minCompares = (ulong)(n * logN * 0.4);
-        var maxCompares = (ulong)(n * logN * 2.0 + n);
-
-        // Swaps are similar to HeapSort
-        var minSwaps = (ulong)(n * logN * 0.3);
-        var maxSwaps = (ulong)(n * logN * 1.5);
-
-        // Each swap writes 2 elements
-        var minWrites = minSwaps * 2;
-        var maxWrites = maxSwaps * 2;
-
-        // Each comparison reads 2 elements
-        var minIndexReads = minCompares * 2;
-
-        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
-        await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await AssertWeakHeapCounts(stats, n);
     }
+
+    [Test]
+    [Arguments(10)]
+    [Arguments(100)]
+    public async Task TheoreticalValuesAllEqualTest(int n)
+    {
+        var stats = new StatisticsContext();
+        var equal = new int[n];
+        WeakHeapSort.Sort(equal.AsSpan(), stats);
+
+        // No merge finds a larger element, so the build swaps nothing and no extraction merge moves anything.
+        // What remains is the max and the root written once per extraction, and the final swap.
+        await AssertWeakHeapCounts(stats, n);
+        await Assert.That(stats.SwapCount).IsEqualTo(1UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo((ulong)(2 * (n - 2) + 2));
+    }
+
+    // The build merges every node with its distinguished ancestor: n - 1 comparisons and at most one swap each.
+    // Extracting from a heap of m elements merges the root with every node of the distinguished path, whose length
+    // lies between ⌈log2(m + 1)⌉ - 1 and ⌈log2 m⌉. Extraction writes the max and the root once each, plus one write
+    // per merge that moves an element, and never swaps. The final swap of the last two elements is unconditional.
+    static async Task AssertWeakHeapCounts(StatisticsContext stats, int n)
+    {
+        ulong minPath = 0, maxPath = 0;
+        for (var m = 2; m < n; m++)
+        {
+            minPath += (ulong)(CeilLog2(m + 1) - 1);
+            maxPath += (ulong)CeilLog2(m);
+        }
+
+        await Assert.That(stats.CompareCount).IsBetween((ulong)(n - 1) + minPath, (ulong)(n - 1) + maxPath);
+        await Assert.That(stats.SwapCount).IsBetween(1UL, (ulong)n);
+
+        var extractionMerges = stats.CompareCount - (ulong)(n - 1);
+        var fixedWrites = 2 * stats.SwapCount + 2 * (ulong)(n - 2);
+        await Assert.That(stats.IndexWriteCount).IsBetween(fixedWrites, fixedWrites + extractionMerges);
+    }
+
+    static int CeilLog2(int x) => x <= 1 ? 0 : 32 - int.LeadingZeroCount(x - 1);
 }
