@@ -17,7 +17,7 @@ public class InconsistentComparerSafetyTests
     enum Sorter
     {
         Quad, QuadLimitedSwap, Flux, Pdq, PdqBranchless, Intro, IntroDotnet, Std,
-        Quick, QuickMedian3, QuickMedian9, Quick3way, Stable, BidirectionalStable, PairInsertion,
+        Quick, QuickMedian3, QuickMedian9, Quick3way, Stable, BidirectionalStable, PairInsertion, Drift, Glide,
     }
 
     /// <summary>
@@ -187,6 +187,8 @@ public class InconsistentComparerSafetyTests
             case Sorter.Stable: StableQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.BidirectionalStable: BidirectionalStableQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.PairInsertion: PairInsertionSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Drift: Driftsort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Glide: Glidesort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             default: throw new ArgumentOutOfRangeException(nameof(sorter));
         }
     }

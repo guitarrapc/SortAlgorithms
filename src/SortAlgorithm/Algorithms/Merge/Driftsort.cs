@@ -678,12 +678,12 @@ public static class Driftsort
     /// <para><strong>Kernel tiers:</strong> the fast kernels are
     /// gated on NullContext because the branchless kernel physically writes each element to two
     /// candidate slots and the SIMD kernel bypasses per-element operations, either of which would
-    /// corrupt observed operation counts. Observing contexts always take the reference loop below.</para>
+    /// corrupt observed operation counts. Observing contexts always take the per-element loop below.</para>
     /// <list type="number">
     /// <item><description>AVX-512 vpcompressd kernel: int + ComparableComparer + NullContext.</description></item>
     /// <item><description>Branchless two-cursor kernel: NullContext and sizeof(T) &lt;= 16.
-    /// RyuJIT compiles the ternary store index of the reference loop to a
-    /// data-dependent branch, so the reference loop mispredicts ~50% on random data.</description></item>
+    /// RyuJIT compiles the ternary store index of the per-element loop to a
+    /// data-dependent branch, so the per-element loop mispredicts ~50% on random data.</description></item>
     /// <item><description>Reference loop: observing contexts and large elements.</description></item>
     /// </list>
     /// </summary>
@@ -717,7 +717,7 @@ public static class Driftsort
         var scratchRev = len; // Decremented before every placement; right side fills scratch from the back.
 
         // Elements before the pivot, the pivot itself, then the rest — split into two loops
-        // (as in the reference) so the pivot check is not paid per element.
+        // so the pivot check is not paid per element.
         for (var i = start; i < pivotPos; i++)
         {
             var value = s.Read(i);
@@ -761,7 +761,7 @@ public static class Driftsort
     /// holds a stale copy is overwritten later by its owning element because stale copies
     /// only ever land in the still-open gap between the cursors. Cursor updates use
     /// bool-to-int arithmetic; the 4x unroll amortizes loop control (RyuJIT does not
-    /// unroll this loop itself). Same scratch layout as the reference loop.
+    /// unroll this loop itself). Same scratch layout as the per-element loop.
     /// </summary>
     private static int StablePartitionBranchless<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
@@ -1151,12 +1151,13 @@ public static class Driftsort
     /// <summary>
     /// Merges src[srcStart..srcStart+len/2) and src[srcStart+len/2..srcStart+len) into
     /// dst[dstStart..dstStart+len), consuming the input from both ends at once
-    /// (idea from quadsort's parity merge, adapted as in the reference). The source and
+    /// (the idea of quadsort's parity merge). The source and
     /// destination regions must not overlap and len must be at least 2.
-    /// <para>All read indices stay in bounds for any comparison outcome; an inconsistent
-    /// comparer yields an unspecified permutation of copies but never faults.</para>
+    /// <para>All read indices stay in bounds for any comparison outcome. With a consistent comparer
+    /// the forward and backward cursors meet exactly; when they do not, the output may repeat some
+    /// elements and miss others, so the input is copied over it and the comparer is reported.</para>
     /// <para>Under NullContext the branch-free twin below runs instead; the loop here keeps
-    /// the reference-shaped conditional steps so observing contexts report accurate reads.</para>
+    /// the conditional steps so observing contexts report accurate reads.</para>
     /// </summary>
     private static void BidirectionalMerge<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> src, int srcStart, int len,
@@ -1203,12 +1204,33 @@ public static class Driftsort
         {
             var leftNonempty = left <= leftRev;
             dst.Write(d, src.Read(leftNonempty ? left : right));
+            if (leftNonempty) left++; else right++;
         }
+
+        CheckCursorsMet(src, srcStart, len, dst, dstStart, left, leftRev, right, rightRev);
     }
 
     /// <summary>
-    /// Branch-free twin of <see cref="BidirectionalMerge"/> matching the reference's
-    /// merge_up/merge_down: cursors advance by bool arithmetic and the taken element is picked
+    /// After a bidirectional merge each run must have been consumed exactly once, which the forward and backward cursors
+    /// show by meeting. Only a comparer that is not a consistent total order can make them miss; the output may then repeat
+    /// elements, so the input, which is still intact, is copied over it before the comparer is reported. The check compares
+    /// indices only, and it folds away under the natural order of a primitive type.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void CheckCursorsMet<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> src, int srcStart, int len,
+        SortSpan<T, TComparer, TContext> dst, int dstStart,
+        int left, int leftRev, int right, int rightRev)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (src.UsesNaturalPrimitiveOrder || (left == leftRev + 1 && right == rightRev + 1)) return;
+        src.CopyTo(srcStart, dst, dstStart, len);
+        ThrowHelper.ThrowInconsistentComparer();
+    }
+
+    /// <summary>
+    /// Branch-free twin of <see cref="BidirectionalMerge"/>: cursors advance by bool arithmetic and the taken element is picked
     /// with a mask select from the already-loaded pair, so the loop has no data-dependent branch.
     /// The tie rules match the branchy loop exactly (forward consumes the left run on ties,
     /// backward the right run) and the select returns exactly one of the two loaded values,
@@ -1259,7 +1281,10 @@ public static class Driftsort
         {
             var leftNonempty = left <= leftRev;
             dst.Write(d, src.Read(leftNonempty ? left : right));
+            if (leftNonempty) left++; else right++;
         }
+
+        CheckCursorsMet(src, srcStart, len, dst, dstStart, left, leftRev, right, rightRev);
     }
 
     /// <summary>

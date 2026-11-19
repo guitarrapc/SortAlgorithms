@@ -6,11 +6,11 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// SpinSortBoostは、Boost.Sortライブラリのspin_sort実装に構造的に忠実な安定ソートアルゴリズムです。
+/// SpinSortは、Boost.Sortライブラリのspin_sort実装に構造的に忠実な安定ソートアルゴリズムです。
 /// レベル駆動の再帰（RangeSort）とレベルパリティに基づくバッファ選択を用いたトップダウンマージソートで、
 /// ceil(n/2) の補助メモリのみを使用します。
 /// <br/>
-/// SpinSortBoost is a stable sort algorithm structurally faithful to Boost.Sort's spin_sort.
+/// SpinSort is a stable sort algorithm structurally faithful to Boost.Sort's spin_sort.
 /// It uses level-driven recursion (RangeSort) with level-parity-based buffer selection,
 /// top-down merge sort with only ceil(n/2) auxiliary memory, and early exit for sorted/reversed data.
 /// </summary>
@@ -34,7 +34,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>SortRangeSort:</strong> A standalone entry point that computes its own nlevel
 /// and dispatches to RangeSort. Used by CheckStableSort to sort unsorted tails.</description></item>
 /// <item><description><strong>MIN_CHECK Merge Probe:</strong> Boost's <c>util::merge</c> and
-/// <c>util::merge_half</c> spend one comparison on merges of 1024+ elements to detect runs that are
+/// <c>util::merge_half</c> spend one or two comparisons on merges of 1024+ elements to detect runs that are
 /// already in order (or fully inverted) and replace the merge with bulk copies.</description></item>
 /// <item><description><strong>Binary-Search Tail Insertion:</strong> <c>insert_partial_sort</c> locates each
 /// tail element with <c>upper_bound</c> and shifts the prefix in blocks, so inserting a short unsorted
@@ -45,13 +45,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Hybrid (Merge + Insertion)</description></item>
 /// <item><description>Stable      : Yes (≤ comparison in all merge operations preserves relative order)</description></item>
 /// <item><description>In-place    : No (requires O(ceil(n/2)) temporary space for the half buffer)</description></item>
-/// <item><description>Best case   : O(n) - Already sorted, reverse sorted, or nearly-sorted data</description></item>
+/// <item><description>Best case   : O(n) - Already sorted or strictly descending data (a sorted prefix with a short unsorted tail costs O(n + t log t) for a tail of t elements)</description></item>
 /// <item><description>Average case: O(n log n) - Balanced recursive merge</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by balanced binary split</description></item>
 /// <item><description>Comparisons : Θ(n) best, O(n log n) average and worst - matching the running time Boost states for spinsort</description></item>
 /// <item><description>Swaps       : O(n) - only the reversal that turns a detected descending run ascending; merging moves elements by copying</description></item>
-/// <item><description>Index Reads : O(n log n) - every merge level reads each element of the runs it joins; Θ(n) when the input is one run</description></item>
-/// <item><description>Index Writes: O(n log n) - every merge level writes each element it moves, into the half buffer or back; Θ(n) when the input is one run</description></item>
+/// <item><description>Index Reads : O(n log n) - every merge level reads each element of the runs it joins; Θ(n) when the input is already sorted or strictly descending</description></item>
+/// <item><description>Index Writes: O(n log n) - every merge level writes each element it moves, into the half buffer or back; none for sorted input and Θ(n) for strictly descending input</description></item>
 /// <item><description>Space       : O(ceil(n/2))</description></item>
 /// </list>
 /// <para><strong>History:</strong></para>
@@ -74,14 +74,14 @@ public static class SpinSort
     private const int BUFFER_MAIN = 0;    // Main input array
     private const int BUFFER_TEMP = 1;    // Temporary half buffer
 
-    // Boost's outer Sort_min = 36. Arrays with n <= Sort_min * 2 (72) use insertion sort directly.
+    // Ranges of up to 2 * SORT_MIN (72) elements are sorted by insertion sort without merging.
     private const int SORT_MIN = 36;
 
-    // Boost's inner sort_min = 32, used in RangeSort base case and CheckStableSort.
+    // Leaf size of RangeSort and the insertion limit of CheckStableSort.
     private const int SORT_MIN_INTERNAL = 32;
 
-    // Boost util::merge / util::merge_half MIN_CHECK: minimum combined run length for which the
-    // "already ordered" probe is attempted before falling back to the element-wise merge.
+    // Minimum combined run length for which the merges first probe whether the runs are already
+    // in order before falling back to the element-wise merge.
     private const int MIN_CHECK = 1024;
 
     /// <summary>
@@ -128,10 +128,10 @@ public static class SpinSort
         var n = last - first;
         if (n <= 1) return;
 
-        // Boost: if (nelem <= (Sort_min << 1)) insert_sort
+        // Up to 2 * SORT_MIN elements are sorted by insertion sort.
         if (n <= SORT_MIN * 2)
         {
-            BinaryInsertionSort.Sort(span, first, last, comparer, context);
+            InsertionSort.Sort(span, first, last, comparer, context);
             return;
         }
 
@@ -140,7 +140,7 @@ public static class SpinSort
     }
 
     /// <summary>
-    /// Core algorithm, equivalent to Boost's spinsort constructor.
+    /// Core algorithm.
     /// Performs pre-sort detection, computes nlevel, splits based on nlevel parity,
     /// calls RangeSort for each half, and merge_half's the results.
     /// </summary>
@@ -150,10 +150,10 @@ public static class SpinSort
     {
         var n = last - first;
 
-        // Boost: check if sorted (ascending scan)
+        // Already sorted: nothing to do
         if (IsAscending(s, first, last)) return;
 
-        // Boost: check if reverse sorted (descending scan) + reverse
+        // Strictly descending: reverse it
         if (IsDescending(s, first, last))
         {
             Reverse(s, first, last - 1);
@@ -172,14 +172,14 @@ public static class SpinSort
         {
             var bufS = new SortSpan<T, TComparer, TContext>(buf.AsSpan(0, nelem1), s.Context, s.Comparer, BUFFER_TEMP);
 
-            // Boost: nlevel = nbits64(((nelem + Sort_min - 1) / Sort_min) - 1) - 1
+            // nlevel = nbits64(ceil(n / SORT_MIN) - 1) - 1
             var nlevel = (int)(NBits64((uint)(((n + SORT_MIN - 1) / SORT_MIN) - 1)) - 1);
 
             if ((nlevel & 1) == 1)
             {
                 // Odd nlevel: RangeSort(range1, range2, level) puts data from range1 → result in range2.
                 //
-                // Boost layout:
+                // Layout:
                 //   range_1 = [first, first + nelem_2)   — size = nelem2 (smaller, left)
                 //   range_2 = [first + nelem_2, last)    — size = nelem1 (larger, right)
                 //   Copy range_2 → buf
@@ -211,7 +211,7 @@ public static class SpinSort
             {
                 // Even nlevel: RangeSort(range1, range2, level) — data in range2, result in range2.
                 //
-                // Boost layout:
+                // Layout:
                 //   range_1 = [first, first + nelem_1)   — size = nelem1 (larger, left)
                 //   range_2 = [first + nelem_1, last)    — size = nelem2 (smaller, right)
                 //   Copy range_1 → buf
@@ -248,7 +248,7 @@ public static class SpinSort
     }
 
     /// <summary>
-    /// Boost's range_sort: level-driven recursive merge sort.
+    /// Level-driven recursive merge sort.
     /// <br/>
     /// Contract:
     /// <list type="bullet">
@@ -264,7 +264,7 @@ public static class SpinSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Boost: check_stable_sort based on level parity
+        // Ranges over 1024 elements first check for sorted or nearly sorted data, in the buffer the level parity says holds it
         if (len > 1024)
         {
             if ((level & 1) == 0)
@@ -315,7 +315,7 @@ public static class SpinSort
     }
 
     /// <summary>
-    /// Boost's sort_range_sort: computes nlevel for a sub-range and dispatches to RangeSort.
+    /// Computes nlevel for a sub-range and dispatches to RangeSort.
     /// Used by CheckStableSort to sort unsorted tails. Ensures the sorted result ends up in rng_data.
     /// </summary>
     private static void SortRangeSort<T, TComparer, TContext>(
@@ -324,14 +324,14 @@ public static class SpinSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Boost: sort_min = 32
+        // Small ranges are sorted by insertion sort
         if (dataLen <= SORT_MIN_INTERNAL)
         {
             InsertionSort.SortCore(data, dataStart, dataStart + dataLen);
             return;
         }
 
-        // Boost: nlevel = nbits64(((rng_data.size() + sort_min - 1) / sort_min) - 1)
+        // nlevel = nbits64(ceil(len / SORT_MIN_INTERNAL) - 1)
         // Note: no -1 at the end (unlike the constructor which subtracts 1)
         var nlevel = NBits64((uint)(((dataLen + SORT_MIN_INTERNAL - 1) / SORT_MIN_INTERNAL) - 1));
 
@@ -350,7 +350,7 @@ public static class SpinSort
     }
 
     /// <summary>
-    /// Boost's check_stable_sort: detects nearly-sorted data and handles it via partial insertion.
+    /// Detects nearly-sorted data and handles it via partial insertion.
     /// Returns true if the data was fully sorted, nearly sorted (small unsorted tail after a sorted
     /// prefix), or nearly reversed (small unsorted tail after a descending prefix).
     /// </summary>
@@ -362,14 +362,14 @@ public static class SpinSort
     {
         var ndata = last - first;
 
-        // Boost: if (ndata < 32) { insert_sort; return true; }
+        // Fewer than 32 elements: insertion sort
         if (ndata < SORT_MIN_INTERNAL)
         {
             InsertionSort.SortCore(data, first, last);
             return true;
         }
 
-        // Boost: min_insert_partial_sort = max(32, ndata >> 3)
+        // An unsorted tail shorter than max(32, ndata / 8) is sorted and inserted into the sorted prefix
         var minInsertPartial = Math.Max(SORT_MIN_INTERNAL, ndata >> 3);
 
         // Check ascending: scan for sorted prefix
@@ -386,7 +386,7 @@ public static class SpinSort
             return true;
         }
 
-        // Boost: check descending only if ascending failed at the very first pair
+        // Descending is checked only when ascending failed at the very first pair
         if (sortedEnd != first + 1) return false;
 
         // Check strictly descending
@@ -409,8 +409,7 @@ public static class SpinSort
 
     /// <summary>
     /// Sorts the unsorted tail data[mid..last) in-place, then merges it into the sorted prefix
-    /// data[first..mid) via InsertPartialSort. Uses SortRangeSort for the tail sort to maintain
-    /// structural fidelity with Boost (which calls sort_range_sort for the tail).
+    /// data[first..mid) via InsertPartialSort. The tail is sorted by SortRangeSort.
     /// </summary>
     private static void SortTailAndInsert<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> data, int first, int mid, int last,
@@ -420,7 +419,7 @@ public static class SpinSort
     {
         var tailLen = last - mid;
 
-        // Boost: sort_range_sort(range(it2, rng_data.last), rng_aux, comp)
+        // Sort the tail on its own
         SortRangeSort(data, mid, tailLen, aux, auxStart);
 
         // Merge sorted prefix + sorted tail
@@ -432,12 +431,11 @@ public static class SpinSort
     /// Uses aux as temporary storage for the tail during the insertion.
     /// </summary>
     /// <remarks>
-    /// Mirrors Boost's <c>insert_partial_sort</c>: each tail element's destination is located with
+    /// Each tail element's destination is located with
     /// <see cref="UpperBound"/> and the prefix elements between two consecutive destinations are
     /// shifted as a block, so the comparison count is O(tailLen · log prefixLen) instead of being
-    /// proportional to the shift distance. Boost stores the destinations in a <c>std::vector</c> and
-    /// then walks it backwards; processing the tail from its largest element instead makes the same
-    /// traversal possible without the position array, because the destinations are monotonic.
+    /// proportional to the shift distance. Processing the tail from its largest element walks the
+    /// destinations backwards without storing them, because the destinations are monotonic.
     /// </remarks>
     private static void InsertPartialSort<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> data, int first, int mid, int last,
@@ -476,7 +474,7 @@ public static class SpinSort
     /// </summary>
     /// <remarks>
     /// Uses <c>IsLessOrEqual(s[mid], value)</c>: advances past equal elements, so the insertion point
-    /// is <em>after</em> any equal values, matching Boost's <c>std::upper_bound</c> and preserving stability.
+    /// is <em>after</em> any equal values, preserving stability.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int UpperBound<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, T value)
@@ -515,7 +513,7 @@ public static class SpinSort
         var leftEnd = left1 + len1;
         var rightEnd = left2 + len2;
 
-        // Boost util::merge's MIN_CHECK short-circuit: on large merges, one comparison can prove the
+        // MIN_CHECK short-circuit: on large merges, one or two comparisons can prove the
         // two runs are already in order (or fully inverted), turning the merge into bulk copies.
         // Keeping this inline matters: extracting it into a non-inlined helper measured slower on random input.
         if (len1 + len2 >= MIN_CHECK && len1 != 0 && len2 != 0)
@@ -576,7 +574,7 @@ public static class SpinSort
         var leftEnd = leftLen;
         var rightEnd = mainStart + leftLen + rightLen;
 
-        // Boost util::merge_half's MIN_CHECK short-circuit. Same idea as MergeFromSrcToDst, except the
+        // MIN_CHECK short-circuit. Same idea as MergeFromSrcToDst, except the
         // right run already occupies its final tail position, so the ordered case only copies the buffer.
         if (leftLen + rightLen >= MIN_CHECK && leftLen != 0 && rightLen != 0)
         {
@@ -619,7 +617,7 @@ public static class SpinSort
     }
 
     /// <summary>
-    /// Boost's ascending check: returns true if s[first..last) is non-decreasing.
+    /// Returns true if s[first..last) is non-decreasing.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsAscending<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
@@ -634,7 +632,7 @@ public static class SpinSort
     }
 
     /// <summary>
-    /// Boost's descending check: returns true if s[first..last) is strictly decreasing.
+    /// Returns true if s[first..last) is strictly decreasing.
     /// Equal elements return false to preserve stability.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -660,7 +658,7 @@ public static class SpinSort
     }
 
     /// <summary>
-    /// Boost's nbits64: returns the number of bits needed to represent num.
+    /// Returns the number of bits needed to represent num.
     /// Equivalent to floor(log2(num)) + 1 for num > 0, and 0 for num == 0.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

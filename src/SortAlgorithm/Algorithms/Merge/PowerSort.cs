@@ -76,7 +76,7 @@ public static class PowerSort
     private const int BUFFER_TEMP = 1;       // Temporary merge buffer
 
     // PowerSort constants
-    private const int MIN_RUN = 24;          // Fixed minimum run length (matches reference PowerSort default)
+    private const int MIN_RUN = 24;          // Fixed minimum run length
 
     /// <summary>
     /// Sorts the elements in the specified span in ascending order using the default comparer.
@@ -142,13 +142,7 @@ public static class PowerSort
         var n = last - first;
         if (n <= 1) return;
 
-        // For very small arrays, use insertion sort directly
-        if (n < MIN_RUN)
-        {
-            InsertionSort.Sort(span, first, last, comparer, context);
-            return;
-        }
-
+        // A range shorter than MIN_RUN is a single run: its natural prefix is detected and the rest is added by insertion.
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
         SortCore(s, first, last, comparer, context);
     }
@@ -180,9 +174,9 @@ public static class PowerSort
         // 2. Boundary power stack (bp) - stores powers of boundaries between adjacent runs
         // Invariant: if runCount = k, then bpCount = k - 1
         // Stack depth bound: boundary powers on the stack are strictly increasing, and a power is
-        // LeadingZeroCount of a value below 2^31, so it never exceeds 32. The reference sizes its
-        // stack the same way (floor_log2(n) + 1, at most 31 for an int-indexed span). 40 leaves
-        // margin; overrunning it would throw from the Span bounds check rather than corrupt memory.
+        // LeadingZeroCount of a value below 2^31, so it never exceeds 32 (floor_log2(n) + 1 boundaries,
+        // at most 31 for an int-indexed span). 40 leaves margin; overrunning it would throw from the
+        // Span bounds check rather than corrupt memory.
         const int StackCapacity = 40;
         Span<int> runBase = stackalloc int[StackCapacity];
         Span<int> runLen = stackalloc int[StackCapacity];
@@ -260,7 +254,7 @@ public static class PowerSort
 
                     // Verify invariant after merge
                     Debug.Assert(bpCount == runCount - 1, $"Invariant violated after merge: bpCount={bpCount}, runCount={runCount}, expected bpCount={runCount - 1}");
-                    // p is NOT recalculated here (matches the paper's algorithm)
+                    // p is not recalculated: the boundary it belongs to has not moved
                 }
 
                 // Push the next run onto the stack
@@ -354,7 +348,7 @@ public static class PowerSort
 
         var runLength = runEnd - start;
 
-        // If run is too small, extend it to MIN_RUN using binary insertion sort
+        // If run is too small, extend it to MIN_RUN using insertion sort
         if (runLength < MIN_RUN)
         {
             var force = Math.Min(MIN_RUN, last - start);
@@ -383,7 +377,7 @@ public static class PowerSort
 
     /// <summary>
     /// Computes the node power for PowerSort merge strategy.
-    /// Matches the reference PowerSort's <c>node_power_clz</c> implementation using 64-bit arithmetic only.
+    /// Uses 64-bit arithmetic only.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -401,7 +395,7 @@ public static class PowerSort
     private static int ComputeNodePower(int s1, int e1, int s2, int e2, int n)
     {
         // 2× midpoints: for run [s, e), midpoint = (s+e)/2, so 2*midpoint = s + e
-        // Note: s1+e1 = s1+s2 since e1 = s2 (adjacent runs). Matches reference's l2 = beginA + beginB.
+        // Note: s1+e1 = s1+s2 since e1 = s2 (adjacent runs).
         ulong twoM1 = (ulong)(uint)s1 + (uint)e1;  // < 2n
         ulong twoM2 = (ulong)(uint)s2 + (uint)e2;  // < 2n
 
@@ -424,10 +418,8 @@ public static class PowerSort
     /// The temporary buffer is reused across multiple merges for efficiency.
     /// </summary>
     /// <remarks>
-    /// Copies the smaller of the two runs to a temporary buffer and merges linearly, matching the
-    /// reference's <c>merge_runs_copy_half</c> (<c>COPY_SMALLER</c>). Note that the reference's own
-    /// default is <c>COPY_BOTH</c>; COPY_SMALLER is chosen here because it halves the worst-case
-    /// buffer to n/2 and copies fewer elements per merge.
+    /// Copying only the smaller run halves the worst-case buffer to n/2 and copies fewer elements per merge
+    /// than copying both runs.
     /// Unlike TimSort's galloping merge, PowerSort relies on optimal merge ORDER
     /// (via node power) rather than optimizing individual merge operations.
     /// </remarks>
@@ -449,7 +441,7 @@ public static class PowerSort
     /// <summary>
     /// Merges two adjacent runs where the first run is smaller or equal.
     /// Copies the first run to the temporary buffer and merges forward.
-    /// Uses simple linear merge matching the reference PowerSort implementation.
+    /// Uses a simple linear merge.
     /// </summary>
     private static void MergeLow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
         ref T[] tmpBuffer, TComparer comparer, TContext context)
@@ -504,7 +496,7 @@ public static class PowerSort
     /// <summary>
     /// Merges two adjacent runs where the second run is smaller.
     /// Copies the second run to the temporary buffer and merges backward.
-    /// Uses simple linear merge matching the reference PowerSort implementation.
+    /// Uses a simple linear merge.
     /// </summary>
     private static void MergeHigh<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int base1, int len1, int base2, int len2,
         ref T[] tmpBuffer, TComparer comparer, TContext context)

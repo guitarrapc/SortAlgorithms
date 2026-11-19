@@ -72,39 +72,15 @@ public class PowerSortTests : StableSortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         PowerSort.Sort(reversed.AsSpan(), stats);
 
-        // PowerSort for reversed data:
-        // Small arrays (n < MIN_MERGE=32) use BinaryInsertSort: O(n²) writes, O(n log n) comparisons
-        // Larger arrays detect single descending run, reverse it with swaps: O(n) comparisons, O(n/2) swaps
-        //
-        // Actual observations for reversed data:
-        // n=10:  45 comparisons, 54 writes, 0 swaps   (InsertionSort)
-        // n=20:  190 comparisons, 209 writes, 0 swaps  (InsertionSort)
-        // n=50:  50 comparisons, 50 writes, 25 swaps  (Single descending run + reverse)
-        // n=100: 100 comparisons, 100 writes, 50 swaps (Single descending run + reverse)
-        //
-        // Pattern: For n < MIN_RUN(24), uses InsertionSort (O(n²) comparisons); for n >= MIN_RUN, run detection + reverse
-        ulong minCompares, maxCompares, minWrites, maxWrites, minSwaps, maxSwaps;
-        if (n < 32)
-        {
-            // InsertionSort: reversed data causes each element to shift all the way left
-            // Comparisons: up to n*(n-1)/2 (linear search per element)
-            minCompares = (ulong)(n);
-            maxCompares = (ulong)(n * (n - 1) / 2 + n);
-            minWrites = (ulong)(n * (n - 1) / 4); // At least n²/4 writes
-            maxWrites = (ulong)(n * (n + 1) / 2); // Up to n²/2 writes
-            minSwaps = 0UL;
-            maxSwaps = 0UL; // InsertionSort doesn't use swaps
-        }
-        else
-        {
-            // Single descending run + reverse
-            minCompares = (ulong)(n - 1);
-            maxCompares = (ulong)(n + 1);
-            minWrites = (ulong)(n - 1);
-            maxWrites = (ulong)(n + 1);
-            minSwaps = (ulong)(n / 2 - 1);
-            maxSwaps = (ulong)(n / 2 + 1);
-        }
+        // PowerSort for reversed data, at every size: run detection finds one strictly descending run and reverses it
+        // with n/2 swaps (2 writes each). Detection compares the first pair twice, once to choose the direction and once
+        // in the scan, so it makes n comparisons.
+        var minCompares = (ulong)(n - 1);
+        var maxCompares = (ulong)(n + 1);
+        var minWrites = (ulong)(n - 1);
+        var maxWrites = (ulong)(n + 1);
+        var minSwaps = (ulong)(n / 2 - 1);
+        var maxSwaps = (ulong)(n / 2 + 1);
 
         await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);

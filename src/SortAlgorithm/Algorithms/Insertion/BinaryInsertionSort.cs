@@ -169,7 +169,11 @@ public static class BinaryInsertionSort
     /// <param name="first">The inclusive start index of the sorted range.</param>
     /// <param name="last">The exclusive end index of the range to sort.</param>
     /// <param name="start">The position from which to start inserting elements. Elements before this are already sorted.</param>
-    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int start)
+    /// <param name="checkInOrderFirst">
+    /// When true, an element is first compared with its predecessor and left in place if it is not smaller.
+    /// TimSort passes false: its binary insertion searches for every element without that extra comparison.
+    /// </param>
+    internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int start, bool checkInOrderFirst = true)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -189,7 +193,7 @@ public static class BinaryInsertionSort
             // Early termination: if element is already in correct position, skip everything
             // Compare indices directly to avoid reading tmp unnecessarily
             // This optimization significantly improves performance on sorted or nearly-sorted data
-            if (i > first && s.IsLessOrEqualAt(i - 1, i))
+            if (checkInOrderFirst && i > first && s.IsLessOrEqualAt(i - 1, i))
             {
                 // Element is already in the correct position (greater than or equal to previous element)
                 continue;

@@ -43,8 +43,10 @@ namespace SortAlgorithm.Algorithms;
 /// (≤256 elements) it is allocated on the stack using stackalloc; for larger arrays ArrayPool&lt;int&gt;.Shared is used
 /// to avoid stack overflow.</description></item>
 /// <item><description><strong>Splitting of the Derivative List:</strong> The derivative list is divided in half recursively
-/// until a half delimits fewer than 2 sublists and needs no merge, then the sublists are merged bottom-up.
-/// This gives O(log k) merge levels and exactly k-1 merges for k sublists (k ≤ ⌈n/2⌉).</description></item>
+/// with a gap: the two halves leave one sublist between them, which neither recursive call claims. After both halves are
+/// sorted, the gap sublist is merged into the right half, and the left half is then merged with the result. A half that
+/// delimits fewer than 2 sublists needs no merge. Every merge joins two sublists into one, so k sublists take exactly k-1
+/// merges (k ≤ ⌈n/2⌉).</description></item>
 /// <item><description><strong>Size-Adaptive Merge Direction:</strong> Unlike traditional merge sort, ShiftSort chooses which partition to buffer
 /// based on size comparison (second - first &gt; third - second). The smaller partition is copied to temporary storage,
 /// so a merge buffers min(len₁, len₂) elements rather than always buffering the left run. The work buffer is sized once
@@ -54,8 +56,8 @@ namespace SortAlgorithm.Algorithms;
 /// When the first partition is smaller, merging proceeds forward from left to right using '&lt;' comparison (not '&lt;=')
 /// to ensure left elements are written first when equal. Both directions preserve stability by prioritizing left-side elements.</description></item>
 /// <item><description><strong>Shift-Based Element Movement:</strong> During merge operations, elements are "shifted" (single assignment) rather than "swapped" (three assignments).
-/// This reduces write operations compared to traditional merge sort, particularly benefiting scenarios with expensive write operations
-/// or cache-sensitive workloads. Once one side of a merge is exhausted the remainder of the buffered run needs no further comparison,
+/// Only the smaller sublist is buffered, and the part of the larger one that is already in place at the far end is never rewritten.
+/// Once one side of a merge is exhausted the remainder of the buffered run needs no further comparison,
 /// so it is moved as a single range copy rather than one element at a time.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -76,8 +78,6 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>The merge follows the C++ reference, which breaks ties with '&gt;' and '&lt;'. The Java reference uses '&gt;=' in the
 /// backward merge, which is not stable and contradicts the paper's own claim that ShiftSort is stable.</description></item>
-/// <item><description>The reference splits with a gap (new_i = new_j + 1), which leaves one sublist unclaimed by either recursive call
-/// and needs two merges per node to pick it up. Sharing the boundary needs one, and both shapes perform the same k-1 merges.</description></item>
 /// <item><description>Uses ArrayPool&lt;T&gt; for zero-allocation operation on repeated sorts</description></item>
 /// <item><description>Stack-allocates the derivative list for small inputs (≤256 elements) to avoid heap pressure</description></item>
 /// <item><description>Integrates with SortSpan pattern for comprehensive statistics tracking and visualization</description></item>
@@ -232,38 +232,55 @@ public static class ShiftSort
     }
 
     /// <summary>
-    /// Recursively divides the boundary range [lo, hi] and merges sorted runs bottom-up.
+    /// Recursively divides the boundary range [lo, hi] and merges the sorted sublists it delimits.
     /// zeroIndices is an ascending boundary sequence where zeroIndices[lo] is the inclusive start
     /// and zeroIndices[hi] is the exclusive end of the region being sorted.
-    /// Each adjacent pair (zeroIndices[k], zeroIndices[k+1]) represents one sorted run.
+    /// Each adjacent pair (zeroIndices[k], zeroIndices[k+1]) represents one sorted sublist.
     /// </summary>
+    /// <remarks>
+    /// The derivative list is split with a gap: the left half ends one boundary before the right half starts,
+    /// so the sublist between them belongs to neither recursive call. It is merged into the sorted right half
+    /// first, and the sorted left half is then merged with the result. The scan builds the list from the end of
+    /// the array, so the higher positions are the first half of the list and are split first.
+    /// </remarks>
     private static void Split<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, Span<int> zeroIndices, int lo, int hi, Span<T> workBuffer)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Base case: 0 or 1 run - already sorted
+        // 0 or 1 sublist - already sorted
         if ((hi - lo) < 2)
         {
             return;
         }
 
-        // Split at the midpoint boundary. Two runs give mid == lo + 1, so both recursive calls return
-        // immediately and only the merge below runs; that case is not special-cased separately, because
-        // a separate base case would emit the merge without the phase and role events announced here.
-        var mid = lo + (hi - lo) / 2;
+        // rightStart is where the right half begins, and leftEnd = rightStart - 1 is where the left half ends.
+        // With two sublists the left half is empty and the gap sublist merges straight into the right one; the
+        // general path handles that without a special case, so every merge keeps its phase and role events.
+        var rightStart = hi - (hi - lo) / 2;
+        var leftEnd = rightStart - 1;
 
-        // Recursively sort left half: [zeroIndices[lo], zeroIndices[mid])
-        Split(s, zeroIndices, lo, mid, workBuffer);
-        // Recursively sort right half: [zeroIndices[mid], zeroIndices[hi])
-        Split(s, zeroIndices, mid, hi, workBuffer);
+        Split(s, zeroIndices, rightStart, hi, workBuffer);
+        Split(s, zeroIndices, lo, leftEnd, workBuffer);
 
-        // Merge the two sorted halves into [zeroIndices[lo], zeroIndices[hi])
-        s.Context.OnPhase(SortPhase.MergeSortMerge, zeroIndices[lo], zeroIndices[mid] - 1, zeroIndices[hi] - 1);
-        s.Context.OnRole(zeroIndices[lo], BUFFER_MAIN, RoleType.LeftPointer);
-        s.Context.OnRole(zeroIndices[hi] - 1, BUFFER_MAIN, RoleType.RightPointer);
-        Merge(s, zeroIndices[lo], zeroIndices[mid], zeroIndices[hi], workBuffer);
-        s.Context.OnRole(zeroIndices[lo], BUFFER_MAIN, RoleType.None);
-        s.Context.OnRole(zeroIndices[hi] - 1, BUFFER_MAIN, RoleType.None);
+        MergeAnnounced(s, zeroIndices[leftEnd], zeroIndices[rightStart], zeroIndices[hi], workBuffer);
+        MergeAnnounced(s, zeroIndices[lo], zeroIndices[leftEnd], zeroIndices[hi], workBuffer);
+    }
+
+    /// <summary>
+    /// Merges [first, second) with [second, third) when both are non-empty, announcing the merge to the context.
+    /// </summary>
+    private static void MergeAnnounced<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int second, int third, Span<T> workBuffer)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (first == second || second == third) return;
+
+        s.Context.OnPhase(SortPhase.MergeSortMerge, first, second - 1, third - 1);
+        s.Context.OnRole(first, BUFFER_MAIN, RoleType.LeftPointer);
+        s.Context.OnRole(third - 1, BUFFER_MAIN, RoleType.RightPointer);
+        Merge(s, first, second, third, workBuffer);
+        s.Context.OnRole(first, BUFFER_MAIN, RoleType.None);
+        s.Context.OnRole(third - 1, BUFFER_MAIN, RoleType.None);
     }
 
     /// <summary>

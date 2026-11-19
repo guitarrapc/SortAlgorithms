@@ -29,14 +29,18 @@ namespace SortAlgorithm.Algorithms;
 /// Counts already-sorted elements from the front or back via <c>NumberStableSortedForward/Backward</c>
 /// (Boost's <c>number_stable_sorted_forward/backward</c> from <c>sort_basic.hpp</c>).
 /// When a large sorted prefix or suffix is found, only the unsorted region is recursively sorted then merged,
-/// avoiding redundant work on already-ordered data.</description></item>
-/// <item><description><strong>SortSmall — Base Case for nblock &lt; 5:</strong> Mirrors Boost's <c>sort_small</c>.
-/// For <c>len ≤ SORT_MIN_INTERNAL (32)</c> uses <c>InsertionSort</c> (equivalent to Boost's <c>insert_sort</c>
-/// with the same threshold of 32). For 1-2 blocks it calls <c>RangeSortData</c>; for 3-4 blocks it sorts the
+/// avoiding redundant work on already-ordered data. A remainder longer than two blocks is sorted through <c>Divide</c> on the
+/// shared block index rather than by a nested sort with its own block rearrangement, as Boost does; the final
+/// <c>RearrangeWithIndex</c> places its blocks too, so the comparisons are the same and one rearrangement pass is saved.</description></item>
+/// <item><description><strong>SortSmall — Base Case for nblock &lt; 5:</strong> Corresponds to Boost's <c>sort_small</c>.
+/// For 1-2 blocks it calls <c>RangeSortData</c>; for 3-4 blocks it sorts the
 /// right group via <c>RangeSortData</c>, the left group via <c>RangeSortBuffer</c>, then merges with <c>MergeHalf</c>,
 /// matching Boost's asymmetric small-block path.</description></item>
-/// <item><description><strong>RangeSortData / RangeSortBuffer:</strong> Alternating recursive half-buffer merge sorts,
-/// corresponding to Boost's <c>range_sort_data</c> / <c>range_sort_buffer</c> pair from <c>sort_basic.hpp</c>.</description></item>
+/// <item><description><strong>RangeSortData / RangeSortBuffer / InternalSort:</strong> Correspond to Boost's <c>range_sort_data</c>,
+/// <c>range_sort_buffer</c> and <c>internal_sort</c> from <c>sort_basic.hpp</c>. A range of up to 32 elements is insertion-sorted in place;
+/// a longer one is sorted by a half-buffer merge sort whose two ranges trade roles at every level. Its leaves of up to 32 elements
+/// are insertion-sorted only at a level where the elements already sit in the range the halves are merged from; elsewhere the
+/// recursion goes one level deeper, so no leaf copies its elements before sorting them.</description></item>
 /// <item><description><strong>InsertSorted / InsertSortedBackward:</strong> The partial-sorted fast paths use stable
 /// upper-bound / lower-bound insertion against a copied small side, mirroring Boost's <c>insert_sorted</c> and
 /// <c>insert_sorted_backward</c> helpers instead of falling back to a generic adjacent merge.</description></item>
@@ -49,13 +53,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Merge (Block-based)</description></item>
 /// <item><description>Stable      : Yes (≤ comparison in all merge operations preserves relative order)</description></item>
 /// <item><description>In-place    : No (requires O(n / BLOCK_SIZE) block-index storage plus O(BLOCK_SIZE) circular scratch)</description></item>
-/// <item><description>Best case   : Θ(n) - an already ordered input is settled by one scan, the figure Boost states for flat_stable_sort</description></item>
+/// <item><description>Best case   : Θ(n) - an already ordered input of more than 7 blocks is settled by one scan, the figure Boost states for flat_stable_sort</description></item>
 /// <item><description>Average case: O(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n) (balanced binary split at block granularity)</description></item>
 /// <item><description>Comparisons : Θ(n) best, O(n log n) average and worst - matching the running time Boost states for flat_stable_sort</description></item>
 /// <item><description>Swaps       : O(n) - only the reversal that turns a detected descending run ascending; merging moves elements through the block scratch by copying</description></item>
-/// <item><description>Index Reads : O(n log n) - every merge level reads each element of the blocks it joins; Θ(n) when the input is one run</description></item>
-/// <item><description>Index Writes: O(n log n) - every merge level writes each element it moves; Θ(n) when the input is one run</description></item>
+/// <item><description>Index Reads : O(n log n) - every merge level reads each element of the blocks it joins; Θ(n) when the input is already sorted or strictly descending</description></item>
+/// <item><description>Index Writes: O(n log n) - every merge level writes each element it moves; none when more than 7 blocks are already sorted, Θ(n) when they are strictly descending</description></item>
 /// <item><description>Space       : O(n / BLOCK_SIZE) indices + O(BLOCK_SIZE) temporary elements + O(log n) recursion stack</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
@@ -74,10 +78,10 @@ public static class FlatStableSort
     private const int BUFFER_MAIN = 0;    // Main input array
     private const int BUFFER_TEMP = 1;    // Temporary half buffer
 
-    // Boost's inner sort_min = 32, used in RangeSort base case and CheckStableSort.
+    // Ranges of up to 32 elements are sorted by insertion sort.
     private const int SORT_MIN_INTERNAL = 32;
 
-    // Boost util::merge / util::merge_half MIN_CHECK: minimum combined run length for which the
+    // Minimum combined run length for which the
     // "already in order / fully inverted" probe is worth two comparisons. Below it the probe is skipped.
     private const int MIN_CHECK = 1024;
 
@@ -130,8 +134,8 @@ public static class FlatStableSort
     }
 
     /// <summary>
-    /// Core algorithm, equivalent to Boost's flat_stable_sort constructor.
-    /// Allocates the reusable auxiliary storage needed by Boost's sort_small and half-buffer merges,
+    /// Core algorithm.
+    /// Allocates the reusable auxiliary storage needed by the small sorts and half-buffer merges,
     /// then dispatches to Divide.
     /// </summary>
     private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
@@ -144,7 +148,7 @@ public static class FlatStableSort
 
         var blockSize = GetBlockSize<T>();
         var nblock = CeilDiv(n, blockSize);
-        var tempLength = blockSize << 1; // Always 2*BLOCK_SIZE (power of two), matching Boost's circular_buffer<Value_t, Power2+1>
+        var tempLength = blockSize << 1; // Always 2*BLOCK_SIZE (power of two), the capacity of the circular buffer
         var tempBuffer = ArrayPool<T>.Shared.Rent(tempLength);
         var indexBuffer = ArrayPool<int>.Shared.Rent(nblock);
         var scratchBuffer = ArrayPool<int>.Shared.Rent((nblock << 1) + 1);
@@ -171,82 +175,38 @@ public static class FlatStableSort
 
     /// <summary>
     /// Sorts the elements in <paramref name="data"/> in-place, using <paramref name="aux"/> as scratch space.
-    /// Result is left in <paramref name="data"/>. Mirrors Boost's <c>range_sort_data</c>.
     /// </summary>
     /// <remarks>
-    /// Delegates to <see cref="RangeSortBuffer"/> for each half (writing sorted output into
-    /// <paramref name="aux"/>), then <see cref="MergeFromBufferToData"/> combines them back into
-    /// <paramref name="data"/>.
+    /// Up to <see cref="SORT_MIN_INTERNAL"/> elements are sorted by insertion sort. Longer ranges go to
+    /// <see cref="InternalSort"/> with <paramref name="data"/> as the destination.
     /// </remarks>
     private static void RangeSortData<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var len = data.Length;
-        switch (len)
+        if (len <= SORT_MIN_INTERNAL)
         {
-            case <= 1:
-                return;
-            case <= SORT_MIN_INTERNAL:
-                InsertionSort.SortCore(data, 0, len);
-                return;
+            InsertionSort.SortCore(data, 0, len);
+            return;
         }
 
-        // flat_stable_sort always splits halves with mid = (len+1)/2, favoring the left half when len is odd.
-        var mid = (len + 1) / 2;
-        var dataLeft = data.Slice(0, mid, data.BufferId);
-        var dataRight = data.Slice(mid, len - mid, data.BufferId);
-        var auxLeft = aux.Slice(0, mid, aux.BufferId);
-        var auxRight = aux.Slice(mid, len - mid, aux.BufferId);
-
-        RangeSortBuffer(dataLeft, auxLeft);
-        RangeSortBuffer(dataRight, auxRight);
-        // ping-pong マージ (aux → data)。出力先である data の絶対インデックスで通知する。
-        // ブロック層のフェーズ (FlatStableSortMergeBlocks 等) は blockSize=1024 のため
-        // n > 5120 でしか発火しない。可視化サイズで実際に動くのはこの再帰マージなので、
-        // ここを通知しないと観測側には葉の挿入ソートしか見えない。
-        data.Context.OnPhase(SortPhase.MergeSortMerge, data.Offset, data.Offset + mid - 1, data.Offset + len - 1);
-        MergeFromBufferToData(aux, mid, data);
+        InternalSort(aux, data, 0, even: true);
     }
 
     /// <summary>
     /// Sorts the elements in <paramref name="data"/> and writes the sorted result into <paramref name="aux"/>.
-    /// Mirrors Boost's <c>range_sort_buffer</c>.
     /// </summary>
     /// <remarks>
-    /// The sorted output is placed in <paramref name="aux"/>; <paramref name="data"/> may be modified
-    /// as intermediate scratch. Handles len 0/1/2 as special cases without recursion. For larger
-    /// ranges, delegates to <see cref="RangeSortData"/> for each half (result in <paramref name="data"/>),
-    /// then <see cref="MergeFromDataToBuffer"/> combines them into <paramref name="aux"/>.
+    /// <paramref name="data"/> may be modified as intermediate scratch. Up to <see cref="SORT_MIN_INTERNAL"/> elements
+    /// are sorted by insertion sort and copied over. Longer ranges go to <see cref="InternalSort"/> with
+    /// <paramref name="aux"/> as the destination.
     /// </remarks>
     private static void RangeSortBuffer<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, SortSpan<T, TComparer, TContext> aux)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var len = data.Length;
-        switch (len)
-        {
-            case 0:
-                return;
-            case 1:
-                aux.Write(0, data.Read(0));
-                return;
-            case 2:
-                var v0 = data.Read(0);
-                var v1 = data.Read(1);
-                if (data.IsLessThan(v1, v0))
-                {
-                    aux.Write(0, v1);
-                    aux.Write(1, v0);
-                }
-                else
-                {
-                    aux.Write(0, v0);
-                    aux.Write(1, v1);
-                }
-                return;
-        }
-
         if (len <= SORT_MIN_INTERNAL)
         {
             InsertionSort.SortCore(data, 0, len);
@@ -254,147 +214,114 @@ public static class FlatStableSort
             return;
         }
 
-        var mid = (len + 1) / 2;
-        var dataLeft = data.Slice(0, mid, data.BufferId);
-        var dataRight = data.Slice(mid, len - mid, data.BufferId);
-        var auxLeft = aux.Slice(0, mid, aux.BufferId);
-        var auxRight = aux.Slice(mid, len - mid, aux.BufferId);
-
-        RangeSortData(dataLeft, auxLeft);
-        RangeSortData(dataRight, auxRight);
-        // ping-pong マージ (data → aux)。出力先である aux の絶対インデックスで通知する。
-        aux.Context.OnPhase(SortPhase.MergeSortMerge, aux.Offset, aux.Offset + mid - 1, aux.Offset + len - 1);
-        MergeFromDataToBuffer(data, mid, aux);
+        InternalSort(data, aux, 0, even: false);
     }
 
     /// <summary>
-    /// Stable merge of <paramref name="data"/>[0..<paramref name="mid"/>) and
-    /// <paramref name="data"/>[<paramref name="mid"/>..len) into <paramref name="aux"/>.
+    /// Sorts the elements of <paramref name="a"/> and <paramref name="b"/> (the same length) into <paramref name="b"/>.
+    /// </summary>
+    /// <remarks>
+    /// The two ranges trade roles at every level: the halves are sorted into <paramref name="a"/> and then merged into
+    /// <paramref name="b"/>. Which range holds the unsorted elements therefore alternates with <paramref name="level"/>: it is
+    /// <paramref name="a"/> when the parity of the level equals <paramref name="even"/>, and <paramref name="b"/> otherwise.
+    /// Halves of up to <see cref="SORT_MIN_INTERNAL"/> elements are insertion-sorted only at a level where the elements are
+    /// already in <paramref name="a"/>; elsewhere the recursion goes one level deeper, so no leaf copies its elements first.
+    /// </remarks>
+    private static void InternalSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, SortSpan<T, TComparer, TContext> b, int level, bool even)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var len = a.Length;
+        // The halves split at (len + 1) / 2, favoring the left half when len is odd.
+        var mid = (len + 1) >> 1;
+        var aLeft = a.Slice(0, mid, a.BufferId);
+        var aRight = a.Slice(mid, len - mid, a.BufferId);
+
+        if (mid <= SORT_MIN_INTERNAL && (level & 1) == (even ? 1 : 0))
+        {
+            InsertionSort.SortCore(aLeft, 0, mid);
+            InsertionSort.SortCore(aRight, 0, len - mid);
+        }
+        else
+        {
+            InternalSort(b.Slice(0, mid, b.BufferId), aLeft, level + 1, even);
+            InternalSort(b.Slice(mid, len - mid, b.BufferId), aRight, level + 1, even);
+        }
+
+        // 出力先である b の絶対インデックスで通知する。ブロック層のフェーズはブロック数が多いときにしか
+        // 発火しないため、可視化サイズで実際に動くこの再帰マージを通知しないと、観測側には葉の挿入ソートしか見えない。
+        b.Context.OnPhase(SortPhase.MergeSortMerge, b.Offset, b.Offset + mid - 1, b.Offset + len - 1);
+        MergeHalves(a, mid, b);
+    }
+
+    /// <summary>
+    /// Stable merge of <paramref name="src"/>[0..<paramref name="mid"/>) and
+    /// <paramref name="src"/>[<paramref name="mid"/>..len) into <paramref name="dst"/>.
     /// </summary>
     /// <remarks>
     /// <c>IsLessOrEqual</c> favours the left element on equal keys, preserving stable order.
     /// <para>
     /// Deliberately not <c>AggressiveInlining</c>: with the MIN_CHECK probe below the body is large
-    /// enough that forcing it into the mutually recursive <see cref="RangeSortData"/> /
-    /// <see cref="RangeSortBuffer"/> callers degraded the fall-through merge loop. Measured on
-    /// MergeBenchmark (int, 5 interleaved passes) the forced-inline variant was slower on
-    /// 2048/PipeOrgan and 4096/PipeOrgan — the patterns where the probe does not fire —
-    /// while letting the JIT decide is at or better than the pre-probe baseline on every case.
+    /// enough that forcing it into the recursive <see cref="InternalSort"/> caller degraded the
+    /// fall-through merge loop. Measured on MergeBenchmark (int, 5 interleaved passes) the forced-inline
+    /// variant was slower on 2048/PipeOrgan and 4096/PipeOrgan — the patterns where the probe does not
+    /// fire — while letting the JIT decide is at or better than the pre-probe baseline on every case.
     /// </para>
     /// </remarks>
-    private static void MergeFromDataToBuffer<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> data, int mid, SortSpan<T, TComparer, TContext> aux)
+    private static void MergeHalves<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> src, int mid, SortSpan<T, TComparer, TContext> dst)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var len = data.Length;
+        var len = src.Length;
         var left = 0;
         var right = mid;
-        var dst = 0;
+        var d = 0;
 
-        // Boost util::merge's MIN_CHECK short-circuit: on large merges, one comparison can prove the
-        // two runs are already in order (or fully inverted), turning the merge into bulk copies.
+        // MIN_CHECK short-circuit: on large merges, one or two comparisons can prove the two runs are
+        // already in order (or fully inverted), turning the merge into bulk copies.
         if (len >= MIN_CHECK && mid != 0 && mid != len)
         {
-            // data[mid] >= data[mid - 1]: the runs concatenate as-is.
-            if (data.IsGreaterOrEqualAt(mid, mid - 1))
+            // src[mid] >= src[mid - 1]: the runs concatenate as-is.
+            if (src.IsGreaterOrEqualAt(mid, mid - 1))
             {
-                data.CopyTo(0, aux, 0, len);
+                src.CopyTo(0, dst, 0, len);
                 return;
             }
 
-            // data[len - 1] < data[0]: the whole right run precedes the whole left run.
-            if (data.IsLessAt(len - 1, 0))
+            // src[len - 1] < src[0]: the whole right run precedes the whole left run.
+            if (src.IsLessAt(len - 1, 0))
             {
-                data.CopyTo(mid, aux, 0, len - mid);
-                data.CopyTo(0, aux, len - mid, mid);
+                src.CopyTo(mid, dst, 0, len - mid);
+                src.CopyTo(0, dst, len - mid, mid);
                 return;
             }
         }
 
         while (left < mid && right < len)
         {
-            var leftValue = data.Read(left);
-            var rightValue = data.Read(right);
-            if (data.IsLessOrEqual(leftValue, rightValue))
+            var leftValue = src.Read(left);
+            var rightValue = src.Read(right);
+            if (src.IsLessOrEqual(leftValue, rightValue))
             {
-                aux.Write(dst++, leftValue);
+                dst.Write(d++, leftValue);
                 left++;
             }
             else
             {
-                aux.Write(dst++, rightValue);
+                dst.Write(d++, rightValue);
                 right++;
             }
         }
 
         if (left < mid)
-            data.CopyTo(left, aux, dst, mid - left);
+            src.CopyTo(left, dst, d, mid - left);
         else if (right < len)
-            data.CopyTo(right, aux, dst, len - right);
-    }
-
-    /// <summary>
-    /// Stable merge of <paramref name="aux"/>[0..<paramref name="mid"/>) and
-    /// <paramref name="aux"/>[<paramref name="mid"/>..len) into <paramref name="data"/>.
-    /// </summary>
-    /// <remarks>
-    /// <c>IsLessOrEqual</c> favours the left element on equal keys, preserving stable order.
-    /// Not <c>AggressiveInlining</c>, for the reason documented on <see cref="MergeFromDataToBuffer"/>.
-    /// </remarks>
-    private static void MergeFromBufferToData<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> aux, int mid, SortSpan<T, TComparer, TContext> data)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var len = data.Length;
-        var left = 0;
-        var right = mid;
-        var dst = 0;
-
-        // Boost util::merge's MIN_CHECK short-circuit, mirrored for the aux → data direction.
-        if (len >= MIN_CHECK && mid != 0 && mid != len)
-        {
-            // aux[mid] >= aux[mid - 1]: the runs concatenate as-is.
-            if (aux.IsGreaterOrEqualAt(mid, mid - 1))
-            {
-                aux.CopyTo(0, data, 0, len);
-                return;
-            }
-
-            // aux[len - 1] < aux[0]: the whole right run precedes the whole left run.
-            if (aux.IsLessAt(len - 1, 0))
-            {
-                aux.CopyTo(mid, data, 0, len - mid);
-                aux.CopyTo(0, data, len - mid, mid);
-                return;
-            }
-        }
-
-        while (left < mid && right < len)
-        {
-            var leftValue = aux.Read(left);
-            var rightValue = aux.Read(right);
-            if (aux.IsLessOrEqual(leftValue, rightValue))
-            {
-                data.Write(dst++, leftValue);
-                left++;
-            }
-            else
-            {
-                data.Write(dst++, rightValue);
-                right++;
-            }
-        }
-
-        if (left < mid)
-            aux.CopyTo(left, data, dst, mid - left);
-        else if (right < len)
-            aux.CopyTo(right, data, dst, len - right);
+            src.CopyTo(right, dst, d, len - right);
     }
 
     /// <summary>
     /// Stably inserts the sorted range [<paramref name="mid"/>..<paramref name="last"/>) into the sorted
     /// prefix [<paramref name="first"/>..<paramref name="mid"/>), using <paramref name="aux"/> as scratch.
-    /// Mirrors Boost's <c>insert_sorted</c>.
     /// </summary>
     /// <remarks>
     /// Processes tail elements right-to-left; each insertion point is found with
@@ -431,7 +358,6 @@ public static class FlatStableSort
     /// <summary>
     /// Stably inserts the sorted range [<paramref name="first"/>..<paramref name="mid"/>) into the sorted
     /// suffix [<paramref name="mid"/>..<paramref name="last"/>), using <paramref name="aux"/> as scratch.
-    /// Mirrors Boost's <c>insert_sorted_backward</c>.
     /// </summary>
     /// <remarks>
     /// Processes head elements left-to-right; each insertion point is found with
@@ -486,7 +412,7 @@ public static class FlatStableSort
         var leftEnd = leftLen;
         var rightEnd = mainStart + leftLen + rightLen;
 
-        // Boost util::merge_half's MIN_CHECK short-circuit. Same idea as MergeFromDataToBuffer, except
+        // MIN_CHECK short-circuit. Same idea as MergeHalves, except
         // the right run already occupies its final tail position, so the ordered case only copies buf.
         if (leftLen + rightLen >= MIN_CHECK && leftLen != 0 && rightLen != 0)
         {
@@ -601,11 +527,11 @@ public static class FlatStableSort
     }
 
     /// <summary>
-    /// Returns the block size for type <typeparamref name="T"/>, mirroring Boost's <c>block_size_fss</c>.
+    /// Returns the block size for type <typeparamref name="T"/>.
     /// </summary>
     /// <remarks>
     /// Block size is a power of two selected by element size in bytes via a lookup table:
-    /// <c>powers = [10, 10, 10, 9, 8, 7, 6, 6]</c>. Boost indexes it with <c>tmsb[sizeof − 1]</c>,
+    /// <c>powers = [10, 10, 10, 9, 8, 7, 6, 6]</c>, indexed with <c>tmsb[sizeof − 1]</c>,
     /// where <c>tmsb[n]</c> is the <em>bit length</em> of <c>n</c> (0 for n = 0, otherwise
     /// <c>⌊log₂ n⌋ + 1</c>) — not <c>⌊log₂ n⌋</c>. Sizes above 128 clamp to index 7.
     /// <c>string</c> is always treated as 64 (1&lt;&lt;6) regardless of its reference size.
@@ -625,7 +551,7 @@ public static class FlatStableSort
         {
             <= 1 => 0,
             > 128 => 7,
-            // BitOperations.Log2 is ⌊log₂ n⌋; +1 turns it into the bit length Boost's tmsb table holds.
+            // BitOperations.Log2 is ⌊log₂ n⌋; +1 turns it into the bit length the tmsb index uses.
             _ => (int)BitOperations.Log2((uint)(size - 1)) + 1,
         };
 
@@ -635,7 +561,6 @@ public static class FlatStableSort
 
     /// <summary>
     /// Holds all state for a block-level stable merge pass over <see cref="_data"/>.
-    /// Mirrors Boost's <c>merge_block</c> class.
     /// </summary>
     /// <remarks>
     /// Uses a <em>deferred-permutation</em> model: the recursive <see cref="Divide"/>/<see cref="MergeRangePos"/>
@@ -690,7 +615,6 @@ public static class FlatStableSort
         /// <summary>
         /// Recursively splits the block index range [<paramref name="indexFirst"/>..<paramref name="indexLast"/>)
         /// in half, sorts each half, then merges with <see cref="MergeRangePos"/>.
-        /// Mirrors Boost's <c>divide</c>.
         /// </summary>
         /// <remarks>
         /// nblock &lt; 5 → <see cref="SortSmall"/> (no recursion).
@@ -724,11 +648,10 @@ public static class FlatStableSort
 
         /// <summary>
         /// Sorts a small contiguous group of blocks (nblock &lt; 5) without further recursion.
-        /// Mirrors Boost's <c>sort_small</c>.
         /// </summary>
         /// <remarks>
-        /// nblock ≤ 0 → no-op. data.Length ≤ SORT_MIN_INTERNAL → <see cref="InsertionSort.SortCore"/> directly.
-        /// nblock &lt; 3 → <see cref="RangeSortData"/> (result stays in <c>_data</c>).
+        /// nblock ≤ 0 → no-op.
+        /// nblock &lt; 3 → <see cref="RangeSortData"/> (result stays in <c>_data</c>; up to 32 elements are insertion-sorted there).
         /// nblock 3–4 → sort right half with <see cref="RangeSortData"/>, sort left half with
         /// <see cref="RangeSortBuffer"/> (result into <c>_temp</c>), merge with <see cref="MergeHalf"/>.
         /// </remarks>
@@ -742,12 +665,6 @@ public static class FlatStableSort
             var data = _data.Slice(dataRange.Start, dataRange.Length, BUFFER_MAIN);
 
             _data.Context.OnPhase(SortPhase.FlatStableSortSmall, _data.Offset + dataRange.Start, _data.Offset + dataRange.End - 1, nblock);
-
-            if (data.Length <= SORT_MIN_INTERNAL)
-            {
-                InsertionSort.SortCore(data, 0, data.Length);
-                return;
-            }
 
             if (nblock < 3)
             {
@@ -771,7 +688,6 @@ public static class FlatStableSort
         /// Fast path: detects that the leading portion of the block range is already ascending,
         /// sorts any unsorted tail, merges, then returns <c>true</c> to skip recursive splitting.
         /// Returns <c>false</c> when no useful sorted prefix exists.
-        /// Mirrors Boost's forward fast path inside <c>divide</c>.
         /// </summary>
         /// <remarks>
         /// Uses <see cref="NumberStableSortedForward"/> with <c>minProcess = max(blockSize, len/8)</c>.
@@ -815,7 +731,6 @@ public static class FlatStableSort
         /// Fast path: detects that the trailing portion of the block range is already ascending,
         /// sorts any unsorted prefix, merges, then returns <c>true</c> to skip recursive splitting.
         /// Returns <c>false</c> when no useful sorted suffix exists.
-        /// Mirrors Boost's backward fast path inside <c>divide</c>.
         /// </summary>
         /// <remarks>
         /// Uses <see cref="NumberStableSortedBackward"/> with <c>minProcess = max(blockSize, len/8)</c>.
@@ -855,8 +770,8 @@ public static class FlatStableSort
         }
 
         /// <summary>
-        /// Sorts the physical range [first, last) via a nested MergeBlockState, mirroring Boost's recursive
-        /// <c>flat_stable_sort(sub-range, ptr_circ)</c> call used in the partial-sorted fast path.
+        /// Sorts the physical range [first, last) via a nested MergeBlockState, a recursive
+        /// flat stable sort of the sub-range used in the partial-sorted fast path.
         /// The sub-state reuses the shared <c>_temp</c> scratch buffer.
         /// </summary>
         private void SortSubRange(int first, int last)
@@ -868,7 +783,7 @@ public static class FlatStableSort
             var data = _data.Slice(first, len, BUFFER_MAIN);
             var nblock = CeilDiv(len, _blockSize);
 
-            // Use ArrayPool (matching Boost's std::vector<size_t> index heap allocation in merge_block)
+            // Use ArrayPool for the index
             // rather than stackalloc, so this is safe regardless of nblock size.
             var indexBuffer = ArrayPool<int>.Shared.Rent(nblock);
             var scratchBuffer = ArrayPool<int>.Shared.Rent((nblock << 1) + 1);
@@ -893,7 +808,7 @@ public static class FlatStableSort
         /// Stably merges two sorted block-index ranges
         /// [<paramref name="indexFirst"/>..<paramref name="indexMiddle"/>) and
         /// [<paramref name="indexMiddle"/>..<paramref name="indexLast"/>) by updating <see cref="_index"/>
-        /// with the merged order. Mirrors Boost's <c>merge_range_pos</c>.
+        /// with the merged order.
         /// </summary>
         /// <remarks>
         /// <para>
@@ -1112,7 +1027,6 @@ public static class FlatStableSort
         /// <summary>
         /// Shifts elements within a contiguous span of logical blocks rightward (higher address) by
         /// <paramref name="npos"/> positions to accommodate the shorter tail block at the end.
-        /// Mirrors Boost's <c>move_range_pos_backward</c>.
         /// </summary>
         /// <remarks>
         /// <para>
@@ -1149,8 +1063,8 @@ public static class FlatStableSort
         /// The two copies that shift elements forward within a single block have <c>dst &gt; src</c> with
         /// a potentially overlapping region.  <c>SortSpan.CopyTo</c> delegates to
         /// <c>Span&lt;T&gt;.CopyTo</c> → <c>Buffer.Memmove</c>, which selects a right-to-left traversal
-        /// automatically when destination is ahead of source — exactly the behaviour of Boost's
-        /// explicit <c>util::move_backward</c> calls.  Forward (left-to-right) copy would corrupt data
+        /// automatically when destination is ahead of source, as a backward move must.
+        /// Forward (left-to-right) copy would corrupt data
         /// when <c>_blockSize &gt; 2 × npos</c>.
         /// </para>
         /// <para><strong>Precondition:</strong> <paramref name="npos"/> ≤ <c>_blockSize</c>;
@@ -1188,7 +1102,6 @@ public static class FlatStableSort
         /// <summary>
         /// Materialises the deferred block permutation in <see cref="_index"/> by following each cycle
         /// and physically moving blocks into their correct positions.
-        /// Mirrors Boost's <c>rearrange_with_index</c>.
         /// </summary>
         /// <remarks>
         /// For each out-of-place position, saves the initial block in <see cref="_temp"/> and follows
@@ -1262,19 +1175,19 @@ public static class FlatStableSort
 
     /// <summary>
     /// Circular buffer backed by a <see cref="SortSpan{T,TComparer,TContext}"/>.
-    /// Mirrors the API and state model of Boost's <c>circular_buffer&lt;Value_t, Power2&gt;</c>:
-    /// capacity is always a power of two, so all index wrap-around uses a bitmask
+    /// Its capacity is always a power of two,
+    /// so all index wrap-around uses a bitmask
     /// (<c>_mask = _capacity - 1</c>) instead of modulo division.
     /// </summary>
     private ref struct CircularSortBuffer<T, TComparer, TContext>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // --- Storage (mirrors Boost's ptr / NMAX / MASK) ---
+        // --- Storage ---
         private readonly SortSpan<T, TComparer, TContext> _buffer;
         private readonly int _capacity;  // NMAX — must be a power of two
         private readonly int _mask;      // MASK = NMAX - 1  (enables & instead of %)
-        // --- Mutable state (mirrors Boost's nelem / first_pos) ---
+        // --- Mutable state ---
         private int _nelem;
         private int _first;
 
@@ -1287,35 +1200,35 @@ public static class FlatStableSort
             _first = 0;
         }
 
-        // --- State properties (mirrors Boost's size() / capacity() / empty() / full() / free_size()) ---
+        // --- State properties / capacity() / empty() / full() / free_size()) ---
         public int Size => _nelem;
         public int Capacity => _capacity;
         public int FreeSize => _capacity - _nelem;
         public bool Empty => _nelem == 0;
         public bool Full => _nelem == _capacity;
 
-        /// <summary>Clears the buffer without touching the backing storage (mirrors Boost's <c>clear()</c>).</summary>
+        /// <summary>Clears the buffer without touching the backing storage.</summary>
         public void Clear() { _nelem = 0; _first = 0; }
 
-        // --- Element access (mirrors Boost's front() / back() / operator[]) ---
-        /// <summary>Returns the first element (mirrors Boost's <c>front()</c>).</summary>
+        // --- Element access / back() / operator[]) ---
+        /// <summary>Returns the first element.</summary>
         public T Front() => _buffer.Read(_first);
 
-        /// <summary>Returns the last element (mirrors Boost's <c>back()</c>).</summary>
+        /// <summary>Returns the last element.</summary>
         public T Back() => _buffer.Read((_first + _nelem - 1) & _mask);
 
-        /// <summary>Returns the element at logical position <paramref name="pos"/> (mirrors Boost's <c>operator[]</c>).</summary>
+        /// <summary>Returns the element at logical position <paramref name="pos"/>.</summary>
         public T this[int pos] => _buffer.Read((_first + pos) & _mask);
 
-        // --- Single-element mutations (mirrors Boost's push_back / push_front / pop_front / pop_back) ---
-        /// <summary>Appends a value at the back (mirrors Boost's <c>push_back(val)</c>).</summary>
+        // --- Single-element mutations ---
+        /// <summary>Appends a value at the back.</summary>
         public void PushBack(T value)
         {
             _buffer.Write((_first + _nelem) & _mask, value);
             _nelem++;
         }
 
-        /// <summary>Prepends a value at the front (mirrors Boost's <c>push_front(val)</c>).</summary>
+        /// <summary>Prepends a value at the front.</summary>
         public void PushFront(T value)
         {
             _first = (_first + _mask) & _mask;   // (_first - 1 + NMAX) & MASK
@@ -1323,20 +1236,19 @@ public static class FlatStableSort
             _nelem++;
         }
 
-        /// <summary>Removes the front element (mirrors Boost's <c>pop_front()</c>).</summary>
+        /// <summary>Removes the front element.</summary>
         public void PopFront()
         {
             _nelem--;
             _first = (_first + 1) & _mask;
         }
 
-        /// <summary>Removes the back element (mirrors Boost's <c>pop_back()</c>).</summary>
+        /// <summary>Removes the back element.</summary>
         public void PopBack() => _nelem--;
 
-        // --- Bulk move operations (mirrors Boost's push_move_back / push_move_front / pop_move_front / pop_move_back) ---
+        // --- Bulk move operations ---
         /// <summary>
-        /// Moves <paramref name="length"/> elements from <paramref name="source"/> into the back
-        /// (mirrors Boost's <c>push_move_back(iter, num)</c>).
+        /// Moves <paramref name="length"/> elements from <paramref name="source"/> into the back.
         /// </summary>
         public void PushMoveBack(SortSpan<T, TComparer, TContext> source, int start, int length)
         {
@@ -1347,8 +1259,8 @@ public static class FlatStableSort
         }
 
         /// <summary>
-        /// Moves <paramref name="length"/> elements from <paramref name="source"/> into the front
-        /// (mirrors Boost's <c>push_copy_front</c> semantics — decrements <c>first_pos</c> before writing).
+        /// Moves <paramref name="length"/> elements from <paramref name="source"/> into the front.
+        ///.
         /// </summary>
         public void PushMoveFront(SortSpan<T, TComparer, TContext> source, int start, int length)
         {
@@ -1360,8 +1272,7 @@ public static class FlatStableSort
         }
 
         /// <summary>
-        /// Moves <paramref name="length"/> elements from the front into <paramref name="destination"/>
-        /// (mirrors Boost's <c>pop_move_front(iter, num)</c>).
+        /// Moves <paramref name="length"/> elements from the front into <paramref name="destination"/>.
         /// </summary>
         public void PopMoveFront(SortSpan<T, TComparer, TContext> destination, int start, int length)
         {
@@ -1373,8 +1284,7 @@ public static class FlatStableSort
         }
 
         /// <summary>
-        /// Moves <paramref name="length"/> elements from the back into <paramref name="destination"/>
-        /// (mirrors Boost's <c>pop_move_back(iter, num)</c>).
+        /// Moves <paramref name="length"/> elements from the back into <paramref name="destination"/>.
         /// </summary>
         public void PopMoveBack(SortSpan<T, TComparer, TContext> destination, int start, int length)
         {

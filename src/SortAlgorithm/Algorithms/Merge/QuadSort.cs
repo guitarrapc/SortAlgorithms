@@ -189,10 +189,10 @@ public static class QuadSort
     }
 
     /// <summary>
-    /// Sorts the span with <paramref name="swapSize"/> elements of swap memory, as the reference's <c>quadsort_swap</c> entry point
-    /// does. With swap memory shorter than the runs, the final levels are rotate merges. Like the reference, a span of up to 96
-    /// elements is sorted by <c>tail_swap</c>, which needs as much swap memory as there are elements, so that much is provided
-    /// whatever <paramref name="swapSize"/> says.
+    /// Sorts the span with <paramref name="swapSize"/> elements of swap memory. With swap memory shorter than the runs, the final
+    /// levels are rotate merges. A span of up to 96 elements is sorted by <c>tail_swap</c>, which needs as much swap memory as there
+    /// are elements, so that much is provided whatever <paramref name="swapSize"/> says. Below 32 elements of swap memory the
+    /// 32-element blocks could never be merged, so a smaller <paramref name="swapSize"/> is rejected.
     /// </summary>
     internal static void SortWithSwapSize<T, TComparer, TContext>(Span<T> span, int swapSize, TComparer comparer, TContext context)
         where TComparer : IComparer<T>

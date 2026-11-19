@@ -73,8 +73,10 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
-/// <item><description>MIN_MERGE = 32: Arrays smaller than 32 elements use Binary Insertion Sort directly (O(n²) but fast for small n)</description></item>
-/// <item><description>MIN_GALLOP = 7: Threshold for entering galloping mode during merges</description></item>
+/// <item><description>MIN_MERGE = 32: Arrays smaller than 32 elements form one run: the natural prefix is detected and the rest is added by binary insertion (O(n²) but fast for small n)</description></item>
+/// <item><description>Binary insertion searches the sorted prefix for every element it adds, without first comparing the element with its predecessor</description></item>
+/// <item><description>MIN_GALLOP = 7: Threshold for entering galloping mode during merges. The shared threshold drops by one for every round that stays in galloping mode,
+/// rises by two when a merge leaves it, and never goes below 1; CPython's listsort raises it by one instead</description></item>
 /// <item><description>Stack size = 64: Sufficient for any int-indexed Span&lt;T&gt; (worst-case stack depth is ⌈log_φ(n)⌉ where φ ≈ 1.618 is golden ratio)</description></item>
 /// <item><description>Galloping mode: Adaptive exponential search + binary search when one run consistently wins, dynamically adjusted threshold</description></item>
 /// <item><description>Range reduction: Before merging, skip elements already in final positions using galloping</description></item>
@@ -168,13 +170,12 @@ public static class TimSort
         var n = last - first;
         if (n <= 1) return;
 
-        // For very small arrays, use binary insertion sort directly
-        // Detect natural run first, then sort from run end (matching reference implementations)
+        // Below MIN_MERGE the whole range becomes one run: detect its natural prefix, then extend it by binary insertion.
         if (n < MIN_MERGE)
         {
             var sortSpan = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
             var initRunLen = CountRunAndMakeAscending(sortSpan, first, last);
-            BinaryInsertionSort.SortCore(sortSpan, first, last, first + initRunLen);
+            BinaryInsertionSort.SortCore(sortSpan, first, last, first + initRunLen, checkInOrderFirst: false);
             return;
         }
 
@@ -228,7 +229,7 @@ public static class TimSort
                 if (runLength < minRun)
                 {
                     var force = Math.Min(minRun, last - i);
-                    BinaryInsertionSort.SortCore(s, i, i + force, i + runLength);
+                    BinaryInsertionSort.SortCore(s, i, i + force, i + runLength, checkInOrderFirst: false);
                     runEnd = i + force;
                     runLength = force;
                 }
@@ -612,7 +613,7 @@ public static class TimSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Handle degenerate cases without temp buffer (C++ rotateLeft/rotateRight)
+        // A run of one element needs no buffer: shift the other run over it and place the element.
         if (len1 == 1)
         {
             var tmp = s.Read(base1);
@@ -642,10 +643,9 @@ public static class TimSort
         s.Write(dest++, s.Read(cursor2++));
         len2--;
 
-        // Work on a local copy of the shared galloping threshold and write it back at exitMerge,
-        // as the reference implementations do. Through the 'ref' parameter the JIT cannot rule out
-        // aliasing with the element writes below, so the one-pair-at-a-time loop condition would
-        // reload it from memory on every iteration.
+        // Work on a local copy of the shared galloping threshold and write it back at exitMerge.
+        // Through the 'ref' parameter the JIT cannot rule out aliasing with the element writes below,
+        // so the one-pair-at-a-time loop condition would reload it from memory on every iteration.
         var minGallopLocal = minGallop;
 
         while (true)
@@ -740,8 +740,7 @@ public static class TimSort
         }
 
     exitMerge:
-        // Keep minGallop at least 1, matching canonical TimSort behavior.
-        // Some C++ ports use a more aggressive clamp that effectively forces it to 1.
+        // Keep minGallop at least 1.
         minGallop = minGallopLocal < 1 ? 1 : minGallopLocal;
 
         if (len1 == 1)
@@ -769,9 +768,8 @@ public static class TimSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Handle degenerate cases without temp buffer (C++ rotateLeft/rotateRight)
-        // Note: len1 == 1 is unreachable here (MergeHigh requires len1 > len2 >= 1),
-        // but kept for symmetry with MergeLow and the C++ reference (gfx::TimSort).
+        // A run of one element needs no buffer: shift the other run over it and place the element.
+        // len1 == 1 is unreachable here (MergeHigh requires len1 > len2 >= 1); it is kept for symmetry with MergeLow.
         if (len1 == 1)
         {
             var tmp = s.Read(base1);
@@ -801,10 +799,9 @@ public static class TimSort
         s.Write(dest--, s.Read(cursor1--));
         len1--;
 
-        // Work on a local copy of the shared galloping threshold and write it back at exitMerge,
-        // as the reference implementations do. Through the 'ref' parameter the JIT cannot rule out
-        // aliasing with the element writes below, so the one-pair-at-a-time loop condition would
-        // reload it from memory on every iteration.
+        // Work on a local copy of the shared galloping threshold and write it back at exitMerge.
+        // Through the 'ref' parameter the JIT cannot rule out aliasing with the element writes below,
+        // so the one-pair-at-a-time loop condition would reload it from memory on every iteration.
         var minGallopLocal = minGallop;
 
         while (true)
@@ -896,8 +893,7 @@ public static class TimSort
         }
 
     exitMerge:
-        // Keep minGallop at least 1, matching canonical TimSort behavior.
-        // Some C++ ports use a more aggressive clamp that effectively forces it to 1.
+        // Keep minGallop at least 1.
         minGallop = minGallopLocal < 1 ? 1 : minGallopLocal;
 
         if (len2 == 1)

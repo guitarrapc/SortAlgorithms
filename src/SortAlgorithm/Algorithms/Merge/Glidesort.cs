@@ -25,9 +25,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Powersort Merge Tree:</strong> Fixed-point depth comparison produces a near-optimal merge order
 /// with O(log n) stack depth.</description></item>
 /// <item><description><strong>Stable Quicksort:</strong> Stable bidirectional 2-way partition into scratch space.
-/// Pseudo-median-of-3 pivot. Recursion-limit fallback uses eager merge sort.</description></item>
+/// Recursive pseudo-median-of-3 pivot drawn from about n^0.528 samples. Recursion-limit fallback uses eager merge sort.</description></item>
 /// <item><description><strong>Block Insertion Sort:</strong> Branchless Sort4/8/16/32 sorting networks (Pow2SmallSort pipeline),
-/// then backward-merge block insertion for remaining elements.</description></item>
+/// then backward-merge insertion of the remaining elements in blocks of 32, 16, 8, 4, 2 or 1, each the largest that fits.</description></item>
 /// <item><description><strong>Physical Merge:</strong> Iterative shrink-split with gap trick.
 /// Triple/quad merges reduce data movement for adjacent sorted pairs.</description></item>
 /// </list>
@@ -40,7 +40,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n log k) where k is the number of distinct values - Exploits duplicates via quicksort partitioning</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by powersort merge tree and bounded quicksort recursion</description></item>
 /// <item><description>Comparisons : O(n log k) average, O(n log n) worst - the running time of this algorithm is its comparison count</description></item>
-/// <item><description>Swaps       : O(n) - only the reversal that turns a detected descending run ascending, plus the branchless merge's paired exchange; merging otherwise moves elements by copying</description></item>
+/// <item><description>Swaps       : O(n) - the reversal that turns a detected descending run ascending, the block swap a physical merge makes when its runs do not fit in scratch, and one exchange per block insertion sort for a block of two; merging otherwise moves elements by copying</description></item>
 /// <item><description>Index Reads : O(n log k) average, O(n log n) worst - every merge level reads each element of the runs it joins</description></item>
 /// <item><description>Index Writes: O(n log k) average, O(n log n) worst - every merge level writes each element it moves, into the auxiliary buffer or back</description></item>
 /// <item><description>Space       : O(n) default auxiliary buffer (scales down for very large arrays)</description></item>
@@ -80,13 +80,12 @@ public static class Glidesort
     // Recursively select a pseudomedian if above this threshold.
     private const int PSEUDO_MEDIAN_REC_THRESHOLD = 64;
 
-    // Scratch buffer scaling thresholds (in bytes), matching the reference implementation.
+    // Scratch buffer scaling thresholds (in bytes).
     // When sorting N elements we allocate a buffer of at most size N, N/2 or N/8.
     private const int FULL_ALLOC_MAX_BYTES = 1024 * 1024;        // 1 MB
     private const int HALF_ALLOC_MAX_BYTES = 1024 * 1024 * 1024;  // 1 GB
 
     // Partition strategy constants for the stable bidirectional quicksort.
-    // Matches the reference PartitionStrategy enum.
     private const byte STRATEGY_RIGHT = 0;           // Select new pivot, partition as (< pivot) vs (>= pivot)
     private const byte STRATEGY_LEFT_WITH_PIVOT = 1;  // Use previous pivot, partition as (<= pivot) vs (> pivot)
     private const byte STRATEGY_LEFT_IF_EQUAL = 2;    // Select new pivot; if equal to previous, partition left; else right
@@ -345,9 +344,9 @@ public static class Glidesort
     /// runType: 0=Unsorted, 1=Sorted, 2=DoubleSorted.
     /// </summary>
     /// <remarks>
-    /// Matches the reference: a run is significant if it is at least SMALL_SORT long
+    /// A run is significant if it is at least SMALL_SORT long
     /// AND run_length² ≥ remaining / 2, where remaining = last - start.
-    /// The reference uses el.len() (the remaining slice length at each call site), not the
+    /// remaining is the length still to be scanned at each call site, not the
     /// total input length. This means runs near the END of the array are recognised using
     /// the remaining suffix as the baseline — a run of 32 elements in the last 64 is
     /// proportionally significant (32²=1024 ≥ 32), even though it would be missed if
@@ -386,8 +385,7 @@ public static class Glidesort
         var runEnd = start + skip;
 
         // When eagerSmallsort is true (used by the quicksort fallback), sort unsorted
-        // blocks immediately so they become Sorted runs. This matches the reference
-        // glidesort(eager_smallsort=true) behavior: no Unsorted runs are created, so the
+        // blocks immediately so they become Sorted runs. No Unsorted runs are created, so the
         // powersort merge tree only performs merges (guaranteed O(n log n)).
         if (eagerSmallsort)
         {
@@ -450,8 +448,7 @@ public static class Glidesort
         var rightLen = rightEnd - rightStart;
 
         // Unsorted + Unsorted: concatenate if the combined block fits in scratch.
-        // This matches the reference (l.len() + r.len() <= scratch.len()).
-        // Unsorted blocks start at SMALL_SORT and can grow through concatenation,
+                // Unsorted blocks start at SMALL_SORT and can grow through concatenation,
         // but the powersort merge tree limits how many adjacent unsorted blocks exist.
         // When scratch is smaller than n (for very large arrays), this condition
         // naturally prevents unbounded growth.
@@ -540,7 +537,7 @@ public static class Glidesort
 
     /// <summary>
     /// Merges two adjacent sorted runs [start..mid) and [mid..end) using scratch space.
-    /// Uses an iterative shrink-split loop matching the reference glidesort <c>physical_merge</c>:
+    /// Uses an iterative shrink-split loop:
     /// <para>1. <b>Shrink</b>: skip already-in-place prefix of left and suffix of right.</para>
     /// <para>2. <b>Split</b>: find split points (lsplit, rsplit) via <see cref="MergeSplitPoints{T,TComparer,TContext}"/>
     ///    such that <c>left1.len == right0.len</c>, partitioning each side into two sub-runs.</para>
@@ -758,19 +755,10 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Already sorted: left.last ≤ right.first → copy left (t) into gap, right stays in place.
-        // The length guards are required, not an optimization: MergeSplitPoints returns
-        // rsplit == right.len when right is the shorter side and the crossover point is 0,
-        // which makes r1Len zero and leaves r1 pointing one past the right run (past the end
-        // of the whole span when this merge reaches it). Reading s[r1] there is out of bounds.
-        // Both degenerate cases fall through to the loop below, which handles them correctly:
-        // an empty left1 writes nothing, and an empty right1 copies left1 into the gap.
-        if (l1Len != 0 && r1Len != 0 && t.IsLessOrEqualAcross(l1Len - 1, s, r1))
-        {
-            t.CopyTo(0, s, outStart, l1Len);
-            return;
-        }
-
+        // Either run may be empty: MergeSplitPoints returns rsplit == right.len when right is the shorter side
+        // and the crossover point is 0, which makes r1Len zero and leaves r1 one past the right run. The loop
+        // below reads nothing until both runs are non-empty, so an empty left1 writes nothing and an empty
+        // right1 copies left1 into the gap.
         var c1 = 0;
         var e1 = l1Len;
         var c2 = r1;
@@ -815,9 +803,6 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Already sorted: left.last ≤ right.first → sequential copy is sufficient.
-        if (s.IsLessOrEqualAt(mid - 1, mid)) { s.CopyTo(leftStart, t, tOffset, rightEnd - leftStart); return; }
-
         var c1 = leftStart;
         var e1 = mid;
         var c2 = mid;
@@ -948,9 +933,6 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Already sorted: left.last ≤ right.first → left stays in place, copy right (t) into gap.
-        if (s.IsLessOrEqualAcross(leftStart + leftLen - 1, t, 0)) { t.CopyTo(0, s, outEnd - tLen, tLen); return; }
-
         // Count-based: n1/n2 eliminate signed-comparison bounds (especially c2 >= 0 which
         // requires an integer sign check). Loop condition is a zero-check.
         var n1 = leftLen;
@@ -992,9 +974,6 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Already sorted: left.last ≤ right.first → sequential copy is sufficient.
-        if (t.IsLessOrEqualAt(leftLen - 1, leftLen)) { t.CopyTo(0, s, outStart, totalLen); return; }
-
         var c1 = 0;
         var e1 = leftLen;
         var c2 = leftLen;
@@ -1082,7 +1061,7 @@ public static class Glidesort
     /// Uses the gap trick when possible:
     /// <para><b>Full scratch</b>: merge both pairs into scratch, then merge the two halves back.
     /// Every element moves exactly twice (3 merge passes instead of ~6).</para>
-    /// <para><b>Partial scratch</b>: try the bigger pair for scratch first (matches the reference).
+    /// <para><b>Partial scratch</b>: try the bigger pair for scratch first.
     /// Merging the smaller pair in-place first minimizes in-place merge work, then the bigger pair
     /// goes into scratch and a single gap merge finishes (4 merge passes).</para>
     /// <para><b>Fallback</b>: three sequential PhysicalMerge calls (6 merge passes).</para>
@@ -1111,9 +1090,8 @@ public static class Glidesort
         }
 
         // Partial: try the bigger pair for scratch first.
-        // Matches the reference: "try to merge the bigger pair into scratch first. This guarantees
-        // that if the bigger one fits but the smaller one doesn't we can use the old space of
-        // the bigger one as scratch space while merging the smaller one."
+        // If the bigger pair fits in scratch but the smaller one does not, the old space of the bigger
+        // pair can serve as scratch while the smaller one is merged.
         // Merging the smaller pair in-place first (fewer elements = less work) and putting the
         // bigger pair into scratch minimizes in-place merge cost.
         if (leftLen >= rightLen)
@@ -1250,9 +1228,10 @@ public static class Glidesort
         var n = leftLen + rightLen;
         var eighth = n / 8;
 
-        var a = 0;
-        var b = n / 2 - eighth;
-        var c = n - eighth;
+        // a, b and c start three regions of n / 8 elements, each placed so it lies entirely in one of the two inputs.
+        var a = leftLen >= eighth ? 0 : leftLen;
+        var b = leftLen >= n / 2 ? n / 2 - eighth : n - n / 2;
+        var c = rightLen >= eighth ? n - eighth : leftLen - eighth;
 
         if (n < PSEUDO_MEDIAN_REC_THRESHOLD)
         {
@@ -1265,8 +1244,13 @@ public static class Glidesort
     }
 
     /// <summary>
-    /// Recursively selects a pivot value from split input by sampling from three regions.
+    /// Selects a pivot value from split input by taking the median of three approximate medians, one of each region
+    /// of <paramref name="n"/> elements starting at <paramref name="a"/>, <paramref name="b"/> and <paramref name="c"/>.
     /// </summary>
+    /// <remarks>
+    /// Each region's median is approximated recursively from three sub-regions of n / 8 elements while the region is
+    /// large enough, so the pivot is drawn from about n^0.528 samples.
+    /// </remarks>
     private static T Median3RecValueFromInput<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
         SortSpan<T, TComparer, TContext> t,
@@ -1276,17 +1260,38 @@ public static class Glidesort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var n8 = n / 8;
-        // n here is the sub-segment size (= original_n / 8 from the caller).
-        // n * 8 reconstructs the original segment size; recurse only when it meets the threshold.
-        // Equivalent to: original_n >= PSEUDO_MEDIAN_REC_THRESHOLD.
         if (n * 8 >= PSEUDO_MEDIAN_REC_THRESHOLD)
         {
-            a = Median3IdxFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, a + n8 * 4, a + n8 * 7);
-            b = Median3IdxFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b, b + n8 * 4, b + n8 * 7);
-            c = Median3IdxFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c, c + n8 * 4, c + n8 * 7);
+            var n8 = n / 8;
+            a = Median3RecIdxFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, a + n8 * 4, a + n8 * 7, n8);
+            b = Median3RecIdxFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b, b + n8 * 4, b + n8 * 7, n8);
+            c = Median3RecIdxFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c, c + n8 * 4, c + n8 * 7, n8);
         }
         return Median3ValueFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, b, c);
+    }
+
+    /// <summary>
+    /// Returns the logical index of the approximate median of the three regions of <paramref name="n"/> elements
+    /// starting at <paramref name="a"/>, <paramref name="b"/> and <paramref name="c"/>, recursing like
+    /// <see cref="Median3RecValueFromInput"/>.
+    /// </summary>
+    private static int Median3RecIdxFromInput<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> s,
+        SortSpan<T, TComparer, TContext> t,
+        bool leftInMain, int leftOff, int leftLen,
+        bool rightInMain, int rightOff,
+        int a, int b, int c, int n)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (n * 8 >= PSEUDO_MEDIAN_REC_THRESHOLD)
+        {
+            var n8 = n / 8;
+            a = Median3RecIdxFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, a + n8 * 4, a + n8 * 7, n8);
+            b = Median3RecIdxFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b, b + n8 * 4, b + n8 * 7, n8);
+            c = Median3RecIdxFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c, c + n8 * 4, c + n8 * 7, n8);
+        }
+        return Median3IdxFromInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, b, c);
     }
 
     /// <summary>
@@ -1346,7 +1351,7 @@ public static class Glidesort
     /// <summary>
     /// Recursive stable bidirectional 2-way quicksort with dest/scratch swap.
     /// <para>
-    /// Matches the reference <c>stable_bidir_quicksort_into</c>: input data is specified
+    /// Input data is specified
     /// as two "halves" (left for forward scan, right for backward scan) that may reside in
     /// either <c>s</c> (main) or <c>t</c> (scratch). Output is always written to
     /// <c>s[destStart..destStart+n)</c> with <c>t[scrStart..scrStart+n)</c> as scratch.
@@ -1441,9 +1446,9 @@ public static class Glidesort
             //
             // The fast kernels are restricted to NullContext:
             // the write-both kernel physically writes each element to both candidate slots
-            // (matching the reference partition_one_forward) and the SIMD kernel bypasses
+            // and the SIMD kernel bypasses
             // per-element operations, either of which would corrupt observed operation counts.
-            // Observing contexts always take the reference-shaped loop.
+            // Observing contexts always take the per-element loop.
             int lessFwdCount, lessBwdCount, geqFwdCount, geqBwdCount;
             if (typeof(TContext) == typeof(NullContext) && typeof(T) == typeof(int)
                 && comparer is IComparableComparer && Avx512F.IsSupported)
@@ -1901,15 +1906,14 @@ public static class Glidesort
 
     /// <summary>
     /// Sorts the range [start..end) using the Glidesort block insertion sort.
-    /// First sorts the first min(n, 32) elements using fixed-size small-sort pipeline
-    /// (Sort4 → Sort8 → Sort16 → Sort32), then inserts remaining elements into the
-    /// sorted prefix in blocks of up to 32 via a backward merge from scratch space.
+    /// First sorts the largest block of 32, 16, 8, 4, 2 or 1 elements that fits at the start, then repeatedly
+    /// sorts the largest such block that fits in what is left and inserts it into the sorted prefix with a
+    /// backward merge from scratch space.
     /// </summary>
     /// <remarks>
-    /// Matches the reference <c>block_insertion_sort</c> from the Rust glidesort codebase.
-    /// For SMALL_SORT=48, this is at most two passes: one Sort32 and one 16-element block insert.
-    /// The scratch span <paramref name="t"/> is used for the Sort8/Sort16/Sort32 merge steps
-    /// and for staging each block before insertion. All accesses are sequential and non-overlapping.
+    /// For SMALL_SORT=48, 47 elements become blocks of 32, 8, 4, 2 and 1.
+    /// Each block is sorted in place by the fixed-size pipeline, using <paramref name="t"/> for its merge steps,
+    /// and then copied to <paramref name="t"/> for the insertion. All accesses are sequential and non-overlapping.
     /// </remarks>
     private static void BlockInsertionSort<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
@@ -1921,45 +1925,42 @@ public static class Glidesort
         var n = end - start;
         if (n <= 1) return;
 
-        // Sort the first min(n, 32) elements using fixed-size small-sort pipeline.
-        var numSorted = SmallSortPartial(s, t, start, end);
+        var numSorted = SortPow2Block(s, t, start, n);
 
-        // Insert remaining elements in blocks of up to 32 at a time.
         while (start + numSorted < end)
         {
             var blockStart = start + numSorted;
-            var blockLen = Math.Min(end - blockStart, 32);
+            var blockLen = SortPow2Block(s, t, blockStart, end - blockStart);
 
-            // Copy block to scratch space and sort it there (in-place via insertion sort;
-            // blockLen ≤ 32 so no extra scratch is needed for the sort itself).
+            // Stage the sorted block in scratch, then backward-merge it into the sorted prefix.
             s.CopyTo(blockStart, t, 0, blockLen);
-            InsertionSort.SortCore(t, 0, blockLen);
-
-            // Backward-merge sorted scratch into the sorted prefix.
             BlockInsert(s, t, start, numSorted, blockLen);
             numSorted += blockLen;
         }
     }
 
     /// <summary>
-    /// Sorts the first min(end-start, 32) elements of [start..end) in place using
-    /// fixed-size small-sort pipeline. Returns the count sorted: 32, 16, 8, 4, or n (for n&lt;4).
+    /// Sorts the largest block of 32, 16, 8, 4, 2 or 1 elements that fits in <paramref name="available"/>,
+    /// in place at <paramref name="start"/>, and returns its length.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int SmallSortPartial<T, TComparer, TContext>(
+    private static int SortPow2Block<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
         SortSpan<T, TComparer, TContext> t,
-        int start, int end)
+        int start, int available)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var n = end - start;
-        if (n >= 32) { Sort32(s, t, start); return 32; }
-        if (n >= 16) { Sort16(s, t, start); return 16; }
-        if (n >= 8) { Sort8(s, t, start); return 8; }
-        if (n >= 4) { Sort4(s, t, start); return 4; }
-        InsertionSort.SortCore(s, start, end);
-        return n;
+        if (available >= 32) { Sort32(s, t, start); return 32; }
+        if (available >= 16) { Sort16(s, t, start); return 16; }
+        if (available >= 8) { Sort8(s, t, start); return 8; }
+        if (available >= 4) { Sort4(s, t, start); return 4; }
+        if (available >= 2)
+        {
+            if (s.IsLessAt(start + 1, start)) s.Swap(start, start + 1);
+            return 2;
+        }
+        return 1;
     }
 
     /// <summary>
@@ -2013,10 +2014,10 @@ public static class Glidesort
 
     // Pow2SmallSort Pipeline
     //
-    // Matches the reference Pow2SmallSort from small_sort.rs:
+    // Stages:
     // - Sort4Into: out-of-place sort4 using 5 comparisons with conditional value selection
     // - SymmetricMerge: merge two equal-sized sorted runs reading from both begin and end
-    // - DoubleMerge: interleaved symmetric merge of two independent pairs (preserves the reference's ILP-oriented interleaving)
+    // - DoubleMerge: interleaved symmetric merge of two independent pairs, so the two streams overlap
     //
     // Pipeline data flow:
     //   sort8:  s → t : Sort4Into × 2                                → t → s : SymmetricMerge(k=4)
@@ -2025,7 +2026,7 @@ public static class Glidesort
 
     /// <summary>
     /// Out-of-place sort of 4 elements: reads src[si..si+4), writes sorted result to dst[di..di+4).
-    /// Uses 5 comparisons with conditional value selection, matching the reference <c>sort4_raw</c>.
+    /// Uses 5 comparisons with conditional value selection.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort4Into<T, TComparer, TContext>(
@@ -2068,7 +2069,6 @@ public static class Glidesort
     /// into <paramref name="dst"/>. Reads from both begin and end simultaneously: each iteration
     /// produces one element at the front and one element at the back of the output.
     /// Exactly <paramref name="k"/> iterations produce exactly 2k outputs.
-    /// Matches the reference <c>final_merge_from_dst_into</c>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SymmetricMerge<T, TComparer, TContext>(
@@ -2102,12 +2102,19 @@ public static class Glidesort
             lb += takeLeftF; rb += 1 - takeLeftF;
             le -= takeLeftB; re -= 1 - takeLeftB;
         }
+
+        // A consistent comparer makes the front and back cursors of each run cross exactly. Otherwise the output may repeat
+        // elements and miss others, so the input runs are copied over it unsorted, which keeps the range a permutation.
+        if (!src.UsesNaturalPrimitiveOrder && (lb != le + 1 || rb != re + 1))
+        {
+            src.CopyTo(leftOff, dst, dstOff, k);
+            src.CopyTo(rightOff, dst, dstOff + k, k);
+        }
     }
 
     /// <summary>
     /// Interleaved double merge: merges 4 sorted groups of <paramref name="k"/> elements
-    /// (4k total) into 2 sorted groups of 2k. Interleaves two independent symmetric merges,
-    /// preserving the reference's ILP-oriented data flow from <c>double_merge_from_src_to_dst</c>.
+    /// (4k total) into 2 sorted groups of 2k. Interleaves two independent symmetric merges.
     /// (C# JIT does not guarantee actual ILP from this interleaving.)
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2161,13 +2168,19 @@ public static class Glidesort
             l0e -= takeL0e; r0e -= 1 - takeL0e;
             l1e -= takeL1e; r1e -= 1 - takeL1e;
         }
+
+        // As in SymmetricMerge: cursors that did not cross exactly mean an inconsistent comparer, and the input is copied over.
+        if (!src.UsesNaturalPrimitiveOrder && (l0b != l0e + 1 || r0b != r0e + 1 || l1b != l1e + 1 || r1b != r1e + 1))
+        {
+            src.CopyTo(srcOff, dst, dstOff, 4 * k);
+        }
     }
 
     /// <summary>
     /// Sorts 4 consecutive elements at [i..i+4) in place using the out-of-place <see cref="Sort4Into"/>
     /// algorithm with scratch buffer <paramref name="t"/>, then copies the result back.
-    /// Delegates to <see cref="Sort4Into"/> which implements the reference <c>sort4_raw</c> algorithm
-    /// using conditional value selection (not swaps), guaranteeing stability.
+    /// Delegates to <see cref="Sort4Into"/>, which sorts
+    /// by conditional value selection (not swaps), guaranteeing stability.
     /// Requires <paramref name="t"/> to have at least 4 elements.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2237,7 +2250,7 @@ public static class Glidesort
         else
         {
             // Narrow scratch path: bounce through s, then use SymmetricMerge for the final step,
-            // matching the reference path's final merge structure.
+            // so the last step is a symmetric merge on every path.
             // t[0..16) → s[i..i+16): double merge (4 groups of 4 → 2 groups of 8)
             DoubleMerge(t, s, 0, i, 4);
 
@@ -2302,7 +2315,7 @@ public static class Glidesort
 
     /// <summary>
     /// Computes the scratch buffer size for a given input size.
-    /// Matches the reference scaling strategy: full allocation (n) up to 1 MB total bytes,
+    /// Full allocation (n) up to 1 MB total bytes,
     /// half allocation (n/2) up to 1 GB, then n/8 for very large data.
     /// Always allocates at least SMALL_SORT elements so that small-sort operations succeed.
     /// </summary>

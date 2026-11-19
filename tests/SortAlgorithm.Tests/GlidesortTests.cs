@@ -147,8 +147,8 @@ public class GlidesortTests : StableSortTestsBase
         // Larger arrays are detected as a single ascending run with n-1 comparisons and 0 writes.
         //
         // Actual observations for sorted data:
-        // n=10:  21 comparisons, 20 writes, 0 swaps   (BlockInsertionSort: Sort8(18c,16w) + block[2](3c,4w))
-        // n=20:  59 comparisons, 56 writes, 0 swaps   (BlockInsertionSort: Sort16(52c,48w) + block[4](7c,8w))
+        // n=10:  21 comparisons, 20 writes, 0 swaps   (BlockInsertionSort: Sort8(18c,16w) + 2-block(1c) inserted (2c,4w))
+        // n=20:  61 comparisons, 64 writes, 0 swaps   (BlockInsertionSort: Sort16(52c,48w) + Sort4(5c,8w) inserted (4c,8w))
         //   Sort16 uses full Pow2SmallSort pipeline: Sort4Into×4 → DoubleMerge(k=4) → SymmetricMerge(k=8).
         //   SymmetricMerge always performs k iterations × 2 comparisons = 16, regardless of input order.
         // n=50:  49 comparisons, 0 writes, 0 swaps    (Single ascending run detected)
@@ -156,8 +156,8 @@ public class GlidesortTests : StableSortTestsBase
         if (n < 48)
         {
             // BlockInsertionSort: branchless Sort4/8/16/32 pipelines write deterministically regardless of input order.
-            var expectedCompares = n == 10 ? 21UL : 59UL;
-            var expectedWrites = n == 10 ? 20UL : 56UL;
+            var expectedCompares = n == 10 ? 21UL : 61UL;
+            var expectedWrites = n == 10 ? 20UL : 64UL;
             await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
             await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
             await Assert.That(stats.IndexReadCount > 0).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be > 0");
@@ -199,13 +199,13 @@ public class GlidesortTests : StableSortTestsBase
         ulong minCompares, maxCompares, minWrites, maxWrites, minSwaps, maxSwaps;
         if (n < 48)
         {
-            // BlockInsertionSort: branchless networks (lower writes than InsertionSort for reversed)
+            // BlockInsertionSort: branchless networks (lower writes than InsertionSort for reversed). A block of two is put in order with one swap, and at most one such block occurs.
             minCompares = (ulong)n;
             maxCompares = (ulong)(n * (n - 1) / 2 + n);
             minWrites = (ulong)n;
             maxWrites = (ulong)(n * (n + 1) / 2);
             minSwaps = 0UL;
-            maxSwaps = 0UL;
+            maxSwaps = 1UL;
         }
         else
         {
