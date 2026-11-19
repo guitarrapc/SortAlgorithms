@@ -39,6 +39,9 @@ namespace SortAlgorithm.Algorithms;
 /// fold into the address.</description></item>
 /// <item><description>The block fills and the exchange are methods that are not inlined. Inlined, reverse-sorted input measured slower,
 /// and the other patterns moved by a few percent either way.</description></item>
+/// <item><description>Whole blocks of <see cref="int"/> keys in natural order, sorted without an observer, are classified by the sign of
+/// each key's 64-bit difference from the pivot, unrolled over the whole block. It needs no setcc, whose RyuJIT form can wait on the
+/// previous count, and it measured faster. It stores the same offsets as the comparison form.</description></item>
 /// </list>
 /// <para><strong>Measured trade-offs vs <see cref="PDQSort"/> (int keys; direction only, magnitudes depend on the machine):</strong></para>
 /// <list type="bullet">
@@ -463,6 +466,98 @@ public static class PDQSortBranchless
     }
 
     /// <summary>
+    /// Whether whole blocks can use <see cref="FillLeftInt32"/> and <see cref="FillRightInt32"/>: int keys in natural order, with no observer.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool UsesInt32Fill<T, TComparer, TContext>(in SortSpan<T, TComparer, TContext> s)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => typeof(T) == typeof(int) && typeof(TContext) == typeof(NullContext) && s.UsesNaturalPrimitiveOrder;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ref int Int32At<T, TComparer, TContext>(in SortSpan<T, TComparer, TContext> s, nint i)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => ref Unsafe.Add(ref Unsafe.As<T, int>(ref MemoryMarshal.GetReference(s.RawSpan)), i);
+
+    /// <summary>
+    /// -1 when <paramref name="x"/> is below the pivot, else 0. The difference of two ints cannot overflow in 64 bits, so its sign is the comparison.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static nint Below(int x, long pivot) => (nint)((x - pivot) >> 63);
+
+    /// <summary>
+    /// <see cref="FillLeft"/> for one whole block of int keys starting at <paramref name="block"/>, with the same offsets and count.
+    /// </summary>
+    /// <remarks>
+    /// RyuJIT turns a comparison into an addend with setcc and movzx, and its setcc writes only the low byte of a register that can still hold
+    /// the previous count, which ties each flag to that count. The sign of a subtraction needs no setcc. Unrolling the whole block makes every
+    /// stored offset a constant, so no instruction is spent on it.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static int FillLeftInt32(ref int block, ref byte offsets, long pivot)
+    {
+        // miss is minus the number of elements below the pivot so far, so element k's offset goes to miss + k.
+        nint miss = 0;
+        miss = FillLeft8(ref block, ref offsets, miss, pivot, 0);
+        miss = FillLeft8(ref block, ref offsets, miss, pivot, 8);
+        miss = FillLeft8(ref block, ref offsets, miss, pivot, 16);
+        miss = FillLeft8(ref block, ref offsets, miss, pivot, 24);
+        miss = FillLeft8(ref block, ref offsets, miss, pivot, 32);
+        miss = FillLeft8(ref block, ref offsets, miss, pivot, 40);
+        miss = FillLeft8(ref block, ref offsets, miss, pivot, 48);
+        miss = FillLeft8(ref block, ref offsets, miss, pivot, 56);
+        return (int)(BlockSize + miss);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static nint FillLeft8(ref int block, ref byte offsets, nint miss, long pivot, int k)
+    {
+        Unsafe.Add(ref offsets, miss + k) = (byte)k; miss += Below(Unsafe.Add(ref block, k), pivot);
+        Unsafe.Add(ref offsets, miss + k + 1) = (byte)(k + 1); miss += Below(Unsafe.Add(ref block, k + 1), pivot);
+        Unsafe.Add(ref offsets, miss + k + 2) = (byte)(k + 2); miss += Below(Unsafe.Add(ref block, k + 2), pivot);
+        Unsafe.Add(ref offsets, miss + k + 3) = (byte)(k + 3); miss += Below(Unsafe.Add(ref block, k + 3), pivot);
+        Unsafe.Add(ref offsets, miss + k + 4) = (byte)(k + 4); miss += Below(Unsafe.Add(ref block, k + 4), pivot);
+        Unsafe.Add(ref offsets, miss + k + 5) = (byte)(k + 5); miss += Below(Unsafe.Add(ref block, k + 5), pivot);
+        Unsafe.Add(ref offsets, miss + k + 6) = (byte)(k + 6); miss += Below(Unsafe.Add(ref block, k + 6), pivot);
+        Unsafe.Add(ref offsets, miss + k + 7) = (byte)(k + 7); miss += Below(Unsafe.Add(ref block, k + 7), pivot);
+        return miss;
+    }
+
+    /// <summary>
+    /// <see cref="FillRight"/> for one whole block of int keys, as <see cref="FillLeftInt32"/> does from the left. <paramref name="block"/> is the
+    /// block's lowest element rather than its end, so no reference points past the range.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static int FillRightInt32(ref int block, ref byte offsets, long pivot)
+    {
+        nint num = 0;
+        num = FillRight8(ref block, ref offsets, num, pivot, 1);
+        num = FillRight8(ref block, ref offsets, num, pivot, 9);
+        num = FillRight8(ref block, ref offsets, num, pivot, 17);
+        num = FillRight8(ref block, ref offsets, num, pivot, 25);
+        num = FillRight8(ref block, ref offsets, num, pivot, 33);
+        num = FillRight8(ref block, ref offsets, num, pivot, 41);
+        num = FillRight8(ref block, ref offsets, num, pivot, 49);
+        num = FillRight8(ref block, ref offsets, num, pivot, 57);
+        return (int)num;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static nint FillRight8(ref int block, ref byte offsets, nint num, long pivot, int k)
+    {
+        Unsafe.Add(ref offsets, num) = (byte)k; num -= Below(Unsafe.Add(ref block, BlockSize - k), pivot);
+        Unsafe.Add(ref offsets, num) = (byte)(k + 1); num -= Below(Unsafe.Add(ref block, BlockSize - k - 1), pivot);
+        Unsafe.Add(ref offsets, num) = (byte)(k + 2); num -= Below(Unsafe.Add(ref block, BlockSize - k - 2), pivot);
+        Unsafe.Add(ref offsets, num) = (byte)(k + 3); num -= Below(Unsafe.Add(ref block, BlockSize - k - 3), pivot);
+        Unsafe.Add(ref offsets, num) = (byte)(k + 4); num -= Below(Unsafe.Add(ref block, BlockSize - k - 4), pivot);
+        Unsafe.Add(ref offsets, num) = (byte)(k + 5); num -= Below(Unsafe.Add(ref block, BlockSize - k - 5), pivot);
+        Unsafe.Add(ref offsets, num) = (byte)(k + 6); num -= Below(Unsafe.Add(ref block, BlockSize - k - 6), pivot);
+        Unsafe.Add(ref offsets, num) = (byte)(k + 7); num -= Below(Unsafe.Add(ref block, BlockSize - k - 7), pivot);
+        return num;
+    }
+
+    /// <summary>
     /// Branchless block partition: port of orlp's partition_right_branchless (pdqsort.h),
     /// derived from BlockQuicksort (Edelkamp/Weiss). Elements equal to the pivot go to the
     /// right partition - identical contract to PDQSort.PartitionRight.
@@ -520,6 +615,8 @@ public static class PDQSortBranchless
             var numR = 0;
             var startL = 0;
             var startR = 0;
+            var int32Fill = UsesInt32Fill(s);
+            var int32Pivot = int32Fill ? (int)(object)pivot! : 0;
 
             while (last - first > 2 * BlockSize)
             {
@@ -527,12 +624,16 @@ public static class PDQSortBranchless
                 if (numL == 0)
                 {
                     startL = 0;
-                    numL = FillLeft(in s, first, ref offsetsL, pivot, BlockSize);
+                    numL = int32Fill
+                        ? FillLeftInt32(ref Int32At(s, first), ref offsetsL, int32Pivot)
+                        : FillLeft(in s, first, ref offsetsL, pivot, BlockSize);
                 }
                 if (numR == 0)
                 {
                     startR = 0;
-                    numR = FillRight(in s, last, ref offsetsR, pivot, BlockSize);
+                    numR = int32Fill
+                        ? FillRightInt32(ref Int32At(s, last - BlockSize), ref offsetsR, int32Pivot)
+                        : FillRight(in s, last, ref offsetsR, pivot, BlockSize);
                 }
 
                 var num = Math.Min(numL, numR);

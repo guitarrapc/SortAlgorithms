@@ -52,6 +52,66 @@ public class PDQSortBranchlessTests : SortTestsBase
         await Assert.That(Convert.ToHexString(hash.GetHashAndReset())).IsEqualTo(expected);
     }
 
+    // Sort(span) on int keys classifies whole blocks by the sign of a 64-bit difference from the pivot. Keys at both ends of the int range
+    // give the largest differences, a 32-bit difference would overflow on them, and n = 1000 sends the first partitions through the
+    // full-block loop with these keys as pivots.
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task Int32BlockFillSortsKeysAcrossTheIntRange(bool edgesOnly)
+    {
+        int[] edges = [int.MinValue, int.MinValue + 1, -1, 0, 1, int.MaxValue - 1, int.MaxValue];
+        var rng = new Random(7);
+        var values = new int[1000];
+        for (var i = 0; i < values.Length; i++)
+        {
+            values[i] = !edgesOnly && i % 2 == 1 ? rng.Next(int.MinValue, int.MaxValue) : edges[rng.Next(edges.Length)];
+        }
+        var sorted = values.Order().ToArray();
+
+        PDQSortBranchless.Sort(values.AsSpan());
+
+        await Assert.That(values).IsEquivalentTo(sorted, CollectionOrdering.Matching);
+    }
+
+    // A wrong classification of a key equal to the pivot still sorts, so the sort tests cannot see it. This compares the int block fills with
+    // the plain loop of orlp's pdqsort: a key equal to the pivot belongs to the right partition, so the left fill counts it and the right
+    // fill does not. Half of the blocks hold only keys within one of the pivot.
+    [Test]
+    public async Task Int32BlockFillsMatchThePlainLoop()
+    {
+        int[] pivots = [int.MinValue, -1, 0, 1, int.MaxValue];
+        var rng = new Random(11);
+        var block = new int[64];
+        var offsets = new byte[64];
+        var expected = new byte[64];
+        var mismatches = new List<string>();
+        foreach (var pivot in pivots)
+        {
+            for (var round = 0; round < 40; round++)
+            {
+                for (var i = 0; i < block.Length; i++)
+                {
+                    block[i] = round % 2 == 0
+                        ? pivots[rng.Next(pivots.Length)]
+                        : (int)Math.Clamp((long)pivot + rng.Next(-1, 2), int.MinValue, int.MaxValue);
+                }
+
+                var count = 0;
+                for (var k = 0; k < 64; k++) { expected[count] = (byte)k; if (block[k] >= pivot) count++; }
+                var got = PDQSortBranchless.FillLeftInt32(ref block[0], ref offsets[0], pivot);
+                if (got != count || !offsets.AsSpan(0, count).SequenceEqual(expected.AsSpan(0, count))) mismatches.Add($"left pivot {pivot} round {round}");
+
+                count = 0;
+                for (var k = 1; k <= 64; k++) { expected[count] = (byte)k; if (block[64 - k] < pivot) count++; }
+                got = PDQSortBranchless.FillRightInt32(ref block[0], ref offsets[0], pivot);
+                if (got != count || !offsets.AsSpan(0, count).SequenceEqual(expected.AsSpan(0, count))) mismatches.Add($"right pivot {pivot} round {round}");
+            }
+        }
+
+        await Assert.That(mismatches).IsEmpty();
+    }
+
     [Test]
     public async Task RangeSortTest()
     {
