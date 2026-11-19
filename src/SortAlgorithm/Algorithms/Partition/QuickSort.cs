@@ -72,6 +72,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst-case O(n²) comparisons/swaps on already-sorted or reverse-sorted arrays with poor pivot selection</description></item>
 /// <item><description>Poor performance on arrays with many duplicate elements (use 3-way partitioning instead)</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The Hoare scans stop at the pivot value and at the pairs already swapped, which only a consistent comparer guarantees. Element
+/// access is unchecked, so the cursors are also checked against the range. The natural order of a primitive type is always consistent, and
+/// the checks are compiled out for it. A comparer that is not a consistent total order can make the sort throw
+/// <see cref="InvalidOperationException"/>. Either way the range keeps its elements, in an unspecified order, and nothing outside the range
+/// is read or written.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
 /// </remarks>
@@ -199,7 +205,7 @@ public static class QuickSort
                 var i = left;
                 var j = right;
 
-                var partition = new PartitionLoop<T, TComparer, TContext> { I = i, J = j };
+                var partition = new PartitionLoop<T, TComparer, TContext> { I = i, J = j, Left = left, Right = right };
                 s.WithPreparedKey(pivot, ref partition);
                 i = partition.I;
                 j = partition.J;
@@ -248,21 +254,30 @@ public static class QuickSort
         public static PreparedKeyKind Kind => PreparedKeyKind.Partition;
         public int I;
         public int J;
+        public int Left;
+        public int Right;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Run<TOrder>(SortSpan<T, TComparer, TContext> s, T pivot)
             where TOrder : struct, IKeyOrder
         {
+            // The pivot value and the pairs already swapped stop the scans, which only a consistent comparer guarantees. Element access is
+            // unchecked, so the cursors are also checked against the range. The natural order of a primitive type is consistent, so the
+            // checks fold away for it.
+            var checkCursors = !s.UsesNaturalPrimitiveOrder;
+
             while (I <= J)
             {
                 while (s.IsElementLessThan<TOrder>(I, pivot))
                 {
                     I++;
+                    if (checkCursors && I > Right) ThrowHelper.ThrowInconsistentComparer();
                 }
 
                 while (s.IsValueLessThan<TOrder>(pivot, J))
                 {
                     J--;
+                    if (checkCursors && J < Left) ThrowHelper.ThrowInconsistentComparer();
                 }
 
                 if (I <= J)

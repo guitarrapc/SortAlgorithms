@@ -39,6 +39,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(log n) - Recursion stack depth</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The scans of the generic partitions and the unguarded insertion sort stop at elements that earlier comparisons put in their way,
+/// which only a consistent comparer guarantees. Element access is unchecked, so those cursors are also checked against their range. The
+/// natural order of a primitive type is always consistent, and the checks are compiled out for it. The bitset partition runs only under
+/// that order. A comparer that is not a consistent total order can make the sort throw <see cref="InvalidOperationException"/>. Either way
+/// the range keeps its elements, in an unspecified order, and nothing outside the range is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>libc++'s <c>std::sort</c> was not an introsort from the start. The initial import by Howard Hinnant (2010) was a quicksort
 /// without a depth limit or a heapsort fallback. The introsort fallback this port follows was added by Nilay Vaish in 2021
@@ -579,6 +585,9 @@ public static class StdSort
                 j = i;
                 do
                 {
+                    // Only a consistent comparer stops at the sentinel, and element access is unchecked. The natural order of a
+                    // primitive type is consistent, so the check folds away for it.
+                    if (!s.UsesNaturalPrimitiveOrder && k < first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, j, tmp);
                     s.Write(j, s.Read(k));
                     j = k;
                 } while (s.IsValueLessThan(tmp, --k));
@@ -889,6 +898,7 @@ public static class StdSort
     {
         var begin = first;  // Save original position for bounds checking
         var pivot = s.Read(first);
+        var checkCursors = !s.UsesNaturalPrimitiveOrder;
 
         // Find first element >= pivot
         var i = first;
@@ -928,10 +938,10 @@ public static class StdSort
         {
             s.Swap(i, j);
 
-            // After swap, find next elements to swap
-            // These are always guarded by the median-of-3 pivot selection
-            do { i++; } while (s.IsElementLessThan(i, pivot));
-            do { j--; } while (s.IsElementGreaterOrEqual(j, pivot));
+            // After swap, find next elements to swap. With a consistent comparer the swapped pair stops these scans. Element access
+            // is unchecked, so the cursors are also checked against the range, except under the natural order of a primitive type.
+            do { i++; if (checkCursors && i == last) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsElementLessThan(i, pivot));
+            do { j--; if (checkCursors && j < begin) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsElementGreaterOrEqual(j, pivot));
         }
 
         // Place pivot in correct position
@@ -958,16 +968,19 @@ public static class StdSort
     {
         var begin = first;  // Save original position for bounds checking
         var pivot = s.Read(first);
+        var checkCursors = !s.UsesNaturalPrimitiveOrder;
 
         // Find first element > pivot
         var i = first;
         // From LLVM libc++: probe the last element to decide whether the upward scan needs a bound.
         if (s.IsValueLessThan(pivot, last - 1))
         {
-            // Unguarded: the element at last - 1 is > pivot and stops the scan, so no bound is needed.
+            // Unguarded: with a consistent comparer the element at last - 1 is > pivot and stops the scan. Element access is unchecked,
+            // so the cursor is still checked against the range, except under the natural order of a primitive type.
             do
             {
                 i++;
+                if (checkCursors && i == last) ThrowHelper.ThrowInconsistentComparer();
             } while (s.IsValueGreaterOrEqual(pivot, i));
         }
         else
@@ -994,10 +1007,10 @@ public static class StdSort
         {
             s.Swap(i, j);
 
-            // After swap, find next elements to swap
-            // These are always guarded by the median-of-3 pivot selection
-            do { i++; } while (s.IsValueGreaterOrEqual(pivot, i));
-            do { j--; } while (s.IsValueLessThan(pivot, j));
+            // After swap, find next elements to swap. With a consistent comparer the swapped pair stops these scans, and the cursors
+            // are checked as above.
+            do { i++; if (checkCursors && i == last) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsValueGreaterOrEqual(pivot, i));
+            do { j--; if (checkCursors && j < begin) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsValueLessThan(pivot, j));
         }
 
         // Place pivot in correct position

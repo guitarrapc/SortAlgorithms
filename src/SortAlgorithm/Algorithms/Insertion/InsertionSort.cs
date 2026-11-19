@@ -1,5 +1,4 @@
 ﻿using SortAlgorithm.Contexts;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -317,7 +316,7 @@ public static class InsertionSort
                 {
                     // Only a consistent comparer stops at the sentinel, and element access is unchecked. The natural order of a
                     // primitive type is consistent, so the check folds away for it.
-                    if (!s.UsesNaturalPrimitiveOrder && j < first) RestoreAndThrow(s, first, tmp);
+                    if (!s.UsesNaturalPrimitiveOrder && j < first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, first, tmp);
                     s.Write(j + 1, a);
                     j--;
                 }
@@ -463,7 +462,7 @@ public static class InsertionSort
                         if (s.IsElementGreaterThan(j, tmp, out var a))
                         {
                             // As in UnguardedSortCore, only a consistent comparer stops at the sentinel.
-                            if (!s.UsesNaturalPrimitiveOrder && j < first) RestoreAndThrow(s, first, tmp);
+                            if (!s.UsesNaturalPrimitiveOrder && j < first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, first, tmp);
                             s.Write(j + 1, a);
                             j--;
                         }
@@ -479,19 +478,6 @@ public static class InsertionSort
         }
 
         return true; // Successfully sorted without exceeding insertion limit
-    }
-
-    /// <summary>
-    /// Reports a comparer that moved an element past the sentinel of an unguarded insertion. The shifts have left a gap at
-    /// <paramref name="first"/>, and filling it with the element being inserted keeps the range a permutation of its input.
-    /// </summary>
-    [DoesNotReturn]
-    static void RestoreAndThrow<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, T value)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        s.Write(first, value);
-        throw new InvalidOperationException("Comparison method violates its general contract.");
     }
 
     /// <summary>

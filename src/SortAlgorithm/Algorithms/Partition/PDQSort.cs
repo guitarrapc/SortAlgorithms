@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
 using SortAlgorithm.Contexts;
 
@@ -435,7 +434,7 @@ public static class PDQSort
         var checkCursors = !s.UsesNaturalPrimitiveOrder;
 
         // Find the first element greater than or equal to the pivot (the median of 3 guarantees this exists).
-        do { first++; if (checkCursors && first == end) ThrowInconsistentComparer(); } while (s.IsElementLessThan(first, pivot));
+        do { first++; if (checkCursors && first == end) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsElementLessThan(first, pivot));
 
         // Find the first element strictly smaller than the pivot. We have to guard this search if
         // there was no element before *first.
@@ -445,7 +444,7 @@ public static class PDQSort
         }
         else
         {
-            do { last--; if (checkCursors && last < begin) ThrowInconsistentComparer(); } while (s.IsElementGreaterOrEqual(last, pivot));
+            do { last--; if (checkCursors && last < begin) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsElementGreaterOrEqual(last, pivot));
         }
 
         // If the first pair of elements that should be swapped to partition are the same element,
@@ -458,8 +457,8 @@ public static class PDQSort
         while (first < last)
         {
             s.Swap(first, last);
-            do { first++; if (checkCursors && first == end) ThrowInconsistentComparer(); } while (s.IsElementLessThan(first, pivot));
-            do { last--; if (checkCursors && last < begin) ThrowInconsistentComparer(); } while (s.IsElementGreaterOrEqual(last, pivot));
+            do { first++; if (checkCursors && first == end) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsElementLessThan(first, pivot));
+            do { last--; if (checkCursors && last < begin) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsElementGreaterOrEqual(last, pivot));
         }
 
         // Put the pivot in the right place
@@ -489,7 +488,7 @@ public static class PDQSort
 
         // Find the first element less than or equal to pivot from the right.
         // *begin == pivot, so the scan is guaranteed to terminate at begin at the latest.
-        do { last--; if (checkCursors && last < begin) ThrowInconsistentComparer(); } while (s.IsValueLessThan(pivot, last));
+        do { last--; if (checkCursors && last < begin) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsValueLessThan(pivot, last));
 
         // Find the first element strictly greater than pivot from the left. We have to guard
         // this search if there was no element after *last.
@@ -499,15 +498,15 @@ public static class PDQSort
         }
         else
         {
-            do { first++; if (checkCursors && first == end) ThrowInconsistentComparer(); } while (s.IsValueGreaterOrEqual(pivot, first));
+            do { first++; if (checkCursors && first == end) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsValueGreaterOrEqual(pivot, first));
         }
 
         // Keep swapping pairs. Previously swapped pairs guard the searches.
         while (first < last)
         {
             s.Swap(first, last);
-            do { last--; if (checkCursors && last < begin) ThrowInconsistentComparer(); } while (s.IsValueLessThan(pivot, last));
-            do { first++; if (checkCursors && first == end) ThrowInconsistentComparer(); } while (s.IsValueGreaterOrEqual(pivot, first));
+            do { last--; if (checkCursors && last < begin) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsValueLessThan(pivot, last));
+            do { first++; if (checkCursors && first == end) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsValueGreaterOrEqual(pivot, first));
         }
 
         var pivotPos = last;
@@ -555,11 +554,6 @@ public static class PDQSort
 
         return true;
     }
-
-    /// <summary>Reports a comparer whose answers would move a partition cursor out of its range.</summary>
-    [DoesNotReturn]
-    static void ThrowInconsistentComparer()
-        => throw new InvalidOperationException("Comparison method violates its general contract.");
 
     /// <summary>
     /// Sorts 3 elements at positions a, b, c.

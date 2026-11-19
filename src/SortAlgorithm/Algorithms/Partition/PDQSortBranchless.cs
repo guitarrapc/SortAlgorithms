@@ -64,6 +64,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: Θ(n log n) average, O(1) best - each swap writes two positions; an already ordered input is never partitioned</description></item>
 /// <item><description>Space       : O(log n) recursion stack + O(1) offset buffers (128 bytes per partition call)</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The two scans that start a partition and the scans of the partition that puts equal elements on the left stop at elements that
+/// earlier comparisons put in their way, which only a consistent comparer guarantees. Element access is unchecked, so those cursors are
+/// also checked against their range, as in PDQSort. The block phase is bounded by counts, not by comparisons. The natural order of a
+/// primitive type is always consistent, and the checks are compiled out for it. A comparer that is not a consistent total order can make
+/// the sort throw <see cref="InvalidOperationException"/>. Either way the range keeps its elements, in an unspecified order, and nothing
+/// outside the range is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>The block partition was added to pdqsort later; it is not part of the original design. orlp/pdqsort was first
 /// committed in February 2015. The BlockQuicksort paper appeared on arXiv in April 2016, and the block partition was
@@ -430,8 +437,12 @@ public static class PDQSortBranchless
         var first = begin;
         var last = end;
 
+        // The two scans below stop at elements that earlier comparisons put in their way, as in PDQSort.PartitionRight, and check
+        // their cursor the same way. The block phase that follows is bounded by counts, not by comparisons.
+        var checkCursors = !s.UsesNaturalPrimitiveOrder;
+
         // Find the first element greater than or equal to the pivot (the median of 3 guarantees this exists).
-        do { first++; } while (s.IsElementLessThan(first, pivot));
+        do { first++; if (checkCursors && first == end) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsElementLessThan(first, pivot));
 
         // Find the first element strictly smaller than the pivot. We have to guard this search if
         // there was no element before *first.
@@ -441,7 +452,7 @@ public static class PDQSortBranchless
         }
         else
         {
-            do { last--; } while (s.IsElementGreaterOrEqual(last, pivot));
+            do { last--; if (checkCursors && last < begin) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsElementGreaterOrEqual(last, pivot));
         }
 
         // If the first pair of elements that should be swapped to partition are the same element,
@@ -636,7 +647,10 @@ public static class PDQSortBranchless
         var first = begin;
         var last = end;
 
-        do { last--; } while (s.IsValueLessThan(pivot, last));
+        // As in PDQSort.PartitionLeft, the unguarded scans also check their cursor against the range.
+        var checkCursors = !s.UsesNaturalPrimitiveOrder;
+
+        do { last--; if (checkCursors && last < begin) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsValueLessThan(pivot, last));
 
         if (last + 1 == end)
         {
@@ -644,14 +658,14 @@ public static class PDQSortBranchless
         }
         else
         {
-            do { first++; } while (s.IsValueGreaterOrEqual(pivot, first));
+            do { first++; if (checkCursors && first == end) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsValueGreaterOrEqual(pivot, first));
         }
 
         while (first < last)
         {
             s.Swap(first, last);
-            do { last--; } while (s.IsValueLessThan(pivot, last));
-            do { first++; } while (s.IsValueGreaterOrEqual(pivot, first));
+            do { last--; if (checkCursors && last < begin) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsValueLessThan(pivot, last));
+            do { first++; if (checkCursors && first == end) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsValueGreaterOrEqual(pivot, first));
         }
 
         var pivotPos = last;

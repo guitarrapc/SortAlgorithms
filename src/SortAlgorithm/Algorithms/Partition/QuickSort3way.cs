@@ -73,6 +73,11 @@ namespace SortAlgorithm.Algorithms;
 /// 3-way is faster when duplicates dominate. Conceptually, DualPivot is a "2-pivot strategy" while
 /// 3-way is a "1-pivot equal-element strategy" — different goals.</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The scans are bounded by the range. Only a consistent comparer parks no more equal elements on the left than the final cursor
+/// leaves room for when they are swapped back, and element access is unchecked, so that count is checked before the swaps. A comparer that
+/// is not a consistent total order can make the sort throw <see cref="InvalidOperationException"/>. Either way the range keeps its
+/// elements, in an unspecified order, and nothing outside the range is read or written.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Bentley &amp; McIlroy, "Engineering a Sort Function", Software: Practice and Experience 23(11), 1993</para>
 /// <para>Sedgewick &amp; Wayne, Algorithms 4th Ed., Section 2.3 (Quicksort with 3-way partitioning)</para>
@@ -259,6 +264,10 @@ public static class QuickSort3way
                     if (q != j) s.Swap(q, j);
                 }
             }
+
+            // Only a consistent comparer leaves j at or above the equal elements parked on the left. The swaps below move j down once for
+            // each of them, and element access is unchecked. The right side needs no check, because j stays below q for any comparer.
+            if (j < p) ThrowHelper.ThrowInconsistentComparer();
 
             // Swap the parked equal elements back into the middle:
             //   before: [left, p] == pivot, (p, j] < pivot, [i, q) > pivot, [q, right] == pivot  (i == j + 1)

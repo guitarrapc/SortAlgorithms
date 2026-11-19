@@ -74,6 +74,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Space       : O(n) total auxiliary across all active recursion levels + O(log n) recursion stack</description></item>
 /// <item><description>Copies      : ~2n log₂ n (average) - Each element copied to/from temporary storage at each recursion level</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The pass that collects the equal elements compares them with the pivot again and relies on the answers of the first pass. Scratch
+/// access is unchecked, so each write is checked against the gap, and the gap must end up full and not empty before the range is written
+/// back. A valid comparer always leaves at least the pivot in it. Without that check, a comparer that put every element on one side would
+/// leave the partition no smaller, and the sort would not finish. The natural order of a primitive type always repeats its answers, and the
+/// per-element check is compiled out for it. A comparer that is not a consistent total order can make the sort throw
+/// <see cref="InvalidOperationException"/>. If the sort finishes, the second pass may have picked other elements than the first pass
+/// skipped, so some can be repeated and others lost. Nothing outside the range is read or written either way.</para>
 /// <para><strong>History:</strong></para>
 /// <para>The earliest description of this partition found is the stable quicksort in Rust's driftsort (Bergdoll and Peters, 2024).
 /// Its <c>stable_partition</c> writes the elements less than the pivot to the left side of scratch, and the others "go to the right
@@ -307,15 +315,23 @@ public static class BidirectionalStableQuickSort
         }
 
         // Fill equal elements into scratch[lessCount..greaterStart) in left-to-right order.
+        // Only a comparer that repeats its answers fills the gap exactly, and scratch access is unchecked, so each write is checked
+        // against the gap. The natural order of a primitive type repeats its answers, so that check folds away for it.
+        var checkGap = !s.UsesNaturalPrimitiveOrder;
         var equalDst = lessCount;
         for (var i = left; i <= right; i++)
         {
             var elem = s.Read(i);
             if (!s.IsLessThan(elem, pivotVal) && !s.IsLessThan(pivotVal, elem))
             {
+                if (checkGap && equalDst == greaterStart) ThrowHelper.ThrowInconsistentComparer();
                 tempSortSpan.Write(equalDst++, elem);
             }
         }
+
+        // A gap left partly empty would copy stale scratch values into the range. An empty gap means the pivot did not compare equal to
+        // itself, and the partition would then be no smaller than the range.
+        if (equalDst != greaterStart || greaterStart == lessCount) ThrowHelper.ThrowInconsistentComparer();
 
         // Copy back to original array.
         tempSortSpan.CopyTo(0, s, left, length);

@@ -66,6 +66,12 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Partition scheme:</strong> Hoare bidirectional partition with a median-of-9 pivot value.
 /// Equal keys split evenly, so duplicate-heavy input stays O(n log n); use <see cref="QuickSort3way"/> for the Θ(n log k) duplicate-specialized variant.</para>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The Hoare scans stop at the pivot value and at the pairs already swapped, which only a consistent comparer guarantees. Element
+/// access is unchecked, so the cursors are also checked against the range. The natural order of a primitive type is always consistent, and
+/// the checks are compiled out for it. A comparer that is not a consistent total order can make the sort throw
+/// <see cref="InvalidOperationException"/>. Either way the range keeps its elements, in an unspecified order, and nothing outside the range
+/// is read or written.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
 /// </remarks>
@@ -200,9 +206,12 @@ public static class QuickSortMedian9
             // Phase 2. Hoare bidirectional partition.
             // Scans stop at elements on the wrong side and exchange them; elements already in place are
             // never moved, so sorted runs survive partitioning (zero effective swaps on sorted input).
-            // The pivot value is present in the range, which guarantees both inner scans terminate.
+            // The pivot value is present in the range, which guarantees both inner scans terminate inside it with a consistent comparer.
+            // Element access is unchecked, so the cursors are also checked against the range. The natural order of a primitive type is
+            // consistent, so the checks fold away for it.
             var i = left;
             var j = right;
+            var checkCursors = !s.UsesNaturalPrimitiveOrder;
 
             while (i <= j)
             {
@@ -210,12 +219,14 @@ public static class QuickSortMedian9
                 while (s.IsElementLessThan(i, pivot))
                 {
                     i++;
+                    if (checkCursors && i > right) ThrowHelper.ThrowInconsistentComparer();
                 }
 
                 // Move j backward while elements are greater than pivot
                 while (s.IsValueLessThan(pivot, j))
                 {
                     j--;
+                    if (checkCursors && j < left) ThrowHelper.ThrowInconsistentComparer();
                 }
 
                 // Swap if pointers haven't crossed

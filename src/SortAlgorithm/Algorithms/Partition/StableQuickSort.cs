@@ -70,6 +70,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Space       : O(n) total auxiliary across all active recursion levels + O(log n) recursion stack</description></item>
 /// <item><description>Copies      : ~2n log₂ n (average) - Each element copied to/from temporary storage at each recursion level</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The distribution pass compares every element with the pivot again and relies on the answers of the counting pass. Scratch access
+/// is unchecked, so each write is checked against its region, and a comparer that answers differently can make the sort throw
+/// <see cref="InvalidOperationException"/> before the range is written back. The natural order of a primitive type always repeats its
+/// answers, and the checks are compiled out for it. Either way the range keeps its elements, in an unspecified order, and nothing outside
+/// the range is read or written.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
 /// </remarks>
@@ -274,6 +280,10 @@ public static class StableQuickSort
 
         // Phase 2: Distribute elements to buffer maintaining order (SortSpan経由)
         // Short-circuit when i == pivotIndex: pivot always compares equal to itself
+        // A comparer that does not repeat its Phase 1 answers can overfill a region, and scratch access is unchecked, so each write is
+        // checked against its region. The range is untouched until Phase 3. The natural order of a primitive type repeats its answers,
+        // so the checks fold away for it.
+        var checkRegions = !s.UsesNaturalPrimitiveOrder;
         for (var i = left; i <= right; i++)
         {
             var element = s.Read(i);
@@ -282,14 +292,17 @@ public static class StableQuickSort
             var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
             if (cmp < 0)
             {
+                if (checkRegions && lessIdx == lessEnd) ThrowHelper.ThrowInconsistentComparer();
                 tempSortSpan.Write(lessIdx++, element);
             }
             else if (cmp == 0)
             {
+                if (checkRegions && equalIdx == equalEnd) ThrowHelper.ThrowInconsistentComparer();
                 tempSortSpan.Write(equalIdx++, element);
             }
             else
             {
+                if (checkRegions && greaterIdx == length) ThrowHelper.ThrowInconsistentComparer();
                 tempSortSpan.Write(greaterIdx++, element);
             }
         }

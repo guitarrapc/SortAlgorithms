@@ -35,6 +35,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(log n) - recursion stack only, no additional arrays allocated</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>The partition scans stop at the pivot and at the median-of-3 ends, which only a consistent comparer guarantees. Element access is
+/// unchecked, so the cursors are also checked against the partition. The reference gets the same protection from bounds-checked span
+/// access. The natural order of a primitive type is always consistent, and the checks are compiled out for it. A comparer that is not a
+/// consistent total order can make the sort throw <see cref="InvalidOperationException"/>. Either way the range keeps its elements, in an
+/// unspecified order, and nothing outside the range is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>The algorithm is Musser's introsort (1997). .NET adopted it in .NET Framework 4.5 (2012): "Beginning in .NET Framework 4.5",
 /// the sort algorithm "has changed (to be an introspective sort instead of a quick sort)".</para>
@@ -242,11 +248,15 @@ public static class IntroSortDotnet
         int left = 0;
         int right = hi - 1;
 
+        // Only a consistent comparer stops the scans at the pivot and the median-of-3 ends, and element access is unchecked, so the
+        // cursors are also checked against the partition. The natural order of a primitive type is consistent, so the checks fold away.
+        var checkCursors = !s.UsesNaturalPrimitiveOrder;
+
         // Walk the left and right pointers, swapping elements as necessary, until they cross.
         while (left < right)
         {
-            while (s.IsElementLessThan(offset + (++left), pivot)) ;
-            while (s.IsValueLessThan(pivot, offset + (--right))) ;
+            do { left++; if (checkCursors && left > hi) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsElementLessThan(offset + left, pivot));
+            do { right--; if (checkCursors && right < 0) ThrowHelper.ThrowInconsistentComparer(); } while (s.IsValueLessThan(pivot, offset + right));
 
             if (left >= right)
                 break;

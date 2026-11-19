@@ -4,8 +4,8 @@ using SortAlgorithm.Contexts;
 namespace SortAlgorithm.Tests;
 
 /// <summary>
-/// The merges of QuadSort and FluxSort and the partition scans of PDQSort and IntroSort advance their cursors on the strength of earlier
-/// comparisons, and Release builds do not check element access. Guard cells surround each range under test. The comparers report every
+/// The merges of QuadSort and FluxSort and the partitions and insertion sorts of the quicksort family advance their cursors and fill their
+/// regions on the strength of earlier comparisons, and Release builds do not check element access. Guard cells surround each range under test. The comparers report every
 /// guard cell they are shown, which reveals a read that only feeds a comparison, and the cells must keep their value, which reveals a stray
 /// write.
 /// </summary>
@@ -14,7 +14,17 @@ public class InconsistentComparerSafetyTests
     const int GuardLength = 64;
     const long GuardKey = long.MinValue;
 
-    enum Sorter { Quad, QuadLimitedSwap, Flux, Pdq, Intro }
+    enum Sorter
+    {
+        Quad, QuadLimitedSwap, Flux, Pdq, PdqBranchless, Intro, IntroDotnet, Std,
+        Quick, QuickMedian3, QuickMedian9, Quick3way, Stable, BidirectionalStable,
+    }
+
+    /// <summary>
+    /// QuadSort, FluxSort and BidirectionalStableQuickSort may repeat or lose elements under a broken comparer. The others document that the
+    /// range keeps its elements.
+    /// </summary>
+    static bool KeepsElements(Sorter sorter) => sorter is not (Sorter.Quad or Sorter.QuadLimitedSwap or Sorter.Flux or Sorter.BidirectionalStable);
 
     /// <summary>Thrown by a watching comparer, so that a cursor that has left the range stops before it can leave the buffer too.</summary>
     sealed class GuardCellReadException : Exception;
@@ -69,6 +79,32 @@ public class InconsistentComparerSafetyTests
         public int Calls;
 
         public int Compare(int x, int y) => ++Calls > honestCalls ? answer : x.CompareTo(y);
+    }
+
+    /// <summary>Answers "equal" for a number of calls and then gives one answer for good.</summary>
+    sealed class EqualThenConstantComparer(int equalCalls, int answer) : IComparer<int>
+    {
+        int calls;
+
+        public int Compare(int x, int y) => ++calls > equalCalls ? answer : 0;
+    }
+
+    /// <summary>
+    /// Runs a sort on its own thread and returns whether it finished in time and what it threw. A sort that never finishes keeps spinning on
+    /// a background thread, which fails the test instead of hanging the run.
+    /// </summary>
+    static (bool Finished, Exception? Error) RunWithin(Action sort)
+    {
+        Exception? error = null;
+        var thread = new Thread(() =>
+        {
+            try { sort(); }
+            catch (Exception e) { error = e; }
+        })
+        { IsBackground = true };
+        thread.Start();
+        var finished = thread.Join(TimeSpan.FromSeconds(30));
+        return (finished, error);
     }
 
     readonly struct OverflowingComparer : IComparer<int>
@@ -140,13 +176,23 @@ public class InconsistentComparerSafetyTests
             case Sorter.QuadLimitedSwap: QuadSort.SortWithSwapSize(buffer.AsSpan(first, last - first), 64, comparer, context); break;
             case Sorter.Flux: FluxSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.Pdq: PDQSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
-            default: IntroSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.PdqBranchless: PDQSortBranchless.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Intro: IntroSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.IntroDotnet: IntroSortDotnet.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Std: StdSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Quick: QuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.QuickMedian3: QuickSortMedian3.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.QuickMedian9: QuickSortMedian9.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Quick3way: QuickSort3way.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Stable: StableQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.BidirectionalStable: BidirectionalStableQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            default: throw new ArgumentOutOfRangeException(nameof(sorter));
         }
     }
 
     /// <summary>
     /// Sorts between guard cells. The sort may finish or report the broken comparer, and either way the range may hold only values of the
-    /// input. PDQSort and IntroSort document that the range keeps its elements, so for them it must also stay a permutation of the input.
+    /// input. A sort that documents that the range keeps its elements must also leave it a permutation of the input.
     /// Returns a description of the violation, if any.
     /// </summary>
     static string? Exercise<T, TComparer, TContext>(Sorter sorter, T[] input, T guard, TComparer comparer, TContext context)
@@ -182,7 +228,7 @@ public class InconsistentComparerSafetyTests
             if (!inside && !EqualityComparer<T>.Default.Equals(buffer[i], guard)) return $"guard cell {i} was overwritten";
         }
 
-        if (sorter is Sorter.Pdq or Sorter.Intro)
+        if (KeepsElements(sorter))
         {
             var expected = input.Order().ToArray();
             var actual = buffer.AsSpan(GuardLength, input.Length).ToArray().Order().ToArray();
@@ -288,6 +334,8 @@ public class InconsistentComparerSafetyTests
         return Enumerable.Range(0, n).Select(_ => random.Next(5) switch { 0 => double.NaN, var k => (double)(k - 1) }).ToArray();
     }
 
+    public static IEnumerable<string> Sorters() => Enum.GetNames<Sorter>();
+
     public static IEnumerable<(string Sorter, int N)> Cases()
     {
         foreach (var sorter in Enum.GetNames<Sorter>())
@@ -346,11 +394,7 @@ public class InconsistentComparerSafetyTests
     /// both forms of its first scan from the left. A comparer has to answer truthfully to get there.
     /// </summary>
     [Test]
-    [Arguments(nameof(Sorter.Quad))]
-    [Arguments(nameof(Sorter.QuadLimitedSwap))]
-    [Arguments(nameof(Sorter.Flux))]
-    [Arguments(nameof(Sorter.Pdq))]
-    [Arguments(nameof(Sorter.Intro))]
+    [MethodDataSource(nameof(Sorters))]
     public async Task ConstantAnswersFromAnyPointStayInsideTheRange(string sorterName)
     {
         var sorter = Enum.Parse<Sorter>(sorterName);
@@ -371,6 +415,88 @@ public class InconsistentComparerSafetyTests
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// A comparer that calls every element less than every other puts all of them, the pivot included, on the less side, so the partition is
+    /// no smaller than its range. The sort must report the comparer instead of partitioning the same range again forever.
+    /// </summary>
+    [Test]
+    public async Task BidirectionalPartitionThatSeparatesNothingStops()
+    {
+        var data = Enumerable.Range(0, 100).ToArray();
+        var (finished, error) = RunWithin(() => BidirectionalStableQuickSort.Sort(data.AsSpan(), new ConstantComparer(-1), NullContext.Default));
+
+        await Assert.That(finished).IsTrue();
+        await Assert.That(error).IsTypeOf<InvalidOperationException>();
+    }
+
+    /// <summary>
+    /// The first pass finds every element equal to the pivot and the second finds none, which leaves the gap for the equal elements unfilled.
+    /// The scratch starts with a marker that no input holds, so copying that gap back would put the marker into the range. Sweeping the
+    /// switch point reaches this case whatever number of comparisons pivot selection makes.
+    /// </summary>
+    [Test]
+    public async Task BidirectionalPartitionCopiesNoUnfilledGap()
+    {
+        const int marker = -12345;
+        for (var k = 0; k <= 64; k++)
+        {
+            var data = Enumerable.Range(1, 8).ToArray();
+            var scratch = Enumerable.Repeat(marker, data.Length).ToArray();
+            var comparer = new EqualThenConstantComparer(k, -1);
+            var (finished, error) = RunWithin(() => BidirectionalSortCore(data, scratch, comparer));
+
+            await Assert.That(finished).IsTrue().Because($"after {k} calls");
+            await Assert.That(error is null or InvalidOperationException).IsTrue().Because($"after {k} calls: {error}");
+            await Assert.That(data).DoesNotContain(marker).Because($"after {k} calls");
+        }
+    }
+
+    static void BidirectionalSortCore(int[] data, int[] scratch, EqualThenConstantComparer comparer)
+    {
+        var s = new SortSpan<int, EqualThenConstantComparer, NullContext>(data, NullContext.Default, comparer, 0);
+        BidirectionalStableQuickSort.SortCore(s, 0, data.Length - 1, scratch);
+    }
+
+    /// <summary>
+    /// The stable partitions write into a scratch buffer that the public overloads rent. Passing the scratch directly puts guard cells right
+    /// after it, so a region that overflows writes a guard cell instead of memory past the buffer. The guard is as long as the range, which
+    /// covers the largest possible overflow.
+    /// </summary>
+    [Test]
+    [Arguments(nameof(Sorter.Stable))]
+    [Arguments(nameof(Sorter.BidirectionalStable))]
+    public async Task StablePartitionWritesStayInsideTheScratch(string sorterName)
+    {
+        var sorter = Enum.Parse<Sorter>(sorterName);
+        foreach (var n in new[] { 7, 31, 133, 1000 })
+        {
+            for (var seed = 1; seed <= 40; seed++)
+            {
+                foreach (var sticky in new[] { false, true })
+                {
+                    var label = $"{sorter} n={n} seed={seed} {(sticky ? "sticky" : "coin flip")}";
+                    var data = FullRangeInts(n, seed);
+                    var scratch = new int[n + n];
+                    Array.Fill(scratch, int.MinValue);
+                    IComparer<int> comparer = sticky ? new StickyIntComparer(new Random(seed)) : new CoinFlipComparer(new Random(seed));
+                    var (finished, error) = RunWithin(() => StableSortCore(sorter, data, scratch, comparer));
+
+                    await Assert.That(finished).IsTrue().Because(label);
+                    await Assert.That(error is null or InvalidOperationException).IsTrue().Because($"{label}: {error}");
+                    await Assert.That(scratch.Skip(n).All(v => v == int.MinValue)).IsTrue().Because($"{label}: a guard cell after the scratch was written");
+                }
+            }
+        }
+    }
+
+    static void StableSortCore(Sorter sorter, int[] data, int[] scratch, IComparer<int> comparer)
+    {
+        var s = new SortSpan<int, IComparer<int>, NullContext>(data, NullContext.Default, comparer, 0);
+        var span = scratch.AsSpan(0, data.Length);
+        if (sorter == Sorter.Stable) StableQuickSort.SortCore(s, 0, data.Length - 1, span);
+        else BidirectionalStableQuickSort.SortCore(s, 0, data.Length - 1, span);
     }
 
     [Test]
