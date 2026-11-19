@@ -172,4 +172,46 @@ public class MinHeapSortTests : SortTestsBase
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
+
+    [Test]
+    [Arguments(10)]
+    [Arguments(20)]
+    [Arguments(50)]
+    [Arguments(100)]
+    public async Task TheoreticalValuesAllEqualTest(int n)
+    {
+        var stats = new StatisticsContext();
+        var equal = new int[n];
+        MinHeapSort.Sort(equal.AsSpan(), stats);
+
+        // With equal keys every top-down sift stops at its first level, so the heap phases are linear.
+        // Build: two comparisons per internal node, one fewer when the last node has only a left child: n - 1.
+        // Extraction: two per heap of three or more elements and one for the heap of two: 2n - 5.
+        // Writes: two per extraction (the sifted element back to the root, the minimum to the end) plus the reversal's swaps.
+        await Assert.That(stats.CompareCount).IsEqualTo((ulong)(3 * n - 6));
+        await Assert.That(stats.SwapCount).IsEqualTo((ulong)(n / 2));
+        await Assert.That(stats.IndexWriteCount).IsEqualTo((ulong)(2 * (n - 1) + 2 * (n / 2)));
+    }
+
+    [Test]
+    [Arguments(10)]
+    [Arguments(100)]
+    public async Task BuildLeavesHeapOrderedNodesInPlace(int n)
+    {
+        // Ascending input is already a min-heap, so the build moves nothing.
+        // Descending input puts every internal node above its children, so the build has to move them.
+        await Assert.That(BuildWrites(Enumerable.Range(0, n).ToArray())).IsEqualTo(0);
+        await Assert.That(BuildWrites(Enumerable.Range(0, n).Reverse().ToArray())).IsGreaterThan(0);
+    }
+
+    static int BuildWrites(int[] array)
+    {
+        var inBuild = false;
+        var writes = 0;
+        MinHeapSort.Sort(array.AsSpan(), new VisualizationContext(
+            onSwap: (_, _, _) => { if (inBuild) writes += 2; },
+            onIndexWrite: (_, _, _) => { if (inBuild) writes++; },
+            onPhase: (phase, _, _, _) => inBuild = phase == SortPhase.HeapBuild));
+        return writes;
+    }
 }

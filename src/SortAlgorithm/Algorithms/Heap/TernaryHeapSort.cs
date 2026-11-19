@@ -1,4 +1,5 @@
 ﻿using SortAlgorithm.Contexts;
+using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
@@ -14,24 +15,23 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="number">
 /// <item><description><strong>Heap Property Maintenance:</strong> For a max-heap, every parent node must be greater than or equal to its children.
 /// For array index i, children are at 3i+1, 3i+2, and 3i+3. This implementation correctly maintains this property through the iterative heapify operation.</description></item>
-/// <item><description><strong>Build Heap Phase:</strong> The initial heap construction starts from the last non-leaf node ((n-2)/3) and heapifies downward to index 0 using Floyd's algorithm.
-/// This bottom-up approach runs in O(n) time and reduces comparisons by ~25-30% compared to standard heapify.</description></item>
+/// <item><description><strong>Build Heap Phase:</strong> Floyd's construction sifts down every internal node, from the last one ((n-2)/3) to the root, in O(n) time.</description></item>
 /// <item><description><strong>Extract Max Phase:</strong> Repeatedly reads the root (maximum) and the last element, sifts the last element down via hole-based heapify, then writes the max to the end.
 /// No swap is needed; this reduces memory writes and eliminates all Swap operations from the extraction phase.
 /// This phase performs n-1 extractions, each requiring O(log₃ n) heapify operations, totaling O(n log n).</description></item>
-/// <item><description><strong>Heapify Operation:</strong> Uses an iterative (non-recursive) hole-based sift-down approach to restore heap property.
-/// The replacement value (read from the last position) is passed in directly; it descends by moving the largest child up into the hole, then writes the value at its correct position.
-/// This avoids reading from the root inside the method and eliminates all Swap operations.</description></item>
+/// <item><description><strong>Sift-Down:</strong> Top-down in both phases. At each level the largest of the three children is found with two comparisons,
+/// then the sifted value is compared with it; the sift stops as soon as the value is not smaller.
+/// The value is held aside while larger children move up into the hole, and it is written once where it stops.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Heap / Selection</description></item>
 /// <item><description>Stable      : No (heap operations do not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space)</description></item>
-/// <item><description>Best case   : Ω(n log n) - Even for sorted input, heap construction and extraction are required</description></item>
+/// <item><description>Best case   : Θ(n) - when all keys are equal, every sift stops at its first level; with distinct keys the best case is Θ(n log n)</description></item>
 /// <item><description>Average case: Θ(n log n) - Build heap O(n) + n-1 extractions with O(log₃ n) heapify each</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
-/// <item><description>Comparisons : ~3n log₃ n - Approximately 3 comparisons per heapify (three child checks)</description></item>
+/// <item><description>Comparisons : ~3n log₃ n - three per level: two among the children, one between the sifted value and the largest child</description></item>
 /// <item><description>Swaps       : 0 - No swaps; extraction reads root+last, sifts last down, writes root to end</description></item>
 /// <item><description>Index Reads : Θ(n log₃ n) - every sift-down reads the three children at each level it descends</description></item>
 /// <item><description>Index Writes: Θ(n log₃ n) - every sift-down writes each level it descends, plus n root-to-end writes</description></item>
@@ -46,8 +46,10 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
-/// <item><description>Uses Floyd's improved heap construction during build phase, reducing comparisons by ~25-30%</description></item>
-/// <item><description>Uses Floyd-style hole-based extraction that eliminates all swap operations, improving cache performance</description></item>
+/// <item><description>Uses hole-based sift-down, so no phase performs a swap</description></item>
+/// <item><description>A node already in heap order is left in place during the build, as in <see cref="HeapSort"/></description></item>
+/// <item><description>The build sifts top-down like <see cref="HeapSort"/>. Descending to a leaf first and climbing back up
+/// (<see cref="BottomupHeapSort"/>'s step) saves comparisons in a ternary build, but it would no longer be the plain d-ary heapsort</description></item>
 /// <item><description>Uses iterative heapify (loop) instead of recursive for better performance and stack safety</description></item>
 /// <item><description>Builds max-heap for ascending sort (min-heap would produce descending order)</description></item>
 /// <item><description>Child indices: For parent i (offset-adjusted), children are at 3*(i-offset)+1+offset, 3*(i-offset)+2+offset, 3*(i-offset)+3+offset</description></item>
@@ -149,14 +151,15 @@ public static class TernaryHeapSort
     {
         var n = last - first;
 
-        // Build ternary heap using Floyd's improved heap construction
-        // This reduces comparisons by ~25-30% compared to standard bottom-up heapify
-        // In ternary heap, parent of node i is at (i-1)/3
-        // So last non-leaf is at (n-2)/3
+        // Build ternary heap by sifting down every internal node. The parent of node i is (i-1)/3,
+        // so the last internal node is (n-2)/3. A node already in heap order is left in place.
         s.Context.OnPhase(SortPhase.HeapBuild, first, last - 1);
         for (var i = first + (n - 2) / 3; i >= first; i--)
         {
-            FloydHeapify(s, i, n, first);
+            var child = LargestChild(s, 3 * (i - first) + 1 + first, last);
+            if (!s.IsGreaterAt(child, i, out var childValue, out var value)) continue;
+            s.Write(i, childValue);
+            Heapify(s, child, n, first, value);
         }
 
         // Extract elements from heap
@@ -177,77 +180,8 @@ public static class TernaryHeapSort
     }
 
     /// <summary>
-    /// Restores the ternary heap property using Floyd's improved heap construction algorithm.
-    /// This method first descends to a leaf level by always selecting the largest child among three,
-    /// then sifts the original value up to its correct position.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
-    /// <param name="s">The SortSpan containing the elements and context for tracking operations.</param>
-    /// <param name="root">The index of the root node of the subtree to heapify.</param>
-    /// <param name="size">The size of the heap (number of elements to consider).</param>
-    /// <param name="offset">The starting index offset for the heap within the span.</param>
-    /// <remarks>
-    /// Floyd's algorithm reduces the number of comparisons during heap construction by ~25-30%.
-    /// Phase 1: Percolate down to a leaf by always taking the largest of three children
-    /// Phase 2: Sift up the original root value to its correct position.
-    /// <para>Time Complexity: O(log₃ n) - Same asymptotic complexity but fewer comparisons in practice.</para>
-    /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
-    /// </remarks>
-    private static void FloydHeapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var rootValue = s.Read(root);
-        var hole = root;
-
-        // Phase 1: Percolate down to a leaf, always taking the largest of three children
-        var child = 3 * (hole - offset) + 1 + offset;
-        while (child < offset + size)
-        {
-            // Find largest among three children
-            var maxChild = child;
-            if (child + 1 < offset + size && s.IsGreaterAt(child + 1, maxChild))
-            {
-                maxChild = child + 1;
-            }
-            if (child + 2 < offset + size && s.IsGreaterAt(child + 2, maxChild))
-            {
-                maxChild = child + 2;
-            }
-
-            // Move largest child up
-            s.Write(hole, s.Read(maxChild));
-            hole = maxChild;
-            child = 3 * (hole - offset) + 1 + offset;
-        }
-
-        // Phase 2: Sift up the original root value to its correct position
-        var parent = offset + (hole - offset - 1) / 3;
-        if (s.IsNaturalFloatingNaN(rootValue))
-        {
-            while (hole > root && s.IsValueGreaterThanWithNaNState(rootValue, parent, true))
-            {
-                s.Write(hole, s.Read(parent));
-                hole = parent;
-                parent = offset + (hole - offset - 1) / 3;
-            }
-        }
-        else
-        {
-            while (hole > root && s.IsValueGreaterThanWithNaNState(rootValue, parent, false))
-            {
-                s.Write(hole, s.Read(parent));
-                hole = parent;
-                parent = offset + (hole - offset - 1) / 3;
-            }
-        }
-        s.Write(hole, rootValue);
-    }
-
-
-    /// <summary>
     /// Restores the ternary heap property for a subtree rooted at the specified index using iterative sift-down.
-    /// Used during the extraction phase after removing the root element.
+    /// Both the build and the extraction phase use it.
     /// </summary>
     /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
     /// <param name="s">The SortSpan containing the elements and context for tracking operations.</param>
@@ -274,21 +208,11 @@ public static class TernaryHeapSort
             while (true)
             {
                 var child1 = 3 * (hole - offset) + 1 + offset; // First child
-                var child2 = 3 * (hole - offset) + 2 + offset; // Second child
-                var child3 = 3 * (hole - offset) + 3 + offset; // Third child
 
                 if (child1 >= offset + size) break;
 
                 // Find largest among three children
-                var largest = child1;
-                if (child2 < offset + size && s.IsGreaterAt(child2, largest))
-                {
-                    largest = child2;
-                }
-                if (child3 < offset + size && s.IsGreaterAt(child3, largest))
-                {
-                    largest = child3;
-                }
+                var largest = LargestChild(s, child1, offset + size);
 
                 // If value is already >= largest child, heap property is satisfied
                 if (s.IsValueGreaterOrEqualWithNaNState(value, largest, true)) break;
@@ -303,21 +227,11 @@ public static class TernaryHeapSort
             while (true)
             {
                 var child1 = 3 * (hole - offset) + 1 + offset; // First child
-                var child2 = 3 * (hole - offset) + 2 + offset; // Second child
-                var child3 = 3 * (hole - offset) + 3 + offset; // Third child
 
                 if (child1 >= offset + size) break;
 
                 // Find largest among three children
-                var largest = child1;
-                if (child2 < offset + size && s.IsGreaterAt(child2, largest))
-                {
-                    largest = child2;
-                }
-                if (child3 < offset + size && s.IsGreaterAt(child3, largest))
-                {
-                    largest = child3;
-                }
+                var largest = LargestChild(s, child1, offset + size);
 
                 // If value is already >= largest child, heap property is satisfied
                 if (s.IsValueGreaterOrEqualWithNaNState(value, largest, false)) break;
@@ -329,5 +243,24 @@ public static class TernaryHeapSort
         }
 
         s.Write(hole, value);
+    }
+
+    /// <summary>
+    /// Returns the index of the largest child of a node whose first child is <paramref name="child1"/>.
+    /// The second and third children exist only when they lie below <paramref name="end"/>.
+    /// </summary>
+    /// <remarks>
+    /// The selection branches on each comparison. Moving the index by arithmetic instead, as <see cref="HeapSort"/> does,
+    /// measured slower here: the second comparison needs the first one's winner, so the arithmetic lengthens the chain of dependent loads.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int LargestChild<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int child1, int end)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var largest = child1;
+        if (child1 + 1 < end && s.IsGreaterAt(child1 + 1, largest)) largest = child1 + 1;
+        if (child1 + 2 < end && s.IsGreaterAt(child1 + 2, largest)) largest = child1 + 2;
+        return largest;
     }
 }

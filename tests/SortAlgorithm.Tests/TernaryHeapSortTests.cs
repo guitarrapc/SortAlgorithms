@@ -10,7 +10,7 @@ public class TernaryHeapSortTests : SortTestsBase
     protected override void Sort<T, TContext>(Span<T> span, TContext context)
         => TernaryHeapSort.Sort(span, context);
 
-    // Hole-based heapify writes elements even for sorted input; Floyd-style extraction eliminates all swaps.
+    // Hole-based heapify writes elements even for sorted input; hole-based sift-down eliminates all swaps.
     protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
     protected override CountExpectation SortedInputSwaps => CountExpectation.Zero;
 
@@ -89,10 +89,10 @@ public class TernaryHeapSortTests : SortTestsBase
         var sorted = Enumerable.Range(0, n).ToArray();
         TernaryHeapSort.Sort(sorted.AsSpan(), stats);
 
-        // Ternary Heap Sort with Floyd-style extraction:
+        // Ternary Heap Sort with hole-based extraction:
         // Build heap phase: O(n) comparisons using Floyd's heap construction
         // Extract phase: (n-1) extractions, each requiring O(log₃ n) heapify
-        // Floyd-style extraction: Read root + last, sift down last, write root to end
+        // Hole-based extraction: Read root + last, sift down last, write root to end
         // No swaps needed in extraction phase
         //
         // Each heapify compares with 3 children instead of 2
@@ -103,10 +103,10 @@ public class TernaryHeapSortTests : SortTestsBase
         var minCompares = (ulong)(n * logN * 1.0);
         var maxCompares = (ulong)(n * logN * 4.5 + n);
 
-        // Floyd-style extraction eliminates all swaps
+        // Hole-based sift-down eliminates all swaps
         var expectedSwaps = 0UL;
 
-        // Writes: FloydHeapify during build + hole-based heapify during extraction
+        // Writes: hole-based sift-down in both phases
         var minWrites = (ulong)(n * logN * 1.0);
         var maxWrites = (ulong)(n * logN * 4.0 + n * 2);
 
@@ -130,9 +130,9 @@ public class TernaryHeapSortTests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         TernaryHeapSort.Sort(reversed.AsSpan(), stats);
 
-        // Ternary Heap Sort with Floyd-style extraction has O(n log n) time complexity regardless of input order
+        // Ternary Heap Sort with hole-based extraction has O(n log n) time complexity regardless of input order
         // Reversed data shows similar patterns to sorted data due to heap property
-        // Floyd-style extraction: Read root + last, sift down last, write root to end
+        // Hole-based extraction: Read root + last, sift down last, write root to end
         // No swaps needed in extraction phase
         //
         // Pattern: approximately n * log₃(n) * 3 for compares
@@ -141,10 +141,10 @@ public class TernaryHeapSortTests : SortTestsBase
         var minCompares = (ulong)(n * logN * 1.0);
         var maxCompares = (ulong)(n * logN * 4.5 + n);
 
-        // Floyd-style extraction eliminates all swaps
+        // Hole-based sift-down eliminates all swaps
         var expectedSwaps = 0UL;
 
-        // Writes: FloydHeapify during build + hole-based heapify during extraction
+        // Writes: hole-based sift-down in both phases
         var minWrites = (ulong)(n * logN * 1.0);
         var maxWrites = (ulong)(n * logN * 4.0 + n * 2);
 
@@ -172,9 +172,9 @@ public class TernaryHeapSortTests : SortTestsBase
         var random = TestHelpers.ShuffledRange(n, seed);
         TernaryHeapSort.Sort(random.AsSpan(), stats);
 
-        // Ternary Heap Sort with Floyd-style extraction has consistent O(n log n) time complexity for random data
+        // Ternary Heap Sort with hole-based extraction has consistent O(n log n) time complexity for random data
         // The values are similar to sorted/reversed cases
-        // Floyd-style extraction: Read root + last, sift down last, write root to end
+        // Hole-based extraction: Read root + last, sift down last, write root to end
         // No swaps needed in extraction phase
         //
         // Pattern: approximately n * log₃(n) * 3, with variation due to randomness
@@ -183,10 +183,10 @@ public class TernaryHeapSortTests : SortTestsBase
         var minCompares = (ulong)(n * logN * 1.0);
         var maxCompares = (ulong)(n * logN * 4.5 + n);
 
-        // Floyd-style extraction eliminates all swaps
+        // Hole-based sift-down eliminates all swaps
         var expectedSwaps = 0UL;
 
-        // Writes: FloydHeapify during build + hole-based heapify during extraction
+        // Writes: hole-based sift-down in both phases
         var minWrites = (ulong)(n * logN * 1.0);
         var maxWrites = (ulong)(n * logN * 4.0 + n * 2);
 
@@ -197,5 +197,48 @@ public class TernaryHeapSortTests : SortTestsBase
         await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+    }
+
+    [Test]
+    [Arguments(10)]
+    [Arguments(20)]
+    [Arguments(50)]
+    [Arguments(100)]
+    public async Task TheoreticalValuesAllEqualTest(int n)
+    {
+        var stats = new StatisticsContext();
+        var equal = new int[n];
+        TernaryHeapSort.Sort(equal.AsSpan(), stats);
+
+        // With equal keys every top-down sift stops at its first level, so the sort is linear.
+        // A sift that stops at once compares as many times as the node has children.
+        // Build: every non-root element is the child of exactly one internal node: n - 1.
+        // Extraction: three per heap of four or more elements, then two and one: 3n - 9.
+        // The build writes nothing; each extraction writes the sifted element back to the root and the maximum to the end.
+        await Assert.That(stats.CompareCount).IsEqualTo((ulong)(4 * n - 10));
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo((ulong)(2 * (n - 1)));
+    }
+
+    [Test]
+    [Arguments(10)]
+    [Arguments(100)]
+    public async Task BuildLeavesHeapOrderedNodesInPlace(int n)
+    {
+        // Descending input is already a max-heap, so the build moves nothing.
+        // Ascending input puts every internal node below its children, so the build has to move them.
+        await Assert.That(BuildWrites(Enumerable.Range(0, n).Reverse().ToArray())).IsEqualTo(0);
+        await Assert.That(BuildWrites(Enumerable.Range(0, n).ToArray())).IsGreaterThan(0);
+    }
+
+    static int BuildWrites(int[] array)
+    {
+        var inBuild = false;
+        var writes = 0;
+        TernaryHeapSort.Sort(array.AsSpan(), new VisualizationContext(
+            onSwap: (_, _, _) => { if (inBuild) writes += 2; },
+            onIndexWrite: (_, _, _) => { if (inBuild) writes++; },
+            onPhase: (phase, _, _, _) => inBuild = phase == SortPhase.HeapBuild));
+        return writes;
     }
 }

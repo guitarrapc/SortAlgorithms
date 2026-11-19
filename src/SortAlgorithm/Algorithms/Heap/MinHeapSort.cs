@@ -5,11 +5,11 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// 配列から、常に最小の要素をルートにもつヒープ（最小二分ヒープ）を作成します（この時点で不安定）。
-/// その後、ルート（最小値）を末尾要素と交換し、ヒープサイズを縮小してヒープ構造を再維持します。
+/// その後、ルート（最小値）を末尾へ移し、末尾にあった要素をルートから sift-down してヒープサイズを縮小します。
 /// これにより降順の配列が得られるため、最後に反転して昇順にします。
 /// <br/>
 /// Builds a min-heap (binary heap) from the array where the root always contains the minimum element (which is inherently unstable).
-/// Then, swaps the root (minimum) with the last element, reduces the heap size, and re-establishes the min-heap property.
+/// Then, moves the root (minimum) to the end, sifts the former last element down from the root, and reduces the heap size.
 /// This produces a descending array, which is then reversed to obtain ascending order.
 /// </summary>
 /// <remarks>
@@ -17,27 +17,22 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="number">
 /// <item><description><strong>Min-Heap Property Maintenance:</strong> Every parent node must be less than or equal to its children.
 /// For array index i, left child is at 2i+1 and right child is at 2i+2. This implementation correctly maintains this property through iterative heapify operations.</description></item>
-/// <item><description><strong>Build Heap Phase:</strong> The initial min-heap construction starts from the last non-leaf node (n/2 - 1) and heapifies downward to index 0.
-/// This implementation uses Floyd's improved heap construction algorithm, which reduces comparisons by ~25% compared to standard bottom-up heapify.
-/// This bottom-up approach runs in O(n) time.</description></item>
+/// <item><description><strong>Build Heap Phase:</strong> Floyd's construction sifts down every internal node, from the last one (n/2 - 1) to the root, in O(n) time.</description></item>
 /// <item><description><strong>Extract Min Phase:</strong> Repeatedly reads the root (minimum) and the last element, sifts the last element down via Heapify, then writes the min to the end.
 /// This produces a descending order because the smallest elements are moved to the end first.</description></item>
 /// <item><description><strong>Reverse Phase:</strong> After all extractions, the array is in descending order. A simple O(n) reversal converts it to ascending order.</description></item>
-/// <item><description><strong>Floyd's Heapify Optimization:</strong> During heap construction, uses Floyd's two-phase algorithm:
-/// Phase 1 percolates down to a leaf by selecting smaller children without comparing keys.
-/// Phase 2 sifts the original value up to its correct position. This reduces the average number of comparisons.</description></item>
-/// <item><description><strong>Standard Heapify:</strong> During extraction phase, uses hole-based iterative sift-down.
-/// The replacement value (read from the last position) is passed in directly; it descends by moving the smaller child up into the hole, then writes the value at its correct position.</description></item>
+/// <item><description><strong>Sift-Down:</strong> Top-down in both phases, as in <see cref="HeapSort"/>. At each level the two children are compared, then the sifted value is compared with the smaller one;
+/// the sift stops as soon as the value is not larger. The value is held aside while smaller children move up into the hole, and it is written once where it stops.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Heap / Selection</description></item>
 /// <item><description>Stable      : No (heap operations do not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space)</description></item>
-/// <item><description>Best case   : Ω(n log n) - Even for sorted input, heap construction, extraction, and reversal are required</description></item>
+/// <item><description>Best case   : Θ(n) - when all keys are equal, every sift stops at its first level; with distinct keys the best case is Θ(n log n)</description></item>
 /// <item><description>Average case: Θ(n log n) - Build heap O(n) + n-1 extractions with O(log n) heapify each + O(n) reversal</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
-/// <item><description>Comparisons : ~2n log n - Approximately 2 comparisons per heapify (left and right child checks)</description></item>
+/// <item><description>Comparisons : ~2n log n - two per level: one between the children, one between the sifted value and the smaller child</description></item>
 /// <item><description>Swaps       : ~n/2 - Only from the final reversal step; extraction uses Read+Heapify+Write pattern with 0 swaps</description></item>
 /// <item><description>Index Reads : Θ(n log n) - every sift-down reads the children at each level it descends, plus n reads for the final reversal</description></item>
 /// <item><description>Index Writes: Θ(n log n) - every sift-down writes each level it descends, plus the reversal's n writes</description></item>
@@ -54,7 +49,8 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Uses iterative heapify (loop) instead of recursive for better performance and stack safety</description></item>
 /// <item><description>Builds min-heap then reverses for ascending sort (max-heap directly produces ascending order without reversal)</description></item>
-/// <item><description>Comparison-based algorithm: requires O(n log n) comparisons in all cases</description></item>
+/// <item><description>As in <see cref="HeapSort"/>, the smaller child is selected by adding the comparison result to the index (except for float, double and Half),
+/// a node already in heap order is left in place during the build, and the build runs in its own method</description></item>
 /// <item><description>Despite O(n log n) guarantee, often slower than HeapSort in practice due to extra reversal step and poor cache performance</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
@@ -158,8 +154,7 @@ public static class MinHeapSort
 
         // Build min-heap
         s.Context.OnPhase(SortPhase.HeapBuild, first, last - 1);
-        for (var i = first + (n / 2) - 1; i >= first; i--)
-            FloydHeapify(s, i, n, first);
+        BuildHeap(s, first, last);
 
         // Extract elements from min-heap (produces descending order)
         var totalExtractions = n - 1;
@@ -183,82 +178,26 @@ public static class MinHeapSort
     }
 
     /// <summary>
-    /// Restores the min-heap property using Floyd's improved heap construction algorithm.
-    /// This method first descends to a leaf level by always selecting the smaller child,
-    /// then sifts the original value up to its correct position.
-    /// This typically reduces the number of comparisons compared to standard sift-down heap construction.
+    /// Builds a min-heap on [first..last) by sifting down every internal node, from the last one to the root.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span.</typeparam>
-    /// <typeparam name="TComparer">The type of the comparer.</typeparam>
-    /// <typeparam name="TContext">The type of the sort context.</typeparam>
-    /// <param name="s">The SortSpan containing the elements and context for tracking operations.</param>
-    /// <param name="root">The index of the root node of the subtree to heapify.</param>
-    /// <param name="size">The size of the heap (number of elements to consider).</param>
-    /// <param name="offset">The starting index offset for the heap within the span.</param>
     /// <remarks>
-    /// Floyd's algorithm reduces the number of comparisons during heap construction by ~25%.
-    /// Phase 1: Percolate down to a leaf by always taking the smaller child (no key comparison).
-    /// Phase 2: Sift up the original root value to its correct position.
-    /// <para>Time Complexity: O(log n) - Same asymptotic complexity but fewer comparisons in practice.</para>
-    /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
+    /// Kept out of line so that each phase gets its own inlining budget, as in <see cref="HeapSort"/>.
     /// </remarks>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void FloydHeapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void BuildHeap<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var rootValue = s.Read(root);
-        var hole = root;
-
-        // Phase 1: Percolate down to a leaf, always taking the smaller child
-        var child = 2 * (hole - offset) + 1 + offset;
-        while (child < offset + size)
+        var n = last - first;
+        for (var i = first + n / 2; i-- > first;)
         {
-            // Find smaller child
-            if (child + 1 < offset + size && s.IsLessAt(child + 1, child))
-            {
-                child++;
-            }
-
-            // Move smaller child up
-            s.Write(hole, s.Read(child));
-            hole = child;
-            child = 2 * (hole - offset) + 1 + offset;
+            // Every node in this range has a left child. A node already in heap order is left in place,
+            // so it is neither read out nor written back.
+            var child = SmallerChild(s, 2 * (i - first) + 1 + first, last);
+            if (!s.IsLessAt(child, i, out var childValue, out var value)) continue;
+            s.Write(i, childValue);
+            Heapify(s, child, n, first, value);
         }
-
-        // Phase 2: Sift up the original root value to its correct position
-        var parent = offset + (hole - offset - 1) / 2;
-        if (typeof(T) == typeof(Half))
-        {
-            if (s.IsNaturalFloatingNaN(rootValue))
-            {
-                while (hole > root && s.IsValueLessThanWithNaNState(rootValue, parent, true))
-                {
-                    s.Write(hole, s.Read(parent));
-                    hole = parent;
-                    parent = offset + (hole - offset - 1) / 2;
-                }
-            }
-            else
-            {
-                while (hole > root && s.IsValueLessThanWithNaNState(rootValue, parent, false))
-                {
-                    s.Write(hole, s.Read(parent));
-                    hole = parent;
-                    parent = offset + (hole - offset - 1) / 2;
-                }
-            }
-        }
-        else
-        {
-            while (hole > root && s.IsValueLessThan(rootValue, parent))
-            {
-                s.Write(hole, s.Read(parent));
-                hole = parent;
-                parent = offset + (hole - offset - 1) / 2;
-            }
-        }
-        s.Write(hole, rootValue);
     }
 
     /// <summary>
@@ -286,12 +225,11 @@ public static class MinHeapSort
                 while (true)
                 {
                     var left = 2 * (hole - offset) + 1 + offset;
-                    var right = left + 1;
 
                     if (left >= offset + size) break;
 
                     // Find smaller child
-                    var smallest = (right < offset + size && s.IsLessAt(right, left)) ? right : left;
+                    var smallest = SmallerChild(s, left, offset + size);
 
                     // If value is already <= smallest child, min-heap property is satisfied
                     if (s.IsValueLessOrEqualWithNaNState(value, smallest, true)) break;
@@ -306,12 +244,11 @@ public static class MinHeapSort
                 while (true)
                 {
                     var left = 2 * (hole - offset) + 1 + offset;
-                    var right = left + 1;
 
                     if (left >= offset + size) break;
 
                     // Find smaller child
-                    var smallest = (right < offset + size && s.IsLessAt(right, left)) ? right : left;
+                    var smallest = SmallerChild(s, left, offset + size);
 
                     // If value is already <= smallest child, min-heap property is satisfied
                     if (s.IsValueLessOrEqualWithNaNState(value, smallest, false)) break;
@@ -327,12 +264,11 @@ public static class MinHeapSort
             while (true)
             {
                 var left = 2 * (hole - offset) + 1 + offset;
-                var right = left + 1;
 
                 if (left >= offset + size) break;
 
                 // Find smaller child
-                var smallest = (right < offset + size && s.IsLessAt(right, left)) ? right : left;
+                var smallest = SmallerChild(s, left, offset + size);
 
                 // If value is already <= smallest child, min-heap property is satisfied
                 if (s.IsValueLessOrEqual(value, smallest)) break;
@@ -344,6 +280,29 @@ public static class MinHeapSort
         }
 
         s.Write(hole, value);
+    }
+
+    /// <summary>
+    /// Returns the index of the smaller child of a node whose left child is <paramref name="left"/>.
+    /// The right child exists only when it lies below <paramref name="end"/>.
+    /// </summary>
+    /// <remarks>
+    /// Only the bounds check branches. The comparison result is added to the index, as in Rust's heapsort,
+    /// because a branch on it is mispredicted about half the time on random input.
+    /// Floating-point types keep the branch for the reason given in <see cref="HeapSort"/>'s LargerChild.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int SmallerChild<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int end)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (left + 1 >= end) return left;
+        if (typeof(T) == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(Half))
+        {
+            if (s.IsLessAt(left + 1, left)) left++;
+            return left;
+        }
+        return left + (s.IsLessAt(left + 1, left) ? 1 : 0);
     }
 
     /// <summary>

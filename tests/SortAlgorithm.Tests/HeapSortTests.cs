@@ -90,14 +90,14 @@ public class HeapSortTests : SortTestsBase
         HeapSort.Sort(sorted.AsSpan(), stats);
 
         // Heap Sort characteristics:
-        // Build heap phase: O(n) comparisons with some writes even for sorted data
+        // Build heap phase: O(n) comparisons; ascending input moves every internal node, descending input none
         // Extract phase: (n-1) extractions, each requiring O(log n) heapify
         //
         // Empirical observations for sorted data:
         // n=10:  Compare=41,  Swap=0
         // n=20:  Compare=121, Swap=0
-        // n=50:  Compare=405, Swap=0
-        // n=100: Compare=1031, Swap=0
+        // n=50:  Compare=434, Swap=0
+        // n=100: Compare=1081, Swap=0
         //
         // SwapCount: 0 - No swaps; extraction uses Read+Heapify+Write pattern
         // IndexWriteCount: ~n*log(n) from hole-based sift-down writes + (n-1) writes for max placement
@@ -133,10 +133,10 @@ public class HeapSortTests : SortTestsBase
         // Reversed data shows similar patterns to sorted data due to heap property
         //
         // Empirical observations for reversed data:
-        // n=10:  Compare=38,  Swap=0
-        // n=20:  Compare=115, Swap=0
-        // n=50:  Compare=401, Swap=0
-        // n=100: Compare=1023, Swap=0
+        // n=10:  Compare=35,  Swap=0
+        // n=20:  Compare=105, Swap=0
+        // n=50:  Compare=379, Swap=0
+        // n=100: Compare=944, Swap=0
         //
         // SwapCount: 0 - No swaps; extraction uses Read+Heapify+Write pattern
         // IndexWriteCount: ~n*log(n) from hole-based sift-down writes + (n-1) writes for max placement
@@ -176,10 +176,10 @@ public class HeapSortTests : SortTestsBase
         // The values are similar to sorted/reversed cases
         //
         // Empirical observations for random data (example):
-        // n=10:  Compare=38,  Swap=0
-        // n=20:  Compare=113, Swap=0
-        // n=50:  Compare=405, Swap=0
-        // n=100: Compare=1031, Swap=0
+        // n=10:  Compare=40,  Swap=0
+        // n=20:  Compare=117, Swap=0
+        // n=50:  Compare=414, Swap=0
+        // n=100: Compare=1032, Swap=0
         //
         // SwapCount: 0 - No swaps; extraction uses Read+Heapify+Write pattern
         // IndexWriteCount: ~n*log(n) from hole-based sift-down writes + (n-1) writes for max placement
@@ -198,5 +198,47 @@ public class HeapSortTests : SortTestsBase
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
         await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+    }
+
+    [Test]
+    [Arguments(10)]
+    [Arguments(20)]
+    [Arguments(50)]
+    [Arguments(100)]
+    public async Task TheoreticalValuesAllEqualTest(int n)
+    {
+        var stats = new StatisticsContext();
+        var equal = new int[n];
+        HeapSort.Sort(equal.AsSpan(), stats);
+
+        // With equal keys every top-down sift stops at its first level, so the sort is linear.
+        // Build: two comparisons per internal node, one fewer when the last node has only a left child: n - 1.
+        // Extraction: two per heap of three or more elements and one for the heap of two: 2n - 5.
+        // The build writes nothing; each extraction writes the sifted element back to the root and the maximum to the end.
+        await Assert.That(stats.CompareCount).IsEqualTo((ulong)(3 * n - 6));
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo((ulong)(2 * (n - 1)));
+    }
+
+    [Test]
+    [Arguments(10)]
+    [Arguments(100)]
+    public async Task BuildLeavesHeapOrderedNodesInPlace(int n)
+    {
+        // Descending input is already a max-heap, so the build moves nothing.
+        // Ascending input puts every internal node below its children, so the build has to move them.
+        await Assert.That(BuildWrites(Enumerable.Range(0, n).Reverse().ToArray())).IsEqualTo(0);
+        await Assert.That(BuildWrites(Enumerable.Range(0, n).ToArray())).IsGreaterThan(0);
+    }
+
+    static int BuildWrites(int[] array)
+    {
+        var inBuild = false;
+        var writes = 0;
+        HeapSort.Sort(array.AsSpan(), new VisualizationContext(
+            onSwap: (_, _, _) => { if (inBuild) writes += 2; },
+            onIndexWrite: (_, _, _) => { if (inBuild) writes++; },
+            onPhase: (phase, _, _, _) => inBuild = phase == SortPhase.HeapBuild));
+        return writes;
     }
 }

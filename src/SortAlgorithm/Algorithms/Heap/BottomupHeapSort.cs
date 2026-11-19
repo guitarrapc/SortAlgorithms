@@ -1,49 +1,45 @@
 ﻿using SortAlgorithm.Contexts;
+using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// ヒープ構築と削除の両方で「ボトムアップ」アプローチを使用するヒープソートの最適化版です。
-/// ヒープ構築にはFloydのアルゴリズムを、削除フェーズには真のボトムアップsift-downを使用し、標準的なヒープソートよりも比較回数を大幅に削減します。
+/// sift のたびに、まず値と比較せずに大きい方の子をたどって葉まで降り、そこから値を上へ戻す位置を探すことで、標準的なヒープソートよりも比較回数を大幅に削減します。
 /// <br/>
 /// An optimized variant of heap sort that uses a "bottom-up" approach for both heap construction and deletion.
-/// It employs Floyd's algorithm for heap construction and true bottom-up sift-down for the deletion phase, significantly reducing the number of comparisons compared to standard heap sort.
+/// Every sift first descends to a leaf along the larger children without comparing the sifted value, then climbs back to the value's position, significantly reducing the number of comparisons compared to standard heap sort.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Bottom-Up Heapsort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Heap Property Maintenance:</strong> For a max-heap, every parent node must be greater than or equal to its children.
 /// For array index i (0-based), left child is at 2i+1 and right child is at 2i+2.
-/// This implementation maintains this property through both Floyd's heapify and bottom-up sift-down operations.</description></item>
-/// <item><description><strong>Build Heap Phase (Floyd's Algorithm):</strong> The initial heap construction starts from the last non-leaf node (⌊n/2⌋ - 1) and processes nodes toward the root.
-/// For each node, Floyd's two-phase approach is used:
-/// Phase 1 - Percolate down to a leaf by always selecting the larger child (without comparing the node's key).
-/// Phase 2 - Sift up the original node value to its correct position.
-/// This runs in O(n) time with approximately 1.5n comparisons (25% fewer than standard heapify).</description></item>
+/// This implementation maintains this property through the bottom-up sift in both phases.</description></item>
+/// <item><description><strong>Build Heap Phase:</strong> Floyd's construction sifts every internal node, from the last one (⌊n/2⌋ - 1) to the root, using the bottom-up sift. It runs in O(n) time.</description></item>
 /// <item><description><strong>Extract Max Phase (Bottom-Up Deletion):</strong> Repeatedly performs the following:
-/// (a) Swap the root (maximum) with the last element and reduce heap size.
-/// (b) Apply bottom-up sift-down to restore heap property:
-///     Phase 1 - Create a "hole" at root and descend to a leaf by selecting larger children (without comparing the replacement element).
-///     Phase 2 - Sift up the replacement element (formerly last element) from the leaf to its correct position.
-/// This reduces comparisons from 2 log n (standard sift-down) to approximately log n + log log n per deletion.</description></item>
+/// (a) Read the last element, then move the root (maximum) into the last position, which leaves a hole at the root.
+/// (b) Apply the bottom-up sift from the root hole:
+///     Phase 1 - Leaf search: descend to a leaf by moving the larger child up into the hole at each level (one comparison per level, never against the sifted element).
+///     Phase 2 - Bottom-up search: climb from the leaf while the parent is smaller than the sifted element, moving each such parent back down, then write the element.</description></item>
 /// <item><description><strong>Key Difference from Standard HeapSort:</strong> Standard heap sort uses top-down sift-down (comparing the sinking element at each level).
 /// Bottom-up heap sort defers element comparison: it first descends to a leaf unconditionally, then performs upward comparisons only.
-/// This asymmetry (down without comparison, up with comparison) is the defining characteristic.</description></item>
-/// <item><description><strong>Termination Guarantee:</strong> After n-1 extract-max operations, the heap is reduced to size 1, and all elements are in sorted order.
-/// The algorithm terminates in exactly O(n log n) time with provably fewer comparisons than standard heap sort.</description></item>
+/// The element being sifted is usually a former leaf and belongs near the bottom, so the climb is short on average.
+/// This asymmetry (down without comparing the element, up with it) is the defining characteristic.</description></item>
+/// <item><description><strong>Termination Guarantee:</strong> After n-1 extract-max operations, the heap is reduced to size 1, and all elements are in sorted order.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Heap / Selection</description></item>
-/// <item><description>Stable      : No (swapping elements by index breaks relative order of equal elements)</description></item>
+/// <item><description>Stable      : No (heap operations do not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space - uses only a few temporary variables)</description></item>
-/// <item><description>Best case   : Ω(n log n) - Even for sorted input, heap construction O(n) and extraction O(n log n) are required</description></item>
-/// <item><description>Average case: Θ(n log n) - Build heap 1.5n comparisons + extraction (n-1)(log n + log log n) comparisons</description></item>
-/// <item><description>Worst case  : O(n log n) - Guaranteed upper bound regardless of input distribution</description></item>
-/// <item><description>Comparisons : ~n log n - Approximately 30-40% fewer comparisons than standard heap sort</description></item>
-/// <item><description>Swaps       : ~n log n - Similar to standard heap sort (dominated by extraction phase)</description></item>
+/// <item><description>Best case   : Ω(n log n) - every sift descends to a leaf, even when all keys are equal</description></item>
+/// <item><description>Average case: Θ(n log n) - Build heap O(n) + n-1 deletions of log n + O(1) comparisons each</description></item>
+/// <item><description>Worst case  : O(n log n) - at most 1.5n log n + O(n) comparisons (Wegener)</description></item>
+/// <item><description>Comparisons : ~n log n - one per level on the way down, plus on average a constant number on the way up</description></item>
+/// <item><description>Swaps       : 0 - the maximum reaches the end by one read and one write, and every sift moves elements through a hole</description></item>
 /// <item><description>Index Reads : Θ(n log n) - the descent to a leaf and the climb back up each touch one node per level</description></item>
-/// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Index Writes: Θ(n log n) - the descent writes one element per level and the climb moves back the few it passes, plus n root-to-end writes</description></item>
 /// <item><description>Space       : O(1) - the heap occupies the input span itself; only a few temporary variables are used</description></item>
 /// </list>
 /// <para><strong>Cache behaviour:</strong> poor locality — the heap's parent/child index arithmetic jumps through memory, so extraction misses cache far more than a sequential algorithm.</para>
@@ -62,24 +58,26 @@ namespace SortAlgorithm.Algorithms;
 /// </para>
 /// <para><strong>Comparison Reduction Analysis:</strong></para>
 /// <list type="bullet">
-/// <item><description>Standard sift-down: 2 comparisons per level (left child, right child, then max comparison) × log n levels = 2 log n comparisons</description></item>
-/// <item><description>Bottom-up sift-down: 1 comparison per level during descent (child-child only) × log n levels + log log n comparisons during ascent = log n + log log n comparisons</description></item>
-/// <item><description>Overall reduction: From ~2n log n to ~n log n comparisons (approximately 30-40% improvement)</description></item>
+/// <item><description>Standard sift-down: 2 comparisons per level (the two children, then the sinking element against the larger one) × log n levels = 2 log n comparisons</description></item>
+/// <item><description>Bottom-up sift-down: 1 comparison per level during descent (child-child only) × log n levels, plus on average O(1) comparisons during ascent = log n + O(1) comparisons</description></item>
+/// <item><description>Overall reduction: From ~2n log n to ~n log n comparisons, about half</description></item>
 /// </list>
 /// <para><strong>Difference from Standard HeapSort:</strong></para>
 /// <list type="bullet">
-/// <item><description>Standard HeapSort: Uses Floyd's algorithm for construction, standard top-down sift-down for extraction</description></item>
-/// <item><description>Bottom-Up HeapSort: Uses Floyd's algorithm for construction, bottom-up sift-down for extraction</description></item>
+/// <item><description>Standard <see cref="HeapSort"/>: top-down sift-down in both phases</description></item>
+/// <item><description>Bottom-Up HeapSort: bottom-up sift in both phases</description></item>
 /// <item><description>Key innovation: Applying the bottom-up principle to the deletion phase as well</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
-/// <item><description>Uses Floyd's two-phase heapify during heap construction for optimal comparison count</description></item>
-/// <item><description>Uses true bottom-up sift-down during extraction phase (descend to leaf, then sift up)</description></item>
+/// <item><description>The maximum moves to the end and the former last element is sifted from the root hole, as in libstdc++'s <c>__pop_heap</c>, so no swap is needed</description></item>
+/// <item><description>The descent moves each larger child up as it goes, as libstdc++'s <c>__adjust_heap</c> and libc++'s <c>__floyd_sift_down</c> do.
+/// Wegener's formulation finds the leaf first and shifts the path once at the end; both take the same comparisons.</description></item>
+/// <item><description>The larger child is selected by adding the comparison result to the index rather than branching on it, as in <see cref="HeapSort"/>
+/// (float, double and Half keep the branch). The descent then has no data-dependent branch at all, because it never compares the sifted element.</description></item>
 /// <item><description>Builds max-heap for ascending sort (min-heap would produce descending order)</description></item>
 /// <item><description>All operations are iterative (no recursion) for better performance and stack safety</description></item>
-/// <item><description>Comparison-based algorithm: requires O(n log n) comparisons but fewer than other O(n log n) sorts</description></item>
-/// <item><description>Despite fewer comparisons, may be slower than Quicksort in practice due to poor cache performance</description></item>
+/// <item><description>Saving comparisons pays off most when a comparison is expensive; with cheap keys the extra moves of the climb can cancel the gain</description></item>
 /// </list>
 /// <para><strong>Historical Context:</strong></para>
 /// <para>
@@ -191,11 +189,11 @@ public static class BottomupHeapSort
     {
         var n = last - first;
 
-        // Build heap using Floyd's bottom-up algorithm
+        // Build heap using Floyd's construction with the bottom-up sift
         s.Context.OnPhase(SortPhase.HeapBuild, first, last - 1);
-        for (var i = first + n / 2 - 1; i >= first; i--)
+        for (var i = first + n / 2; i-- > first;)
         {
-            FloydHeapify(s, i, n, first);
+            BottomUpSift(s, i, n, first, s.Read(i));
         }
 
         // Extract elements from heap using bottom-up deletion
@@ -204,143 +202,85 @@ public static class BottomupHeapSort
         {
             s.Context.OnPhase(SortPhase.HeapExtract, last - i, totalExtractions);
 
-            // Move current root (max) to end
-            s.Swap(first, i);
+            // Move the current root (max) to the end; the former last element is sifted from the root hole
+            var value = s.Read(i);
+            s.Write(i, s.Read(first));
 
             // Index i now holds the confirmed max value
             s.Context.OnRole(i, BUFFER_MAIN, RoleType.CurrentMax);
 
-            // Re-heapify using true bottom-up sift-down
-            BottomUpSiftDown(s, first, i - first, first);
+            BottomUpSift(s, first, i - first, first, value);
 
             s.Context.OnRole(i, BUFFER_MAIN, RoleType.None);
         }
     }
 
     /// <summary>
-    /// Restores the heap property using true bottom-up sift-down for deletion phase.
-    /// This method implements the characteristic bottom-up deletion:
-    /// 1. Save the element at root (which is the former last element after swap in SortCore)
-    /// 2. Create a "hole" at root and descend to a leaf by selecting larger children (no key comparison)
-    /// 3. Place the saved element at the leaf position
-    /// 4. Sift up the element to its correct position
+    /// Places <paramref name="value"/> into the heap whose root position <paramref name="root"/> is a hole.
+    /// The hole first descends to a leaf along the larger children, then <paramref name="value"/> climbs from that leaf to its position.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
+    /// <typeparam name="T">The type of elements in the span.</typeparam>
     /// <param name="s">The SortSpan containing the elements and context for tracking operations.</param>
-    /// <param name="root">The index of the root node to start sift-down.</param>
+    /// <param name="root">The index of the hole where the sift starts.</param>
     /// <param name="size">The size of the heap (number of elements to consider).</param>
     /// <param name="offset">The starting index offset for the heap within the span.</param>
+    /// <param name="value">The element to place. Whatever <paramref name="root"/> currently holds is overwritten.</param>
     /// <remarks>
-    /// This is the defining characteristic of Bottom-Up HeapSort's deletion phase.
-    /// Unlike Floyd's heapify (used in construction), this method:
-    /// - Descends to a leaf without comparing the element being inserted
-    /// - Only performs comparisons during the upward sift phase
-    /// - Reduces comparisons in deletion from 2 log n to log n + log log n on average
-    /// <para>Time Complexity: O(log n) - But with fewer comparisons than standard sift-down</para>
-    /// <para>Space Complexity: O(1) - Uses iteration with constant extra space</para>
+    /// This is the defining step of Bottom-Up HeapSort. The descent never compares <paramref name="value"/>;
+    /// only the climb does, and it is short on average because a former leaf belongs near the bottom.
+    /// <para>Time Complexity: O(log n) - log n comparisons on the way down, O(1) on average on the way up.</para>
+    /// <para>Space Complexity: O(1) - Uses iteration with constant extra space.</para>
     /// </remarks>
-    private static void BottomUpSiftDown<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void BottomUpSift<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset, T value)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (size <= 1) return;
-
-        // Save the element at root after swap (which is the former last element that needs to be reinserted)
-        var value = s.Read(root);
+        var end = offset + size;
         var hole = root;
 
-        // Phase 1: Descend to a leaf level by always selecting the larger child (no key comparison with 'value')
-        while (true)
-        {
-            var left = 2 * (hole - offset) + 1 + offset;
-            var right = left + 1;
-
-            // If no children, we've reached a leaf
-            if (left >= offset + size) break;
-
-            // Select the larger child to continue descent
-            var largerChild = left;
-            if (right < offset + size && s.IsGreaterAt(right, left))
-            {
-                largerChild = right;
-            }
-
-            // Move the larger child up to fill the hole
-            s.Write(hole, s.Read(largerChild));
-            hole = largerChild;
-        }
-
-        // Phase 2: Sift up the saved value from the leaf position to its correct position
-        // This is similar to insertion into a max-heap
-        while (hole > root)
-        {
-            var parent = offset + (hole - offset - 1) / 2;
-
-            // If parent is greater than or equal to value, we found the correct position
-            // Use Compare(value, parent) which compares value against span[parent]
-            if (s.IsValueLessOrEqual(value, parent))
-            {
-                break;
-            }
-
-            // Move parent down
-            s.Write(hole, s.Read(parent));
-            hole = parent;
-        }
-
-        // Place the value in its final position
-        s.Write(hole, value);
-    }
-
-    /// <summary>
-    /// Restores the heap property using Floyd's improved heap construction algorithm.
-    /// This method first descends to a leaf level by always selecting the larger child,
-    /// then sifts the original value up to its correct position.
-    /// This reduces comparisons by ~25% compared to standard bottom-up heapify
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the span. Must implement <see cref="IComparable{T}"/>.</typeparam>
-    /// <param name="s">The SortSpan containing the elements and context for tracking operations.</param>
-    /// <param name="root">The index of the root node of the subtree to heapify.</param>
-    /// <param name="size">The size of the heap (number of elements to consider).</param>
-    /// <param name="offset">The starting index offset for the heap within the span.</param>
-    /// <remarks>
-    /// Floyd's algorithm reduces the number of comparisons during heap construction by ~25%.
-    /// Phase 1: Percolate down to a leaf by always taking the larger child (no key comparison).
-    /// Phase 2: Sift up the original root value to its correct position.
-    /// <para>Time Complexity: O(log n) - Same asymptotic complexity but fewer comparisons in practice.</para>
-    /// <para>Space Complexity: O(1) - Uses iteration instead of recursion.</para>
-    /// </remarks>
-    private static void FloydHeapify<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int root, int size, int offset)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var rootValue = s.Read(root);
-        var hole = root;
-
-        // Phase 1: Percolate down to a leaf, always taking the larger child
+        // Phase 1: Descend to a leaf, moving the larger child up into the hole at each level
         var child = 2 * (hole - offset) + 1 + offset;
-        while (child < offset + size)
+        while (child < end)
         {
-            // Find larger child
-            if (child + 1 < offset + size && s.IsGreaterAt(child + 1, child))
-            {
-                child++;
-            }
-
-            // Move larger child up
+            child = LargerChild(s, child, end);
             s.Write(hole, s.Read(child));
             hole = child;
             child = 2 * (hole - offset) + 1 + offset;
         }
 
-        // Phase 2: Sift up the original root value to its correct position
+        // Phase 2: Climb while the parent is smaller than value, moving each such parent back down
         while (hole > root)
         {
             var parent = offset + (hole - offset - 1) / 2;
-            if (s.IsValueLessOrEqual(rootValue, parent)) break;
+            if (s.IsValueLessOrEqual(value, parent)) break;
             s.Write(hole, s.Read(parent));
             hole = parent;
         }
-        s.Write(hole, rootValue);
+
+        s.Write(hole, value);
+    }
+
+    /// <summary>
+    /// Returns the index of the larger child of a node whose left child is <paramref name="left"/>.
+    /// The right child exists only when it lies below <paramref name="end"/>.
+    /// </summary>
+    /// <remarks>
+    /// Only the bounds check branches. The comparison result is added to the index, as in Rust's heapsort,
+    /// because a branch on it is mispredicted about half the time on random input.
+    /// Floating-point types keep the branch for the reason given in <see cref="HeapSort"/>'s LargerChild.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int LargerChild<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int end)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (left + 1 >= end) return left;
+        if (typeof(T) == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(Half))
+        {
+            if (s.IsGreaterAt(left + 1, left)) left++;
+            return left;
+        }
+        return left + (s.IsGreaterAt(left + 1, left) ? 1 : 0);
     }
 }
