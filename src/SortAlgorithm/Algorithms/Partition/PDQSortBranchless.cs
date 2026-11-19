@@ -25,15 +25,20 @@ namespace SortAlgorithm.Algorithms;
 /// derived from "BlockQuicksort: How Branch Mispredictions don't affect Quicksort"
 /// by Stefan Edelkamp and Armin Weiss (https://arxiv.org/abs/1604.06697).
 /// </para>
-/// <para><strong>Implementation notes specific to .NET (measured via BenchmarkDotNet + DisassemblyDiagnoser):</strong></para>
+/// <para><strong>Implementation notes specific to .NET (measured with timing and disassembly):</strong></para>
 /// <list type="bullet">
 /// <item><description>Offset buffers are stackalloc'd and accessed via <see cref="MemoryMarshal.GetReference{T}(Span{T})"/> +
-/// <see cref="Unsafe.Add{T}(ref T, int)"/>: the store index is a runtime value the JIT cannot prove in-range,
+/// <see cref="Unsafe.Add{T}(ref T, nint)"/>: the store index is a runtime value the JIT cannot prove in-range,
 /// so Span indexing would emit a bounds check per classified element (measured slower).</description></item>
 /// <item><description><c>Unsafe.As&lt;bool, byte&gt;</c> converts the comparison result to an addend, which RyuJIT
 /// compiles to setcc (no data-dependent branch). A ternary (b ? 1 : 0) is not guaranteed branch-free.</description></item>
 /// <item><description>The classification loops are manually unrolled 8x like orlp's implementation;
 /// RyuJIT does not unroll them automatically (without the unroll, many-duplicates inputs measured slower).</description></item>
+/// <item><description>The block phase keeps its cursors and counts in <see cref="nint"/> and uses the <see cref="nint"/> overloads of
+/// <c>SortSpan</c>. An <see cref="int"/> index is zero-extended on every access, so the unrolled loop's constant offsets could not
+/// fold into the address.</description></item>
+/// <item><description>The block fills and the exchange are methods that are not inlined. Inlined, reverse-sorted input measured slower,
+/// and the other patterns moved by a few percent either way.</description></item>
 /// </list>
 /// <para><strong>Measured trade-offs vs <see cref="PDQSort"/> (int keys; direction only, magnitudes depend on the machine):</strong></para>
 /// <list type="bullet">
@@ -384,36 +389,77 @@ public static class PDQSortBranchless
     }
 
     /// <summary>
-    /// Classifies one element from the left side: unconditionally stores its offset, then
-    /// advances the buffer cursor only when the element belongs to the right partition.
-    /// The bool-to-byte add compiles to cmp + setcc + add: no data-dependent branch.
+    /// The comparison result as an addend. The bool-to-byte reinterpretation compiles to setcc, so the add has no data-dependent branch.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void ClassifyLeft<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, T pivot, ref byte offsetsL, ref int numL, ref int it, ref int i)
+    private static nint Flag(bool value) => Unsafe.As<bool, byte>(ref value);
+
+    /// <summary>
+    /// Classifies <paramref name="count"/> elements from <paramref name="first"/> upward: stores every offset, and advances the count
+    /// only for an element that belongs to the right partition. Returns that count.
+    /// </summary>
+    /// <remarks>
+    /// The block helpers take the span by <see langword="in"/> and copy it to a local. Passed by value, the caller copies it before every
+    /// call, and the partition measured slower. Read through the reference directly, the JIT reloads the base pointer before every element,
+    /// because the offset stores might alias it.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static int FillLeft<T, TComparer, TContext>(in SortSpan<T, TComparer, TContext> span, nint first, ref byte offsets, T pivot, nint count)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        Unsafe.Add(ref offsetsL, numL) = (byte)i;
-        var wrongSide = s.IsElementGreaterOrEqual(it, pivot);
-        numL += Unsafe.As<bool, byte>(ref wrongSide);
-        it++;
-        i++;
+        var s = span;
+        nint num = 0;
+        nint i = 0;
+        // 8x unroll, mirroring orlp's pdqsort.h (RyuJIT does not unroll this). Constant offsets from one cursor fold into the address.
+        for (; i + 8 <= count; i += 8)
+        {
+            var at = first + i;
+            Unsafe.Add(ref offsets, num) = (byte)i; num += Flag(s.IsElementGreaterOrEqual(at, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 1); num += Flag(s.IsElementGreaterOrEqual(at + 1, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 2); num += Flag(s.IsElementGreaterOrEqual(at + 2, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 3); num += Flag(s.IsElementGreaterOrEqual(at + 3, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 4); num += Flag(s.IsElementGreaterOrEqual(at + 4, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 5); num += Flag(s.IsElementGreaterOrEqual(at + 5, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 6); num += Flag(s.IsElementGreaterOrEqual(at + 6, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 7); num += Flag(s.IsElementGreaterOrEqual(at + 7, pivot));
+        }
+        for (; i < count; i++)
+        {
+            Unsafe.Add(ref offsets, num) = (byte)i; num += Flag(s.IsElementGreaterOrEqual(first + i, pivot));
+        }
+        return (int)num;
     }
 
     /// <summary>
-    /// Classifies one element from the right side (walking backwards from <c>last</c>).
-    /// Offsets are 1-based distances from <c>last</c>, matching orlp's convention.
+    /// Classifies <paramref name="count"/> elements from <paramref name="last"/> downward, as <see cref="FillLeft"/> does from the left.
+    /// Offsets are 1-based distances from <paramref name="last"/>, matching orlp's convention.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void ClassifyRight<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, T pivot, ref byte offsetsR, ref int numR, ref int it, ref int i)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static int FillRight<T, TComparer, TContext>(in SortSpan<T, TComparer, TContext> span, nint last, ref byte offsets, T pivot, nint count)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        Unsafe.Add(ref offsetsR, numR) = (byte)i;
-        it--;
-        var wrongSide = s.IsElementLessThan(it, pivot);
-        numR += Unsafe.As<bool, byte>(ref wrongSide);
-        i++;
+        var s = span;
+        nint num = 0;
+        nint i = 1;
+        for (; i + 7 <= count; i += 8)
+        {
+            var at = last - i;
+            Unsafe.Add(ref offsets, num) = (byte)i; num += Flag(s.IsElementLessThan(at, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 1); num += Flag(s.IsElementLessThan(at - 1, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 2); num += Flag(s.IsElementLessThan(at - 2, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 3); num += Flag(s.IsElementLessThan(at - 3, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 4); num += Flag(s.IsElementLessThan(at - 4, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 5); num += Flag(s.IsElementLessThan(at - 5, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 6); num += Flag(s.IsElementLessThan(at - 6, pivot));
+            Unsafe.Add(ref offsets, num) = (byte)(i + 7); num += Flag(s.IsElementLessThan(at - 7, pivot));
+        }
+        for (; i <= count; i++)
+        {
+            Unsafe.Add(ref offsets, num) = (byte)i; num += Flag(s.IsElementLessThan(last - i, pivot));
+        }
+        return (int)num;
     }
 
     /// <summary>
@@ -481,39 +527,16 @@ public static class PDQSortBranchless
                 if (numL == 0)
                 {
                     startL = 0;
-                    var it = first;
-                    for (var i = 0; i < BlockSize;)
-                    {
-                        // 8x unroll, mirroring orlp's pdqsort.h (RyuJIT does not unroll this).
-                        ClassifyLeft(s, pivot, ref offsetsL, ref numL, ref it, ref i);
-                        ClassifyLeft(s, pivot, ref offsetsL, ref numL, ref it, ref i);
-                        ClassifyLeft(s, pivot, ref offsetsL, ref numL, ref it, ref i);
-                        ClassifyLeft(s, pivot, ref offsetsL, ref numL, ref it, ref i);
-                        ClassifyLeft(s, pivot, ref offsetsL, ref numL, ref it, ref i);
-                        ClassifyLeft(s, pivot, ref offsetsL, ref numL, ref it, ref i);
-                        ClassifyLeft(s, pivot, ref offsetsL, ref numL, ref it, ref i);
-                        ClassifyLeft(s, pivot, ref offsetsL, ref numL, ref it, ref i);
-                    }
+                    numL = FillLeft(in s, first, ref offsetsL, pivot, BlockSize);
                 }
                 if (numR == 0)
                 {
                     startR = 0;
-                    var it = last;
-                    for (var i = 1; i <= BlockSize;)
-                    {
-                        ClassifyRight(s, pivot, ref offsetsR, ref numR, ref it, ref i);
-                        ClassifyRight(s, pivot, ref offsetsR, ref numR, ref it, ref i);
-                        ClassifyRight(s, pivot, ref offsetsR, ref numR, ref it, ref i);
-                        ClassifyRight(s, pivot, ref offsetsR, ref numR, ref it, ref i);
-                        ClassifyRight(s, pivot, ref offsetsR, ref numR, ref it, ref i);
-                        ClassifyRight(s, pivot, ref offsetsR, ref numR, ref it, ref i);
-                        ClassifyRight(s, pivot, ref offsetsR, ref numR, ref it, ref i);
-                        ClassifyRight(s, pivot, ref offsetsR, ref numR, ref it, ref i);
-                    }
+                    numR = FillRight(in s, last, ref offsetsR, pivot, BlockSize);
                 }
 
                 var num = Math.Min(numL, numR);
-                SwapOffsets(s, first, last, ref Unsafe.Add(ref offsetsL, startL), ref Unsafe.Add(ref offsetsR, startR), num, numL == numR);
+                SwapOffsets(in s, first, last, ref Unsafe.Add(ref offsetsL, startL), ref Unsafe.Add(ref offsetsR, startR), num, numL == numR);
                 numL -= num;
                 numR -= num;
                 startL += num;
@@ -546,24 +569,16 @@ public static class PDQSortBranchless
             if (unknownLeft > 0 && numL == 0)
             {
                 startL = 0;
-                var it = first;
-                for (var i = 0; i < lSize;)
-                {
-                    ClassifyLeft(s, pivot, ref offsetsL, ref numL, ref it, ref i);
-                }
+                numL = FillLeft(in s, first, ref offsetsL, pivot, lSize);
             }
             if (unknownLeft > 0 && numR == 0)
             {
                 startR = 0;
-                var it = last;
-                for (var i = 1; i <= rSize;)
-                {
-                    ClassifyRight(s, pivot, ref offsetsR, ref numR, ref it, ref i);
-                }
+                numR = FillRight(in s, last, ref offsetsR, pivot, rSize);
             }
 
             var numFinal = Math.Min(numL, numR);
-            SwapOffsets(s, first, last, ref Unsafe.Add(ref offsetsL, startL), ref Unsafe.Add(ref offsetsR, startR), numFinal, numL == numR);
+            SwapOffsets(in s, first, last, ref Unsafe.Add(ref offsetsL, startL), ref Unsafe.Add(ref offsetsR, startR), numFinal, numL == numR);
             numL -= numFinal;
             numR -= numFinal;
             startL += numFinal;
@@ -605,14 +620,15 @@ public static class PDQSortBranchless
     /// together (numL == numR) plain swaps keep pdqsort O(n) on descending inputs; otherwise
     /// a cyclic permutation saves one write per element (orlp's swap_offsets).
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SwapOffsets<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, ref byte offsetsL, ref byte offsetsR, int num, bool useSwaps)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void SwapOffsets<T, TComparer, TContext>(in SortSpan<T, TComparer, TContext> span, nint first, nint last, ref byte offsetsL, ref byte offsetsR, nint num, bool useSwaps)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        var s = span;
         if (useSwaps)
         {
-            for (var i = 0; i < num; i++)
+            for (nint i = 0; i < num; i++)
             {
                 s.Swap(first + Unsafe.Add(ref offsetsL, i), last - Unsafe.Add(ref offsetsR, i));
             }
@@ -623,7 +639,7 @@ public static class PDQSortBranchless
             var r = last - offsetsR;
             var tmp = s.Read(l);
             s.Write(l, s.Read(r));
-            for (var i = 1; i < num; i++)
+            for (nint i = 1; i < num; i++)
             {
                 l = first + Unsafe.Add(ref offsetsL, i);
                 s.Write(r, s.Read(l));

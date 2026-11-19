@@ -6,6 +6,71 @@ namespace SortAlgorithm.Tests;
 
 public class SortSpanTests
 {
+    // Each nint overload must announce the same events and give the same results as its int overload. The slice has a
+    // non-zero offset and buffer id, so reported coordinates that came from the raw index instead of the span would differ.
+    // NullContext with the natural comparer takes the unchecked native-index path, which no observed run exercises.
+    [Test]
+    public async Task NativeIndexOverloadsMatchIntOverloads()
+    {
+        var observedInt = RunObserved(useNint: false);
+        var observedNint = RunObserved(useNint: true);
+        await Assert.That(observedNint.Log).IsEquivalentTo(observedInt.Log, CollectionOrdering.Matching);
+        await Assert.That(observedNint.Values).IsEquivalentTo(observedInt.Values, CollectionOrdering.Matching);
+        await Assert.That(observedNint.Results).IsEquivalentTo(observedInt.Results, CollectionOrdering.Matching);
+
+        var plainInt = RunUnobserved(useNint: false);
+        var plainNint = RunUnobserved(useNint: true);
+        await Assert.That(plainNint.Values).IsEquivalentTo(plainInt.Values, CollectionOrdering.Matching);
+        await Assert.That(plainNint.Results).IsEquivalentTo(plainInt.Results, CollectionOrdering.Matching);
+        await Assert.That(plainInt.Results).IsEquivalentTo(observedInt.Results, CollectionOrdering.Matching);
+
+        static (List<string> Log, int[] Values, List<string> Results) RunObserved(bool useNint)
+        {
+            var log = new List<string>();
+            var context = new VisualizationContext(
+                onCompare: (i, j, r, bi, bj) => log.Add($"c:{i}:{j}:{Math.Sign(r)}:{bi}:{bj}"),
+                onSwap: (i, j, b) => log.Add($"s:{i}:{j}:{b}"),
+                onIndexRead: (i, b) => log.Add($"r:{i}:{b}"),
+                onIndexWrite: (i, b, v) => log.Add($"w:{i}:{b}:{v}"));
+            var values = new[] { 50, 40, 30, 20, 10, 0 };
+            var s = new SortSpan<int, Comparer<int>, VisualizationContext>(values.AsSpan(1, 4), context, Comparer<int>.Default, 2, 1);
+            return (log, values, Exercise(s, useNint));
+        }
+
+        static (int[] Values, List<string> Results) RunUnobserved(bool useNint)
+        {
+            var values = new[] { 50, 40, 30, 20, 10, 0 };
+            var s = new SortSpan<int, ComparableComparer<int>, NullContext>(values.AsSpan(1, 4), NullContext.Default, new(), 2, 1);
+            return (values, Exercise(s, useNint));
+        }
+
+        static List<string> Exercise<TComparer, TContext>(SortSpan<int, TComparer, TContext> s, bool useNint)
+            where TComparer : IComparer<int>
+            where TContext : ISortContext
+        {
+            var results = new List<string>();
+            if (useNint)
+            {
+                results.Add(s.Read((nint)1).ToString());
+                s.Write((nint)2, 7);
+                s.Swap((nint)0, (nint)3);
+                results.Add(s.IsElementLessThan((nint)1, 35).ToString());
+                results.Add(s.IsElementGreaterOrEqual((nint)2, 7).ToString());
+                results.Add(s.IsElementGreaterOrEqual((nint)3, 41).ToString());
+            }
+            else
+            {
+                results.Add(s.Read(1).ToString());
+                s.Write(2, 7);
+                s.Swap(0, 3);
+                results.Add(s.IsElementLessThan(1, 35).ToString());
+                results.Add(s.IsElementGreaterOrEqual(2, 7).ToString());
+                results.Add(s.IsElementGreaterOrEqual(3, 41).ToString());
+            }
+            return results;
+        }
+    }
+
     [Test]
     public async Task CopyTo_ShouldCopyRangeToAnotherSortSpan()
     {

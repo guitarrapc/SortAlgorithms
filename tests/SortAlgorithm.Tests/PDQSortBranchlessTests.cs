@@ -1,4 +1,6 @@
-﻿using SortAlgorithm.Algorithms;
+﻿using System.Security.Cryptography;
+using System.Text;
+using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
 using TUnit.Assertions.Enums;
 
@@ -14,6 +16,41 @@ public class PDQSortBranchlessTests : SortTestsBase
     // sorted arrays may have 0 swaps due to pattern detection and partial
     // insertion sort optimization, which is expected behavior.
     protected override CountExpectation SortedInputWrites => CountExpectation.NonZero;
+
+    // At n = 1000 the first partitions span more than two 64-element blocks, so the full-block loop and its
+    // exchanges run. Few distinct keys also reach the partition that puts equal elements on the left. The hash
+    // covers every announced operation in order, so a change in how the partition is written must leave what
+    // an observer sees unchanged.
+    [Test]
+    [Arguments(0, "9BF483BC69A5AE54B30D77BAAE41F20EF2A4EC9DE07C461AFE3F108B822BD8B3")]
+    [Arguments(16, "E05D5728F68F9E6DB8C6D69CF624FABFEE8F745575B4A45622DBA1D1FC3A7F34")]
+    public async Task BlockPartitionEventStreamIsPinned(int distinct, string expected)
+    {
+        var values = new int[1000];
+        var x = 0x9E3779B9u;
+        for (var i = 0; i < values.Length; i++)
+        {
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            values[i] = distinct == 0 ? (int)x : (int)(x % (uint)distinct);
+        }
+        var sorted = values.Order().ToArray();
+
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        void Add(string e) => hash.AppendData(Encoding.UTF8.GetBytes(e + "\n"));
+        var context = new VisualizationContext(
+            onCompare: (i, j, r, bi, bj) => Add($"c:{i}:{j}:{Math.Sign(r)}:{bi}:{bj}"),
+            onSwap: (i, j, b) => Add($"s:{i}:{j}:{b}"),
+            onIndexRead: (i, b) => Add($"r:{i}:{b}"),
+            onIndexWrite: (i, b, v) => Add($"w:{i}:{b}:{v}"),
+            onPhase: (p, a, b, c) => Add($"p:{(int)p}:{a}:{b}:{c}"),
+            onRole: (i, b, role) => Add($"o:{i}:{b}:{(int)role}"));
+        PDQSortBranchless.Sort(values.AsSpan(), context);
+
+        await Assert.That(values).IsEquivalentTo(sorted, CollectionOrdering.Matching);
+        await Assert.That(Convert.ToHexString(hash.GetHashAndReset())).IsEqualTo(expected);
+    }
 
     [Test]
     public async Task RangeSortTest()

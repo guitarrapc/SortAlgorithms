@@ -150,6 +150,40 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     }
 
     /// <summary>
+    /// Reads the element at a native-sized index and announces it as <see cref="Read(int)"/> does.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="int"/> overload zero-extends its index, so the JIT cannot fold a constant offset such as <c>i + 3</c> into the
+    /// address. An unrolled loop that keeps its cursor in <see cref="nint"/> gets one address mode per element instead.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public T Read(nint i)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            _context.OnIndexRead(_offset + (int)i, _bufferId);
+        }
+        return ReadUnobserved(i);
+    }
+
+    /// <summary>
+    /// Writes the element at a native-sized index and announces it as <see cref="Write(int, T)"/> does.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Write(nint i, T value)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            _context.OnIndexWrite(_offset + (int)i, _bufferId, value);
+        }
+#if DEBUG
+        _span[(int)i] = value;
+#else
+        Unsafe.Add(ref _ref, i) = value;
+#endif
+    }
+
+    /// <summary>
     /// Compares the elements at the specified indices and returns an integer that indicates their relative order. (Equivalent to comparer.Compare(span[i], span[j]).)
     /// </summary>
     /// <param name="i">The index of the first element to compare.</param>
@@ -458,6 +492,17 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #endif
     }
 
+    /// <summary>Reads at a native-sized index without announcing anything. Only for the NullContext path.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private T ReadUnobserved(nint i)
+    {
+#if DEBUG
+        return _span[(int)i];
+#else
+        return Unsafe.Add(ref _ref, i);
+#endif
+    }
+
     // NetWasm 0.13 benefits from inlining the reporting helpers. Keep standard .NET
     // heuristics: forcing these helpers inline regressed the measured SortVivo API.
     /// <summary>Announces the reads and the comparison for two indices of this span.</summary>
@@ -629,6 +674,26 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     public bool IsElementGreaterOrEqual(int i, T value)
     {
         if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out _) >= 0;
+        return IsGreaterOrEqual(ReadUnobserved(i), value);
+    }
+
+    /// <summary>
+    /// <see cref="IsElementLessThan(int, T)"/> at a native-sized index, for the reason given on <see cref="Read(nint)"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementLessThan(nint i, T value)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement((int)i, value, out _) < 0;
+        return IsLessThan(ReadUnobserved(i), value);
+    }
+
+    /// <summary>
+    /// <see cref="IsElementGreaterOrEqual(int, T)"/> at a native-sized index, for the reason given on <see cref="Read(nint)"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsElementGreaterOrEqual(nint i, T value)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement((int)i, value, out _) >= 0;
         return IsGreaterOrEqual(ReadUnobserved(i), value);
     }
 
@@ -816,6 +881,25 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #else
         ref T si = ref Unsafe.Add(ref _ref, (nint)(uint)i);
         ref T sj = ref Unsafe.Add(ref _ref, (nint)(uint)j);
+        (si, sj) = (sj, si);
+#endif
+    }
+
+    /// <summary>
+    /// <see cref="Swap(int, int)"/> at native-sized indices, for the reason given on <see cref="Read(nint)"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Swap(nint i, nint j)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            _context.OnSwap(_offset + (int)i, _offset + (int)j, _bufferId);
+        }
+#if DEBUG
+        (_span[(int)i], _span[(int)j]) = (_span[(int)j], _span[(int)i]);
+#else
+        ref T si = ref Unsafe.Add(ref _ref, i);
+        ref T sj = ref Unsafe.Add(ref _ref, j);
         (si, sj) = (sj, si);
 #endif
     }
