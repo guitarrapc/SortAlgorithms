@@ -772,7 +772,8 @@ public enum SortPhase
     QuadSortQuadMerge,
 
     /// <summary>
-    /// Quadsort tail merge level: merging adjacent runs pairwise by a backward merge that copies the right run to swap memory. Detail phase.
+    /// Quadsort tail merge level: merging adjacent runs pairwise, backwards with the right run in swap memory, or by a cross merge through
+    /// swap memory when both runs fit there and the right run has at least 64 elements. Detail phase.
     /// param1=start (inclusive), param2=end-1 (inclusive), param3=block (length of the left runs being merged)
     /// </summary>
     QuadSortTailMerge,
@@ -795,7 +796,7 @@ public enum SortPhase
 
     /// <summary>
     /// FluxSort partition: copying the elements not greater than the pivot to the front of the range in buffer 0 and the greater ones to
-    /// swap memory, both in scan order. The pivot is on the stack at the end of swap memory and carries <see cref="RoleType.Pivot"/>.
+    /// swap memory, both in scan order. The pivot is on the stack in swap memory and carries <see cref="RoleType.Pivot"/>.
     /// param1=start (inclusive), param2=end-1 (inclusive), param3=source buffer (0 = main, 1 = swap memory)
     /// </summary>
     FluxSortPartition,
@@ -807,14 +808,16 @@ public enum SortPhase
     FluxSortReversePartition,
 
     /// <summary>
-    /// FluxSort pivot sample: copying an evenly spaced sample of the range into the other buffer and sorting its two halves with quadsort,
-    /// whose median becomes the pivot.
+    /// FluxSort pivot sample: choosing the pivot from an evenly spaced sample of the range. Nine candidates are compared directly. A larger
+    /// sample is copied into the other buffer, its two halves are sorted with quadsort, and their median becomes the pivot. The phase is
+    /// announced again after those quadsort calls, so their detail phase does not cover the median search.
     /// param1=start (inclusive), param2=end-1 (inclusive), param3=sampleCount
     /// </summary>
     FluxSortPivotSample,
 
     /// <summary>
-    /// FluxSort handing a range to quadsort: a small input, a streaky quarter, a short or unbalanced partition, or low-cardinality data.
+    /// FluxSort handing a range to quadsort: a small input, a streaky quarter, a short or unbalanced partition, both sides of a partition
+    /// that began with a long run of elements not greater than the pivot, or low-cardinality data.
     /// param1=start (inclusive), param2=end-1 (inclusive)
     /// </summary>
     FluxSortQuadsort,

@@ -1,6 +1,7 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -11,7 +12,7 @@ namespace SortAlgorithm.Algorithms;
 /// 整列済みまたは逆順の入力は n 回程度の比較で終わり、短い区間は分岐のないパリティマージで並べます。
 /// <br/>
 /// A bottom-up, adaptive, stable merge sort (van den Hoven, 2020). A quad swap analyzer classifies every group of eight elements
-/// as in order, in reverse order, or neither from four pair comparisons, turning the input into sorted blocks of 32; quad merges then
+/// as in order, in reverse order, or neither, turning the input into sorted blocks of 32. Quad merges then
 /// join four blocks at a time with branchless parity and cross merges that work from both ends of the output at once.
 /// Ordered and reverse-ordered input finish after about n comparisons, and short ranges are sorted by branchless parity merges.
 /// </summary>
@@ -22,16 +23,17 @@ namespace SortAlgorithm.Algorithms;
 /// sorts each recursively, and joins them with two parity merges into a stack array and one back. Two to seven elements use the
 /// fixed parity swap networks of <c>tiny_sort</c>.</description></item>
 /// <item><description><strong>Quad swap:</strong> each group of eight is compared as four pairs. All four in order, with the pairs also in order across
-/// their boundaries, continues an ordered stretch; all four strictly descending, again across the boundaries, continues a descending
-/// stretch that is reversed in place once it ends. Anything else gets four branchless pair swaps and a parity merge of the two halves.
+/// their boundaries, continues an ordered stretch. All four strictly descending, again across the boundaries, continues a descending
+/// stretch that is reversed in place once it ends. Anything else gets four branchless pair swaps and two levels of parity merges.
 /// Groups of four eight-element blocks are then parity merged into blocks of 32. A whole input that is one descending stretch is
 /// reversed and the sort ends here.</description></item>
 /// <item><description><strong>Quad merge:</strong> four adjacent blocks are merged into swap memory pairwise and back as one, doubling the block size
 /// twice per level. A pair whose boundary is already in order is copied instead of merged, and four blocks already in order are left
 /// alone. Each merge is a cross merge: it copies eight elements at a time from whichever end of a run cannot interleave with the other
 /// run, and otherwise merges branchlessly from the head and the tail of the output at once.</description></item>
-/// <item><description><strong>Tail merge:</strong> the blocks that do not fill a group of four are merged pairwise by a backward merge
-/// that copies only the right run into swap memory.</description></item>
+/// <item><description><strong>Tail merge:</strong> the runs the quad merges leave are merged pairwise. When both runs fit in swap
+/// memory and the right run has at least 64 elements, they are cross merged there and copied back. Otherwise the right run is copied
+/// to swap memory and the two are merged backwards.</description></item>
 /// <item><description><strong>Rotate merge:</strong> when the runs outgrow swap memory, the remaining levels are merged in place by splitting
 /// the left run, binary searching its upper half's first element in the right run, rotating the pieces with a trinity rotation,
 /// and recursing until the pieces fit in swap memory.</description></item>
@@ -42,20 +44,22 @@ namespace SortAlgorithm.Algorithms;
 /// (<c>#define cmp</c>), which is what a struct <typeparamref name="TComparer"/> becomes after JIT specialization. That makes the
 /// gcc-only <c>QUAD_CACHE</c> switch to branchy merges unreachable, so it is not ported.</description></item>
 /// <item><description>Branchless steps: the reference has a gcc and a clang form of its branchless merge step. This port uses the gcc
-/// form, which writes both candidates (the one not taken lands on a position a later step overwrites) and advances the cursors
+/// form, which writes both candidates (the one not taken is overwritten or left unused) and advances the cursors
 /// arithmetically: the clang form selects the value to write, and RyuJIT compiles that selection inside a loop to a data-dependent
 /// branch (verified by disassembly). Where the reference writes the merge step out as a plain ternary, at the ends of a merge,
 /// one position is written. The branchless pair swaps write both positions whatever the comparison decided, as the reference does,
 /// choosing the destination index rather than the value.</description></item>
-/// <item><description>Fidelity: on identical inputs this port makes exactly the comparisons the reference does (checked against the C
-/// source with a counting comparison macro over 11 input shapes and lengths from 2 to 1,000,000).</description></item>
+/// <item><description>Fidelity: with a consistent comparer and identical inputs, this port makes the comparisons the reference makes, in the same order.
+/// ScandumReferenceTraceTests holds it to that.</description></item>
 /// <item><description>Swap memory: n elements rented from <see cref="ArrayPool{T}"/>, or, above 4,194,304 elements, 4,194,304 · 4^k
 /// elements for the smallest k that exceeds n / 8, as the reference allocates. The reference falls back to a 512-element stack array
-/// when allocation fails; .NET reports that failure with an exception instead, so the fallback is not ported.</description></item>
+/// when allocation fails. .NET reports that failure with an exception instead, so the fallback is not ported.</description></item>
 /// <item><description>Buffers: 0 is the input, 1 is the swap memory, and 2 is the 32-element stack array that the quad swap and the
 /// small-input <c>tail_swap</c> merge through, which the reference keeps on the stack as well.</description></item>
-/// <item><description>Comparer contract: the merges index past a run's end on the strength of earlier comparisons, as the reference does,
-/// so a comparer that is not a consistent total order can make them read outside the runs being merged.</description></item>
+/// <item><description>Comparer contract: the reference trusts earlier comparisons to keep its merge cursors inside the runs. Element access
+/// is unchecked here, so this port checks the cursors wherever only that trust protects them. A comparer that is not a consistent total
+/// order can make the sort throw <see cref="InvalidOperationException"/>, and it can leave the elements in an unspecified state, with some
+/// repeated and others lost. It cannot make the sort read or write outside its buffers.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
@@ -67,8 +71,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst case  : O(n log n) - the swap memory holds more than n / 8 elements, so the rotate merge levels recurse a bounded number of times before their pieces fit</description></item>
 /// <item><description>Comparisons : Θ(n) best, Θ(n log n) average and worst - the quad swap spends 7 comparisons per eight ordered elements; a merge level makes about one comparison per element it merges, none for elements it copies in blocks of eight, plus the guard comparisons that look for such blocks</description></item>
 /// <item><description>Swaps       : O(n) - exchanges reverse descending stretches, settle the middle pair of a four-element tiny sort, and finish trinity rotations; merges and the branchless pair sorts move elements by writes</description></item>
-/// <item><description>Index Reads : Θ(n) best, Θ(n log n) average and worst - every merge level reads each element of the runs it joins</description></item>
-/// <item><description>Index Writes: O(n) best, Θ(n log n) average and worst - every merge level writes each element into swap memory and back, or copies it there unmerged; a branchless step writes both of its candidates</description></item>
+/// <item><description>Index Reads : Θ(n) best, Θ(n log n) average and worst - the quad swap reads every element, and merges and rotations read what they compare or move</description></item>
+/// <item><description>Index Writes: O(n) best, Θ(n log n) average and worst - merges and rotations move elements, reversals exchange them, and a branchless step writes both of its candidates</description></item>
 /// <item><description>Space       : O(n) - swap memory of n elements (more than n / 8 above 4,194,304 elements) plus a 32-element stack array</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
@@ -227,7 +231,7 @@ public static class QuadSort
 
         if (n < QUAD_SWAP_MIN)
         {
-            // The reference sorts in a stack array of n elements (VAR swap[nmemb]); n < 32 fits the same 32-element array.
+            // The reference declares a stack array of n elements (VAR swap[nmemb]). Every n below 32 fits the 32-element array.
             var stackStorage = new StackSwap<T>();
             Span<T> stackSpan = stackStorage;
             var st = new SortSpan<T, TComparer, TContext>(stackSpan, a.Context, a.Comparer, BUFFER_STACK);
@@ -270,7 +274,9 @@ public static class QuadSort
     /// with the caller's swap memory <paramref name="w"/>[<paramref name="pw"/>..<paramref name="pw"/> + <paramref name="swapSize"/>).
     /// Up to 96 elements are sorted by <c>tail_swap</c>, which needs <paramref name="n"/> elements of swap memory.
     /// <paramref name="a"/> and <paramref name="w"/> may be the same buffer as long as the two ranges do not overlap.
+    /// It is not inlined because FluxSort calls it from its recursive partition, whose frames must not hold element copies.
     /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
     internal static void SortSwap<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int pa, SortSpan<T, TComparer, TContext> w, int pw, int swapSize, int n)
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -312,8 +318,8 @@ public static class QuadSort
 
     /// <summary>
     /// Writes back a pair whose comparison was made earlier, exchanged when <paramref name="swap"/> is 1. Both positions are written
-    /// whatever the flag, as the reference's branchless swaps do; the flag picks the destination index rather than the value, because
-    /// RyuJIT compiles a value selection inside a loop to a branch (verified by disassembly).
+    /// whatever the flag. The flag picks the destination index rather than the value, because RyuJIT compiles a value selection
+    /// inside a loop to a branch.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static void WritePair<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int i, int swap, T l, T r)
@@ -326,7 +332,7 @@ public static class QuadSort
 
     /// <summary>
     /// <c>head_branchless_merge</c> in the reference's gcc form: writes src[l] to dst[d] and then src[r] to dst[d + x], where x is 1 when
-    /// the left element is taken. The taken element ends up at dst[d]; when it is the left one, src[r] lands one position ahead, which a
+    /// the left element is taken. The taken element ends up at dst[d]. When it is the left one, src[r] lands one position ahead, which a
     /// later step overwrites. Writing both instead of selecting one keeps the step free of data-dependent branches.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -344,7 +350,7 @@ public static class QuadSort
 
     /// <summary>
     /// <c>tail_branchless_merge</c> in the reference's gcc form: writes src[l] to dst[d] and then src[r] to dst[d - 1 + y], where y is 1
-    /// when the right element is taken. The taken element ends up at dst[d]; when it is the left one, src[r] lands one position below,
+    /// when the right element is taken. The taken element ends up at dst[d]. When it is the left one, src[r] lands one position below,
     /// which a later step overwrites.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -436,6 +442,12 @@ public static class QuadSort
         l -= x;
         r -= x ^ 1;
     }
+
+    /// <summary>Reports a comparer whose answers would move a merge cursor out of its range.</summary>
+    [DoesNotReturn]
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static void ThrowInconsistentComparer()
+        => throw new InvalidOperationException("Comparison method violates its general contract.");
 
     /// <summary>The last step of a head merge: dst[d] = src[l] &lt;= src[r] ? src[l] : src[r].</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -579,6 +591,9 @@ public static class QuadSort
         TailBranchless(a, ref d, w, ref ptl, ref ptr);
         TailBranchless(a, ref d, w, ref ptl, ref ptr);
         TailBranchless(a, ref d, w, ref ptl, ref ptr);
+
+        // Three tail steps can use up all three left elements only if the comparer contradicted itself.
+        if (ptl < pw) ThrowInconsistentComparer();
         TailLast(a, d, w, ptl, ptr);
     }
 
@@ -776,7 +791,7 @@ public static class QuadSort
     /// </summary>
     /// <remarks>
     /// The reference jumps between the ordered, reversed and unordered states with <c>goto</c>, including into the middle of a
-    /// <c>switch</c>; the labels below are the same states, lifted to the method's top level where C# allows jumps to them.
+    /// <c>switch</c>. The labels below are the same states, lifted to the method's top level where C# allows jumps to them.
     /// </remarks>
     static bool QuadSwap<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int pa, int n)
         where TComparer : IComparer<T>
@@ -908,7 +923,7 @@ public static class QuadSort
         }
 
         {
-            // The descending stretch reached the last full group: it extends into the remainder for as long as the remainder keeps
+            // The descending stretch reached the last full group. It takes in the remainder only if all of the remainder keeps
             // descending (the reference's fall-through switch on nmemb % 8, checked from the remainder's end backwards).
             var rem = n % 8;
             for (var k = rem - 1; k >= 0; k--)
@@ -954,7 +969,7 @@ public static class QuadSort
 
     /// <summary>
     /// <c>cross_merge</c>: merges src[ps..ps + left) and src[ps + left..ps + left + right) into dst[pd..). Eight elements at a time are
-    /// copied from whichever end of a run lies entirely before (or after) the other run's next element; the rest is merged branchlessly
+    /// copied from whichever end of a run lies entirely before (or after) the other run's next element. The rest is merged branchlessly
     /// from the head and the tail at once. Two runs of nearly equal length that interleave at both ends go to <see cref="ParityMerge"/>.
     /// </summary>
     internal static void CrossMerge<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> dst, int pd, SortSpan<T, TComparer, TContext> src, int ps, int left, int right)
@@ -977,11 +992,16 @@ public static class QuadSort
 
         var ptd = pd;
         var tpd = pd + left + right - 1;
+        var end = ps + left + right;
 
         while (true)
         {
             if (tpl - ptl > 8)
             {
+                // Only a consistent comparer keeps the right run from being overdrawn. An overdrawn run would send the block copies
+                // below outside the output, and a cursor at the end of the range would make the comparisons read past it.
+                if (ptr > tpr + 1 || ptr >= end) ThrowInconsistentComparer();
+
             Ptl8Ptr:
                 if (!src.IsGreaterAt(ptl + 7, ptr))
                 {
@@ -1009,6 +1029,9 @@ public static class QuadSort
 
             if (tpr - ptr > 8)
             {
+                // The same goes for the left run.
+                if (ptl > tpl + 1 || tpl < ps) ThrowInconsistentComparer();
+
             PtlPtr8:
                 if (src.IsGreaterAt(ptl, ptr + 7))
                 {
@@ -1036,10 +1059,24 @@ public static class QuadSort
 
             if (tpd - ptd < 16) break;
 
-            for (var loop = 8; loop != 0; loop--)
+            // A cursor moves at most eight places in a batch, so only a batch near the ends of the range has to check its reads.
+            // The output still to fill keeps ptl and tpr inside the range, which leaves ptr and tpl to check.
+            if (ptr <= end - 8 && tpl >= ps + 7)
             {
-                HeadBranchless(dst, ref ptd, src, ref ptl, ref ptr);
-                TailBranchless(dst, ref tpd, src, ref tpl, ref tpr);
+                for (var loop = 8; loop != 0; loop--)
+                {
+                    HeadBranchless(dst, ref ptd, src, ref ptl, ref ptr);
+                    TailBranchless(dst, ref tpd, src, ref tpl, ref tpr);
+                }
+            }
+            else
+            {
+                for (var loop = 8; loop != 0; loop--)
+                {
+                    if (ptr >= end || tpl < ps) ThrowInconsistentComparer();
+                    HeadBranchless(dst, ref ptd, src, ref ptl, ref ptr);
+                    TailBranchless(dst, ref tpd, src, ref tpl, ref tpr);
+                }
             }
         }
 
@@ -1400,10 +1437,10 @@ public static class QuadSort
 
     /// <summary>
     /// <c>trinity_rotation</c>: exchanges a[pa..pa + left) with a[pa + left..pa + n). The shorter side goes through swap memory
-    /// when it fits; otherwise the difference between the sides does (a bridge rotation), and failing that the rotation is done
+    /// when it fits. Otherwise the difference between the sides does (a bridge rotation), and failing that the rotation is done
     /// in place by four-way, three-way and two-way cycles from both ends.
     /// </summary>
-    static void TrinityRotation<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int pa, SortSpan<T, TComparer, TContext> w, int pw, int swapSize, int n, int left)
+    internal static void TrinityRotation<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int pa, SortSpan<T, TComparer, TContext> w, int pw, int swapSize, int n, int left)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -1461,7 +1498,6 @@ public static class QuadSort
 
                     while (bridge-- != 0)
                     {
-                        // temp = *ptc; *ptc++ = *--ptd; *ptd = *pta; *pta++ = temp;
                         var temp = a.Read(ptc);
                         a.Write(ptc++, a.Read(--ptd));
                         a.Write(ptd, a.Read(pta));
@@ -1521,7 +1557,6 @@ public static class QuadSort
 
                     while (bridge-- != 0)
                     {
-                        // temp = *--ptb; *ptb = *pta; *pta++ = *--ptd; *ptd = temp;
                         var temp = a.Read(--ptb);
                         a.Write(ptb, a.Read(pta));
                         a.Write(pta++, a.Read(--ptd));
@@ -1549,7 +1584,7 @@ public static class QuadSort
         }
     }
 
-    /// <summary>temp = *--ptb; *ptb = *pta; *pta++ = *ptc; *ptc++ = *--ptd; *ptd = temp;</summary>
+    /// <summary>One step of the in-place rotation: four elements, one under each cursor, move one place around a cycle.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static void FourWayCycle<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, ref int pta, ref int ptb, ref int ptc, ref int ptd)
         where TComparer : IComparer<T>
@@ -1673,7 +1708,8 @@ public static class QuadSort
         // The reference computes nmemb - block in size_t, so a block longer than the range never takes this branch.
         if (n <= (long)block * 2 && n >= block && n - block <= swapSize)
         {
-            a.Context.OnPhase(SortPhase.QuadSortRotateMerge, a.Offset + pa, a.Offset + pa + n - 1, block);
+            // This is one backward merge, the work of a tail merge. With full swap memory it only finds the runs already merged.
+            if (n > block) a.Context.OnPhase(SortPhase.QuadSortTailMerge, a.Offset + pa, a.Offset + pa + n - 1, block);
             PartialBackwardMerge(a, pa, w, pw, swapSize, n, block);
             return;
         }

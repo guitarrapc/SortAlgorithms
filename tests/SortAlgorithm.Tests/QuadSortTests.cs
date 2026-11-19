@@ -34,7 +34,7 @@ public class QuadSortTests : StableSortTestsBase
             "random" => Enumerable.Range(0, n).Select(_ => random.Next()).ToArray(),
             "sorted" => Enumerable.Range(0, n).ToArray(),
             "reversed" => Enumerable.Range(0, n).Reverse().ToArray(),
-            // Descending with runs of equal keys: a stretch is reversed only while it descends strictly.
+            // Descending with ties: every group of eight holds an equal pair, so no group counts as strictly descending.
             "reversedDuplicates" => Enumerable.Range(0, n).Select(i => (n - i) / 3).ToArray(),
             "fewDistinct" => Enumerable.Range(0, n).Select(_ => random.Next(4)).ToArray(),
             "saw" => Enumerable.Range(0, n).Select(i => i % 37).ToArray(),
@@ -71,7 +71,7 @@ public class QuadSortTests : StableSortTestsBase
 
     /// <summary>
     /// Elements that hold references pass through the 32-element stack array (an inline array of <c>T</c>) in the quad swap and the
-    /// small-input tail swap, and through pooled swap memory in the merges; all of them must keep the references intact and in order.
+    /// small-input tail swap, and through pooled swap memory in the merges. All of them must keep the references intact and in order.
     /// </summary>
     [Test]
     [Arguments(31)]
@@ -230,12 +230,136 @@ public class QuadSortTests : StableSortTestsBase
     }
 
     /// <summary>
-    /// Swap memory is n up to 4,194,304 elements; above that it is 4,194,304 · 4^k for the smallest k with more than n / 8 elements.
+    /// With swap memory for every run, the quad and tail merges finish the sort, and what follows them only checks a boundary.
+    /// A consumer must not see that as a rotate merge.
+    /// </summary>
+    [Test]
+    [Arguments(1024)]
+    [Arguments(4096)]
+    [Arguments(5000)]
+    [Arguments(16_384)]
+    public async Task FullSwapMemoryAnnouncesNoRotateMerge(int n)
+    {
+        var phases = new List<SortPhase>();
+        var context = new VisualizationContext(onPhase: (phase, _, _, _) => phases.Add(phase));
+        var array = TestHelpers.ShuffledRange(n, 42);
+
+        QuadSort.Sort(array.AsSpan(), context);
+
+        await Assert.That(array).IsEquivalentTo(Enumerable.Range(0, n).ToArray(), CollectionOrdering.Matching);
+        await Assert.That(phases).DoesNotContain(SortPhase.QuadSortRotateMerge);
+    }
+
+    /// <summary>
+    /// Each stage of a sort with enough swap memory announces itself over the whole range. 5,000 elements leave a tail for the tail merge
+    /// levels, which start below the 4,096-element run of the final merge.
+    /// </summary>
+    [Test]
+    public async Task EachStageAnnouncesItsPhase()
+    {
+        const int n = 5000;
+        var phases = new List<(SortPhase Phase, int Start, int End, int Block)>();
+        var context = new VisualizationContext(onPhase: (phase, start, end, block) => phases.Add((phase, start, end, block)));
+
+        QuadSort.Sort(TestHelpers.ShuffledRange(n, 42).AsSpan(), context);
+
+        await Assert.That(phases[0]).IsEqualTo((SortPhase.QuadSortQuadSwap, 0, n - 1, 0));
+        await Assert.That(phases).Contains((SortPhase.QuadSortQuadMerge, 0, n - 1, 32));
+        await Assert.That(phases.Any(p => p.Phase == SortPhase.QuadSortTailMerge && p.Block < 4096)).IsTrue();
+    }
+
+    /// <summary>
+    /// With 512 elements of swap memory the merge levels stop at runs of 1,024 elements. The 476 elements left over from 1,500 fit in swap
+    /// memory, so one backward merge finishes the sort, announced as a tail merge of those runs. With 1,024 elements the run is already
+    /// the whole range, so nothing is announced for it.
+    /// </summary>
+    [Test]
+    public async Task FinalBackwardMergeIsAnnouncedAsATailMerge()
+    {
+        var unfinished = TailMergeBlocks(1500);
+        var finished = TailMergeBlocks(1024);
+
+        await Assert.That(unfinished[^1]).IsEqualTo((0, 1499, 1024));
+        await Assert.That(finished.Select(p => p.Block)).DoesNotContain(1024);
+    }
+
+    static List<(int Start, int End, int Block)> TailMergeBlocks(int n)
+    {
+        var blocks = new List<(int Start, int End, int Block)>();
+        var context = new VisualizationContext(onPhase: (phase, start, end, block) =>
+        {
+            if (phase == SortPhase.QuadSortTailMerge) blocks.Add((start, end, block));
+        });
+        QuadSort.SortWithSwapSize(TestHelpers.ShuffledRange(n, 42).AsSpan(), 512, new ComparableComparer<int>(), context);
+        return blocks;
+    }
+
+    /// <summary>
+    /// A rotation moves the same elements whichever way it runs, so only its use of swap memory tells the ways apart: the shorter side
+    /// when it fits, the difference between the sides when that fits and exceeds three, and nothing otherwise. Swap memory above
+    /// 65,536 elements counts as 65,536.
+    /// </summary>
+    [Test]
+    [Arguments(100, 300, 128, 100)]
+    [Arguments(300, 100, 128, 100)]
+    [Arguments(200, 300, 128, 100)]
+    [Arguments(300, 200, 128, 100)]
+    [Arguments(200, 500, 128, 0)]
+    [Arguments(500, 200, 128, 0)]
+    [Arguments(202, 204, 128, 0)]
+    [Arguments(204, 202, 128, 0)]
+    [Arguments(128, 300, 128, 128)]
+    [Arguments(300, 128, 128, 128)]
+    [Arguments(200, 328, 128, 128)]
+    [Arguments(328, 200, 128, 128)]
+    [Arguments(200, 203, 128, 0)]
+    [Arguments(203, 200, 128, 0)]
+    [Arguments(200, 204, 128, 4)]
+    [Arguments(204, 200, 128, 4)]
+    [Arguments(70_000, 100_000, 70_000, 30_000)]
+    [Arguments(100_000, 70_000, 70_000, 30_000)]
+    [Arguments(65_536, 100_000, 70_000, 65_536)]
+    [Arguments(100_000, 65_536, 70_000, 65_536)]
+    [Arguments(65_537, 100_000, 70_000, 34_463)]
+    [Arguments(100_000, 65_537, 70_000, 34_463)]
+    public async Task TrinityRotationChoosesItsSwapMemoryUse(int left, int right, int swapSize, int expectedCopy)
+    {
+        var (rotated, largestCopy) = Rotate(left, right, swapSize);
+
+        await Assert.That(rotated).IsTrue();
+        await Assert.That(largestCopy).IsEqualTo(expectedCopy);
+    }
+
+    static (bool Rotated, int LargestCopy) Rotate(int left, int right, int swapSize)
+    {
+        var n = left + right;
+        var values = Enumerable.Range(0, n).ToArray();
+        var swap = new int[swapSize];
+        var largestCopy = 0;
+        var context = new VisualizationContext(onRangeCopy: (_, _, length, _, destinationBuffer, _) =>
+        {
+            if (destinationBuffer == 1) largestCopy = Math.Max(largestCopy, length);
+        });
+        var comparer = new ComparableComparer<int>();
+        var a = new SortSpan<int, ComparableComparer<int>, VisualizationContext>(values, context, comparer, 0);
+        var w = new SortSpan<int, ComparableComparer<int>, VisualizationContext>(swap, context, comparer, 1);
+
+        QuadSort.TrinityRotation(a, 0, w, 0, swapSize, n, left);
+
+        var rotated = values.AsSpan(0, right).SequenceEqual(Enumerable.Range(left, right).ToArray())
+            && values.AsSpan(right).SequenceEqual(Enumerable.Range(0, left).ToArray());
+        return (rotated, largestCopy);
+    }
+
+    /// <summary>
+    /// Swap memory is n up to 4,194,304 elements. Above that it is 4,194,304 · 4^k for the smallest k with more than n / 8 elements.
     /// The cases sit on both sides of the cap and of each step of k.
     /// </summary>
     [Test]
     [Arguments(0, 0)]
     [Arguments(1000, 1000)]
+    [Arguments(2_097_153, 2_097_153)]
+    [Arguments(4_194_303, 4_194_303)]
     [Arguments(4_194_304, 4_194_304)]
     [Arguments(4_194_305, 4_194_304)]
     [Arguments(33_554_431, 4_194_304)]
@@ -308,7 +432,7 @@ public class QuadSortTests : StableSortTestsBase
     /// Random input: no comparison sort averages fewer than log₂ n! comparisons. A parity or cross merge compares once for every
     /// element it merges, with no early exit when one run runs out, so each of the about log₂ n merge levels (the three inside the quad
     /// swap's groups of eight included) costs about n comparisons, and the guards that look for ordered boundaries and eight-element
-    /// blocks add a fraction of n; the total stays below n (log₂ n + 1). The merges move every element through swap memory and back,
+    /// blocks add a fraction of n. The total stays below n (log₂ n + 1). The merges move every element through swap memory and back,
     /// so writes outnumber comparisons.
     /// </summary>
     [Test]
@@ -355,7 +479,7 @@ public class QuadSortTests : StableSortTestsBase
     }
 
     /// <summary>
-    /// Quadsort's phases are detail phases, because FluxSort delegates ranges to it; at the top level they are announced alone.
+    /// Quadsort's phases are detail phases, because FluxSort delegates ranges to it. At the top level they are announced alone.
     /// Their coordinates cover the range being sorted, including when that range starts inside the span.
     /// </summary>
     [Test]

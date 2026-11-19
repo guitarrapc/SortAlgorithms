@@ -10,7 +10,7 @@ namespace SortAlgorithm.Algorithms;
 /// 直前と同じピボットを選んだときはピボットと等しい要素をまとめて取り除き、偏った分割や短い区間は quadsort に任せます。
 /// <br/>
 /// A stable hybrid of quicksort and mergesort (van den Hoven, 2021). An up-front analysis of the input's four quarters finds ordered,
-/// reversed and streaky stretches and hands those to quadsort; everything else is partitioned stably: one pass copies the elements not
+/// reversed and streaky stretches and hands those to quadsort. Everything else is partitioned stably: one pass copies the elements not
 /// greater than the pivot to the front of the main array and the greater ones to swap memory, both in scan order. Choosing the same
 /// pivot twice in a row separates the elements equal to it in one more pass, and unbalanced or short partitions go to quadsort.
 /// </summary>
@@ -18,12 +18,12 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Algorithm:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Small input:</strong> up to 132 elements are sorted by quadsort.</description></item>
-/// <item><description><strong>Analysis:</strong> each quarter's adjacent pairs are counted as descending or not, 32 pairs at a time;
-/// a block of 32 that is entirely one or the other is a streak. When none of the four quarters shows a streak, the next 96 pairs of
+/// <item><description><strong>Analysis:</strong> each quarter's adjacent pairs are counted as descending or not, 32 pairs at a time.
+/// A block of 32 that is entirely one or the other is a streak. When none of the four quarters shows a streak, the next 96 pairs of
 /// each are skipped and assumed half descending. Input with no descending pair and ordered quarter boundaries is already sorted.
 /// Quarters that descend strictly throughout are reversed, together with a neighbour when the boundary between them descends too.</description></item>
 /// <item><description><strong>Dispatch:</strong> a quarter with more streaks than n / 256 is sorted by quadsort (skipped when it has no
-/// descending pair); adjacent non-streaky quarters are partitioned together as one range. The sorted quarters are then cross merged
+/// descending pair). Adjacent non-streaky quarters are partitioned together as one range. The sorted quarters are then cross merged
 /// into swap memory pairwise and back as one, skipping the merges whose boundaries are already in order.</description></item>
 /// <item><description><strong>Pivot:</strong> the pseudomedian of nine for up to 2,048 elements. Above that, an evenly spaced sample of
 /// 32 · 2^k elements (the smallest such that the sample's cube is at least the range) is copied out, its halves are sorted with quadsort,
@@ -31,9 +31,9 @@ namespace SortAlgorithm.Algorithms;
 /// it marks low-cardinality data, and the range is sorted with quadsort instead.</description></item>
 /// <item><description><strong>Partition:</strong> elements not greater than the pivot go to the front of the main array, greater ones to
 /// swap memory, in scan order. A leading run of elements not greater than the pivot covering more than a quarter of the range means
-/// the data is partly ordered, and both sides go to quadsort. The pivot is pushed on a stack kept at the end of swap memory.</description></item>
+/// the data is partly ordered, and when some element is greater, both sides go to quadsort. The pivot is pushed on a stack in swap memory.</description></item>
 /// <item><description><strong>Recursion:</strong> the greater side is copied back and quadsorted when it is at most 96 elements or the
-/// smaller side is at most 1/32 of it; otherwise it is partitioned from swap memory into place. The not-greater side continues in the
+/// smaller side is at most 1/32 of it. Otherwise it is partitioned from swap memory into place. The not-greater side continues in the
 /// same loop unless it is at most 96 elements or the greater side is at most 1/32 of it, in which case it is quadsorted or reverse
 /// partitioned.</description></item>
 /// <item><description><strong>Reverse partition:</strong> when the not-greater side picks a pivot equal to the previous one (or the greater
@@ -45,29 +45,33 @@ namespace SortAlgorithm.Algorithms;
 /// (<c>#define cmp</c>), which is what a struct <typeparamref name="TComparer"/> becomes after JIT specialization: the streak threshold is
 /// n / 256, and the cache limit that forces quadsort for quarters above 262,144 elements does not apply.</description></item>
 /// <item><description>Partition step: the gcc form of the reference, which writes every element to both destinations and advances the
-/// two cursors arithmetically, so the loop has no data-dependent branch. Each element therefore costs two writes, one of which a later
-/// element overwrites.</description></item>
+/// two cursors arithmetically, so the loop has no data-dependent branch. Each element therefore costs two writes, and the one on the
+/// other side is overwritten by the next element or left unused.</description></item>
 /// <item><description>Sample offset: the reference starts the sample at an offset taken from the address of a stack variable, which differs
 /// between builds and runs. This port starts at the middle of the first stride, so the samples, and with them the operation counts, are
 /// reproducible.</description></item>
-/// <item><description>Pseudomedian of nine: the reference copies the nine candidates into a stack array; this port holds them in locals,
+/// <item><description>Pseudomedian of nine: the reference copies the nine candidates into a stack array. This port holds them in locals,
 /// so the comparisons between candidates are reported without a buffer location.</description></item>
-/// <item><description>Buffers: 0 is the input, 1 is the swap memory of n elements whose end holds the pivot stack, and 2 is quadsort's
+/// <item><description>Swap memory: n elements rented from <see cref="ArrayPool{T}"/>. The reference falls back to quadsort when allocation
+/// fails. .NET reports that failure with an exception instead, so the fallback is not ported.</description></item>
+/// <item><description>Buffers: 0 is the input, 1 is the swap memory of n elements, which also holds the pivot stack, and 2 is quadsort's
 /// 32-element stack array. Quadsort runs with fluxsort's swap memory, as the reference shares it.</description></item>
-/// <item><description>Comparer contract: as in quadsort, the merges and the pivot stack rely on a consistent total order.</description></item>
+/// <item><description>Comparer contract: as in quadsort, a comparer that is not a consistent total order can make the sort throw
+/// <see cref="InvalidOperationException"/>, and it can leave the elements in an unspecified state. It cannot make the sort read or write
+/// outside its buffers.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Hybrid (Partition + Merge)</description></item>
 /// <item><description>Stable      : Yes (both partition destinations are filled in scan order, equal elements stay on the not-greater side, and quadsort is stable)</description></item>
-/// <item><description>In-place    : No (n elements of swap memory shared with quadsort, holding the pivot stack at its end)</description></item>
+/// <item><description>In-place    : No (n elements of swap memory shared with quadsort, which also hold the pivot stack)</description></item>
 /// <item><description>Best case   : Θ(n) - ordered input is recognised by the analysis with about n comparisons, strictly descending input is reversed, and low-cardinality ranges collapse by reverse partitions</description></item>
 /// <item><description>Average case: Θ(n log n) - the sampled pivot splits each range near its median</description></item>
 /// <item><description>Worst case  : O(n log n) - a partition continues only on a split no worse than 1:32; otherwise the larger side goes to quadsort, or, when the greater side is the small one, a reverse partition removes the pivot's duplicates (at least 1/17 of the range) before partitioning continues, or hands the rest to quadsort</description></item>
 /// <item><description>Comparisons : Θ(n) best, Θ(n log n) average and worst - one per element per partition, plus pivot selection of O(n^(1/3) log n) per range and quadsort's merges for the ranges handed to it</description></item>
 /// <item><description>Swaps       : O(n) - only reversals of descending quarters and stretches, and quadsort's small exchanges; partitions and merges move elements by writes</description></item>
-/// <item><description>Index Reads : Θ(n) best, Θ(n log n) average and worst - every partition reads each element of its range once, plus the pivot it compares against</description></item>
-/// <item><description>Index Writes: O(n) best, Θ(n log n) average and worst - every partition writes each element twice and copies the greater side back</description></item>
+/// <item><description>Index Reads : Θ(n) best, Θ(n log n) average and worst - the analysis reads the adjacent pairs it counts, and each later stage reads the elements it compares or moves</description></item>
+/// <item><description>Index Writes: O(n) best, Θ(n log n) average and worst - a partition writes each element twice, and the analysis reversals, quadsort, the quarter merges, the pivot samples and the copies back add their own writes</description></item>
 /// <item><description>Space       : O(n) - swap memory of n elements, plus quadsort's 32-element stack array and O(log n) recursion</description></item>
 /// </list>
 /// <para><strong>Reference:</strong></para>
@@ -83,15 +87,15 @@ public static class FluxSort
 
     // Buffer identifiers for visualization
     const int BUFFER_MAIN = 0;       // Main input array
-    const int BUFFER_SWAP = 1;       // Swap memory: partition destination for greater elements, quadsort's swap, pivot stack at its end
+    const int BUFFER_SWAP = 1;       // Swap memory: partition destination for greater elements, quadsort's swap, pivot stack
 
-    // Ranges this short are sorted by quadsort without analysis.
+    // Ranges shorter than this are sorted by quadsort without analysis.
     const int ANALYZE_MIN = 133;
 
     // Partitions this short, on either side, go to quadsort (the reference's FLUX_OUT).
     const int FLUX_OUT = 96;
 
-    // Ranges up to this size take the pseudomedian of nine; larger ones sample about the cube root.
+    // Ranges up to this size take the pseudomedian of nine. Larger ones sample about the cube root.
     const int MEDIAN_OF_NINE_MAX = 2048;
 
     /// <summary>
@@ -523,6 +527,9 @@ public static class FluxSort
         QuadSort.SortSwap(pts, pd, pts, pd + cbrt * 2, cbrt, cbrt);
         QuadSort.SortSwap(pts, pd + cbrt, pts, pd + cbrt * 2, cbrt, cbrt);
 
+        // The quadsort calls are over, so their detail phase must not cover the median search.
+        a.Context.OnPhase(SortPhase.FluxSortPivotSample, a.Offset + pa, a.Offset + pa + n - 1, cbrt * 2);
+
         // The reference combines the two comparisons with a bitwise &, so both are made.
         var secondNotAbove = !pts.IsGreaterAt(pd + cbrt * 2 - 1, pd);
         var firstConstant = !pts.IsGreaterAt(pd + cbrt - 1, pd);
@@ -539,13 +546,37 @@ public static class FluxSort
     /// <c>flux_reverse_partition</c>: splits a[pa..pa + n) into the elements less than the pivot at w[piv] and those not less, which
     /// all equal it here, and sorts the first part.
     /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
     static void ReversePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int pa, SortSpan<T, TComparer, TContext> w, int piv, int n)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         a.Context.OnPhase(SortPhase.FluxSortReversePartition, a.Offset + pa, a.Offset + pa + n - 1);
         a.Context.OnRole(w.Offset + piv, BUFFER_SWAP, RoleType.Pivot);
+        var aSize = ReverseScan(a, pa, w, piv, n);
+        a.Context.OnRole(w.Offset + piv, BUFFER_SWAP, RoleType.None);
 
+        var sSize = n - aSize;
+
+        w.CopyTo(0, a, pa + aSize, sSize);
+
+        if (sSize <= aSize / 16 || aSize <= FLUX_OUT)
+        {
+            Quadsort(a, pa, w, aSize, aSize);
+            return;
+        }
+        Partition(a, pa, w, false, piv, aSize);
+    }
+
+    /// <summary>
+    /// The scan of the reverse partition. Returns the number of elements less than the pivot. It is a separate method for the same reason
+    /// as <see cref="ChoosePivot"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static int ReverseScan<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int pa, SortSpan<T, TComparer, TContext> w, int piv, int n)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
         var m = 0;
         var i = 0;
 
@@ -566,19 +597,7 @@ public static class FluxSort
             ReverseStep(a, pa, w, piv, ref i, ref m);
         }
 
-        a.Context.OnRole(w.Offset + piv, BUFFER_SWAP, RoleType.None);
-
-        var aSize = m;
-        var sSize = n - aSize;
-
-        w.CopyTo(0, a, pa + aSize, sSize);
-
-        if (sSize <= aSize / 16 || aSize <= FLUX_OUT)
-        {
-            Quadsort(a, pa, w, aSize, aSize);
-            return;
-        }
-        Partition(a, pa, w, false, piv, aSize);
+        return m;
     }
 
     /// <summary>
@@ -599,8 +618,10 @@ public static class FluxSort
     /// <summary>
     /// <c>flux_default_partition</c>: splits the range read from <paramref name="src"/>[<paramref name="ps"/>..) into the elements not
     /// greater than the pivot at w[piv], written to a[pa..), and the greater ones, written to w[0..). Returns the count of the first part,
-    /// or 0 after sorting both parts with quadsort when a leading run of elements not greater than the pivot covered more than a quarter.
+    /// or 0 after sorting both parts with quadsort when a leading run of elements not greater than the pivot covered more than a quarter
+    /// and some element was greater.
     /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
     static int DefaultPartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int pa, SortSpan<T, TComparer, TContext> w,
         SortSpan<T, TComparer, TContext> src, int ps, int piv, int n)
         where TComparer : IComparer<T>
@@ -660,8 +681,37 @@ public static class FluxSort
     }
 
     /// <summary>
+    /// Writes the pivot of the range to w[<paramref name="piv"/>]. Returns true when the sample marks low-cardinality data. Partitioning recurses
+    /// as deep as the reference does, and element copies held in <see cref="Partition"/>'s frame would multiply by that depth for large
+    /// elements, so the work on elements stays in methods that are not inlined into it.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static bool ChoosePivot<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int pa, SortSpan<T, TComparer, TContext> w, bool fromSwap, int piv, int n)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (n <= MEDIAN_OF_NINE_MAX)
+        {
+            // The candidates are read across this range, so they must not count toward the phase before it.
+            a.Context.OnPhase(SortPhase.FluxSortPivotSample, a.Offset + pa, a.Offset + pa + n - 1, 9);
+            w.Write(piv, fromSwap ? MedianOfNine(w, 0, n) : MedianOfNine(a, pa, n));
+            return false;
+        }
+
+        w.Write(piv, MedianOfCbrt(a, pa, w, fromSwap, n, out var generic));
+        return generic;
+    }
+
+    /// <summary>Whether the previous pivot does not exceed the new one, which on this side means they are equal.</summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static bool PivotRepeats<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> w, int piv)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+        => !w.IsGreaterAt(piv + 1, piv);
+
+    /// <summary>
     /// <c>flux_partition</c>: sorts the <paramref name="n"/> elements read from w[0..) when <paramref name="fromSwap"/> is set, or from
-    /// a[pa..) otherwise, into a[pa..pa + n). Pivots are pushed below <paramref name="piv"/> on the stack at the end of swap memory.
+    /// a[pa..) otherwise, into a[pa..pa + n). Pivots are pushed below <paramref name="piv"/> on the stack in swap memory.
     /// </summary>
     static void Partition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int pa, SortSpan<T, TComparer, TContext> w, bool fromSwap, int piv, int n)
         where TComparer : IComparer<T>
@@ -673,27 +723,20 @@ public static class FluxSort
         {
             --piv;
 
-            if (n <= MEDIAN_OF_NINE_MAX)
+            if (ChoosePivot(a, pa, w, fromSwap, piv, n))
             {
-                w.Write(piv, fromSwap ? MedianOfNine(w, 0, n) : MedianOfNine(a, pa, n));
-            }
-            else
-            {
-                w.Write(piv, MedianOfCbrt(a, pa, w, fromSwap, n, out var generic));
-
-                if (generic)
+                // Announced before the copy back, which is part of the hand-off and not of the finished sample.
+                a.Context.OnPhase(SortPhase.FluxSortQuadsort, a.Offset + pa, a.Offset + pa + n - 1);
+                if (fromSwap)
                 {
-                    if (fromSwap)
-                    {
-                        w.CopyTo(0, a, pa, n);
-                    }
-                    Quadsort(a, pa, w, n, n);
-                    return;
+                    w.CopyTo(0, a, pa, n);
                 }
+                QuadSort.SortSwap(a, pa, w, 0, n, n);
+                return;
             }
 
             // The same pivot as the previous round: everything here is not greater than it, so take out the equal elements.
-            if (aSize != 0 && !w.IsGreaterAt(piv + 1, piv))
+            if (aSize != 0 && PivotRepeats(w, piv))
             {
                 ReversePartition(a, pa, w, piv, n);
                 return;

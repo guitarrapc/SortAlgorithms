@@ -27,3 +27,5 @@ For an existing sandbox project, use its project file explicitly:
 ```powershell
 dotnet run -c Release --project sandbox/YourProject/YourProject.csproj
 ```
+
+`sandbox/ScandumReferenceTrace/trace.c` prints the expected values of `ScandumReferenceTraceTests` from the C sources of quadsort and fluxsort. Its header lists the build steps.
