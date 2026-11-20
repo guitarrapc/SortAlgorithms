@@ -17,14 +17,13 @@ public class InconsistentComparerSafetyTests
     enum Sorter
     {
         Quad, QuadLimitedSwap, Flux, Pdq, PdqBranchless, Intro, IntroDotnet, Std,
-        Quick, QuickMedian3, QuickMedian9, Quick3way, Stable, BidirectionalStable, PairInsertion, Drift, Glide,
+        Quick, QuickMedian3, QuickMedian9, Quick3way, Stable, BidirectionalStable, PairInsertion, Drift, Glide, Ipn, DualPivot, Destswap,
     }
 
     /// <summary>
-    /// QuadSort, FluxSort and BidirectionalStableQuickSort may repeat or lose elements under a broken comparer. The others document that the
-    /// range keeps its elements.
+    /// QuadSort and FluxSort may repeat or lose elements under a broken comparer. The others document that the range keeps its elements.
     /// </summary>
-    static bool KeepsElements(Sorter sorter) => sorter is not (Sorter.Quad or Sorter.QuadLimitedSwap or Sorter.Flux or Sorter.BidirectionalStable);
+    static bool KeepsElements(Sorter sorter) => sorter is not (Sorter.Quad or Sorter.QuadLimitedSwap or Sorter.Flux);
 
     /// <summary>Thrown by a watching comparer, so that a cursor that has left the range stops before it can leave the buffer too.</summary>
     sealed class GuardCellReadException : Exception;
@@ -189,6 +188,9 @@ public class InconsistentComparerSafetyTests
             case Sorter.PairInsertion: PairInsertionSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.Drift: Driftsort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.Glide: Glidesort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Ipn: Ipnsort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.DualPivot: DualPivotQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Destswap: DestswapStableQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             default: throw new ArgumentOutOfRangeException(nameof(sorter));
         }
     }
@@ -435,9 +437,9 @@ public class InconsistentComparerSafetyTests
     }
 
     /// <summary>
-    /// The first pass finds every element equal to the pivot and the second finds none, which leaves the gap for the equal elements unfilled.
-    /// The scratch starts with a marker that no input holds, so copying that gap back would put the marker into the range. Sweeping the
-    /// switch point reaches this case whatever number of comparisons pivot selection makes.
+    /// A comparer that calls elements equal and then changes its answer must not make the partition copy back a scratch cell it did not
+    /// write. The scratch starts with a marker that no input holds, so copying such a cell would put the marker into the range. Sweeping the
+    /// switch point reaches every step of the partition whatever number of comparisons pivot selection makes.
     /// </summary>
     [Test]
     public async Task BidirectionalPartitionCopiesNoUnfilledGap()

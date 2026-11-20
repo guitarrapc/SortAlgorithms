@@ -22,8 +22,8 @@ public class PDQSortBranchlessTests : SortTestsBase
     // covers every announced operation in order, so a change in how the partition is written must leave what
     // an observer sees unchanged.
     [Test]
-    [Arguments(0, "9BF483BC69A5AE54B30D77BAAE41F20EF2A4EC9DE07C461AFE3F108B822BD8B3")]
-    [Arguments(16, "E05D5728F68F9E6DB8C6D69CF624FABFEE8F745575B4A45622DBA1D1FC3A7F34")]
+    [Arguments(0, "FD24DE91F50000604D4B7E18E6864A26B029F83D104091D4C5DD77804FFCA6D7")]
+    [Arguments(16, "5D8A04F8BED3CC858FAB20CCE6215F3F7353330EF715B1D459089FC2E7254C7A")]
     public async Task BlockPartitionEventStreamIsPinned(int distinct, string expected)
     {
         var values = new int[1000];

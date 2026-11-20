@@ -7,13 +7,11 @@ namespace SortAlgorithm.Algorithms;
 /// <summary>
 /// 安定ソート版のクイックソートです。
 /// 配列から四分位位置の中央値を求めてピボットとし、このピボットを基準に配列を左右に分割する分割統治法のソートアルゴリズムです。
-/// Hoare partition schemeを使用し、四分位ベースのMedian-of-3法でピボットを選択することで様々なデータパターンに対して安定した性能を実現します。
-/// 安定ソートのため、外部バッファを使用して安定な分割を行います。
+/// 四分位ベースのMedian-of-3法でピボットを選択し、外部バッファへの2パス（件数の数え上げ、次に振り分け）で未満・等値・超過の3領域へ安定に分割します。
 /// <br/>
 /// A stable variant of quicksort.
-/// A divide-and-conquer sorting algorithm that selects the pivot as the median of quartile positions in the array and partitions the array into left and right subarrays based on that pivot.
-/// It uses the Hoare partition scheme and selects the pivot via a quartile-based median-of-three method to achieve stable performance across various data patterns.
-/// To ensure stability, it performs stable partitioning using an external buffer.
+/// A divide-and-conquer sorting algorithm that selects the pivot as the median of quartile positions in the array and partitions the array into less, equal and greater regions based on that pivot.
+/// To ensure stability, it partitions through an external buffer in two passes: one counts the three groups, the next distributes them.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Stable QuickSort:</strong></para>
@@ -61,11 +59,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Stable      : Yes (preserves relative order of equal elements)</description></item>
 /// <item><description>In-place    : No (O(n) total auxiliary space across all active recursion levels, O(log n) recursion stack)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Occurs when pivot consistently divides array into balanced partitions</description></item>
-/// <item><description>Average case: Θ(n log n) - Expected ~n log₂ n comparisons with median-of-3 pivot selection</description></item>
+/// <item><description>Average case: Θ(n log n) - Median-of-3 pivots split near the median on average</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability ~1/n³ with median-of-3)</description></item>
-/// <item><description>Comparisons : ~2n log₂ n (average) - Two comparison passes per partition (count, then distribute), ~2n comparisons per level</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, O(n²) worst - every element is compared with the pivot twice per level (count, then distribute); with a median-of-3 pivot on distinct keys that is about 2 × (12/7) n ln n ≈ 2.38 n log₂ n</description></item>
 /// <item><description>Swaps       : 0 - elements move by copying to and from the scratch buffer, never by exchange</description></item>
-/// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - the count pass and the distribute pass each read every element of the range at every level</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - the count pass and the distribute pass each read every element of the range once per level, and the copy back reads the scratch</description></item>
 /// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each element is written into scratch and back at every level</description></item>
 /// <item><description>Space       : O(n) total auxiliary across all active recursion levels + O(log n) recursion stack</description></item>
 /// <item><description>Copies      : ~2n log₂ n (average) - Each element copied to/from temporary storage at each recursion level</description></item>
@@ -205,7 +203,6 @@ public static class StableQuickSort
             s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.Pivot);
 
             // Phase 2. Stable partition using pre-allocated scratch buffer
-            // Use index-based comparison to avoid copying large struct pivot values
             var (lessEnd, greaterStart) = StablePartition(s, left, right, pivotIndex, scratch);
 
             // Phase 3. Recursively sort partitions with tail recursion optimization
@@ -253,15 +250,16 @@ public static class StableQuickSort
         var length = right - left + 1;
         var tempSortSpan = new SortSpan<T, TComparer, TContext>(scratch.Slice(0, length), s.Context, s.Comparer, BUFFER_TEMP);
 
+        // The range is not written until Phase 3, so the pivot is read once and held.
+        var pivot = s.Read(pivotIndex);
         var lessIdx = 0;
         var equalIdx = 0;
 
         // Phase 1: Count elements in each partition
-        // Use index-based comparison to avoid copying large struct pivot values
         // Short-circuit when i == pivotIndex: pivot always compares equal to itself
         for (var i = left; i <= right; i++)
         {
-            var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
+            var cmp = i == pivotIndex ? 0 : s.Compare(i, pivot);
             if (cmp < 0)
             {
                 lessIdx++;
@@ -287,9 +285,9 @@ public static class StableQuickSort
         for (var i = left; i <= right; i++)
         {
             var element = s.Read(i);
-            // Re-compares against the pivot (second comparison per element after Phase 1);
-            // results match Phase 1 because the range is not modified until Phase 3
-            var cmp = i == pivotIndex ? 0 : s.Compare(i, pivotIndex);
+            // Second comparison per element; it repeats Phase 1 because the range is not modified until Phase 3.
+            // The element is already held, so it is compared by value instead of being read again.
+            var cmp = i == pivotIndex ? 0 : s.Compare(element, pivot);
             if (cmp < 0)
             {
                 if (checkRegions && lessIdx == lessEnd) ThrowHelper.ThrowInconsistentComparer();

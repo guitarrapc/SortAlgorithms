@@ -35,21 +35,21 @@ namespace SortAlgorithm.Algorithms;
 /// merge (up to 8 bytes); stable 4/8-element conditional-selection networks with bidirectional merges
 /// (up to 85 bytes, shared shape with Driftsort's small sort); or plain insertion sort with a 16-element
 /// threshold (larger elements, no scratch).</description></item>
-/// <item><description><strong>Heapsort Fallback:</strong> After 2·floor(log2(n)) partitions the recursion
-/// switches to heapsort, guaranteeing O(n log n) worst case.</description></item>
+/// <item><description><strong>Heapsort Fallback:</strong> Once 2·floor(log2(n)) partitions have been made on one recursion path,
+/// the range is sorted by heapsort, guaranteeing O(n log n) worst case.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Hybrid (Partition (base) + Heap + Insertion + Network)</description></item>
 /// <item><description>Stable      : No</description></item>
 /// <item><description>In-place    : Yes for large elements; small-sort scratch of at most 48 pooled elements otherwise (the reference uses a stack array, unavailable for generic T in C#)</description></item>
-/// <item><description>Best case   : O(n) - Fully ascending or descending input sorts with exactly n-1 comparisons</description></item>
-/// <item><description>Average case: O(n log k) where k is the number of distinct values - Equal-partition trick exploits duplicates</description></item>
+/// <item><description>Best case   : Θ(n) - A non-descending or strictly descending input longer than 20 elements is recognised as one run with n-1 comparisons (and reversed if descending)</description></item>
+/// <item><description>Average case: Θ(n log n); O(n log k) for k distinct values - the equal-partition step removes a run of keys equal to an ancestor pivot</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by the bounded partition count plus heapsort fallback</description></item>
-/// <item><description>Comparisons : O(n) for fully ascending or descending input, O(n log k) expected for k distinct values, O(n log n) worst - the three guarantees the reference implementation states</description></item>
-/// <item><description>Swaps       : Θ(n log n) - partitioning exchanges elements, and the heapsort fallback sifts by exchange; the sorting network in the small sort exchanges too</description></item>
+/// <item><description>Comparisons : Θ(n) for a non-descending or strictly descending input longer than 20 elements, O(n log k) expected for k distinct values, O(n log n) worst - the three guarantees the reference implementation states</description></item>
+/// <item><description>Swaps       : O(n) average, O(n log n) worst - the cyclic partitions move elements by reads and writes and swap the pivot twice per partition; a strictly descending input is reversed with n/2 swaps; the observed sorting networks swap the pairs they exchange; the heapsort fallback swaps each extracted maximum</description></item>
 /// <item><description>Index Reads : Θ(n log n) average, Θ(n) best - every partition level reads each element of the range it splits</description></item>
-/// <item><description>Index Writes: Θ(n log n) average, Θ(n) best - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, 0 best - the cyclic partitions write each element about twice per level, and the small sorts write through their scratch and merges; an input recognised as one ascending run is not written</description></item>
 /// <item><description>Space       : O(log n) stack; at most 48 pooled scratch elements for the small sort</description></item>
 /// </list>
 /// <para><strong>Differences from the Reference (Rust) Implementation:</strong></para>
@@ -1203,10 +1203,10 @@ public static class Ipnsort
     /// <summary>
     /// Merges src[srcStart..srcStart+len/2) and src[srcStart+len/2..srcStart+len) into
     /// dst[dstStart..dstStart+len), consuming the input from both ends at once
-    /// (idea from quadsort's parity merge, adapted as in the reference). The source and
-    /// destination regions must not overlap and len must be at least 2.
-    /// <para>All read indices stay in bounds for any comparison outcome; an inconsistent
-    /// comparer yields an unspecified permutation of copies but never faults.</para>
+    /// (the idea of quadsort's parity merge). The source and destination regions must not overlap and len must be at least 2.
+    /// <para>All read indices stay in bounds for any comparison outcome. With a consistent comparer
+    /// the forward and backward cursors meet exactly; when they do not, the output may repeat some
+    /// elements and miss others, so the input is copied over it and the comparer is reported.</para>
     /// <para>Under NullContext the branch-free twin below runs instead; the loop here keeps
     /// the reference-shaped conditional steps so observing contexts report accurate reads.</para>
     /// </summary>
@@ -1255,12 +1255,34 @@ public static class Ipnsort
         {
             var leftNonempty = left <= leftRev;
             dst.Write(d, src.Read(leftNonempty ? left : right));
+            if (leftNonempty) left++; else right++;
         }
+
+        CheckCursorsMet(src, srcStart, len, dst, dstStart, left, leftRev, right, rightRev);
     }
 
     /// <summary>
-    /// Branch-free twin of <see cref="BidirectionalMerge"/> matching the reference's
-    /// merge_up/merge_down: cursors advance by bool arithmetic and the taken element is picked
+    /// After a bidirectional merge each run must have been consumed exactly once, which the forward and backward cursors
+    /// show by meeting. Only a comparer that is not a consistent total order can make them miss; the output may then repeat
+    /// elements, so the input, which is still intact, is copied over it before the comparer is reported. The check compares
+    /// indices only, and it folds away under the natural order of a primitive type.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void CheckCursorsMet<T, TComparer, TContext>(
+        SortSpan<T, TComparer, TContext> src, int srcStart, int len,
+        SortSpan<T, TComparer, TContext> dst, int dstStart,
+        int left, int leftRev, int right, int rightRev)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (src.UsesNaturalPrimitiveOrder || (left == leftRev + 1 && right == rightRev + 1)) return;
+        src.CopyTo(srcStart, dst, dstStart, len);
+        ThrowHelper.ThrowInconsistentComparer();
+    }
+
+    /// <summary>
+    /// Branch-free twin of <see cref="BidirectionalMerge"/>, in the form of merge_up/merge_down:
+    /// cursors advance by bool arithmetic and the taken element is picked
     /// with a mask select from the already-loaded pair, so the loop has no data-dependent branch.
     /// Merge inputs here are quicksort-leaf halves, which are dominated by random interleavings.
     /// </summary>
@@ -1308,7 +1330,10 @@ public static class Ipnsort
         {
             var leftNonempty = left <= leftRev;
             dst.Write(d, src.Read(leftNonempty ? left : right));
+            if (leftNonempty) left++; else right++;
         }
+
+        CheckCursorsMet(src, srcStart, len, dst, dstStart, left, leftRev, right, rightRev);
     }
 
     /// <summary>

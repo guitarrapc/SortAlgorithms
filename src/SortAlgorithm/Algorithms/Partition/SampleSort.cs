@@ -9,14 +9,14 @@ namespace SortAlgorithm.Algorithms;
 /// 中央値、四分位点、八分位点…の順に分割へ使う QuickSort の一般化です（Frazer &amp; McKellar, 1970）。
 /// 1 回の分割ごとにピボットを選び直す代わりに、すべてのピボットを 1 つのサンプルから決めることで分割が釣り合い、
 /// 比較回数の期待値は n が大きくなるにつれて情報理論的下限 log₂ n! に近づきます。
-/// サンプルを使い切った部分配列と、サンプル自身の整列には同じ手順を再帰的に適用し、他のソートへは切り替えません。
+/// サンプル自身の整列と、サンプルを使い切った部分配列には同じ手順を再帰的に適用し（後者は CPython の samplesort の方式）、他のソートへは切り替えません。
 /// <br/>
 /// A generalisation of QuickSort that draws a random sample of 2^k − 1 elements, sorts it first, and then uses its
 /// elements as preselected pivots — the median first, then the quartiles, then the octiles, and so on (Frazer &amp; McKellar, 1970).
 /// Taking every pivot from one sample instead of choosing a new one for each partition keeps the partitions balanced,
 /// so the expected number of comparisons approaches the information-theoretic bound log₂ n! as n grows.
-/// The subarrays left once the sample is exhausted, and the sample itself, are sorted by the same procedure; the
-/// algorithm never switches to another sort.
+/// The sample itself, and the subarrays left once the sample is exhausted, are sorted by the same procedure (the latter as
+/// CPython's samplesort did); the algorithm never switches to another sort.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Sample Sort:</strong></para>
@@ -40,10 +40,15 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Implementation notes:</strong></para>
 /// <list type="bullet">
 /// <item><description>Sample size: 2^k − 1 where 2^k is the power of two closest to n / ln n, with n the length of the range drawing the
-/// sample. This is the rule CPython's samplesort used; the theory leaves the sample size free as long as it grows with n. For every
-/// n ≥ 2 the closest power is at least 2, so each range draws at least one pivot and the small ranges at the bottom of the recursion are
-/// ordinary randomised quicksort partitions rather than a separate small sort. The rule is evaluated through a table of 25 cutoffs
-/// (<c>SampleCutoffs</c>) instead of a logarithm per range.</description></item>
+/// sample; the theory leaves the sample size free as long as it grows with n. The rule is evaluated through a table of 25 cutoffs
+/// (<c>SampleCutoffs</c>) instead of a logarithm per range, and the table rounds at the arithmetic midpoint between two powers
+/// (46, 114, 269, …). CPython's samplesort chose the same power but rounded at the geometric midpoint (43, 106, 250, …) and never drew
+/// fewer than 15 pivots, handing smaller ranges to binary insertion sort. This class has no such cutoff: for every n ≥ 2 the closest
+/// power is at least 2, so each range draws at least one pivot and the small ranges at the bottom of the recursion are ordinary
+/// randomised quicksort partitions.</description></item>
+/// <item><description>Recursion on exhausted ranges: a range whose sample is used up draws a new sample, as CPython's samplesort did.
+/// Wikipedia describes Frazer and McKellar as sampling once and quicksorting the resulting subarrays; the paper itself was not
+/// available to check.</description></item>
 /// <item><description>Random source: a xorshift32 stream with a <c>seed</c> parameter, so a given seed always draws the same samples and
 /// the operation counts are reproducible. The draw is a partial Fisher–Yates shuffle of the first 2^k − 1 positions.</description></item>
 /// <item><description>Sample placement: a range keeps its sorted sample in its first positions. To partition, the elements after the sample

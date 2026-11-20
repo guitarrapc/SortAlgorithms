@@ -8,16 +8,16 @@ namespace SortAlgorithm.Algorithms;
 /// <summary>
 /// LLVM libc++ std::sort implementation in C#.
 /// Implements Introsort algorithm combining quicksort, heapsort, and insertion sort
-/// with advanced optimizations including Tuckey's ninther, sorting networks, and
+/// with advanced optimizations including Tukey's ninther, sorting networks, and
 /// detection of already-partitioned data.
 /// </summary>
 /// <remarks>
 /// <para><strong>Algorithm Overview:</strong></para>
 /// <list type="bullet">
-/// <item><description>Introsort: QuickSort with HeapSort fallback at depth limit</description></item>
+/// <item><description>Introsort: QuickSort with libc++'s heap fallback (__partial_sort: make_heap, then sort_heap with Floyd's sift) at depth limit</description></item>
 /// <item><description>Sorting Networks: Optimized 2-5 element sorts (branchless cmov-style variants for primitive types with natural ordering)</description></item>
 /// <item><description>Insertion Sort: For small subarrays (< 24 elements)</description></item>
-/// <item><description>Tuckey's Ninther: Advanced pivot selection for large arrays (>= 128)</description></item>
+/// <item><description>Tukey's Ninther: Advanced pivot selection for arrays longer than 128</description></item>
 /// <item><description>Partition Optimizations: Equal element handling, already-partitioned detection</description></item>
 /// <item><description>Bitset Partition: For primitive types with the natural-order comparer (the analog of libc++'s
 /// __use_branchless_sort), partitioning uses 64-element blocks whose comparison outcomes are packed into ulong
@@ -34,9 +34,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n log n) - Typical random data</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by HeapSort fallback</description></item>
 /// <item><description>Comparisons : Θ(n log n) average, O(n log n) worst - introsort's quicksort phase bounded by the heapsort fallback</description></item>
-/// <item><description>Swaps       : Θ(n log n) - the partition scheme exchanges elements, and the heapsort fallback sifts by exchange</description></item>
+/// <item><description>Swaps       : O(n log n) - the partitions exchange misplaced pairs and the sorting networks exchange out-of-order pairs; the heap fallback moves elements through holes and swaps nothing</description></item>
 /// <item><description>Index Reads : Θ(n log n) - every partition level reads each element of the range it splits</description></item>
-/// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Index Writes: O(n log n) - each swap writes two positions; pivot placement, the insertion shifts, the branchless networks' unconditional stores and the heap fallback's hole moves add their own writes</description></item>
 /// <item><description>Space       : O(log n) - Recursion stack depth</description></item>
 /// </list>
 /// <para><strong>Comparer contract:</strong></para>
@@ -67,7 +67,7 @@ public static class StdSort
 
     // Upper bound for using insertion sort for sorting
     private const int InsertionSortThreshold = 24;
-    // Lower bound for using Tuckey's ninther technique for median computation
+    // Lower bound for using Tukey's ninther technique for median computation
     private const int NINTHER_THRESHOLD = 128;
     // Block size for the bitset partition: one ulong worth of comparison outcomes,
     // matching libc++'s __detail::__block_size (sizeof(uint64_t) * 8)
@@ -473,12 +473,12 @@ public static class StdSort
             if (depth == 0)
             {
                 s.Context.OnPhase(SortPhase.HybridToHeapSort, first, last - 1);
-                HeapSort.SortFallbackCore(s, first, last);
+                PartialSort(s, first, last);
                 return;
             }
             depth--;
 
-            // Pivot selection: Tuckey's ninther for large arrays, median-of-3 otherwise
+            // Pivot selection: Tukey's ninther for large arrays, median-of-3 otherwise
             var halfLen = len / 2;
             if (len > NINTHER_THRESHOLD)
             {
@@ -578,9 +578,9 @@ public static class StdSort
         for (var i = first + 1; i < last; i++)
         {
             var j = i - 1;
-            if (s.IsLessAt(i, j))
+            // The comparisons hand back the elements they read, so each shift writes a value already held.
+            if (s.IsLessAt(i, j, out var tmp, out var shifted))
             {
-                var tmp = s.Read(i);
                 var k = j;
                 j = i;
                 do
@@ -588,9 +588,9 @@ public static class StdSort
                     // Only a consistent comparer stops at the sentinel, and element access is unchecked. The natural order of a
                     // primitive type is consistent, so the check folds away for it.
                     if (!s.UsesNaturalPrimitiveOrder && k < first) ThrowHelper.RestoreAndThrowInconsistentComparer(s, j, tmp);
-                    s.Write(j, s.Read(k));
+                    s.Write(j, shifted);
                     j = k;
-                } while (s.IsValueLessThan(tmp, --k));
+                } while (s.IsValueLessThan(tmp, --k, out shifted));
                 s.Write(j, tmp);
             }
         }
@@ -637,16 +637,15 @@ public static class StdSort
 
         for (var i = j + 1; i < last; i++)
         {
-            if (s.IsLessAt(i, j))
+            if (s.IsLessAt(i, j, out var tmp, out var shifted))
             {
-                var tmp = s.Read(i);
                 var k = j;
                 j = i;
                 do
                 {
-                    s.Write(j, s.Read(k));
+                    s.Write(j, shifted);
                     j = k;
-                } while (j != first && s.IsValueLessThan(tmp, --k));
+                } while (j != first && s.IsValueLessThan(tmp, --k, out shifted));
                 s.Write(j, tmp);
 
                 if (++count == limit)
@@ -1025,5 +1024,174 @@ public static class StdSort
         s.Write(pivotPos, pivot);
 
         return i;
+    }
+
+    /// <summary>
+    /// libc++'s heap fallback, <c>__partial_sort(first, last, last)</c>: <c>__make_heap</c> sifts every parent down with a held hole,
+    /// then <c>__sort_heap</c> pops each maximum by Floyd's sift (down to a leaf comparing only the children) and a sift up from the leaf.
+    /// It runs only after the depth limit, so it is kept out of the partition loop's code.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void PartialSort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var n = last - first;
+        if (n > 1)
+        {
+            for (var start = (n - 2) / 2; start >= 0; start--)
+            {
+                HeapSiftDown(s, first, n, first + start);
+            }
+        }
+
+        for (var len = n; len > 1; len--)
+        {
+            PopHeap(s, first, first + len, len);
+        }
+    }
+
+    /// <summary>
+    /// libc++'s <c>__sift_down</c>: moves the element at <paramref name="start"/> down a max-heap of <paramref name="len"/> elements
+    /// at <paramref name="first"/>, holding it while larger children move up into the hole.
+    /// </summary>
+    private static void HeapSiftDown<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int len, int start)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var child = start - first;
+        if (len < 2 || (len - 2) / 2 < child) return;
+
+        child = 2 * child + 1;
+        var childI = first + child;
+        if (child + 1 < len)
+        {
+            var right = RightChildIsLarger(s, childI);
+            childI += right;
+            child += right;
+        }
+
+        if (s.IsLessAt(childI, start, out var childValue, out var top)) return;
+
+        while (true)
+        {
+            s.Write(start, childValue);
+            start = childI;
+            if ((len - 2) / 2 < child) break;
+
+            child = 2 * child + 1;
+            childI = first + child;
+            if (child + 1 < len)
+            {
+                var right = RightChildIsLarger(s, childI);
+                childI += right;
+                child += right;
+            }
+
+            if (s.IsElementLessThan(childI, top, out childValue)) break;
+        }
+
+        s.Write(start, top);
+    }
+
+    /// <summary>
+    /// libc++'s <c>__pop_heap</c>: moves the maximum of the heap [first, last) to last - 1. The hole left at the root descends to a leaf
+    /// along the larger children, takes the last element, and that element sifts up.
+    /// </summary>
+    private static void PopHeap<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int len)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (len <= 1) return;
+
+        var top = s.Read(first);
+        var hole = FloydSiftDown(s, first, len);
+        last--;
+        if (hole == last)
+        {
+            s.Write(hole, top);
+        }
+        else
+        {
+            s.Write(hole, s.Read(last));
+            hole++;
+            s.Write(last, top);
+            HeapSiftUp(s, first, hole, hole - first);
+        }
+    }
+
+    /// <summary>
+    /// libc++'s <c>__floyd_sift_down</c>: moves the hole at the root to a leaf, filling it with the larger child at every level. Returns
+    /// the leaf position of the hole.
+    /// </summary>
+    private static int FloydSiftDown<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int len)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        var hole = first;
+        var childI = first;
+        var child = 0;
+        while (true)
+        {
+            childI += child + 1;
+            child = 2 * child + 1;
+            if (child + 1 < len)
+            {
+                var right = RightChildIsLarger(s, childI);
+                childI += right;
+                child += right;
+            }
+
+            s.Write(hole, s.Read(childI));
+            hole = childI;
+            if (child > (len - 2) / 2) return hole;
+        }
+    }
+
+    /// <summary>
+    /// 1 when the child at <paramref name="childI"/> is less than its right sibling (libc++'s <c>comp(*child_i, *(child_i + 1))</c>), else 0.
+    /// The result is added to the child index instead of branched on, as Rust's heapsort and <see cref="HeapSort"/> do, because the branch
+    /// is mispredicted about half the time. Floating-point types keep the branch: their natural comparison branches on NaN internally.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int RightChildIsLarger<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int childI)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (typeof(T) == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(Half))
+        {
+            if (s.IsLessAt(childI, childI + 1)) return 1;
+            return 0;
+        }
+        return s.IsLessAt(childI, childI + 1) ? 1 : 0;
+    }
+
+    /// <summary>
+    /// libc++'s <c>__sift_up</c>: moves the element at <paramref name="last"/> - 1 up the heap at <paramref name="first"/>, holding it
+    /// while smaller parents move down into the hole.
+    /// </summary>
+    private static void HeapSiftUp<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, int len)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        if (len <= 1) return;
+
+        len = (len - 2) / 2;
+        var ptr = first + len;
+        last--;
+        if (!s.IsLessAt(ptr, last, out var ptrValue, out var t)) return;
+
+        while (true)
+        {
+            s.Write(last, ptrValue);
+            last = ptr;
+            if (len == 0) break;
+
+            len = (len - 1) / 2;
+            ptr = first + len;
+            if (!s.IsElementLessThan(ptr, t, out ptrValue)) break;
+        }
+
+        s.Write(last, t);
     }
 }

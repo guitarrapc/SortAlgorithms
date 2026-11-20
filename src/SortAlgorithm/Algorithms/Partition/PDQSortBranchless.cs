@@ -55,7 +55,7 @@ namespace SortAlgorithm.Algorithms;
 /// patterns thanks to pattern detection. This is the same trade-off orlp/pdqsort accepts.</description></item>
 /// <item><description>Small random input (n=256): slower, because the block machinery's fixed costs dominate.</description></item>
 /// </list>
-/// <para>All other components (ninther pivot selection, equal-block skip, partition_left for duplicates,
+/// <para>All other components (ninther pivot selection, partition_left for duplicates,
 /// partial insertion sort pattern detection, pattern-defeating shuffles, heapsort fallback, tail recursion
 /// elimination) are identical to <see cref="PDQSort"/> - see its documentation for the theory.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -63,13 +63,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Hybrid (Partition (base) + Heap + Insertion)</description></item>
 /// <item><description>Stable      : No</description></item>
 /// <item><description>In-place    : Yes (O(log n) stack + 128 bytes of offset buffers per partition call)</description></item>
-/// <item><description>Best case   : O(n) - Sorted, reverse sorted, all equal elements</description></item>
+/// <item><description>Best case   : Θ(n) - Sorted, reverse sorted, all equal elements</description></item>
 /// <item><description>Average case: Θ(n log n)</description></item>
 /// <item><description>Worst case  : O(n log n) - HeapSort fallback</description></item>
-/// <item><description>Comparisons : ~1.2-1.4n log₂ n (average), Θ(n) best - the branchless partition performs the same logical comparisons as the branching one, so the counts match <see cref="PDQSort"/></description></item>
-/// <item><description>Swaps       : ~0.33n log₂ n (average) - buffering the offsets changes when the exchanges happen, not which ones are needed</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, Θ(n) best, O(n log n) worst - the block partition compares each element with the pivot once, where the branching scans compare the two elements at which they cross twice, so the totals differ slightly from <see cref="PDQSort"/></description></item>
+/// <item><description>Swaps       : O(n log n) - the cyclic exchange moves misplaced elements by reads and writes and swaps only when both offset counts are equal; the starting scans, pivot selection and the pattern-breaking shuffles add a constant number per partition</description></item>
 /// <item><description>Index Reads : Θ(n log n) average, Θ(n) best - every partition level reads each element once to classify it into the offset buffer</description></item>
-/// <item><description>Index Writes: Θ(n log n) average, O(1) best - each swap writes two positions; an already ordered input is never partitioned</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(1) best - the cyclic exchange writes each misplaced element once, swaps write two positions, and the pivot placement and the insertion sorts add their own writes; sorted input is partitioned once without entering the block phase</description></item>
 /// <item><description>Space       : O(log n) recursion stack + O(1) offset buffers (128 bytes per partition call)</description></item>
 /// </list>
 /// <para><strong>Comparer contract:</strong></para>
@@ -102,9 +102,7 @@ public static class PDQSortBranchless
     private const int NintherThreshold = 128;
     private const int PartialInsertionSortLimit = 8;
 
-    // Block partition constants: 64 offsets per side fit both offset buffers in two cache
-    // lines and keep every offset within a byte (orlp uses the same block size for the
-    // non-cache-line-aligned configuration).
+    // Block partition constants: orlp's block size. 64 offsets per side keep every offset within a byte.
     private const int BlockSize = 64;
 
     // Buffer identifiers for visualization
@@ -267,20 +265,16 @@ public static class PDQSortBranchless
                 continue;
             }
 
-            // Partition and detect equal elements block
+            // Partition and get results.
             s.Context.OnPhase(SortPhase.QuickSortPartition, begin, end - 1, begin);
             s.Context.OnRole(begin, BUFFER_MAIN, RoleType.Pivot);
-            var (equalLeft, equalRight, alreadyPartitioned) = PartitionRightSkipEquals(s, begin, end);
+            var (pivotPos, alreadyPartitioned) = PartitionRight(s, begin, end);
             s.Context.OnRole(begin, BUFFER_MAIN, RoleType.None);
 
-            // Calculate sizes excluding the equal block
-            var lSize = equalLeft - begin;        // Elements < pivot
-            var rSize = end - equalRight;          // Elements > pivot
-            var eqSize = equalRight - equalLeft;         // Elements == pivot (to be excluded from recursion)
-            var effective = size - eqSize;  // Effective size excluding equal elements
-
-            // Check for highly unbalanced partition (using effective size)
-            var highlyUnbalanced = effective > 0 && (lSize < effective / 8 || rSize < effective / 8);
+            // Check for a highly unbalanced partition.
+            var lSize = pivotPos - begin;
+            var rSize = end - (pivotPos + 1);
+            var highlyUnbalanced = lSize < size / 8 || rSize < size / 8;
 
             // If we got a highly unbalanced partition we shuffle elements to break many patterns
             if (highlyUnbalanced)
@@ -297,26 +291,26 @@ public static class PDQSortBranchless
                 if (lSize >= InsertionSortThreshold)
                 {
                     s.Swap(begin, begin + lSize / 4);
-                    s.Swap(equalLeft - 1, equalLeft - lSize / 4);
+                    s.Swap(pivotPos - 1, pivotPos - lSize / 4);
 
                     if (lSize > NintherThreshold)
                     {
                         s.Swap(begin + 1, begin + (lSize / 4 + 1));
                         s.Swap(begin + 2, begin + (lSize / 4 + 2));
-                        s.Swap(equalLeft - 2, equalLeft - (lSize / 4 + 1));
-                        s.Swap(equalLeft - 3, equalLeft - (lSize / 4 + 2));
+                        s.Swap(pivotPos - 2, pivotPos - (lSize / 4 + 1));
+                        s.Swap(pivotPos - 3, pivotPos - (lSize / 4 + 2));
                     }
                 }
 
                 if (rSize >= InsertionSortThreshold)
                 {
-                    s.Swap(equalRight, equalRight + rSize / 4);
+                    s.Swap(pivotPos + 1, pivotPos + (1 + rSize / 4));
                     s.Swap(end - 1, end - rSize / 4);
 
                     if (rSize > NintherThreshold)
                     {
-                        s.Swap(equalRight + 1, equalRight + (1 + rSize / 4));
-                        s.Swap(equalRight + 2, equalRight + (2 + rSize / 4));
+                        s.Swap(pivotPos + 2, pivotPos + (2 + rSize / 4));
+                        s.Swap(pivotPos + 3, pivotPos + (3 + rSize / 4));
                         s.Swap(end - 2, end - (1 + rSize / 4));
                         s.Swap(end - 3, end - (2 + rSize / 4));
                     }
@@ -325,70 +319,32 @@ public static class PDQSortBranchless
             else
             {
                 // If we were decently balanced and we tried to sort an already partitioned
-                // sequence try to use insertion sort (excluding equal elements block)
+                // sequence try to use insertion sort.
                 if (alreadyPartitioned)
                 {
                     s.Context.OnPhase(SortPhase.PDQPartialInsertionSort, begin, end - 1);
-                    if (PartialInsertionSort(s, begin, equalLeft) &&
-                        PartialInsertionSort(s, equalRight, end))
+                    if (PartialInsertionSort(s, begin, pivotPos) &&
+                        PartialInsertionSort(s, pivotPos + 1, end))
                     {
                         return;
                     }
                 }
             }
 
-            // Tail recursion optimization: always recurse on smaller partition, loop on larger
-            var leftSize = equalLeft - begin;
-            var rightSize = end - equalRight;
-
-            if (leftSize < rightSize)
+            // Recurse on the smaller side and loop on the larger, which bounds the call stack at O(log n). pdqsort recurses on the left
+            // side; both sides see the same range, bad-partition budget and leftmost flag either way, so the comparisons are the same.
+            if (lSize < rSize)
             {
-                // Recurse on smaller left partition (preserves leftmost flag)
-                PDQSortLoop(s, begin, equalLeft, badAllowed, leftmost);
-                // Tail recursion: continue loop with larger right partition
-                begin = equalRight;
+                PDQSortLoop(s, begin, pivotPos, badAllowed, leftmost);
+                begin = pivotPos + 1;
                 leftmost = false;
             }
             else
             {
-                // Recurse on smaller right partition (always non-leftmost)
-                PDQSortLoop(s, equalRight, end, badAllowed, false);
-                // Tail recursion: continue loop with larger left partition
-                end = equalLeft;
-                // Preserve leftmost flag for left partition
+                PDQSortLoop(s, pivotPos + 1, end, badAllowed, false);
+                end = pivotPos;
             }
         }
-    }
-
-    /// <summary>
-    /// Partitions using the branchless PartitionRight and then detects consecutive elements
-    /// equal to the pivot, returning the bounds of the equal block to exclude from recursion.
-    /// Same contract as PDQSort.PartitionRightSkipEquals.
-    /// </summary>
-    private static (int eqL, int eqR, bool alreadyPartitioned) PartitionRightSkipEquals<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var (pivotPos, alreadyPartitioned) = PartitionRight(s, begin, end);
-
-        // Read pivot value once to minimize SortSpan access
-        var pivot = s.Read(pivotPos);
-
-        // Expand left: find consecutive elements equal to pivot
-        var eqL = pivotPos;
-        while (eqL > begin && s.Compare(eqL - 1, pivot) == 0)
-        {
-            eqL--;
-        }
-
-        // Expand right: find consecutive elements equal to pivot
-        var eqR = pivotPos + 1;
-        while (eqR < end && s.Compare(eqR, pivot) == 0)
-        {
-            eqR++;
-        }
-
-        return (eqL, eqR, alreadyPartitioned);
     }
 
     /// <summary>
@@ -589,7 +545,7 @@ public static class PDQSortBranchless
         // there was no element before *first.
         if (first - 1 == begin)
         {
-            do { last--; } while (first < last && s.IsElementGreaterOrEqual(last, pivot));
+            while (first < last && s.IsElementGreaterOrEqual(--last, pivot)) { }
         }
         else
         {
@@ -771,7 +727,7 @@ public static class PDQSortBranchless
 
         if (last + 1 == end)
         {
-            do { first++; } while (first < last && s.IsValueGreaterOrEqual(pivot, first));
+            while (first < last && s.IsValueGreaterOrEqual(pivot, ++first)) { }
         }
         else
         {
@@ -808,17 +764,17 @@ public static class PDQSortBranchless
         for (var cur = begin + 1; cur < end; cur++)
         {
             var sift = cur;
-            var siftValue = s.Read(cur);
 
             // Compare first so we can avoid 2 moves for an element already positioned correctly.
-            if (s.IsLessAt(sift, sift - 1))
+            // The comparisons hand back the elements they read, so each shift writes a value already held.
+            if (s.IsLessAt(sift, sift - 1, out var siftValue, out var shifted))
             {
-                do
+                while (true)
                 {
-                    s.Write(sift, s.Read(sift - 1));
+                    s.Write(sift, shifted);
                     sift--;
+                    if (sift == begin || !s.IsValueLessThan(siftValue, sift - 1, out shifted)) break;
                 }
-                while (sift != begin && s.IsValueLessThan(siftValue, sift - 1));
 
                 s.Write(sift, siftValue);
                 limit += cur - sift;

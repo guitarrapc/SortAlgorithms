@@ -651,9 +651,9 @@ public enum SortPhase
     HybridToHeapSort,
 
     /// <summary>
-    /// Hybrid sort (DestswapStableQuickSort) switching to MergeSort because the partition is small
-    /// (n &lt; threshold) or the recursion budget has been exhausted, guaranteeing O(n log n) worst-case.
-    /// param1=left (inclusive), param2=right (inclusive), param3=threshold (SMALL_SORT when small; 0 when budget exhausted)
+    /// Hybrid sort switching to MergeSort for a range.
+    /// param1=left (inclusive), param2=right (inclusive), param3=threshold (0 when a recursion budget was exhausted)
+    /// No algorithm announces it since DestswapStableQuickSort stopped falling back to merge sort; it stays so later phases keep their values.
     /// </summary>
     HybridToMergeSort,
 

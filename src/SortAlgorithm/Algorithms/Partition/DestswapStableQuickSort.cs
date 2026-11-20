@@ -1,6 +1,5 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Buffers;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
@@ -8,23 +7,21 @@ namespace SortAlgorithm.Algorithms;
 /// <summary>
 /// DestSwap 方式の安定ソート版クイックソートです。
 /// 分割時に less を出力先バッファへ、geq をスクラッチバッファへ直接書き込み、再帰ごとに出力先とスクラッチの役割を交換することで、各レベルでのコピーバックを不要にした安定 2-way パーティションを行います。
-/// 左半分の前方スキャンと右半分の後方スキャンを交互に実行し、Glidesort 由来の擬似メディアンヒューリスティックでピボットを選択します。
-/// 小さなパーティションや再帰予算の枯渇時はボトムアップマージソートへフォールバックすることで、最悪計算量 O(n log n) を保証します。
+/// 左半分の前方スキャンと右半分の後方スキャンを交互に実行し、Glidesort の擬似メディアンでピボットを選択します。他のアルゴリズムへの切り替えは行わず、最悪計算量は O(n²) です。
 /// <br/>
 /// A stable variant of quicksort using the DestSwap strategy.
 /// The stable 2-way partition writes less elements directly into the destination buffer and geq elements into the scratch buffer, and recursive calls swap the destination/scratch roles so that no copy-back is needed at each level.
-/// It interleaves a forward scan over the left half with a backward scan over the right half, and selects the pivot with a Glidesort-inspired pseudo-median heuristic.
-/// Small partitions and exhausted recursion budgets fall back to bottom-up merge sort, guaranteeing O(n log n) worst-case complexity.
+/// It interleaves a forward scan over the left half with a backward scan over the right half, and selects the pivot with glidesort's pseudo-median.
+/// It does not switch to another algorithm, so its worst case is O(n²) like other quicksorts.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct DestSwap Stable QuickSort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Pseudo-Median Pivot Selection (Glidesort-inspired):</strong> The pivot value is sampled at three positions
-/// biased away from the extremes: a = 0, b = n/2 - n/8, c = n - 1 - n/8.
-/// For n below the pseudo-median threshold (64) a plain median-of-3 of those positions is used (3 reads, 2-3 comparisons);
-/// at or above the threshold each position is first refined to the median of three nearby samples spaced n/64 apart,
-/// then the median of the three refined positions is taken (9 reads, 8-12 comparisons).
-/// The biased positions avoid the extreme indices that produce degenerate pivots on pipeorgan, valley, and partially sorted patterns.</description></item>
+/// <item><description><strong>Pseudo-Median Pivot Selection (glidesort):</strong> Three regions of n/8 elements start at a = 0,
+/// b = n/2 - n/8 and c = n - n/8, each moved into the other half of the split input when its own half is too short.
+/// For n below the pseudo-median threshold (64) the pivot is the median of the three elements at a, b and c (2-3 comparisons).
+/// From the threshold on, each region is first reduced to the median of three of its own subregions an eighth of its size, recursively
+/// while a region holds at least 8 elements, so about n^0.528 elements are sampled. Below 8 elements c is the last element.</description></item>
 /// <item><description><strong>DestSwap Stable 2-way Partitioning (no copy-back):</strong> The logical input is a concatenation of two half-spans
 /// that may reside in either the main span or the scratch span. A single interleaved pass scans the left half forward and the right half backward,
 /// writing four groups directly to their final regions:
@@ -49,35 +46,40 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Left with pivot: less = val ≤ prevPivot — activated when a partition produces no less elements,
 /// re-partitioning the same data so that at least the pivot-equal elements move to the less side, guaranteeing progress</description></item>
 /// <item><description>Left if equal (adaptive): used for the geq-side recursion; a new pivot is selected and the left strategy
-/// activates only when newPivot ≤ prevPivot, indicating an equal-heavy region</description></item>
+/// activates only when newPivot ≤ prevPivot, indicating an equal-heavy region. The less side of such a range keeps the same ancestor
+/// pivot, because every element of the range is at least that pivot.</description></item>
 /// </list>
 /// This makes arrays with many duplicate elements terminate without degrading to quadratic behavior.</description></item>
 /// <item><description><strong>Recursive Subdivision with Tail Recursion Optimization:</strong> Between the less and geq sides,
 /// the smaller one is sorted recursively and the larger one is sorted via iteration (tail recursion elimination),
 /// keeping the recursion stack depth O(log n) even in adversarial cases.</description></item>
-/// <item><description><strong>Termination and Worst-Case Guarantee:</strong> The recursion budget is 2·log₂(n).
-/// When the budget is exhausted or a partition is smaller than the small-sort threshold (16),
-/// the split input is assembled into the destination and sorted with bottom-up merge sort,
-/// bounding the worst case at O(n log n) regardless of pivot quality.</description></item>
+/// <item><description><strong>Termination:</strong> Every partition puts the pivot on the side that is not empty in its strategy, so the
+/// side processed next is strictly smaller than the range, down to ranges of one element. No other algorithm takes over, so a run of bad
+/// pivots costs O(n²) as in any quicksort.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
 /// <item><description>Stable      : Yes (stable 2-way partition and order-preserving buffer roles keep equal elements in original relative order)</description></item>
 /// <item><description>In-place    : No (O(n) pooled scratch buffer, O(log n) recursion stack)</description></item>
-/// <item><description>Best case   : Θ(n log n) - Occurs when pivot consistently divides array into balanced partitions</description></item>
-/// <item><description>Average case: Θ(n log n) - Expected ~n log₂ n comparisons with pseudo-median pivot selection</description></item>
-/// <item><description>Worst case  : O(n log n) - Bottom-up merge sort fallback after 2·log₂ n recursion levels bounds adversarial inputs</description></item>
-/// <item><description>Comparisons : ~n log₂ n (average) - The 2-way partition costs 1 comparison per element per level</description></item>
+/// <item><description>Best case   : Θ(n log n) - Occurs when pivot consistently divides array into balanced partitions; Θ(n) when all elements are equal</description></item>
+/// <item><description>Average case: Θ(n log n) - the pseudo-median splits near the median</description></item>
+/// <item><description>Worst case  : O(n²) - pivots that keep splitting off a constant number of elements</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, O(n²) worst - the 2-way partition costs 1 comparison per element per level, plus the pseudo-median's samples</description></item>
 /// <item><description>Swaps       : 0 - the destination-swap partition moves elements by assignment between buffer roles, never by exchange</description></item>
-/// <item><description>Index Reads : Θ(n log n) - every partition level reads each element of the range it splits, bounded by the merge sort fallback</description></item>
-/// <item><description>Index Writes: Θ(n log n) - each element is written once per partition level, with no copy-back pass</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - every partition level reads each element of the range it splits</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each element is written once per partition level, with no copy-back pass; the left-strategy step copies the less elements left in scratch to their destination</description></item>
 /// <item><description>Space       : O(n) pooled scratch buffer + O(log n) recursion stack</description></item>
 /// <item><description>Copies      : ~n log₂ n (average) - Each element is written once per partition level; no per-level copy-back</description></item>
 /// </list>
+/// <para><strong>Comparer contract:</strong></para>
+/// <para>A consistent comparer puts the pivot itself on the less side of a left partition and on the geq side of a right one, which is what
+/// makes every step smaller than its range. When a comparer that is not a consistent total order breaks that, the range is gathered into
+/// its destination and left unsorted instead of being partitioned forever; other ranges may still be waiting in scratch, so the sort does
+/// not stop. Every element is written to exactly one place per partition, so the range keeps its elements, in an unspecified order.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
-/// <para>Glidesort (pseudo-median pivot selection): https://github.com/orlp/glidesort</para>
+/// <para>Glidesort (partition, pseudo-median and duplicate strategies): https://github.com/orlp/glidesort</para>
 /// </remarks>
 public static class DestswapStableQuickSort
 {
@@ -90,10 +92,6 @@ public static class DestswapStableQuickSort
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
     private const int BUFFER_TEMP = 1;       // Temporary merge buffer
-
-    // Use BottomUp merge sort for small partitions or when recursion budget is exhausted.
-    // BottomUp fallback guarantees O(n log n) worst case for adversarial inputs.
-    private const int SMALL_SORT = 16;
 
     // Recursively select a pseudo-median when n is at or above this threshold.
     // Below the threshold a plain median-of-3 at the biased sample positions is used.
@@ -192,7 +190,6 @@ public static class DestswapStableQuickSort
     /// Entry point for DestSwap stable quicksort.
     /// Splits input in half and delegates to <see cref="SortInto"/> which writes output directly
     /// to <c>s[left..right]</c> using <c>scratch</c> as the complementary buffer — no copy-back per recursion level.
-    /// Recursion limit is 2·log₂(n); exhausted budget falls back to BottomUp merge sort.
     /// </summary>
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, Span<T> scratch)
         where TComparer : IComparer<T>
@@ -200,13 +197,12 @@ public static class DestswapStableQuickSort
     {
         var n = right - left + 1;
         var t = new SortSpan<T, TComparer, TContext>(scratch, s.Context, s.Comparer, BUFFER_TEMP);
-        var logn = 32 - BitOperations.LeadingZeroCount((uint)n);
         var half = n / 2;
         SortInto(s, t,
             leftInMain: true, leftOff: left, leftLen: half,
             rightInMain: true, rightOff: left + half, rightLen: n - half,
             destStart: left, scrStart: 0,
-            recursionLimit: 2 * logn, strategy: STRATEGY_RIGHT, prevPivot: default!);
+            strategy: STRATEGY_RIGHT, prevPivot: default!);
     }
 
     /// <summary>
@@ -232,8 +228,7 @@ public static class DestswapStableQuickSort
     /// <see cref="STRATEGY_LEFT_IF_EQUAL"/> (adaptive): used for the geq-side recursion; selects a
     /// new pivot and activates left strategy only when newPivot ≤ prevPivot (equal-heavy region).
     /// </para>
-    /// When recursion budget reaches zero or n &lt; <see cref="SMALL_SORT"/>, assembles the split
-    /// input into dest and applies <see cref="BottomupMergeSort.SortCore"/> as the O(n log n) fallback.
+    /// A range of one element is copied into its destination and needs nothing else.
     /// </summary>
     private static void SortInto<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s,
@@ -241,7 +236,7 @@ public static class DestswapStableQuickSort
         bool leftInMain, int leftOff, int leftLen,
         bool rightInMain, int rightOff, int rightLen,
         int destStart, int scrStart,
-        int recursionLimit, byte strategy, T prevPivot)
+        byte strategy, T prevPivot)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
@@ -249,43 +244,21 @@ public static class DestswapStableQuickSort
         {
             var n = leftLen + rightLen;
 
-            // --- Base case: small partition or recursion budget exhausted ---
-            if (n < SMALL_SORT || recursionLimit == 0)
+            // --- Base case: a range of at most one element is sorted once it is in its destination ---
+            if (n <= 1)
             {
-                if (n > 1)
-                    s.Context.OnPhase(SortPhase.HybridToMergeSort, destStart, destStart + n - 1, n < SMALL_SORT ? SMALL_SORT : 0);
-
-                // Assemble split input into s[destStart..destStart+n)
-                if (leftLen > 0)
+                if (leftLen == 1)
                 {
-                    if (leftInMain) { if (leftOff != destStart) s.CopyTo(leftOff, s, destStart, leftLen); }
-                    else t.CopyTo(leftOff, s, destStart, leftLen);
+                    if (!leftInMain) t.CopyTo(leftOff, s, destStart, 1);
+                    else if (leftOff != destStart) s.CopyTo(leftOff, s, destStart, 1);
                 }
-                if (rightLen > 0)
+                else if (rightLen == 1)
                 {
-                    var rightDest = destStart + leftLen;
-                    if (rightInMain) { if (rightOff != rightDest) s.CopyTo(rightOff, s, rightDest, rightLen); }
-                    else t.CopyTo(rightOff, s, rightDest, rightLen);
-                }
-                if (n > 1)
-                {
-                    // BottomUp fallback — contract satisfied by construction:
-                    //   sLocal : s[destStart..+n)  — input already assembled above; SortCore postcondition
-                    //            guarantees sorted result always lands back in sLocal.
-                    //   tLocal : t[scrStart..+n)   — scrStart + n ≤ t.Length holds throughout recursion
-                    //            because each split assigns (scrStart, geqTotal) to one child and
-                    //            (scrStart+geqTotal, lessTotal) to the other; their n' values always
-                    //            sum to n, keeping the upper bound at the original t.Length.
-                    //   buffer IDs : BUFFER_MAIN=0 / BUFFER_TEMP=1 match BottomupMergeSort's constants;
-                    //                relative offsets are 0-based after Slice, so no offset drift.
-                    var sLocal = s.Slice(destStart, n, BUFFER_MAIN);
-                    var tLocal = t.Slice(scrStart, n, BUFFER_TEMP);
-                    BottomupMergeSort.SortCore(sLocal, tLocal);
+                    if (!rightInMain) t.CopyTo(rightOff, s, destStart, 1);
+                    else if (rightOff != destStart) s.CopyTo(rightOff, s, destStart, 1);
                 }
                 return;
             }
-
-            recursionLimit--;
 
             // --- Pivot selection ---
             T pivot;
@@ -363,6 +336,16 @@ public static class DestswapStableQuickSort
             var lessTotal = lessFwdCount + lessBwdCount;
             var geqTotal = geqFwdCount + geqBwdCount;
 
+            // The pivot is one of the elements, so a consistent comparer puts it on the geq side of a right partition and on the less side of
+            // a left one. A comparer that does not would leave the side that is processed next as large as the range, forever. Other ranges
+            // may still be waiting in scratch, so the sort cannot stop here; this range is gathered into its destination and left as it is.
+            if (partitionLeft ? lessTotal == 0 : geqTotal == 0)
+            {
+                if (lessBwdCount > 0) t.CopyTo(scrStart + n - lessBwdCount, s, destStart + lessFwdCount, lessBwdCount);
+                if (geqFwdCount > 0) t.CopyTo(scrStart, s, destStart + lessTotal, geqFwdCount);
+                return;
+            }
+
             // --- All elements went to geq (none less) → switch to left strategy with same pivot ---
             // Guarantees progress: with left strategy at least the pivot element goes to less side.
             if (lessTotal == 0 && !partitionLeft)
@@ -394,6 +377,10 @@ public static class DestswapStableQuickSort
             //             dest=s[destStart..+lessTotal],  scratch=t[scrStart+geqTotal..+lessTotal]
             // geq side  : left=geq_fwd(t),  right=geq_bwd(s),
             //             dest=s[destStart+lessTotal..+geqTotal], scratch=t[scrStart..+geqTotal]
+            // The geq side checks its next pivot against this one. The less side keeps the ancestor pivot this range was checked
+            // against: every element here is at least that pivot, so a next pivot not above it still marks a run of equal elements.
+            var lessStrategy = strategy == STRATEGY_LEFT_IF_EQUAL ? STRATEGY_LEFT_IF_EQUAL : STRATEGY_RIGHT;
+            var lessPrevPivot = strategy == STRATEGY_LEFT_IF_EQUAL ? prevPivot : default!;
             if (lessTotal <= geqTotal)
             {
                 if (lessTotal > 0)
@@ -402,7 +389,7 @@ public static class DestswapStableQuickSort
                         true, destStart, lessFwdCount,
                         false, scrStart + n - lessBwdCount, lessBwdCount,
                         destStart, scrStart + geqTotal,
-                        recursionLimit, STRATEGY_RIGHT, default!);
+                        lessStrategy, lessPrevPivot);
                 }
                 // Tail-call on larger (geq) side
                 strategy = STRATEGY_LEFT_IF_EQUAL;
@@ -420,11 +407,11 @@ public static class DestswapStableQuickSort
                         false, scrStart, geqFwdCount,
                         true, destStart + n - geqBwdCount, geqBwdCount,
                         destStart + lessTotal, scrStart,
-                        recursionLimit, STRATEGY_LEFT_IF_EQUAL, pivot);
+                        STRATEGY_LEFT_IF_EQUAL, pivot);
                 }
                 // Tail-call on larger (less) side
-                strategy = STRATEGY_RIGHT;
-                prevPivot = default!;
+                strategy = lessStrategy;
+                prevPivot = lessPrevPivot;
                 leftInMain = true; leftOff = destStart; leftLen = lessFwdCount;
                 rightInMain = false; rightOff = scrStart + n - lessBwdCount; rightLen = lessBwdCount;
                 scrStart += geqTotal;
@@ -452,22 +439,10 @@ public static class DestswapStableQuickSort
     }
 
     /// <summary>
-    /// Selects a pivot value using Glidesort inspired pseudo-median heuristic.
-    /// Samples three positions biased away from the extremes:
-    /// <c>a = 0</c>, <c>b = n/2 - n/8</c>, <c>c = n - n/8</c>.
-    /// <list type="bullet">
-    /// <item><description>
-    /// n &lt; <see cref="PSEUDO_MEDIAN_REC_THRESHOLD"/>: median-of-3 at those positions
-    /// (3 reads, 2-3 comparisons).
-    /// </description></item>
-    /// <item><description>
-    /// n ≥ threshold: each position is refined to the median of three nearby samples spaced
-    /// n/64 apart, then the median of the three refined positions is returned
-    /// (9 reads, 8-12 comparisons).
-    /// </description></item>
-    /// </list>
-    /// Compared to first/middle/last, the biased positions avoid the extremes that cause
-    /// degenerate pivots on pipeorgan, valley, and partially-sorted patterns.
+    /// Selects the pivot value with glidesort's pseudo-median. a, b and c start three regions of n/8 elements, each placed inside one of the
+    /// two halves of the split input: a at the start, b at n/2 - n/8 and c at n - n/8, moved into the other half when theirs is too short.
+    /// Below <see cref="PSEUDO_MEDIAN_REC_THRESHOLD"/> the pivot is the median of the three elements at a, b and c; from it on each region
+    /// is reduced recursively by <see cref="Median3RecIdx"/>. Below 8 elements the regions are empty, and c is the last element.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static T SelectPivot<T, TComparer, TContext>(
@@ -479,43 +454,43 @@ public static class DestswapStableQuickSort
     {
         var n = leftLen + rightLen;
         var eighth = n / 8;
-        var a = 0;
-        var b = n / 2 - eighth;  // slightly left of centre
-        var c = n - 1 - eighth;  // n/8 before the last element
+        var a = leftLen >= eighth ? 0 : leftLen;
+        var b = leftLen >= n / 2 ? n / 2 - eighth : n - n / 2;
+        var c = rightLen >= eighth ? n - Math.Max(eighth, 1) : leftLen - eighth;
 
         if (n < PSEUDO_MEDIAN_REC_THRESHOLD)
             return Median3Value(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, b, c);
 
-        return Median3RecValue(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, b, c, eighth);
+        var m = Median3RecIdx(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, b, c, eighth);
+        return ReadSplitInput(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, m);
     }
 
     /// <summary>
-    /// Refines three sample positions using local median-of-3, then returns the median value
-    /// of the three refined positions.
-    /// Each position <c>x</c> is replaced by the median index of
-    /// <c>{ x, x + n8*4, x + n8*7 }</c> where <c>n8 = eighth / 8 = n / 64</c>.
-    /// Bounds: the highest sampled index is <c>(n - n/8) + 7*(n/64) = 63n/64 &lt; n</c>.
-    /// Called only when <c>n ≥ <see cref="PSEUDO_MEDIAN_REC_THRESHOLD"/></c>, so n8 ≥ 1.
+    /// The median of three regions of <paramref name="regionLen"/> elements starting at a, b and c. A region of at least 8 elements is
+    /// first reduced to the median of three of its own subregions an eighth of its size, so the sample grows as about n^0.528.
     /// </summary>
-    private static T Median3RecValue<T, TComparer, TContext>(
+    private static int Median3RecIdx<T, TComparer, TContext>(
         SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> t,
         bool leftInMain, int leftOff, int leftLen,
         bool rightInMain, int rightOff,
-        int a, int b, int c, int eighth)
+        int a, int b, int c, int regionLen)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var n8 = eighth / 8;  // = n / 64; ≥ 1 because n ≥ PSEUDO_MEDIAN_REC_THRESHOLD
-        a = Median3Idx(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, a + n8 * 4, a + n8 * 7);
-        b = Median3Idx(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b, b + n8 * 4, b + n8 * 7);
-        c = Median3Idx(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c, c + n8 * 4, c + n8 * 7);
-        return Median3Value(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, b, c);
+        if (regionLen * 8 >= PSEUDO_MEDIAN_REC_THRESHOLD)
+        {
+            var n8 = regionLen / 8;
+            a = Median3RecIdx(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, a + n8 * 4, a + n8 * 7, n8);
+            b = Median3RecIdx(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, b, b + n8 * 4, b + n8 * 7, n8);
+            c = Median3RecIdx(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, c, c + n8 * 4, c + n8 * 7, n8);
+        }
+        return Median3Idx(s, t, leftInMain, leftOff, leftLen, rightInMain, rightOff, a, b, c);
     }
 
     /// <summary>
     /// Returns the logical index of the median among the values at the three given logical indices.
     /// Uses 2-3 value comparisons via <see cref="SortSpan{T,TComparer,TContext}.IsLessThan(T,T)"/>.
-    /// The XOR-based selection matches Glidesort's reference implementation.
+    ///
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int Median3Idx<T, TComparer, TContext>(
@@ -542,7 +517,7 @@ public static class DestswapStableQuickSort
 
     /// <summary>
     /// Returns the value of the median among the values at the three given logical indices.
-    /// Uses 2-3 value comparisons. The XOR-based selection matches Glidesort's reference.
+    /// Uses 2-3 value comparisons.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static T Median3Value<T, TComparer, TContext>(

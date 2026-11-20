@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the duplicate check optimization implemented in BlockQuickSort, based on Section 3.1 of the BlockQuickSort paper (Edelkamp & Weiß, 2016).
+This document describes the duplicate check optimization implemented in BlockQuickSort, based on Section 3.2 of the BlockQuickSort paper (Edelkamp & Weiß, 2016).
 
 ## Purpose
 
@@ -42,7 +42,7 @@ The duplicate check is applied when **either** condition from the paper is met:
 6. Exclude pivot-equal range from recursive calls
 ```
 
-### Paper Conditions (Section 3.1)
+### Paper Conditions (Section 3.2)
 
 The paper specifies two triggering conditions:
 
@@ -205,7 +205,7 @@ Sort([87, 92, ...])      // Right partition
 
 ## Paper Reference
 
-**Section 3.1: Further Tuning of Block Partitioning**
+**Section 3.2: Further Tuning of Block Partitioning**
 > "an additional check for duplicates equal to the pivot if one of the following two conditions applies:
 > - the pivot occurs twice in the sample for pivot selection (in the case of median-of-three),
 > - the partitioning results very unbalanced for an array of small size.

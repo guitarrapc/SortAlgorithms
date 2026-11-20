@@ -37,7 +37,7 @@ namespace SortAlgorithm.Algorithms;
 /// </list>
 /// The point of the separation is that the scan can store an offset unconditionally and fold the comparison
 /// outcome into a counter increment, so no branch depends on the comparison result. See <c>AppendOffset</c>.
-/// The paper measures 2.31 branch misses per element for this scheme against 10.23 for std::sort (Table 1).
+/// The paper measures 2.39 branch misses per element for the median-of-√n variant with duplicate check against 10.23 for std::sort (Table 1).
 /// Note that the scheme reloads every swapped element, so the number of scanned elements grows by twice the
 /// number of swaps; the block size is kept small so those elements are still in L1 when the swap happens.</description></item>
 /// <item><description><strong>Partitioning Invariant Maintenance:</strong> After partitioning, the array must satisfy:
@@ -46,7 +46,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Element at pivotIndex equals the pivot value</description></item>
 /// <item><description>All elements in [pivotIndex+1, right] are ≥ pivot</description></item>
 /// </list>
-/// This optimization is critical for preventing stack overflow on adversarial inputs where partitions are highly imbalanced.</description></item>
+/// The pivot-equal elements the duplicate check groups next to the pivot are excluded from recursion as well.</description></item>
 /// <item><description><strong>Hybrid Insertion Sort Threshold:</strong> For small subarrays (size ≤ 20), the algorithm switches to InsertionSort.
 /// This threshold is chosen because:
 /// <list type="bullet">
@@ -54,15 +54,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Partitioning overhead (pivot selection, buffer management) dominates for n &lt; 20</description></item>
 /// <item><description>Expected recursion depth reduction: A 20-element threshold reduces tree depth by ⌊log₂(20)⌋ ≈ 4 levels</description></item>
 /// </list>
-/// The paper's reference implementation uses 16 (IS_THRESH); 20 is this repository's own cutoff and matches
-/// the other hybrid sorts here.</description></item>
+/// The reference implementation uses the same threshold (IS_THRESH 20; the paper text gives 16).</description></item>
 /// <item><description><strong>Termination Guarantee:</strong> The algorithm terminates because:
 /// <list type="bullet">
 /// <item><description>Base case 1: right ≤ left (partition has ≤ 1 element) → return immediately</description></item>
 /// <item><description>Base case 2: size ≤ 20 → delegate to InsertionSort (which has its own termination proof)</description></item>
 /// <item><description>Recursive case: Each partition is strictly smaller than the original range (at least one element is the pivot)</description></item>
 /// <item><description>Pivot selection from existing elements ensures progress (pivot is always within [left, right])</description></item>
-/// <item><description>Tail recursion on smaller partition guarantees at most O(log n) depth before hitting base cases</description></item>
+/// <item><description>Recursing on the smaller partition and looping on the larger guarantees at most O(log n) depth before hitting base cases</description></item>
 /// </list>
 /// Maximum recursion depth: O(log n) in all cases due to smaller-partition-first recursion strategy.</description></item>
 /// <item><description><strong>IntroSort Fallback for Worst-Case Protection:</strong> To guarantee O(n log n) worst-case performance,
@@ -71,7 +70,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Depth limit: 2⌊log₂(n)⌋ + 1 (calculated using BitOperations.Log2)</description></item>
 /// <item><description>When recursion depth exceeds this limit, the algorithm switches to HeapSort for the current partition</description></item>
 /// <item><description>HeapSort guarantees O(n log n) regardless of input distribution, preventing O(n²) on adversarial patterns</description></item>
-/// <item><description>The paper's reference implementation uses depth_limit = 2 * ilogb(n) + 3; this implementation is one level stricter</description></item>
+/// <item><description>The reference implementation uses depth_limit = 2 * ilogb(n) + 3; this implementation is two levels stricter</description></item>
 /// <item><description>The depth limit is only triggered on pathological inputs; typical inputs complete with QuickSort's superior average-case performance</description></item>
 /// </list>
 /// The paper explicitly mentions: "recursion depth becomes often higher than the threshold for switching to Heapsort" as motivation for duplicate checks.
@@ -85,10 +84,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Θ(n log n) - Balanced partitions from high-quality pivot selection</description></item>
 /// <item><description>Average case: Θ(n log n) - block partitioning performs the same logical comparisons as Hoare partitioning, so the classical quicksort bound carries over</description></item>
 /// <item><description>Worst case  : O(n log n) - Guaranteed by IntroSort fallback to HeapSort when recursion depth exceeds 2⌊log₂(n)⌋+1 (prevents QuickSort's O(n²) on adversarial inputs)</description></item>
-/// <item><description>Comparisons : Θ(n log n) average, O(n log n) worst - Edelkamp and Weiß show block partitioning performs the same logical comparisons as Hoare partitioning on random permutations, so it inherits quicksort's ~1.39n log₂ n</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, O(n log n) worst - Edelkamp and Weiß show block partitioning performs the same logical comparisons as Hoare partitioning on random permutations, so it inherits the count of its pivot rule: n log₂ n + o(n log n) for a median of a growing sample such as median-of-√n</description></item>
 /// <item><description>Swaps       : Θ(n log n) average - the Hoare scheme exchanges fewer elements than Lomuto, and buffering the offsets does not change which exchanges are needed</description></item>
-/// <item><description>Index Reads : Θ(n log n) average, O(n log n) worst - every partition level reads each element of the range it splits, once to classify it into the offset buffer</description></item>
-/// <item><description>Index Writes: Θ(n log n) average, O(n log n) worst - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, O(n log n) worst - every partition level reads each element of the range it splits, once to classify it into the offset buffer, and the offset buffers are read back when the misplaced elements are exchanged</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(n log n) worst - each swap writes two positions, and every classified element writes its offset into a buffer, about as many writes again</description></item>
 /// <item><description>Space       : O(log n) recursion stack + O(1) index buffers (two 128-entry offset blocks via stackalloc)</description></item>
 /// </list>
 /// <para><strong>Partition scheme:</strong> Hoare block partitioning over 128-element blocks with buffered swaps. Pivot selection is
@@ -98,10 +97,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Worst-case guarantee: IntroSort fallback ensures O(n log n) even on adversarial inputs (standard QuickSort can degrade to O(n²))</description></item>
 /// <item><description>Branch prediction: the scanning loops branch only on the loop counter, never on a comparison result, so the partitioning inner loop has no mispredictable branch</description></item>
 /// <item><description>Better pivot quality than median-of-3, at O(√n) sampling cost for large inputs</description></item>
-/// <item><description>Duplicate check groups pivot-equal elements so they can be excluded from recursion (paper Section 3.1)</description></item>
+/// <item><description>Duplicate check groups pivot-equal elements so they can be excluded from recursion (paper Section 3.2)</description></item>
 /// </list>
-/// <para><strong>Paper tunings not implemented here (Section 3.2):</strong> loop unrolling of the scanning
-/// phase, and cyclic permutations in place of pairwise swaps during rearrangement.</para>
+/// <para><strong>Known differences from the reference implementation:</strong> the reference entry point (blocked_double_pivot_check_mosqrt) unrolls the scanning
+/// phase and rearranges by cyclic permutation through a hole instead of pairwise swaps; it leaves the pivot sample out of the partitioned range;
+/// its duplicate check triggers on the pivot equalling a boundary element and on scan ranges of 50-256 elements with a nearly empty side, and
+/// counts the pivot as already found; and it insertion-sorts small ranges even at the depth limit. A re-port is pending.</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
 /// <para>Paper: https://arxiv.org/abs/1604.06697</para>
@@ -251,9 +252,8 @@ public static class BlockQuickSort
     {
         if (right <= left) return;
 
-        // Calculate depth limit: 2 * log2(n) + 1
-        // Based on IntroSort pattern and BlockQuickSort paper reference implementation
-        var depthLimit = 2 * BitOperations.Log2((uint)(right - left + 1)) + 1;
+        // Calculate depth limit: 2 * log2(n) + 1 (the reference allows 2 * ilogb(n) + 3)
+                var depthLimit = 2 * BitOperations.Log2((uint)(right - left + 1)) + 1;
         SortCoreInternal(s, left, right, depthLimit);
     }
 
@@ -344,7 +344,7 @@ public static class BlockQuickSort
             var sampleSize = (int)Math.Sqrt(size);
             sampleSize += (1 - (sampleSize % 2)); // Make it odd
             pivotIndex = MedianOfK(s, left, right, sampleSize);
-            // For large samples, skip duplicate check (too expensive)
+            // No duplicate check on this path (the reference checks the pivot against the two boundary elements here too)
         }
         else if (size > 800)
         {
@@ -903,7 +903,7 @@ public static class BlockQuickSort
 
     /// <summary>
     /// Checks for duplicate elements equal to the pivot and groups them together.
-    /// Based on BlockQuickSort paper Section 3.1: "Further Tuning of Block Partitioning".
+    /// Based on BlockQuickSort paper Section 3.2: "Further Tuning of Block Partitioning".
     /// This optimization helps prevent deep recursion when arrays have many duplicate values.
     /// </summary>
     /// <remarks>

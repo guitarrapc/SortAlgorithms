@@ -5,9 +5,8 @@ using System.Runtime.CompilerServices;
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// Dotnet runtime style IntroSort implementation.
-/// This is a simplified version based on dotnet runtime's ArraySortHelper&lt;T&gt;,
-/// optimized for JIT performance with minimal overhead.
+/// A port of the introsort in dotnet runtime's ArraySortHelper, following its generic-comparer path
+/// (ArraySortHelperForTComparer, which Span.Sort uses with a struct comparer) line for line.
 /// <br/>
 /// A hybrid sorting algorithm that combines QuickSort, HeapSort, and InsertionSort.
 /// It primarily uses QuickSort, but switches to InsertionSort for small arrays and HeapSort when recursion depth becomes too deep,
@@ -17,7 +16,7 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Key Differences from IntroSort:</strong></para>
 /// <list type="bullet">
 /// <item><description><strong>Simpler pivot selection:</strong> Uses simple median-of-3 (lo, mid, hi) instead of quartile-based or Ninther</description></item>
-/// <item><description><strong>Lomuto-style partitioning:</strong> Places pivot in final position, excludes it from recursion</description></item>
+/// <item><description><strong>Two-cursor partition:</strong> The median-of-3 pivot is parked at hi - 1 and the Hoare/Sedgewick scans meet between lo and hi - 1; the pivot is then placed in its final position and excluded from recursion</description></item>
 /// <item><description><strong>No extra optimizations:</strong> No swap counting, no nearly-sorted detection, no duplicate detection</description></item>
 /// <item><description><strong>JIT-friendly:</strong> Smaller code size, marked with NoInlining for recursive method</description></item>
 /// </list>
@@ -27,12 +26,12 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Stable      : No (QuickSort and HeapSort are unstable; element order is not preserved for equal values)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack, no additional arrays allocated)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Occurs when QuickSort consistently creates balanced partitions and InsertionSort handles small subarrays efficiently</description></item>
-/// <item><description>Average case: Θ(n log n) - Expected ~1.386n log₂ n comparisons from QuickSort</description></item>
-/// <item><description>Worst case  : O(n log n) - Guaranteed by HeapSort fallback when recursion depth exceeds 2⌊log₂(n)⌋</description></item>
-/// <item><description>Comparisons : ~1.386n log₂ n (average), O(n log n) worst - QuickSort's expected count, bounded by the HeapSort fallback</description></item>
-/// <item><description>Swaps       : Θ(n log n) - the partition scheme exchanges elements; the HeapSort fallback sifts by exchange as well</description></item>
+/// <item><description>Average case: Θ(n log n) - median-of-3 pivots split near the median on average</description></item>
+/// <item><description>Worst case  : O(n log n) - Guaranteed by HeapSort fallback when recursion depth exceeds 2(⌊log₂(n)⌋ + 1)</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, O(n log n) worst - each partition compares every element of its range with the pivot, about (12/7) n ln n ≈ 1.19 n log₂ n on distinct keys before the insertion-sort leaves; bounded by the HeapSort fallback</description></item>
+/// <item><description>Swaps       : Θ(n log n) average, O(n) best - the partition exchanges misplaced pairs and parks and places the pivot; the HeapSort fallback swaps each extracted maximum and moves the rest through a hole</description></item>
 /// <item><description>Index Reads : Θ(n log n) - every partition level reads each element of the range it splits</description></item>
-/// <item><description>Index Writes: Θ(n log n) - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Index Writes: Θ(n log n) average - each swap writes two positions, the insertion-sort leaves write the elements they shift, and the HeapSort fallback writes through its sift hole</description></item>
 /// <item><description>Space       : O(log n) - recursion stack only, no additional arrays allocated</description></item>
 /// </list>
 /// <para><strong>Comparer contract:</strong></para>
@@ -146,8 +145,8 @@ public static class IntroSortDotnet
     /// From dotnet runtime comments:
     /// "IntroSort is recursive; block it from being inlined into itself as this is currently not profitable."
     ///
-    /// This implementation follows dotnet runtime's approach of using Slice to always work with
-    /// 0-based spans, which improves performance especially for sorted/reversed data.
+    /// The runtime slices each partition to a 0-based span; this port passes an offset into one SortSpan instead, so the indices it
+    /// reports stay those of the caller's span.
     /// </remarks>
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void IntroSortInternal<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int depthLimit)
@@ -296,9 +295,9 @@ public static class IntroSortDotnet
             T t = s.Read(offset + i + 1);
 
             int j = i;
-            while (j >= 0 && s.IsElementGreaterThan(offset + j, t))
+            while (j >= 0 && s.IsValueLessThan(t, offset + j, out var shifted))
             {
-                s.Write(offset + j + 1, s.Read(offset + j));
+                s.Write(offset + j + 1, shifted);
                 j--;
             }
 

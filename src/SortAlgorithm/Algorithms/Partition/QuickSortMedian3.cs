@@ -49,10 +49,10 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Stable      : No (partitioning does not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack, O(1) for partitioning)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Sorted input partitions perfectly with zero effective swaps</description></item>
-/// <item><description>Average case: Θ(n log n) - Expected ~1.39n log₂ n comparisons</description></item>
+/// <item><description>Average case: Θ(n log n) - Expected (12/7) n ln n ≈ 1.19 n log₂ n comparisons on distinct keys (Sedgewick)</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability ~1/n³ with median-of-3)</description></item>
-/// <item><description>Comparisons : ~1.39n log₂ n (average)</description></item>
-/// <item><description>Swaps       : ~0.33n log₂ n (average); near zero on sorted input</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, O(n²) worst - (12/7) n ln n ≈ 1.19 n log₂ n on average, against 2 n ln n ≈ 1.39 n log₂ n for a single random pivot</description></item>
+/// <item><description>Swaps       : Θ(n log n) average, O(n) best - the partition exchanges misplaced pairs; on sorted input the scans meet on the pivot, one swap of it with itself per partition</description></item>
 /// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - every partition level reads each element of the range it splits</description></item>
 /// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each swap writes two positions, so the writes follow the swap count</description></item>
 /// <item><description>Space       : O(log n) - recursion stack only; partitioning itself is O(1)</description></item>

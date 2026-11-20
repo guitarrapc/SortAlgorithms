@@ -6,10 +6,10 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// 双方向コピーバックを用いた安定ソート版クイックソートです。
-/// 安定ソートのため外部バッファを使用しますが、分割時に less を scratch 先頭・greater を scratch 末尾（逆順）へ1スキャンで書き込み、その後 greater セクションをリバースすることで安定性を保ちながらカウントパスを不要にします。
+/// 安定ソートのため外部バッファを使用しますが、分割時に less を scratch 先頭・greater を scratch 末尾（逆順）へ1スキャンで書き込み、greater セクションを逆順にコピーバックすることで安定性を保ちながらカウントパスを不要にします。
 /// <br/>
 /// A stable variant of quicksort that uses a bidirectional copy-back strategy.
-/// To ensure stability it uses an external buffer, but eliminates the count pass by writing less elements to the scratch front and greater elements to the scratch back (reversed) in a single forward scan, then reversing the greater section to restore left-to-right order.
+/// To ensure stability it uses an external buffer, but eliminates the count pass by writing less elements to the scratch front and greater elements to the scratch back (reversed) in a single forward scan, then copying the greater section back in reverse to restore left-to-right order.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Bidirectional Stable QuickSort:</strong></para>
@@ -24,10 +24,10 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>The pivot value is read once upfront from the array.</description></item>
 /// <item><description>Single forward scan: less-than elements are written to the front of scratch in order;
-/// greater-than elements are written to the back of scratch in reverse order; equal elements are skipped.</description></item>
-/// <item><description>The reversed greater-than section in scratch is corrected by a short in-place reverse sweep to restore left-to-right stability.</description></item>
-/// <item><description>A second targeted scan fills only equal elements into the gap between the less and greater sections.</description></item>
-/// <item><description>The populated scratch buffer is copied back to the original array.</description></item>
+/// greater-than elements are written to the back of scratch in reverse order; equal elements are moved, in order, to the front of the
+/// range, onto positions the scan has already read.</description></item>
+/// <item><description>The equal elements move up to their final place, the less-than elements are copied back from the front of scratch,
+/// and the greater-than elements from the back of scratch in reverse, which restores their left-to-right order.</description></item>
 /// </list>
 /// Compared to the 2-pass approach, less-than elements cost 1 comparison and greater/equal elements cost 2,
 /// reducing total comparison work when duplicate elements are rare.</description></item>
@@ -65,23 +65,21 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Stable      : Yes (preserves relative order of equal elements)</description></item>
 /// <item><description>In-place    : No (O(n) total auxiliary space across all active recursion levels, O(log n) recursion stack)</description></item>
 /// <item><description>Best case   : Θ(n log n) - Occurs when pivot consistently divides array into balanced partitions</description></item>
-/// <item><description>Average case: Θ(n log n) - Expected ~n log₂ n comparisons with median-of-3 pivot selection</description></item>
+/// <item><description>Average case: Θ(n log n) - Median-of-3 pivots split near the median on average</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability ~1/n³ with median-of-3)</description></item>
-/// <item><description>Comparisons : ~n log₂ n (average) - Less elements cost 1 comparison; greater/equal cost 2; fewer total comparisons than 2-pass when duplicates are rare</description></item>
-/// <item><description>Swaps       : Θ(n log n) - at most greaterCount/2 per partition level, from the in-place reversal of the greater section in scratch that restores stability</description></item>
-/// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - every partition level reads each element of its range, then reads it back out of scratch</description></item>
-/// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each element is written into scratch and back at every level</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, O(n²) worst - less elements cost 1 comparison per level and greater or equal ones 2; on distinct keys that is about 1.5 × (12/7) n ln n ≈ 1.78 n log₂ n</description></item>
+/// <item><description>Swaps       : 0 - elements move by copying to and from the scratch buffer, never by exchange</description></item>
+/// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - every partition level reads each element of its range, then reads it back out of scratch or, for equal elements, out of the range</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each element is written twice per level: less and greater ones into scratch and back, equal ones to the front of the range and up to their place</description></item>
 /// <item><description>Space       : O(n) total auxiliary across all active recursion levels + O(log n) recursion stack</description></item>
 /// <item><description>Copies      : ~2n log₂ n (average) - Each element copied to/from temporary storage at each recursion level</description></item>
 /// </list>
 /// <para><strong>Comparer contract:</strong></para>
-/// <para>The pass that collects the equal elements compares them with the pivot again and relies on the answers of the first pass. Scratch
-/// access is unchecked, so each write is checked against the gap, and the gap must end up full and not empty before the range is written
-/// back. A valid comparer always leaves at least the pivot in it. Without that check, a comparer that put every element on one side would
-/// leave the partition no smaller, and the sort would not finish. The natural order of a primitive type always repeats its answers, and the
-/// per-element check is compiled out for it. A comparer that is not a consistent total order can make the sort throw
-/// <see cref="InvalidOperationException"/>. If the sort finishes, the second pass may have picked other elements than the first pass
-/// skipped, so some can be repeated and others lost. Nothing outside the range is read or written either way.</para>
+/// <para>Each element is compared once or twice and written to exactly one place, so the three groups fill the range whatever the comparer
+/// answers. The partition must still leave at least one element equal to the pivot. A valid comparer always does, because the pivot equals
+/// itself; without that check, a comparer that put every element on one side would leave the partition no smaller, and the sort would not
+/// finish. A comparer that is not a consistent total order can make the sort throw <see cref="InvalidOperationException"/>. Either way the
+/// range keeps its elements, in an unspecified order, and nothing outside the range is read or written.</para>
 /// <para><strong>History:</strong></para>
 /// <para>The earliest description of this partition found is the stable quicksort in Rust's driftsort (Bergdoll and Peters, 2024).
 /// Its <c>stable_partition</c> writes the elements less than the pivot to the left side of scratch, and the others "go to the right
@@ -259,15 +257,9 @@ public static class BidirectionalStableQuickSort
     /// - [lessEnd, greaterStart): elements equal to pivot
     /// - [greaterStart, right + 1): elements greater than pivot
     /// <para>
-    /// Uses a bidirectional single-scan approach that eliminates the count pass:
-    /// 1. Single forward scan writes less to scratch front and greater to scratch back (reversed).
-    ///    Pivot value is read once upfront; no pre-counting needed — positions are resolved by
-    ///    the pointers after the scan.
-    /// 2. The reversed greater section in scratch is corrected by a short in-place reverse sweep.
-    /// 3. Equal elements are filled into the gap with a targeted forward scan.
+    /// One forward scan writes less elements to the scratch front, greater elements to the scratch back in reverse, and moves equal
+    /// elements to the front of the range. The copy back reverses the greater section, so no count pass and no second scan are needed.
     /// </para>
-    /// Compared to the 2-pass approach, main-scan comparisons drop from 2 per element to 1 for
-    /// less/greater elements, improving throughput especially when equal elements are rare.
     /// </summary>
     private static (int lessEnd, int greaterStart) StablePartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int pivotIndex, Span<T> scratch)
         where TComparer : IComparer<T>
@@ -278,10 +270,11 @@ public static class BidirectionalStableQuickSort
 
         var pivotVal = s.Read(pivotIndex);
 
-        // Bidirectional single scan: less → scratch front (in order), greater → scratch back (reversed).
-        // Equal elements are skipped here and filled into the gap in a subsequent targeted pass.
+        // Single scan: less → scratch front (in order), greater → scratch back (reversed), equal → compacted in place at the front of the
+        // range. An equal element is written to a position the scan has already read, so the in-place writes never overtake it.
         var lessIdx = 0;
         var greaterIdx = length - 1;
+        var equalCount = 0;
 
         for (var i = left; i <= right; i++)
         {
@@ -294,49 +287,30 @@ public static class BidirectionalStableQuickSort
             {
                 tempSortSpan.Write(greaterIdx--, elem);  // greater → scratch[greaterIdx--] (reversed)
             }
-            // equal: skip
+            else
+            {
+                var equalDst = left + equalCount++;
+                if (equalDst != i) s.Write(equalDst, elem);
+            }
         }
+
+        // Every element went to exactly one place, so the three groups fill the range whatever the comparer answered. No equal element
+        // means the pivot did not compare equal to itself, and the partition could then be no smaller than the range.
+        if (equalCount == 0) ThrowHelper.ThrowInconsistentComparer();
 
         var lessCount = lessIdx;
-        var greaterStart = greaterIdx + 1; // scratch[greaterStart..length) contains greater in reverse order
 
-        // Reverse the greater section to restore left-to-right stability.
-        // During the forward scan each later-encountered greater element was placed at a lower
-        // scratch index, so reversing the section restores the original left-to-right order.
-        if (greaterStart < length)
+        // Assemble less, equal, greater. The equal elements move up first (an overlapping move within the range), then the less elements
+        // come back from the scratch front, and the greater elements from the scratch back in reverse, which restores their scan order.
+        if (lessCount > 0) s.CopyTo(left, s, left + lessCount, equalCount);
+        tempSortSpan.CopyTo(0, s, left, lessCount);
+        var dst = left + lessCount + equalCount;
+        for (var k = length - 1; k > greaterIdx; k--)
         {
-            s.Context.OnPhase(SortPhase.Reverse, greaterStart, length - 1);
-            var lo = greaterStart;
-            var hi = length - 1;
-            while (lo < hi)
-            {
-                tempSortSpan.Swap(lo++, hi--);
-            }
+            s.Write(dst++, tempSortSpan.Read(k));
         }
 
-        // Fill equal elements into scratch[lessCount..greaterStart) in left-to-right order.
-        // Only a comparer that repeats its answers fills the gap exactly, and scratch access is unchecked, so each write is checked
-        // against the gap. The natural order of a primitive type repeats its answers, so that check folds away for it.
-        var checkGap = !s.UsesNaturalPrimitiveOrder;
-        var equalDst = lessCount;
-        for (var i = left; i <= right; i++)
-        {
-            var elem = s.Read(i);
-            if (!s.IsLessThan(elem, pivotVal) && !s.IsLessThan(pivotVal, elem))
-            {
-                if (checkGap && equalDst == greaterStart) ThrowHelper.ThrowInconsistentComparer();
-                tempSortSpan.Write(equalDst++, elem);
-            }
-        }
-
-        // A gap left partly empty would copy stale scratch values into the range. An empty gap means the pivot did not compare equal to
-        // itself, and the partition would then be no smaller than the range.
-        if (equalDst != greaterStart || greaterStart == lessCount) ThrowHelper.ThrowInconsistentComparer();
-
-        // Copy back to original array.
-        tempSortSpan.CopyTo(0, s, left, length);
-
-        return (left + lessCount, left + greaterStart);
+        return (left + lessCount, left + lessCount + equalCount);
     }
 
     /// <summary>

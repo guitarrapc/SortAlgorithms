@@ -16,7 +16,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Adaptive Algorithm Selection:</strong> PDQSort must correctly choose between sub-algorithms:
 /// <list type="bullet">
 /// <item><description>InsertionSort when partition size &lt; 24 (InsertionSortThreshold)</description></item>
-/// <item><description>HeapSort when bad partition count exceeds badAllowed = log₂(n)</description></item>
+/// <item><description>HeapSort when the bad partitions on one recursion path reach badAllowed = ⌊log₂(n)⌋</description></item>
 /// <item><description>PartialInsertionSort when already-partitioned pattern detected</description></item>
 /// <item><description>QuickSort with adaptive pivot selection for all other cases</description></item>
 /// </list>
@@ -47,7 +47,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Left partition becomes fully sorted (all equal to pivot), requiring no recursion</description></item>
 /// <item><description>Achieves O(n) time for arrays with all equal elements</description></item>
 /// </list>
-/// This is triggered by comparing the pivot with *(begin-1), which is the largest element of the previous left partition.</description></item>
+/// This is triggered by comparing the pivot with *(begin-1), the pivot of an earlier partition, which no element of [begin, end) is smaller than.</description></item>
 /// <item><description><strong>Partial Insertion Sort for Pattern Detection:</strong> When a partition appears already sorted (alreadyPartitioned flag),
 /// attempt insertion sort with a limit of 8 element moves (PartialInsertionSortLimit):
 /// <list type="bullet">
@@ -60,34 +60,33 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="bullet">
 /// <item><description>Swap elements at positions: begin ↔ begin+n/4, pivotPos-1 ↔ pivotPos-n/4 (and similar for right partition)</description></item>
 /// <item><description>For large partitions (&gt; 128), perform additional swaps at +1, +2 offsets</description></item>
-/// <item><description>This randomization defeats carefully crafted adversarial inputs (e.g., anti-quicksort permutations)</description></item>
+/// <item><description>The swaps are deterministic; they break the patterns that keep producing bad pivots (e.g., anti-quicksort permutations)</description></item>
 /// </list>
-/// Without shuffling, adversarial inputs could force O(n²) behavior even with good pivot selection.</description></item>
+/// Without shuffling, such inputs would keep producing bad partitions until the heapsort fallback.</description></item>
 /// <item><description><strong>Unguarded Insertion Sort Optimization:</strong> For non-leftmost partitions, use unguarded insertion sort:
 /// <list type="bullet">
 /// <item><description>*(begin-1) acts as a sentinel (guaranteed ≤ any element in [begin, end))</description></item>
 /// <item><description>Eliminates boundary check (sift != begin) in the inner loop</description></item>
-/// <item><description>Reduces comparisons and improves cache performance for small partitions</description></item>
+/// <item><description>Removes the index test from the inner loop; the comparisons are the same</description></item>
 /// </list>
 /// This optimization is safe because quicksort's partitioning ensures *(begin-1) ≤ pivot ≤ all elements in right partition.</description></item>
 /// <item><description><strong>Tail Recursion Elimination:</strong> After partitioning into [begin, pivotPos) and [pivotPos+1, end),
-/// the algorithm always recursively processes the smaller partition and loops on the larger partition.
-/// This optimization guarantees the recursion stack depth is at most O(log n) (specifically ⌈log₂(n)⌉),
-/// even in pathological cases before the bad partition limit triggers HeapSort.
-/// This is identical to the strategy used in LLVM libcxx's std::sort and our IntroSort implementation.</description></item>
+/// the algorithm recursively processes the smaller partition and loops on the larger partition, which bounds the call stack at
+/// O(log n). pdqsort itself recurses on the left partition; both sides see the same range, bad-partition budget and leftmost flag
+/// either way, so the comparisons and moves are the same, and only the order in which the two sides are sorted differs.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Hybrid (Partition (base) + Heap + Insertion)</description></item>
 /// <item><description>Stable      : No (partitioning and heapsort are unstable)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack)</description></item>
-/// <item><description>Best case   : O(n) - Sorted, reverse sorted, all equal elements (pattern detection + partial insertion sort)</description></item>
-/// <item><description>Average case: Θ(n log n) - Expected ~1.2-1.4n log₂ n comparisons (better than basic quicksort due to optimizations)</description></item>
-/// <item><description>Worst case  : O(n log n) - Guaranteed by HeapSort fallback when bad partition limit exceeded</description></item>
-/// <item><description>Comparisons : ~1.2-1.4n log₂ n (average) - Ninther pivot selection and insertion sort reduce constant factors</description></item>
-/// <item><description>Swaps       : ~0.33n log₂ n (average) - Partitioning performs fewer swaps than Lomuto scheme</description></item>
+/// <item><description>Best case   : Θ(n) - Sorted, reverse sorted, all equal elements (pattern detection + partial insertion sort)</description></item>
+/// <item><description>Average case: Θ(n log n) - Median-of-3 and ninther pivots split near the median on average</description></item>
+/// <item><description>Worst case  : O(n log n) - Guaranteed by HeapSort fallback when the bad partition limit is reached</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, Θ(n) best, O(n log n) worst - each partition compares every element of its range with the pivot</description></item>
+/// <item><description>Swaps       : Θ(n log n) average, O(1) best - the partition exchanges misplaced pairs; pivot selection and the pattern-breaking shuffles add a constant number per partition</description></item>
 /// <item><description>Index Reads : Θ(n log n) average, Θ(n) best - every partition level reads each element of the range it splits; a detected pattern is settled by the partial insertion sort instead</description></item>
-/// <item><description>Index Writes: Θ(n log n) average, O(1) best - each swap writes two positions; an already ordered input is never partitioned</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(1) best - each swap writes two positions, and the pivot placement and the insertion sorts add their own writes; sorted input is partitioned once, and the ninther swap and the pivot placement write four positions</description></item>
 /// <item><description>Space       : O(log n) - recursion stack only</description></item>
 /// </list>
 /// <para><strong>Comparer contract:</strong></para>
@@ -279,21 +278,16 @@ public static class PDQSort
                 continue;
             }
 
-            // Partition and detect equal elements block
+            // Partition and get results.
             s.Context.OnPhase(SortPhase.QuickSortPartition, begin, end - 1, begin);
             s.Context.OnRole(begin, BUFFER_MAIN, RoleType.Pivot);
-            var (equalLeft, equalRight, alreadyPartitioned) = PartitionRightSkipEquals(s, begin, end);
+            var (pivotPos, alreadyPartitioned) = PartitionRight(s, begin, end);
             s.Context.OnRole(begin, BUFFER_MAIN, RoleType.None);
 
-            // Calculate sizes excluding the equal block
-            var lSize = equalLeft - begin;        // Elements < pivot
-            var rSize = end - equalRight;          // Elements > pivot
-            var eqSize = equalRight - equalLeft;         // Elements == pivot (to be excluded from recursion)
-            var effective = size - eqSize;  // Effective size excluding equal elements
-
-            // Check for highly unbalanced partition (using effective size)
-            // If effective is small, the array is mostly equal elements and will finish soon
-            var highlyUnbalanced = effective > 0 && (lSize < effective / 8 || rSize < effective / 8);
+            // Check for a highly unbalanced partition.
+            var lSize = pivotPos - begin;
+            var rSize = end - (pivotPos + 1);
+            var highlyUnbalanced = lSize < size / 8 || rSize < size / 8;
 
             // If we got a highly unbalanced partition we shuffle elements to break many patterns
             if (highlyUnbalanced)
@@ -310,26 +304,26 @@ public static class PDQSort
                 if (lSize >= InsertionSortThreshold)
                 {
                     s.Swap(begin, begin + lSize / 4);
-                    s.Swap(equalLeft - 1, equalLeft - lSize / 4);
+                    s.Swap(pivotPos - 1, pivotPos - lSize / 4);
 
                     if (lSize > NintherThreshold)
                     {
                         s.Swap(begin + 1, begin + (lSize / 4 + 1));
                         s.Swap(begin + 2, begin + (lSize / 4 + 2));
-                        s.Swap(equalLeft - 2, equalLeft - (lSize / 4 + 1));
-                        s.Swap(equalLeft - 3, equalLeft - (lSize / 4 + 2));
+                        s.Swap(pivotPos - 2, pivotPos - (lSize / 4 + 1));
+                        s.Swap(pivotPos - 3, pivotPos - (lSize / 4 + 2));
                     }
                 }
 
                 if (rSize >= InsertionSortThreshold)
                 {
-                    s.Swap(equalRight, equalRight + rSize / 4);
+                    s.Swap(pivotPos + 1, pivotPos + (1 + rSize / 4));
                     s.Swap(end - 1, end - rSize / 4);
 
                     if (rSize > NintherThreshold)
                     {
-                        s.Swap(equalRight + 1, equalRight + (1 + rSize / 4));
-                        s.Swap(equalRight + 2, equalRight + (2 + rSize / 4));
+                        s.Swap(pivotPos + 2, pivotPos + (2 + rSize / 4));
+                        s.Swap(pivotPos + 3, pivotPos + (3 + rSize / 4));
                         s.Swap(end - 2, end - (1 + rSize / 4));
                         s.Swap(end - 3, end - (2 + rSize / 4));
                     }
@@ -338,78 +332,32 @@ public static class PDQSort
             else
             {
                 // If we were decently balanced and we tried to sort an already partitioned
-                // sequence try to use insertion sort (excluding equal elements block)
+                // sequence try to use insertion sort.
                 if (alreadyPartitioned)
                 {
                     s.Context.OnPhase(SortPhase.PDQPartialInsertionSort, begin, end - 1);
-                    if (PartialInsertionSort(s, begin, equalLeft) &&
-                        PartialInsertionSort(s, equalRight, end))
+                    if (PartialInsertionSort(s, begin, pivotPos) &&
+                        PartialInsertionSort(s, pivotPos + 1, end))
                     {
                         return;
                     }
                 }
             }
 
-            // Tail recursion optimization: always recurse on smaller partition, loop on larger
-            // This guarantees O(log n) stack depth even for pathological inputs
-            // (similar to IntroSort and LLVM std::sort implementation)
-            // Exclude equal elements block [eqL, eqR) from recursion
-            var leftSize = equalLeft - begin;
-            var rightSize = end - equalRight;
-
-            if (leftSize < rightSize)
+            // Recurse on the smaller side and loop on the larger, which bounds the call stack at O(log n). pdqsort recurses on the left
+            // side; both sides see the same range, bad-partition budget and leftmost flag either way, so the comparisons are the same.
+            if (lSize < rSize)
             {
-                // Recurse on smaller left partition (preserves leftmost flag)
-                PDQSortLoop(s, begin, equalLeft, badAllowed, leftmost);
-                // Tail recursion: continue loop with larger right partition
-                begin = equalRight;
+                PDQSortLoop(s, begin, pivotPos, badAllowed, leftmost);
+                begin = pivotPos + 1;
                 leftmost = false;
             }
             else
             {
-                // Recurse on smaller right partition (always non-leftmost)
-                PDQSortLoop(s, equalRight, end, badAllowed, false);
-                // Tail recursion: continue loop with larger left partition
-                end = equalLeft;
-                // Preserve leftmost flag for left partition
+                PDQSortLoop(s, pivotPos + 1, end, badAllowed, false);
+                end = pivotPos;
             }
         }
-    }
-
-    /// <summary>
-    /// Partitions using PartitionRight and then detects consecutive elements equal to the pivot.
-    /// Returns the bounds of the equal block (eqL, eqR) to exclude from further recursion.
-    /// This optimization is critical for handling inputs with many duplicate elements efficiently.
-    /// </summary>
-    /// <returns>
-    /// eqL: Start of equal block (inclusive) - all elements in [eqL, eqR) equal pivot
-    /// eqR: End of equal block (exclusive)
-    /// alreadyPartitioned: Whether the input was already partitioned
-    /// </returns>
-    private static (int eqL, int eqR, bool alreadyPartitioned) PartitionRightSkipEquals<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int begin, int end)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var (pivotPos, alreadyPartitioned) = PartitionRight(s, begin, end);
-
-        // Read pivot value once to minimize SortSpan access
-        var pivot = s.Read(pivotPos);
-
-        // Expand left: find consecutive elements equal to pivot
-        var eqL = pivotPos;
-        while (eqL > begin && s.Compare(eqL - 1, pivot) == 0)
-        {
-            eqL--;
-        }
-
-        // Expand right: find consecutive elements equal to pivot
-        var eqR = pivotPos + 1;
-        while (eqR < end && s.Compare(eqR, pivot) == 0)
-        {
-            eqR++;
-        }
-
-        return (eqL, eqR, alreadyPartitioned);
     }
 
     /// <summary>
@@ -440,7 +388,7 @@ public static class PDQSort
         // there was no element before *first.
         if (first - 1 == begin)
         {
-            do { last--; } while (first < last && s.IsElementGreaterOrEqual(last, pivot));
+            while (first < last && s.IsElementGreaterOrEqual(--last, pivot)) { }
         }
         else
         {
@@ -494,7 +442,7 @@ public static class PDQSort
         // this search if there was no element after *last.
         if (last + 1 == end)
         {
-            do { first++; } while (first < last && s.IsValueGreaterOrEqual(pivot, first));
+            while (first < last && s.IsValueGreaterOrEqual(pivot, ++first)) { }
         }
         else
         {
@@ -532,17 +480,17 @@ public static class PDQSort
         for (var cur = begin + 1; cur < end; cur++)
         {
             var sift = cur;
-            var siftValue = s.Read(cur);
 
             // Compare first so we can avoid 2 moves for an element already positioned correctly.
-            if (s.IsLessAt(sift, sift - 1))
+            // The comparisons hand back the elements they read, so each shift writes a value already held.
+            if (s.IsLessAt(sift, sift - 1, out var siftValue, out var shifted))
             {
-                do
+                while (true)
                 {
-                    s.Write(sift, s.Read(sift - 1));
+                    s.Write(sift, shifted);
                     sift--;
+                    if (sift == begin || !s.IsValueLessThan(siftValue, sift - 1, out shifted)) break;
                 }
-                while (sift != begin && s.IsValueLessThan(siftValue, sift - 1));
 
                 s.Write(sift, siftValue);
                 limit += cur - sift;

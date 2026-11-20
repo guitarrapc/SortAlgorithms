@@ -246,6 +246,21 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     }
 
     /// <summary>
+    /// Compares the element at the specified index with a given value, handing back the element that was read.
+    /// (Equivalent to comparer.Compare(span[i], value).)
+    /// </summary>
+    /// <param name="i">The index of the element to compare.</param>
+    /// <param name="value">The value to compare against.</param>
+    /// <param name="element">The element that was read.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int Compare(int i, T value, out T element)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareElement(i, value, out element);
+        element = ReadUnobserved(i);
+        return _comparer.Compare(element, value);
+    }
+
+    /// <summary>
     /// Compares a given value with the element at the specified index. (Equivalent to comparer.Compare(value, span[i]).)
     /// </summary>
     /// <param name="value">The value to compare.</param>
@@ -729,6 +744,18 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     {
         if (typeof(TContext) != typeof(NullContext)) return ReportCompareValue(value, j, out _) < 0;
         return IsLessThan(value, ReadUnobserved(j));
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="value"/> is strictly less than the element at index <paramref name="j"/>,
+    /// handing back the element that was read.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsValueLessThan(T value, int j, out T element)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareValue(value, j, out element) < 0;
+        element = ReadUnobserved(j);
+        return IsLessThan(value, element);
     }
 
     /// <summary>

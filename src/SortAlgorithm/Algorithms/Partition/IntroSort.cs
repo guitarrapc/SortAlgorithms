@@ -1,118 +1,64 @@
 ﻿using SortAlgorithm.Contexts;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
-/// QuickSort、HeapSort、InsertionSortを組み合わせたハイブリッドソートアルゴリズム。
-/// 通常はQuickSortを使用、小さい配列ではInsertionSort、再帰深度が深くなりすぎた場合はHeapSortに切り替えることで、
-/// QuickSortの最悪ケースO(n²)を回避し、常にO(n log n)を保証します。
+/// Musser (1997) のイントロソートです。中央値3点のクイックソートで分割を進め、分割の深さが 2⌊log₂ n⌋ に達した範囲はヒープソートに切り替え、
+/// 16要素以下の範囲は残しておき、最後に全体を1回の挿入ソートで仕上げます。
 /// <br/>
-/// A hybrid sorting algorithm that combines QuickSort, HeapSort, and InsertionSort.
-/// It primarily uses QuickSort, but switches to InsertionSort for small arrays and HeapSort when recursion depth becomes too deep,
-/// avoiding QuickSort's worst-case O(n²) and guaranteeing O(n log n) in all cases.
+/// Musser's (1997) introsort. It partitions with median-of-3 quicksort, switches a range to heapsort once the partitioning depth reaches
+/// 2⌊log₂ n⌋, leaves ranges of 16 or fewer elements unsorted, and finishes with one insertion sort over the whole range.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Introsort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Adaptive Algorithm Selection:</strong> The algorithm must correctly choose between three sub-algorithms:
-/// <list type="bullet">
-/// <item><description>InsertionSort when partition size ≤ 30 (optimized via benchmarking for best performance)</description></item>
-/// <item><description>HeapSort when recursion depth exceeds depthLimit = 2⌊log₂(n)⌋</description></item>
-/// <item><description>QuickSort (sample median + Hoare partition) for all other cases</description></item>
-/// </list>
-/// This adaptive selection ensures O(n log n) worst-case while maintaining QuickSort's average-case performance.</description></item>
-/// <item><description><strong>Depth Limit Calculation:</strong> The depth limit must be set to 2⌊log₂(n)⌋ where n is the partition size.
-/// This value is derived from the expected depth of a balanced binary tree (⌊log₂(n)⌋) multiplied by 2 to allow for some imbalance.
-/// When this limit is exceeded, it indicates pathological QuickSort behavior (e.g., adversarial input patterns),
-/// triggering a switch to HeapSort which guarantees O(n log n) regardless of input.</description></item>
-/// <item><description><strong>QuickSort Phase - Sampled Pivot Selection:</strong> The sample size depends on the partition size:
-/// <list type="bullet">
-/// <item><description>For arrays &lt; 1000 elements: median of three quartile positions (q1 = left + n/4, mid = left + n/2, q3 = left + 3n/4)</description></item>
-/// <item><description>For arrays ≥ 1000 elements: median of five using positions: left, left+delta/2, mid, mid+delta/2, right (where delta = n/2)</description></item>
-/// </list>
-/// Five-point sampling selects the third element in the comparer order of those five samples.</description></item>
-/// <item><description><strong>QuickSort Phase - Hoare Partition Scheme:</strong> Partitioning uses bidirectional scanning:
-/// <list type="bullet">
-/// <item><description>Left pointer l advances while s[l] &lt; pivot (with boundary check l &lt; right)</description></item>
-/// <item><description>Right pointer r retreats while s[r] &gt; pivot (with boundary check r &gt; left)</description></item>
-/// <item><description>When both pointers stop and l ≤ r, swap s[l] ↔ s[r] and advance both pointers</description></item>
-/// <item><description>Loop terminates when l &gt; r, ensuring partitioning invariant: s[left..r] ≤ pivot ≤ s[l..right]</description></item>
-/// </list>
-/// The condition l ≤ r (not l &lt; r) ensures elements equal to pivot are swapped, preventing infinite loops on duplicate-heavy arrays.
-/// Boundary checks prevent out-of-bounds access when all elements are smaller/larger than pivot.
-/// <br/>
-/// <strong>Duplicate Detection Optimization:</strong> After partitioning, if one partition is empty and the other contains all elements,
-/// the algorithm checks if all elements equal the pivot value. This detects arrays with many duplicates (common in real-world data)
-/// and terminates early, avoiding unnecessary recursion. This optimization is particularly effective for:
-/// <list type="bullet">
-/// <item><description>Boolean arrays (only two distinct values)</description></item>
-/// <item><description>Categorical data with few distinct values (e.g., status codes, ratings)</description></item>
-/// <item><description>Arrays with many repeated elements (e.g., sensor data with constant readings)</description></item>
-/// </list></description></item>
-/// <item><description><strong>Tail Recursion Optimization:</strong> After partitioning into [left, r] and [l, right],
-/// the algorithm always recursively processes the smaller partition and loops on the larger partition.
-/// This optimization guarantees the recursion stack depth is at most O(log n) (specifically ⌈log₂(n)⌉),
-/// even in pathological cases before the depth limit triggers HeapSort.
-/// This is identical to the strategy used in LLVM libcxx's std::sort implementation.</description></item>
-/// <item><description><strong>InsertionSort Threshold:</strong> For partitions of size ≤ 30, InsertionSort is used instead of QuickSort.
-/// This threshold was determined through empirical benchmarking:
-/// <list type="bullet">
-/// <item><description>InsertionSort has lower constant factors than QuickSort for small arrays</description></item>
-/// <item><description>Reduces recursion overhead (30-element partition would require ~5 recursion levels)</description></item>
-/// <item><description>Improves cache locality by processing small contiguous regions (fits in L1 cache)</description></item>
-/// <item><description>Threshold 30 measured faster than 16 across primitive and reference types</description></item>
-/// <item><description>Threshold of 30 matches C++ std::introsort for trivially copyable types</description></item>
-/// </list>
-/// This hybrid approach achieves better constant factors than pure QuickSort while maintaining O(n log n) worst-case.</description></item>
-/// <item><description><strong>Nearly-Sorted Detection with Early Abort (SortIncomplete):</strong> When partitioning produces zero swaps,
-/// the partition is likely nearly sorted. The algorithm uses InsertionSort.SortIncomplete to attempt sorting:
-/// <list type="bullet">
-/// <item><description>For very small partitions (2-5 elements): Uses sorting networks for optimal performance</description></item>
-/// <item><description>For larger partitions: Tracks insertion count; aborts if more than 8 insertions are needed</description></item>
-/// <item><description>If both partitions complete: Entire range is sorted, return early</description></item>
-/// <item><description>If one partition completes: Continue with only the incomplete partition (tail recursion optimization)</description></item>
-/// <item><description>If both partitions incomplete: Fall through to regular QuickSort/HeapSort (partition not nearly sorted)</description></item>
-/// </list>
-/// This optimization is based on LLVM libcxx's __insertion_sort_incomplete and significantly improves performance for nearly-sorted data,
-/// common in real-world scenarios (append operations, partially sorted streams, time-series data).</description></item>
-/// <item><description><strong>HeapSort Fallback Correctness:</strong> When depthLimit reaches 0, the current partition is sorted using HeapSort.
-/// HeapSort guarantees O(n log n) time complexity regardless of input distribution, providing a safety net against adversarial inputs.
-/// The depth limit ensures that HeapSort is invoked only when QuickSort exhibits pathological behavior,
-/// preserving QuickSort's superior average-case performance for typical inputs.</description></item>
+/// <item><description><strong>Introsort loop:</strong> While the range holds more than size_threshold = 16 elements, a depth counter starting
+/// at 2⌊log₂ n⌋ is decremented for every partition on the current path. When it reaches 0, the range is sorted by heapsort and the loop
+/// ends. Otherwise the range is partitioned, the loop recurses on the right part and continues with the left part. The depth limit bounds
+/// the recursion depth, so the paper recurses on the right part without comparing the sizes of the two parts.</description></item>
+/// <item><description><strong>Median-of-3 pivot:</strong> The pivot is the median value of A[f], A[f + (b - f)/2] and A[b - 1], found
+/// with 2-3 comparisons. The samples are not moved; only the value is used.</description></item>
+/// <item><description><strong>Unguarded partition:</strong> The scan from the left stops at an element not less than the pivot, the scan
+/// from the right at an element not greater than it; if they have not crossed, the two elements are exchanged and the left scan moves on.
+/// The median sample and the elements already exchanged stop the scans, so they need no bound. Elements equal to the pivot stop both scans
+/// and are exchanged, which keeps the split balanced on duplicate-heavy input.</description></item>
+/// <item><description><strong>Final insertion sort:</strong> The loop leaves every element within its range of at most 16 elements, and
+/// every element of a range precedes every element of the next one. One insertion sort over the whole range then moves each element
+/// only within its range, so the pass costs O(n) for a fixed size_threshold.</description></item>
+/// <item><description><strong>Worst-case bound:</strong> Partitioning costs O(n) per level and there are at most 2⌊log₂ n⌋ levels, and
+/// heapsort sorts each range it is handed in O(m log m), so the total is O(n log n).</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Hybrid (Partition (base) + Heap + Insertion)</description></item>
-/// <item><description>Stable      : No (QuickSort and HeapSort are unstable; element order is not preserved for equal values)</description></item>
-/// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack, no additional arrays allocated)</description></item>
-/// <item><description>Best case   : Θ(n log n) - Musser's introsort partitions every range, and its best input (sorted data under median-of-three) produces balanced partitions all the way down (this implementation can finish sorted input in Θ(n); see the implementation note)</description></item>
-/// <item><description>Average case: Θ(n log n) - Expected ~1.386n log₂ n comparisons from QuickSort with Hoare partition, reduced by InsertionSort optimization</description></item>
-/// <item><description>Worst case  : O(n log n) - Guaranteed by HeapSort fallback when recursion depth exceeds 2⌊log₂(n)⌋</description></item>
-/// <item><description>Comparisons : ~1.2-1.4n log₂ n (average) - Lower than pure QuickSort due to InsertionSort handling small partitions</description></item>
-/// <item><description>Swaps       : ~0.33n log₂ n (average) - Hoare partition performs significantly fewer swaps than Lomuto partition</description></item>
-/// <item><description>Index Reads : O(n log n) - every partition level reads each element of the range it splits; the HeapSort fallback and InsertionSort leaves keep the same order; a range the nearly-sorted detection finishes is not split further</description></item>
-/// <item><description>Index Writes: O(n log n) - each swap writes two positions, so the writes follow the swap count (already-sorted input makes no swaps and no writes)</description></item>
-/// <item><description>Space       : O(log n) - recursion stack only, no additional arrays allocated</description></item>
+/// <item><description>Stable      : No (partitioning and heapsort exchange elements across equal keys)</description></item>
+/// <item><description>In-place    : Yes (O(log n) recursion depth, bounded by the depth limit)</description></item>
+/// <item><description>Best case   : Θ(n log n) - every range above the threshold is partitioned; sorted input splits evenly at every level</description></item>
+/// <item><description>Average case: Θ(n log n) - median-of-3 pivots split near the median on average</description></item>
+/// <item><description>Worst case  : O(n log n) - the depth limit hands a range that keeps splitting badly to heapsort</description></item>
+/// <item><description>Comparisons : Θ(n log n) - each partition compares every element of its range with the pivot, about (12/7) n ln n ≈ 1.19 n log₂ n on distinct keys, less the levels below the threshold; the final insertion sort adds O(n)</description></item>
+/// <item><description>Swaps       : O(n log n) - the partitions exchange misplaced pairs, and elements equal to the pivot are exchanged too; the heapsort fallback swaps each extracted maximum</description></item>
+/// <item><description>Index Reads : Θ(n log n) - every partition level reads each element of the range it splits, and the final insertion sort reads each element at least once</description></item>
+/// <item><description>Index Writes: O(n log n) - each swap writes two positions, the final insertion sort writes the elements it shifts, and the heapsort fallback writes through its sift holes</description></item>
+/// <item><description>Space       : O(log n) - recursion only, at most 2⌊log₂ n⌋ levels deep</description></item>
 /// </list>
-/// <para><strong>Implementation note – nearly-sorted detection:</strong></para>
-/// <para>The Best case row above is Musser's introsort, which has no early exit: in his paper an already sorted
-/// sequence produces equal-length partitions in every range, so it still costs Θ(n log n). This implementation adds
-/// the nearly-sorted detection described above, after libc++'s <c>__insertion_sort_incomplete</c>: when a partition
-/// step makes no swaps, each side goes to InsertionSort.SortIncomplete, which gives up after 8 insertions. On
-/// already-sorted input the first partition makes no swaps and both sides are confirmed sorted, so the sort ends
-/// there: about 2n comparisons, 3n reads and no writes, which is Θ(n).</para>
+/// <para><strong>Implementation notes:</strong></para>
+/// <list type="bullet">
+/// <item><description>size_threshold is 16, the value of the HP STL's <c>__stl_threshold</c> that the paper's code uses.</description></item>
+/// <item><description>The heapsort fallback is <see cref="HeapSort"/>'s top-down heapsort; the paper only requires an O(n log n) stopper.</description></item>
+/// <item><description>A natural-order floating-point range first moves its NaNs to the front, without comparisons, as the other
+/// partition sorts here do; the depth limit is taken from the length that remains.</description></item>
+/// </list>
 /// <para><strong>Comparer contract:</strong></para>
-/// <para>The Hoare partition checks its cursors against the range. The insertion sorts of ranges that are not leftmost rely on the element
-/// before the range to stop their scan instead. Only a consistent comparer guarantees that, so their cursor is also checked. The natural
-/// order of a primitive type is always consistent, and that check is compiled out for it. A comparer that is not a consistent total order can
-/// make the sort throw <see cref="InvalidOperationException"/>. Either way the range keeps its elements, in an unspecified order, and
-/// nothing outside the range is read or written.</para>
+/// <para>The partition scans stop at the median sample and at the elements already exchanged, which only a consistent comparer guarantees.
+/// Element access is unchecked, so the cursors are also checked against the range. The natural order of a primitive type is always
+/// consistent, and the checks are compiled out for it. A comparer that is not a consistent total order can make the sort throw
+/// <see cref="InvalidOperationException"/>. Either way the range keeps its elements, in an unspecified order, and nothing outside the range
+/// is read or written.</para>
 /// <para><strong>Reference:</strong></para>
+/// <para>Paper: David R. Musser, "Introspective Sorting and Selection Algorithms", Software: Practice and Experience 27(8), 983-993 (1997). https://webpages.charlotte.edu/rbunescu/courses/ou/cs4040/introsort.pdf</para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Introsort</para>
-/// <para>Paper: David R Musser https://webpages.charlotte.edu/rbunescu/courses/ou/cs4040/introsort.pdf</para>
-/// <para>LLVM implementation: https://github.com/llvm/llvm-project/blob/368faacac7525e538fa6680aea74e19a75e3458d/libcxx/include/__algorithm/sort.h#L272</para>
 /// </remarks>
 public static class IntroSort
 {
@@ -122,14 +68,8 @@ public static class IntroSort
     /// <remarks>Verified by IntroSortTests, which derives from SortTestsBase.</remarks>
     public static bool IsStable => false;
 
-    // Partitioning correctness: Hoare partition maintains invariant s[left..r] ≤ pivot ≤ s[l..right] with proper boundary checks
-    // Recursion correctness: Both partitions [left, r] and [l, right] are strictly smaller than [left, right] due to pointer advance after swap
-    // Termination guarantee: Combination of depth limit (triggers HeapSort) and tail recursion (limits stack depth) ensures termination
-    // Algorithm correctness: InsertionSort, HeapSort, and QuickSort are all proven correct sorting algorithms
-    // Complexity guarantee: Depth limit of 2⌊log₂(n)⌋ ensures HeapSort fallback before stack overflow or quadratic behavior
-
-    // Follow to dotnet runtime https://github.com/dotnet/dotnet/blob/a6dd645cee9a1f6d40c3b151f80fb82bcbb87a4d/src/runtime/src/libraries/System.Private.CoreLib/src/System/Array.cs#L25
-    private const int IntrosortSizeThreshold = 16;
+    // Ranges of at most this many elements are left to the final insertion sort (the HP STL's __stl_threshold).
+    private const int SizeThreshold = 16;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -216,323 +156,95 @@ public static class IntroSort
             return;
         }
 
-        // Sort the remaining range.
-        var depthLimit = 2 * (BitOperations.Log2((uint)(last - nanEnd)) + 1);
-        IntroSortInternal(s, nanEnd, last - 1, depthLimit, true);
+        IntroSortLoop(s, nanEnd, last, 2 * BitOperations.Log2((uint)(last - nanEnd)));
+
+        s.Context.OnPhase(SortPhase.HybridToInsertionSort, nanEnd, last - 1, SizeThreshold);
+        InsertionSort.SortCore(s, nanEnd, last);
     }
 
     /// <summary>
-    /// Internal IntroSort implementation that switches between QuickSort, HeapSort, and InsertionSort based on size and depth.
+    /// Partitions [f, b) until every range holds at most <see cref="SizeThreshold"/> elements, sorting a range by heapsort once
+    /// <paramref name="depthLimit"/> partitions on its path have been made. Recurses on the right part and continues with the left part.
     /// </summary>
-    private static void IntroSortInternal<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int depthLimit, bool leftmost)
+    private static void IntroSortLoop<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int f, int b, int depthLimit)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        while (right > left)
+        while (b - f > SizeThreshold)
         {
-            var size = right - left + 1;
-
-            // Tiny arrays: use inline sorting networks to avoid function call overhead
-            if (size == 2)
-            {
-                if (s.IsGreaterAt(left, right)) s.Swap(left, right);
-                return;
-            }
-
-            if (size == 3)
-            {
-                if (s.IsGreaterAt(left, left + 1)) s.Swap(left, left + 1);
-                if (s.IsGreaterAt(left, right)) s.Swap(left, right);
-                if (s.IsGreaterAt(left + 1, right)) s.Swap(left + 1, right);
-                return;
-            }
-
-            // Small arrays: use InsertionSort
-            // For leftmost partitions, use guarded version (needs boundary checks)
-            // For non-leftmost partitions, use unguarded version (pivot acts as sentinel)
-            if (size <= IntrosortSizeThreshold)
-            {
-                s.Context.OnPhase(SortPhase.HybridToInsertionSort, left, right, IntrosortSizeThreshold);
-                if (leftmost)
-                {
-                    InsertionSort.SortCore(s, left, right + 1);
-                }
-                else
-                {
-                    InsertionSort.UnguardedSortCore(s, left, right + 1);
-                }
-                return;
-            }
-
-            // Max depth reached: switch to HeapSort to guarantee O(n log n)
             if (depthLimit == 0)
             {
-                s.Context.OnPhase(SortPhase.HybridToHeapSort, left, right);
-                HeapSort.SortFallbackCore(s, left, right + 1);
+                s.Context.OnPhase(SortPhase.HybridToHeapSort, f, b - 1);
+                HeapSort.SortFallbackCore(s, f, b);
                 return;
             }
 
             depthLimit--;
 
-            // QuickSort with adaptive pivot selection:
-            // - For large arrays (>= 1000): use median-of-5
-            // - For smaller arrays: use median-of-3 (quartile-based)
-            var length = right - left + 1;
-            int pivotIndex;
-
-            if (length >= 1000)
-            {
-                var delta = length / 2;
-                var mid = left + delta;
-                var q1 = left + delta / 2;
-                var q3 = mid + delta / 2;
-                pivotIndex = MedianOf5Index(s, left, q1, mid, q3, right);
-            }
-            else
-            {
-                // Standard quartile-based median-of-3 for smaller arrays
-                var q1 = left + length / 4;
-                var mid = left + length / 2;
-                var q3 = left + (length * 3) / 4;
-                pivotIndex = MedianOf3Index(s, q1, mid, q3);
-            }
-
-            // Hoare partition scheme with swap counting for nearly-sorted detection
-            s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, pivotIndex);
+            var pivotIndex = MedianOf3Index(s, f, f + (b - f) / 2, b - 1);
+            s.Context.OnPhase(SortPhase.QuickSortPartition, f, b - 1, pivotIndex);
             s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.Pivot);
-            var pivot = s.Read(pivotIndex);
-            var l = left;
-            var r = right;
-            var swapCount = 0;
-
-            while (l <= r)
-            {
-                // Move l forward while elements are less than pivot
-                while (l < right && s.IsElementLessThan(l, pivot))
-                {
-                    l++;
-                }
-
-                // Move r backward while elements are greater than pivot
-                while (r > left && s.IsElementGreaterThan(r, pivot))
-                {
-                    r--;
-                }
-
-                // If pointers haven't crossed, swap and advance both
-                if (l <= r)
-                {
-                    if (l != r) // Only count actual swaps (not self-swaps)
-                    {
-                        s.Swap(l, r);
-                        swapCount++;
-                    }
-                    l++;
-                    r--;
-                }
-            }
-
-            // After partitioning: [left..r] <= pivot, [l..right] >= pivot
-            // Detect all-equal-to-pivot case (common in arrays with many duplicates)
-            // If one partition is empty and the other is the full range, all elements equal pivot
-            var leftPartSize = r - left + 1;
-            var rightPartSize = right - l + 1;
-            var totalSize = right - left + 1;
-
-            if (leftPartSize == 0 && rightPartSize == totalSize)
-            {
-                // All elements >= pivot; check if all are equal to pivot
-                // This happens when all elements in range equal the pivot value
-                var allEqual = true;
-                for (var i = left; i <= right && allEqual; i++)
-                {
-                    if (s.Compare(i, pivot) != 0)
-                    {
-                        allEqual = false;
-                    }
-                }
-                if (allEqual)
-                {
-                    // All elements equal - range is sorted, done
-                    s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
-                    return;
-                }
-            }
-            else if (rightPartSize == 0 && leftPartSize == totalSize)
-            {
-                // All elements <= pivot; check if all are equal to pivot
-                var allEqual = true;
-                for (var i = left; i <= right && allEqual; i++)
-                {
-                    if (s.Compare(i, pivot) != 0)
-                    {
-                        allEqual = false;
-                    }
-                }
-                if (allEqual)
-                {
-                    // All elements equal - range is sorted, done
-                    s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
-                    return;
-                }
-            }
-
-            // Nearly-sorted detection
-            // This is similar to C++ std::introsort's __insertion_sort_incomplete optimization
-            if (swapCount == 0)
-            {
-                // For nearly-sorted arrays, InsertionSort is very efficient
-                // Try both partitions with SortIncomplete (can give up if not nearly sorted)
-                var leftSorted = left >= r || InsertionSort.SortIncomplete(s, left, r + 1, leftmost);
-                var rightSorted = l >= right || InsertionSort.SortIncomplete(s, l, right + 1, false);
-
-                if (leftSorted)
-                {
-                    if (rightSorted)
-                    {
-                        // Both partitions completed successfully - done
-                        s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
-                        return;
-                    }
-                    else
-                    {
-                        // Left done, right needs more work - continue with right partition
-                        s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
-                        leftmost = false;
-                        left = l;
-                        continue;
-                    }
-                }
-                else
-                {
-                    if (rightSorted)
-                    {
-                        // Right done, left needs more work - continue with left partition
-                        s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
-                        right = r;
-                        continue;
-                    }
-                    else
-                    {
-                        // Both partitions incomplete - fall through to regular tail recursion
-                    }
-                }
-            }
-
-            // Tail recursion optimization: always recurse on smaller partition, loop on larger
-            // This guarantees O(log n) stack depth even for pathological inputs
-            // (similar to C++ std::introsort and LLVM implementation)
+            var p = UnguardedPartition(s, f, b, s.Read(pivotIndex));
             s.Context.OnRole(pivotIndex, BUFFER_MAIN, RoleType.None);
-            var leftSize = r - left + 1;
-            var rightSize = right - l + 1;
 
-            if (leftSize < rightSize)
-            {
-                // Recurse on smaller left partition (preserves leftmost flag)
-                if (left < r)
-                {
-                    IntroSortInternal(s, left, r, depthLimit, leftmost);
-                }
-                // Tail recursion: continue loop with larger right partition
-                // Right partition is never leftmost (element at position r acts as sentinel)
-                leftmost = false;
-                left = l;
-            }
-            else
-            {
-                // Recurse on smaller right partition (always non-leftmost)
-                if (l < right)
-                {
-                    IntroSortInternal(s, l, right, depthLimit, leftmost);
-                }
-                // Tail recursion: continue loop with larger left partition
-                // Preserve leftmost flag for left partition
-                right = r;
-            }
+            IntroSortLoop(s, p, b, depthLimit);
+            b = p;
         }
     }
 
     /// <summary>
-    /// Returns the median index among three elements at specified indices.
-    /// This method performs exactly 2-3 comparisons to determine the median index.
+    /// Partitions [first, last) around <paramref name="pivot"/>, a value with an element not less than it and an element not greater than
+    /// it in the range. Returns the cut: no element before it is greater than the pivot, and no element from it on is less.
     /// </summary>
-    private static int MedianOf3Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int lowIdx, int midIdx, int highIdx)
+    private static int UnguardedPartition<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last, T pivot)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Use SortSpan.Compare to track statistics
-        var cmpLowMid = s.Compare(lowIdx, midIdx);
+        // The median sample and the elements already exchanged stop the scans, which only a consistent comparer guarantees. Element access is
+        // unchecked, so the cursors are also checked against the range. The natural order of a primitive type is consistent, so the checks
+        // fold away for it.
+        var checkCursors = !s.UsesNaturalPrimitiveOrder;
+        var begin = first;
+        var end = last;
 
-        if (cmpLowMid > 0) // low > mid
+        while (true)
         {
-            var cmpMidHigh = s.Compare(midIdx, highIdx);
-            if (cmpMidHigh > 0) // low > mid > high
+            while (s.IsElementLessThan(first, pivot))
             {
-                return midIdx; // mid is median
+                first++;
+                if (checkCursors && first == end) ThrowHelper.ThrowInconsistentComparer();
             }
-            else // low > mid, mid <= high
+
+            last--;
+            while (s.IsValueLessThan(pivot, last))
             {
-                var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? highIdx : lowIdx;
+                last--;
+                if (checkCursors && last < begin) ThrowHelper.ThrowInconsistentComparer();
             }
-        }
-        else // low <= mid
-        {
-            var cmpMidHigh = s.Compare(midIdx, highIdx);
-            if (cmpMidHigh > 0) // low <= mid, mid > high
-            {
-                var cmpLowHigh = s.Compare(lowIdx, highIdx);
-                return cmpLowHigh > 0 ? lowIdx : highIdx;
-            }
-            else // low <= mid <= high
-            {
-                return midIdx; // mid is median
-            }
+
+            if (!(first < last)) return first;
+
+            s.Swap(first, last);
+            first++;
         }
     }
 
     /// <summary>
-    /// Returns the median index among five elements at specified indices.
-    /// Performs six comparisons without moving the sampled elements.
+    /// Returns the index of the median of the elements at <paramref name="a"/>, <paramref name="b"/> and <paramref name="c"/>, with the
+    /// comparisons of the HP STL's <c>__median</c>.
     /// </summary>
-    /// <remarks>
-    /// The five samples are: left, left+delta/2, mid, mid+delta/2, right (where delta = length/2).
-    /// </remarks>
-    private static int MedianOf5Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int i1, int i2, int i3, int i4, int i5)
+    private static int MedianOf3Index<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int a, int b, int c)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        if (s.IsGreaterAt(i1, i2)) (i1, i2) = (i2, i1);
-        if (s.IsGreaterAt(i3, i4)) (i3, i4) = (i4, i3);
-        if (s.IsGreaterAt(i1, i3))
+        if (s.IsLessAt(a, b))
         {
-            (i1, i3) = (i3, i1);
-            (i2, i4) = (i4, i2);
+            if (s.IsLessAt(b, c)) return b;
+            if (s.IsLessAt(a, c)) return c;
+            return a;
         }
-
-        // The minimum of the first four samples has rank at most two among all five.
-        // Removing it leaves the median as the second element of two ordered pairs.
-        if (s.IsGreaterAt(i2, i5)) (i2, i5) = (i5, i2);
-        return s.IsGreaterAt(i2, i3)
-            ? (s.IsGreaterAt(i2, i4) ? i4 : i2)
-            : (s.IsGreaterAt(i3, i5) ? i5 : i3);
-    }
-
-    /// <summary>
-    /// Computes the floor of the base-2 logarithm of a positive integer.
-    /// </summary>
-    /// <param name="n">The positive integer to compute the logarithm for.</param>
-    /// <returns>The floor of log2(n).</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int Log2(int n)
-    {
-        // var log = 0;
-        // while (n > 1)
-        // {
-        //     n >>= 1;
-        //     log++;
-        // }
-        // return log;
-        return BitOperations.Log2((uint)n);
+        if (s.IsLessAt(a, c)) return a;
+        if (s.IsLessAt(b, c)) return c;
+        return b;
     }
 }

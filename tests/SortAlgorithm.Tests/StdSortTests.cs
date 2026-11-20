@@ -221,4 +221,54 @@ public class StdSortTests : SortTestsBase
         var minIndexReads = stats.CompareCount;
         await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
     }
+
+    delegate void PartialSortCall(SortSpan<int, ComparableComparer<int>, StatisticsContext> s, int first, int last);
+
+    /// <summary>
+    /// The heap fallback is libc++'s partial sort over the whole range: a heap built by holding each parent while larger children move up,
+    /// then maxima popped through a hole. It must sort every size, duplicates included, without a single swap.
+    /// </summary>
+    [Test]
+    public async Task HeapFallbackSortsWithoutSwaps()
+    {
+        var partialSort = typeof(StdSort).GetMethod("PartialSort", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .MakeGenericMethod(typeof(int), typeof(ComparableComparer<int>), typeof(StatisticsContext)).CreateDelegate<PartialSortCall>();
+        foreach (var n in new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16, 17, 31, 32, 33, 100, 1000 })
+        {
+            foreach (var distinct in new[] { 0, 2, 16 })
+            {
+                var data = TestHelpers.ShuffledRange(n, 42 + n).Select(x => distinct == 0 ? x : x % distinct).ToArray();
+                var guarded = new int[n + 2];
+                guarded[0] = int.MinValue;
+                guarded[n + 1] = int.MaxValue;
+                data.CopyTo(guarded, 1);
+                var stats = new StatisticsContext();
+                var s = new SortSpan<int, ComparableComparer<int>, StatisticsContext>(guarded, stats, default, 0);
+                partialSort(s, 1, n + 1);
+
+                var expected = data.Order().ToArray();
+                await Assert.That(guarded.Skip(1).Take(n).ToArray()).IsEquivalentTo(expected, CollectionOrdering.Matching).Because($"n={n} distinct={distinct}");
+                await Assert.That(guarded[0] == int.MinValue && guarded[n + 1] == int.MaxValue).IsTrue().Because($"n={n} distinct={distinct}");
+                await Assert.That(stats.SwapCount).IsEqualTo(0UL).Because($"n={n} distinct={distinct}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// McIlroy's adversary keeps every pivot an extreme of its range, so the depth limit runs out and the heap fallback sorts the rest.
+    /// The replay uses the same kind of comparer as the generation, so it takes the generic partition, not the bitset one.
+    /// </summary>
+    [Test]
+    public async Task KillerInputReachesTheHeapFallback()
+    {
+        const int n = 2000;
+        var input = SortAlgorithm.Utils.KillerAdversaryGenerator.Generate(n, static (span, comparer) => StdSort.Sort(span, comparer, NullContext.Default));
+        var fallbacks = 0;
+        var context = new VisualizationContext(onPhase: (phase, _, _, _) => { if (phase == SortPhase.HybridToHeapSort) fallbacks++; });
+        IComparer<int> comparer = Comparer<int>.Default;
+        StdSort.Sort(input.AsSpan(), comparer, context);
+
+        await Assert.That(input).IsEquivalentTo(Enumerable.Range(0, n).ToArray(), CollectionOrdering.Matching);
+        await Assert.That(fallbacks).IsGreaterThan(0);
+    }
 }

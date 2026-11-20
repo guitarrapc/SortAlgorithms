@@ -1,114 +1,68 @@
-﻿using System.Runtime.CompilerServices;
-using SortAlgorithm.Contexts;
+﻿using SortAlgorithm.Contexts;
 
 namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// 2つのピボットを使用して配列を3つの領域に分割する分割統治法のソートアルゴリズムです。
-/// 単一ピボットのQuickSortと比較して、より均等な分割により再帰の深さを浅くし、キャッシュ効率を高めることで高速化を実現します。
-/// 本実装はVladimir Yaroslavskiy (2009)のDual-Pivot QuickSort論文に基づいています。
+/// Vladimir Yaroslavskiy の2009年の論文に書かれたとおりのデュアルピボット・クイックソートで、ピボットは範囲の約 1/div と (div-1)/div の位置の2要素、
+/// 中央領域が小さい分割が続くと div を増やし、大きな中央領域ではピボットと等しい要素を両端へ寄せてから再帰します。
 /// <br/>
 /// A divide-and-conquer sorting algorithm that uses two pivots to partition the array into three regions.
-/// Compared to single-pivot QuickSort, it achieves faster performance through more balanced partitioning, reducing recursion depth and improving cache efficiency.
-/// This implementation is based on Vladimir Yaroslavskiy's (2009) Dual-Pivot QuickSort paper.
+/// It is the dual-pivot quicksort of Vladimir Yaroslavskiy's 2009 paper as written: the pivots are the two elements about 1/div and
+/// (div-1)/div into the range, div grows after a partition with a small center, and a large center first moves the elements equal to
+/// the pivots to its ends.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Dual-Pivot QuickSort:</strong></para>
 /// <list type="number">
-/// <item><description><strong>Pivot Selection and Ordering (5-Sample Method):</strong> Two pivots (p1, p2) are selected as follows:
-/// <list type="bullet">
-/// <item><description><strong>For arrays &lt; 47 elements:</strong> Insertion sort is used instead (no pivot selection occurs)</description></item>
-/// <item><description><strong>For arrays ≥47 elements:</strong> Use Yaroslavskiy's 5-sample strategy:
-/// <list type="bullet">
-/// <item><description>Sample 5 elements at evenly distributed positions: left+length/7, left+2*length/7, middle, right-2*length/7, right-length/7</description></item>
-/// <item><description>Sort these 5 elements using insertion sort (4-10 comparisons)</description></item>
-/// <item><description>Choose the 2nd smallest and 4th smallest as pivot1 and pivot2</description></item>
-/// <item><description>This yields approximately 1/7, 3/7, 5/7 division ratios, close to the ideal 1/3, 2/3 for dual-pivot</description></item>
-/// </list>
-/// </description></item>
-/// </list>
-/// The pivots satisfy p1 ≤ p2 by construction. This method dramatically reduces worst-case probability and handles sorted/reverse-sorted data efficiently.</description></item>
-/// <item><description><strong>Three-Way Partitioning (Neither Hoare nor Lomuto):</strong> This algorithm uses a specialized 3-way partitioning scheme designed for dual-pivot quicksort.
-/// Unlike Hoare partition (bidirectional scan with two pointers) or Lomuto partition (single-direction scan),
-/// this approach performs a left-to-right scan with three boundary pointers (l, k, g) to partition the array into three regions:
-/// <list type="bullet">
-/// <item><description>Left region: elements &lt; p1 (indices [left, l-1])</description></item>
-/// <item><description>Middle region: elements where p1 ≤ element ≤ p2 (indices [l+1, g-1])</description></item>
-/// <item><description>Right region: elements &gt; p2 (indices [g+1, right])</description></item>
-/// </list>
-/// The partitioning loop maintains these invariants:
-/// - Elements in [left+1, l-1] are &lt; p1
-/// - Elements in [l, k-1] are in [p1, p2]
-/// - Elements in [g+1, right-1] are &gt; p2
-/// - Element at index k is currently being examined
-/// This is the standard dual-pivot partitioning method introduced by Yaroslavskiy.</description></item>
-/// <item><description><strong>Pivot Placement:</strong> After partitioning, pivots are moved to their final positions:
-/// - p1 is swapped with the element at position l (boundary of left region)
-/// - p2 is swapped with the element at position g (boundary of right region)
-/// This ensures pivots are correctly positioned between their respective regions.</description></item>
-/// <item><description><strong>Recursive Division:</strong> The algorithm recursively sorts three independent regions:
-/// - Left region: [left, l-1]
-/// - Middle region: [l+1, g-1] (only if p1 &lt; p2, i.e., pivots are distinct)
-/// - Right region: [g+1, right]
-/// Base case: when right ≤ left, the region has ≤ 1 element and is trivially sorted.</description></item>
-/// <item><description><strong>Termination:</strong> The algorithm terminates because:
-/// - Each recursive call operates on a strictly smaller subarray (at least 2 elements are pivots)
-/// - The base case (right ≤ left) is eventually reached for all subarrays
-/// - Maximum recursion depth: O(log₃ n) on average, O(log n) worst case (tail recursion optimization: loop on largest partition, recurse on two smaller)</description></item>
+/// <item><description><strong>Tiny ranges:</strong> A range with len = right - left &lt; 27 is sorted by insertion sort.</description></item>
+/// <item><description><strong>Pivot selection:</strong> With third = len / div (div starts at 3), m1 = left + third and m2 = right - third,
+/// kept inside (left, right). One comparison of a[m1] and a[m2] decides which goes to a[left] and which to a[right], so the pivots
+/// p1 = a[left] and p2 = a[right] satisfy p1 ≤ p2.</description></item>
+/// <item><description><strong>Three-way partition:</strong> One scan with k between less and great. a[k] &lt; p1 is exchanged to less;
+/// a[k] &gt; p2 makes great step down over elements greater than p2, is exchanged with a[great], and the element it receives is checked
+/// against p1 once. The regions are then [left+1, less) &lt; p1, [less, k) between the pivots, and (great, right) &gt; p2.</description></item>
+/// <item><description><strong>Adapting div:</strong> dist = great - less is the size of the center minus one. When dist &lt; 13 the center was
+/// small, the pivots were poor, and div grows by one for all three subranges.</description></item>
+/// <item><description><strong>Pivot placement and recursion:</strong> The pivots are exchanged into less - 1 and great + 1, and the parts
+/// left of p1 and right of p2 are sorted. The center is sorted only when p1 &lt; p2: with p1 = p2 every element there equals the pivots.</description></item>
+/// <item><description><strong>Equal elements:</strong> When dist &gt; len - 13 and p1 ≠ p2, the center held nearly the whole range. Its
+/// elements equal to p1 are exchanged to its left end, those equal to p2 to its right end (and the element received is checked against p1
+/// once), and only the part between them is sorted.</description></item>
 /// </list>
 /// <para><strong>Performance Characteristics:</strong></para>
 /// <list type="bullet">
 /// <item><description>Family      : Partitioning (Divide and Conquer)</description></item>
 /// <item><description>Stable      : No (partitioning does not preserve relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(log n) auxiliary space for recursion stack)</description></item>
-/// <item><description>Best case   : Θ(n log₃ n) - Balanced partitions (each region ≈ n/3)</description></item>
-/// <item><description>Average case: Θ(n log₃ n) - Expected number of comparisons: 1.9n ln n ≈ 1.37n log₂ n (vs 2n ln n for single-pivot)</description></item>
-/// <item><description>Worst case  : O(n²) - Occurs when partitioning is highly unbalanced (rare with dual pivots)</description></item>
-/// <item><description>Comparisons : 1.9n ln n (average) - Each element compared with both pivots during partitioning</description></item>
-/// <item><description>Swaps       : 0.6n ln n (average) - More swaps than single-pivot (~0.33n ln n), but net faster due to fewer comparisons and better cache behavior</description></item>
+/// <item><description>Best case   : Θ(n) - all elements equal: the pivots are equal, the center is never sorted, and the outer parts are empty</description></item>
+/// <item><description>Average case: Θ(n log n) - 1.9 n ln n ≈ 1.32 n log₂ n comparisons on random distinct keys (Wild and Nebel)</description></item>
+/// <item><description>Worst case  : O(n²) - pivots that keep splitting off a constant number of elements</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, O(n²) worst - an element below p1 is compared once, every other element at least twice; 1.9 n ln n on average</description></item>
+/// <item><description>Swaps       : Θ(n log n) average, O(n²) worst - 0.6 n ln n on average (Wild and Nebel), plus the pivot exchanges and the insertion sort leaves' moves</description></item>
 /// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - every partition level reads each element of the range it splits</description></item>
-/// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each swap writes two positions, so the writes follow the swap count</description></item>
+/// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each swap writes two positions, and the insertion sort leaves write the elements they shift</description></item>
 /// <item><description>Space       : O(log n) - recursion stack only</description></item>
 /// </list>
 /// <para><strong>Partition scheme:</strong> Yaroslavskiy's 3-way dual-pivot partition — neither Hoare nor Lomuto.</para>
-/// <para><strong>Advantages over Single-Pivot QuickSort:</strong></para>
+/// <para><strong>Implementation notes:</strong></para>
 /// <list type="bullet">
-/// <item><description>More balanced partitions: log₃ n vs log₂ n recursion depth (≈37% reduction)</description></item>
-/// <item><description>Fewer comparisons on average: 1.9n ln n vs 2n ln n (≈5% reduction)</description></item>
-/// <item><description>Better cache locality: three regions fit better in CPU cache than two</description></item>
-/// <item><description>Lower probability of worst-case behavior: dual pivots provide better sampling</description></item>
-/// </list>
-/// <para><strong>Yaroslavskiy 2009 Optimizations Implemented:</strong></para>
-/// <list type="bullet">
-/// <item><description><strong>Insertion Sort Fallback (threshold = 47):</strong> Arrays smaller than 47 elements are sorted using insertion sort for better constant-factor performance.
-/// The 2009 paper uses TINY_SIZE = 17; this implementation follows Java 7's INSERTION_SORT_THRESHOLD = 47, which measured uniformly faster here (most on ordered patterns, less on random).</description></item>
-/// <item><description><strong>5-Sample Pivot Selection:</strong> For arrays ≥47 elements, uses 5-sample method to select pivots, reducing worst-case probability.</description></item>
-/// <item><description><strong>Inner While Loop:</strong> Partitioning uses inner while loop to scan from right when element &gt; pivot2, matching Yaroslavskiy's specification.</description></item>
-/// <item><description><strong>Equal Elements Optimization (DIST_SIZE = 13):</strong> When center region is large (&gt; length - 13) and pivots are different,
-/// segregates elements equal to pivots from the center region before recursing. This improves performance on arrays with many duplicate values.</description></item>
-/// <item><description><strong>Dual-Pivot Partitioning:</strong> Separate handling for equal pivots vs. different pivots cases.</description></item>
-/// <item><description>Reference: https://web.archive.org/web/20151002230717/http://iaroslavski.narod.ru/quicksort/DualPivotQuicksort.pdf</description></item>
+/// <item><description>The paper sorts the left part, the right part, and then the center. Here the two smaller of the three parts are
+/// sorted recursively and the largest by the loop, which bounds the stack at O(log n); every part is partitioned the same way.</description></item>
+/// <item><description>The paper tests p1 ≠ p2 and p1 &lt; p2 separately. Because p1 ≤ p2, one answer serves both, and when a[m1] &lt; a[m2]
+/// placed the pivots it is already known.</description></item>
+/// <item><description>The tiny ranges use <see cref="InsertionSort"/>, which shifts where the paper's loop swaps neighbours; the
+/// comparisons are the same.</description></item>
 /// </list>
 /// <para><strong>Differences from Java's DualPivotQuicksort:</strong></para>
-/// <list type="bullet">
-/// <item><description><strong>Core Algorithm:</strong> This implementation matches Yaroslavskiy's 2009 paper specification.</description></item>
-/// <item><description><strong>Adaptive Algorithm Selection (JDK 7–13, @version 2011.02.11):</strong> Java's implementation selects among several algorithms:
-/// <list type="bullet">
-/// <item><description>Dual-Pivot QuickSort: ranges with right - left &lt; QUICKSORT_THRESHOLD (286), and longer ranges that contain MAX_RUN_COUNT (67) or more ascending/descending runs</description></item>
-/// <item><description>Merge Sort: ranges with right - left ≥ 286 and fewer than 67 runs (nearly sorted input)</description></item>
-/// <item><description>Insertion Sort: quicksort parts shorter than INSERTION_SORT_THRESHOLD (47) — traditional insertion sort for the leftmost part, pair insertion sort for the others</description></item>
-/// <item><description>Counting Sort: byte arrays with right - left &gt; 29 and short/char arrays with right - left &gt; 3200; int, long, float, and double arrays never use it</description></item>
-/// </list>
-/// JDK 14 replaced this with a rewrite (@version 2018.08.18, @since 1.7 * 14) that adds mixed insertion sort, a heap sort fallback when recursion gets too deep, and parallel merge sort.
-/// This implementation uses Yaroslavskiy's original algorithm without additional adaptive selection.</description></item>
-/// <item><description><strong>Duplicate Handling:</strong> JDK 7–13 uses two pivots only when the five samples are all distinct; otherwise it partitions around the middle sample with a single-pivot 3-way (Dutch National Flag) scheme.
-/// With two pivots and a large center part, it moves elements equal to the pivots out of the center part before recursing.
-/// This implementation uses Yaroslavskiy's 2009 approach with equal elements optimization.</description></item>
-/// </list>
+/// <para>Java 7 takes the pivots as the 2nd and 4th of five sorted samples around the middle, sorts ranges below 47 by insertion sort, and
+/// drops the div rule; JDK 14 rewrote it again. Those are later variants with other constants: with Java 7's sampling the averages fall to
+/// about 1.70 n ln n comparisons and 0.55 n ln n swaps (Nebel and Wild). This class follows the 2009 paper.</para>
 /// <para><strong>Reference:</strong></para>
-/// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
+/// <para>Paper: Vladimir Yaroslavskiy, "Dual-Pivot Quicksort" (2009). https://web.archive.org/web/20151002230717/http://iaroslavski.narod.ru/quicksort/DualPivotQuicksort.pdf</para>
 /// <para>Paper: https://arxiv.org/abs/1310.7409 Average Case Analysis of Java 7's Dual Pivot Quicksort / Sebastian Wild, Markus E. Nebel</para>
-/// <para>Paper: https://arxiv.org/abs/1503.08498 Dual pivot Quicksort / Vasileios Iliopoulos, David B.Penman</para>
+/// <para>Paper: https://arxiv.org/abs/1403.6602 Analysis of Pivot Sampling in Dual-Pivot Quicksort / Markus E. Nebel, Sebastian Wild</para>
+/// <para>Wiki: https://en.wikipedia.org/wiki/Quicksort</para>
 /// </remarks>
 public static class DualPivotQuickSort
 {
@@ -118,22 +72,14 @@ public static class DualPivotQuickSort
     /// <remarks>Verified by DualPivotQuickSortTests, which derives from SortTestsBase.</remarks>
     public static bool IsStable => false;
 
-    // Threshold for switching to insertion sort.
-    // Yaroslavskiy's 2009 paper uses TINY_SIZE = 17; Java 7's DualPivotQuicksort raised it to 47
-    // (INSERTION_SORT_THRESHOLD), which this implementation follows.
-    // Measured in this codebase (int, NullContext): 47 is uniformly faster than 17 —
-    // Sorted/Reversed/SingleElementMoved improve the most (insertion sort handles ordered leaves in
-    // O(n) instead of run-destroying dual-pivot partitions), Random improves less,
-    // duplicate-heavy patterns are unchanged within noise.
-    // Every range reaching pivot selection therefore has length >= 47, which guarantees
-    // seventh >= 6 and keeps all 5 sample points e1..e5 inside [left, right] with
-    // spacing at approximately 1/7, 3/7, 4/7 (middle), 5/7, 6/7 of the range.
-    private const int InsertionSortThreshold = 47;
+    // A range with right - left below this is sorted by insertion sort (the paper's tiny-array test).
+    private const int TinySize = 27;
 
-    // Threshold for equal elements optimization (Yaroslavskiy 2009)
-    // When center region is larger than (length - DIST_SIZE) and pivots are different,
-    // segregate elements equal to pivots from the center region
-    private const int DIST_SIZE = 13;
+    // A center with dist = great - less below this makes div grow; a center with dist above len - DistSize gets the equal-elements pass.
+    private const int DistSize = 13;
+
+    // The initial divisor of the pivot positions.
+    private const int InitialDiv = 3;
 
     // Buffer identifiers for visualization
     private const int BUFFER_MAIN = 0;       // Main input array
@@ -226,330 +172,144 @@ public static class DualPivotQuickSort
     internal static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
-    {
-        while (right > left)
-        {
-            int length = right - left + 1;
+        => DualPivotQuicksort(s, left, right, InitialDiv);
 
-            // For tiny arrays, use insertion sort (Yaroslavskiy 2009 optimization)
-            if (length < InsertionSortThreshold)
+    private static void DualPivotQuicksort<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int left, int right, int div)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        while (true)
+        {
+            var len = right - left;
+
+            // Insertion sort for tiny arrays.
+            if (len < TinySize)
             {
-                // Report the delegation. Every other hybrid in this library announces it, and without
-                // it a consumer reconstructing the divide-and-conquer structure sees the recursion
-                // stop with no explanation (the sub-problems below the threshold simply vanish).
-                s.Context.OnPhase(SortPhase.HybridToInsertionSort, left, right, InsertionSortThreshold);
-                InsertionSort.SortCore(s, left, right + 1);
+                if (len > 0)
+                {
+                    s.Context.OnPhase(SortPhase.HybridToInsertionSort, left, right, TinySize);
+                    InsertionSort.SortCore(s, left, right + 1);
+                }
                 return;
             }
 
-            // Phase 0. Choose pivots using 5-sample method (Yaroslavskiy 2009 / Java 7)
-            // length >= InsertionSortThreshold (47) is guaranteed here, so all sample
-            // points fall inside [left, right].
-            int seventh = (length >> 3) + (length >> 6) + 1; // ≈ length/7
+            // "Medians": the elements about 1/div and (div-1)/div into the range, the smaller to the left end.
+            var third = len / div;
+            var m1 = left + third;
+            var m2 = right - third;
+            if (m1 <= left) m1 = left + 1;
+            if (m2 >= right) m2 = right - 1;
+            bool diffPivots;
+            if (s.IsLessAt(m1, m2))
+            {
+                s.Swap(m1, left);
+                s.Swap(m2, right);
+                diffPivots = true;
+            }
+            else
+            {
+                s.Swap(m1, right);
+                s.Swap(m2, left);
+                diffPivots = false;
+            }
 
-            // Sample 5 evenly distributed elements
-            int e3 = left + ((right - left) >> 1); // middle (overflow-safe)
-            int e2 = e3 - seventh;
-            int e1 = e2 - seventh;
-            int e4 = e3 + seventh;
-            int e5 = e4 + seventh;
-
-            // Sort these 5 elements using insertion sort (4-10 comparisons)
-            // This guarantees e1 <= e2 <= e3 <= e4 <= e5, ensuring pivot1 <= pivot2
-            // Using the same proven approach as StdSort.Sort5
-            Sort5(s, e1, e2, e3, e4, e5);
-
-            // Now: e1 <= e2 <= e3 <= e4 <= e5 is GUARANTEED
-            // Move pivots to the edges (will be swapped to final positions later)
-            s.Swap(e2, left);
-            s.Swap(e4, right);
-
-            // Check if pivots are different (right after pivot selection)
-            // This is more efficient than checking after partitioning
-            // At this point, left and right hold pivot values with left <= right guaranteed
-            var diffPivots = s.Compare(left, right) != 0;
-            // param3 is the pivot index. Omitting it defaulted to 0, which told consumers the pivot
-            // was at index 0 of the whole array regardless of the range being partitioned.
-            // Dual-pivot holds two pivots, at left and right; report the left one.
             s.Context.OnPhase(SortPhase.QuickSortPartition, left, right, left);
             s.Context.OnRole(left, BUFFER_MAIN, RoleType.Pivot);
             s.Context.OnRole(right, BUFFER_MAIN, RoleType.Pivot);
 
-            // Cache pivot values to avoid repeated index reads in the inner loop
-            T pivot1Value = s.Read(left);
-            T pivot2Value = s.Read(right);
-
-            // Phase 1. Partition array into three regions using dual pivots
-            // Following Yaroslavskiy 2009 paper structure exactly
-            var less = left + 1;
-            var great = right - 1;
-
+            // Pivots. a[m1] < a[m2] already showed p1 < p2; otherwise p1 ≤ p2, and one comparison tells whether they differ.
+            T pivot1, pivot2;
             if (diffPivots)
             {
-                // Different pivots (p1 < p2): dual-comparison loop
-                // Each element is compared against both pivot1 (left) and pivot2 (right)
-                for (int k = less; k <= great; k++)
-                {
-                    // Read a[k] once per examination (paper's `x = a[k]`); both pivot
-                    // comparisons reuse the cached value, so one read is recorded per element.
-                    // The first comparison reads through the span and so is reported against k. The
-                    // second reuses the cached value, so it names neither operand: locating it would
-                    // mean either reading twice, which announces work this loop deliberately avoids,
-                    // or having the caller assert where the value came from, which is an assertion
-                    // nothing can check.
-                    if (s.IsElementLessThan(k, pivot1Value, out var ak))
-                    {
-                        // Element < pivot1: move to left region
-                        s.Swap(k, less);
-                        less++;
-                    }
-                    else if (s.IsGreaterThan(ak, pivot2Value))
-                    {
-                        // Element > pivot2: scan from right to find position
-                        // Check k < great first to avoid unnecessary comparisons (short-circuit evaluation)
-                        while (k < great && s.IsElementGreaterThan(great, pivot2Value))
-                        {
-                            great--;
-                        }
-                        s.Swap(k, great);
-                        great--;
-
-                        // Re-read and re-check swapped element (original value no longer at k after swap)
-                        if (s.IsElementLessThan(k, pivot1Value, out _))
-                        {
-                            s.Swap(k, less);
-                            less++;
-                        }
-                    }
-                    // else: pivot1 <= element <= pivot2, stays in middle
-                }
+                pivot1 = s.Read(left);
+                pivot2 = s.Read(right);
             }
             else
             {
-                // Equal pivots (p1 == p2): single-comparison loop
-                // All comparisons use left only, avoiding redundant cross-index reads against right.
-                //
-                // Loop invariant at start of each iteration k:
-                //   [left+1, less-1] = all elements strictly < pivot
-                //   [less,   k-1  ] = all elements == pivot
-                //   [k,      great] = unexamined
-                //   [great+1,right-1] = all elements strictly > pivot
-                //   s[left] = pivot (never modified during this loop)
-                //
-                // This invariant is preserved in every case:
-                //   s[k] < pivot : swap(k, less) puts old s[less](==pivot) at k, less++ extends left region.
-                //   s[k] > pivot : inner while guarantees s[great] <= pivot before swap(k, great),
-                //                  so s[k] after swap is <= pivot; re-check moves any < pivot to left.
-                //                  s[k] > pivot after swap is structurally impossible.
-                //   s[k] == pivot: no action, stays in middle.
-                //
-                // After the loop: [less, great] is PROVABLY all == pivot.
-                // Sorting this region would be a no-op, so skipping it (midCount=0) is correct and
-                // avoids O(n²) regression on all-equal inputs.
-                for (int k = less; k <= great; k++)
-                {
-                    // Read a[k] once per examination (paper's `x = a[k]`); both branch
-                    // comparisons reuse the cached value, so one read is recorded per element.
-                    if (s.IsElementLessThan(k, pivot1Value, out var ak))
-                    {
-                        // Element < pivot: move to left region
-                        s.Swap(k, less);
-                        less++;
-                    }
-                    else if (s.IsGreaterThan(ak, pivot1Value))
-                    {
-                        // Element > pivot: scan from right to find position
-                        while (k < great && s.IsElementGreaterThan(great, pivot1Value))
-                        {
-                            great--;
-                        }
-                        s.Swap(k, great);
-                        great--;
+                diffPivots = s.IsLessAt(left, right, out pivot1, out pivot2);
+            }
 
-                        // Re-read and re-check swapped element
-                        if (s.IsElementLessThan(k, pivot1Value, out _))
-                        {
-                            s.Swap(k, less);
-                            less++;
-                        }
+            // Sorting: a[left+1, less) < p1, a[less, k) between the pivots, a(great, right) > p2.
+            var less = left + 1;
+            var great = right - 1;
+            for (var k = less; k <= great; k++)
+            {
+                // a[k] is read once; its second comparison uses the held value.
+                if (s.IsElementLessThan(k, pivot1, out var ak))
+                {
+                    s.Swap(k, less++);
+                }
+                else if (s.IsGreaterThan(ak, pivot2))
+                {
+                    while (k < great && s.IsElementGreaterThan(great, pivot2))
+                    {
+                        great--;
                     }
-                    // else: element == pivot, stays in middle
+                    s.Swap(k, great--);
+                    if (s.IsElementLessThan(k, pivot1))
+                    {
+                        s.Swap(k, less++);
+                    }
                 }
             }
 
-            // Swap pivots into their final positions
-            s.Swap(left, less - 1);
-            s.Swap(right, great + 1);
+            // Swaps
+            var dist = great - less;
+            if (dist < DistSize) div++;
+            s.Swap(less - 1, left);
+            s.Swap(great + 1, right);
 
-            // Store pivot positions (these indices remain fixed throughout subsequent phases)
-            int pivot1 = less - 1;
-            int pivot2 = great + 1;
-
-            // Update pivot roles: pivots have moved from left/right to pivot1/pivot2
             s.Context.OnRole(left, BUFFER_MAIN, RoleType.None);
             s.Context.OnRole(right, BUFFER_MAIN, RoleType.None);
-            s.Context.OnRole(pivot1, BUFFER_MAIN, RoleType.Pivot);
-            s.Context.OnRole(pivot2, BUFFER_MAIN, RoleType.Pivot);
 
-            // Phase 3. Equal elements optimization (not included in paper, extended implementation)
-            // When center region is large and pivots are different,
-            // segregate elements equal to pivots before sorting center.
-            // innerLeft/innerRight start equal to the Phase 1 center boundaries [less, great],
-            // then narrow inward as equal-to-pivot elements are moved to the edges of the center.
-            int innerLeft = less;
-            int innerRight = great;
-            int centerLen = great - less + 1;
-            if (centerLen > length - DIST_SIZE && diffPivots)
+            // The outer parts are fixed now; the equal-elements pass below moves only elements of the center.
+            var leftEnd = less - 2;
+            var rightStart = great + 2;
+
+            // Equal elements
+            if (dist > len - DistSize && diffPivots)
             {
-                for (int k = innerLeft; k <= innerRight; k++)
+                for (var k = less; k <= great; k++)
                 {
-                    if (s.Compare(k, pivot1Value) == 0) // equals pivot1
+                    if (s.Compare(k, pivot1, out var ak) == 0)
                     {
-                        s.Swap(k, innerLeft);
-                        innerLeft++;
+                        s.Swap(k, less++);
                     }
-                    else if (s.Compare(k, pivot2Value) == 0) // equals pivot2
+                    else if (s.Compare(ak, pivot2) == 0)
                     {
-                        // Advance innerRight past all pivot2-equal elements
-                        // This ensures the swapped element is not equal to pivot2
-                        while (k <= innerRight && s.Compare(innerRight, pivot2Value) == 0)
+                        s.Swap(k, great--);
+                        if (s.Compare(k, pivot1) == 0)
                         {
-                            innerRight--;
-                        }
-
-                        // Only swap if k and innerRight haven't crossed
-                        if (k <= innerRight)
-                        {
-                            s.Swap(k, innerRight);
-                            innerRight--;
-
-                            // Re-check swapped element (only need to check pivot1 now)
-                            // Since we advanced innerRight past all pivot2-equals, k is guaranteed != pivot2
-                            if (s.Compare(k, pivot1Value) == 0)
-                            {
-                                s.Swap(k, innerLeft);
-                                innerLeft++;
-                            }
+                            s.Swap(k, less++);
                         }
                     }
                 }
             }
 
-            // Phases 2, 4, 5: tail recursion optimization
-            // Recurse on the two smallest regions; loop (continue) on the largest.
-            // This bounds recursion depth to O(log n): given sizes l+c+r = length-2,
-            // the looped region is the largest, so each recursed size ≤ (length-2)/2.
-            s.Context.OnRole(pivot1, BUFFER_MAIN, RoleType.None);
-            s.Context.OnRole(pivot2, BUFFER_MAIN, RoleType.None);
-            int leftCount = pivot1 - left;
-            // When diffPivots == false, the equal-pivot partition loop invariant guarantees
-            // [less..great] is all == pivot, so sorting it is a no-op. Setting midCount=0
-            // skips the recursion and prevents O(n²) regression on all-equal inputs.
-            int midCount = diffPivots ? innerRight - innerLeft + 1 : 0;
-            int rightCount = right - pivot2;
+            // Subarrays: the center is sorted only when the pivots differ. The two smaller parts are sorted recursively and the
+            // largest by the loop, which bounds the stack at O(log n).
+            var leftCount = leftEnd - left + 1;
+            var midCount = diffPivots ? great - less + 1 : 0;
+            var rightCount = right - rightStart + 1;
 
             if (leftCount >= midCount && leftCount >= rightCount)
             {
-                // Left is largest: loop left, recurse on center and right
-                if (diffPivots) SortCore(s, innerLeft, innerRight);
-                SortCore(s, pivot2 + 1, right);
-                right = pivot1 - 1;
+                if (diffPivots) DualPivotQuicksort(s, less, great, div);
+                DualPivotQuicksort(s, rightStart, right, div);
+                right = leftEnd;
             }
             else if (rightCount >= leftCount && rightCount >= midCount)
             {
-                // Right is largest: loop right, recurse on left and center
-                SortCore(s, left, pivot1 - 1);
-                if (diffPivots) SortCore(s, innerLeft, innerRight);
-                left = pivot2 + 1;
+                DualPivotQuicksort(s, left, leftEnd, div);
+                if (diffPivots) DualPivotQuicksort(s, less, great, div);
+                left = rightStart;
             }
             else
             {
-                // Center is largest: loop center, recurse on left and right
-                SortCore(s, left, pivot1 - 1);
-                SortCore(s, pivot2 + 1, right);
-                left = innerLeft;
-                right = innerRight;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Sorts 3 elements. 2-3 compares, 0-2 swaps.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Sort3<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x, int y, int z)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        if (s.IsLessAt(y, x))
-        {
-            if (s.IsLessAt(z, y))
-            {
-                s.Swap(x, z); // z < y < x -> swap x,z -> x < y < z
-                return;
-            }
-
-            s.Swap(x, y); // x > y && y <= z -> x < y && x <= z
-            if (s.IsLessAt(z, y))  // if y > z
-                s.Swap(y, z); // x <= y && y < z
-        }
-        else if (s.IsLessAt(z, y))
-        {
-            s.Swap(y, z); // x >= y && y > z -> x >= z && y <= z
-            if (s.IsLessAt(y, x))  // if x > y
-                s.Swap(x, y); // x <= y && y <= z
-        }
-    }
-
-    /// <summary>
-    /// Sorts 4 elements. 3-6 compares, 0-5 swaps.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Sort4<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        Sort3(s, x1, x2, x3);
-        if (s.IsLessAt(x4, x3))
-        {
-            s.Swap(x3, x4);
-            if (s.IsLessAt(x3, x2))
-            {
-                s.Swap(x2, x3);
-                if (s.IsLessAt(x2, x1))
-                {
-                    s.Swap(x1, x2);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Sorts 5 elements. 4-10 compares, 0-9 swaps.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Sort5<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int x1, int x2, int x3, int x4, int x5)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        // Sort first 4 elements
-        Sort4(s, x1, x2, x3, x4);
-
-        // Insert x5 into the sorted sequence
-        if (s.IsLessAt(x5, x4))
-        {
-            s.Swap(x4, x5);
-            if (s.IsLessAt(x4, x3))
-            {
-                s.Swap(x3, x4);
-                if (s.IsLessAt(x3, x2))
-                {
-                    s.Swap(x2, x3);
-                    if (s.IsLessAt(x2, x1))
-                    {
-                        s.Swap(x1, x2);
-                    }
-                }
+                DualPivotQuicksort(s, left, leftEnd, div);
+                DualPivotQuicksort(s, rightStart, right, div);
+                left = less;
+                right = great;
             }
         }
     }
