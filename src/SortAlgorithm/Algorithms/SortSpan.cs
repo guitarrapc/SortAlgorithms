@@ -107,6 +107,80 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
             "an observing context would silently lose element operations.");
 
     /// <summary>
+    /// Announces a read of the <paramref name="count"/> elements from index <paramref name="i"/>, in index order, and returns a
+    /// reference to the first of them. A vector load reads its lanes through this reference, so it must read exactly these elements.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ref T ReadBlock(int i, int count)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            for (var k = 0; k < count; k++)
+            {
+                _context.OnIndexRead(_offset + i + k, _bufferId);
+            }
+        }
+#if DEBUG
+        return ref _span.Slice(i, count)[0];
+#else
+        return ref Unsafe.Add(ref _ref, (nint)(uint)i);
+#endif
+    }
+
+    /// <summary>
+    /// Announces <paramref name="count"/> comparisons that one vector instruction performed, lane by lane in index order: the element at
+    /// <c>i + k</c> against a value held in a register. Bit k of <paramref name="less"/> or <paramref name="greater"/> is set when the element
+    /// at <c>i + k</c> is less or greater than its operand; neither bit means equal.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void ReportLaneCompares(int i, int count, ulong less, ulong greater)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            for (var k = 0; k < count; k++)
+            {
+                _context.OnCompare(_offset + i + k, -1, LaneResult(less, greater, k), _bufferId, -1);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Announces <paramref name="count"/> comparisons that one vector instruction performed, lane by lane in index order: the element at
+    /// <c>i + k</c> against the element at <c>j + k</c>. The masks are read as in <see cref="ReportLaneCompares(int, int, ulong, ulong)"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void ReportLaneCompares(int i, int j, int count, ulong less, ulong greater)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            for (var k = 0; k < count; k++)
+            {
+                _context.OnCompare(_offset + i + k, _offset + j + k, LaneResult(less, greater, k), _bufferId, _bufferId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Announces <paramref name="count"/> comparisons that one vector instruction performed between two values held in registers, in lane
+    /// order. The masks are read as in <see cref="ReportLaneCompares(int, int, ulong, ulong)"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void ReportHeldLaneCompares(int count, ulong less, ulong greater)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            for (var k = 0; k < count; k++)
+            {
+                _context.OnCompare(-1, -1, LaneResult(less, greater, k), -1, -1);
+            }
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int LaneResult(ulong less, ulong greater, int lane)
+        => (int)((greater >> lane) & 1) - (int)((less >> lane) & 1);
+
+    /// <summary>
     /// Retrieves the element at the specified zero-based index. (Equivalent to span[i].)
     /// </summary>
     /// <param name="i">The zero-based index of the element to retrieve. Must be within the bounds of the collection.</param>

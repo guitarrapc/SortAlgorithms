@@ -353,6 +353,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(DoubleSelectionSortSimd))]
+    public void SetupDoubleSelectionSortSimd() => Setup(nameof(DoubleSelectionSortSimd));
+
+    [Benchmark]
+    public int DoubleSelectionSortSimd()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.DoubleSelectionSortSimd.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(Driftsort))]
     public void SetupDriftsort() => Setup(nameof(Driftsort));
 
@@ -922,6 +933,17 @@ public class SortAuditBenchmark : SortAuditBase
     {
         var values = buffers.Next();
         SortAlgorithm.Algorithms.SelectionSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
+    [GlobalSetup(Target = nameof(SelectionSortSimd))]
+    public void SetupSelectionSortSimd() => Setup(nameof(SelectionSortSimd));
+
+    [Benchmark]
+    public int SelectionSortSimd()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.SelectionSortSimd.Sort(values.AsSpan(), NullContext.Default);
         return values[values.Length / 2];
     }
 

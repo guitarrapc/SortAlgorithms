@@ -2343,8 +2343,10 @@ UnrollFactor=1  WarmupCount=2
 - [Bingo Sort](./src/SortAlgorithm/Algorithms/Selection/BingoSort.cs)
 - [Cycle Sort](./src/SortAlgorithm/Algorithms/Selection/CycleSort.cs)
 - [Double Selection Sort](./src/SortAlgorithm/Algorithms/Selection/DoubleSelectionSort.cs)
+- [Double Selection Sort (SIMD)](./src/SortAlgorithm/Algorithms/Selection/DoubleSelectionSortSimd.cs)
 - [Pancake Sort](./src/SortAlgorithm/Algorithms/Selection/PancakeSort.cs)
 - [Selection Sort](./src/SortAlgorithm/Algorithms/Selection/SelectionSort.cs)
+- [Selection Sort (SIMD)](./src/SortAlgorithm/Algorithms/Selection/SelectionSortSimd.cs)
 
 ### Insertion
 - [Binary Insertion Sort](./src/SortAlgorithm/Algorithms/Insertion/BinaryInsertionSort.cs)

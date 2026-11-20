@@ -728,4 +728,33 @@ public class SortSpanTests
         foreach (var (name, value) in trusted) await Assert.That(value).IsTrue().Because(name);
         foreach (var (name, value) in untrusted) await Assert.That(value).IsFalse().Because(name);
     }
+
+    /// <summary>
+    /// A vector instruction is reported lane by lane in index order: a block read as one read per lane, and a lane comparison with the
+    /// result its two masks give that lane. The index operands carry the span's offset and buffer id; held operands are -1.
+    /// </summary>
+    [Test]
+    public async Task BlockReadsAndLaneComparesReportEachLaneInIndexOrder()
+    {
+        var compares = new List<CompareEvent>();
+        var reads = new List<(int Index, int BufferId)>();
+        var source = new[] { 10, 20, 30, 40, 50, 60, 70, 80 };
+        var span = new SortSpan<int, ComparableComparer<int>, VisualizationContext>(
+            source.AsSpan(), Recording(compares, reads), new ComparableComparer<int>(), 7, offset: 100);
+
+        var first = span.ReadBlock(2, 3);
+        // Lane 0 less, lane 1 greater, lane 2 equal, lane 3 greater.
+        span.ReportLaneCompares(4, 4, less: 0b0001, greater: 0b1010);
+        span.ReportLaneCompares(0, 4, 2, less: 0b10, greater: 0b01);
+        span.ReportHeldLaneCompares(2, less: 0b00, greater: 0b10);
+
+        await Assert.That(first).IsEqualTo(30);
+        await Assert.That(reads).IsEquivalentTo(new List<(int, int)> { (102, 7), (103, 7), (104, 7) }, CollectionOrdering.Matching);
+        await Assert.That(compares).IsEquivalentTo(new List<CompareEvent>
+        {
+            new(104, -1, -1, 7, -1), new(105, -1, 1, 7, -1), new(106, -1, 0, 7, -1), new(107, -1, 1, 7, -1),
+            new(100, 104, 1, 7, 7), new(101, 105, -1, 7, 7),
+            new(-1, -1, 0, -1, -1), new(-1, -1, 1, -1, -1),
+        }, CollectionOrdering.Matching);
+    }
 }

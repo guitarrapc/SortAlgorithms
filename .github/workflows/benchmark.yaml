@@ -18,6 +18,7 @@ on:
           - "*NetworkBenchmark*"
           - "*PartitionBenchmark*"
           - "*SelectionBenchmark*"
+          - "*SelectionSimdBenchmark*"
           - "*TreeBenchmark*"
           - "*IntKeyBenchmark*"
           - "*StringBenchmark*"
