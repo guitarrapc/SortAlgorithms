@@ -173,6 +173,55 @@ public class PancakeSortTests : SortTestsBase
         await Assert.That(stats.IndexReadCount).IsEqualTo(ScanReads(n) + 2 * stats.SwapCount);
     }
 
+    [Test]
+    [Arguments(10, 1)]
+    [Arguments(20, 3)]
+    [Arguments(50, 7)]
+    [Arguments(50, 50)]
+    public async Task SortedWithDuplicatesFlipsNothingTest(int n, int copies)
+    {
+        var stats = new StatisticsContext();
+        var array = Enumerable.Range(0, n).Select(i => i / copies).ToArray();
+        var expected = array.ToArray();
+
+        PancakeSort.Sort(array.AsSpan(), stats);
+
+        // Every prefix of a sorted range ends with a copy of its maximum, which wins the tie at the end.
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+        await Assert.That(stats.CompareCount).IsEqualTo((ulong)(n * (n - 1) / 2));
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
+    }
+
+    [Test]
+    public async Task LastElementWinsTieTest()
+    {
+        var stats = new StatisticsContext();
+        var array = new[] { 3, 1, 3 };
+
+        PancakeSort.Sort(array.AsSpan(), stats);
+
+        // Pass 1 keeps the 3 that ends the prefix instead of flipping the first 3 there.
+        // Pass 2 flips [3, 1] (1 swap).
+        await Assert.That(array).IsEquivalentTo([1, 3, 3], CollectionOrdering.Matching);
+        await Assert.That(stats.SwapCount).IsEqualTo(1UL);
+    }
+
+    [Test]
+    public async Task FirstMaximumKeptBeforeEndTest()
+    {
+        var stats = new StatisticsContext();
+        var array = new[] { 3, 1, 3, 2 };
+
+        PancakeSort.Sort(array.AsSpan(), stats);
+
+        // Pass 1 takes the 3 at index 0, so its first flip is empty, and the second flips all four (2 swaps): [2, 3, 1, 3].
+        // Taking the 3 at index 2 would flip three elements first (1 more swap).
+        // Pass 2 flips [2, 3] and then [3, 2, 1] (2 swaps); pass 3 finds [1, 2] in place.
+        await Assert.That(array).IsEquivalentTo([1, 2, 3, 3], CollectionOrdering.Matching);
+        await Assert.That(stats.SwapCount).IsEqualTo(4UL);
+    }
+
     // Each of the n(n-1)/2 comparisons reads the scanned element and the candidate.
     static ulong ScanReads(int n) => (ulong)n * (ulong)(n - 1);
 }

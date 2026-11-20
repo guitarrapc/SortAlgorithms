@@ -28,21 +28,13 @@ public class CycleSortTests : SortTestsBase
         var sorted = Enumerable.Range(0, n).ToArray();
         CycleSort.Sort(sorted.AsSpan(), stats);
 
-        // Cycle Sort performs FindPosition comparisons: n(n-1)/2
-        // For sorted data, SkipDuplicates is called but no actual duplicates exist,
-        // so it performs minimal additional comparisons (1 per call to verify no match)
+        // Each start counts once over the rest of the range and finds its item in place,
+        // so nothing is skipped or written. Each start also reads its item.
         var findPositionCompares = (ulong)(n * (n - 1) / 2);
 
-        // Sorted data: no writes needed (all elements already in correct positions)
-        var expectedWrites = 0UL;
-
-        // For sorted data, FindPosition is called n-1 times (once per cycleStart)
-        // Each call results in pos == cycleStart, so no SkipDuplicates is invoked
-        var expectedCompares = findPositionCompares;
-
-        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-        await Assert.That(stats.IndexReadCount >= findPositionCompares).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {findPositionCompares}");
+        await Assert.That(stats.CompareCount).IsEqualTo(findPositionCompares);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(n - 1) + findPositionCompares);
     }
 
     [Test]
@@ -56,34 +48,17 @@ public class CycleSortTests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         CycleSort.Sort(reversed.AsSpan(), stats);
 
-        // Cycle Sort performs FindPosition comparisons: n(n-1)/2 as the base
-        var findPositionCompares = (ulong)(n * (n - 1) / 2);
+        // Reversed input is k = ⌊n/2⌋ two-element cycles, the one from start i swapping i and n-1-i.
+        // Each start counts over the rest of the range; a two-element cycle counts once more for its second item.
+        // Each of its two placements ends its duplicate skip with one comparison and overwrites one cell.
+        var k = n / 2;
+        var counts = (ulong)(n * (n - 1) / 2 + k * (n - 1) - k * (k - 1) / 2);
+        var placements = (ulong)(2 * k);
 
-        // However, FindPosition is called multiple times per cycle:
-        // 1. Once before the initial write
-        // 2. Multiple times in the while loop until the cycle completes
-        //
-        // For reversed data, the actual number of comparisons is approximately
-        // 2x the base due to cycle rotations and SkipDuplicates calls.
-        // Each element that moves requires additional FindPosition calls within its cycle.
-        //
-        // Empirical observations:
-        // - n=10: ~90 comparisons (2.0x base)
-        // - n=20: ~355 comparisons (1.87x base)
-        // - n=50: ~2200 comparisons (1.80x base)
-        //
-        // We use a range to accommodate variations in cycle lengths.
-        var minCompares = findPositionCompares;
-        var maxCompares = findPositionCompares * 3; // Allow up to 3x for safety
-
-        // Reversed data: each element needs to be moved to its correct position
-        // In the worst case (reversed), n-1 elements need to be written
-        var minWrites = (ulong)(n - 1);
-        var maxWrites = (ulong)n;
-
-        await Assert.That(stats.CompareCount).IsBetween(minCompares, maxCompares);
-        await Assert.That(stats.IndexWriteCount).IsBetween(minWrites, maxWrites);
-        await Assert.That(stats.IndexReadCount >= minCompares).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minCompares}");
+        await Assert.That(stats.CompareCount).IsEqualTo(counts + placements);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(placements);
+        // Item read per start, one read per counted element, skip read and overwrite read per placement.
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(n - 1) + counts + 2 * placements);
     }
 
     [Test]

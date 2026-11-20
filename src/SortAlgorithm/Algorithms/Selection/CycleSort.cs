@@ -34,9 +34,9 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Θ(n²) - sorted input still counts once from every start position: n(n-1)/2 comparisons and no writes</description></item>
 /// <item><description>Average case: Θ(n²) - every placed element costs another count over the range after its cycle's start</description></item>
 /// <item><description>Worst case  : Θ(n²) - about 3n²/2 comparisons when one cycle runs through every element; at most n writes</description></item>
-/// <item><description>Comparisons : Θ(n²) - n(n-1)/2 for the counts from each start, one more count for each element placed after a cycle's first, and one per equal element skipped</description></item>
+/// <item><description>Comparisons : Θ(n²) - n(n-1)/2 for the counts from each start, one more count for each element placed after a cycle's first, and for each placement one per equal element skipped plus the one that ends the skip</description></item>
 /// <item><description>Swaps       : 0 - each element is carried in a held variable and dropped into its computed position; nothing is exchanged</description></item>
-/// <item><description>Index Reads : Θ(n²) - each count reads every element after the cycle's start; each placement reads the cell it overwrites</description></item>
+/// <item><description>Index Reads : Θ(n²) - each count reads every element after the cycle's start and each start reads its item; each placement reads the cells its duplicate skip compares and the cell it overwrites</description></item>
 /// <item><description>Index Writes: O(n) - one per element not already in its final position, the minimum for an in-place sort</description></item>
 /// <item><description>Space       : O(1) - only the held element and a few counters</description></item>
 /// </list>
