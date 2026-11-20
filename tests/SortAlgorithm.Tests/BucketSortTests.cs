@@ -119,13 +119,14 @@ public class BucketSortTests
     }
 
     /// <summary>
-    /// バケツが複数の異なるキーを受け持つ入力。値は (0,1), (4,5), (8,9), ... と 2 個ずつ隣接し、
-    /// 値域 2n-2 に対してバケツ幅 2 になるので、隣接ペアがちょうど同じバケツに入る。
+    /// バケツが複数の異なるキーを受け持つ入力。値は (0,1), (4,5), (8,9), ... と 2 個ずつ隣接し、最後のペアだけ
+    /// (2n-2, 2n-1) に置く（n は偶数）。値域 2n を n 個のバケツに分けるとバケツ番号は ⌊v / 2⌋ になり、
+    /// 隣接ペアがちょうど同じバケツに入る。
     /// バケツ内ソートが働くのは値域 &gt; n のときだけで、これは CountingSort / PigeonholeSort が
     /// 値域を理由に拒否する、bucket sort 本来の担当入力でもある。
     /// </summary>
     private static int[] PairedSparseKeys(int n)
-        => [.. Enumerable.Range(0, n).Select(i => (i / 2) * 4 + (i % 2))];
+        => [.. Enumerable.Range(0, n).Select(i => (i / 2 == n / 2 - 1 ? 2 * n - 2 : (i / 2) * 4) + (i % 2))];
 
     [Test]
     [Arguments(10)]

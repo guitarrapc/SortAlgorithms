@@ -427,6 +427,48 @@ public class SpreadSortTests : IntegerSortTestsBase
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
     }
 
+    /// <summary>
+    /// 整列済みの先頭部分の最小・最大キーは、Boost と同じくその両端から取り、先頭部分は走査し直さない。
+    /// 全体の最小と最大が先頭部分の両端にある入力、どちらも後半にある入力、先頭部分が 1 要素の入力のいずれでも、
+    /// バケツ番号が範囲内に収まって整列すること（DEBUG ではバケツの添字が境界検査される）。
+    /// </summary>
+    [Test]
+    [Arguments(0)]
+    [Arguments(1)]
+    [Arguments(2)]
+    public async Task OrderedPrefixExtremesTest(int shape)
+    {
+        const int n = 4000;
+        var random = new Random(42);
+        var data = new int[n];
+        switch (shape)
+        {
+            case 0:
+                // Prefix spans the whole range: global minimum at its first element, global maximum at its last.
+                for (var i = 0; i < n / 2; i++) data[i] = -1_000_000 + i * 1000; // -1_000_000 .. 999_000
+                for (var i = n / 2; i < n; i++) data[i] = random.Next(-999_999, 999_000);
+                data[n / 2] = -999_999; // breaks the order right after the prefix
+                break;
+            case 1:
+                // Prefix sits in the middle of the range: both extremes are after it.
+                for (var i = 0; i < n / 2; i++) data[i] = i;
+                for (var i = n / 2; i < n; i++) data[i] = random.Next(-1_000_000, 1_000_000);
+                data[n / 2] = -1;
+                data[n - 1] = 1_000_000;
+                break;
+            default:
+                // Prefix of one element: the walk stops at once.
+                for (var i = 0; i < n; i++) data[i] = random.Next(-1_000_000, 1_000_000);
+                data[0] = 1_000_000;
+                data[1] = -1_000_000;
+                break;
+        }
+
+        var expected = data.Order().ToArray();
+        SpreadSort.Sort(data.AsSpan(), new StatisticsContext());
+        await Assert.That(data).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
     [Test]
     public async Task TheoreticalValuesAllSameTest()
     {

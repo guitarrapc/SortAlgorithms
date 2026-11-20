@@ -1,5 +1,6 @@
 ﻿using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
+using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
@@ -26,6 +27,36 @@ public class FlashSortTests : IntegerSortTestsBase
         var unsigned = new nuint[] { 5, 2, 8, 1, 9 };
         Sort(unsigned.AsSpan(), stats);
         await Assert.That(IsSorted(unsigned)).IsTrue();
+    }
+
+    /// <summary>
+    /// クラス定数 c1 は double なので、64 ビット幅のキー差は変換で下位ビットを失う。それでもクラス番号は [0, m) に収まり、
+    /// キーが大きくなって減ることはない。キー空間の両端と、最大値の直下に下位ビットだけが異なる密集を置いて、両方の性質を確かめる。
+    /// </summary>
+    [Test]
+    [Arguments(2, 1)]
+    [Arguments(1000, 42)]
+    [Arguments(5000, 1234)]
+    public async Task FullWidthKeysTest(int n, int seed)
+    {
+        var random = new Random(seed);
+        var signed = new long[n];
+        for (var i = 0; i < n; i++) signed[i] = random.NextInt64(long.MinValue, long.MaxValue);
+        for (var i = 1; i < n / 2; i++) signed[i] = long.MaxValue - random.Next(0, 1000);
+        signed[0] = long.MinValue;
+        signed[^1] = long.MaxValue;
+        var expectedSigned = signed.Order().ToArray();
+        FlashSort.Sort(signed.AsSpan());
+        await Assert.That(signed).IsEquivalentTo(expectedSigned, CollectionOrdering.Matching);
+
+        var unsigned = new ulong[n];
+        for (var i = 0; i < n; i++) unsigned[i] = (ulong)random.NextInt64(long.MinValue, long.MaxValue);
+        for (var i = 1; i < n / 2; i++) unsigned[i] = ulong.MaxValue - (ulong)random.Next(0, 1000);
+        unsigned[0] = ulong.MinValue;
+        unsigned[^1] = ulong.MaxValue;
+        var expectedUnsigned = unsigned.Order().ToArray();
+        FlashSort.Sort(unsigned.AsSpan());
+        await Assert.That(unsigned).IsEquivalentTo(expectedUnsigned, CollectionOrdering.Matching);
     }
 
     [Test]

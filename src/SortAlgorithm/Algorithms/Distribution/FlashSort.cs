@@ -19,14 +19,15 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="number">
 /// <item><description><strong>Key Extraction:</strong> Each element must have a deterministic unsigned 64-bit key derived from its binary representation.
 /// Signed integers are converted to unsigned by bit-casting; the key is stable.</description></item>
-/// <item><description><strong>Range Partitioning:</strong> The key range [minKey, maxKey] is divided into m equal classes.
-/// Class index k = ⌊(key - minKey) × m / (range + 1)⌋.</description></item>
-/// <item><description><strong>Class Count Heuristic:</strong> This implementation uses m = max(2, ⌊0.43 × n⌋) classes.
-/// The 0.43n heuristic is empirically optimal for roughly uniform random data.</description></item>
-/// <item><description><strong>Permutation Phase:</strong> Elements are placed into their correct class region using in-place permutation cycles.
-/// The maximum element is first moved to index 0 to anchor the cycle correctly.</description></item>
-/// <item><description><strong>Per-Class Sorting:</strong> Each class region is sorted using Insertion Sort (stable, O(m²) for m elements).
-/// This ensures stability within each class.</description></item>
+/// <item><description><strong>Range Partitioning:</strong> The key range [minKey, maxKey] is divided linearly into m classes.
+/// Class index K = ⌊c1 × (key − minKey)⌋ with c1 = (m − 1) / (maxKey − minKey), so the minimum falls in class 0 and the maximum in class m − 1.</description></item>
+/// <item><description><strong>Class Count:</strong> This implementation uses m = max(2, ⌊0.43 × n⌋) classes, the optimum m/n = √(3/16) ≈ 0.43
+/// that Neubert derives from his cost model for uniformly distributed keys.</description></item>
+/// <item><description><strong>Permutation Phase:</strong> Elements are placed into their class regions by in-place permutation cycles.
+/// The maximum element is first exchanged to index 0, which starts the first cycle. A cycle holds one element in a temporary,
+/// writes it to the next free slot of its class and picks up the element it evicts, so each element is moved once.</description></item>
+/// <item><description><strong>Per-Class Sorting:</strong> Each class region is sorted using Insertion Sort. Every element is already in its
+/// class, so this finishes the sort; it does not restore the input order of equal keys, which the permutation has already lost.</description></item>
 /// <item><description><strong>Uniform Distribution Assumption:</strong> Optimal performance (O(n)) requires uniform key distribution.
 /// Worst case O(n²) occurs when all elements fall into a single class.</description></item>
 /// </list>
@@ -38,15 +39,25 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Ω(n) - Uniform distribution, one pass over the array</description></item>
 /// <item><description>Average case: Θ(n) - Assumes uniform distribution, permutation phase is O(n)</description></item>
 /// <item><description>Worst case  : O(n²) - All elements in one class, degenerates to Insertion Sort</description></item>
-/// <item><description>Comparisons : O(n log(n/m)) on average - Each class sorted independently by Insertion Sort; O(n²) worst, when one class holds everything</description></item>
+/// <item><description>Comparisons : O(n) expected - a class holds n/m elements in expectation, and Insertion Sort over a class of constant expected size costs O(1); O(n²) worst, when one class holds everything</description></item>
 /// <item><description>Swaps       : O(1) - a single exchange brings the maximum to the front; the permutation cycle moves elements by assignment, not by swapping</description></item>
-/// <item><description>Index Reads : Θ(n) on average - the classification and the permutation each touch every element once; O(n²) worst, when the final Insertion Sort degenerates</description></item>
+/// <item><description>Index Reads : Θ(n) on average - the range scan, the classification and the permutation each touch every element once; O(n²) worst, when the final Insertion Sort degenerates</description></item>
 /// <item><description>Index Writes: Θ(n) on average - the permutation places each element once; O(n²) worst for the same reason</description></item>
 /// <item><description>Space       : O(m) - Two integer arrays of size m for counts and boundaries</description></item>
+/// </list>
+/// <para><strong>Implementation Notes:</strong></para>
+/// <list type="bullet">
+/// <item><description><strong>Floating-point class constant:</strong> c1 is a double, as in Neubert's code. Converting to double, multiplying by a
+/// positive constant and truncating are each monotonic, so a larger key never lands in a smaller class, and c1 × (maxKey − minKey) stays
+/// below m for every m a span can reach. Counting and permuting call the same function, which is all the cycles need. Exact 128-bit
+/// arithmetic would add a division per classification, and every element is classified at least twice.</description></item>
+/// <item><description><strong>Final pass per class:</strong> Neubert runs one straight insertion sort over the whole array. Sorting each class
+/// on its own moves the same elements and skips the comparison at each class boundary, at the cost of keeping the boundaries.</description></item>
 /// </list>
 /// <para><strong>Note:</strong> クラス数は 0.43n (最小 2) に自動調整されます。キーの分布が偏るとパフォーマンスが低下します。128ビット整数型には対応していません。</para>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Flashsort</para>
+/// <para>Karl-Dietrich Neubert, "The Flashsort1 Algorithm", Dr. Dobb's Journal, February 1998.</para>
 /// </remarks>
 public static class FlashSort
 {
@@ -113,10 +124,9 @@ public static class FlashSort
         // All elements equal: already sorted
         if (minKey == maxKey) return;
 
-        var range = maxKey - minKey;
-
-        // m = number of buckets; empirically 0.43·n often works well on roughly uniform random data
+        // m = number of classes, at Neubert's optimum of 0.43·n
         var m = Math.Max(2, (int)(0.43 * n));
+        var c1 = (m - 1) / (double)(maxKey - minKey);
 
         var countArr = ArrayPool<int>.Shared.Rent(m);
         var boundaryArr = ArrayPool<int>.Shared.Rent(m);
@@ -131,7 +141,7 @@ public static class FlashSort
             for (var i = 0; i < n; i++)
             {
                 var key = GetUnsignedKey(s.Read(i), bitSize);
-                count[ClassOf(key, minKey, range, m)]++;
+                count[ClassOf(key, minKey, c1)]++;
             }
 
             // Pass 3: prefix sum → count[k] becomes exclusive upper bound of class k
@@ -144,43 +154,36 @@ public static class FlashSort
 
             context.OnPhase(SortPhase.DistributionWrite);
 
-            // Move the maximum element to index 0 so the permutation cycle starts cleanly
-            // at class m-1 whose region ends at boundary[m-1]-1 = n-1
+            // Move the maximum element to index 0: the first cycle starts there, in the last class
             s.Swap(maxIdx, 0);
 
-            // Pass 4: permutation phase — place every element in its correct class region
-
+            // Pass 4: permutation phase — place every element in its correct class region.
+            // count[k] is the exclusive end of class k's unfilled slots; a cycle fills them from the top down.
             var move = 0;
             var j = 0;
-            var kClass = m - 1;
+            var kClass = ClassOf(maxKey, minKey, c1);
 
             while (move < n - 1)
             {
-                // Advance j to the next position whose element still belongs to an unfilled slot
-                // j >= count[kClass] means position j is already in the "filled" suffix of its class
-                while (j < n)
+                // Find the next cycle leader. Slot j is filled when j >= count[kClass], and kClass already holds the class
+                // of the element at j, so only a step reads. An unplaced element leaves an unfilled slot at or after j.
+                while (j >= count[kClass])
                 {
-                    kClass = ClassOf(GetUnsignedKey(s.Read(j), bitSize), minKey, range, m);
-                    if (j < count[kClass]) break;
                     j++;
+                    kClass = ClassOf(GetUnsignedKey(s.Read(j), bitSize), minKey, c1);
                 }
-
-                // All remaining elements are already correctly placed
-                if (j >= n) break;
 
                 // Pick up the element at j and cycle it into its correct class
                 var flash = s.Read(j);
 
-                // Cycle terminates when j equals the current count[kClass]:
-                // that means the next empty slot for flash's class IS j itself → cycle closed
+                // The cycle closes when the next free slot of flash's class is j itself
                 while (j != count[kClass])
                 {
-                    kClass = ClassOf(GetUnsignedKey(flash, bitSize), minKey, range, m);
-                    var dest = count[kClass] - 1;
-                    var temp = s.Read(dest);
+                    kClass = ClassOf(GetUnsignedKey(flash, bitSize), minKey, c1);
+                    var dest = --count[kClass];
+                    var hold = s.Read(dest);
                     s.Write(dest, flash);
-                    flash = temp;
-                    count[kClass]--;
+                    flash = hold;
                     move++;
                 }
             }
@@ -205,12 +208,12 @@ public static class FlashSort
     }
 
     /// <summary>
-    /// Maps an unsigned key to a class index in [0, m-1] using linear interpolation.
-    /// Uses UInt128 arithmetic to guarantee exact results with no overflow for any 64-bit key range.
+    /// Maps an unsigned key to its class, ⌊c1 × (key − minKey)⌋ with c1 = (m − 1) / (maxKey − minKey).
+    /// The result lies in [0, m − 1] and never decreases as the key grows (see the class remarks).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int ClassOf(ulong key, ulong minKey, ulong range, int m)
-        => (int)((UInt128)(m - 1) * (key - minKey) / range);
+    private static int ClassOf(ulong key, ulong minKey, double c1)
+        => (int)(c1 * (key - minKey));
 
     /// <summary>
     /// Get the bit size of the type T.

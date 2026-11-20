@@ -234,8 +234,31 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
         AmericanFlagSort.Sort(array.AsSpan(), stats);
 
         await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
-        // In-place permutation moves elements with Swap on the main buffer only
-        await Assert.That(stats.SwapCount).IsNotEqualTo(0UL);
+        // The cycles carry one element at a time, so elements move by assignment on the main buffer, never by exchange
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsNotEqualTo(0UL);
+    }
+
+    /// <summary>
+    /// 値域 256 未満の相異なるキーは 1 レベルで終わり、各バケツが 1 要素になる。
+    /// サイクルは要素を自分のスロットへ 1 回だけ書き込むので、書き込み数は定位置にない要素の数にちょうど等しい
+    /// （交換で回すと、要素ごとに先頭スロットへの書き戻しが加わり 2 倍になる）。
+    /// </summary>
+    [Test]
+    [Arguments(10, 42)]
+    [Arguments(100, 42)]
+    [Arguments(200, 1234)]
+    public async Task CycleWritesEachMisplacedElementOnce(int n, int seed)
+    {
+        var array = TestHelpers.ShuffledRange(n, seed);
+        var misplaced = (ulong)array.Where((value, index) => value != index).Count();
+
+        var stats = new StatisticsContext();
+        AmericanFlagSort.Sort(array.AsSpan(), stats);
+
+        await Assert.That(array).IsEquivalentTo(Enumerable.Range(0, n).ToArray(), CollectionOrdering.Matching);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(misplaced);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
     [Test]
@@ -292,12 +315,13 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
 
         // American Flag Sort on random data:
         // - Bucket distribution varies
-        // - In-place permutation requires swaps
+        // - The permutation cycles move elements by assignment; a level writes each slot at most once
         await Assert.That((ulong)array.Length).IsEqualTo((ulong)n);
         await Assert.That(stats.IndexReadCount).IsNotEqualTo(0UL);
         await Assert.That(IsSorted(array)).IsTrue();
 
         await Assert.That(stats.CompareCount).IsEqualTo(0UL);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(2 * stats.SwapCount);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsLessThanOrEqualTo((ulong)n);
     }
 }

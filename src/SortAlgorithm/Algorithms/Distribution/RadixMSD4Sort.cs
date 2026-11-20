@@ -37,6 +37,8 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Writes: O(d × n) - distribution; uniform digits do not move elements</description></item>
 /// <item><description>Space       : O(n + d × R) - element scratch and radix counters</description></item>
 /// </list>
+/// <para><strong>Reference:</strong></para>
+/// <para>Wiki: https://en.wikipedia.org/wiki/Radix_sort#Most_significant_digit</para>
 /// </remarks>
 public static class RadixMSD4Sort
 {

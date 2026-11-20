@@ -7,20 +7,24 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// American Flag Sort - In-place MSD Radix Sortの実装。
-/// 値をビット列として扱い、4ビットずつ（16種類）の桁に分けて要素を分類し、in-placeで並び替えます。
+/// 値をビット列として扱い、8ビットずつ（256種類）の桁に分けて要素を分類し、in-placeで並び替えます。
 /// 最上位桁（Most Significant Digit）から最下位桁へ向かって処理することで、再帰的にソートを実現します。
-/// <see cref="RadixMSD4Sort"/>と異なり補助バッファを一切確保せず、配列内で要素をスワップすることでin-placeソートを実現します。
+/// <see cref="RadixMSD4Sort"/>と異なり補助バッファを一切確保せず、配列内の置換サイクルで要素を移すことでin-placeソートを実現します。
 /// <br/>
 /// American Flag Sort - An in-place MSD Radix Sort implementation.
 /// Treats values as bit sequences, dividing them into 8-bit digits (256 buckets) and classifying elements in-place.
 /// Processing from the Most Significant Digit to the least significant ensures a recursive sort.
-/// Unlike <see cref="RadixMSD4Sort"/>, this implementation allocates no auxiliary buffer at all and achieves in-place sorting by swapping elements within the array.
+/// Unlike <see cref="RadixMSD4Sort"/>, this implementation allocates no auxiliary buffer at all and moves elements along permutation cycles within the array.
 /// </summary>
 /// <remarks>
 /// <para>Processes the most significant differing digit first, using radix R=256.
 /// A key-range scan normalizes keys by their minimum and determines d, the number of relevant digits.
 /// Uniform digits do not permute elements; singleton buckets and exhausted digits terminate recursion.
 /// Every nontrivial bucket is processed by radix distribution, without a comparison-sort cutoff.</para>
+/// <para>The permutation walks the buckets in order. An element already in the bucket being filled stays where it is; any other
+/// element is carried around a cycle: it is written to the next free slot of its own bucket, the element it evicts is carried on,
+/// and the cycle closes when an evicted element belongs to the slot it started from. One temporary holds the carried element, as in
+/// McIlroy, Bostic and McIlroy's program, so a misplaced element costs one read and one write rather than an exchange.</para>
 /// <para>The SortBy key defines the complete order. Natural floating keys tie signed zeros and map every NaN
 /// to the first key. Custom key selectors define their own equivalence classes.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -32,11 +36,14 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Average case: O(n + d × n) - radix levels over the normalized key range</description></item>
 /// <item><description>Worst case  : O(n + d × n) - bounded by the digit count</description></item>
 /// <item><description>Comparisons : 0 - keys and digits determine the order without element comparisons</description></item>
-/// <item><description>Swaps       : O(d × n) - in-place bucket cycles</description></item>
+/// <item><description>Swaps       : 0 - a cycle moves elements by assignment through one temporary, never by exchange</description></item>
 /// <item><description>Index Reads : O(n + d × n) - range scan and digit levels</description></item>
-/// <item><description>Index Writes: O(d × n) - distribution; uniform digits do not move elements</description></item>
+/// <item><description>Index Writes: O(d × n) - every write puts an element in its final slot for the level, so a level writes each slot at most once; elements already in their bucket and uniform digits are not written</description></item>
 /// <item><description>Space       : O(d × R) - radix counters and recursion stack</description></item>
 /// </list>
+/// <para><strong>Reference:</strong></para>
+/// <para>Wiki: https://en.wikipedia.org/wiki/American_flag_sort</para>
+/// <para>Peter M. McIlroy, Keith Bostic and M. Douglas McIlroy, "Engineering Radix Sort", Computing Systems 6(1), 1993, pp. 5–27.</para>
 /// </remarks>
 public static class AmericanFlagSort
 {
@@ -349,8 +356,7 @@ public static class AmericanFlagSort
     }
 
     /// <summary>
-    /// Permutes elements in-place into their correct buckets.
-    /// Uses a technique similar to cyclic permutation to avoid using auxiliary buffer.
+    /// Permutes elements in-place into their correct buckets along permutation cycles, carrying one element at a time.
     /// </summary>
     /// <remarks>
     /// Array roles:
@@ -377,33 +383,37 @@ public static class AmericanFlagSort
             // bucketCounts[bucket] = start, bucketCounts[bucket + 1] = end
             var bucketEnd = bucketCounts[bucket + 1];
 
-            // Move elements to their correct positions within and across buckets
             while (bucketNext[bucket] < bucketEnd)
             {
-                var currentPos = start + bucketNext[bucket];
-                var currentValue = s.Read(currentPos);
-                var currentKey = radixKey.GetKey(currentValue) - minKey;
-                var currentDigit = (int)((currentKey >> shift) & RadixMask);
+                var leaderPos = start + bucketNext[bucket];
+                var value = s.Read(leaderPos);
+                var digit = (int)(((radixKey.GetKey(value) - minKey) >> shift) & RadixMask);
 
-                // If element is already in correct bucket, advance
-                if (currentDigit == bucket)
+                // Already in the bucket being filled: it stays.
+                if (digit == bucket)
                 {
                     bucketNext[bucket]++;
                     continue;
                 }
 
-                // Swap current element to its correct bucket
-                var targetPos = start + bucketNext[currentDigit];
-
+                // Carry the element to the next free slot of its bucket and pick up the one it evicts, until an
+                // evicted element belongs to the leader's bucket. The slots and the final order are those an exchange
+                // with the leader slot would give; holding the element instead saves the write back to the leader per step.
+                do
+                {
 #if DEBUG
-                // targetPos must stay within currentDigit bucket range
-                // bucketCounts[currentDigit] = start, bucketCounts[currentDigit + 1] = end
-                Debug.Assert(bucketNext[currentDigit] >= bucketCounts[currentDigit]);
-                Debug.Assert(bucketNext[currentDigit] < bucketCounts[currentDigit + 1]);
+                    Debug.Assert(bucketNext[digit] >= bucketCounts[digit]);
+                    Debug.Assert(bucketNext[digit] < bucketCounts[digit + 1]);
 #endif
+                    var targetPos = start + bucketNext[digit]++;
+                    var evicted = s.Read(targetPos);
+                    s.Write(targetPos, value);
+                    value = evicted;
+                    digit = (int)(((radixKey.GetKey(value) - minKey) >> shift) & RadixMask);
+                } while (digit != bucket);
 
-                s.Swap(currentPos, targetPos);
-                bucketNext[currentDigit]++;
+                s.Write(leaderPos, value);
+                bucketNext[bucket]++;
             }
         }
     }

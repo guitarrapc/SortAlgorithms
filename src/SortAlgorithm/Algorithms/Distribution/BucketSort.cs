@@ -20,10 +20,13 @@ namespace SortAlgorithm.Algorithms;
 /// <list type="number">
 /// <item><description><strong>Key Extraction:</strong> Each element must have a deterministic integer key obtained via the key selector function.
 /// The key must be stable (same element always produces the same key).</description></item>
-/// <item><description><strong>Range Partitioning:</strong> The key range [min, max] is divided into k equal-sized buckets.
-/// Each bucket i handles keys in the range [min + i×bucketSize, min + (i+1)×bucketSize).</description></item>
-/// <item><description><strong>Distribution Function:</strong> Elements are distributed to buckets using: bucketIndex = ⌊(key - min) / bucketSize⌋.
-/// This ensures all elements with similar keys go to the same bucket.</description></item>
+/// <item><description><strong>Range Partitioning:</strong> The key range [min, max] is divided linearly into k buckets of equal width
+/// (max − min + 1) / k.</description></item>
+/// <item><description><strong>Distribution Function:</strong> Elements are distributed to buckets using: bucketIndex = ⌊k × (key − min) / (max − min + 1)⌋.
+/// The index never decreases as the key grows and lies in [0, k), and every bucket covers part of the range.
+/// It is computed as one multiplication by the real constant k / (max − min + 1), held as a double. A key distance is below 2^32
+/// and converts exactly, rounding is monotonic, and the product stays below k, so both properties hold; a key that lands exactly
+/// on a bucket boundary may fall into the bucket below it.</description></item>
 /// <item><description><strong>Bucket Count:</strong> This implementation uses k = min(n, range) buckets. The Θ(n + k) average
 /// case requires k to grow with n, so that a bucket holds O(1) elements in expectation; a bucket count fixed below that
 /// leaves n/k elements per bucket and the per-bucket sorting, not the distribution, decides the running time.
@@ -41,7 +44,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Stable      : Yes (Insertion Sort preserves relative order)</description></item>
 /// <item><description>In-place    : No (O(n + k) auxiliary space for buckets)</description></item>
 /// <item><description>Best case   : Ω(n + k) - Uniform distribution, each bucket has ~n/k elements</description></item>
-/// <item><description>Average case: Θ(n + k) - Assumes uniform distribution, total sort cost n×(n/k)²/k + n + k ≈ n</description></item>
+/// <item><description>Average case: Θ(n + k) - Assumes uniform distribution: the buckets cost Θ(n + n²/k + k) in expectation, which is Θ(n) for k = Θ(n)</description></item>
 /// <item><description>Worst case  : O(n²) - All elements in one bucket, degenerates to Insertion Sort</description></item>
 /// <item><description>Comparisons : O(n) expected, Θ(n²) worst - with one bucket per element a bucket holds O(1) keys in expectation, so the
 /// per-bucket <see cref="InsertionSort"/> costs O(1) each; every key landing in one bucket collapses it to a single insertion sort</description></item>
@@ -172,7 +175,8 @@ public static class BucketSort
             // Equal keys need no sorting only when those keys also define the comparison order.
             if (min == max && typeof(TComparer) == typeof(KeySelectorComparer<T, TKeySelector>)) return;
 
-            long range = (long)max - (long)min + 1;
+            // At most 2^32 for int keys.
+            var range = (ulong)((long)max - min) + 1;
 
             // One bucket per element, so a bucket holds O(1) elements in expectation and the
             // per-bucket insertion sort stays O(n) overall. A count that does not scale with n
@@ -181,13 +185,10 @@ public static class BucketSort
             var bucketCount = s.Length;
 
             // More buckets than distinct keys cannot help; one bucket per key is the limit.
-            if (range < bucketCount)
+            if (range < (ulong)bucketCount)
             {
                 bucketCount = (int)range;
             }
-
-            // Calculate bucket size (range divided by bucket count)
-            var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
 
             int[]? rentedBounds = null;
             Span<int> bucketBounds = bucketCount <= StackAllocThreshold
@@ -196,7 +197,7 @@ public static class BucketSort
             bucketBounds.Clear(); // Required: neither branch yields zeroed memory - [module: SkipLocalsInit] skips it for stackalloc, and a pooled array carries its previous contents
             try
             {
-                BucketDistribute(s, tempSpan, keys, bucketBounds, bucketSize, min);
+                BucketDistribute(s, tempSpan, keys, bucketBounds, bucketCount / (double)range, min);
             }
             finally
             {
@@ -220,25 +221,21 @@ public static class BucketSort
     /// exclusive end. The end of bucket i-1 is the start of bucket i, so no second array is needed to
     /// recover the bucket ranges after distribution.
     /// </param>
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> keys, Span<int> bucketBounds, long bucketSize, int min)
+    /// <param name="scale">k / (max - min + 1), the bucket count per unit of key distance.</param>
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, SortSpan<T, TComparer, TContext> temp, Span<int> keys, Span<int> bucketBounds, double scale, int min)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         var bucketCount = bucketBounds.Length;
 
         // First pass: convert keys to bucket indices and count
-        // Reuse keys array to store bucket indices (eliminates division in second pass)
+        // Reuse keys array to store bucket indices (eliminates the multiplication in the second pass)
         s.Context.OnPhase(SortPhase.DistributionCount);
         for (var i = 0; i < s.Length; i++)
         {
-            var key = keys[i];
-            var bucketIndex = (int)(((long)key - min) / bucketSize);
-
-            // Handle edge case where key == max
-            if (bucketIndex >= bucketCount)
-            {
-                bucketIndex = bucketCount - 1;
-            }
+            // floor(k * (key - min) / range). The distance is below 2^32, so it converts to double exactly, and the
+            // product stays below k (see the class remarks).
+            var bucketIndex = (int)(((long)keys[i] - min) * scale);
 
             keys[i] = bucketIndex; // Overwrite with bucket index
             bucketBounds[bucketIndex]++;
@@ -300,10 +297,13 @@ public static class BucketSort
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Bucket Sort (Range-based):</strong></para>
 /// <list type="number">
-/// <item><description><strong>Range Partitioning:</strong> The value range [min, max] is divided into k equal-sized buckets.
-/// Each bucket i handles values in the range [min + i×bucketSize, min + (i+1)×bucketSize).</description></item>
-/// <item><description><strong>Distribution Function:</strong> Elements are distributed to buckets using: bucketIndex = ⌊(value - min) / bucketSize⌋.
-/// This ensures all elements with similar values go to the same bucket.</description></item>
+/// <item><description><strong>Range Partitioning:</strong> The value range [min, max] is divided linearly into k buckets of equal width
+/// (max − min + 1) / k.</description></item>
+/// <item><description><strong>Distribution Function:</strong> Elements are distributed to buckets using: bucketIndex = ⌊k × (value − min) / (max − min + 1)⌋.
+/// The index never decreases as the value grows and lies in [0, k), and every bucket covers part of the range.
+/// It is computed as one multiplication by the real constant k / (max − min + 1), held as a double; see <see cref="BucketSort"/>.
+/// When max − min needs more than 32 bits, both the distance and max − min are shifted right until it fits, so the distance still
+/// converts to double exactly; the mapping keeps its properties and moves no bucket boundary by more than 2^−30 of the range.</description></item>
 /// <item><description><strong>Bucket Count:</strong> This implementation uses k = min(n, range) buckets. The Θ(n + k) average
 /// case requires k to grow with n, so that a bucket holds O(1) elements in expectation; a bucket count fixed below that
 /// leaves n/k elements per bucket and the per-bucket sorting, not the distribution, decides the running time.
@@ -321,7 +321,7 @@ public static class BucketSort
 /// <item><description>Stable      : Yes (Insertion Sort preserves relative order)</description></item>
 /// <item><description>In-place    : No (O(n + k) auxiliary space for buckets)</description></item>
 /// <item><description>Best case   : Ω(n + k) - Uniform distribution, each bucket has ~n/k elements</description></item>
-/// <item><description>Average case: Θ(n + k) - Assumes uniform distribution, total sort cost n×(n/k)²/k + n + k ≈ n</description></item>
+/// <item><description>Average case: Θ(n + k) - Assumes uniform distribution: the buckets cost Θ(n + n²/k + k) in expectation, which is Θ(n) for k = Θ(n)</description></item>
 /// <item><description>Worst case  : O(n²) - All elements in one bucket, degenerates to Insertion Sort</description></item>
 /// <item><description>Comparisons : O(n) expected, Θ(n²) worst - with one bucket per element a bucket holds O(1) keys in expectation, so the
 /// per-bucket <see cref="InsertionSort"/> costs O(1) each; every key landing in one bucket collapses it to a single insertion sort</description></item>
@@ -437,13 +437,10 @@ public static class BucketSortInteger
         var min = ConvertToLong(minValue);
         var max = ConvertToLong(maxValue);
 
-        // Compute range in ulong to avoid signed overflow.
         // (ulong)(max - min) reinterprets the unchecked signed subtraction as an unsigned distance,
         // which is correct even when max - min overflows long
         // (e.g. min = long.MinValue, max = long.MaxValue → true distance = 2^64 - 1).
-        // The +1 wraps to 0 only when the true range is exactly 2^64 (full long space); cap to ulong.MaxValue.
-        ulong range = (ulong)(max - min) + 1;
-        if (range == 0) range = ulong.MaxValue;
+        var distance = (ulong)(max - min);
 
         // One bucket per element, so a bucket holds O(1) elements in expectation and the per-bucket
         // insertion sort stays O(n) overall. See <see cref="BucketSort"/> for the measurement that
@@ -451,14 +448,15 @@ public static class BucketSortInteger
         var bucketCount = s.Length;
 
         // More buckets than distinct values cannot help; one bucket per value is the limit.
-        if (range < (ulong)bucketCount)
+        if (distance < (ulong)bucketCount)
         {
-            bucketCount = (int)range;
+            bucketCount = (int)distance + 1;
         }
 
-        // Ceiling division without overflow: (range + bucketCount - 1) / bucketCount can overflow ulong
-        // for large ranges, so use: a / b + (a % b != 0 ? 1 : 0)
-        ulong bucketSize = Math.Max(1UL, range / (ulong)bucketCount + (range % (ulong)bucketCount != 0 ? 1UL : 0UL));
+        // The bucket index is floor(k * (value - min) / (distance + 1)). A distance wider than 32 bits is shifted down
+        // to 32 bits, together with every value's, so that it converts to double exactly.
+        var shift = Math.Max(0, 32 - BitOperations.LeadingZeroCount(distance));
+        var divisor = (distance >> shift) + 1;
 
         int[]? rentedBounds = null;
         Span<int> bucketBounds = bucketCount <= StackAllocThreshold
@@ -467,7 +465,7 @@ public static class BucketSortInteger
         bucketBounds.Clear(); // Required: neither branch yields zeroed memory - [module: SkipLocalsInit] skips it for stackalloc, and a pooled array carries its previous contents
         try
         {
-            BucketDistribute(s, tempSpan, bucketIndices, bucketBounds, bucketSize, min);
+            BucketDistribute(s, tempSpan, bucketIndices, bucketBounds, min, shift, divisor, bucketCount / (double)divisor);
         }
         finally
         {
@@ -477,7 +475,7 @@ public static class BucketSortInteger
     }
 
     /// <inheritdoc cref="BucketSort.BucketDistribute"/>
-    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> tempSpan, Span<int> bucketIndices, Span<int> bucketBounds, ulong bucketSize, long min)
+    private static void BucketDistribute<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> source, SortSpan<T, TComparer, TContext> tempSpan, Span<int> bucketIndices, Span<int> bucketBounds, long min, int shift, ulong divisor, double scale)
         where T : IBinaryInteger<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
@@ -490,20 +488,15 @@ public static class BucketSortInteger
         for (var i = 0; i < source.Length; i++)
         {
             var value = source.Read(i);
-            var valueLong = ConvertToLong(value);
-            // (ulong)(valueLong - min): reinterprets the unchecked signed subtraction as an unsigned
-            // distance. Correct even when valueLong - min overflows long (e.g. full ulong range).
-            var bucketIndex = (int)((ulong)(valueLong - min) / bucketSize);
+            // (ulong)(value - min): reinterprets the unchecked signed subtraction as an unsigned
+            // distance. Correct even when value - min overflows long (e.g. full ulong range).
+            var distance = (ulong)(ConvertToLong(value) - min) >> shift;
 
-            // Handle edge case where value == max
-            // A comparer that orders the values by their numeric value keeps every value between its minimum and maximum. Any other
-            // comparer can leave a value far outside them, whose distance wraps to a negative index. The unsigned test catches both.
-            if ((uint)bucketIndex >= (uint)bucketCount)
-            {
-                if (bucketIndex < 0) ThrowComparerDisagreesWithValues();
-                bucketIndex = bucketCount - 1;
-            }
+            // A comparer that orders the values by their numeric value keeps every value between its minimum and maximum, so the
+            // distance stays below the divisor and the index below k. Any other comparer can leave a value outside them.
+            if (distance >= divisor) ThrowComparerDisagreesWithValues();
 
+            var bucketIndex = (int)((long)distance * scale);
             bucketIndices[i] = bucketIndex; // Cache bucket index
             bucketBounds[bucketIndex]++;
         }

@@ -585,10 +585,9 @@ public static class SpreadSort
     /// independently each iteration, so it pipelines. It is safe to decide "already sorted" this way
     /// because after the NaN pre-pass the comparer order and the key order coincide: NaN was the last
     /// place they differed, once the key selectors stopped separating <c>-0.0</c> from <c>+0.0</c>.</para>
-    /// <para>The extremes are a different matter — they must be the extremes <em>by key</em> (see the
-    /// class remarks), and the comparison walk cannot supply them, so an unsorted range is scanned
-    /// once more for min/max by key. This costs a pass only on input that is actually going to be
-    /// distributed; already-sorted input still returns after the comparison walk alone.</para>
+    /// <para>The extremes must be the extremes <em>by key</em> (see the class remarks). Because the comparer
+    /// and the keys agree on order, the prefix the walk found in order has its smallest key at its first
+    /// element and its largest at its last, so, as in Boost, only the elements after the prefix are scanned.</para>
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static bool IsSortedOrFindExtremes<T, TRadixKey, TComparer, TContext>(
@@ -612,25 +611,26 @@ public static class SpreadSort
             }
         }
 
-        // Not sorted. Find the true extremes by key.
-        minKey = ulong.MaxValue;
-        maxKey = ulong.MinValue;
+        // Not sorted. The ordered prefix [first, current] has its extremes at its ends; scan the rest.
         var minIdx = first;
-        var maxIdx = first;
-        for (var i = first; i < last; i++)
+        var maxIdx = current;
+        minKey = radixKey.GetKey(s.Read(minIdx));
+        maxKey = radixKey.GetKey(s.Read(maxIdx));
+        for (var i = current + 1; i < last; i++)
         {
             var key = radixKey.GetKey(s.Read(i));
-            ReportKeyCompare(s, i, minIdx, key, minKey);
-            if (key < minKey)
-            {
-                minKey = key;
-                minIdx = i;
-            }
             ReportKeyCompare(s, i, maxIdx, key, maxKey);
             if (key > maxKey)
             {
                 maxKey = key;
                 maxIdx = i;
+                continue;
+            }
+            ReportKeyCompare(s, i, minIdx, key, minKey);
+            if (key < minKey)
+            {
+                minKey = key;
+                minIdx = i;
             }
         }
 

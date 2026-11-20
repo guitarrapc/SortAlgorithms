@@ -1,5 +1,6 @@
 using SortAlgorithm.Algorithms;
 using SortAlgorithm.Contexts;
+using TUnit.Assertions.Enums;
 
 namespace SortAlgorithm.Tests;
 
@@ -26,23 +27,23 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
     /// バケツ幅が 1 になり、各バケツは等値要素しか持たない —— バケツ内ソートが働くのは値域 &gt; n のとき、
     /// つまり CountingSort / PigeonholeSort が値域を理由に拒否する、bucket sort 本来の担当入力に限られる。
     ///
-    /// 値は (0,1), (4,5), (8,9), ... と 2 個ずつ隣接する。値域は 2n-2 なのでバケツ幅は 2 になり、
-    /// 隣接ペアがちょうど同じバケツに入って、非空バケツが n/2 個・各 2 要素という決定的な形になる。
+    /// 値は (0,1), (4,5), (8,9), ... と 2 個ずつ隣接し、最後のペアだけ (2n-2, 2n-1) に置く（n は偶数）。
+    /// 値域が 2n になるので、バケツ番号 ⌊n × v / 2n⌋ = ⌊v / 2⌋ で隣接ペアがちょうど同じバケツに入り、
+    /// 非空バケツが n/2 個・各 2 要素という決定的な形になる。
     /// </summary>
     private static int[] PairedSparseKeys(int n)
-        => [.. Enumerable.Range(0, n).Select(i => (i / 2) * 4 + (i % 2))];
+        => [.. Enumerable.Range(0, n).Select(i => (i / 2 == n / 2 - 1 ? 2 * n - 2 : (i / 2) * 4) + (i % 2))];
 
     /// <summary>
-    /// アルゴリズムと同じ規則でバケツを割り当て、非空バケツ数を数える。
+    /// アルゴリズムと同じ規則 ⌊k × (v - min) / 値域⌋ でバケツを割り当て、非空バケツ数を数える。
     /// バケツ相の演算数を決めるのはバケツ数ではなく非空バケツ数で、空のバケツは何もしない。
     /// </summary>
     private static int NonEmptyBucketsFor(int[] data)
     {
         var min = data.Min();
         long range = (long)data.Max() - min + 1;
-        var bucketCount = (int)Math.Min(data.Length, range);
-        var bucketSize = Math.Max(1, (range + bucketCount - 1) / bucketCount);
-        return data.Select(v => Math.Min((int)((v - (long)min) / bucketSize), bucketCount - 1)).Distinct().Count();
+        var scale = Math.Min(data.Length, range) / (double)range;
+        return data.Select(v => (int)((v - (long)min) * scale)).Distinct().Count();
     }
 
     /// <summary>
@@ -165,6 +166,58 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
         await AssertReadsFollowFromCompares(random, stats);
     }
 
+    /// <summary>
+    /// 値域が 32 ビットを超えると、距離と値域を 32 ビットまで右シフトしてからバケツ番号を計算する。
+    /// long / ulong の全域と、最大値の直下に下位ビットだけが異なる密集（同じバケツに落ちる）を置いて、
+    /// バケツ番号が範囲内に収まり結果が整列することを確かめる。
+    /// </summary>
+    [Test]
+    [Arguments(2, 1)]
+    [Arguments(100, 42)]
+    [Arguments(1000, 1234)]
+    public async Task FullWidthRangeTest(int n, int seed)
+    {
+        var random = new Random(seed);
+        var signed = new long[n];
+        for (var i = 0; i < n; i++) signed[i] = random.NextInt64(long.MinValue, long.MaxValue);
+        for (var i = 1; i < n / 2; i++) signed[i] = long.MaxValue - random.Next(0, 1000);
+        signed[0] = long.MinValue;
+        signed[^1] = long.MaxValue;
+        var expectedSigned = signed.Order().ToArray();
+        BucketSortInteger.Sort(signed.AsSpan());
+        await Assert.That(signed).IsEquivalentTo(expectedSigned, CollectionOrdering.Matching);
+
+        var unsigned = new ulong[n];
+        for (var i = 0; i < n; i++) unsigned[i] = (ulong)random.NextInt64(long.MinValue, long.MaxValue);
+        for (var i = 1; i < n / 2; i++) unsigned[i] = ulong.MaxValue - (ulong)random.Next(0, 1000);
+        unsigned[0] = ulong.MinValue;
+        unsigned[^1] = ulong.MaxValue;
+        var expectedUnsigned = unsigned.Order().ToArray();
+        BucketSortInteger.Sort(unsigned.AsSpan());
+        await Assert.That(unsigned).IsEquivalentTo(expectedUnsigned, CollectionOrdering.Matching);
+    }
+
+    /// <summary>
+    /// 値域が n をわずかに超える入力。バケツ幅を整数に切り上げる割り当てでは幅 2 になり、使われるバケツが半分に減って
+    /// n/2 組が同じバケツで比較されていた。⌊k × (v - min) / 値域⌋ は値域 n + 1 を n 個のバケツに配るので、
+    /// 2 つの値を受け持つバケツは 1 つ（値 0 と 1）だけで、ソート済み入力のバケツ内比較は 1 回になる。
+    /// </summary>
+    [Test]
+    [Arguments(100)]
+    [Arguments(1000)]
+    public async Task RangeJustAboveNUsesEveryBucketTest(int n)
+    {
+        // n distinct values from 0..n with the middle one left out: range n + 1.
+        var data = Enumerable.Range(0, n + 1).Where(v => v != n / 2).ToArray();
+        var stats = new StatisticsContext();
+        BucketSortInteger.Sort(data.AsSpan(), stats);
+
+        await Assert.That(NonEmptyBucketsFor(data)).IsEqualTo(n - 1);
+        await Assert.That(stats.CompareCount).IsEqualTo(FixedCost(n).Compares + 1)
+            .Because("挿入対象があるのは値 0 と 1 を受け持つバケツだけ");
+        await Assert.That(data).IsEquivalentTo(Enumerable.Range(0, n + 1).Where(v => v != n / 2).ToArray(), CollectionOrdering.Matching);
+    }
+
     [Test]
     [Arguments(10)]
     [Arguments(20)]
@@ -200,7 +253,7 @@ public class BucketSortIntegerTests : IntegerSortTestsBase
         var context = new VisualizationContext(
             onCompare: (i, j, _, bi, bj) => compares.Add((i, j, bi, bj)));
 
-        // 値域 > n の入力。バケツ幅が 2 になり、隣接ペアが同じバケツに入ってバケツ内ソートが実際に走る。
+        // 値域 > n の入力。値域 2n を n 個のバケツに分けるので、隣接ペアが同じバケツに入ってバケツ内ソートが実際に走る。
         var data = PairedSparseKeys(n).Reverse().ToArray();
         BucketSortInteger.Sort(data.AsSpan(), context);
 
