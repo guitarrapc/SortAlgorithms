@@ -261,6 +261,59 @@ public class AmericanFlagSortTests : IntegerSortTestsBase
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
     }
 
+    /// <summary>
+    /// 使われている最後のバケツは、手前のバケツが埋まった時点で自分の範囲に揃っているので、置換では走査しない。
+    /// キーが 0 と high の 2 値で桁が 1 つなら、読み取りは範囲スキャン n、数え上げ n、バケツ 0 の z スロット、
+    /// サイクルが high の範囲で書き込んだスロット数の和になる。high = 255 は以前から固定で飛ばしていた最後のバケツ。
+    /// </summary>
+    [Test]
+    [Arguments(1000, 300, 1, 0)]       // 分割済み: high の範囲は一度も読まない
+    [Arguments(1000, 300, 200, 0)]
+    [Arguments(1000, 300, 255, 0)]
+    [Arguments(1000, 300, 1, 42)]      // シャッフル
+    [Arguments(1000, 700, 200, 1234)]
+    [Arguments(1000, 300, 255, 42)]
+    public async Task LastOccupiedBucketIsNotWalkedTest(int n, int zeros, int high, int seed)
+    {
+        var array = new int[n];
+        for (var i = zeros; i < n; i++) array[i] = high;
+        if (seed != 0) new Random(seed).Shuffle(array);
+
+        // サイクルは high の範囲を先頭から順に使い、その範囲にある最後の 0 を運び出したところで止まる
+        var lastZero = Array.LastIndexOf(array, 0);
+        var carried = lastZero >= zeros ? lastZero - zeros + 1 : 0;
+
+        var stats = new StatisticsContext();
+        AmericanFlagSort.Sort(array.AsSpan(), stats);
+
+        await Assert.That(array).IsEquivalentTo(Enumerable.Repeat(0, zeros).Concat(Enumerable.Repeat(high, n - zeros)).ToArray(), CollectionOrdering.Matching);
+        await Assert.That(stats.IndexReadCount).IsEqualTo((ulong)(2 * n + zeros + carried));
+    }
+
+    /// <summary>
+    /// 下位レベルで全要素が同じ桁を持つ範囲は、置換もバケツ報告もせずに次の桁へ進む。その桁が 0 でも 0 以外でも同じ。
+    /// </summary>
+    [Test]
+    [Arguments(0)]
+    [Arguments(5)]
+    public async Task UniformInnerDigitSkipsPermutationTest(int middleDigit)
+    {
+        // 最上位桁は 0 が 1 個と 1 が k 個。1 の側は中位桁がすべて middleDigit、下位桁は相異なる
+        const int k = 50;
+        var array = new[] { 0 }.Concat(Enumerable.Range(0, k).Select(i => 65536 + middleDigit * 256 + (k - 1 - i))).ToArray();
+        var expected = array.Order().ToArray();
+
+        var buckets = 0;
+        AmericanFlagSort.Sort(array.AsSpan(), new VisualizationContext(onPhase: (phase, _, _, _) =>
+        {
+            if (phase == SortPhase.DistributionBucket) buckets++;
+        }));
+
+        // 最上位レベルの 2 バケツと最下位レベルの k バケツだけ。中位レベルは一様なので報告しない
+        await Assert.That(buckets).IsEqualTo(2 + k);
+        await Assert.That(array).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
     [Test]
     [Arguments(10)]
     [Arguments(20)]

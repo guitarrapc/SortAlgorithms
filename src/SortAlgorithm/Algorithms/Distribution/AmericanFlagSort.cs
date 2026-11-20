@@ -24,7 +24,8 @@ namespace SortAlgorithm.Algorithms;
 /// <para>The permutation walks the buckets in order. An element already in the bucket being filled stays where it is; any other
 /// element is carried around a cycle: it is written to the next free slot of its own bucket, the element it evicts is carried on,
 /// and the cycle closes when an evicted element belongs to the slot it started from. One temporary holds the carried element, as in
-/// McIlroy, Bostic and McIlroy's program, so a misplaced element costs one read and one write rather than an exchange.</para>
+/// McIlroy, Bostic and McIlroy's program, so a misplaced element costs one read and one write rather than an exchange.
+/// The walk stops before the last occupied bucket: once the buckets below it are full, every element left in its range belongs to it.</para>
 /// <para>The SortBy key defines the complete order. Natural floating keys tie signed zeros and map every NaN
 /// to the first key. Custom key selectors define their own equivalence classes.</para>
 /// <para><strong>Performance Characteristics:</strong></para>
@@ -268,19 +269,15 @@ public static class AmericanFlagSort
             bucketCounts[digitValue + 1]++;
         }
 
-        // Early termination optimization: Check for uniform digit values
-        // Count non-empty buckets BEFORE prefix sum transformation
-        // At this point, bucketCounts[i+1] holds the raw count for bucket i (off-by-one indexing)
-        var nonEmptyBuckets = 0;
-        for (var i = 0; i < RadixSize; i++)
-        {
-            if (bucketCounts[i + 1] > 0 && ++nonEmptyBuckets > 1)
-                break;
-        }
+        // Find the last occupied bucket while bucketCounts[i+1] still holds the raw count for bucket i.
+        // length > 1, so some bucket is occupied and the scan stops.
+        var lastBucket = RadixMask;
+        while (bucketCounts[lastBucket + 1] == 0)
+            lastBucket--;
 
-        // If all elements have the same digit value (0 or 1 non-empty buckets),
+        // If that bucket holds every element the digit is uniform:
         // skip permutation and recursively process the next digit
-        if (nonEmptyBuckets <= 1)
+        if (bucketCounts[lastBucket + 1] == length)
         {
             if (digit > 0)
                 AmericanFlagSortRecursive(s, radixKey, minKey, start, length, digit - 1, digitCount);
@@ -317,7 +314,7 @@ public static class AmericanFlagSort
 
         // Phase 3: In-place permutation
         // Rearrange elements into their correct buckets using cyclic permutation
-        PermuteInPlace(s, radixKey, minKey, start, shift, bucketCounts, bucketNext);
+        PermuteInPlace(s, radixKey, minKey, start, shift, lastBucket, bucketCounts, bucketNext);
 
         // Phase 4: Recursively sort each bucket for the next digit
         for (var i = 0; i < RadixSize; i++)
@@ -366,18 +363,17 @@ public static class AmericanFlagSort
     /// <paramref name="minKey"/> must be the same value the counting pass used, or an element would be routed
     /// to a bucket the counts never reserved space for.
     /// </remarks>
+    /// <param name="lastBucket">The highest bucket with a nonzero count. Buckets above it are empty.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PermuteInPlace<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, ulong minKey, int start, int shift, Span<int> bucketCounts, Span<int> bucketNext)
+    private static void PermuteInPlace<T, TRadixKey, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, TRadixKey radixKey, ulong minKey, int start, int shift, int lastBucket, Span<int> bucketCounts, Span<int> bucketNext)
         where TRadixKey : struct, IRadixKeySelector<T>
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
         // In-place permutation using bucket positions.
-        // The last bucket is deliberately not visited: once buckets 0..RadixSize-2 have each been filled to
-        // their own count, every element with one of those digits sits in its own bucket, so whatever is left
-        // in the final bucket's range can only be elements of that digit. Walking it would re-read and
-        // re-classify count[RadixSize-1] elements to conclude they are already home.
-        for (var bucket = 0; bucket < RadixSize - 1; bucket++)
+        // The last occupied bucket is not visited: once the buckets below it are filled, every element left
+        // in its range belongs to it, so walking it would only re-read elements that are already home.
+        for (var bucket = 0; bucket < lastBucket; bucket++)
         {
             // Get the range for this bucket directly from bucketCounts
             // bucketCounts[bucket] = start, bucketCounts[bucket + 1] = end
