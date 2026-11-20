@@ -210,10 +210,9 @@ public class BlockQuickSortTests : SortTestsBase
         BlockQuickSort.Sort(reversed.AsSpan(), stats);
 
         // BlockQuickSort behavior on reversed data:
-        // - For small arrays (n ≤ 20): Uses InsertionSort
-        //   - Worst case O(n²): n(n-1)/2 comparisons, (n-1)(n+2)/2 writes
+        // - For small arrays (n ≤ 20): the reference's insertion sort compares each element with the first one; on reversed input every
+        //   element is smaller, so each costs one comparison and moves the whole prefix: n - 1 comparisons
         // - For larger arrays (n > 20): Uses QuickSort with adaptive pivot selection
-        //   - Median-of-3 or better pivot selection helps avoid worst-case
         //   - Block partitioning occurs, then InsertionSort for final small partitions
         //   - Overall: O(n log n) behavior with good pivot selection
 
@@ -222,9 +221,8 @@ public class BlockQuickSortTests : SortTestsBase
         // Conservative bounds that handle both paths
         if (n <= 20)
         {
-            // InsertionSort worst case for small arrays
-            minCompares = (ulong)(n * (n - 1) / 2);
-            maxCompares = (ulong)(n * (n - 1) / 2);
+            minCompares = (ulong)(n - 1);
+            maxCompares = (ulong)(n - 1);
         }
         else
         {
