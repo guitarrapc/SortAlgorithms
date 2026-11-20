@@ -219,15 +219,13 @@ public static class TreapSort
     private static int HeapUp<T, TContext>(Span<Node<T>> arena, int x, ref int rootIndex, TContext context)
         where TContext : ISortContext
     {
-        // A node's priority is assigned once at creation and never rewritten, so it is read once here
-        // even though the heap-up compares against it at every level.
+        // A node's priority is assigned once at creation and never rewritten, so it is read once here,
+        // together with the parent pointer, even though the heap-up compares against it at every level.
+        context.OnIndexRead(x, BUFFER_TREE); // read Parent and Priority
         var xPriority = arena[x].Priority;
-
-        context.OnIndexRead(x, BUFFER_TREE); // read Parent
         var p = arena[x].Parent;
         while (p != NULL_INDEX)
         {
-            context.OnIndexRead(x, BUFFER_TREE); // read Priority
             context.OnIndexRead(p, BUFFER_TREE); // read Priority
             if (xPriority <= arena[p].Priority)
                 break;
@@ -244,7 +242,6 @@ public static class TreapSort
         }
 
         // If x has no parent, it is the new root
-        context.OnIndexRead(x, BUFFER_TREE); // read Parent
         if (p == NULL_INDEX)
             rootIndex = x;
 

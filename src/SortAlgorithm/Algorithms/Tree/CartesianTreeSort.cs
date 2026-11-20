@@ -70,7 +70,10 @@ namespace SortAlgorithm.Algorithms;
 /// so no element equal to v can be in that subtree. Hence u is either a proper ancestor of v - and an ancestor is always extracted
 /// first - or the two are in disjoint subtrees, in which case whichever becomes available second still loses the tie to the other
 /// only if its index is larger. Either way u is written first.</description></item>
-/// <item><description>The priority queue is an implicit binary min-heap over arena indices; sift-up and sift-down move indices, which is why the sort reports no swaps.</description></item>
+/// <item><description>The priority queue is an implicit binary min-heap over arena indices; sift-up and sift-down move indices, which is why the sort reports no swaps.
+/// Each step's delete-min and the insertion of the minimum's children share one sift: a child replaces the minimum at the top and is sifted down,
+/// and only the other child is pushed. This changes how the queue does its work, not which node it returns, because the queue order
+/// (value, then original position) is total.</description></item>
 /// <item><description>Each extracted node is announced as <see cref="RoleType.CurrentMin"/> on the tree buffer for the duration of its step.
 /// The tree shape reaches an observer through the link events and the queue's membership follows from that shape plus the extraction
 /// order, so the order is the only part of this phase that is not derivable — and without the role the only way to recover it is to
@@ -235,15 +238,15 @@ public static class CartesianTreeSort
         if (rootIndex == NULL_INDEX) return;
 
         var context = s.Context;
-        var heapCount = 0;
-        Push(arena, heap, ref heapCount, rootIndex, s.Comparer, context);
+        var heapCount = 1;
+        heap[0] = rootIndex;
 
         var writeIndex = 0;
         while (heapCount > 0)
         {
             context.OnPhase(SortPhase.CartesianTreeExtract, writeIndex + 1, s.Length);
 
-            var node = Pop(arena, heap, ref heapCount, s.Comparer, context);
+            var node = heap[0];
             // Which node the queue chose is the one thing about this phase that an observer cannot derive.
             // The queue's membership follows from the tree and the extraction order, and the tree follows
             // from the link events, but the order itself is decided inside the queue. Naming the node here
@@ -254,60 +257,84 @@ public static class CartesianTreeSort
 
             context.OnIndexRead(node, BUFFER_TREE); // read Left pointer
             var left = arena[node].Left;
-            if (left != NULL_INDEX) Push(arena, heap, ref heapCount, left, s.Comparer, context);
-
             context.OnIndexRead(node, BUFFER_TREE); // read Right pointer
             var right = arena[node].Right;
-            if (right != NULL_INDEX) Push(arena, heap, ref heapCount, right, s.Comparer, context);
+
+            // Delete-min and the insertions that follow share one sift: a child takes the minimum's place at
+            // the top, and only the other child, if any, is pushed. A leaf leaves the queue by moving the
+            // last entry to the top.
+            if (left != NULL_INDEX)
+            {
+                SiftDown(arena, heap, heapCount, left, s.Comparer, context);
+                if (right != NULL_INDEX) Push(arena, heap, ref heapCount, right, s.Comparer, context);
+            }
+            else if (right != NULL_INDEX)
+            {
+                SiftDown(arena, heap, heapCount, right, s.Comparer, context);
+            }
+            else if (--heapCount > 0)
+            {
+                SiftDown(arena, heap, heapCount, heap[heapCount], s.Comparer, context);
+            }
 
             context.OnRole(node, BUFFER_TREE, RoleType.None);
         }
     }
 
     /// <summary>
-    /// Inserts an arena index into the implicit binary min-heap and sifts it up into place.
+    /// Appends an arena index to the implicit binary min-heap and sifts it up into place.
     /// </summary>
+    /// <remarks>
+    /// The entering node is held while the parents it passes move down one level each, so its value is read once.
+    /// </remarks>
     private static void Push<T, TComparer, TContext>(Span<Node<T>> arena, Span<int> heap, ref int count, int nodeIndex, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var child = count++;
-        heap[child] = nodeIndex;
-        while (child > 0)
+        var hole = count++;
+        if (hole > 0)
         {
-            var parent = (child - 1) >> 1;
-            if (!Precedes(arena, heap[child], heap[parent], comparer, context)) break;
-            (heap[child], heap[parent]) = (heap[parent], heap[child]);
-            child = parent;
+            var value = ReadNodeValue(arena, nodeIndex, context);
+            do
+            {
+                var parent = (hole - 1) >> 1;
+                if (!PrecedesValue(arena, nodeIndex, value, heap[parent], comparer, context)) break;
+                heap[hole] = heap[parent];
+                hole = parent;
+            } while (hole > 0);
         }
+        heap[hole] = nodeIndex;
     }
 
     /// <summary>
-    /// Removes and returns the arena index of the smallest available node.
+    /// Places <paramref name="nodeIndex"/> at the top of the heap, replacing the entry there, and sifts it down
+    /// into place.
     /// </summary>
-    private static int Pop<T, TComparer, TContext>(Span<Node<T>> arena, Span<int> heap, ref int count, TComparer comparer, TContext context)
+    /// <remarks>
+    /// The entering node is held while the children it passes move up one level each, so its value is read once.
+    /// </remarks>
+    private static void SiftDown<T, TComparer, TContext>(Span<Node<T>> arena, Span<int> heap, int count, int nodeIndex, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var min = heap[0];
-        heap[0] = heap[--count];
-
-        var parent = 0;
-        while (true)
+        var hole = 0;
+        if (count > 1)
         {
-            var left = 2 * parent + 1;
-            if (left >= count) break;
+            var value = ReadNodeValue(arena, nodeIndex, context);
+            while (true)
+            {
+                var child = 2 * hole + 1;
+                if (child >= count) break;
 
-            var candidate = left;
-            var right = left + 1;
-            if (right < count && Precedes(arena, heap[right], heap[left], comparer, context)) candidate = right;
+                var right = child + 1;
+                if (right < count && Precedes(arena, heap[right], heap[child], comparer, context)) child = right;
 
-            if (!Precedes(arena, heap[candidate], heap[parent], comparer, context)) break;
-            (heap[candidate], heap[parent]) = (heap[parent], heap[candidate]);
-            parent = candidate;
+                if (PrecedesValue(arena, nodeIndex, value, heap[child], comparer, context)) break;
+                heap[hole] = heap[child];
+                hole = child;
+            }
         }
-
-        return min;
+        heap[hole] = nodeIndex;
     }
 
     // Helper methods for node operations (encapsulates visualization tracking)
@@ -330,6 +357,21 @@ public static class CartesianTreeSort
         context.OnIndexRead(a, BUFFER_TREE);
         context.OnIndexRead(b, BUFFER_TREE);
         var cmp = comparer.Compare(arena[a].Value, arena[b].Value);
+        context.OnCompare(a, b, cmp, BUFFER_TREE, BUFFER_TREE);
+        return cmp < 0 || (cmp == 0 && a < b);
+    }
+
+    /// <summary>
+    /// As <see cref="Precedes"/>, with node <paramref name="a"/>'s value already held in <paramref name="aValue"/>,
+    /// so only node <paramref name="b"/> is read.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool PrecedesValue<T, TComparer, TContext>(Span<Node<T>> arena, int a, T aValue, int b, TComparer comparer, TContext context)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        context.OnIndexRead(b, BUFFER_TREE);
+        var cmp = comparer.Compare(aValue, arena[b].Value);
         context.OnCompare(a, b, cmp, BUFFER_TREE, BUFFER_TREE);
         return cmp < 0 || (cmp == 0 && a < b);
     }

@@ -206,9 +206,10 @@ public class CartesianTreeSortTests : StableSortTestsBase
         await Assert.That(stats.CompareCount).IsGreaterThanOrEqualTo((ulong)(n - 1));
         await Assert.That(stats.CompareCount).IsLessThanOrEqualTo(buildBound + extractBound);
 
-        // Reads: n main + one per comparison operand + 3n during extraction. Construction compares against
-        // one node (1 read per comparison), extraction compares two nodes (2 reads per comparison), so the
-        // total is bounded by the comparison count either way.
+        // Reads: n main + 3n during extraction + the comparison operands. Construction compares against one
+        // node (1 read). Extraction reads both children when it compares them (2 reads), and only the queued
+        // node when it compares against the node being sifted, which it read once beforehand (at most 2 reads
+        // per comparison of that sift). The total is therefore bounded by the comparison count either way.
         var minReads = (ulong)(4 * n) + stats.CompareCount;
         await Assert.That(stats.IndexReadCount).IsGreaterThanOrEqualTo(minReads);
         await Assert.That(stats.IndexReadCount).IsLessThanOrEqualTo((ulong)(4 * n) + 2 * stats.CompareCount);
@@ -284,6 +285,34 @@ public class CartesianTreeSortTests : StableSortTestsBase
         CartesianTreeSort.Sort(input.AsSpan(), context);
 
         await Assert.That(context.ExtractCompares).IsEqualTo(0UL);
+    }
+
+    /// <summary>
+    /// On nearly sorted input the queue is wide, but the child that replaces each extracted minimum is usually the
+    /// next minimum, so it settles at the top after a comparison or two. A delete-min that moves the last queue
+    /// entry to the top instead sinks that entry to the bottom on every extraction, about 12n comparisons here.
+    /// </summary>
+    [Test]
+    [Arguments(42)]
+    [Arguments(1234)]
+    public async Task NearlySortedExtractionStaysNearLinear(int seed)
+    {
+        const int n = 4096;
+        var input = Enumerable.Range(0, n).ToArray();
+        var random = new Random(seed);
+        for (var k = 0; k < n / 64; k++)
+        {
+            var i = random.Next(n);
+            var j = random.Next(n);
+            (input[i], input[j]) = (input[j], input[i]);
+        }
+
+        var context = new PhaseCompareCountingContext();
+        var array = input.ToArray();
+        CartesianTreeSort.Sort(array.AsSpan(), context);
+
+        await Assert.That(array).IsEquivalentTo(Enumerable.Range(0, n).ToArray(), CollectionOrdering.Matching);
+        await Assert.That(context.ExtractCompares).IsLessThan((ulong)(4 * n));
     }
 
     /// <summary>

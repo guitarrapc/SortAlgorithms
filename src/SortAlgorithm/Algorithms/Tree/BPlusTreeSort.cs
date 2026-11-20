@@ -18,8 +18,9 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Theoretical Conditions for Correct B+Tree Sort:</strong></para>
 /// <list type="number">
 /// <item><description><strong>Elements Live in Leaves:</strong> Every element is stored in exactly one leaf. An internal
-/// node holding separators s₀ ... s_{m-1} has m+1 children, and every key in child c_i satisfies s_{i-1} ≤ key &lt; s_i.
-/// A separator is a copy, so an internal key is never an element of the input.</description></item>
+/// node holding separators s₀ ... s_{m-1} has m+1 children, and every key in child c_i satisfies s_{i-1} ≤ key ≤ s_i.
+/// A key equal to s_i can sit on its left only when a leaf split fell inside a run of equal keys; without duplicates the
+/// upper bound is strict. A separator is a copy, so an internal key is never an element of the input.</description></item>
 /// <item><description><strong>Node Occupancy:</strong> Every node except the root holds at least t-1 keys and at most
 /// 2t-1, which bounds the height by log_t((n+1)/2) + 1 for every input.</description></item>
 /// <item><description><strong>Uniform Leaf Depth:</strong> All leaves are at the same depth; the tree grows only at the root.</description></item>

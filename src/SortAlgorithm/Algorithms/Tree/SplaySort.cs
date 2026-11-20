@@ -42,6 +42,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Index Reads : Θ(n) main + O(n log n) amortized tree - the descent and the splay that follows it each touch O(log n) nodes per insertion amortized, plus n traversal reads</description></item>
 /// <item><description>Index Writes: Θ(2n) elements + O(n log n) amortized structure - each element is written once to the tree (CreateNode) and once during in-order traversal; each splay rotation rewrites a constant number of child and parent pointers</description></item>
 /// <item><description>Space       : O(n) - one node per element; each node holds value, left/right/parent indices</description></item>
+/// <item><description>Rotations   : O(n log n) amortized - a splay performs exactly as many rotations as the inserted node's depth; sorted and reverse-sorted input insert at depth 1, so each insertion is a single zig (n - 1 in total)</description></item>
 /// </list>
 /// <para><strong>Adaptive Behavior:</strong></para>
 /// <para>
