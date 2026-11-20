@@ -44,7 +44,7 @@ public class StabilityDeclarationTests
         // Standalone suites: their inputs are constrained (power-of-two widths for the networks,
         // a handful of elements for the joke sorts, a key selector for the distribution sorts),
         // so they do not derive from the shared bases at all.
-        "BatcherOddEvenMergeSort", "BitonicSort", "BitonicSortNonOptimized", "BogoSort",
+        "BatcherOddEvenMergeSort", "BitonicSort", "BitonicSortBranchless", "BitonicSortNonOptimized", "BogoSort",
         "BozoSort", "BucketSort", "CountingSort", "PigeonholeSort", "SlowSort", "StoogeSort",
     ];
 

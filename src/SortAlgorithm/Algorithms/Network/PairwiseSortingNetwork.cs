@@ -67,6 +67,7 @@ namespace SortAlgorithm.Algorithms;
 /// layer structure Parberry describes.</description></item>
 /// <item><description>Index arithmetic uses <c>uint</c>, so loop bounds and the next stride or block start stay representable for any <c>int</c> length.</description></item>
 /// <item><description>Uses only the input buffer (buffer ID 0); no heap allocation.</description></item>
+/// <item><description>For the same network with comparators that always write both positions, see PairwiseSortingNetworkBranchless.</description></item>
 /// </list>
 /// <para><strong>History:</strong></para>
 /// <para>Parberry published the network in 1992 as the first serious rival to Batcher's odd-even sorting network to appear in over twenty years:

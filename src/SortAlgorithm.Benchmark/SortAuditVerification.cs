@@ -40,7 +40,7 @@ public static class SortAuditVerification
 
     static void Verify(string name, AuditSort sort, int[] values)
     {
-        var unsupportedLength = name is "BitonicSort" or "BitonicSortNonOptimized" && values.Length > 1 && !int.IsPow2(values.Length);
+        var unsupportedLength = name is "BitonicSort" or "BitonicSortBranchless" or "BitonicSortNonOptimized" && values.Length > 1 && !int.IsPow2(values.Length);
         var unsupportedRange = name is "CountingSortInteger" or "PigeonholeSortInteger" && values.Length > 1
             && (long)values.Max() - values.Min() + 1 > (long)values.Length * 32;
         if (unsupportedLength || unsupportedRange)

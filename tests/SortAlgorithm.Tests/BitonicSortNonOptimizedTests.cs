@@ -203,6 +203,51 @@ public class BitonicSortNonOptimizedTests
     }
 
     /// <summary>
+    /// The recursion runs the same network as <see cref="BitonicSort"/>, depth first instead of layer by layer. Both
+    /// orders respect every wire's sequence of comparators, so each comparator meets the same two values in either
+    /// order. With distinct keys, the comparison sign and whether the comparator exchanged give its direction, so equal
+    /// multisets of (positions, sign, exchange) mean the same comparators with the same directions.
+    /// </summary>
+    [Test]
+    [Arguments(2, 42)]
+    [Arguments(8, 42)]
+    [Arguments(16, 1234)]
+    [Arguments(64, 42)]
+    [Arguments(256, 1234)]
+    [Arguments(1024, 42)]
+    public async Task SameNetworkAsBitonicSortTest(int n, int seed)
+    {
+        var input = TestHelpers.ShuffledRange(n, seed);
+
+        var recursive = new ComparatorRecorder();
+        BitonicSortNonOptimized.Sort(input.ToArray().AsSpan(), recursive);
+        var layered = new ComparatorRecorder();
+        BitonicSort.Sort(input.ToArray().AsSpan(), layered);
+
+        var expected = layered.Comparators.Order(StringComparer.Ordinal).ToList();
+        var actual = recursive.Comparators.Order(StringComparer.Ordinal).ToList();
+        await Assert.That(actual).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    /// <summary>
+    /// Records every comparator as "lower upper sign exchanged".
+    /// </summary>
+    sealed class ComparatorRecorder : ISortContext
+    {
+        public List<string> Comparators { get; } = [];
+
+        public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0) { }
+        public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) => Comparators.Add($"{i} {j} {Math.Sign(result)} keep");
+        public void OnSwap(int i, int j, int bufferId) => Comparators[^1] = Comparators[^1].Replace(" keep", " swap");
+        public void OnIndexRead(int index, int bufferId) { }
+        public void OnIndexWrite(int index, int bufferId) { }
+        public void OnIndexWrite<T>(int index, int bufferId, T value) { }
+        public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId) { }
+        public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values) { }
+        public void OnRole(int index, int bufferId, RoleType role) { }
+    }
+
+    /// <summary>
     /// Calculates the theoretical number of comparisons for Bitonic Sort.
     /// For n = 2^k, the formula is: n * k * (k+1) / 4, where k = log2(n)
     /// This comes from the recursive structure:

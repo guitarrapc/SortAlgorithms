@@ -20,24 +20,20 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Power-of-Two Requirement:</strong> The input length must be a power of 2 (n = 2^m for some integer m ≥ 0).
 /// This ensures the divide-and-conquer structure maintains balanced splits at each stage.
 /// If n is not a power of 2, this implementation throws ArgumentException. Use BatcherOddEvenMergeSort for arbitrary sizes.</description></item>
-/// <item><description><strong>Iterative Bitonic Construction:</strong> This implementation uses an XOR-based iterative approach that directly represents
-/// the bitonic sorting network structure. The algorithm uses 0-based local indices (0 to n-1) for the network logic, then maps them to actual array indices.
-/// For each network level k (2, 4, 8, ..., n), it performs comparison stages at distances j (k/2, k/4, ..., 1).
-/// Comparison pairs are determined by XOR operation in local index space: element i is compared with element i^j.
-/// The sort direction for each element is determined by (i &amp; k) in local index space:
-/// if (i &amp; k) == 0, sort ascending (first half of bitonic sequence); otherwise sort descending (second half).
-/// This 0-based local index approach ensures the implementation matches the theoretical bitonic network definition exactly.
-/// For the recursive approach, see BitonicSortNonOptimized.</description></item>
-/// <item><description><strong>Bitonic Merge Correctness:</strong> Given a bitonic sequence of length n = 2k, the XOR-based network compares and conditionally swaps
-/// elements at XOR distance j (i.e., compare element[i] with element[i^j]). This operation partitions the sequence into two bitonic subsequences,
-/// where all elements in the first half are ≤ all elements in the second half. The iterative XOR-based stages automatically apply this to all subsequences,
-/// producing a fully sorted sequence.
-/// <para><strong>Proof sketch:</strong> Let S = [a₁,...,aₖ, b₁,...,bₖ] be bitonic. After comparing and swapping pairs determined by XOR:
+/// <item><description><strong>Iterative Bitonic Construction:</strong> The network runs levels k = 2, 4, ..., n. Level k runs stages
+/// j = k/2, k/4, ..., 1, and stage j compares every position i whose j bit is clear with i ^ j = i + j. The comparator sorts ascending
+/// when (i &amp; k) == 0 and descending otherwise, so after level k the runs of k positions alternate ascending and descending and every
+/// pair of neighbouring runs forms a bitonic run of 2k positions for the next level. At the last level (k = n) every comparator is ascending.
+/// This is the unrolled form of the recursive construction in BitonicSortNonOptimized: the same comparators, grouped into layers.</description></item>
+/// <item><description><strong>Bitonic Merge Correctness:</strong> Stage j acts on runs of 2j positions as a half-cleaner: it compares each
+/// position of the lower half with the position j above it. Batcher shows that on a bitonic run this leaves both halves bitonic with
+/// every element of the lower half ≤ every element of the upper half (≥ for a descending comparator). The stages j = k/2, ..., 1 therefore
+/// sort each bitonic run of k positions.
+/// <para><strong>Proof sketch:</strong> Let S = [a₁,...,aₘ, b₁,...,bₘ] be bitonic. After comparing aᵢ with bᵢ for every i:
 /// <list type="bullet">
-/// <item>The XOR operation ensures symmetric comparison pairs across the bitonic sequence midpoint.
-/// After swap: min(aᵢ, bᵢ) goes to first half, max(aᵢ, bᵢ) to second half.
-/// All elements in first half ≤ all elements in second half.
-/// Both halves remain bitonic, allowing recursive application of the same network structure.</item>
+/// <item>min(aᵢ, bᵢ) is in the lower half and max(aᵢ, bᵢ) in the upper half.
+/// All elements in the lower half are ≤ all elements in the upper half, and both halves remain bitonic,
+/// so the next stage can apply the same step to each half.</item>
 /// </list></para></description></item>
 /// <item><description><strong>Comparison Network Property:</strong> Bitonic sort is a comparison network, meaning the sequence of comparisons
 /// is data-independent (oblivious). The same comparisons are performed regardless of input values, making it ideal for parallel hardware
@@ -64,15 +60,13 @@ namespace SortAlgorithm.Algorithms;
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
 /// <item><description>Strictly requires power-of-2 input length. Throws ArgumentException otherwise.</description></item>
-/// <item><description>True in-place sorting with zero heap allocation (all work done on input span).</description></item>
-/// <item><description>Sequential implementation: Does not exploit parallelism (comparisons are executed sequentially).</description></item>
-/// <item><description>Uses iterative XOR-based implementation with 0-based local indices to eliminate recursion overhead and directly represent the sorting network structure.</description></item>
-/// <item><description>Uses aggressive inlining for performance-critical helper methods (CompareAndSwapAscending, CompareAndSwapDescending, IsPowerOfTwo, etc.).</description></item>
-/// <item><description>Branch elimination optimization: Separate CompareAndSwapAscending/Descending methods avoid conditional branching in inner loops, improving JIT optimization and branch prediction.</description></item>
-/// <item><description>XOR-based pairing (i ^ j) in local index space ensures correct bitonic network structure: outer loop (level k), middle loop (stage j), inner loop (local index i).</description></item>
-/// <item><description>Direction determination via bitwise AND ((i &amp; k) == 0 for ascending) in local index space eliminates per-block direction calculations and matches theoretical definition exactly.</description></item>
-/// <item><description>Local-to-global index mapping (low + i, low + i^j) ensures correct behavior when sorting subarrays.</description></item>
-/// <item><description>For unoptimized recursive version, see BitonicSortNonOptimized.</description></item>
+/// <item><description>Each stage enumerates its comparators directly: runs of k positions in order, groups of 2j within a run, and the lower
+/// position of every pair. That is the same comparators in the same order as the loop in the Wikipedia article, which visits every i and
+/// skips the half whose partner i ^ j lies below it, and the direction is chosen once per run of k positions rather than once per comparator.</description></item>
+/// <item><description>Comparators run one at a time; the parallelism within a layer is not exploited.</description></item>
+/// <item><description>Uses only the input buffer (buffer ID 0); no heap allocation.</description></item>
+/// <item><description>For the recursive formulation, see BitonicSortNonOptimized. For the same network with comparators that always write
+/// both positions, see BitonicSortBranchless.</description></item>
 /// </list>
 /// <para><strong>Use Cases:</strong></para>
 /// <list type="bullet">
@@ -141,65 +135,75 @@ public static class BitonicSort
             throw new ArgumentException($"Bitonic sort requires input length to be a power of 2. Actual length: {span.Length}", nameof(span));
 
         var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        SortCoreIterative(s, 0, span.Length);
+        SortCore(s, (uint)span.Length);
     }
 
     /// <summary>
-    /// Iteratively builds and merges bitonic sequences using the XOR-based network structure.
-    /// This is the correct bitonic sorting network implementation that guarantees bitonic properties.
-    /// Uses 0-based local indices for network structure, then maps to actual array indices.
+    /// Runs the bitonic sorting network level by level. Level k merges bitonic runs of k positions into sorted runs,
+    /// and stage j of a level compares every position i whose j bit is clear with i ^ j = i + j.
     /// </summary>
     /// <param name="s">The span to sort.</param>
-    /// <param name="low">The starting index of the sequence.</param>
-    /// <param name="count">The length of the sequence.</param>
-    private static void SortCoreIterative<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int low, int count)
+    /// <param name="count">The number of positions; a power of two, at least 2.</param>
+    private static void SortCore<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, uint count)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        // Outer loop: bitonic sequence size k (2, 4, 8, ..., count)
-        // This determines which "level" of the bitonic network we're building
         // The next level is 2^31 after the largest valid network.
-        for (uint k = 2; k <= (uint)count; k = NextLevel(k)) // Level
+        for (uint k = 2; k <= count; k = NextLevel(k))
         {
-            s.Context.OnPhase(SortPhase.BitonicLevel, (int)k, count);
-
-            // Middle loop: comparison distance j (k/2, k/4, ..., 1)
-            // This determines the "stage" within each level
-            for (int j = (int)(k >> 1); j > 0; j >>= 1) // Stage
+            s.Context.OnPhase(SortPhase.BitonicLevel, (int)k, (int)count);
+            for (var j = k >> 1; j > 0; j >>= 1)
             {
-                s.Context.OnPhase(SortPhase.BitonicStage, j, (int)k, count);
-                // Inner loop: use 0-based local index for network structure
-                for (int i = 0; i < count; i++) // Local index
+                s.Context.OnPhase(SortPhase.BitonicStage, (int)j, (int)k, (int)count);
+
+                // A comparator sorts ascending when its lower position has the k bit clear. That bit is the same
+                // across each run of k positions, so the direction is chosen once per run.
+                for (uint run = 0; run < count; run += k)
                 {
-                    // XOR-based pairing in local index space
-                    int ixj = i ^ j; // XOR Pairing
-
-                    // Only process if partner avoids duplicate comparisons
-                    // Note: ixj < count check is unnecessary because:
-                    // - count is a power of 2, so i and j fit within log2(count) bits
-                    // - XOR operation only flips bits, so ixj also fits within log2(count) bits
-                    // - Therefore ixj < count is guaranteed for 0-based local indices
-                    if (ixj > i) // avoid duplicate
+                    if ((run & k) == 0)
                     {
-                        // Direction is determined by (i & k) in local index space:
-                        // - (i & k) == 0: ascending order (first half of bitonic sequence)
-                        // - (i & k) != 0: descending order (second half of bitonic sequence)
-                        bool ascending = ((uint)i & k) == 0; // direction
-
-                        // Map local indices to actual array indices
-                        int a = low + i;
-                        int b = low + ixj;
-
-                        if (ascending)
-                        {
-                            CompareAndSwapAscending(s, a, b);
-                        }
-                        else
-                        {
-                            CompareAndSwapDescending(s, a, b);
-                        }
+                        AscendingStage(s, run, run + k, j);
+                    }
+                    else
+                    {
+                        DescendingStage(s, run, run + k, j);
                     }
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs stage <paramref name="j"/> on [<paramref name="start"/>, <paramref name="end"/>) in ascending order:
+    /// in each group of 2j positions, the lower j are compared with the position j above them.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void AscendingStage<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, uint start, uint end, uint j)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        for (var group = start; group < end; group += j << 1)
+        {
+            for (var i = group; i < group + j; i++)
+            {
+                CompareAndSwapAscending(s, (int)i, (int)(i + j));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs stage <paramref name="j"/> on [<paramref name="start"/>, <paramref name="end"/>) in descending order.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void DescendingStage<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, uint start, uint end, uint j)
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        for (var group = start; group < end; group += j << 1)
+        {
+            for (var i = group; i < group + j; i++)
+            {
+                CompareAndSwapDescending(s, (int)i, (int)(i + j));
             }
         }
     }
@@ -274,7 +278,11 @@ public static class BitonicSort
 /// <item><description><strong>Recursive Bitonic Construction:</strong> Divide the input into two halves. Recursively sort the first half in ascending order
 /// and the second half in descending order. The concatenation of these two sorted subsequences forms a bitonic sequence.
 /// This is because the first half increases (a₁ ≤ a₂ ≤ ... ≤ aₖ) and the second half decreases (bₖ ≥ ... ≥ b₂ ≥ b₁),
-/// creating the pattern: increasing then decreasing.</description></item>
+/// creating the pattern: increasing then decreasing. The halves get these directions at every level, including inside a region
+/// that is itself merged in descending order, so the comparators and their directions are exactly those of BitonicSort:
+/// a run of k positions is ascending when its k bit is clear.
+/// Batcher's comparators all put the low value on top; he makes a merge input bitonic by joining two sorted lists with the second reversed.
+/// Sorting the second half descending is that reversal written in array positions.</description></item>
 /// <item><description><strong>Bitonic Merge Correctness:</strong> Given a bitonic sequence of length n = 2k, compare and conditionally swap elements
 /// at distance k apart (i.e., compare element[i] with element[i+k] for i ∈ [0, k)). This operation, called a bitonic split,
 /// partitions the sequence into two bitonic subsequences of length k each, where all elements in the first half are ≤ all elements
@@ -297,7 +305,7 @@ public static class BitonicSort
 /// <list type="bullet">
 /// <item><description>Family      : Network Sort / Exchange</description></item>
 /// <item><description>Stable      : No (swapping non-adjacent elements can change relative order of equal elements)</description></item>
-/// <item><description>In-place    : Yes (O(1) auxiliary space - sorts directly on input array)</description></item>
+/// <item><description>In-place    : Yes (no auxiliary buffer; the recursion keeps O(log n) frames on the call stack)</description></item>
 /// <item><description>Best case   : Θ(n log² n) - Data-independent comparison count (same as worst case)</description></item>
 /// <item><description>Average case: Θ(n log² n) - Performs the same comparisons for all inputs</description></item>
 /// <item><description>Worst case  : Θ(n log² n) - For n = 2^k: n × log n × (log n + 1) / 4 comparisons</description></item>
@@ -305,16 +313,16 @@ public static class BitonicSort
 /// <item><description>Swaps       : O(n log² n) - At most equal to comparison count; depends on input disorder</description></item>
 /// <item><description>Index Reads : Θ(n log² n) - every comparator reads the two positions it tests, and the network runs the same comparators whatever the input</description></item>
 /// <item><description>Index Writes: O(n log² n) - each swap writes two positions, so the writes follow the swap count</description></item>
-/// <item><description>Space       : O(1) - the comparators act directly on the input span</description></item>
+/// <item><description>Space       : O(log n) - the recursion stack; the comparators act directly on the input span</description></item>
 /// <item><description>Depth       : O(log² n) - For n = 2^k: log n × (log n + 1) / 2 layers of n/2 comparators each, so O(log² n) parallel time with n/2 comparators</description></item>
 /// </list>
 /// <para><strong>Implementation Notes:</strong></para>
 /// <list type="bullet">
 /// <item><description>Strictly requires power-of-2 input length. Throws ArgumentException otherwise.</description></item>
-/// <item><description>True in-place sorting with zero heap allocation (all work done on input span).</description></item>
-/// <item><description>Sequential implementation: Does not exploit parallelism (comparisons are executed sequentially).</description></item>
-/// <item><description>Uses aggressive inlining for performance-critical helper methods (CompareAndSwapAscending, CompareAndSwapDescending, IsPowerOfTwo, etc.).</description></item>
-/// <item><description>Branch elimination optimization: Separate CompareAndSwapAscending/Descending methods avoid conditional branching in inner loops, improving JIT optimization and branch prediction.</description></item>
+/// <item><description>Runs the comparators depth first, in recursion order, so a layer's comparators are not adjacent in time.
+/// BitonicSort runs the same network layer by layer.</description></item>
+/// <item><description>Each merge chooses its direction once and runs a direction-specific comparator loop.</description></item>
+/// <item><description>Uses only the input buffer (buffer ID 0); no heap allocation.</description></item>
 /// </list>
 /// <para><strong>Use Cases:</strong></para>
 /// <list type="bullet">
@@ -325,6 +333,7 @@ public static class BitonicSort
 /// </list>
 /// <para><strong>Reference:</strong></para>
 /// <para>Wiki: https://en.wikipedia.org/wiki/Bitonic_sorter</para>
+/// <para>Batcher, K. E. (1968). "Sorting networks and their applications". AFIPS Spring Joint Computer Conference. https://doi.org/10.1145/1468075.1468121</para>
 /// </remarks>
 public static class BitonicSortNonOptimized
 {
@@ -397,10 +406,9 @@ public static class BitonicSortNonOptimized
         {
             int k = count / 2;
 
-            // Recursively sort first half in the same direction as this region
-            SortCore(s, low, k, ascending);
-            // Recursively sort second half in the opposite direction to create bitonic sequence
-            SortCore(s, low + k, k, !ascending);
+            // An ascending half followed by a descending half is bitonic, whichever direction this region is merged in.
+            SortCore(s, low, k, ascending: true);
+            SortCore(s, low + k, k, ascending: false);
 
             // Merge the bitonic sequence in the desired order
             BitonicMerge(s, low, count, ascending);

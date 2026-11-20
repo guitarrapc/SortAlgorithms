@@ -57,6 +57,7 @@ namespace SortAlgorithm.Algorithms;
 /// <c>(j+k) &amp; (2p-1)</c> once per group and bounds i by the array end, so the inner loop runs only the comparators the
 /// formulation accepts, in the same order, without dividing.</description></item>
 /// <item><description>Generates fewer total comparisons than Bitonic Sort for the same input size.</description></item>
+/// <item><description>For the same network with comparators that always write both positions, see BatcherOddEvenMergeSortBranchless.</description></item>
 /// <item><description>For n that is not a power of two, the truncated network is larger than the one Batcher's own "s by t" merging rule
 /// gives when applied to n directly. Under that rule a list with no partner passes through unchanged. The truncated network still runs
 /// every merge, or recursive sub-merge, whose second list lies entirely at positions ≥ n, restricted to positions below n. Those
@@ -122,8 +123,7 @@ public static class BatcherOddEvenMergeSort
     {
         if (span.Length <= 1) return;
 
-        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
-        SortCoreIterative(s, span.Length);
+        SortCoreIterative(span, comparer, context);
     }
 
     /// <summary>
@@ -131,12 +131,18 @@ public static class BatcherOddEvenMergeSort
     /// Repeatedly merges adjacent sorted blocks using odd-even compare-exchange stages.
     /// The comparison pattern is data-oblivious and determined solely by the network structure.
     /// </summary>
-    /// <param name="s">The span to sort.</param>
-    /// <param name="count">The length of the sequence.</param>
-    private static void SortCoreIterative<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int count)
+    /// <param name="span">The span to sort; at least 2 elements.</param>
+    /// <param name="comparer">The comparer to use for element comparisons.</param>
+    /// <param name="context">The sort context.</param>
+    private static void SortCoreIterative<T, TComparer, TContext>(Span<T> span, TComparer comparer, TContext context)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        // The SortSpan is a local of the method that runs the loops. Passed in, it is reached through a reference, and the
+        // JIT reloaded the span's base pointer at every comparator.
+        var s = new SortSpan<T, TComparer, TContext>(span, context, comparer, BUFFER_MAIN);
+        var count = span.Length;
+
         // Iterative Batcher odd-even merge sorting network, in the iterative formulation of the Wikipedia article.
         // Repeatedly merges adjacent sorted blocks using data-oblivious compare-exchange stages.
         // The next pass and group offset can exceed int.MaxValue before the loop exits.

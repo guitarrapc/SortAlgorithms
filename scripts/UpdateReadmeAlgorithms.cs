@@ -53,6 +53,7 @@ Dictionary<string, string> displayNames = new()
     ["AmericanFlagSort"] = "American Flag Sort",
     ["BalancedBinaryTreeSort"] = "Binary Tree Sort (AVL)",
     ["BatcherOddEvenMergeSort"] = "Batcher Odd-Even Merge Sort",
+    ["BatcherOddEvenMergeSortBranchless"] = "Batcher Odd-Even Merge Sort Branchless",
     ["BidirectionalStableQuickSort"] = "Quick Sort (Bidirectional Stable)",
     ["BinaryTreeSort"] = "Binary Tree Sort (BST)",
     ["BitonicSort"] = "Bitonic Sort",

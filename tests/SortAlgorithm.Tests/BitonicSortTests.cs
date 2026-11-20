@@ -203,6 +203,111 @@ public class BitonicSortTests
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedReads);
     }
 
+    public static IEnumerable<int> SequenceSizes() => [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
+
+    /// <summary>
+    /// The phases announced, the comparators run, their order, and the exchanges they make are exactly those of the
+    /// loop in the Wikipedia article: for k = 2, 4, ..., n; j = k/2, ..., 1; i = 0, ..., n - 1, compare i with
+    /// l = i ^ j when l &gt; i, ascending when i &amp; k is 0 and descending otherwise. The reference below runs that loop
+    /// on its own copy of the input, independently of how the implementation enumerates the same pairs.
+    /// </summary>
+    [Test]
+    [MethodDataSource(nameof(SequenceSizes))]
+    public async Task EventSequenceMatchesTextbookLoopTest(int n)
+    {
+        var input = TestHelpers.ShuffledRange(n, 42);
+        var recorder = new NetworkEventRecorder();
+        BitonicSort.Sort(input.ToArray().AsSpan(), recorder);
+
+        var a = input.ToArray();
+        var expected = new List<string>();
+        for (var k = 2; k <= n; k *= 2)
+        {
+            expected.Add($"level {k} {n}");
+            for (var j = k / 2; j > 0; j /= 2)
+            {
+                expected.Add($"stage {j} {k} {n}");
+                for (var i = 0; i < n; i++)
+                {
+                    var l = i ^ j;
+                    if (l <= i) continue;
+                    expected.Add($"compare {i} {l}");
+                    var ascending = (i & k) == 0;
+                    if (ascending ? a[i] > a[l] : a[i] < a[l])
+                    {
+                        (a[i], a[l]) = (a[l], a[i]);
+                        expected.Add($"swap {i} {l}");
+                    }
+                }
+            }
+        }
+
+        await Assert.That(recorder.Events).IsEquivalentTo(expected, CollectionOrdering.Matching);
+    }
+
+    public static IEnumerable<int> ZeroOneSizes() => [1, 2, 4, 8, 16];
+
+    /// <summary>
+    /// The zero-one principle: a comparator network sorts every input of length n if and only if it sorts every
+    /// 0-1 input of length n, so enumerating all 2^n bit strings proves the network for this n sorts.
+    /// </summary>
+    [Test]
+    [MethodDataSource(nameof(ZeroOneSizes))]
+    public async Task ZeroOnePrincipleTest(int n)
+    {
+        var bits = new int[n];
+        var failures = new List<string>();
+
+        for (var mask = 0; mask < 1 << n; mask++)
+        {
+            var ones = 0;
+            for (var i = 0; i < n; i++)
+            {
+                bits[i] = (mask >> i) & 1;
+                ones += bits[i];
+            }
+
+            BitonicSort.Sort(bits.AsSpan());
+
+            for (var i = 0; i < n; i++)
+            {
+                if (bits[i] != (i < n - ones ? 0 : 1))
+                {
+                    failures.Add($"mask 0b{Convert.ToString(mask, 2).PadLeft(n, '0')}: position {i} holds {bits[i]}");
+                    break;
+                }
+            }
+            if (failures.Count >= 5) break;
+        }
+
+        await Assert.That(failures).IsEmpty();
+    }
+
+    /// <summary>
+    /// Records phase announcements, comparisons and swaps, in the order they happen, as text.
+    /// </summary>
+    internal sealed class NetworkEventRecorder : ISortContext
+    {
+        public List<string> Events { get; } = [];
+
+        public void OnPhase(SortPhase phase, int param1 = 0, int param2 = 0, int param3 = 0)
+            => Events.Add(phase switch
+            {
+                SortPhase.BitonicLevel => $"level {param1} {param2}",
+                SortPhase.BitonicStage => $"stage {param1} {param2} {param3}",
+                _ => $"unexpected {phase}",
+            });
+
+        public void OnCompare(int i, int j, int result, int bufferIdI, int bufferIdJ) => Events.Add($"compare {i} {j}");
+        public void OnSwap(int i, int j, int bufferId) => Events.Add($"swap {i} {j}");
+        public void OnIndexRead(int index, int bufferId) { }
+        public void OnIndexWrite(int index, int bufferId) { }
+        public void OnIndexWrite<T>(int index, int bufferId, T value) { }
+        public void OnRangeCopy(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId) { }
+        public void OnRangeCopy<T>(int sourceIndex, int destinationIndex, int length, int sourceBufferId, int destinationBufferId, ReadOnlySpan<T> values) { }
+        public void OnRole(int index, int bufferId, RoleType role) { }
+    }
+
     /// <summary>
     /// Calculates the theoretical number of comparisons for Bitonic Sort.
     /// For n = 2^k, the formula is: n * k * (k+1) / 4, where k = log2(n)

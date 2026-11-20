@@ -78,6 +78,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(BatcherOddEvenMergeSortBranchless))]
+    public void SetupBatcherOddEvenMergeSortBranchless() => Setup(nameof(BatcherOddEvenMergeSortBranchless));
+
+    [Benchmark]
+    public int BatcherOddEvenMergeSortBranchless()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.BatcherOddEvenMergeSortBranchless.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(BidirectionalStableQuickSort))]
     public void SetupBidirectionalStableQuickSort() => Setup(nameof(BidirectionalStableQuickSort));
 
@@ -650,6 +661,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(PairwiseSortingNetworkBranchless))]
+    public void SetupPairwiseSortingNetworkBranchless() => Setup(nameof(PairwiseSortingNetworkBranchless));
+
+    [Benchmark]
+    public int PairwiseSortingNetworkBranchless()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.PairwiseSortingNetworkBranchless.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(PancakeSort))]
     public void SetupPancakeSort() => Setup(nameof(PancakeSort));
 
@@ -1181,6 +1203,17 @@ public class SortAuditNetworkBenchmark : SortAuditBase
     {
         var values = buffers.Next();
         SortAlgorithm.Algorithms.BitonicSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
+    [GlobalSetup(Target = nameof(BitonicSortBranchless))]
+    public void SetupBitonicSortBranchless() => Setup(nameof(BitonicSortBranchless));
+
+    [Benchmark]
+    public int BitonicSortBranchless()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.BitonicSortBranchless.Sort(values.AsSpan(), NullContext.Default);
         return values[values.Length / 2];
     }
 

@@ -29,6 +29,12 @@ public class NetworkBenchmark
     }
 
     [Benchmark]
+    public void BitonicSortBranchless()
+    {
+        SortAlgorithm.Algorithms.BitonicSortBranchless.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void BitonicRecursiveSort()
     {
         SortAlgorithm.Algorithms.BitonicSortNonOptimized.Sort(_buffers.Next().AsSpan());
@@ -41,8 +47,20 @@ public class NetworkBenchmark
     }
 
     [Benchmark]
+    public void BatcherOddEvenMergeSortBranchless()
+    {
+        SortAlgorithm.Algorithms.BatcherOddEvenMergeSortBranchless.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void PairwiseSortingNetwork()
     {
         SortAlgorithm.Algorithms.PairwiseSortingNetwork.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
+    public void PairwiseSortingNetworkBranchless()
+    {
+        SortAlgorithm.Algorithms.PairwiseSortingNetworkBranchless.Sort(_buffers.Next().AsSpan());
     }
 }
