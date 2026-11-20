@@ -32,6 +32,8 @@ public class PreparedFloatingSortCorrectnessTests
     [Arguments("PDQSortBranchless")]
     [Arguments("Ipnsort")]
     [Arguments("StdSort")]
+    [Arguments("CycleSort")]
+    [Arguments("DoubleSelectionSort")]
     public void FloatingSortsPreserveOrderBitsAndDeclaredStability(string algorithm)
     {
         Verify<Half>(algorithm);
@@ -160,6 +162,14 @@ public class PreparedFloatingSortCorrectnessTests
             case "StdSort":
                 if (kind == 0) StdSort.Sort(span, first, last, context);
                 else StdSort.Sort(span, first, last, comparer, context);
+                break;
+            case "CycleSort":
+                if (kind == 0) CycleSort.Sort(span.Slice(first, last - first), context);
+                else CycleSort.Sort(span.Slice(first, last - first), comparer, context);
+                break;
+            case "DoubleSelectionSort":
+                if (kind == 0) DoubleSelectionSort.Sort(span, first, last, context);
+                else DoubleSelectionSort.Sort(span, first, last, comparer, context);
                 break;
         }
     }

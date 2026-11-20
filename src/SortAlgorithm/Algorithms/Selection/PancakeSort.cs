@@ -30,18 +30,21 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Selection (selects maximum and places it in correct position)</description></item>
 /// <item><description>Stable      : No (flipping changes relative order of equal elements)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space)</description></item>
-/// <item><description>Best case   : Ω(n²) - Already sorted, still must find maximum in each iteration (no flips needed)</description></item>
-/// <item><description>Average case: Θ(n²) - Comparisons are always n(n-1)/2; average ~3n/2 flips</description></item>
-/// <item><description>Worst case  : O(n²) - Maximum 2(n-1) flips when maximum is always at position 0</description></item>
-/// <item><description>Comparisons : n(n-1)/2 - Always the same regardless of input (sum of 1 to n-1)</description></item>
-/// <item><description>Swaps       : 0 to n(n-1)/2 - Each flip of length k performs k/2 swaps; worst case 2n flips of average length n/2</description></item>
-/// <item><description>Index Reads : 2 × comparisons + 2 × swaps - Comparisons read 2 elements; swaps read and write 2 elements each</description></item>
-/// <item><description>Index Writes: 2 × swaps - Each swap writes 2 elements</description></item>
+/// <item><description>Best case   : Θ(n²) - Already sorted, still must find maximum in each iteration (no flips needed)</description></item>
+/// <item><description>Average case: Θ(n²) - Comparisons are always n(n-1)/2; close to 2n flips, since the maximum ends its prefix only by chance</description></item>
+/// <item><description>Worst case  : Θ(n²) - At most 2n - 3 flips; each pass flips at most the whole remaining prefix</description></item>
+/// <item><description>Comparisons : Θ(n²) - Exactly n(n-1)/2: one scan of each prefix of n, n-1, ..., 2 elements, regardless of input</description></item>
+/// <item><description>Swaps       : O(n²) - A flip of k elements exchanges ⌊k/2⌋ pairs; 0 on sorted input</description></item>
+/// <item><description>Index Reads : Θ(n²) - Each comparison reads the scanned element and the candidate maximum; each swap adds two</description></item>
+/// <item><description>Index Writes: O(n²) - Two per swap; nothing else writes</description></item>
 /// <item><description>Space       : O(1) - the flips reverse ranges inside the input span</description></item>
 /// </list>
 /// <para><strong>Note:</strong> The Pancake Sorting Problem asks for the minimum number of flips to sort any array.
-/// This implementation uses a simple greedy approach (not necessarily optimal) that guarantees at most 2(n-1) flips.
+/// This implementation uses a simple greedy approach (not necessarily optimal) that guarantees at most 2n - 3 flips.
 /// The optimal bound is between (15n/14) and (18n/11) flips for worst-case inputs.</para>
+/// <para><strong>Implementation Notes:</strong></para>
+/// <para>Without an observer a flip is <see cref="MemoryExtensions.Reverse{T}(Span{T})"/>, which the runtime vectorizes for primitive types.
+/// An observed sort performs the same exchanges as one swap per pair.</para>
 /// <para><strong>History:</strong></para>
 /// <para>The problem was posed in 1975 as Problem E2569 of the American Mathematical Monthly, under the pseudonym Harry Dweighter
 /// (Jacob E. Goodman). Gates and Papadimitriou (1979), often cited for pancake sorting, came later and proved bounds on the
@@ -140,7 +143,8 @@ public static class PancakeSort
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        for (var currentSize = last; currentSize > first; currentSize--)
+        // A one-element prefix is already in place, so the last pass flips a two-element prefix.
+        for (var currentSize = last; currentSize > first + 1; currentSize--)
         {
             // Find max in [first..currentSize-1] with CurrentMax role tracking
             s.Context.OnPhase(SortPhase.PancakeFindMax, first, currentSize - 1);
@@ -168,39 +172,22 @@ public static class PancakeSort
     }
 
     /// <summary>
-    /// Finds the index of the maximum element within the first n elements of the span.
-    /// </summary>
-    /// <param name="s"></param>
-    /// <param name="first"></param>
-    /// <param name="last"></param>
-    /// <returns></returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int MaxIndex<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int first, int last)
-        where TComparer : IComparer<T>
-        where TContext : ISortContext
-    {
-        var maxIndex = first;
-        for (var i = first + 1; i < last; i++)
-        {
-            if (s.IsGreaterAt(i, maxIndex))
-            {
-                maxIndex = i;
-            }
-        }
-        return maxIndex;
-    }
-
-    /// <summary>
     /// Reverses the elements in the span from start to end.
     /// </summary>
-    /// <param name="s"></param>
-    /// <param name="start"></param>
-    /// <param name="end"></param>
+    /// <remarks>
+    /// Without an observer the BCL reverse performs the same exchanges, vectorized for primitive types.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Flip<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> s, int start, int end)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
+        if (typeof(TContext) == typeof(NullContext))
+        {
+            s.RawSpan.Slice(start, end - start + 1).Reverse();
+            return;
+        }
+
         while (start < end)
         {
             s.Swap(start, end);

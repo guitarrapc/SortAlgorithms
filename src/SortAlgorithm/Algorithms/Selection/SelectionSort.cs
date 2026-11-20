@@ -35,11 +35,11 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>In-place    : Yes (O(1) auxiliary space)</description></item>
 /// <item><description>Best case   : Θ(n²) - Always performs n(n-1)/2 comparisons regardless of input order</description></item>
 /// <item><description>Average case: Θ(n²) - Same comparison count; swap count varies but doesn't dominate</description></item>
-/// <item><description>Worst case  : Θ(n²) - Same comparison count; maximum n-1 swaps when reverse sorted</description></item>
+/// <item><description>Worst case  : Θ(n²) - Same comparison count; at most n-1 swaps</description></item>
 /// <item><description>Comparisons : Θ(n²) - Exactly n(n-1)/2 comparisons in all cases (input-independent)</description></item>
-/// <item><description>Swaps       : O(n) - At most n-1 swaps; best case 0 (already sorted), worst case n-1</description></item>
-/// <item><description>Index Reads : Θ(n²) - the scan for the minimum reads every element of the unsorted region on each pass</description></item>
-/// <item><description>Index Writes: O(n) - 2 writes per swap (via tuple deconstruction or temp variable)</description></item>
+/// <item><description>Swaps       : O(n) - At most n-1 swaps, one per pass whose minimum is not already at the boundary; 0 on sorted input</description></item>
+/// <item><description>Index Reads : Θ(n²) - each comparison reads the scanned element and the candidate minimum; each swap adds two</description></item>
+/// <item><description>Index Writes: O(n) - two per swap; nothing else writes</description></item>
 /// <item><description>Space       : O(1) - the minimum's index is tracked in a single variable</description></item>
 /// </list>
 /// <para><strong>Use Cases:</strong></para>

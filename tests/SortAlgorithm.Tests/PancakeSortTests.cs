@@ -102,13 +102,10 @@ public class PancakeSortTests : SortTestsBase
         var expectedSwaps = 0UL;
         var expectedWrites = 0UL; // No swaps = no writes
 
-        // Each comparison reads 2 elements (i and maxIndex)
-        var minIndexReads = expectedCompares * 2;
-
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await Assert.That(stats.IndexReadCount).IsEqualTo(ScanReads(n) + 2 * stats.SwapCount);
     }
 
     [Test]
@@ -135,13 +132,10 @@ public class PancakeSortTests : SortTestsBase
         var expectedSwaps = (ulong)(n / 2);
         var expectedWrites = expectedSwaps * 2; // Each swap writes 2 elements
 
-        // Each comparison reads 2 elements
-        var minIndexReads = expectedCompares * 2;
-
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
         await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await Assert.That(stats.IndexReadCount).IsEqualTo(ScanReads(n) + 2 * stats.SwapCount);
     }
 
     [Test]
@@ -174,11 +168,11 @@ public class PancakeSortTests : SortTestsBase
         var minSwaps = 0UL;
         var maxSwaps = (ulong)(n * n);
 
-        // Each comparison reads 2 elements
-        var minIndexReads = expectedCompares * 2;
-
         await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
         await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await Assert.That(stats.IndexReadCount).IsEqualTo(ScanReads(n) + 2 * stats.SwapCount);
     }
+
+    // Each of the n(n-1)/2 comparisons reads the scanned element and the candidate.
+    static ulong ScanReads(int n) => (ulong)n * (ulong)(n - 1);
 }

@@ -115,20 +115,55 @@ public class DoubleSelectionSortTests : SortTestsBase
     }
 
     [Test]
-    public async Task EdgeCaseAllEqualElementsTest()
+    [Arguments(5)]
+    [Arguments(6)]
+    public async Task EdgeCaseAllEqualElementsTest(int n)
     {
         var stats = new StatisticsContext();
-        var array = new[] { 5, 5, 5, 5, 5 };
+        var array = Enumerable.Repeat(5, n).ToArray();
 
         DoubleSelectionSort.Sort(array.AsSpan(), stats);
 
-        await Assert.That(array).IsEquivalentTo([5, 5, 5, 5, 5], CollectionOrdering.Matching);
+        // The minimum is the first smallest element and the maximum the last largest,
+        // so every region of equal keys already has both at its ends.
+        await Assert.That(array).IsEquivalentTo(Enumerable.Repeat(5, n).ToArray(), CollectionOrdering.Matching);
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.CompareCount).IsEqualTo(ExpectedCompares(n));
+    }
+
+    [Test]
+    public async Task MaximumIsLastLargestTest()
+    {
+        var stats = new StatisticsContext();
+        var array = new[] { 1, 3, 2, 3 };
+
+        DoubleSelectionSort.Sort(array.AsSpan(), stats);
+
+        // Pass 1 keeps the 3 that already ends the region. Taking the first 3 would exchange two equal keys.
+        // Pass 2 exchanges the remaining [3, 2].
+        await Assert.That(array).IsEquivalentTo([1, 2, 3, 3], CollectionOrdering.Matching);
+        await Assert.That(stats.SwapCount).IsEqualTo(1UL);
+    }
+
+    [Test]
+    public async Task MinimumIsFirstSmallestTest()
+    {
+        var stats = new StatisticsContext();
+        var array = new[] { 2, 1, 3, 1, 4 };
+
+        DoubleSelectionSort.Sort(array.AsSpan(), stats);
+
+        // Pass 1 takes the 1 at index 1, not the one at index 3, and moves it to the front (1 swap).
+        // Pass 2 over [2, 3, 1] then places both extremes (2 swaps).
+        await Assert.That(array).IsEquivalentTo([1, 1, 2, 3, 4], CollectionOrdering.Matching);
+        await Assert.That(stats.SwapCount).IsEqualTo(3UL);
     }
 
     [Test]
     [Arguments(10)]
+    [Arguments(11)]
     [Arguments(20)]
-    [Arguments(50)]
+    [Arguments(51)]
     [Arguments(100)]
     public async Task TheoreticalValuesSortedTest(int n)
     {
@@ -136,49 +171,18 @@ public class DoubleSelectionSortTests : SortTestsBase
         var sorted = Enumerable.Range(0, n).ToArray();
         DoubleSelectionSort.Sort(sorted.AsSpan(), stats);
 
-        // Double Selection Sort processes from both ends
-        // In each iteration i:
-        //   - Range is [left..right] where left=i, right=n-1-i
-        //   - Elements compared: (right - left) [from left+1 to right]
-        //   - Comparisons: 2 * (right - left) [each element compared with both min and max]
-        //
-        // Example for n=10:
-        // i=0: left=0, right=9, compares=2*9=18
-        // i=1: left=1, right=8, compares=2*7=14
-        // i=2: left=2, right=7, compares=2*5=10
-        // i=3: left=3, right=6, compares=2*3=6
-        // i=4: left=4, right=5, compares=2*1=2
-        // Total = 50
-
-        ulong expectedCompares = 0;
-        int iterations = n / 2;
-        for (int i = 0; i < iterations; i++)
-        {
-            int left = i;
-            int right = n - 1 - i;
-            if (left >= right) break;
-            int elementsToCompare = right - left; // from left+1 to right inclusive
-            expectedCompares += (ulong)(elementsToCompare * 2);
-        }
-
-        // For sorted data, min is always at left and max is always at right
-        // So no swaps are needed
-        var expectedSwaps = 0UL;
-        var expectedWrites = 0UL;
-
-        // Each comparison reads 2 elements
-        var minIndexReads = expectedCompares;
-
-        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
-        await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        // Each pass finds the minimum at left and the maximum at right, so nothing moves.
+        await Assert.That(stats.CompareCount).IsEqualTo(ExpectedCompares(n));
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(0UL);
+        await Assert.That(stats.IndexReadCount).IsEqualTo(ExpectedScanReads(n));
     }
 
     [Test]
     [Arguments(10)]
+    [Arguments(11)]
     [Arguments(20)]
-    [Arguments(50)]
+    [Arguments(51)]
     [Arguments(100)]
     public async Task TheoreticalValuesReversedTest(int n)
     {
@@ -186,49 +190,25 @@ public class DoubleSelectionSortTests : SortTestsBase
         var reversed = Enumerable.Range(0, n).Reverse().ToArray();
         DoubleSelectionSort.Sort(reversed.AsSpan(), stats);
 
-        // Double Selection Sort for reversed data [n-1, n-2, ..., 1, 0]:
-        // Comparisons are the same as sorted case
-        ulong expectedCompares = 0;
-        int iterations = n / 2;
-        for (int i = 0; i < iterations; i++)
-        {
-            int left = i;
-            int right = n - 1 - i;
-            if (left >= right) break;
-            int elementsToCompare = right - left;
-            expectedCompares += (ulong)(elementsToCompare * 2);
-        }
-
-        // For reversed data, in each iteration:
-        // - min is at position right (rightmost element in current range)
-        // - max is at position left (leftmost element in current range)
-        // This triggers the case where max==left, leading to:
-        //   1. swap(left, right) - moves max to right, and what was at right (min) to left
-        //   2. After the swap, min index needs adjustment, but since min was at right
-        //      and is now at left, we check if min != left, which is false, so no more swaps
-        // Actually, looking at the code: when max==left, it swaps(left, right), then
-        // adjusts min index: if min was at right, it's now at left.
-        // Then it checks "if (min != left)" which is false, so no second swap.
-        // Result: only 1 swap per iteration.
-        // Number of swaps = floor(n/2)
+        // Each pass finds the maximum at left and the minimum at right; one swap places both
+        // and leaves the inner region reversed for the next pass.
         var expectedSwaps = (ulong)(n / 2);
-        var expectedWrites = (ulong)n; // Each swap writes 2 elements
 
-        var minIndexReads = expectedCompares;
-
-        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
+        await Assert.That(stats.CompareCount).IsEqualTo(ExpectedCompares(n));
         await Assert.That(stats.SwapCount).IsEqualTo(expectedSwaps);
-        await Assert.That(stats.IndexWriteCount).IsEqualTo(expectedWrites);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+        await Assert.That(stats.IndexWriteCount).IsEqualTo(2 * expectedSwaps);
+        await Assert.That(stats.IndexReadCount).IsEqualTo(ExpectedScanReads(n) + 2 * expectedSwaps);
     }
 
     [Test]
     [Arguments(10, 42)]
     [Arguments(10, 1234)]
+    [Arguments(11, 42)]
     [Arguments(20, 42)]
     [Arguments(20, 1234)]
     [Arguments(50, 42)]
     [Arguments(50, 1234)]
+    [Arguments(51, 1234)]
     [Arguments(100, 42)]
     [Arguments(100, 1234)]
     public async Task TheoreticalValuesRandomTest(int n, int seed)
@@ -237,28 +217,32 @@ public class DoubleSelectionSortTests : SortTestsBase
         var random = TestHelpers.ShuffledRange(n, seed);
         DoubleSelectionSort.Sort(random.AsSpan(), stats);
 
-        // Double Selection Sort comparison count
-        ulong expectedCompares = 0;
-        int iterations = n / 2;
-        for (int i = 0; i < iterations; i++)
+        // The comparison count does not depend on the input; each of the n/2 passes swaps at most twice.
+        await Assert.That(stats.CompareCount).IsEqualTo(ExpectedCompares(n));
+        await Assert.That(stats.SwapCount).IsBetween(0UL, (ulong)(2 * (n / 2)));
+        await Assert.That(stats.IndexReadCount).IsEqualTo(ExpectedScanReads(n) + 2 * stats.SwapCount);
+    }
+
+    // Pass regions shrink by two. A pair costs three comparisons: odd k takes 3(k-1)/2, even k takes 3k/2 - 2.
+    static ulong ExpectedCompares(int n)
+    {
+        var total = 0UL;
+        for (var k = n; k >= 2; k -= 2)
         {
-            int left = i;
-            int right = n - 1 - i;
-            if (left >= right) break;
-            int elementsToCompare = right - left;
-            expectedCompares += (ulong)(elementsToCompare * 2);
+            total += (ulong)(k % 2 == 1 ? 3 * (k - 1) / 2 : 3 * k / 2 - 2);
         }
+        return total;
+    }
 
-        // For random data, swap count varies
-        // Minimum: 0 swaps (already sorted)
-        // Maximum: n swaps (worst case, up to 2 swaps per iteration)
-        var minSwaps = 0UL;
-        var maxSwaps = (ulong)n;
-
-        var minIndexReads = expectedCompares;
-
-        await Assert.That(stats.CompareCount).IsEqualTo(expectedCompares);
-        await Assert.That(stats.SwapCount).IsBetween(minSwaps, maxSwaps);
-        await Assert.That(stats.IndexReadCount >= minIndexReads).IsTrue().Because($"IndexReadCount ({stats.IndexReadCount}) should be >= {minIndexReads}");
+    // For int, a pair comparison reads both elements and each candidate comparison reads its element again.
+    // An odd region also reads its first element once (2k - 1 reads), an even one its first pair (2k - 2).
+    static ulong ExpectedScanReads(int n)
+    {
+        var total = 0UL;
+        for (var k = n; k >= 2; k -= 2)
+        {
+            total += (ulong)(k % 2 == 1 ? 2 * k - 1 : 2 * k - 2);
+        }
+        return total;
     }
 }

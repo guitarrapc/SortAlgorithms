@@ -16,12 +16,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description><strong>Cycle Detection:</strong> The algorithm must identify permutation cycles in the array.
 /// Each element belongs to exactly one cycle. By placing an element in its correct position and following the displacement chain,
 /// the algorithm completes each cycle without revisiting positions.</description></item>
-/// <item><description><strong>Position Calculation:</strong> For each element, count how many elements to its right are smaller.
-/// This count determines the element's final sorted position. This requires O(n) comparisons per element.</description></item>
-/// <item><description><strong>Minimal Writes:</strong> Each element is written to memory at most once after being read from its initial position.
-/// For an array requiring k transpositions, exactly k writes occur (theoretically optimal for in-place sorting).</description></item>
-/// <item><description><strong>Duplicate Handling:</strong> When placing an element at its calculated position, skip over duplicates
-/// to find the next available slot. This ensures stability issues don't cause infinite loops.</description></item>
+/// <item><description><strong>Position Calculation:</strong> An element's final position is the cycle's start plus the number of elements after
+/// the start that are smaller than it. Every element before the start is already final and no larger, so it needs no comparison.
+/// This costs one comparison per element after the start each time an element is placed.</description></item>
+/// <item><description><strong>Minimal Writes:</strong> An element already in its final position is never written; any other element is written once,
+/// directly to its final position. Nothing is written merely to make room, which is the minimum number of writes for an in-place sort.</description></item>
+/// <item><description><strong>Duplicate Handling:</strong> When the computed position already holds an equal element, place the element after the
+/// equal ones instead. Exchanging it with an equal element would make the cycle repeat forever.</description></item>
 /// <item><description><strong>Cycle Completion:</strong> Continue rotating elements within a cycle until returning to the starting position.
 /// Once a cycle is completed, move to the next unprocessed position to start a new cycle.</description></item>
 /// </list>
@@ -30,13 +31,13 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Family      : Selection (though often classified separately due to unique cycle-based approach)</description></item>
 /// <item><description>Stable      : No (relative order of equal elements is not preserved)</description></item>
 /// <item><description>In-place    : Yes (O(1) auxiliary space, only constant extra variables)</description></item>
-/// <item><description>Best case   : Θ(n²) - Always performs n(n-1)/2 comparisons regardless of input</description></item>
-/// <item><description>Average case: Θ(n²) - Comparisons dominate; writes are O(n) on average</description></item>
-/// <item><description>Worst case  : Θ(n²) - Same comparison count; maximum n-1 writes when all elements displaced</description></item>
-/// <item><description>Comparisons : Θ(n²) - Always n(n-1)/2 comparisons to calculate all positions</description></item>
+/// <item><description>Best case   : Θ(n²) - sorted input still counts once from every start position: n(n-1)/2 comparisons and no writes</description></item>
+/// <item><description>Average case: Θ(n²) - every placed element costs another count over the range after its cycle's start</description></item>
+/// <item><description>Worst case  : Θ(n²) - about 3n²/2 comparisons when one cycle runs through every element; at most n writes</description></item>
+/// <item><description>Comparisons : Θ(n²) - n(n-1)/2 for the counts from each start, one more count for each element placed after a cycle's first, and one per equal element skipped</description></item>
 /// <item><description>Swaps       : 0 - each element is carried in a held variable and dropped into its computed position; nothing is exchanged</description></item>
-/// <item><description>Index Reads : Θ(n²) - Multiple reads during position calculation phase</description></item>
-/// <item><description>Index Writes: O(n) - Theoretically optimal; at most n writes (each element placed once)</description></item>
+/// <item><description>Index Reads : Θ(n²) - each count reads every element after the cycle's start; each placement reads the cell it overwrites</description></item>
+/// <item><description>Index Writes: O(n) - one per element not already in its final position, the minimum for an in-place sort</description></item>
 /// <item><description>Space       : O(1) - only the held element and a few counters</description></item>
 /// </list>
 /// <para><strong>Use Cases:</strong></para>
@@ -152,20 +153,43 @@ public static class CycleSort
         }
     }
 
+    /// <summary>
+    /// Returns <paramref name="start"/> plus the number of elements after it that are smaller than <paramref name="value"/>.
+    /// </summary>
+    /// <remarks>
+    /// The count adds each comparison result instead of branching on it, a branch that random input mispredicts about half the time.
+    /// The item is invariant during the count, so a floating-point item has its NaN state resolved once and each comparison is a single test.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int FindPosition<T, TComparer, TContext>(ref SortSpan<T, TComparer, TContext> s, T value, int start)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {
-        var pos = start;
-        for (var i = start + 1; i < s.Length; i++)
+        var count = new CountSmaller<T, TComparer, TContext> { Position = start };
+        s.WithPreparedKey(value, ref count);
+        return count.Position;
+    }
+
+    struct CountSmaller<T, TComparer, TContext> : IPreparedKeyLoop<T, TComparer, TContext>
+        where TComparer : IComparer<T>
+        where TContext : ISortContext
+    {
+        // A linear scan against an invariant key, like a partition.
+        public static PreparedKeyKind Kind => PreparedKeyKind.Partition;
+        public int Position;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Run<TOrder>(SortSpan<T, TComparer, TContext> s, T item)
+            where TOrder : struct, IKeyOrder
         {
-            if (s.IsElementLessThan(i, value))
+            var start = Position;
+            var pos = start;
+            for (var i = start + 1; i < s.Length; i++)
             {
-                pos++;
+                pos += s.IsElementLessThan<TOrder>(i, item) ? 1 : 0;
             }
+            Position = pos;
         }
-        return pos;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
