@@ -131,31 +131,33 @@ public class DestswapStableQuickSortTests : StableSortTestsBase
     }
 
     [Test]
-    [Arguments(10, 9)]    // n <= SMALL_SORT=16: BottomUp fallback, sorted data → n-1=9 comparisons
-    [Arguments(20, 41)]   // n > SMALL_SORT: DestSwap QuickSort
-    [Arguments(50, 178)]  // n > SMALL_SORT: DestSwap QuickSort
-    [Arguments(100, 469)] // n > SMALL_SORT: DestSwap QuickSort
+    [Arguments(10, 67)]
+    [Arguments(20, 162)]
+    [Arguments(50, 480)]
+    [Arguments(100, 1077)]
     public async Task TheoreticalComparisonCountTest(int n, int expectedComparisons)
     {
-        // Test the exact comparison count for sorted data.
-        // DestswapStableQuickSort on sorted data is fully deterministic:
-        // - n <= SMALL_SORT (16): BottomUp merge sort → efficient merge on already-sorted runs
-        // - n > SMALL_SORT: DestSwap 2-way QuickSort with adaptive pivot selection
-        // No Swap operations in any case.
-        //
-        // Empirical values for sorted data:
-        // n=10:  Compare=9   (BottomUp fallback: n-1)
-        // n=20:  Compare=41
-        // n=50:  Compare=178
-        // n=100: Compare=469
+        // The exact comparison count for sorted data, which is deterministic. Every range down to two elements is partitioned: no other
+        // algorithm takes over. On sorted distinct keys each median of three costs three comparisons, the partition compares each element
+        // of its range once, and a range checked for equal keys compares its new pivot with the previous one once. For n = 10 the ranges
+        // of more than one element hold 10, 4, 2, 2, 6, 3, 2, 3 and 2 elements, in sort order, and cost 3 + 10, 3 + 4, 3 + 2, 3 + 1 + 2,
+        // 3 + 1 + 6, 3 + 1 + 3, 3 + 1 + 2, 3 + 1 + 3 and 3 + 1 + 2 comparisons: 67. The larger sizes are pinned from the same implementation.
         var stats = new StatisticsContext();
         var sorted = Enumerable.Range(0, n).ToArray();
         DestswapStableQuickSort.Sort(sorted.AsSpan(), stats);
 
         await Assert.That(stats.CompareCount).IsEqualTo((ulong)expectedComparisons);
         await Assert.That(stats.SwapCount).IsEqualTo(0UL);
-        await Assert.That(stats.IndexReadCount >= stats.CompareCount).IsTrue()
-            .Because($"IndexReadCount ({stats.IndexReadCount}) should be >= CompareCount ({stats.CompareCount})");
+
+        // Every partition reads each element of its range once and each median of three reads its three samples; one-element ranges
+        // copied into place add reads on top. Comparisons are no bound on reads: the pivot is held, and so is the previous one it is
+        // checked against.
+        ulong partitioned = 0;
+        DestswapStableQuickSort.Sort(Enumerable.Range(0, n).ToArray().AsSpan(), new VisualizationContext(onPhase: (phase, first, last, _) =>
+        {
+            if (phase == SortPhase.QuickSortPartition) partitioned += (ulong)(last - first + 1) + 3;
+        }));
+        await Assert.That(stats.IndexReadCount).IsGreaterThanOrEqualTo(partitioned);
     }
 
 #endif

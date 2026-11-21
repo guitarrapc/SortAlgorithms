@@ -205,42 +205,10 @@ public class StableQuickSortTests : StableSortTestsBase
         var sameValues = Enumerable.Repeat(42, n).ToArray();
         StableQuickSort.Sort(sameValues.AsSpan(), stats);
 
-        // Stable QuickSort on all equal elements:
-        // - All elements equal to pivot
-        // - Three-way partitioning puts all elements in the "equal" partition
-        // - Equal partition is already sorted, so no recursion occurs
-        // - This is an OPTIMIZATION: O(n) time instead of O(n log n)
-        //
-        // Expected behavior with SortSpan-based temporary buffer (index-based pivot):
-        //
-        // MedianOf3Index (all elements equal):
-        //   - s.Compare(lowIdx, midIdx): comparison between indices
-        //   - low == mid, so else branch
-        //   - s.Compare(midIdx, highIdx): comparison between indices
-        //   - mid == high, so else branch
-        //   - Returns midIdx (no value read required)
-        //   Total: 2 compares, 4 reads
-        //
-        // StablePartition Phase 1 (count):
-        //   - for loop: n iterations
-        //   - i == pivotIndex short-circuits: (n-1) comparisons (skips 1 Compare call)
-        //   Total: n-1 compares, 2(n-1) reads
-        //
-        // StablePartition Phase 2 (distribute to temp):
-        //   - for loop: n iterations
-        //   - s.Read(i): n reads (store to element)
-        //   - i == pivotIndex short-circuits: (n-1) comparisons (skips 1 Compare call)
-        //   - tempSortSpan.Write(equalIdx++, element): n writes to temp buffer
-        //   Total: n reads (element) + 2(n-1) reads (compare) = 3n-2 reads, n-1 compares, n writes to temp
-        //
-        // StablePartition Phase 3 (copy back):
-        //   - tempSortSpan.CopyTo(...): n reads from temp, n writes to main
-        //   Total: n reads from temp, n writes to main
-        //
-        // Grand Total:
-        //   - Compares: 2 (median) + (n-1) (phase1) + (n-1) (phase2) = 2n
-        //   - IndexReads: 4 (median) + 2(n-1) (phase1) + (3n-2) (phase2) + n (phase3) = 6n
-        //   - Swaps: 0
+        // All elements equal the pivot, so one three-way partition puts them all in the equal region and nothing recurses.
+        // MedianOf3Index compares two pairs of indices (2 compares, 4 reads) and returns the middle one. The partition reads the pivot once
+        // and holds it. The count pass compares the other n - 1 elements with it, one read each; the distribute pass reads all n and
+        // compares the same n - 1 by value; the copy back reads the n elements in scratch and writes them to the range.
 
         // Comparisons: 2 (median-of-3) + 2(n-1) (partition phases 1+2) = 2n
         var expectedCompares = (ulong)(2 * n);
@@ -252,8 +220,8 @@ public class StableQuickSortTests : StableSortTestsBase
         // Verify the array is still correct (all values unchanged)
         foreach (var item in sameValues) await Assert.That(item).IsEqualTo(42);
 
-        // IndexReads: 4 (median) + 2(n-1) (phase1) + (3n-2) (phase2) + n (phase3) = 6n
-        var expectedIndexReads = (ulong)(6 * n);
+        // IndexReads: 4 (median) + 1 (pivot) + (n - 1) (count) + n (distribute) + n (copy back) = 3n + 4
+        var expectedIndexReads = (ulong)(3 * n + 4);
         await Assert.That(stats.IndexReadCount).IsEqualTo(expectedIndexReads);
 
         // IndexWrites: n (phase2 to temp) + n (phase3 to main) = 2n

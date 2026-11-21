@@ -61,7 +61,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Θ(n log n) - Occurs when pivot consistently divides array into balanced partitions</description></item>
 /// <item><description>Average case: Θ(n log n) - Median-of-3 pivots split near the median on average</description></item>
 /// <item><description>Worst case  : O(n²) - Occurs when partitioning is maximally unbalanced (probability ~1/n³ with median-of-3)</description></item>
-/// <item><description>Comparisons : Θ(n log n) average, O(n²) worst - every element is compared with the pivot twice per level (count, then distribute); with a median-of-3 pivot on distinct keys that is about 2 × (12/7) n ln n ≈ 2.38 n log₂ n</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, O(n²) worst - every element but the pivot is compared with the pivot twice per level (count, then distribute), plus two or three comparisons for each median of three; with a median-of-3 pivot on distinct keys that is about 2 × (12/7) n ln n ≈ 2.38 n log₂ n</description></item>
 /// <item><description>Swaps       : 0 - elements move by copying to and from the scratch buffer, never by exchange</description></item>
 /// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - the count pass and the distribute pass each read every element of the range once per level, and the copy back reads the scratch</description></item>
 /// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each element is written into scratch and back at every level</description></item>

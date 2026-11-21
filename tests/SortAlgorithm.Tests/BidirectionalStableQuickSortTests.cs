@@ -142,31 +142,30 @@ public class BidirectionalStableQuickSortTests : StableSortTestsBase
     }
 
     [Test]
-    [Arguments(10, 88, 3)]
-    [Arguments(20, 224, 9)]
-    [Arguments(50, 744, 39)]
-    [Arguments(100, 1776, 101)]
-    public async Task TheoreticalComparisonCountTest(int n, int expectedComparisons, int expectedSwaps)
+    [Arguments(10)]
+    [Arguments(20)]
+    [Arguments(50)]
+    [Arguments(100)]
+    public async Task TheoreticalComparisonCountTest(int n)
     {
-        // Test the exact comparison and swap counts for sorted data.
-        // BidirectionalStableQuickSort on sorted data is fully deterministic:
-        // - Median-of-3 at quartile positions picks a balanced pivot
-        // - Bidirectional partitioning: less to front, greater to back (reversed), then reverse greater section
-        // - Swaps occur during the reversal of the greater section in scratch buffer
-        //
-        // Empirical values for sorted data:
-        // n=10:  Compare=88,   Swap=3
-        // n=20:  Compare=224,  Swap=9
-        // n=50:  Compare=744,  Swap=39
-        // n=100: Compare=1776, Swap=101
+        // Sorted distinct keys stay sorted in every range, because the partition is stable, so the count follows from the definition.
         var stats = new StatisticsContext();
         var sorted = Enumerable.Range(0, n).ToArray();
         BidirectionalStableQuickSort.Sort(sorted.AsSpan(), stats);
 
-        await Assert.That(stats.CompareCount).IsEqualTo((ulong)expectedComparisons);
-        await Assert.That(stats.SwapCount).IsEqualTo((ulong)expectedSwaps);
+        await Assert.That(stats.CompareCount).IsEqualTo(SortedComparisons(0, n - 1));
+        await Assert.That(stats.SwapCount).IsEqualTo(0UL);
         await Assert.That(stats.IndexReadCount >= stats.CompareCount).IsTrue()
             .Because($"IndexReadCount ({stats.IndexReadCount}) should be >= CompareCount ({stats.CompareCount})");
+
+        // The median of the samples at the quartiles and the middle is the middle element, found with two comparisons. The scan then
+        // compares each element below it once and each other element twice, and the ranges on both sides of the pivot are sorted the same way.
+        static ulong SortedComparisons(int left, int right)
+        {
+            if (left >= right) return 0;
+            var mid = left + (right - left + 1) / 2;
+            return 2 + (ulong)(mid - left) + 2 * (ulong)(right - mid + 1) + SortedComparisons(left, mid - 1) + SortedComparisons(mid + 1, right);
+        }
     }
 
 #endif

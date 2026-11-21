@@ -65,7 +65,7 @@ namespace SortAlgorithm.Algorithms;
 /// <item><description>Best case   : Θ(n log n) - Occurs when pivot consistently divides array into balanced partitions; Θ(n) when all elements are equal</description></item>
 /// <item><description>Average case: Θ(n log n) - the pseudo-median splits near the median</description></item>
 /// <item><description>Worst case  : O(n²) - pivots that keep splitting off a constant number of elements</description></item>
-/// <item><description>Comparisons : Θ(n log n) average, O(n²) worst - the 2-way partition costs 1 comparison per element per level, plus the pseudo-median's samples</description></item>
+/// <item><description>Comparisons : Θ(n log n) average, O(n²) worst - the 2-way partition costs 1 comparison per element per level, plus the pseudo-median's samples and, on a range checked for equal keys, one comparison of its pivot with the previous one</description></item>
 /// <item><description>Swaps       : 0 - the destination-swap partition moves elements by assignment between buffer roles, never by exchange</description></item>
 /// <item><description>Index Reads : Θ(n log n) average, O(n²) worst - every partition level reads each element of the range it splits</description></item>
 /// <item><description>Index Writes: Θ(n log n) average, O(n²) worst - each element is written once per partition level, with no copy-back pass; the left-strategy step copies the less elements left in scratch to their destination</description></item>
