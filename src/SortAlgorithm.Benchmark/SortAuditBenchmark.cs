@@ -1068,6 +1068,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(SkaSort))]
+    public void SetupSkaSort() => Setup(nameof(SkaSort));
+
+    [Benchmark]
+    public int SkaSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.SkaSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(SmoothSort))]
     public void SetupSmoothSort() => Setup(nameof(SmoothSort));
 

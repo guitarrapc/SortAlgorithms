@@ -41,6 +41,7 @@ public class NegativeZeroTieTests
     public static IEnumerable<Func<DoubleSortCase>> UnstableKeyOrderedSorts()
     {
         yield return () => new DoubleSortCase("AmericanFlagSort", a => AmericanFlagSort.Sort(a.AsSpan()));
+        yield return () => new DoubleSortCase("SkaSort", a => SkaSort.Sort(a.AsSpan()));
         yield return () => new DoubleSortCase("SpreadSort", a => SpreadSort.Sort(a.AsSpan()));
     }
 

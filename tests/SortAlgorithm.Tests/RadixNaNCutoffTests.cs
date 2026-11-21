@@ -38,6 +38,9 @@ public class RadixNaNCutoffTests
         yield return () => new NaNSortCase("AmericanFlagSort",
             a => AmericanFlagSort.Sort(a.AsSpan()),
             (a, c) => AmericanFlagSort.Sort(a.AsSpan(), new StatisticsContext()));
+        yield return () => new NaNSortCase("SkaSort",
+            a => SkaSort.Sort(a.AsSpan()),
+            (a, c) => SkaSort.Sort(a.AsSpan(), new StatisticsContext()));
     }
 
     /// <summary>NaN を 1/3 混ぜた配列。値は決定的。</summary>

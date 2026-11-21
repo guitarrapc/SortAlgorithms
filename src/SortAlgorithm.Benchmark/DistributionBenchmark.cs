@@ -113,6 +113,12 @@ public class DistributionBenchmark
     }
 
     [Benchmark]
+    public void SkaSort()
+    {
+        SortAlgorithm.Algorithms.SkaSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void SpreadSort()
     {
         SortAlgorithm.Algorithms.SpreadSort.Sort(_buffers.Next().AsSpan());

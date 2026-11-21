@@ -41,6 +41,7 @@ public class DistributionBucketObservationTests
     public static IEnumerable<Func<RadixCase>> RadixCases()
     {
         yield return () => new RadixCase("AmericanFlagSort", static (a, c) => AmericanFlagSort.Sort(a.AsSpan(), c));
+        yield return () => new RadixCase("SkaSort", static (a, c) => SkaSort.Sort(a.AsSpan(), c));
         yield return () => new RadixCase("RadixLSD4Sort", static (a, c) => RadixLSD4Sort.Sort(a.AsSpan(), c));
         yield return () => new RadixCase("RadixLSD10Sort", static (a, c) => RadixLSD10Sort.Sort(a.AsSpan(), c));
         yield return () => new RadixCase("RadixLSD256Sort", static (a, c) => RadixLSD256Sort.Sort(a.AsSpan(), c));

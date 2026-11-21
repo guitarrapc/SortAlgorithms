@@ -37,6 +37,7 @@ public class RadixPassNotificationTests
     {
         // MSD 系: 再帰の各ノードが RadixPass を通知する
         yield return () => new RadixSortCase("AmericanFlagSort", static (a, c) => AmericanFlagSort.Sort(a.AsSpan(), c), HasRangeScan: true);
+        yield return () => new RadixSortCase("SkaSort", static (a, c) => SkaSort.Sort(a.AsSpan(), c), HasRangeScan: false);
         yield return () => new RadixSortCase("RadixMSD4Sort", static (a, c) => RadixMSD4Sort.Sort(a.AsSpan(), c), HasRangeScan: true);
         yield return () => new RadixSortCase("RadixMSD10Sort", static (a, c) => RadixMSD10Sort.Sort(a.AsSpan(), c), HasRangeScan: true);
         // LSD 系: 元から契約を満たしている。回帰の基準として同じ検証にかける

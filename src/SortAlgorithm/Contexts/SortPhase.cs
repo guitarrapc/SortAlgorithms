@@ -76,6 +76,9 @@
 ///   <item><term>BlitSortAnalyze, BlitSortPartition, BlitSortReversePartition, BlitSortQuadsort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>BlitSortPivotSample</term><description>start (inclusive) / end-1 (inclusive) / sampleCount</description></item>
 ///   <item><term>BlitSortMerge</term><description>start (inclusive) / end of first half (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>SkaSortAmericanFlag</term><description>start (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>SkaSortRound</term><description>start (inclusive) / end-1 (inclusive) / buckets listed at the start of the round</description></item>
+///   <item><term>SkaSortStdSort</term><description>start (inclusive) / end-1 (inclusive) / threshold</description></item>
 /// </list>
 /// </remarks>
 public enum SortPhase
@@ -919,4 +922,25 @@ public enum SortPhase
     /// param1=start (inclusive), param2=start of the second half - 1 (inclusive end of the first half), param3=end-1 (inclusive)
     /// </summary>
     BlitSortMerge,
+
+    /// <summary>
+    /// SkaSort permuting a range of 128 to 1,023 elements by American flag sort: the buckets are filled in order, and an element that
+    /// does not belong to the bucket being filled is exchanged with the next free slot of its own bucket.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    SkaSortAmericanFlag,
+
+    /// <summary>
+    /// SkaSort round over a range of 1,024 or more elements: every unfilled slot of each listed bucket is exchanged with the next free
+    /// slot of its element's bucket, which is the slot itself when the element is home. Buckets that are full afterwards leave the list.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=buckets listed at the start of the round
+    /// </summary>
+    SkaSortRound,
+
+    /// <summary>
+    /// SkaSort handing a range of fewer than 128 elements to std::sort (<see cref="SortAlgorithm.Algorithms.StdSort"/>). For six or more
+    /// elements StdSort's own phases follow at once.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=threshold
+    /// </summary>
+    SkaSortStdSort,
 }
