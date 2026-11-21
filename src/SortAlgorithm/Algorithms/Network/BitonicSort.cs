@@ -5,11 +5,11 @@ namespace SortAlgorithm.Algorithms;
 
 /// <summary>
 /// バイトニックソート（2のべき乗専用版・最適化版） - バイトニック列を構築し、イテレーティブにマージして整列列に変換するソーティングネットワークアルゴリズムです。
-/// 入力サイズは2のべき乗（2^n）でなければなりません。任意のサイズには BatcherOddEvenMergeSort を使用してください。
+/// 入力サイズは2のべき乗（2^n）でなければなりません。任意のサイズには BitonicSortAnyLength か BatcherOddEvenMergeSort を使用してください。
 /// 再帰版の実装は BitonicSortNonOptimized を参照してください。
 /// <br/>
 /// Bitonic Sort (Power-of-2 Only, Optimized) - A sorting network algorithm that builds a bitonic sequence and iteratively merges it into a sorted sequence.
-/// Input length must be a power of 2 (2^n). For arbitrary sizes, use BatcherOddEvenMergeSort instead.
+/// Input length must be a power of 2 (2^n). For arbitrary sizes, use BitonicSortAnyLength or BatcherOddEvenMergeSort instead.
 /// For recursive implementation, see BitonicSortNonOptimized.
 /// </summary>
 /// <remarks>
@@ -19,7 +19,7 @@ namespace SortAlgorithm.Algorithms;
 /// or can be circularly rotated to achieve this property. For example: [3,7,9,5,2,1] is bitonic.</description></item>
 /// <item><description><strong>Power-of-Two Requirement:</strong> The input length must be a power of 2 (n = 2^m for some integer m ≥ 0).
 /// This ensures the divide-and-conquer structure maintains balanced splits at each stage.
-/// If n is not a power of 2, this implementation throws ArgumentException. Use BatcherOddEvenMergeSort for arbitrary sizes.</description></item>
+/// If n is not a power of 2, this implementation throws ArgumentException. Use BitonicSortAnyLength or BatcherOddEvenMergeSort for arbitrary sizes.</description></item>
 /// <item><description><strong>Iterative Bitonic Construction:</strong> The network runs levels k = 2, 4, ..., n. Level k runs stages
 /// j = k/2, k/4, ..., 1, and stage j compares every position i whose j bit is clear with i ^ j = i + j. The comparator sorts ascending
 /// when (i &amp; k) == 0 and descending otherwise, so after level k the runs of k positions alternate ascending and descending and every
@@ -262,10 +262,10 @@ public static class BitonicSort
 /// <summary>
 /// 非最適化バージョンのバイトニックソート - 再帰的な実装で、アルゴリズムの基本構造を明確に示しています。
 /// バイトニックソート（2のべき乗専用版） - バイトニック列を構築し、再帰的にマージして整列列に変換するソーティングネットワークアルゴリズムです。
-/// 入力サイズは2のべき乗（2^n）でなければなりません。任意のサイズには BatcherOddEvenMergeSort を使用してください。
+/// 入力サイズは2のべき乗（2^n）でなければなりません。任意のサイズには BitonicSortAnyLength か BatcherOddEvenMergeSort を使用してください。
 /// <br/>
 /// Bitonic Sort (Power-of-2 Only) - A sorting network algorithm that builds a bitonic sequence and recursively merges it into a sorted sequence.
-/// Input length must be a power of 2 (2^n). For arbitrary sizes, use BatcherOddEvenMergeSort instead.
+/// Input length must be a power of 2 (2^n). For arbitrary sizes, use BitonicSortAnyLength or BatcherOddEvenMergeSort instead.
 /// </summary>
 /// <remarks>
 /// <para><strong>Theoretical Conditions for Correct Bitonic Sort:</strong></para>
@@ -274,7 +274,7 @@ public static class BitonicSort
 /// or can be circularly rotated to achieve this property. For example: [3,7,9,5,2,1] is bitonic.</description></item>
 /// <item><description><strong>Power-of-Two Requirement:</strong> The input length must be a power of 2 (n = 2^m for some integer m ≥ 0).
 /// This ensures the divide-and-conquer structure maintains balanced splits at each recursive level.
-/// If n is not a power of 2, this implementation throws ArgumentException. Use BatcherOddEvenMergeSort for arbitrary sizes.</description></item>
+/// If n is not a power of 2, this implementation throws ArgumentException. Use BitonicSortAnyLength or BatcherOddEvenMergeSort for arbitrary sizes.</description></item>
 /// <item><description><strong>Recursive Bitonic Construction:</strong> Divide the input into two halves. Recursively sort the first half in ascending order
 /// and the second half in descending order. The concatenation of these two sorted subsequences forms a bitonic sequence.
 /// This is because the first half increases (a₁ ≤ a₂ ≤ ... ≤ aₖ) and the second half decreases (bₖ ≥ ... ≥ b₂ ≥ b₁),

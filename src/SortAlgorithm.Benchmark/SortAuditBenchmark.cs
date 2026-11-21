@@ -1217,6 +1217,28 @@ public class SortAuditNetworkBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(BitonicSortAnyLength))]
+    public void SetupBitonicSortAnyLength() => Setup(nameof(BitonicSortAnyLength));
+
+    [Benchmark]
+    public int BitonicSortAnyLength()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.BitonicSortAnyLength.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
+    [GlobalSetup(Target = nameof(BitonicSortAnyLengthSimd))]
+    public void SetupBitonicSortAnyLengthSimd() => Setup(nameof(BitonicSortAnyLengthSimd));
+
+    [Benchmark]
+    public int BitonicSortAnyLengthSimd()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.BitonicSortAnyLengthSimd.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(BitonicSortBranchless))]
     public void SetupBitonicSortBranchless() => Setup(nameof(BitonicSortBranchless));
 

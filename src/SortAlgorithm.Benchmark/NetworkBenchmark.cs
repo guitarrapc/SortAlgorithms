@@ -41,6 +41,18 @@ public class NetworkBenchmark
     }
 
     [Benchmark]
+    public void BitonicSortAnyLength()
+    {
+        SortAlgorithm.Algorithms.BitonicSortAnyLength.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
+    public void BitonicSortAnyLengthSimd()
+    {
+        SortAlgorithm.Algorithms.BitonicSortAnyLengthSimd.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void BatcherOddEvenMergeSort()
     {
         SortAlgorithm.Algorithms.BatcherOddEvenMergeSort.Sort(_buffers.Next().AsSpan());

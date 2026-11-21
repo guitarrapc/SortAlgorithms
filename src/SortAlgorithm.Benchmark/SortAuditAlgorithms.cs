@@ -21,6 +21,8 @@ public static class SortAuditAlgorithms
         ("BingoSort", static values => BingoSort.Sort(values, NullContext.Default)),
         ("BinomialHeapSort", static values => BinomialHeapSort.Sort(values, NullContext.Default)),
         ("BitonicSort", static values => BitonicSort.Sort(values, NullContext.Default)),
+        ("BitonicSortAnyLength", static values => BitonicSortAnyLength.Sort(values, NullContext.Default)),
+        ("BitonicSortAnyLengthSimd", static values => BitonicSortAnyLengthSimd.Sort(values, NullContext.Default)),
         ("BitonicSortBranchless", static values => BitonicSortBranchless.Sort(values, NullContext.Default)),
         ("BitonicSortNonOptimized", static values => BitonicSortNonOptimized.Sort(values, NullContext.Default)),
         ("BlockMergeSort", static values => BlockMergeSort.Sort(values, NullContext.Default)),
