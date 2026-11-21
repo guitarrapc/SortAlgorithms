@@ -2,81 +2,96 @@
 
 ## Purpose
 
-The same sorting implementation supports statistics, visualization, and tutorial consumers through `ISortContext`. Observation describes algorithm activity; it must not determine the sorted result. `NullContext` is the no-observation choice.
+Statistics, visualization, and tutorial consumers use the same sorting implementation through `ISortContext`. Observation describes what the algorithm does. It must not change the sorted result. `NullContext` means no observation.
 
 ## Events
 
-An observable algorithm reports the operations it performs through the supplied context:
+An observable algorithm reports these operations to the context:
 
-- comparisons, including both operand locations and their buffer identities;
-- swaps, reads, writes, and range copies;
-- the edges of a pointer-based tree, when the algorithm builds one;
-- structured algorithm phases and semantic element roles when the algorithm provides them.
+- comparisons, with the location and buffer identity of both operands
+- swaps, reads, writes, and range copies
+- the edges of a pointer-based tree, if the algorithm builds one
+- structured phases and semantic element roles, if the algorithm provides them
 
-Buffer `0` identifies the caller's main span. Positive identifiers distinguish auxiliary buffers within an operation. `-1` may identify external storage where the context contract permits it. Identifiers are semantic labels for an observation stream, not globally unique handles.
+Buffer `0` is the main span of the caller. A positive identifier marks an auxiliary buffer of the sort. `-1` can mark external storage where the context contract allows it. An identifier is a label in one observation stream, not a globally unique handle.
 
-Values and indices reported to a context describe the algorithm's logical operation at callback time. Implementations must not omit observable operations merely to make statistics look smaller.
+Each reported value and index describes the logical operation at the time of the callback. Do not omit an observable operation to make the statistics smaller.
 
-Callbacks that carry element values are generic in the element type. Writes come in two forms, one that carries the written value and one that does not, for writes whose value is not observable such as a tree pointer. Range copies likewise come in two forms, the second delivering the values as a `ReadOnlySpan<T>` over the source range. The span is valid only for the duration of the call, so a context that retains values must copy them out.
+Callbacks that carry element values are generic in the element type.
 
-Reported indices are absolute: an element operation on a slice reports the slice's offset plus the local index, against the slice's buffer. A phase or role parameter that names an element uses the same coordinates. A parameter that carries a count, such as `HeapExtract`'s step and total, is not shifted.
+- A write has two forms. One form carries the written value. The other form carries no value, for writes whose value is not observable, such as a tree pointer.
+- A range copy also has two forms. The second form gives the values as a `ReadOnlySpan<T>` over the source range. This `ReadOnlySpan<T>` is valid only during the call. A context that keeps the values must copy them.
 
-A comparison reports the index of every operand that has one. An operand held outside any buffer, such as a cached pivot, a running lane minimum, or a value produced by a conditional move, is reported as `-1`. No accessor accepts a caller's claim about where a held value came from, because the claim cannot be checked for an arbitrary element type; `-1` is the accurate answer.
+Reported indices are absolute. An element operation on a slice reports the slice offset plus the local index, with the buffer identifier of the slice. A phase or role parameter that names an element uses the same coordinates. Do not shift a parameter that holds a count, such as the step and the total of `HeapExtract`.
+
+A comparison reports the index of each operand that has one. Report `-1` for an operand that is in no buffer. Examples are a cached pivot, a running lane minimum, and the result of a conditional move. No accessor accepts a claim from the caller about the source of a held value. The library cannot check such a claim for an arbitrary element type, so `-1` is the correct report.
 
 ## Tree Links
 
-A tree-building algorithm reports every write to a child pointer as a link: the parent, the child, and the child slot. A parent of `-1` means the child became the root; a child of `-1` means the slot was emptied. The write itself is still reported as a valueless write at the same call site, so a context that only counts operations treats links as free. Links are reported because a tree's shape cannot be recovered from index operations. Parent pointers, heights, colors, and priorities are not reported: they are derivable from the links or irrelevant to the shape.
+A tree-building algorithm reports each write to a child pointer as a link. The link gives the parent, the child, and the child slot.
 
-Links describe shape and nothing else.
+- Parent `-1` means that the child became the root.
+- Child `-1` means that the slot became empty.
+
+The algorithm also reports the same write as a write without a value, at the same call site. A context that only counts operations therefore does not count links. The library reports links because index operations do not show the shape of a tree. It does not report parent pointers, heights, colors, or priorities. The links already give these values, or the shape does not depend on them.
+
+Links describe only shape:
 
 - The in-order traversal of a reported tree is the sorted output only for a search tree. The sorted sequence is what the algorithm writes to buffer `0`.
-- A multiway node is reported through the same two slots: the left slot of a key names the child before it, and its right slot names the next key of the same node or, for the last key, the child after it. An algorithm whose nodes have a capacity lays its keys out in blocks of that width in its own buffer and announces the width as a phase parameter. A slot of that buffer holds whatever was last written to it, so node identity comes from the block arithmetic, not from the first write to a slot.
-- A forest is reported through the left-child / right-sibling encoding, in which a forest is a tree, and a root link then names the head of that encoding. A node with no incoming link is an expected state, because a priority queue retires each element it hands back. The root may be `-1` while the structure is a set of subtrees with none designated, as in `PairingHeapSort` between removing its root and folding that root's children back.
+- A multiway node uses the same two slots. The left slot of a key names the child before the key. The right slot names the next key in the same node. For the last key, the right slot names the child after the key. An algorithm with a node capacity stores its keys in blocks of that width in its own buffer. It announces the width as a phase parameter. A slot in that buffer holds the value of its last write. Get node identity from the block arithmetic, not from the first write to a slot.
+- A forest uses the left-child / right-sibling encoding, which makes a forest a tree. A root link then names the head of that encoding. A node with no incoming link is normal, because a priority queue retires each element that it returns. The root can be `-1` while the structure is a set of subtrees with no root. `PairingHeapSort` does this after it removes its root and before it folds the children of that root back together.
 
-The links a consumer has received describe the structure as it stands. How many roots it has, and whether every created node is still part of it, are properties of the algorithm.
+The links that a consumer received describe the current structure. The number of roots, and whether each created node is still in the structure, depend on the algorithm.
 
 ## Vector Operations
 
-A vector instruction is reported lane by lane, in index order: a vector load as one read per lane, and a vector comparison as one comparison per lane carrying that lane's result. A lane operand held in a register is reported as `-1`. A vector store is reported as one write per lane it writes, carrying the value it left there; a lane that a mask leaves out is neither written nor reported. Vectors spilled to a stack array between steps are not an element buffer and are not reported.
+An algorithm reports a vector instruction lane by lane, in index order:
 
-The lane count is chosen at run time from the vector widths the machine accelerates, so an observed stream of the same input can differ between machines in its reads and comparisons. The order in which simultaneous lanes are listed is presentation, not a property of the sort.
+- A vector load is one read per lane.
+- A vector comparison is one comparison per lane, with the result of that lane.
+- A lane operand in a register is `-1`.
+- A vector store is one write per lane that it writes, with the value that it left there. The algorithm does not write or report a lane that the mask excludes.
+
+Vectors that spill to a stack array between steps are not an element buffer. The algorithm does not report them.
+
+The algorithm selects the lane count at run time from the vector widths that the machine accelerates. An observed stream of the same input can therefore have different reads and comparisons on different machines. The order of lanes that execute together is presentation, not a property of the sort.
 
 ## Auxiliary Buffers
 
-- Element storage in an auxiliary buffer follows the same observation contract as the input. Writes or range copies initialize its elements before reads consume them.
-- A buffer identifier names storage, not a role within it, and stays attached to the same storage for the whole sort, including when source and destination roles alternate. Ranges of one buffer are distinguished by their offsets, not by separate identifiers.
-- An auxiliary element buffer holds the sorted element type. Slot metadata such as occupancy, tombstones, or bucket tags lives beside the buffer, not in a wrapper element type.
-- Index arrays, offset buffers, and occupancy bitsets are algorithm metadata, not element storage. When an algorithm reports operations on metadata, it uses an identifier of its own, and each write carries the index or offset stored.
-- Element copies contribute their full length to read and write counts, including bootstrap copies, snapshot storage, and staging operations when the algorithm performs them.
+- An auxiliary buffer that stores elements follows the same observation contract as the input. A write or a range copy initializes each element before a read uses it.
+- A buffer identifier names storage, not a role in that storage. It stays on the same storage for the whole sort, also when source and destination roles alternate. Offsets separate the ranges of one buffer. Do not give a range its own identifier.
+- An auxiliary element buffer holds the sorted element type. Keep slot metadata, such as occupancy, tombstones, or bucket tags, next to the buffer, not in a wrapper element type.
+- Index arrays, offset buffers, and occupancy bitsets are algorithm metadata, not element storage. If an algorithm reports operations on metadata, it uses a separate identifier, and each write carries the stored index or offset.
+- An element copy adds its full length to the read count and to the write count. This includes bootstrap copies, snapshot storage, and staging operations when the algorithm performs them.
 
 ## Phase Levels
 
-A phase announcement replaces the previously announced phase at the same level; there is no exit event, and a phase remains current until the next announcement at its level. Announcements occur at two levels, and a consumer keeps one slot per level:
+A phase announcement replaces the previous phase at the same level. There is no exit event. A phase stays current until the next announcement at its level. There are two levels, and a consumer keeps one slot for each level:
 
-- A **scope** phase is what the announcing algorithm decided to do, including a decision to delegate a subrange to another algorithm's core.
-- A **detail** phase is progress reported from inside such a delegated core.
+- A **scope** phase is a decision of the announcing algorithm. A decision to delegate a subrange to the core of another algorithm is a scope phase.
+- A **detail** phase is progress inside a delegated core.
 
-`SortPhase.IsDetailPhase` classifies the two. A scope announcement invalidates the detail slot, because the delegated work it described has ended. A detail announcement leaves the scope slot untouched.
+`SortPhase.IsDetailPhase` classifies each phase. A scope announcement clears the detail slot, because the delegated work has ended. A detail announcement does not change the scope slot.
 
-A core that announces detail phases never delegates onward. A delegated core that announces scope phases, as `StdSort` does under `SkaSort`, replaces the handoff in the scope slot, and its own delegation reports into the detail slot. Two slots therefore describe every sequence this library emits. An algorithm whose own phases are classified detail may also run at the top level, where no scope phase accompanies them.
+A core that announces detail phases never delegates further. A delegated core that announces scope phases replaces the handoff phase in the scope slot, and its own delegation goes to the detail slot. `StdSort` under `SkaSort` is an example. Two slots therefore describe every sequence that this library emits. An algorithm whose own phases are all detail phases can also run at the top level, without a scope phase.
 
-A hybrid that hands a subrange to another algorithm announces the handoff, with the range being delegated, before the delegated core runs. The phase names what the target actually is: `IpnsortSmallSort` exists rather than reusing `HybridToInsertionSort` because ipnsort's small sort is not an insertion sort.
+A hybrid that gives a subrange to another algorithm announces the handoff, with the delegated range, before the delegated core runs. The phase names the real target. For example, `IpnsortSmallSort` exists because the small sort of ipnsort is not an insertion sort, so `HybridToInsertionSort` would be the wrong name.
 
 ## Context Implementations
 
-- A callback added to the contract carries a no-op default implementation so that existing implementations keep compiling. Value-type contexts override it explicitly: a constrained call that falls through to a default interface implementation boxes the receiver, which would put an allocation on the `NullContext` path.
-- A context must tolerate the event volume of the selected algorithm.
-- A mutable context is not implicitly safe for concurrent use.
-- A context that throws interrupts the sort and may leave the span partially sorted.
+- A new callback in the contract has a no-op default implementation, so existing implementations still compile. A value-type context should override the callback explicitly. A constrained call that falls through to a default interface implementation boxes the receiver. On the `NullContext` path, that would add an allocation.
+- A context must handle the event volume of the selected algorithm.
+- A mutable context is not safe for concurrent use by default.
+- If a context throws, the sort stops and can leave the span partially sorted.
 
 ## Consumer Responsibilities
 
-Consumers must not assume:
+A consumer must allow for these facts:
 
-- that two different algorithms produce identical event sequences for the same input;
-- that an algorithm keeps the same set of auxiliary buffers across releases. The set is an implementation choice; phases and the caller's span (buffer `0`) are what the contract guarantees, and a consumer keys on them;
-- that a handoff phase stays current for the whole delegated range. `SkaSort` hands short ranges to `StdSort`, whose scope phases replace `SkaSortStdSort` as soon as StdSort announces one;
-- that a `RadixPass` is followed by `DistributionBucket` reports. `RotateLSDRadixSort` and `Radsort` report none, because no bucket occupies a known contiguous span during their passes;
-- that the buffers hold the elements in their current order between passes. `Radsort` keeps that order in a block permutation, and the span becomes ordered only during the closing `DistributionWrite` phase;
-- that a written value stays where it was written until the algorithm moves it on purpose. The write-both merge and partition steps of `QuadSort`, `FluxSort`, `CrumSort`, and `BlitSort` write both candidates under every context, so a buffer briefly shows a duplicate of an element that is still elsewhere; a position's final value is the last write to it before the step ends;
-- that walking a left-child / right-sibling root list gives the current roots at every moment. `BinomialHeapSort` relinks its root list one root at a time, so a walk mid-merge sees only the relinked prefix. A node is a root exactly when it is nobody's child, so a consumer derives membership from child links.
+- Two different algorithms can give different event sequences for the same input.
+- An algorithm can change its auxiliary buffers between releases. The buffer set is an implementation choice. The contract guarantees the phases and the span of the caller (buffer `0`), so key on those.
+- A handoff phase can stop being current before the delegated range is done. `SkaSort` gives short ranges to `StdSort`. The first scope phase that `StdSort` announces replaces `SkaSortStdSort`.
+- A `RadixPass` is not always followed by `DistributionBucket` reports. `RotateLSDRadixSort` and `Radsort` report none, because no bucket has a known contiguous span during their passes.
+- Between passes, the buffers do not always hold the elements in their current order. `Radsort` keeps that order in a block permutation. The span becomes ordered only during the final `DistributionWrite` phase.
+- A written value does not always stay in place until the algorithm moves it on purpose. The write-both merge and partition steps of `QuadSort`, `FluxSort`, `CrumSort`, and `BlitSort` write both candidates under every context. The algorithm then overwrites the candidate that it did not take, or leaves it unused. A buffer can briefly show a duplicate of an element that is also in another position. The final value of a position is its last write before the step ends.
+- A walk of a left-child / right-sibling root list does not always give the current roots. `BinomialHeapSort` relinks its root list one root at a time, so a walk during a merge sees only the relinked prefix. A node is a root exactly when it is not the child of any node. Get root membership from child links.

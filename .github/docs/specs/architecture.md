@@ -2,89 +2,88 @@
 
 ## Purpose
 
-SortAlgorithms uses one algorithm implementation for two execution modes:
+SortAlgorithms uses one implementation of each algorithm for two execution modes:
 
-1. low-overhead sorting without observation; and
-2. sorting with operation events for statistics, visualization, or tutorials.
+1. sorting without observation, with low overhead
+2. sorting with operation events for statistics, visualization, or tutorials
 
-The sorted result and comparer semantics are shared. Observation is an optional concern and must not require a second copy of each algorithm.
+Both modes give the same sorted result and use the same comparer semantics. Observation is optional. It must not require a second copy of each algorithm.
 
 ## Responsibilities
 
 | Component | Responsibility | Ownership and state |
 |---|---|---|
-| Static algorithm type | Select and perform a named sorting algorithm | No per-call state retained after `Sort` returns |
-| Caller-owned `Span<T>` | Input and in-place output | Owned by the caller |
-| `TComparer` | Define element order | Supplied or selected by the overload |
-| `TContext` / `ISortContext` | Observe logical sorting operations | Supplied and owned by the caller |
-| `SortSpan<T, TComparer, TContext>` | Couple span access, comparison, buffer identity, absolute offset, and observation | Internal stack-only value scoped to the sort |
-| Auxiliary storage | Support algorithms that are not bufferless | Scoped to the call and released before return |
+| Static algorithm type | Select and run a named sorting algorithm | Keeps no per-call state after `Sort` returns |
+| Caller-owned `Span<T>` | Input and in-place output | The caller owns it |
+| `TComparer` | Define the element order | The caller supplies it, or the overload selects it |
+| `TContext` / `ISortContext` | Observe logical sorting operations | The caller supplies and owns it |
+| `SortSpan<T, TComparer, TContext>` | Connect span access, comparison, buffer identity, absolute offset, and observation | Internal stack-only value that exists only during the sort |
+| Auxiliary storage | Support algorithms that are not bufferless | Exists only during the call. The algorithm releases it before it returns. |
 
-Algorithm types are static and retain no mutable sort state. Contexts may be mutable. Concurrent calls are independent when they operate on distinct spans and do not share a non-thread-safe mutable context.
+Algorithm types are static and keep no mutable sort state. Contexts can be mutable. Concurrent calls are independent when they use different spans and do not share a mutable context that is not thread-safe.
 
 ## Execution Modes
 
 ### Unobserved mode
 
-Convenience overloads use `NullContext`, a no-op value type. The implementation is structured so runtime specialization can remove observation branches from hot paths. This is the normal benchmark and production mode.
+The convenience overloads use `NullContext`, a no-op value type. The implementation lets runtime specialization remove observation branches from hot paths. This is the normal mode for benchmarks and production.
 
 ### Observed mode
 
-The caller supplies a context type implementing `ISortContext`. The algorithm reports reads, writes, comparisons, swaps, range copies, phases, roles, and buffer identities as applicable. `StatisticsContext`, `VisualizationContext`, and `CompositeContext` are the built-in consumers.
+The caller supplies a context type that implements `ISortContext`. The algorithm reports reads, writes, comparisons, swaps, range copies, phases, roles, and buffer identities where they apply. The built-in consumers are `StatisticsContext`, `VisualizationContext`, and `CompositeContext`.
 
-Observed mode provides semantic operation data, not a promise of identical callback sequences across algorithms or releases. See [observation.md](observation.md).
+Observed mode gives semantic operation data. It does not promise the same callback sequence across algorithms or releases. See [observation.md](observation.md).
 
 ## Public API Shape
 
-Each algorithm is a static class under `SortAlgorithm.Algorithms`. The common overload family supports natural ordering, natural ordering with a context, and a custom comparer with a context. Some algorithms add range, seed, selector, or variant-specific parameters. See [sorting_api.md](sorting_api.md).
+Each algorithm is a static class in `SortAlgorithm.Algorithms`. The common overload family has three forms: natural ordering, natural ordering with a context, and a custom comparer with a context. Some algorithms add range, seed, selector, or variant-specific parameters. See [sorting_api.md](sorting_api.md).
 
-The natural-order path requires `T : IComparable<T>` and uses the internal `ComparableComparer<T>`. A custom comparer is never bypassed by primitive-specialized comparisons.
+The natural-order path requires `T : IComparable<T>` and uses the internal `ComparableComparer<T>`. Primitive-specialized comparisons never bypass a custom comparer.
 
 ## Internal Data Model
 
-`SortSpan<T, TComparer, TContext>` is an internal `readonly ref struct`. It represents:
+`SortSpan<T, TComparer, TContext>` is an internal `readonly ref struct`. It holds:
 
-- the current span;
-- its first-element reference for Release fast paths;
-- the comparer and context values;
-- a buffer identifier; and
-- an absolute offset used in reported indices.
+- the current span
+- a reference to the first element, for Release fast paths
+- the comparer and context values
+- a buffer identifier
+- an absolute offset for reported indices
 
-Slices preserve the logical relationship to the original buffer through offsets. Auxiliary spans receive distinct buffer identifiers so equal numeric indices in different buffers remain distinguishable.
+A slice keeps its position in the original buffer through its offset. Each auxiliary span gets a different buffer identifier, so a consumer can tell apart equal indices in different buffers.
 
-This type is an internal implementation boundary, not a public extension point. Its detailed methods belong in [implementation_guidelines.md](../references/implementation_guidelines.md).
+This type is an internal implementation boundary, not a public extension point. [implementation_guidelines.md](../references/implementation_guidelines.md) describes how to use its methods.
 
 ## Design Decisions
 
 ### Static algorithms instead of stateful sorter instances
 
-Sorting mutates caller-provided data but does not require an object with retained state. Keeping statistics and visualization outside the algorithm prevents hidden lifetime and reuse semantics and makes concurrent independent calls straightforward.
+Sorting changes the data of the caller, but it does not need an object that keeps state. Statistics and visualization stay outside the algorithm. This prevents hidden lifetime and reuse rules, and it makes independent concurrent calls simple.
 
 ### Generic comparer and context types
 
-Using `TComparer` and `TContext` throughout the call chain gives the runtime concrete types to specialize. Passing either as its interface inside hot helpers would restore dispatch and make the unobserved path harder to optimize.
+`TComparer` and `TContext` stay generic through the whole call chain, so the runtime has concrete types to specialize. If a hot helper takes either type as its interface, interface dispatch returns and the unobserved path is harder to optimize.
 
 ### `SortSpan` instead of context-owned mutation
 
-The context observes; it does not own or mutate the input. `SortSpan` centralizes the correspondence between a logical operation and its callback while keeping ordering behavior in the algorithm and comparer.
+The context observes. It does not own or change the input. `SortSpan` keeps each logical operation and its callback together in one place. The algorithm and the comparer still define the order.
 
 ### Structured events instead of display strings
 
-Phases and roles are domain values. Formatting, animation, and localization belong to consumers rather than algorithms.
+Phases and roles are domain values. Formatting, animation, and localization belong to the consumer, not to the algorithm.
 
 ## Non-goals
 
-- Exposing `SortSpan` as public API
-- Making mutable contexts implicitly safe for shared concurrent use
-- Guaranteeing the same event sequence for different algorithms
-- Requiring every algorithm to use the same auxiliary-storage strategy
+- `SortSpan` as public API
+- Implicit thread safety for a mutable context that concurrent calls share
+- The same event sequence for different algorithms
+- One auxiliary-storage strategy for every algorithm
 - Hiding algorithm-specific properties such as stability or worst-case complexity
 
 ## Lessons Learned
 
-- A class-only context design leaves interface dispatch in the no-observation path. A value-type `NullContext` plus generic `TContext` better represents the desired execution split.
-- Index-only callbacks are insufficient once an algorithm uses temporary buffers; buffer identity and slice offsets are required for faithful visualization.
-- Comparisons involving cached values need external-value markers because one or both operands may not have a meaningful span index.
-- Observation must remain coupled to logical operations. Direct span or comparer access can silently produce correct output but incorrect statistics and visualization.
-- A `ref struct` cleanly scopes span access but cannot cross async, iterator, boxing, or heap-capture boundaries; sorting remains synchronous by design.
-
+- A context design that uses only classes leaves interface dispatch in the path without observation. A value-type `NullContext` with a generic `TContext` separates the two modes better.
+- Callbacks with only an index are not sufficient when an algorithm uses temporary buffers. Faithful visualization needs buffer identity and slice offsets.
+- A comparison with a cached value needs a marker for an external value, because one or both operands may have no meaningful span index.
+- Observation must stay coupled to logical operations. Direct access to the span or the comparer can give correct output with incorrect statistics and visualization.
+- A `ref struct` keeps span access scoped, but it cannot cross async, iterator, boxing, or heap-capture boundaries. Sorting stays synchronous by design.

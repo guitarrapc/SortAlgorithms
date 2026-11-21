@@ -1,12 +1,12 @@
 # SortAlgorithms Specification
 
-User-facing specification entry point for the **SortAlgorithm** library. Detailed contracts are split by behavior under [specs/](specs/). Implementation guidance and command recipes live under [references/](references/).
+This is the entry point to the specification of the **SortAlgorithm** library. [specs/](specs/) holds the detailed contracts, one file for each behavior. [references/](references/) holds implementation guidance and command recipes.
 
 ## Motivation
 
-SortAlgorithms provides a broad set of sorting algorithms for comparison, education, visualization, and performance study without forcing those uses into separate implementations. A caller can use the low-overhead path for ordinary sorting or supply an observation context to inspect the same algorithm's operations.
+SortAlgorithms provides many sorting algorithms for comparison, education, visualization, and performance study. All of these uses share one implementation of each algorithm. A caller can use the low-overhead path for ordinary sorting, or supply an observation context to inspect the operations of the same algorithm.
 
-The library favors explicit generic contracts because sorting performance depends on comparison dispatch, temporary storage, and observation overhead. These concerns must not change the sorted result.
+The library prefers explicit generic contracts, because sorting performance depends on comparison dispatch, temporary storage, and observation overhead. These concerns must not change the sorted result.
 
 ## Implemented Scope
 
@@ -19,22 +19,22 @@ The library favors explicit generic contracts because sorting performance depend
 | Performance guarantees, allocation, and required evidence | [Performance](specs/performance.md) |
 | Correctness and stability expectations | [Validation](specs/validation.md) |
 
-The implemented algorithm catalog is maintained in [README.md](../../README.md#implemented-sort-algorithm).
+[README.md](../../README.md#implemented-sort-algorithm) lists the implemented algorithms.
 
 ## Out Of Scope
 
-- A single automatic policy that selects the best algorithm for arbitrary data
-- A universal stability guarantee across all algorithms
-- A universal worst-case time or auxiliary-space guarantee across all algorithms
-- Thread safety for a span or mutable context shared by concurrent sort operations
-- Persisting or rendering visualization events in the core library
+- One automatic policy that selects the best algorithm for any data
+- A stability guarantee that covers all algorithms
+- A worst-case time or auxiliary-space guarantee that covers all algorithms
+- Thread safety for a span or a mutable context that concurrent sort operations share
+- Storage or rendering of visualization events in the core library
 
 ## Related Documents
 
-- [specs/sorting_api.md](specs/sorting_api.md) — common sorting contract and overload families
-- [specs/architecture.md](specs/architecture.md) — responsibilities, execution modes, and design decisions
-- [specs/observation.md](specs/observation.md) — context events and buffer identity
-- [specs/performance.md](specs/performance.md) — performance guarantees, required evidence, and vector-code policy
-- [specs/validation.md](specs/validation.md) — required behavioral evidence
-- [references/implementation_guidelines.md](references/implementation_guidelines.md) — contributor implementation patterns
-- [references/sandbox.md](references/sandbox.md) — standalone experiment workflow
+- [specs/sorting_api.md](specs/sorting_api.md): common sorting contract and overload families
+- [specs/architecture.md](specs/architecture.md): responsibilities, execution modes, and design decisions
+- [specs/observation.md](specs/observation.md): context events and buffer identity
+- [specs/performance.md](specs/performance.md): performance guarantees, required evidence, and vector-code policy
+- [specs/validation.md](specs/validation.md): required behavioral evidence
+- [references/implementation_guidelines.md](references/implementation_guidelines.md): implementation patterns for contributors
+- [references/sandbox.md](references/sandbox.md): workflow for standalone experiments
