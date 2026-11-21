@@ -176,6 +176,56 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
         }
     }
 
+    /// <summary>
+    /// Announces the comparisons one vector instruction performed between two values held in registers, one for each lane whose bit is
+    /// set in <paramref name="lanes"/>, in lane order. A comparator network compares each pair of lanes once although the instruction
+    /// computes both orders, so the lanes name one member of each pair. The masks are read as in
+    /// <see cref="ReportLaneCompares(int, int, ulong, ulong)"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void ReportSelectedHeldLaneCompares(ulong lanes, ulong less, ulong greater)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            while (lanes != 0)
+            {
+                var k = System.Numerics.BitOperations.TrailingZeroCount(lanes);
+                _context.OnCompare(-1, -1, LaneResult(less, greater, k), -1, -1);
+                lanes &= lanes - 1;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns a reference to the element at index <paramref name="i"/> without announcing anything, for a vector store. Every element
+    /// such a store writes must then be announced with <see cref="ReportWrittenBlock"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ref T BlockRef(int i)
+    {
+#if DEBUG
+        return ref _span[i];
+#else
+        return ref Unsafe.Add(ref _ref, (nint)(uint)i);
+#endif
+    }
+
+    /// <summary>
+    /// Announces the writes of the <paramref name="count"/> elements from index <paramref name="i"/>, in index order, that a vector store
+    /// through <see cref="BlockRef"/> has just performed. Each announcement carries the value the store left at that index.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void ReportWrittenBlock(int i, int count)
+    {
+        if (typeof(TContext) != typeof(NullContext))
+        {
+            for (var k = 0; k < count; k++)
+            {
+                _context.OnIndexWrite(_offset + i + k, _bufferId, _span[i + k]);
+            }
+        }
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int LaneResult(ulong less, ulong greater, int lane)
         => (int)((greater >> lane) & 1) - (int)((less >> lane) & 1);

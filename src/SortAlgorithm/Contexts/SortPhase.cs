@@ -69,6 +69,7 @@
 ///   <item><term>FluxSortPivotSample</term><description>start (inclusive) / end-1 (inclusive) / sampleCount</description></item>
 ///   <item><term>FluxSortQuadsort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>FluxSortMerge</term><description>start (inclusive) / end of first half (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>SimdQuickSortBitonicSort</term><description>start (inclusive) / end-1 (inclusive) / lanes per vector</description></item>
 /// </list>
 /// </remarks>
 public enum SortPhase
@@ -827,4 +828,11 @@ public enum SortPhase
     /// param1=start (inclusive), param2=start of the second half - 1 (inclusive end of the first half), param3=end-1 (inclusive)
     /// </summary>
     FluxSortMerge,
+
+    /// <summary>
+    /// SimdQuickSort small sort: loading a range of at most sixteen vectors, padding the last with the largest key, sorting them with
+    /// the bitonic network in registers, and storing them back.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=lanes per vector (1 on the scalar path)
+    /// </summary>
+    SimdQuickSortBitonicSort,
 }

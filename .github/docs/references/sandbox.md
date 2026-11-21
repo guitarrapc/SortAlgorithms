@@ -29,3 +29,5 @@ dotnet run -c Release --project sandbox/YourProject/YourProject.csproj
 ```
 
 `sandbox/ScandumReferenceTrace/trace.c` prints the expected values of `ScandumReferenceTraceTests` from the C sources of quadsort and fluxsort. Its header lists the build steps.
+
+`sandbox/SimdQuickSortReferenceTrace/trace.cpp` prints the rows of `SimdQuickSortReferenceTraceTests` from Bramas's `sort512.hpp`. It needs a CPU with AVX-512F; its header lists the build steps. Build it in a directory on the WSL file system: a copy of `sort512.hpp` edited in place under `/mnt/c` with `sed -i` came out with NUL bytes and did not compile, while a copy on the WSL file system built cleanly.

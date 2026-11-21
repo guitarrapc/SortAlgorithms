@@ -1035,6 +1035,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(SimdQuickSort))]
+    public void SetupSimdQuickSort() => Setup(nameof(SimdQuickSort));
+
+    [Benchmark]
+    public int SimdQuickSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.SimdQuickSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(SmoothSort))]
     public void SetupSmoothSort() => Setup(nameof(SmoothSort));
 
