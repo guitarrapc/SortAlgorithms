@@ -18,6 +18,7 @@ public class InconsistentComparerSafetyTests
     {
         Quad, QuadLimitedSwap, Flux, Crum, Blit, Pdq, PdqBranchless, Intro, IntroDotnet, Std,
         Quick, QuickMedian3, QuickMedian9, Quick3way, Stable, BidirectionalStable, PairInsertion, Drift, Glide, Ipn, DualPivot, Destswap, Block, Ips4o,
+        SimdMerge,
     }
 
     /// <summary>
@@ -197,6 +198,7 @@ public class InconsistentComparerSafetyTests
             case Sorter.Destswap: DestswapStableQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.Block: BlockQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.Ips4o: Ips4oSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.SimdMerge: SimdMergeSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             default: throw new ArgumentOutOfRangeException(nameof(sorter));
         }
     }

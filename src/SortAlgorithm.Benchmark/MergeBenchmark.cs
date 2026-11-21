@@ -135,6 +135,12 @@ public class MergeBenchmark
     {
         SortAlgorithm.Algorithms.QuadSort.Sort(_buffers.Next().AsSpan());
     }
+
+    [Benchmark]
+    public void SimdMergeSort()
+    {
+        SortAlgorithm.Algorithms.SimdMergeSort.Sort(_buffers.Next().AsSpan());
+    }
 }
 
 /// <summary>

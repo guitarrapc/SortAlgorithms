@@ -84,6 +84,8 @@
 ///   <item><term>Ips4oClassification</term><description>start (inclusive) / end-1 (inclusive) / bucket count</description></item>
 ///   <item><term>Ips4oBlockPermutation</term><description>start (inclusive) / end-1 (inclusive) / block size</description></item>
 ///   <item><term>Ips4oCleanup</term><description>bucket start (inclusive) / bucket end-1 (inclusive) / bucket index</description></item>
+///   <item><term>SimdMergeSortInRegisterSort</term><description>block start (inclusive) / block end-1 (inclusive) / lanes per vector</description></item>
+///   <item><term>SimdMergeSortBlockMerge, SimdMergeSortMerge</term><description>start (inclusive) / end-1 (inclusive) / length of the merged sequences</description></item>
 /// </list>
 /// </remarks>
 public enum SortPhase
@@ -989,4 +991,23 @@ public enum SortPhase
     /// param1=start (inclusive), param2=end-1 (inclusive)
     /// </summary>
     Ips4oBaseCase,
+
+    /// <summary>
+    /// SimdMergeSort sorting the chunks of a block in registers: K² elements are loaded into K vectors, each lane is sorted by an
+    /// odd-even sorting network across the vectors, and a transpose turns every vector into a sorted sequence of K elements.
+    /// param1=block start (inclusive), param2=block end-1 (inclusive), param3=K (lanes per vector)
+    /// </summary>
+    SimdMergeSortInRegisterSort,
+
+    /// <summary>
+    /// SimdMergeSort merging pairs of sorted sequences inside a block with bitonic merge networks.
+    /// param1=block start (inclusive), param2=block end-1 (inclusive), param3=length of the sequences being merged
+    /// </summary>
+    SimdMergeSortBlockMerge,
+
+    /// <summary>
+    /// SimdMergeSort merging pairs of sorted sequences that are at least a block long, across the whole range.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=length of the sequences being merged
+    /// </summary>
+    SimdMergeSortMerge,
 }

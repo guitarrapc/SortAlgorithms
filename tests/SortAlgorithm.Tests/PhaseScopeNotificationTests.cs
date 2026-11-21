@@ -84,6 +84,8 @@ public class PhaseScopeNotificationTests
         // 自身の相だけを通知するもの。5000 要素では 2 段、200 要素では基底ケースだけになる
         yield return () => new PhaseCase("Ips4oSort", static (a, c) => Ips4oSort.Sort(a.AsSpan(), c), 200);
         yield return () => new PhaseCase("Ips4oSort", static (a, c) => Ips4oSort.Sort(a.AsSpan(), c), 5000);
+        yield return () => new PhaseCase("SimdMergeSort", static (a, c) => SimdMergeSort.Sort(a.AsSpan(), c), 200);
+        yield return () => new PhaseCase("SimdMergeSort", static (a, c) => SimdMergeSort.Sort(a.AsSpan(), c), 5000);
     }
 
     /// <summary>
@@ -148,7 +150,7 @@ public class PhaseScopeNotificationTests
     {
         var events = RecordEvents(MakeArray(testCase.Size), testCase.Sort);
 
-        if (testCase.Name is "QuickSort3way" or "LibrarySort" or "Ips4oSort")
+        if (testCase.Name is "QuickSort3way" or "LibrarySort" or "Ips4oSort" or "SimdMergeSort")
         {
             await Assert.That(events.Where(e => e.Phase.IsDetailPhase()).ToArray()).IsEmpty()
                 .Because("These pure algorithms do not delegate a range to another sorting core.");
@@ -156,6 +158,7 @@ public class PhaseScopeNotificationTests
             {
                 "QuickSort3way" => SortPhase.QuickSort3wayPartition,
                 "LibrarySort" => SortPhase.LibrarySortPhase,
+                "SimdMergeSort" => SortPhase.SimdMergeSortInRegisterSort,
                 _ => SortPhase.Ips4oSimpleCases,
             };
             await Assert.That(events.Any(e => e.Phase == scope)).IsTrue();

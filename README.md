@@ -47,8 +47,8 @@ Memory: 15.61 GB Total, 12.46 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method              | Size | Pattern            | Mean           | Error        | StdDev       | Ratio  | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -470,8 +470,8 @@ Memory: 15.61 GB Total, 12.46 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method             | Size | Pattern            | Mean         | Error       | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -557,8 +557,8 @@ Memory: 15.61 GB Total, 12.46 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method           | Size | Pattern            | Mean           | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -836,8 +836,8 @@ Memory: 15.61 GB Total, 12.46 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                 | Size | Pattern            | Mean         | Error       | StdDev      | Ratio  | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -995,8 +995,8 @@ Memory: 15.61 GB Total, 12.46 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                   | Size | Pattern            | Mean           | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -1490,8 +1490,8 @@ Memory: 15.61 GB Total, 12.46 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method     | Size | Pattern            | Mean         | Error       | StdDev      | Ratio | Rank | Allocated | Alloc Ratio |
@@ -1529,8 +1529,8 @@ Memory: 15.61 GB Total, 12.46 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                            | Size | Pattern            | Mean           | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -1736,8 +1736,8 @@ Memory: 15.61 GB Total, 12.46 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                       | Size | Pattern            | Mean           | Error        | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -2207,8 +2207,8 @@ Memory: 15.61 GB Total, 12.46 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method              | Size | Pattern            | Mean         | Error       | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -2294,8 +2294,8 @@ Memory: 15.61 GB Total, 12.46 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                  | Size | Pattern            | Mean            | Error         | StdDev        | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -2429,8 +2429,8 @@ Memory: 15.61 GB Total, 12.46 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
-EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8  
-UnrollFactor=1  WarmupCount=2  
+EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCount=8
+UnrollFactor=1  WarmupCount=2
 ```
 
 | Method                 | Size | Pattern            | Mean         | Error       | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
@@ -2586,6 +2586,7 @@ UnrollFactor=1  WarmupCount=2
   - Iterative
   - Recursive
 - [Shift Sort](./src/SortAlgorithm/Algorithms/Merge/ShiftSort.cs)
+- [SIMD Merge Sort (Chhugani)](./src/SortAlgorithm/Algorithms/Merge/SimdMergeSort.cs)
 - [Spin Sort](./src/SortAlgorithm/Algorithms/Merge/SpinSort.cs)
 - [std::stable_sort (LLVM)](./src/SortAlgorithm/Algorithms/Merge/StdStableSort.cs)
 - [Strand Sort](./src/SortAlgorithm/Algorithms/Merge/StrandSort.cs)
@@ -2623,8 +2624,8 @@ UnrollFactor=1  WarmupCount=2
 - [Quick Sort (Median of 3)](./src/SortAlgorithm/Algorithms/Partition/QuickSortMedian3.cs)
 - [Quick Sort (Median of 9)](./src/SortAlgorithm/Algorithms/Partition/QuickSortMedian9.cs)
 - [Sample Sort](./src/SortAlgorithm/Algorithms/Partition/SampleSort.cs)
-- [Quick Sort (SIMD, Bramas)](./src/SortAlgorithm/Algorithms/Partition/SimdQuickSort.cs)
-- [Quick Sort (Stable)](./src/SortAlgorithm/Algorithms/Partition/StableQuickSort.cs)
+- [SIMD Quick Sort (Bramas)](./src/SortAlgorithm/Algorithms/Partition/SimdQuickSort.cs)
+- [Stable Quick Sort](./src/SortAlgorithm/Algorithms/Partition/StableQuickSort.cs)
 - [std::sort (LLVM)](./src/SortAlgorithm/Algorithms/Partition/StdSort.cs)
 
 ### Distribution

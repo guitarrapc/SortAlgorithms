@@ -111,6 +111,7 @@ public static class SortAuditAlgorithms
         ("ShellSortSedgewick1986", static values => ShellSortSedgewick1986.Sort(values, NullContext.Default)),
         ("ShellSortTokuda1992", static values => ShellSortTokuda1992.Sort(values, NullContext.Default)),
         ("ShiftSort", static values => ShiftSort.Sort(values, NullContext.Default)),
+        ("SimdMergeSort", static values => SimdMergeSort.Sort(values, NullContext.Default)),
         ("SimdQuickSort", static values => SimdQuickSort.Sort(values, NullContext.Default)),
         ("SkaSort", static values => SkaSort.Sort(values, NullContext.Default)),
         ("SlowSort", static values => SlowSort.Sort(values, NullContext.Default)),

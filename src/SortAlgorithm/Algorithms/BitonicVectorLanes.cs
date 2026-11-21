@@ -14,6 +14,8 @@ internal interface IBitonicLanes<TVec, T>
     static abstract int Count { get; }
     static abstract TVec Load(ref T source);
     static abstract void Store(ref T destination, TVec v);
+    /// <summary><paramref name="value"/> in every lane.</summary>
+    static abstract TVec Broadcast(T value);
     static abstract TVec Min(TVec a, TVec b);
     static abstract TVec Max(TVec a, TVec b);
     static abstract ulong LessBits(TVec a, TVec b);
@@ -43,6 +45,7 @@ internal readonly struct BitonicLanes512<T> : IBitonicLanes<Vector512<T>, T>
     public static int Count => Vector512<T>.Count;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector512<T> Load(ref T source) => Vector512.LoadUnsafe(ref source);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector512<T> Broadcast(T value) => Vector512.Create(value);
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void Store(ref T destination, Vector512<T> v) => v.StoreUnsafe(ref destination);
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector512<T> Min(Vector512<T> a, Vector512<T> b) => Vector512.Min(a, b);
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector512<T> Max(Vector512<T> a, Vector512<T> b) => Vector512.Max(a, b);
@@ -93,6 +96,7 @@ internal readonly struct BitonicLanes256<T> : IBitonicLanes<Vector256<T>, T>
     public static int Count => Vector256<T>.Count;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector256<T> Load(ref T source) => Vector256.LoadUnsafe(ref source);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector256<T> Broadcast(T value) => Vector256.Create(value);
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void Store(ref T destination, Vector256<T> v) => v.StoreUnsafe(ref destination);
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector256<T> Min(Vector256<T> a, Vector256<T> b) => Vector256.Min(a, b);
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector256<T> Max(Vector256<T> a, Vector256<T> b) => Vector256.Max(a, b);
@@ -141,6 +145,7 @@ internal readonly struct BitonicLanes128<T> : IBitonicLanes<Vector128<T>, T>
     public static int Count => Vector128<T>.Count;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector128<T> Load(ref T source) => Vector128.LoadUnsafe(ref source);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector128<T> Broadcast(T value) => Vector128.Create(value);
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void Store(ref T destination, Vector128<T> v) => v.StoreUnsafe(ref destination);
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector128<T> Min(Vector128<T> a, Vector128<T> b) => Vector128.Min(a, b);
     [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector128<T> Max(Vector128<T> a, Vector128<T> b) => Vector128.Max(a, b);
