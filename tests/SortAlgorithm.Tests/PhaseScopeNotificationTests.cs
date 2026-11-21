@@ -81,6 +81,9 @@ public class PhaseScopeNotificationTests
         yield return () => new PhaseCase("CrumSort", static (a, c) => CrumSort.Sort(a.AsSpan(), c), 5000);
         yield return () => new PhaseCase("BlitSort", static (a, c) => BlitSort.Sort(a.AsSpan(), c), 200);
         yield return () => new PhaseCase("BlitSort", static (a, c) => BlitSort.Sort(a.AsSpan(), c), 5000);
+        // 自身の相だけを通知するもの。5000 要素では 2 段、200 要素では基底ケースだけになる
+        yield return () => new PhaseCase("Ips4oSort", static (a, c) => Ips4oSort.Sort(a.AsSpan(), c), 200);
+        yield return () => new PhaseCase("Ips4oSort", static (a, c) => Ips4oSort.Sort(a.AsSpan(), c), 5000);
     }
 
     /// <summary>
@@ -145,11 +148,16 @@ public class PhaseScopeNotificationTests
     {
         var events = RecordEvents(MakeArray(testCase.Size), testCase.Sort);
 
-        if (testCase.Name is "QuickSort3way" or "LibrarySort")
+        if (testCase.Name is "QuickSort3way" or "LibrarySort" or "Ips4oSort")
         {
             await Assert.That(events.Where(e => e.Phase.IsDetailPhase()).ToArray()).IsEmpty()
                 .Because("These pure algorithms do not delegate a range to another sorting core.");
-            var scope = testCase.Name == "QuickSort3way" ? SortPhase.QuickSort3wayPartition : SortPhase.LibrarySortPhase;
+            var scope = testCase.Name switch
+            {
+                "QuickSort3way" => SortPhase.QuickSort3wayPartition,
+                "LibrarySort" => SortPhase.LibrarySortPhase,
+                _ => SortPhase.Ips4oSimpleCases,
+            };
             await Assert.That(events.Any(e => e.Phase == scope)).IsTrue();
             return;
         }

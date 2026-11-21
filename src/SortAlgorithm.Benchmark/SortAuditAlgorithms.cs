@@ -67,6 +67,7 @@ public static class SortAuditAlgorithms
         ("IntroSort", static values => IntroSort.Sort(values, NullContext.Default)),
         ("IntroSortDotnet", static values => IntroSortDotnet.Sort(values, NullContext.Default)),
         ("Ipnsort", static values => Ipnsort.Sort(values, NullContext.Default)),
+        ("Ips4oSort", static values => Ips4oSort.Sort(values, NullContext.Default)),
         ("LibrarySort", static values => LibrarySort.Sort(values, NullContext.Default)),
         ("MergeInsertionSort", static values => MergeInsertionSort.Sort(values, NullContext.Default)),
         ("MergeSort", static values => MergeSort.Sort(values, NullContext.Default)),

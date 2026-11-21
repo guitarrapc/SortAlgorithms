@@ -70,6 +70,7 @@ Dictionary<string, string> displayNames = new()
     ["FlatStableSort"] = "Flat Stable Sort",
     ["Glidesort"] = "Glidesort",
     ["IntroSortDotnet"] = "Intro Sort (Dotnet)",
+    ["Ips4oSort"] = "In-place Super Scalar Samplesort (IS⁴o)",
     ["MinHeapSort"] = "Min-Heap Sort",
     ["OddEvenSort"] = "Odd-Even Sort",
     ["PDQSort"] = "Pattern-Defeating Quick Sort",

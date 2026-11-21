@@ -79,6 +79,11 @@
 ///   <item><term>SkaSortAmericanFlag</term><description>start (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>SkaSortRound</term><description>start (inclusive) / end-1 (inclusive) / buckets listed at the start of the round</description></item>
 ///   <item><term>SkaSortStdSort</term><description>start (inclusive) / end-1 (inclusive) / threshold</description></item>
+///   <item><term>Ips4oSimpleCases, Ips4oBaseCase</term><description>start (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>Ips4oSampling</term><description>start (inclusive) / end-1 (inclusive) / sample size</description></item>
+///   <item><term>Ips4oClassification</term><description>start (inclusive) / end-1 (inclusive) / bucket count</description></item>
+///   <item><term>Ips4oBlockPermutation</term><description>start (inclusive) / end-1 (inclusive) / block size</description></item>
+///   <item><term>Ips4oCleanup</term><description>bucket start (inclusive) / bucket end-1 (inclusive) / bucket index</description></item>
 /// </list>
 /// </remarks>
 public enum SortPhase
@@ -943,4 +948,45 @@ public enum SortPhase
     /// param1=start (inclusive), param2=end-1 (inclusive), param3=threshold
     /// </summary>
     SkaSortStdSort,
+
+    /// <summary>
+    /// Ips4oSort checking the whole input once: it returns at once when the input is sorted, and reverses it when it is in
+    /// non-increasing order.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    Ips4oSimpleCases,
+
+    /// <summary>
+    /// Ips4oSort drawing a random sample to the front of the range and sorting it. The sample's own partitioning steps follow
+    /// before the splitters are taken from it.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=sample size
+    /// </summary>
+    Ips4oSampling,
+
+    /// <summary>
+    /// Ips4oSort classifying every element of the range with the branchless decision tree into per-bucket buffer blocks. A full
+    /// buffer block is written back to the front of the range.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=bucket count, equality buckets included
+    /// </summary>
+    Ips4oClassification,
+
+    /// <summary>
+    /// Ips4oSort moving the full blocks to their buckets through two swap blocks, reclassifying the first element of each block.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=block size in elements
+    /// </summary>
+    Ips4oBlockPermutation,
+
+    /// <summary>
+    /// Ips4oSort completing one bucket: the elements of a block that crossed its start, the overflow block and its buffer block
+    /// fill the bucket's partial blocks.
+    /// param1=bucket start (inclusive), param2=bucket end-1 (inclusive), param3=bucket index
+    /// </summary>
+    Ips4oCleanup,
+
+    /// <summary>
+    /// Ips4oSort sorting a range by its own insertion sort: the whole input up to 256 elements, a range up to 32 elements, and every
+    /// bucket of a partitioning step on at most 4,096 elements.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    Ips4oBaseCase,
 }

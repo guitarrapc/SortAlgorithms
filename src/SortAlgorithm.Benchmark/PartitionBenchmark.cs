@@ -125,6 +125,12 @@ public class PartitionBenchmark
     }
 
     [Benchmark]
+    public void Ips4oSort()
+    {
+        SortAlgorithm.Algorithms.Ips4oSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void FluxSort()
     {
         SortAlgorithm.Algorithms.FluxSort.Sort(_buffers.Next().AsSpan());

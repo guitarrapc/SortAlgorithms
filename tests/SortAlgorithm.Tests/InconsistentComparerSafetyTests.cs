@@ -17,14 +17,15 @@ public class InconsistentComparerSafetyTests
     enum Sorter
     {
         Quad, QuadLimitedSwap, Flux, Crum, Blit, Pdq, PdqBranchless, Intro, IntroDotnet, Std,
-        Quick, QuickMedian3, QuickMedian9, Quick3way, Stable, BidirectionalStable, PairInsertion, Drift, Glide, Ipn, DualPivot, Destswap, Block,
+        Quick, QuickMedian3, QuickMedian9, Quick3way, Stable, BidirectionalStable, PairInsertion, Drift, Glide, Ipn, DualPivot, Destswap, Block, Ips4o,
     }
 
     /// <summary>
-    /// QuadSort and the sorts that hand ranges to it (FluxSort, CrumSort, BlitSort) may repeat or lose elements under a broken comparer.
-    /// The others document that the range keeps its elements.
+    /// QuadSort and the sorts that hand ranges to it (FluxSort, CrumSort, BlitSort) may repeat or lose elements under a broken comparer,
+    /// and so may Ips4oSort, whose block permutation trusts a block's first element to classify as before. The others document that the
+    /// range keeps its elements.
     /// </summary>
-    static bool KeepsElements(Sorter sorter) => sorter is not (Sorter.Quad or Sorter.QuadLimitedSwap or Sorter.Flux or Sorter.Crum or Sorter.Blit);
+    static bool KeepsElements(Sorter sorter) => sorter is not (Sorter.Quad or Sorter.QuadLimitedSwap or Sorter.Flux or Sorter.Crum or Sorter.Blit or Sorter.Ips4o);
 
     /// <summary>Thrown by a watching comparer, so that a cursor that has left the range stops before it can leave the buffer too.</summary>
     sealed class GuardCellReadException : Exception;
@@ -195,6 +196,7 @@ public class InconsistentComparerSafetyTests
             case Sorter.DualPivot: DualPivotQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.Destswap: DestswapStableQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.Block: BlockQuickSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Ips4o: Ips4oSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             default: throw new ArgumentOutOfRangeException(nameof(sorter));
         }
     }

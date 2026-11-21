@@ -584,6 +584,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(Ips4oSort))]
+    public void SetupIps4oSort() => Setup(nameof(Ips4oSort));
+
+    [Benchmark]
+    public int Ips4oSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.Ips4oSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(LibrarySort))]
     public void SetupLibrarySort() => Setup(nameof(LibrarySort));
 

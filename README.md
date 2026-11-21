@@ -2615,6 +2615,7 @@ UnrollFactor=1  WarmupCount=2
 - [Intro Sort](./src/SortAlgorithm/Algorithms/Partition/IntroSort.cs)
 - [Intro Sort (Dotnet)](./src/SortAlgorithm/Algorithms/Partition/IntroSortDotnet.cs)
 - [Ipnsort](./src/SortAlgorithm/Algorithms/Partition/Ipnsort.cs)
+- [In-place Super Scalar Samplesort (IS⁴o)](./src/SortAlgorithm/Algorithms/Partition/Ips4oSort.cs)
 - [Pattern-Defeating Quick Sort](./src/SortAlgorithm/Algorithms/Partition/PDQSort.cs)
 - [PDQ Sort Branchless](./src/SortAlgorithm/Algorithms/Partition/PDQSortBranchless.cs)
 - [Quick Sort](./src/SortAlgorithm/Algorithms/Partition/QuickSort.cs)
