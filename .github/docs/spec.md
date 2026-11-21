@@ -16,7 +16,7 @@ The library favors explicit generic contracts because sorting performance depend
 | In-place sorting over `Span<T>` | [Sorting API](specs/sorting_api.md) |
 | Natural-order and custom-comparer overloads | [Sorting API](specs/sorting_api.md) |
 | Statistics and visualization callbacks | [Observation](specs/observation.md) |
-| Performance, allocation, JIT, and algorithm-level optimization | [Performance](specs/performance.md) |
+| Performance guarantees, allocation, and required evidence | [Performance](specs/performance.md) |
 | Correctness and stability expectations | [Validation](specs/validation.md) |
 
 The implemented algorithm catalog is maintained in [README.md](../../README.md#implemented-sort-algorithm).
@@ -34,7 +34,7 @@ The implemented algorithm catalog is maintained in [README.md](../../README.md#i
 - [specs/sorting_api.md](specs/sorting_api.md) — common sorting contract and overload families
 - [specs/architecture.md](specs/architecture.md) — responsibilities, execution modes, and design decisions
 - [specs/observation.md](specs/observation.md) — context events and buffer identity
-- [specs/performance.md](specs/performance.md) — performance contract, adopted optimizations, evidence, and lessons learned
+- [specs/performance.md](specs/performance.md) — performance guarantees, required evidence, and vector-code policy
 - [specs/validation.md](specs/validation.md) — required behavioral evidence
 - [references/implementation_guidelines.md](references/implementation_guidelines.md) — contributor implementation patterns
 - [references/sandbox.md](references/sandbox.md) — standalone experiment workflow

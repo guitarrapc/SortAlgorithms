@@ -47,7 +47,7 @@ Prefer no auxiliary storage when the algorithm permits it. For required storage,
 - Keep loops simple and cache repeatedly used values.
 - Use aggressive inlining only for small, measured hot helpers.
 - Avoid LINQ, closures, iterator state machines, boxing, exception-driven control flow, and per-element allocation in hot paths.
-- Use a small-sort fallback only when benchmarks justify the threshold for that algorithm.
+- Add a small-sort stage only when the algorithm's definition contains one, and take its threshold from the definition or its reference source. A benchmark result does not justify adding or retuning one (see the Core Principles in [AGENTS.md](../../../AGENTS.md)).
 
 ## Documentation Checklist
 

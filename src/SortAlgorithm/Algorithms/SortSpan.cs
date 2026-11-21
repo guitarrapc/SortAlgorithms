@@ -642,7 +642,7 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
 #endif
     }
 
-    // NetWasm 0.13 benefits from inlining the reporting helpers. Keep standard .NET
+    // NetWasm builds benefit from inlining the reporting helpers. Keep standard .NET
     // heuristics: forcing these helpers inline regressed the measured SortVivo API.
     /// <summary>Announces the reads and the comparison for two indices of this span.</summary>
 #if NETWASM

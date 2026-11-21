@@ -7,8 +7,8 @@
 /// Use this context to gather statistics when implementing or analyzing sorting algorithms. The
 /// collected counts can be used to evaluate algorithm efficiency or compare different sorting strategies.
 /// Counters use plain (non-atomic) increments: every sort in this library is single-threaded, and
-/// Interlocked operations cost 10-20x a plain increment (lock-prefixed RMW + full memory barrier),
-/// which dominated instrumented-run time. Do not share one instance across concurrently running sorts;
+/// Interlocked operations (lock-prefixed RMW + full memory barrier) cost far more than a plain increment
+/// and dominated instrumented-run time. Do not share one instance across concurrently running sorts;
 /// use one instance per sort (or per thread) instead.
 /// </remarks>
 public sealed class StatisticsContext : ISortContext
