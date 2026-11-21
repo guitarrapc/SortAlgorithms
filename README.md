@@ -1,4 +1,4 @@
-# SortAlgorithms
+﻿# SortAlgorithms
 
 This repository shows implementation for the Major Sort Algorithm.
 Aim not to use LINQ or similar ease to use, but memory unefficient technique.
@@ -2586,7 +2586,7 @@ UnrollFactor=1  WarmupCount=2
   - Iterative
   - Recursive
 - [Shift Sort](./src/SortAlgorithm/Algorithms/Merge/ShiftSort.cs)
-- [SIMD Merge Sort (Chhugani)](./src/SortAlgorithm/Algorithms/Merge/SimdMergeSort.cs)
+- [Merge Sort (SIMD, Chhugani)](./src/SortAlgorithm/Algorithms/Merge/SimdMergeSort.cs)
 - [Spin Sort](./src/SortAlgorithm/Algorithms/Merge/SpinSort.cs)
 - [std::stable_sort (LLVM)](./src/SortAlgorithm/Algorithms/Merge/StdStableSort.cs)
 - [Strand Sort](./src/SortAlgorithm/Algorithms/Merge/StrandSort.cs)
@@ -2624,8 +2624,8 @@ UnrollFactor=1  WarmupCount=2
 - [Quick Sort (Median of 3)](./src/SortAlgorithm/Algorithms/Partition/QuickSortMedian3.cs)
 - [Quick Sort (Median of 9)](./src/SortAlgorithm/Algorithms/Partition/QuickSortMedian9.cs)
 - [Sample Sort](./src/SortAlgorithm/Algorithms/Partition/SampleSort.cs)
-- [SIMD Quick Sort (Bramas)](./src/SortAlgorithm/Algorithms/Partition/SimdQuickSort.cs)
-- [Stable Quick Sort](./src/SortAlgorithm/Algorithms/Partition/StableQuickSort.cs)
+- [Quick Sort (SIMD, Bramas)](./src/SortAlgorithm/Algorithms/Partition/SimdQuickSort.cs)
+- [Quick Sort (Stable)](./src/SortAlgorithm/Algorithms/Partition/StableQuickSort.cs)
 - [std::sort (LLVM)](./src/SortAlgorithm/Algorithms/Partition/StdSort.cs)
 
 ### Distribution
