@@ -1,13 +1,17 @@
-// Prints the expected comparison traces of ScandumReferenceTraceTests from the C sources of
-// quadsort and fluxsort 1.2.1.3. Keep the input generator and the case lists in step with that test.
+// Prints the expected comparison traces of ScandumReferenceTraceTests from the C sources of quadsort and fluxsort 1.2.1.3,
+// crumsort 1.2.1.3 and blitsort 1.2.1.2. Keep the input generator and the case lists in step with that test.
 //
-// Build in a folder holding copies of fluxsort.c, fluxsort.h, quadsort.c and quadsort.h from the fluxsort repository.
-// The reference starts the pivot sample at an offset taken from a stack address. FluxSort starts it at div / 2,
-// so the copy of fluxsort.c needs the same change:
+// Build in a folder holding copies of fluxsort.c, fluxsort.h, quadsort.c and quadsort.h from the fluxsort repository, crumsort.c and
+// crumsort.h from the crumsort repository, and blitsort.c and blitsort.h from the blitsort repository; the three repositories carry
+// the same quadsort 1.2.1.3. Fluxsort and crumsort start their pivot sample at an offset taken from a stack address. FluxSort starts
+// it at div / 2 and CrumSort at the middle of the last stride, so the copies need the same changes:
 //
 //   sed -i 's/\r$//' *.c *.h
 //   sed -i 's|pta = ptx + (size_t) &div / 16 % div;|pta = ptx + div / 2;|' fluxsort.c
+//   sed -i 's|pta = array + nmemb - 1 - (size_t) &div / 64 % div;|pta = array + nmemb - 1 - div / 2;|' crumsort.c
 //   gcc -O2 -w -I. -o trace <path to this file> && ./trace
+//
+// Work in a directory on the WSL file system rather than under /mnt/c, where sed -i once left NUL bytes in a source file.
 
 #define CAPPED_N 4500000
 #define CAPPED_SAW 2097152
@@ -30,6 +34,8 @@ static inline int traced_greater(int64_t a, int64_t b)
 
 #define cmp(a,b) traced_greater((int64_t) *(a), (int64_t) *(b))
 #include "fluxsort.h"
+#include "crumsort.h"
+#include "blitsort.h"
 
 static uint64_t rng;
 
@@ -126,7 +132,7 @@ static const shape_t core_shapes[] =
 static const shape_t capped_shapes[] = { {8,CAPPED_SAW}, };
 
 enum { PLAN_CORE, PLAN_ALL, PLAN_ALL_SOME_QUARTERS, PLAN_ALL_EVERY_QUARTER, PLAN_CAPPED };
-enum { SORT_QUAD, SORT_FLUX };
+enum { SORT_QUAD, SORT_FLUX, SORT_CRUM, SORT_BLIT };
 
 typedef struct { int sort; int64_t first, last, step, swap; int plan; } row_t;
 
@@ -141,6 +147,14 @@ static const row_t rows[] =
 	{SORT_FLUX,380,392,1,0,PLAN_ALL_SOME_QUARTERS},{SORT_FLUX,510,524,1,0,PLAN_ALL_SOME_QUARTERS},{SORT_FLUX,1000,1000,1,0,PLAN_ALL_SOME_QUARTERS},{SORT_FLUX,2000,2000,1,0,PLAN_ALL},
 	{SORT_FLUX,2044,2052,1,0,PLAN_ALL_SOME_QUARTERS},{SORT_FLUX,4095,4097,1,0,PLAN_ALL_SOME_QUARTERS},{SORT_FLUX,8190,8200,1,0,PLAN_ALL_SOME_QUARTERS},
 	{SORT_FLUX,20000,20000,1,0,PLAN_CORE},{SORT_FLUX,32768,32769,1,0,PLAN_CORE},{SORT_FLUX,100000,100000,1,0,PLAN_CORE},
+	{SORT_CRUM,2,256,17,0,PLAN_ALL},{SORT_CRUM,257,264,1,0,PLAN_ALL_SOME_QUARTERS},{SORT_CRUM,500,520,4,0,PLAN_ALL_SOME_QUARTERS},
+	{SORT_CRUM,1000,1000,1,0,PLAN_ALL_SOME_QUARTERS},{SORT_CRUM,2044,2052,4,0,PLAN_ALL_SOME_QUARTERS},{SORT_CRUM,4095,4097,1,0,PLAN_ALL},
+	{SORT_CRUM,8190,8200,5,0,PLAN_ALL_SOME_QUARTERS},{SORT_CRUM,20000,20000,1,0,PLAN_CORE},{SORT_CRUM,100000,100000,1,0,PLAN_CORE},
+	{SORT_CRUM,300000,300000,1,0,PLAN_CORE},
+	{SORT_BLIT,2,132,13,0,PLAN_ALL},{SORT_BLIT,133,140,1,0,PLAN_ALL_SOME_QUARTERS},{SORT_BLIT,500,524,4,0,PLAN_ALL_SOME_QUARTERS},
+	{SORT_BLIT,1000,1000,1,0,PLAN_ALL_SOME_QUARTERS},{SORT_BLIT,2044,2052,4,0,PLAN_ALL_SOME_QUARTERS},{SORT_BLIT,4095,4097,1,0,PLAN_ALL},
+	{SORT_BLIT,8190,8200,5,0,PLAN_ALL_SOME_QUARTERS},{SORT_BLIT,20000,20000,1,0,PLAN_CORE},{SORT_BLIT,100000,100000,1,0,PLAN_CORE},
+	{SORT_BLIT,300000,300000,1,0,PLAN_CORE},
 };
 
 #define COUNT_OF(x) (sizeof(x) / sizeof((x)[0]))
@@ -161,12 +175,15 @@ static void run(const row_t *row, int shape, int64_t p, int64_t p2, int64_t n)
 	generate(shape, p, p2, n, input);
 
 	if (row->sort == SORT_FLUX) fluxsort_int64(input, n, NULL);
+	else if (row->sort == SORT_CRUM) crumsort_int64(input, n, NULL);
+	else if (row->sort == SORT_BLIT) blitsort_int64(input, n, NULL);
 	else if (row->swap == 0) quadsort_int64(input, n, NULL);
 	else quadsort_swap_int64(input, swap_memory, row->swap, n, NULL);
 
 	for (int64_t i = 1; i < n; i++)
 	{
-		if (input[i - 1] >= input[i]) { fprintf(stderr, "unsorted: shape %d p %lld n %lld\n", shape, (long long) p, (long long) n); exit(1); }
+		// Crumsort is unstable, so only its keys must be in order; the others must also keep equal keys in input order.
+		if (row->sort == SORT_CRUM ? (input[i - 1] >> 28) > (input[i] >> 28) : input[i - 1] >= input[i]) { fprintf(stderr, "unsorted: shape %d p %lld n %lld\n", shape, (long long) p, (long long) n); exit(1); }
 	}
 }
 
@@ -201,7 +218,7 @@ int main(void)
 			}
 		}
 		printf("        (%s, %lld, %lld, %lld, %lld, Plan.%s, %lluUL, 0x%016llXUL),\n",
-			row->sort == SORT_QUAD ? "Sorter.Quad" : "Sorter.Flux", (long long) row->first, (long long) row->last, (long long) row->step, (long long) row->swap,
+			row->sort == SORT_QUAD ? "Sorter.Quad" : row->sort == SORT_FLUX ? "Sorter.Flux" : row->sort == SORT_CRUM ? "Sorter.Crum" : "Sorter.Blit", (long long) row->first, (long long) row->last, (long long) row->step, (long long) row->swap,
 			row->plan == PLAN_CORE ? "Core" : row->plan == PLAN_ALL ? "All" : row->plan == PLAN_ALL_SOME_QUARTERS ? "AllSomeQuarters" : row->plan == PLAN_ALL_EVERY_QUARTER ? "AllEveryQuarter" : "Capped",
 			(unsigned long long) trace_count, (unsigned long long) trace_hash);
 	}

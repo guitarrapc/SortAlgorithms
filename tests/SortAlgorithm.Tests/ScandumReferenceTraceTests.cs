@@ -4,10 +4,10 @@ using SortAlgorithm.Contexts;
 namespace SortAlgorithm.Tests;
 
 /// <summary>
-/// QuadSort and FluxSort are ports, so the C sources of quadsort and fluxsort 1.2.1.3 define what they must do. Each row holds the
-/// comparison count and the hash of every compared pair, in order, that the C sources produce for the same inputs, with fluxsort's pivot
-/// sample offset replaced by FluxSort's. A change to which elements are compared, or in what order, changes that trace even when the output
-/// stays sorted.
+/// QuadSort, FluxSort, CrumSort and BlitSort are ports, so the C sources of quadsort and fluxsort 1.2.1.3, crumsort 1.2.1.3 and blitsort
+/// 1.2.1.2 define what they must do. Each row holds the comparison count and the hash of every compared pair, in order, that the C sources
+/// produce for the same inputs, with the pivot sample offsets of fluxsort and crumsort replaced by those of the ports. A change to which
+/// elements are compared, or in what order, changes that trace even when the output stays sorted.
 /// sandbox/ScandumReferenceTrace/trace.c prints the rows.
 /// </summary>
 public class ScandumReferenceTraceTests
@@ -17,7 +17,7 @@ public class ScandumReferenceTraceTests
     const int KeyShift = 28;
     const int CappedSawPeriod = 2_097_152;
 
-    enum Sorter { Quad, Flux }
+    enum Sorter { Quad, Flux, Crum, Blit }
 
     enum Plan { Core, All, AllSomeQuarters, AllEveryQuarter, Capped }
 
@@ -69,6 +69,26 @@ public class ScandumReferenceTraceTests
         (Sorter.Flux, 20000, 20000, 1, 0, Plan.Core, 2235036UL, 0x1D2BCE24E556A92CUL),
         (Sorter.Flux, 32768, 32769, 1, 0, Plan.Core, 7708274UL, 0x8F99BDDBD573964EUL),
         (Sorter.Flux, 100000, 100000, 1, 0, Plan.Core, 12665845UL, 0xCB12EC0CE8A67F38UL),
+        (Sorter.Crum, 2, 256, 17, 0, Plan.All, 583133UL, 0x3AB025B375EAC2B0UL),
+        (Sorter.Crum, 257, 264, 1, 0, Plan.AllSomeQuarters, 1436371UL, 0xF62A6C32BB2A90C7UL),
+        (Sorter.Crum, 500, 520, 4, 0, Plan.AllSomeQuarters, 1905150UL, 0xA64D40D31117DFECUL),
+        (Sorter.Crum, 1000, 1000, 1, 0, Plan.AllSomeQuarters, 642840UL, 0xAF110A2555C2534FUL),
+        (Sorter.Crum, 2044, 2052, 4, 0, Plan.AllSomeQuarters, 4291752UL, 0xBD173B172A8EAF0CUL),
+        (Sorter.Crum, 4095, 4097, 1, 0, Plan.All, 6996799UL, 0x8644FB68A33EFE62UL),
+        (Sorter.Crum, 8190, 8200, 5, 0, Plan.AllSomeQuarters, 19151495UL, 0xBBB1D08C3BAFB443UL),
+        (Sorter.Crum, 20000, 20000, 1, 0, Plan.Core, 2633373UL, 0xBE051503A0DCB233UL),
+        (Sorter.Crum, 100000, 100000, 1, 0, Plan.Core, 13679208UL, 0x392248526197BD19UL),
+        (Sorter.Crum, 300000, 300000, 1, 0, Plan.Core, 45497093UL, 0xBA5E57546A728634UL),
+        (Sorter.Blit, 2, 132, 13, 0, Plan.All, 210248UL, 0x00C825BED1F4DC29UL),
+        (Sorter.Blit, 133, 140, 1, 0, Plan.AllSomeQuarters, 573501UL, 0x6129599A041341B7UL),
+        (Sorter.Blit, 500, 524, 4, 0, Plan.AllSomeQuarters, 2245933UL, 0x0DC148FE75289795UL),
+        (Sorter.Blit, 1000, 1000, 1, 0, Plan.AllSomeQuarters, 648474UL, 0xD0E1100610D6EB72UL),
+        (Sorter.Blit, 2044, 2052, 4, 0, Plan.AllSomeQuarters, 4344755UL, 0x2D7B42359C017E7DUL),
+        (Sorter.Blit, 4095, 4097, 1, 0, Plan.All, 6970251UL, 0x61B1C196DC15A7B4UL),
+        (Sorter.Blit, 8190, 8200, 5, 0, Plan.AllSomeQuarters, 19362897UL, 0x25732458DA45B7EFUL),
+        (Sorter.Blit, 20000, 20000, 1, 0, Plan.Core, 2630125UL, 0x89928A129B93488EUL),
+        (Sorter.Blit, 100000, 100000, 1, 0, Plan.Core, 14186794UL, 0x0D458C6E6B4A0D70UL),
+        (Sorter.Blit, 300000, 300000, 1, 0, Plan.Core, 47063785UL, 0x16C8120CD1ED518DUL),
     ];
 
     sealed class Trace
@@ -214,19 +234,30 @@ public class ScandumReferenceTraceTests
         }
     }
 
-    /// <summary>Runs one input and returns a description of the failure when its result is not ordered by key and then by position.</summary>
+    /// <summary>
+    /// Runs one input and returns a description of the failure when its result is not ordered by key and, for the stable sorts, then by
+    /// position.
+    /// </summary>
     static string? RunCase(Sorter sorter, int swap, int shape, long p, long p2, long[] input, Trace trace)
     {
         new InputGenerator(shape, p, p2, input.Length).Fill(input);
         var comparer = new TraceComparer(trace);
 
-        if (sorter == Sorter.Flux) FluxSort.Sort(input.AsSpan(), comparer, NullContext.Default);
-        else if (swap == 0) QuadSort.Sort(input.AsSpan(), comparer, NullContext.Default);
-        else QuadSort.SortWithSwapSize(input.AsSpan(), swap, comparer, NullContext.Default);
+        switch (sorter)
+        {
+            case Sorter.Flux: FluxSort.Sort(input.AsSpan(), comparer, NullContext.Default); break;
+            case Sorter.Crum: CrumSort.Sort(input.AsSpan(), comparer, NullContext.Default); break;
+            case Sorter.Blit: BlitSort.Sort(input.AsSpan(), comparer, NullContext.Default); break;
+            default:
+                if (swap == 0) QuadSort.Sort(input.AsSpan(), comparer, NullContext.Default);
+                else QuadSort.SortWithSwapSize(input.AsSpan(), swap, comparer, NullContext.Default);
+                break;
+        }
 
         for (var i = 1; i < input.Length; i++)
         {
-            if (input[i - 1] >= input[i]) return $"shape {shape}, p {p}, p2 {p2}, n {input.Length}: unsorted or unstable at {i}";
+            var outOfOrder = sorter == Sorter.Crum ? input[i - 1] >> KeyShift > input[i] >> KeyShift : input[i - 1] >= input[i];
+            if (outOfOrder) return $"shape {shape}, p {p}, p2 {p2}, n {input.Length}: unsorted or unstable at {i}";
         }
         return null;
     }
@@ -286,4 +317,10 @@ public class ScandumReferenceTraceTests
 
     [Test]
     public Task FluxSortMakesTheReferenceComparisons() => VerifyRows(Sorter.Flux);
+
+    [Test]
+    public Task CrumSortMakesTheReferenceComparisons() => VerifyRows(Sorter.Crum);
+
+    [Test]
+    public Task BlitSortMakesTheReferenceComparisons() => VerifyRows(Sorter.Blit);
 }

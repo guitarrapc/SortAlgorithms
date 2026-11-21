@@ -16,14 +16,15 @@ public class InconsistentComparerSafetyTests
 
     enum Sorter
     {
-        Quad, QuadLimitedSwap, Flux, Pdq, PdqBranchless, Intro, IntroDotnet, Std,
+        Quad, QuadLimitedSwap, Flux, Crum, Blit, Pdq, PdqBranchless, Intro, IntroDotnet, Std,
         Quick, QuickMedian3, QuickMedian9, Quick3way, Stable, BidirectionalStable, PairInsertion, Drift, Glide, Ipn, DualPivot, Destswap, Block,
     }
 
     /// <summary>
-    /// QuadSort and FluxSort may repeat or lose elements under a broken comparer. The others document that the range keeps its elements.
+    /// QuadSort and the sorts that hand ranges to it (FluxSort, CrumSort, BlitSort) may repeat or lose elements under a broken comparer.
+    /// The others document that the range keeps its elements.
     /// </summary>
-    static bool KeepsElements(Sorter sorter) => sorter is not (Sorter.Quad or Sorter.QuadLimitedSwap or Sorter.Flux);
+    static bool KeepsElements(Sorter sorter) => sorter is not (Sorter.Quad or Sorter.QuadLimitedSwap or Sorter.Flux or Sorter.Crum or Sorter.Blit);
 
     /// <summary>Thrown by a watching comparer, so that a cursor that has left the range stops before it can leave the buffer too.</summary>
     sealed class GuardCellReadException : Exception;
@@ -174,6 +175,8 @@ public class InconsistentComparerSafetyTests
             case Sorter.Quad: QuadSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.QuadLimitedSwap: QuadSort.SortWithSwapSize(buffer.AsSpan(first, last - first), 64, comparer, context); break;
             case Sorter.Flux: FluxSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Crum: CrumSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
+            case Sorter.Blit: BlitSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.Pdq: PDQSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.PdqBranchless: PDQSortBranchless.Sort(buffer.AsSpan(), first, last, comparer, context); break;
             case Sorter.Intro: IntroSort.Sort(buffer.AsSpan(), first, last, comparer, context); break;

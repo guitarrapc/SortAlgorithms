@@ -70,6 +70,12 @@
 ///   <item><term>FluxSortQuadsort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>FluxSortMerge</term><description>start (inclusive) / end of first half (inclusive) / end-1 (inclusive)</description></item>
 ///   <item><term>SimdQuickSortBitonicSort</term><description>start (inclusive) / end-1 (inclusive) / lanes per vector</description></item>
+///   <item><term>CrumSortAnalyze, CrumSortPartition, CrumSortReversePartition, CrumSortQuadsort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>CrumSortPivotSample</term><description>start (inclusive) / end-1 (inclusive) / sampleCount</description></item>
+///   <item><term>CrumSortMerge</term><description>start (inclusive) / end of first half (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>BlitSortAnalyze, BlitSortPartition, BlitSortReversePartition, BlitSortQuadsort</term><description>start (inclusive) / end-1 (inclusive)</description></item>
+///   <item><term>BlitSortPivotSample</term><description>start (inclusive) / end-1 (inclusive) / sampleCount</description></item>
+///   <item><term>BlitSortMerge</term><description>start (inclusive) / end of first half (inclusive) / end-1 (inclusive)</description></item>
 /// </list>
 /// </remarks>
 public enum SortPhase
@@ -835,4 +841,82 @@ public enum SortPhase
     /// param1=start (inclusive), param2=end-1 (inclusive), param3=lanes per vector (1 on the scalar path)
     /// </summary>
     SimdQuickSortBitonicSort,
+
+    /// <summary>
+    /// CrumSort analysis: counting descending pairs and streaks in each quarter, detecting sorted input, and reversing strictly descending quarters.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    CrumSortAnalyze,
+
+    /// <summary>
+    /// CrumSort fulcrum partition: the first and last 32 elements are held in swap memory, and every element after them is written to the
+    /// next free slot at both ends of the range, the end it belongs to keeping it. The pivot is held aside and then put at the boundary.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    CrumSortPartition,
+
+    /// <summary>
+    /// CrumSort reverse partition: separating the elements less than the previous pivot from those equal to it, which are then in their final place.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    CrumSortReversePartition,
+
+    /// <summary>
+    /// CrumSort pivot sample: the median of three medians of three for up to 2,048 elements; above that, an evenly spaced sample of about the
+    /// cube root of the range, exchanged to its front and sorted there in two halves by quadsort. Announced again after those quadsort calls.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=sampleCount
+    /// </summary>
+    CrumSortPivotSample,
+
+    /// <summary>
+    /// CrumSort handing a range to quadsort with its swap memory: a small input, a streaky quarter, a short or unbalanced partition, or a
+    /// range whose pivot sample marks low-cardinality data.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    CrumSortQuadsort,
+
+    /// <summary>
+    /// CrumSort merging the sorted quarters in place with rotations, skipping merges whose boundary is in order.
+    /// param1=start (inclusive), param2=start of the second half - 1 (inclusive end of the first half), param3=end-1 (inclusive)
+    /// </summary>
+    CrumSortMerge,
+
+    /// <summary>
+    /// BlitSort analysis: counting descending pairs and streaks in each quarter, detecting sorted input, and reversing strictly descending quarters.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    BlitSortAnalyze,
+
+    /// <summary>
+    /// BlitSort partition: stably splitting the range into the elements not greater than the pivot and the greater ones. A piece that fits in
+    /// swap memory moves its greater elements there and back; a longer range is split in halves, each partitioned, and the middle rotated.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    BlitSortPartition,
+
+    /// <summary>
+    /// BlitSort reverse partition: stably separating the elements less than the previous pivot from those equal to it.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    BlitSortReversePartition,
+
+    /// <summary>
+    /// BlitSort pivot sample: the pseudomedian of nine for up to 2,048 elements; above that, an evenly spaced sample of about the cube root of
+    /// the range copied into swap memory, trimmed to its middle half and sorted in two halves by quadsort. Announced again after those calls.
+    /// param1=start (inclusive), param2=end-1 (inclusive), param3=sampleCount
+    /// </summary>
+    BlitSortPivotSample,
+
+    /// <summary>
+    /// BlitSort handing a range to quadsort: a small input, a streaky quarter, a short or unbalanced partition, or a range whose pivot sample
+    /// marks low-cardinality data.
+    /// param1=start (inclusive), param2=end-1 (inclusive)
+    /// </summary>
+    BlitSortQuadsort,
+
+    /// <summary>
+    /// BlitSort merging the sorted quarters in place with rotations, skipping merges whose boundary is in order.
+    /// param1=start (inclusive), param2=start of the second half - 1 (inclusive end of the first half), param3=end-1 (inclusive)
+    /// </summary>
+    BlitSortMerge,
 }

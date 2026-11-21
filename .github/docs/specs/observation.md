@@ -54,6 +54,8 @@ Index arrays and occupancy bitsets are algorithm metadata and do not become elem
 | Radsort | Scratch blocks: the head-start output blocks and the input's tail, initialized by the tail copy and by pass writes | None |
 | QuadSort | Swap memory for the merges, initialized by merge writes and range copies | The 32-element stack array the quad swap and the small-input tail swap merge through |
 | FluxSort | Swap memory: the side each partition sets aside, pivot samples, merge space for quadsort and the quarter merges, and the pivot stack | Quadsort's 32-element stack array |
+| CrumSort | Swap memory of 512 elements (n for up to 256): the 64 elements each fulcrum partition sets aside, quadsort's swap, and the temporary of the pivot sample exchange | Quadsort's 32-element stack array |
+| BlitSort | Swap memory of 512 elements: the greater side of each partition piece, the pivot samples and their trims, quadsort's swap, and the rotations' temporary | Quadsort's 32-element stack array |
 | TournamentSort | Winner tree of element indices (metadata: reported as index writes carrying the index) | Output area: each winner is written to the next position, and the whole area is copied back over the input at the end |
 
 Element copies contribute their full length to read and write counts. These counts include
@@ -88,7 +90,7 @@ Announcing costs nothing on the unobserved path: `NullContext.OnPhase` is an emp
 - Consumers must not assume that two different algorithms produce identical event sequences for the same input.
 - Consumers must not assume that a `RadixPass` is followed by `DistributionBucket` reports. `RotateLSDRadixSort` sorts each digit by merging in place, so no bucket occupies a known span until the pass has finished moving elements, and it reports none. `Radsort` reports none either: a bucket is a chain of blocks scattered over the span and the scratch buffer, never a contiguous range.
 - Consumers must not assume that the buffers hold the elements in their current order between passes. `Radsort` keeps that order in a block permutation, which is bookkeeping rather than an element operation, so its passes write each element into whichever block its bucket drew, and the span becomes ordered only during the closing `DistributionWrite` phase, which copies the blocks back.
-- Consumers must not assume that a written value stays where it was written until the algorithm moves it on purpose. `QuadSort` and `FluxSort` run their branchless merge and partition steps in the reference's write-both form under every context: each step writes both candidates, and the one not taken is overwritten or left unused. Every such write is a real store and is announced, so a buffer briefly shows a duplicate of an element that is also still elsewhere; the position's final value is the last write to it before the merge or partition ends.
+- Consumers must not assume that a written value stays where it was written until the algorithm moves it on purpose. `QuadSort`, `FluxSort`, `CrumSort` and `BlitSort` run their branchless merge and partition steps in the reference's write-both form under every context: each step writes both candidates, and the one not taken is overwritten or left unused. `CrumSort`'s fulcrum partition writes both candidates into the range itself, one at each end. Every such write is a real store and is announced, so a buffer briefly shows a duplicate of an element that is also still elsewhere; the position's final value is the last write to it before the merge or partition ends.
 
 ## Lessons Learned
 

@@ -903,6 +903,18 @@ internal readonly ref struct SortSpan<T, TComparer, TContext>
     }
 
     /// <summary>
+    /// Returns true if <paramref name="value"/> is strictly greater than the element at index <paramref name="j"/>, which is read and
+    /// returned through <paramref name="element"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsValueGreaterThan(T value, int j, out T element)
+    {
+        if (typeof(TContext) != typeof(NullContext)) return ReportCompareValue(value, j, out element) > 0;
+        element = ReadUnobserved(j);
+        return IsGreaterThan(value, element);
+    }
+
+    /// <summary>
     /// Returns true if <paramref name="value"/> is greater than or equal to the element at index <paramref name="j"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

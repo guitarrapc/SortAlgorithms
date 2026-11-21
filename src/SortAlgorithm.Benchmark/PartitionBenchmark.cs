@@ -131,6 +131,18 @@ public class PartitionBenchmark
     }
 
     [Benchmark]
+    public void CrumSort()
+    {
+        SortAlgorithm.Algorithms.CrumSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
+    public void BlitSort()
+    {
+        SortAlgorithm.Algorithms.BlitSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    [Benchmark]
     public void DotnetSort()
     {
         _buffers.Next().AsSpan().Sort();

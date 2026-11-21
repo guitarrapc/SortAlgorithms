@@ -1630,7 +1630,7 @@ public static class QuadSort
     /// split in half, the right run is split where the left run's upper half begins, the middle two pieces are exchanged by a rotation,
     /// and both resulting pairs of runs are merged the same way until they fit in swap memory.
     /// </summary>
-    static void RotateMergeBlock<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int pa, SortSpan<T, TComparer, TContext> w, int pw, int swapSize, int lblock, int right)
+    internal static void RotateMergeBlock<T, TComparer, TContext>(SortSpan<T, TComparer, TContext> a, int pa, SortSpan<T, TComparer, TContext> w, int pw, int swapSize, int lblock, int right)
         where TComparer : IComparer<T>
         where TContext : ISortContext
     {

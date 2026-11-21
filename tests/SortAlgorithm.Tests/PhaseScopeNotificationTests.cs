@@ -76,6 +76,11 @@ public class PhaseScopeNotificationTests
         // 委譲先が quadsort のコアのもの。5000 要素ではピボット標本の整列も quadsort に渡る
         yield return () => new PhaseCase("FluxSort", static (a, c) => FluxSort.Sort(a.AsSpan(), c), 200);
         yield return () => new PhaseCase("FluxSort", static (a, c) => FluxSort.Sort(a.AsSpan(), c), 5000);
+        // 委譲先が quadsort のコアのもの。5000 要素ではピボット標本の整列も quadsort に渡る
+        yield return () => new PhaseCase("CrumSort", static (a, c) => CrumSort.Sort(a.AsSpan(), c), 200);
+        yield return () => new PhaseCase("CrumSort", static (a, c) => CrumSort.Sort(a.AsSpan(), c), 5000);
+        yield return () => new PhaseCase("BlitSort", static (a, c) => BlitSort.Sort(a.AsSpan(), c), 200);
+        yield return () => new PhaseCase("BlitSort", static (a, c) => BlitSort.Sort(a.AsSpan(), c), 5000);
     }
 
     /// <summary>

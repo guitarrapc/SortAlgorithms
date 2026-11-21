@@ -2606,7 +2606,9 @@ UnrollFactor=1  WarmupCount=2
 
 ### Partition
 - [Quick Sort (Bidirectional Stable)](./src/SortAlgorithm/Algorithms/Partition/BidirectionalStableQuickSort.cs)
+- [Blit Sort](./src/SortAlgorithm/Algorithms/Partition/BlitSort.cs)
 - [Block Quick Sort](./src/SortAlgorithm/Algorithms/Partition/BlockQuickSort.cs)
+- [Crum Sort](./src/SortAlgorithm/Algorithms/Partition/CrumSort.cs)
 - [Quick Sort (Destswap Stable)](./src/SortAlgorithm/Algorithms/Partition/DestswapStableQuickSort.cs)
 - [Quick Sort (Dual Pivot)](./src/SortAlgorithm/Algorithms/Partition/DualPivotQuickSort.cs)
 - [Flux Sort](./src/SortAlgorithm/Algorithms/Partition/FluxSort.cs)

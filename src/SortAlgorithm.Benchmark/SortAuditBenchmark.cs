@@ -144,6 +144,17 @@ public class SortAuditBenchmark : SortAuditBase
         return values[values.Length / 2];
     }
 
+    [GlobalSetup(Target = nameof(BlitSort))]
+    public void SetupBlitSort() => Setup(nameof(BlitSort));
+
+    [Benchmark]
+    public int BlitSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.BlitSort.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
     [GlobalSetup(Target = nameof(BlockMergeSort))]
     public void SetupBlockMergeSort() => Setup(nameof(BlockMergeSort));
 
@@ -328,6 +339,17 @@ public class SortAuditBenchmark : SortAuditBase
     {
         var values = buffers.Next();
         SortAlgorithm.Algorithms.CountingSortInteger.Sort(values.AsSpan(), NullContext.Default);
+        return values[values.Length / 2];
+    }
+
+    [GlobalSetup(Target = nameof(CrumSort))]
+    public void SetupCrumSort() => Setup(nameof(CrumSort));
+
+    [Benchmark]
+    public int CrumSort()
+    {
+        var values = buffers.Next();
+        SortAlgorithm.Algorithms.CrumSort.Sort(values.AsSpan(), NullContext.Default);
         return values[values.Length / 2];
     }
 
