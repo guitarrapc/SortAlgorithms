@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" width="900" height="440" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12">
+<text x="58" y="18" fill="#f0efec" font-size="14" font-weight="600">Speed and run-to-run variation · n = 8192 · Random input</text>
+<text x="58" y="34" fill="#898781">Each dot is one algorithm. Named dots are not beaten on both mean time and CV by any other algorithm.</text>
+<text x="58" y="412" fill="#898781" text-anchor="middle" font-size="11">10 μs</text>
+<text x="275.3" y="412" fill="#898781" text-anchor="middle" font-size="11">100 μs</text>
+<text x="492.7" y="412" fill="#898781" text-anchor="middle" font-size="11">1 ms</text>
+<text x="710" y="412" fill="#898781" text-anchor="middle" font-size="11">10 ms</text>
+<line x1="58" x2="710" y1="396" y2="396" stroke="#2c2c2a"/>
+<text x="50" y="400" fill="#898781" text-anchor="end" font-size="11">0%</text>
+<line x1="58" x2="710" y1="250.7" y2="250.7" stroke="#2c2c2a"/>
+<text x="50" y="254.7" fill="#898781" text-anchor="end" font-size="11">0.5%</text>
+<line x1="58" x2="710" y1="190.5" y2="190.5" stroke="#2c2c2a"/>
+<text x="50" y="194.5" fill="#898781" text-anchor="end" font-size="11">1%</text>
+<line x1="58" x2="710" y1="105.3" y2="105.3" stroke="#2c2c2a"/>
+<text x="50" y="109.3" fill="#898781" text-anchor="end" font-size="11">2%</text>
+<text x="710" y="432" fill="#898781" text-anchor="end">Mean time (log scale) → slower</text>
+<text x="62" y="50" fill="#898781">↑ CV, square-root scale (less stable)</text>
+<path d="M123.4,159L154.6,159L154.6,193.8L164.3,193.8L164.3,217.7L187.1,217.7L187.1,304.5L287.1,304.5L287.1,328.3L298.7,328.3L298.7,330.9L329.2,330.9L329.2,335L334.4,335L334.4,335.9L386,335.9L386,343.4L453.9,343.4L453.9,344.1L479.6,344.1L479.6,349.9L607.9,349.9L607.9,364" fill="none" stroke="#c3c2b7" stroke-width="1.5"/>
+<circle cx="188.7" cy="199.8" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="198.6" cy="268.9" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="180.1" cy="163.8" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="302.8" cy="297.8" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="270.2" cy="282.7" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="346.7" cy="281.5" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="331.2" cy="292.9" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="293.7" cy="324.4" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="267.1" cy="271.7" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="274.4" cy="297.3" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="368.5" cy="319.2" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="369.9" cy="274" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="434.9" cy="314.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="381.8" cy="317.9" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="455.4" cy="338.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="464.7" cy="295.2" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="457.8" cy="341.3" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="547.2" cy="294.5" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="479.7" cy="268.9" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="655.1" cy="305.7" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="649.5" cy="193" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="505.1" cy="341.2" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="702.4" cy="329.5" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="496.2" cy="305.4" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="573.7" cy="329.5" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="423.8" cy="341.7" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="430.1" cy="310.3" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="432.9" cy="324.6" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="431.6" cy="325" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="433.2" cy="205.7" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="438.6" cy="312.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="433.5" cy="298.3" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="411.4" cy="329.8" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="391.4" cy="199.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="516.6" cy="304.6" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="530.2" cy="324.9" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="479.5" cy="309" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="431.9" cy="302.6" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="416.5" cy="337.9" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="452.9" cy="303.8" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="411" cy="290.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="430" cy="304.4" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="402.3" cy="319.9" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="432.7" cy="310" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="391.8" cy="298" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="343" cy="253.3" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="327.4" cy="313.2" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="398.6" cy="328.8" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="320.4" cy="266.6" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="463.3" cy="337.3" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="377" cy="320.5" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="534.2" cy="334.4" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="514.1" cy="282.2" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="263.7" cy="274.9" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="446.8" cy="324.7" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="369.1" cy="266.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="470.6" cy="328.4" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="368.6" cy="256.2" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="404.6" cy="299.2" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="413.3" cy="323.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="409.1" cy="287.9" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="414.9" cy="289.2" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="426.8" cy="297" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="193.3" cy="280.9" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="382.7" cy="335.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="493.7" cy="340.3" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="430.8" cy="317.5" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="474.2" cy="321.4" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="392.6" cy="342.7" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="389.9" cy="334.7" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="327.4" cy="325.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="339" cy="285.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="340.5" cy="325.4" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="327.4" cy="287.8" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="352.6" cy="288.7" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="352.9" cy="280.5" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="362.3" cy="308.8" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="466.2" cy="287.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="469.1" cy="294.3" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="465.2" cy="326.9" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="461.5" cy="296.3" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="442.4" cy="245.1" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="544.7" cy="322.3" r="3.6" fill="#898781" fill-opacity="0.5"/>
+<circle cx="123.4" cy="159" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="154.6" cy="193.8" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="164.3" cy="217.7" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="187.1" cy="304.5" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="287.1" cy="328.3" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="298.7" cy="330.9" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="329.2" cy="335" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="334.4" cy="335.9" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="386" cy="343.4" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="453.9" cy="344.1" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="479.6" cy="349.9" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="607.9" cy="364" r="5" fill="#3987e5" stroke="#0d1117" stroke-width="2"/>
+<circle cx="383.6" cy="254.5" r="5.5" fill="none" stroke="#f0efec" stroke-width="1.5"/>
+<text x="130.4" y="154" fill="#f0efec" font-size="11.5">PigeonSortInteger</text>
+<text x="161.6" y="188.8" fill="#f0efec" font-size="11.5">CountingSortInteger</text>
+<text x="171.3" y="212.7" fill="#f0efec" font-size="11.5">PigeonSort</text>
+<text x="194.1" y="299.5" fill="#f0efec" font-size="11.5">RadixLSD256Sort</text>
+<text x="294.1" y="323.3" fill="#f0efec" font-size="11.5">RadixLSD4Sort</text>
+<line x1="300.7" y1="326.9" x2="304.7" y2="297.9" stroke="#898781" stroke-width="0.8"/>
+<text x="305.7" y="299.9" fill="#f0efec" font-size="11.5">RadixLSD10Sort</text>
+<line x1="331.2" y1="331" x2="335.2" y2="276" stroke="#898781" stroke-width="0.8"/>
+<text x="336.2" y="278" fill="#f0efec" font-size="11.5">QuadSort</text>
+<line x1="336.4" y1="331.9" x2="340.4" y2="250.9" stroke="#898781" stroke-width="0.8"/>
+<text x="341.4" y="252.9" fill="#f0efec" font-size="11.5">StdSort</text>
+<text x="393" y="338.4" fill="#f0efec" font-size="11.5">PDQSort</text>
+<text x="460.9" y="339.1" fill="#f0efec" font-size="11.5">PoplarHeapSort</text>
+<line x1="481.6" y1="345.9" x2="485.6" y2="316.9" stroke="#898781" stroke-width="0.8"/>
+<text x="486.6" y="318.9" fill="#f0efec" font-size="11.5">TreapSort</text>
+<text x="614.9" y="359" fill="#f0efec" font-size="11.5">RotateLSDRadixSort</text>
+<text x="390.6" y="249.5" fill="#898781" font-size="11.5">DotnetSort (reference)</text>
+</svg>
