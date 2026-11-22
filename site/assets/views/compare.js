@@ -1,0 +1,151 @@
+import { d3, PATTERNS, PATTERN_SHORT, esc, svg, logTicks, showTip, hideTip, SER, anchorBase, anchorFactor, geo, fmtX, intro, chartWidth, seg, bindSeg } from "../lib.js";
+
+// Chosen algorithms side by side across sizes, one small chart per input pattern, in the form papers use:
+// divided by n log₂ n, an n log n sort is flat, so where each algorithm sits reads directly.
+// Each algorithm keeps the color of the slot it was added to, so removing one never repaints the others.
+const MAX = 8;
+const DEFAULTS = ["Insertion|InsertionSort", "Insertion|ShellSortCiura2001", "Network|BitonicSort", "Heap|HeapSort", "Merge|Driftsort", "Partition|PDQSort", "Distribution|RadixLSD256Sort"];
+const f3 = d3.format(".3~r"), fTick = d3.format("~g");
+const METRICS = {
+  nlogn: { label: "÷ n log₂ n", axis: "time ÷ n log₂ n", f: (t, n) => t / (n * Math.log2(n)), fmt: v => f3(v) + " ns", tick: v => fTick(v) + " ns" },
+  n: { label: "÷ n", axis: "time per element", f: (t, n) => t / n, fmt: v => f3(v) + " ns", tick: v => fTick(v) + " ns" },
+  ref: { label: "÷ DotnetSort", axis: "time ÷ DotnetSort", f: (t, n, r) => t / r, fmt: fmtX, tick: v => "×" + fTick(v) },
+};
+const shortN = n => n >= 1024 ? n / 1024 + "k" : String(n);
+
+export function render(root, { run, params, setParams, onResize }) {
+  const base = anchorBase(run);
+  const ref = run.reference;
+  const known = new Set(run.categories.flatMap(c => run.methodsOf(c).filter(m => m !== ref).map(m => c + "|" + m)));
+  const factors = new Map(run.categories.map(c => [c, base ? anchorFactor(run, c, base) ?? 1 : 1]));
+  let metric = METRICS[params.y] ? params.y : "nlogn";
+  let shared = params.ys === "one";
+  const slots = Array(MAX).fill(null);
+  (params.a != null ? params.a.split(",") : DEFAULTS).slice(0, MAX).forEach((id, i) => { if (known.has(id) && !slots.includes(id)) slots[i] = id; });
+  // Complexity links here with add=: the algorithm joins the current set, replacing the last slot when all are taken.
+  if (known.has(params.add) && !slots.includes(params.add)) { const i = slots.indexOf(null); slots[i >= 0 ? i : MAX - 1] = params.add; }
+  const bytes = run.allSizes.at(-1) * 4;
+
+  root.innerHTML = `
+    <section class="panel">
+      <h2>Compare</h2>
+      ${intro("Chosen algorithms, one chart per input pattern. Divided by n log₂ n, an n log n sort stays flat, a linear one falls and a quadratic one rises.",
+        `Pick up to eight algorithms. The dashed gray line is ${esc(ref)} (.NET Span.Sort). Both axes are logarithmic. With one y axis for every pattern, the charts can be compared with each other; with an axis per chart, close algorithms separate more. Times from the other benchmark classes are scaled by one drift factor per class, so that their ${esc(ref)} matches the one in ${esc(base ?? "Partition")}.`,
+        `The sizes are the ones the benchmark measures, n = ${run.allSizes[0]} to ${run.allSizes.at(-1)} int elements, which is at most ${bytes / 1024} KB of input. Papers usually go on to millions of elements, where memory effects dominate; these charts cover only the small sizes.`)}
+      <div class="filters">
+        ${seg("c-y", "Scale", Object.entries(METRICS).map(([k, v]) => [k, v.label]), metric).replace('class="fl"', 'class="fl wide"')}
+        <div id="c-addw"></div>
+        <label for="c-q">Quick pick<select id="c-q"><option value="">Choose…</option><option value="mix">One per complexity class</option>${run.categories.filter(c => run.sizesOf(c).length >= 2).map(c => `<option value="${esc(c)}">${esc(c)}: ${MAX} fastest</option>`).join("")}</select></label>
+        <label class="check"><input type="checkbox" id="c-ys"${shared ? " checked" : ""}> One y axis for every pattern</label>
+      </div>
+      <div class="cmp-chips" id="c-k"></div>
+      <p class="note sm-hide" id="c-n"></p>
+      <div class="cmp-grid" id="c-g"></div>
+    </section>`;
+
+  const parts = id => id.split("|");
+  const save = () => {
+    const last = slots.findLastIndex(Boolean);
+    setParams({ a: last < 0 ? "-" : slots.slice(0, last + 1).map(s => s ?? "").join(","), y: metric === "nlogn" ? undefined : metric, ys: shared ? "one" : undefined, add: undefined });
+  };
+
+  const drawControls = () => {
+    const full = slots.every(Boolean);
+    root.querySelector("#c-addw").outerHTML = `<label for="c-add" id="c-addw">Add algorithm<select id="c-add"${full ? " disabled" : ""}><option value="">${full ? `${MAX} chosen; remove one first` : "Choose…"}</option>${run.categories.map(c => {
+      const ms = run.methodsOf(c).filter(m => m !== ref && !slots.includes(c + "|" + m));
+      return ms.length ? `<optgroup label="${esc(c)}">${ms.map(m => `<option value="${esc(c + "|" + m)}">${esc(m)}</option>`).join("")}</optgroup>` : "";
+    }).join("")}</select></label>`;
+    root.querySelector("#c-k").innerHTML = slots.map((id, i) => {
+      if (!id) return "";
+      const [c, m] = parts(id);
+      return `<span class="chip" data-id="${esc(id)}" style="--c:${SER(i)}"><i class="ln"></i><span class="nm">${esc(m)}</span><span class="cat">${esc(c)}</span><button type="button" data-i="${i}" aria-label="Remove ${esc(m)}">×</button></span>`;
+    }).join("") + `<span class="chip ref"><i class="ln dash"></i><span class="nm">${esc(ref)}</span><span class="cat">reference</span></span>`;
+  };
+
+  const drawCharts = () => {
+    const M = METRICS[metric], grid = root.querySelector("#c-g");
+    const refOf = (n, p) => base ? run.get(base, ref, n, p)?.mean : undefined;
+    const value = (t, n, p) => { const r = refOf(n, p); return t > 0 && (metric !== "ref" || r > 0) ? M.f(t, n, r) : NaN; };
+    const chosen = slots.map((id, i) => id && { id, i, c: parts(id)[0], m: parts(id)[1] }).filter(Boolean);
+    const seriesOf = p => [
+      ...chosen.map(s => ({ ...s, pts: run.sizesOf(s.c).map(n => ({ n, v: value((run.get(s.c, s.m, n, p)?.mean ?? NaN) * factors.get(s.c), n, p) })).filter(q => q.v > 0) })),
+      ...(base ? [{ id: "ref", ref: true, m: ref, pts: run.sizesOf(base).map(n => ({ n, v: value(refOf(n, p), n, p) })).filter(q => q.v > 0) }] : []),
+    ];
+    const all = PATTERNS.map(p => ({ p, ss: seriesOf(p) }));
+    const values = all.flatMap(a => a.ss.flatMap(s => s.pts.map(q => q.v)));
+    const sizes = [...new Set(all.flatMap(a => a.ss.flatMap(s => s.pts.map(q => q.n))))].sort((a, b) => a - b);
+    root.querySelector("#c-n").textContent = `y: ${M.axis}, ${shared ? "one axis for all six charts" : "an axis per chart"} · x: n · both logarithmic`;
+    if (!values.length) { grid.innerHTML = `<p class="empty">Add an algorithm to compare.</p>`; return; }
+    grid.innerHTML = PATTERNS.map(p => `<figure class="cmp-cell"><figcaption>${PATTERN_SHORT[p]}</figcaption><div data-p="${p}"></div></figure>`).join("");
+    const W = chartWidth(grid.querySelector("[data-p]"), 240, 560), H = Math.round(Math.max(170, Math.min(240, W * 0.62)));
+    const pad = { l: metric === "ref" ? 46 : 54, r: 10, t: 8, b: 24 };
+    const x = d3.scaleLog().base(2).domain(sizes.length > 1 ? d3.extent(sizes) : [sizes[0] / 2, sizes[0] * 2]).range([pad.l + 6, W - pad.r - 6]);
+    const yOf = vs => d3.scaleLog().domain([d3.min(vs) / 1.2, d3.max(vs) * 1.2]).range([H - pad.b, pad.t]);
+    for (const { p, ss } of all) {
+      const own = ss.flatMap(z => z.pts.map(q => q.v));
+      if (!own.length) continue;
+      const y = yOf(shared ? values : own), yt = logTicks(y, 8), line = d3.line().x(q => x(q.n)).y(q => y(q.v));
+      const s = svg(grid.querySelector(`[data-p="${p}"]`), W, H, `${PATTERN_SHORT[p]}: ${M.axis} against n`);
+      s.append("g").attr("class", "grid").selectAll("line").data(yt).join("line").attr("x1", pad.l).attr("x2", W - pad.r).attr("y1", y).attr("y2", y);
+      s.append("g").attr("class", "axis").attr("transform", `translate(${pad.l},0)`).call(d3.axisLeft(y).tickValues(yt).tickFormat(M.tick).tickSize(0).tickPadding(6));
+      s.append("g").attr("class", "axis").attr("transform", `translate(0,${H - pad.b})`).call(d3.axisBottom(x).tickValues(sizes).tickFormat(shortN).tickSizeOuter(0));
+      const guide = s.append("line").attr("y1", pad.t).attr("y2", H - pad.b).style("stroke", "var(--v-axis)").style("display", "none");
+      // The reference is drawn first, under the chosen algorithms.
+      for (const z of [...ss].reverse()) {
+        if (!z.pts.length) continue;
+        const g = s.append("g").attr("class", "ser").attr("data-id", z.id);
+        g.append("path").attr("d", line(z.pts)).style("fill", "none").style("stroke", z.ref ? "var(--v-muted)" : SER(z.i)).style("stroke-width", z.ref ? 1.5 : 2).style("stroke-dasharray", z.ref ? "4 3" : null);
+        if (!z.ref) g.selectAll("circle").data(z.pts).join("circle").attr("cx", q => x(q.n)).attr("cy", q => y(q.v)).attr("r", 4).style("fill", SER(z.i)).style("stroke", "var(--panel)").style("stroke-width", 1.5);
+      }
+      const hover = ev => {
+        const [px] = d3.pointer(ev, s.node());
+        const n = d3.least(sizes, v => Math.abs(x(v) - px));
+        guide.attr("x1", x(n)).attr("x2", x(n)).style("display", null);
+        const rows = ss.map(z => ({ z, q: z.pts.find(q => q.n === n) })).filter(r => r.q).sort((a, b) => a.q.v - b.q.v);
+        showTip(ev, `<b>${PATTERN_SHORT[p]} · n = ${n}</b>` + rows.map(({ z, q }) =>
+          `<br><i class="ln${z.ref ? " dash" : ""}" style="--c:${z.ref ? "var(--v-muted)" : SER(z.i)}"></i>${esc(z.m)} <b class="mono">${M.fmt(q.v)}</b>`).join(""));
+      };
+      s.append("rect").attr("x", pad.l).attr("y", pad.t).attr("width", W - pad.l - pad.r).attr("height", H - pad.t - pad.b).style("fill", "transparent")
+        .on("pointermove", hover).on("pointerdown", hover).on("pointerleave", () => { guide.style("display", "none"); hideTip(); });
+    }
+  };
+
+  const update = () => { save(); drawControls(); drawCharts(); };
+
+  // Hovering a chip shows that algorithm alone in every chart.
+  const focus = id => {
+    const grid = root.querySelector("#c-g");
+    grid.classList.toggle("focus", !!id);
+    grid.querySelectorAll(".ser").forEach(g => g.classList.toggle("on", g.dataset.id === id));
+  };
+  const chips = root.querySelector("#c-k");
+  chips.addEventListener("click", e => { const b = e.target.closest("button[data-i]"); if (b) { slots[+b.dataset.i] = null; focus(null); update(); } });
+  chips.addEventListener("pointerover", e => { const c = e.target.closest(".chip[data-id]"); focus(c ? c.dataset.id : null); });
+  chips.addEventListener("pointerleave", () => focus(null));
+  root.querySelector(".filters").addEventListener("change", e => {
+    if (e.target.id === "c-ys") {
+      shared = e.target.checked;
+      save(); drawCharts();
+    } else if (e.target.id === "c-add" && e.target.value) {
+      slots[slots.indexOf(null)] = e.target.value;
+      update();
+    } else if (e.target.id === "c-q" && e.target.value) {
+      const v = e.target.value;
+      slots.fill(null);
+      if (v === "mix") DEFAULTS.filter(id => known.has(id)).forEach((id, i) => { slots[i] = id; });
+      else {
+        // The fastest by the geometric mean of the six patterns at the category's largest size.
+        const n = run.maxSize(v);
+        run.methodsOf(v).filter(m => m !== ref)
+          .map(m => ({ m, rows: PATTERNS.map(p => run.get(v, m, n, p)) })).filter(d => d.rows.every(Boolean))
+          .map(d => ({ m: d.m, g: geo(d.rows.map(r => r.mean)) })).sort((a, b) => a.g - b.g)
+          .slice(0, MAX).forEach((d, i) => { slots[i] = v + "|" + d.m; });
+      }
+      e.target.value = "";
+      update();
+    }
+  });
+  bindSeg(root, "c-y", v => { metric = v; save(); drawCharts(); });
+  update();
+  onResize(drawCharts);
+}

@@ -1,6 +1,7 @@
 import { loadIndex, loadRun, esc, fmtDate, hideTip } from "./lib.js";
 import * as explorer from "./views/explorer.js";
 import * as leagues from "./views/leagues.js";
+import * as compare from "./views/compare.js";
 import * as complexity from "./views/complexity.js";
 import * as stability from "./views/stability.js";
 import * as historyView from "./views/history.js";
@@ -8,6 +9,7 @@ import * as historyView from "./views/history.js";
 const VIEWS = [
   ["explorer", "Explorer", explorer],
   ["leagues", "Leagues", leagues],
+  ["compare", "Compare", compare],
   ["complexity", "Complexity", complexity],
   ["stability", "Stability", stability],
   ["history", "History", historyView],

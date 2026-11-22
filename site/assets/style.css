@@ -140,6 +140,22 @@ table.st tr.on td { background: color-mix(in srgb, var(--s1) 9%, transparent); }
 .lg-det { grid-area: det; display: none; flex-wrap: wrap; gap: 4px 12px; font: 11.5px var(--mono); color: var(--ink-2); padding: 2px 0 4px; }
 .lg-row.open .lg-det { display: flex; }
 
+/* Compare: removable chips that double as the legend, and one small chart per pattern. --c is the series color. */
+.ln { display: inline-block; width: 16px; height: 0; border-top: 3px solid var(--c, var(--s1)); border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.ln.dash { border-top: 2px dashed var(--v-muted); border-radius: 0; }
+.cmp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 2px 1px 9px; font-size: 12.5px; background: var(--panel); min-height: 28px; }
+.chip .ln { margin-right: 4px; }
+.chip .cat { margin-left: 4px; font-size: 10.5px; }
+.chip button { border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; min-width: 26px; min-height: 26px; border-radius: 999px; cursor: pointer; }
+.chip button:hover { color: var(--ink); background: var(--accent-soft); }
+.chip.ref { padding-right: 9px; color: var(--muted); }
+.cmp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 12px 18px; }
+.cmp-cell { margin: 0; min-width: 0; }
+.cmp-cell figcaption { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.cmp-grid .ser { transition: opacity .15s; }
+.cmp-grid.focus .ser:not(.on) { opacity: .12; }
+
 svg.chart { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
 svg.chart text { fill: var(--v-ink-2); font: 11px var(--font); }
 svg.chart .t-ink { fill: var(--v-ink); }
@@ -235,11 +251,21 @@ table.hm td.doc { padding: 0 6px 0 10px; white-space: nowrap; font: 11px var(--m
   .lg-wr { font-size: 10.5px; text-align: right; }
   .lg-nm .cat { display: none; }
 
+  /* Compact chips keep the first chart in a phone's first screen; the category is in the add list and the tooltip. */
+  .cmp-chips { gap: 4px; }
+  .chip { font-size: 12px; min-height: 26px; padding-left: 7px; }
+  .chip .cat { display: none; }
+  .chip button { min-width: 24px; min-height: 24px; }
+
   table.hm { font-size: 10.5px; border-spacing: 1px; }
   table.hm td.c { width: 36px; min-width: 36px; font-size: 10px; }
   table.hm td.l { max-width: 100px; overflow: hidden; text-overflow: ellipsis; padding-right: 4px; }
   table.hm th { font-size: 9.5px; padding: 3px 1px; }
   table.hm .doc { display: none; }
   table.hm .gs { display: block; margin-left: 0; }
+}
+/* Six tabs need about 357px at the phone size; the narrowest phones get tighter tabs instead of a scrolling tab row. */
+@media (max-width: 360px) {
+  .tabs a { font-size: 12px; padding-inline: 1px; letter-spacing: -.1px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

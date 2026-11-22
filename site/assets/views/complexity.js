@@ -116,7 +116,7 @@ export function render(root, { run, params, setParams, onResize }) {
     const src = sourceUrl(a.file);
     const options = groups.map(g => `<optgroup label="${esc(g.label)}">${g.methods.map(mm =>
       `<option value="${esc(g.c + "|" + mm)}"${g.c === c && mm === m ? " selected" : ""}>${esc(mm)}</option>`).join("")}</optgroup>`).join("");
-    host.innerHTML = `<div class="legend" style="gap:8px 12px"><select id="k-m" class="pick-m" aria-label="Algorithm">${options}</select><span class="cat">${esc(c)}</span>${src ? `<a href="${src}">source</a>` : ""}<span class="note">selected pattern: ${esc(p)}. Thin gray lines: n, n log n and n² growth from the selected pattern's smallest size.</span></div>
+    host.innerHTML = `<div class="legend" style="gap:8px 12px"><select id="k-m" class="pick-m" aria-label="Algorithm">${options}</select><span class="cat">${esc(c)}</span>${src ? `<a href="${src}">source</a>` : ""}${m !== run.reference ? `<a href="#compare?${new URLSearchParams({ add: c + "|" + m, ...(params.run ? { run: params.run } : {}) })}">compare with others</a>` : ""}<span class="note">selected pattern: ${esc(p)}. Thin gray lines: n, n log n and n² growth from the selected pattern's smallest size.</span></div>
       <div class="legend">${PATTERNS.map((pp, i) => `<span><span class="sw" style="background:${SER(i)}"></span>${PATTERN_SHORT[pp]}</span>`).join("")}</div>
       <div class="twocol"><div id="k-g"></div><div id="k-r"></div></div>`;
     const W = chartWidth(host.querySelector("#k-g"), 280, 620), H = Math.round(Math.max(240, Math.min(330, W * 0.62)));
