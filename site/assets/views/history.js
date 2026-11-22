@@ -20,7 +20,7 @@ export async function render(root, { run, index, params, setParams, onResize }) 
       <div class="filters" id="h-f"></div>
       <div class="legend">${models.map((mdl, i) => `<span><span class="sw" style="background:${SER(i)}"></span>${esc(mdl)}</span>`).join("")}<span>vertical rule = CPU model changed</span></div>
       <div class="scroll" id="h-c"></div>
-      <div class="vscroll" id="h-t" style="max-height:360px"></div>
+      <div class="tbox" id="h-t"></div>
     </section>`;
 
   const drawFilters = () => {
@@ -96,7 +96,7 @@ export async function render(root, { run, index, params, setParams, onResize }) 
     s.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r).attr("height", H - M.t - M.b).style("fill", "transparent")
       .on("pointermove", hover).on("pointerdown", hover).on("pointerleave", () => { ring.style("display", "none"); hideTip(); });
 
-    let t = `<table class="st"><thead><tr><th>Run</th><th>CPU</th><th>Mean</th><th class="sm-hide">Error</th><th>CV</th><th>Change<span class="sm-hide"> vs previous run, same CPU</span></th><th class="sm-hide">Source</th></tr></thead><tbody>`;
+    let t = `<table class="st"><thead><tr><th>Run</th><th>CPU</th><th>Mean</th><th class="sm-hide">Error</th><th>CV</th><th>Change<span class="md-hide"> vs previous run, same CPU</span></th><th class="sm-hide">Source</th></tr></thead><tbody>`;
     const rows = [...pts].reverse();
     rows.forEach(q => {
       const prev = pts.filter(o => o.i < q.i && o.model === q.model).at(-1);
@@ -107,7 +107,7 @@ export async function render(root, { run, index, params, setParams, onResize }) 
         change = `${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}%${sig ? ` <span class="sig">${sig}</span>` : ""}`;
       }
       const link = q.run.runUrl ? `<a href="${esc(q.run.runUrl)}">${q.run.source === "readme" ? "README import" : "workflow run"}</a>` : esc(q.run.source);
-      t += `<tr${q.run.id === run.entry.id ? ' class="on"' : ""}><td><span class="md-hide">${esc(fmtDate(q.run.timestamp))}</span><span class="md-only">${esc(fmtDate(q.run.timestamp).slice(5, 16))}</span></td><td title="${esc(q.run.cpu)}"><span class="md-hide">${esc(q.run.cpu)}</span><span class="md-only">${esc(q.model)}</span></td><td class="num">${fmtT(q.mean)}</td><td class="num sm-hide">${q.err == null ? "—" : "±" + fmtT(q.err)}</td><td class="num">${pct(q.sd / q.mean)}</td><td class="num chg">${change}</td><td class="sm-hide">${link}</td></tr>`;
+      t += `<tr${q.run.id === run.entry.id ? ' class="on"' : ""}><td class="wrap-sm"><span class="md-hide">${esc(fmtDate(q.run.timestamp))}</span><span class="md-only">${esc(fmtDate(q.run.timestamp).slice(5, 16))}</span></td><td class="wrap-sm" title="${esc(q.run.cpu)}"><span class="md-hide">${esc(q.run.cpu)}</span><span class="md-only">${esc(q.model)}</span></td><td class="num">${fmtT(q.mean)}</td><td class="num sm-hide">${q.err == null ? "—" : "±" + fmtT(q.err)}</td><td class="num">${pct(q.sd / q.mean)}</td><td class="num chg">${change}</td><td class="sm-hide">${link}</td></tr>`;
     });
     root.querySelector("#h-t").innerHTML = t + "</tbody></table>";
   };

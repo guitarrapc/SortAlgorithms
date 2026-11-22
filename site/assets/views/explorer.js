@@ -1,7 +1,7 @@
 import { d3, PATTERNS, fmtT, fmtX, esc, cvBadge, allocBadge, refChip, selectEl, caseKey, intro } from "../lib.js";
 
 // Every case of one (category, size, pattern) slice, sortable. "All categories" shows the whole size league.
-// On phones the table rows become two-line cards and a select replaces the sortable headers.
+// On phones and tablets the table rows become two-line cards and a select replaces the sortable headers.
 export function render(root, { run, params, setParams }) {
   const cat = params.c && (params.c === "*" || run.categories.includes(params.c)) ? params.c : (run.categories.includes("Partition") ? "Partition" : run.categories[0]);
   const sizes = run.allSizes;
@@ -17,10 +17,10 @@ export function render(root, { run, params, setParams }) {
         ${selectEl("x-c", "Category", [["*", "All categories"], ...run.categories.map(c => [c, c])], cat)}
         ${selectEl("x-n", "Size", sizes.map(n => [n, "n = " + n]), size)}
         ${selectEl("x-p", "Pattern", PATTERNS, pattern)}
-        ${selectEl("x-s", "Sort by", [["mean", "Mean"], ["cv", "CV"], ["m", "Name"]], "mean", "sm-only")}
+        ${selectEl("x-s", "Sort by", [["mean", "Mean"], ["cv", "CV"], ["m", "Name"]], "mean", "md-only")}
         <label for="x-q">Filter by name<input id="x-q" type="search" placeholder="e.g. Heap"></label>
       </div>
-      <div class="vscroll" id="x-t"></div>
+      <div class="tbox" id="x-t"></div>
     </section>`;
   const f = root.querySelector(".filters");
   let sortKey = "mean", dir = 1;
@@ -50,7 +50,7 @@ export function render(root, { run, params, setParams }) {
       const e0 = x(r.mean - r.err), e1 = x(r.mean + r.err);
       const hist = `#history?${new URLSearchParams({ k: caseKey(r.c, r.m, r.n, r.p) })}`;
       h += `<tr class="${r.ref ? "ref" : ""}"><td class="num rk">${r.ref ? "" : rank.get(r)}</td><td class="nm"><a href="${hist}">${esc(r.m)}</a>${refChip(r)}</td>${c === "*" ? `<td class="ct"><span class="cat">${esc(r.c)}</span></td>` : ""}<td class="num mn">${fmtT(r.mean)}</td>
-        <td class="br">${c === "*" ? `<span class="cat sm-only">${esc(r.c)}</span>` : ""}<div class="xbar${r.ref ? " ref" : ""}" role="img" aria-label="${fmtT(r.mean)} ± ${fmtT(r.err)}"><b style="width:${x(r.mean).toFixed(1)}%"></b><i style="left:${e0.toFixed(1)}%;width:${Math.max(0.5, e1 - e0).toFixed(1)}%"></i></div></td>
+        <td class="br">${c === "*" ? `<span class="cat md-only">${esc(r.c)}</span>` : ""}<div class="xbar${r.ref ? " ref" : ""}" role="img" aria-label="${fmtT(r.mean)} ± ${fmtT(r.err)}"><b style="width:${x(r.mean).toFixed(1)}%"></b><i style="left:${e0.toFixed(1)}%;width:${Math.max(0.5, e1 - e0).toFixed(1)}%"></i></div></td>
         <td class="cv">${cvBadge(r.cv)}</td><td class="al">${allocBadge(r.alloc)}</td><td class="num vb">${fmtX(r.mean / base)}</td></tr>`;
     }
     host.innerHTML = h + "</tbody></table>";

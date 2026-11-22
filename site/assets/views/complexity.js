@@ -26,7 +26,7 @@ export function render(root, { run, params, setParams, onResize }) {
   root.innerHTML = `
     <section class="panel">
       <h2>Complexity</h2>
-      ${intro("How each algorithm's time grows with n. Select a cell to compare it with the documented complexity.",
+      ${intro("How each algorithm's time grows with n. Select an algorithm or a cell to see it on every pattern, next to its documented complexity.",
         "k is the slope of log(time) against log(n). Cells are colored by the nearest reference: n is 1.00 and n² is 2.00 at any size range, while n log n and n log² n depend on the sizes used.",
         "The documented Best / Average / Worst cases come from each algorithm's XML documentation, so a pattern that reaches the documented worst case stands out. k also includes fixed costs, cache effects and branch prediction; the detail shows the slope of each size interval.")}
       <div class="filters">
@@ -96,7 +96,9 @@ export function render(root, { run, params, setParams, onResize }) {
       h += `<tr><td class="g" colspan="8"><span>${esc(g.label)}</span><span class="gs">${sz.map(shortN).join("→")} · n log n = ${r.nl.toFixed(2)}, n log² n = ${r.nl2.toFixed(2)}</span></td></tr>`;
       for (const m of g.methods) {
         const a = algo(m);
-        h += `<tr><td class="l" title="${esc(m)}">${esc(m)}</td>`;
+        // Selecting the name keeps the selected pattern when this algorithm has it.
+        const p0 = Number.isNaN(kOf(g.c, m, sel.p)) ? "Random" : sel.p;
+        h += `<tr><td class="l${sel.c === g.c && sel.m === m ? " on" : ""}" tabindex="0" title="${esc(m)}" data-c="${esc(g.c)}" data-m="${esc(m)}" data-p="${p0}">${esc(m)}</td>`;
         for (const p of PATTERNS) {
           const k = kOf(g.c, m, p);
           if (Number.isNaN(k)) { h += `<td class="c">—</td>`; continue; }
@@ -112,7 +114,9 @@ export function render(root, { run, params, setParams, onResize }) {
     const { c, m, p } = sel, sz = run.sizesOf(c), a = algo(m);
     const host = root.querySelector("#k-d");
     const src = sourceUrl(a.file);
-    host.innerHTML = `<div class="legend" style="gap:8px 12px"><h3>${esc(m)}</h3><span class="cat">${esc(c)}</span>${src ? `<a href="${src}">source</a>` : ""}<span class="note">selected pattern: ${esc(p)}. Thin gray lines: n, n log n and n² growth from the selected pattern's smallest size.</span></div>
+    const options = groups.map(g => `<optgroup label="${esc(g.label)}">${g.methods.map(mm =>
+      `<option value="${esc(g.c + "|" + mm)}"${g.c === c && mm === m ? " selected" : ""}>${esc(mm)}</option>`).join("")}</optgroup>`).join("");
+    host.innerHTML = `<div class="legend" style="gap:8px 12px"><select id="k-m" class="pick-m" aria-label="Algorithm">${options}</select><span class="cat">${esc(c)}</span>${src ? `<a href="${src}">source</a>` : ""}<span class="note">selected pattern: ${esc(p)}. Thin gray lines: n, n log n and n² growth from the selected pattern's smallest size.</span></div>
       <div class="legend">${PATTERNS.map((pp, i) => `<span><span class="sw" style="background:${SER(i)}"></span>${PATTERN_SHORT[pp]}</span>`).join("")}</div>
       <div class="twocol"><div id="k-g"></div><div id="k-r"></div></div>`;
     const W = chartWidth(host.querySelector("#k-g"), 280, 620), H = Math.round(Math.max(240, Math.min(330, W * 0.62)));
@@ -162,7 +166,12 @@ export function render(root, { run, params, setParams, onResize }) {
   };
 
   const select = (c, m, p) => { sel = { c, m, p }; setParams({ c, m, p, mode: mode === "last" ? "last" : undefined }); drawNotes(); drawMatrix(); drawDetail(); };
-  const reveal = () => { if (narrow()) root.querySelector("#k-d").scrollIntoView({ behavior: "smooth", block: "start" }); };
+  // The detail sits below the matrix: on phones it always scrolls into view, elsewhere only when it is off screen.
+  const reveal = () => {
+    const d = root.querySelector("#k-d");
+    if (narrow() || d.getBoundingClientRect().top > innerHeight - 160) d.scrollIntoView({ behavior: "smooth", block: narrow() ? "start" : "nearest" });
+  };
+  const showSelectedRow = () => { const cell = table.querySelector("td.sel, td.l.on"); if (cell) table.scrollTop = cell.offsetTop - 60; };
   const pick = el => { const td = el.closest("[data-m]"); if (td) { select(td.dataset.c, td.dataset.m, td.dataset.p); reveal(); } };
   table.addEventListener("click", e => pick(e.target));
   table.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(e.target); } });
@@ -179,9 +188,17 @@ export function render(root, { run, params, setParams, onResize }) {
     if (!b) return;
     root.querySelector("#k-c").value = "*";
     select(b.dataset.c, b.dataset.m, b.dataset.p);
-    const cell = table.querySelector("td.sel");
-    if (cell) table.scrollTop = cell.offsetTop - 60;
+    showSelectedRow();
     reveal();
+  });
+  // The algorithm picker in the detail keeps the selected pattern when the new algorithm has it.
+  root.querySelector("#k-d").addEventListener("change", e => {
+    if (e.target.id !== "k-m") return;
+    const [c, m] = e.target.value.split("|");
+    const cf = root.querySelector("#k-c");
+    if (cf.value !== "*" && cf.value !== c && m !== run.reference) { cf.value = c; setParams({ cat: c }); }
+    select(c, m, run.get(c, m, run.maxSize(c) ?? 0, sel.p) ? sel.p : "Random");
+    showSelectedRow();
   });
   root.querySelector("#k-c").addEventListener("input", e => { setParams({ cat: e.target.value === "*" ? undefined : e.target.value }); drawMatrix(); });
   root.querySelector("#k-mode").addEventListener("click", e => {

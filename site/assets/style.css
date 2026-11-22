@@ -52,7 +52,7 @@ code, .mono { font-family: var(--mono); font-size: .9em; }
 
 main.wrap { padding-block: 20px 40px; display: grid; gap: 18px; }
 main:focus { outline: none; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; scroll-margin-top: 48px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; scroll-margin-top: 48px; }
 .lead { color: var(--ink-2); max-width: 80ch; }
 details.more { color: var(--ink-2); max-width: 80ch; font-size: .9rem; }
 details.more summary { cursor: pointer; color: var(--muted); font-size: .8rem; width: fit-content; }
@@ -74,6 +74,10 @@ select, input[type="search"] { font: 13px var(--font); color: var(--ink); backgr
 
 .scroll { overflow-x: auto; min-width: 0; }
 .vscroll { max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+/* A table box that grows with its table, so the page scrolls instead of a nested box; the header sticks below the tabs.
+   overflow: clip rounds the corners without making a scroll container, which would stop the header from sticking. */
+.tbox { border: 1px solid var(--line); border-radius: 8px; overflow: clip; min-width: 0; }
+.tbox table.st th { top: var(--tabs-h, 0px); border-bottom: 0; box-shadow: inset 0 -1px var(--line); }
 table.st { border-collapse: collapse; width: 100%; font-size: 12.5px; }
 table.st th { position: sticky; top: 0; background: var(--panel); text-align: left; font-weight: 500; color: var(--muted); font-size: 11.5px; border-bottom: 1px solid var(--line); padding: 6px 8px; white-space: nowrap; z-index: 1; }
 table.st th[data-sort] { cursor: pointer; }
@@ -154,6 +158,11 @@ table.hm td.g > span:first-child { position: sticky; left: 2px; }
 table.hm .gs { font-weight: 400; font-size: 11px; color: var(--muted); margin-left: 8px; }
 table.hm td.c { width: 72px; min-width: 72px; height: 22px; text-align: center; font: 10.5px var(--mono); border-radius: 3px; cursor: pointer; outline-offset: -2px; }
 table.hm td.c.sel { outline: 2px solid var(--v-ink); }
+table.hm td.l[data-m] { cursor: pointer; }
+table.hm td.l[data-m]:hover { color: var(--ink); text-decoration: underline; }
+table.hm td.l.on { color: var(--ink); font-weight: 600; }
+/* min-width: 0 lets the picker shrink in its flex row on a phone; a select is otherwise as wide as its longest option. */
+.pick-m { font: 600 1rem var(--font); min-height: 32px; min-width: 0; max-width: 100%; }
 table.hm td.doc { padding: 0 6px 0 10px; white-space: nowrap; font: 11px var(--mono); color: var(--muted); }
 .kb0 { background: var(--k0); color: var(--ki0); } .kb1 { background: var(--k1); color: var(--ki1); } .kb2 { background: var(--k2); color: var(--ki2); }
 .kb3 { background: var(--k3); color: var(--ki3); } .kb4 { background: var(--k4); color: var(--ki4); }
@@ -168,6 +177,27 @@ table.hm td.doc { padding: 0 6px 0 10px; white-space: nowrap; font: 11px var(--m
 @media (max-width: 900px) {
   .md-hide { display: none !important; }
   .lg-row { grid-template-columns: 26px minmax(0, 13rem) minmax(100px, 1fr) 3.8rem 9.8rem; column-gap: 8px; }
+  table.st td.chg { white-space: normal; }
+  table.st td.chg .sig { display: block; font: 10.5px/1.2 var(--font); color: var(--muted); }
+
+  /* Explorer rows as two-line cards up to tablet width, where the full table no longer fits and a
+     horizontally scrolling box would stop its header from sticking: rank, name, mean, ratio / bar, CV, allocation. */
+  table.cards thead { display: none; }
+  table.cards, table.cards tbody { display: block; }
+  table.cards tr { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto; grid-template-areas: "rk nm mn vb" "rk br cv al"; column-gap: 8px; row-gap: 1px; align-items: center; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  table.cards td { line-height: 1.45; }
+  table.cards td { border: 0; padding: 0; min-width: 0; }
+  table.cards td.rk { grid-area: rk; align-self: start; text-align: left; }
+  table.cards td.nm { grid-area: nm; overflow: hidden; text-overflow: ellipsis; }
+  table.cards td.ct { display: none; }
+  table.cards td.mn { grid-area: mn; }
+  table.cards td.vb { grid-area: vb; color: var(--muted); }
+  table.cards td.br { grid-area: br; display: flex; gap: 6px; align-items: center; }
+  table.cards td.br .cat { flex: none; width: 76px; overflow: hidden; text-overflow: ellipsis; font-size: 10.5px; }
+  table.cards td.br .xbar { flex: 1; }
+  table.cards td.cv { grid-area: cv; }
+  table.cards td.al { grid-area: al; text-align: right; }
+  table.cards .xbar { min-width: 0; }
 }
 @media (max-width: 760px) {
   .twocol { grid-template-columns: 1fr; }
@@ -193,26 +223,8 @@ table.hm td.doc { padding: 0 6px 0 10px; white-space: nowrap; font: 11px var(--m
   .filters .seg button { flex: 1; padding-inline: 4px; }
   .vscroll { max-height: 62vh; }
   table.st th, table.st td { padding-left: 5px; padding-right: 5px; }
-  table.st td.chg { white-space: normal; }
-  table.st td.chg .sig { display: block; font: 10.5px/1.2 var(--font); color: var(--muted); }
-
-  /* Explorer rows as two-line cards: rank, name, mean, ratio / bar, CV, allocation. */
-  table.cards thead { display: none; }
-  table.cards, table.cards tbody { display: block; }
-  table.cards tr { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto; grid-template-areas: "rk nm mn vb" "rk br cv al"; column-gap: 8px; row-gap: 1px; align-items: center; padding: 5px 8px; border-bottom: 1px solid var(--line); }
-  table.cards td { line-height: 1.45; }
-  table.cards td { border: 0; padding: 0; min-width: 0; }
-  table.cards td.rk { grid-area: rk; align-self: start; text-align: left; }
-  table.cards td.nm { grid-area: nm; overflow: hidden; text-overflow: ellipsis; }
-  table.cards td.ct { display: none; }
-  table.cards td.mn { grid-area: mn; }
-  table.cards td.vb { grid-area: vb; color: var(--muted); }
-  table.cards td.br { grid-area: br; display: flex; gap: 6px; align-items: center; }
-  table.cards td.br .cat { flex: none; width: 76px; overflow: hidden; text-overflow: ellipsis; font-size: 10.5px; }
-  table.cards td.br .xbar { flex: 1; }
-  table.cards td.cv { grid-area: cv; }
-  table.cards td.al { grid-area: al; text-align: right; }
-  table.cards .xbar { min-width: 0; }
+  /* Short dates and CPU models break at their space, so the History table fits a 320px screen. */
+  table.st td.wrap-sm { white-space: normal; line-height: 1.3; }
 
   /* A fixed right column keeps every bar, and the axis row, the same width. The legend's tick mark replaces the word "worst". */
   .lg-row { grid-template-columns: 22px minmax(0, 1fr) 6.9rem; grid-template-areas: "rk nm sc" ". bar wr" ". det det"; row-gap: 1px; padding: 5px 4px; }
