@@ -44,6 +44,13 @@ export function render(root, { run, params, setParams }) {
   };
   const algo = m => run.algo(m) || {};
   const avgQuadratic = m => /²/.test(shortC(algo(m).average));
+  // Whether the documented worst case allows time ∝ n²: true or false, or null when the bound names
+  // another variable (d, k, m) or cannot be read. Θ(n·m) allows n² through m = n, so it is not "below n²".
+  const worstAllowsN2 = m => {
+    const terms = [...shortC(algo(m).worst).toLowerCase().matchAll(/[θoω]\(((?:[^()]|\([^()]*\))*)\)/g)].map(t => t[1].replace(/\s+/g, ""));
+    if (!terms.length || terms.some(t => /[a-z]/.test(t.replace(/log[₂₃]?/g, "").replace(/n/g, "")))) return null;
+    return terms.some(t => /n²|n³/.test(t) || /n\^\{?\d+\}?(?!\/)/.test(t));
+  };
   const table = root.querySelector("#k-t");
 
   const drawLegend = () => {
@@ -53,7 +60,7 @@ export function render(root, { run, params, setParams }) {
       `<span class="note">n log n / n log² n reference: ${r4.nl.toFixed(2)} / ${r4.nl2.toFixed(2)} for ${shortN(big[mode === "fit" ? 0 : big.length - 2])}–${shortN(big.at(-1))}, ${r2.nl.toFixed(2)} / ${r2.nl2.toFixed(2)} for 256–1k</span>`;
   };
   const drawNotes = () => {
-    const worst = [];
+    const beyond = [], within = [];
     let lower = 0;
     for (const g of groups) {
       if (g.label === "Reference") continue;
@@ -64,13 +71,17 @@ export function render(root, { run, params, setParams }) {
           const k = kOf(g.c, m, p);
           if (Number.isNaN(k)) continue;
           const b = kclass(k, e);
-          if (b === 4 && !avgQuadratic(m)) worst.push({ c: g.c, m, p });
+          if (b === 4 && !avgQuadratic(m)) (worstAllowsN2(m) === false ? beyond : within).push({ c: g.c, m, p });
           if (p !== "Random" && b < rnd) lower++;
         }
       }
     }
-    root.querySelector("#k-n").innerHTML = `<div class="mchips"><span>Reaches ≈ n² although the documented average is below n² (${worst.length}):</span>${worst.map(w =>
-      `<button type="button" data-c="${esc(w.c)}" data-m="${esc(w.m)}" data-p="${w.p}" aria-pressed="${w.c === sel.c && w.m === sel.m && w.p === sel.p}">${esc(w.m)} · ${PATTERN_SHORT[w.p]}</button>`).join("")}</div>
+    const chips = list => list.length ? list.map(w =>
+      `<button type="button" data-c="${esc(w.c)}" data-m="${esc(w.m)}" data-p="${w.p}" aria-pressed="${w.c === sel.c && w.m === sel.m && w.p === sel.p}">${esc(w.m)} · ${PATTERN_SHORT[w.p]}</button>`).join("") : "<span>none</span>";
+    root.querySelector("#k-n").innerHTML =
+      `<div class="mchips"><span>Reaches ≈ n² although the documented worst case is below n² (${beyond.length}):</span>${chips(beyond)}</div>` +
+      (beyond.some(w => w.p !== "Random") ? `<div>Sorted, Reversed and PipeOrgan give every iteration the same input, so the branch predictor can learn it at small sizes and steepen the slope. StatisticsContext operation counts tell that apart from extra work.</div>` : "") +
+      `<div class="mchips"><span>Reaches ≈ n² within its documented worst case (n², or a bound in another variable such as m) (${within.length}):</span>${chips(within)}</div>
       <div>Cells whose class is lower than the same algorithm on Random (best-case behavior): ${lower}.</div>`;
   };
   const drawMatrix = () => {
