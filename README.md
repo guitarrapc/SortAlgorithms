@@ -46,28 +46,28 @@ Measured at each category's largest size. "≈ 2nd" means the 99.9% confidence i
 
 | Category | n | Random | 1-Moved | Sorted | Reversed | PipeOrgan | ManyDup |
 |---|--:|---|---|---|---|---|---|
-| Exchange | 1024 | **CombSort**<br>×3.00 vs 2nd 🟢 | **CocktailShakerSort**<br>×11.69 vs 2nd 🟢 | **CocktailShakerSort**<br>×1.24 vs 2nd 🟡 | **CombSort**<br>×1.15 vs 2nd 🟢 | **CombSort**<br>×6.44 vs 2nd 🟢 | **CombSort**<br>×3.48 vs 2nd 🟢 |
-| Selection | 1024 | **SelectionSortSimd**<br>≈ 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.48 vs 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.53 vs 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.02 vs 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.63 vs 2nd 🟢 | **BingoSort**<br>×2.78 vs 2nd 🟢 |
-| Insertion | 8192 | **ShellSortKnuth1973**<br>×1.07 vs 2nd 🟢 | **InsertionSort**<br>×1.17 vs 2nd 🟢 | **InsertionSort**<br>×1.27 vs 2nd 🟢 | **ShellSortKnuth1973**<br>×1.15 vs 2nd 🟢 | **ShellSortKnuth1973**<br>×1.13 vs 2nd 🟢 | **ShellSortSedgewick1986**<br>×1.04 vs 2nd 🟢 |
-| Merge | 8192 | **SimdMergeSort**<br>×1.08 vs 2nd 🟢 | **TimSort**<br>×1.55 vs 2nd 🟡 | **Glidesort**<br>≈ 2nd 🟢 | **NaturalMergeSort**<br>≈ 2nd 🟢 | **Driftsort**<br>×1.19 vs 2nd 🟢 | **Driftsort**<br>×1.46 vs 2nd 🟢 |
+| Exchange | 1024 | **CombSort**<br>×3.01 vs 2nd 🟢 | **CocktailShakerSort**<br>×11.45 vs 2nd 🟡 | **CocktailShakerSort**<br>×1.26 vs 2nd 🟢 | **CombSort**<br>×1.15 vs 2nd 🟢 | **CombSort**<br>×6.26 vs 2nd 🟢 | **CombSort**<br>×3.48 vs 2nd 🟢 |
+| Selection | 1024 | **SelectionSortSimd**<br>≈ 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.48 vs 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.51 vs 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.02 vs 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.62 vs 2nd 🟢 | **BingoSort**<br>×2.80 vs 2nd 🟢 |
+| Insertion | 8192 | **ShellSortKnuth1973**<br>×1.07 vs 2nd 🟢 | **InsertionSort**<br>×1.14 vs 2nd 🟡 | **InsertionSort**<br>×1.24 vs 2nd 🟡 | **ShellSortKnuth1973**<br>×1.15 vs 2nd 🟢 | **ShellSortKnuth1973**<br>×1.12 vs 2nd 🟢 | **ShellSortSedgewick1986**<br>×1.04 vs 2nd 🟢 |
+| Merge | 8192 | **Driftsort**<br>≈ 2nd 🟢 | **TimSort**<br>×1.50 vs 2nd 🟢 | **SpinSort**<br>≈ 2nd 🔴 | **NaturalMergeSort**<br>≈ 2nd 🟡 | **Driftsort**<br>×1.18 vs 2nd 🟢 | **Driftsort**<br>×1.43 vs 2nd 🟡 |
 | MergeSlow | 1024 | **StrandSort**<br>only one 🟢 | **StrandSort**<br>only one 🟢 | **StrandSort**<br>only one 🟢 | **StrandSort**<br>only one 🟢 | **StrandSort**<br>only one 🟢 | **StrandSort**<br>only one 🟢 |
-| Heap | 8192 | **HeapSort**<br>×1.01 vs 2nd 🟢 | **SmoothSort**<br>×3.13 vs 2nd 🟢 | **SmoothSort**<br>×3.64 vs 2nd 🟢 | **PairingHeapSort**<br>×3.13 vs 2nd 🟢 | **PairingHeapSort**<br>×1.08 vs 2nd 🟢 | **HeapSort**<br>×1.02 vs 2nd 🟢 |
-| Partition | 8192 | **SimdQuickSort**<br>×4.14 vs 2nd 🟢 | **FluxSort**<br>×1.30 vs 2nd 🟡 | **Ips4oSort**<br>×1.21 vs 2nd 🟢 | **Ips4oSort**<br>≈ 2nd 🟡 | **FluxSort**<br>×1.27 vs 2nd 🟢 | **PDQSortBranchless**<br>×1.02 vs 2nd 🟢 |
-| Distribution | 8192 | **PigeonSortInteger**<br>×1.39 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.24 vs 2nd 🟢 | **SpreadSort**<br>×4.93 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.37 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.34 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.28 vs 2nd 🟢 |
-| Network | 8192 | **BitonicSortAnyLengthSimd**<br>×3.04 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.58 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.62 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.64 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.79 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×3.07 vs 2nd 🟢 |
-| Tree | 8192 | **BinaryTreeSort**<br>×1.22 vs 2nd 🟢 | **CartesianTreeSort**<br>×2.14 vs 2nd 🟢 | **CartesianTreeSort**<br>×2.00 vs 2nd 🟢 | **CartesianTreeSort**<br>×1.95 vs 2nd 🟢 | **CartesianTreeSort**<br>×2.04 vs 2nd 🟢 | **BalancedBinaryTreeSort**<br>×1.07 vs 2nd 🟢 |
+| Heap | 8192 | **HeapSort**<br>×1.01 vs 2nd 🟢 | **SmoothSort**<br>×3.16 vs 2nd 🟢 | **SmoothSort**<br>×3.61 vs 2nd 🟢 | **PairingHeapSort**<br>×3.14 vs 2nd 🟢 | **PairingHeapSort**<br>×1.08 vs 2nd 🟢 | **HeapSort**<br>×1.02 vs 2nd 🟢 |
+| Partition | 8192 | **SimdQuickSort**<br>×3.28 vs 2nd 🟢 | **FluxSort**<br>×1.29 vs 2nd 🟢 | **Ips4oSort**<br>≈ 2nd 🔴 | **Ips4oSort**<br>≈ 2nd 🟡 | **FluxSort**<br>×1.26 vs 2nd 🟢 | **PDQSortBranchless**<br>×1.10 vs 2nd 🟢 |
+| Distribution | 8192 | **PigeonSortInteger**<br>×1.40 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.24 vs 2nd 🟢 | **SpreadSort**<br>×4.93 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.38 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.30 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.30 vs 2nd 🟢 |
+| Network | 8192 | **BitonicSortAnyLengthSimd**<br>×2.99 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.59 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.59 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.63 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.56 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×3.12 vs 2nd 🟢 |
+| Tree | 8192 | **BinaryTreeSort**<br>×1.22 vs 2nd 🟢 | **CartesianTreeSort**<br>×2.13 vs 2nd 🟢 | **CartesianTreeSort**<br>×2.01 vs 2nd 🟢 | **CartesianTreeSort**<br>×1.97 vs 2nd 🟢 | **CartesianTreeSort**<br>×2.04 vs 2nd 🟢 | **BalancedBinaryTreeSort**<br>×1.07 vs 2nd 🟢 |
 
 <details>
-<summary>Benchmark results (2026-11-22 04:43 UTC)</summary>
+<summary>Benchmark results (2026-11-22 08:54 UTC)</summary>
 
-Workflow run: https://github.com/guitarrapc/SortAlgorithms/actions/runs/44984332332
+Workflow run: https://github.com/guitarrapc/SortAlgorithms/actions/runs/45002371533
 
 ### DistributionBenchmark
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V74 3.69GHz, 1 CPU, 4 logical and 2 physical cores
-Memory: 15.61 GB Total, 12.49 GB Available
+AMD EPYC 9V74 3.59GHz, 1 CPU, 4 logical and 2 physical cores
+Memory: 15.61 GB Total, 12.44 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
@@ -75,470 +75,470 @@ EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCo
 UnrollFactor=1  WarmupCount=2  
 ```
 
-| Method              | Size | Pattern            | Mean           | Error        | StdDev      | Ratio  | RatioSD | Rank | Allocated | Alloc Ratio |
-| -------------------- |----- |------------------- |---------------:|-------------:|------------:|-------:|--------:|-----:|----------:|------------:|
-| **CountingSort**        | **256**  | **Random**             |     **1,302.1 ns** |     **46.13 ns** |    **20.48 ns** |   **1.46** |    **0.05** |    **2** |         **-** |          **NA** |
-| CountingSortInteger | 256  | Random             |       895.2 ns |     62.64 ns |    27.81 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 256  | Random             |     1,137.6 ns |     25.41 ns |    11.28 ns |   1.27 |    0.04 |    2 |         - |          NA |
-| PigeonSortInteger   | 256  | Random             |       845.3 ns |    413.68 ns |   216.36 ns |   0.94 |    0.23 |    1 |         - |          NA |
-| BucketSort          | 256  | Random             |     1,444.7 ns |     36.65 ns |    16.27 ns |   1.62 |    0.05 |    2 |         - |          NA |
-| BucketSortInteger   | 256  | Random             |     1,214.2 ns |     48.41 ns |    21.50 ns |   1.36 |    0.04 |    2 |         - |          NA |
-| FlashSort           | 256  | Random             |     4,030.8 ns |    170.68 ns |    89.27 ns |   4.51 |    0.16 |    5 |         - |          NA |
-| RadixLSD4Sort       | 256  | Random             |     2,159.5 ns |     35.24 ns |    15.65 ns |   2.41 |    0.07 |    3 |         - |          NA |
-| RotateLSDRadixSort  | 256  | Random             |    57,106.4 ns |    731.04 ns |   382.35 ns |  63.84 |    1.81 |    7 |         - |          NA |
-| RadixLSD256Sort     | 256  | Random             |     1,051.8 ns |     18.82 ns |     8.36 ns |   1.18 |    0.03 |    2 |         - |          NA |
-| Radsort             | 256  | Random             |     7,732.3 ns |    169.48 ns |    75.25 ns |   8.64 |    0.25 |    6 |         - |          NA |
-| RadixLSD10Sort      | 256  | Random             |     3,186.0 ns |     41.56 ns |    18.45 ns |   3.56 |    0.10 |    4 |         - |          NA |
-| RadixMSD4Sort       | 256  | Random             |     5,154.6 ns |     31.94 ns |    11.39 ns |   5.76 |    0.16 |    5 |         - |          NA |
-| RadixMSD10Sort      | 256  | Random             |     4,618.5 ns |     48.37 ns |    17.25 ns |   5.16 |    0.14 |    5 |         - |          NA |
-| AmericanFlagSort    | 256  | Random             |     2,412.4 ns |     49.62 ns |    17.69 ns |   2.70 |    0.08 |    3 |         - |          NA |
-| SkaSort             | 256  | Random             |     3,365.7 ns |    294.75 ns |   154.16 ns |   3.76 |    0.19 |    4 |         - |          NA |
-| SpreadSort          | 256  | Random             |     6,092.7 ns |    330.27 ns |   172.74 ns |   6.81 |    0.26 |    5 |         - |          NA |
-| DotnetSort          | 256  | Random             |     5,807.6 ns |    153.97 ns |    80.53 ns |   6.49 |    0.20 |    5 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **256**  | **SingleElementMoved** |     **1,253.1 ns** |     **15.52 ns** |     **8.12 ns** |   **1.60** |    **0.01** |    **2** |         **-** |          **NA** |
-| CountingSortInteger | 256  | SingleElementMoved |       782.4 ns |      6.72 ns |     2.40 ns |   1.00 |    0.00 |    1 |         - |          NA |
-| PigeonSort          | 256  | SingleElementMoved |     1,129.7 ns |     17.58 ns |     7.80 ns |   1.44 |    0.01 |    2 |         - |          NA |
-| PigeonSortInteger   | 256  | SingleElementMoved |       653.3 ns |     12.95 ns |     4.62 ns |   0.83 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 256  | SingleElementMoved |     1,388.9 ns |      6.42 ns |     2.85 ns |   1.78 |    0.01 |    2 |         - |          NA |
-| BucketSortInteger   | 256  | SingleElementMoved |     1,119.4 ns |     19.58 ns |     6.98 ns |   1.43 |    0.01 |    2 |         - |          NA |
-| FlashSort           | 256  | SingleElementMoved |     3,198.9 ns |     77.27 ns |    27.56 ns |   4.09 |    0.03 |    4 |         - |          NA |
-| RadixLSD4Sort       | 256  | SingleElementMoved |     2,304.9 ns |    213.22 ns |    94.67 ns |   2.95 |    0.11 |    3 |         - |          NA |
-| RotateLSDRadixSort  | 256  | SingleElementMoved |    34,912.7 ns |    473.72 ns |   247.76 ns |  44.62 |    0.32 |    7 |         - |          NA |
-| RadixLSD256Sort     | 256  | SingleElementMoved |       990.2 ns |     35.63 ns |    15.82 ns |   1.27 |    0.02 |    2 |         - |          NA |
-| Radsort             | 256  | SingleElementMoved |     7,480.0 ns |    290.53 ns |   151.95 ns |   9.56 |    0.19 |    6 |         - |          NA |
-| RadixLSD10Sort      | 256  | SingleElementMoved |     3,095.3 ns |     12.25 ns |     5.44 ns |   3.96 |    0.01 |    4 |         - |          NA |
-| RadixMSD4Sort       | 256  | SingleElementMoved |     5,678.0 ns |    257.76 ns |   134.81 ns |   7.26 |    0.16 |    5 |         - |          NA |
-| RadixMSD10Sort      | 256  | SingleElementMoved |     4,879.9 ns |    295.85 ns |   154.73 ns |   6.24 |    0.19 |    5 |         - |          NA |
-| AmericanFlagSort    | 256  | SingleElementMoved |     1,647.6 ns |     10.95 ns |     4.86 ns |   2.11 |    0.01 |    2 |         - |          NA |
-| SkaSort             | 256  | SingleElementMoved |     2,411.2 ns |      6.96 ns |     2.48 ns |   3.08 |    0.01 |    3 |         - |          NA |
-| SpreadSort          | 256  | SingleElementMoved |       796.2 ns |     74.55 ns |    33.10 ns |   1.02 |    0.04 |    1 |         - |          NA |
-| DotnetSort          | 256  | SingleElementMoved |     1,107.7 ns |    156.50 ns |    81.85 ns |   1.42 |    0.10 |    2 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **256**  | **Sorted**             |     **1,336.1 ns** |    **313.95 ns** |   **164.20 ns** |   **1.80** |    **0.21** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 256  | Sorted             |       742.0 ns |     12.19 ns |     5.41 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 256  | Sorted             |     1,118.0 ns |     23.05 ns |    10.24 ns |   1.51 |    0.02 |    3 |         - |          NA |
-| PigeonSortInteger   | 256  | Sorted             |       539.4 ns |      6.94 ns |     3.08 ns |   0.73 |    0.01 |    2 |         - |          NA |
-| BucketSort          | 256  | Sorted             |     1,317.3 ns |     12.27 ns |     6.42 ns |   1.78 |    0.01 |    3 |         - |          NA |
-| BucketSortInteger   | 256  | Sorted             |     1,032.3 ns |     30.45 ns |    13.52 ns |   1.39 |    0.02 |    3 |         - |          NA |
-| FlashSort           | 256  | Sorted             |     2,843.2 ns |    203.32 ns |    90.28 ns |   3.83 |    0.12 |    5 |         - |          NA |
-| RadixLSD4Sort       | 256  | Sorted             |     2,210.1 ns |     78.04 ns |    34.65 ns |   2.98 |    0.05 |    4 |         - |          NA |
-| RotateLSDRadixSort  | 256  | Sorted             |    34,123.0 ns |    178.56 ns |    93.39 ns |  45.99 |    0.33 |    9 |         - |          NA |
-| RadixLSD256Sort     | 256  | Sorted             |       902.4 ns |     15.13 ns |     6.72 ns |   1.22 |    0.01 |    3 |         - |          NA |
-| Radsort             | 256  | Sorted             |     7,218.5 ns |     25.32 ns |    11.24 ns |   9.73 |    0.07 |    8 |         - |          NA |
-| RadixLSD10Sort      | 256  | Sorted             |     3,058.4 ns |      6.48 ns |     2.31 ns |   4.12 |    0.03 |    5 |         - |          NA |
-| RadixMSD4Sort       | 256  | Sorted             |     5,608.9 ns |    257.41 ns |   134.63 ns |   7.56 |    0.18 |    7 |         - |          NA |
-| RadixMSD10Sort      | 256  | Sorted             |     4,585.7 ns |     55.24 ns |    19.70 ns |   6.18 |    0.05 |    6 |         - |          NA |
-| AmericanFlagSort    | 256  | Sorted             |     1,253.9 ns |     16.54 ns |     8.65 ns |   1.69 |    0.02 |    3 |         - |          NA |
-| SkaSort             | 256  | Sorted             |     2,021.0 ns |     10.36 ns |     3.69 ns |   2.72 |    0.02 |    4 |         - |          NA |
-| SpreadSort          | 256  | Sorted             |       251.8 ns |      3.64 ns |     1.62 ns |   0.34 |    0.00 |    1 |         - |          NA |
-| DotnetSort          | 256  | Sorted             |       629.4 ns |     13.32 ns |     5.92 ns |   0.85 |    0.01 |    2 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **256**  | **Reversed**           |     **1,179.4 ns** |     **14.55 ns** |     **7.61 ns** |   **1.58** |    **0.01** |    **4** |         **-** |          **NA** |
-| CountingSortInteger | 256  | Reversed           |       748.3 ns |     11.94 ns |     5.30 ns |   1.00 |    0.00 |    3 |         - |          NA |
-| PigeonSort          | 256  | Reversed           |     1,163.0 ns |      3.92 ns |     1.74 ns |   1.55 |    0.01 |    4 |         - |          NA |
-| PigeonSortInteger   | 256  | Reversed           |       557.6 ns |      7.72 ns |     3.43 ns |   0.75 |    0.01 |    2 |         - |          NA |
-| BucketSort          | 256  | Reversed           |     1,380.6 ns |      7.78 ns |     3.46 ns |   1.85 |    0.01 |    4 |         - |          NA |
-| BucketSortInteger   | 256  | Reversed           |     1,055.4 ns |     26.91 ns |    11.95 ns |   1.41 |    0.02 |    4 |         - |          NA |
-| FlashSort           | 256  | Reversed           |     2,680.2 ns |     66.45 ns |    23.70 ns |   3.58 |    0.04 |    5 |         - |          NA |
-| RadixLSD4Sort       | 256  | Reversed           |     2,235.2 ns |     97.38 ns |    43.24 ns |   2.99 |    0.06 |    5 |         - |          NA |
-| RotateLSDRadixSort  | 256  | Reversed           |    34,842.1 ns |    287.12 ns |   127.48 ns |  46.56 |    0.35 |    9 |         - |          NA |
-| RadixLSD256Sort     | 256  | Reversed           |       918.3 ns |      8.91 ns |     3.96 ns |   1.23 |    0.01 |    4 |         - |          NA |
-| Radsort             | 256  | Reversed           |     7,872.3 ns |    217.32 ns |   113.66 ns |  10.52 |    0.16 |    8 |         - |          NA |
-| RadixLSD10Sort      | 256  | Reversed           |     3,168.5 ns |    229.33 ns |   119.94 ns |   4.23 |    0.15 |    6 |         - |          NA |
-| RadixMSD4Sort       | 256  | Reversed           |     5,444.2 ns |     45.01 ns |    16.05 ns |   7.28 |    0.05 |    7 |         - |          NA |
-| RadixMSD10Sort      | 256  | Reversed           |     4,769.3 ns |    289.20 ns |   151.26 ns |   6.37 |    0.20 |    7 |         - |          NA |
-| AmericanFlagSort    | 256  | Reversed           |     1,376.9 ns |     19.65 ns |     8.73 ns |   1.84 |    0.02 |    4 |         - |          NA |
-| SkaSort             | 256  | Reversed           |     3,103.9 ns |  1,205.91 ns |   630.71 ns |   4.15 |    0.80 |    6 |         - |          NA |
-| SpreadSort          | 256  | Reversed           |       374.4 ns |     10.05 ns |     4.46 ns |   0.50 |    0.01 |    1 |         - |          NA |
-| DotnetSort          | 256  | Reversed           |     1,111.3 ns |    176.03 ns |    78.16 ns |   1.49 |    0.10 |    4 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **256**  | **PipeOrgan**          |     **1,202.4 ns** |     **11.48 ns** |     **4.09 ns** |   **1.49** |    **0.01** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 256  | PipeOrgan          |       807.4 ns |     13.35 ns |     5.93 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 256  | PipeOrgan          |     1,097.2 ns |      6.96 ns |     2.48 ns |   1.36 |    0.01 |    3 |         - |          NA |
-| PigeonSortInteger   | 256  | PipeOrgan          |       630.4 ns |      6.75 ns |     3.00 ns |   0.78 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 256  | PipeOrgan          |     1,346.3 ns |     23.73 ns |    10.54 ns |   1.67 |    0.02 |    3 |         - |          NA |
-| BucketSortInteger   | 256  | PipeOrgan          |     1,159.3 ns |     67.41 ns |    35.26 ns |   1.44 |    0.04 |    3 |         - |          NA |
-| FlashSort           | 256  | PipeOrgan          |     3,425.9 ns |    136.80 ns |    71.55 ns |   4.24 |    0.09 |    5 |         - |          NA |
-| RadixLSD4Sort       | 256  | PipeOrgan          |     2,172.1 ns |     18.17 ns |     8.07 ns |   2.69 |    0.02 |    4 |         - |          NA |
-| RotateLSDRadixSort  | 256  | PipeOrgan          |    34,592.4 ns |    196.10 ns |   102.57 ns |  42.85 |    0.32 |    8 |         - |          NA |
-| RadixLSD256Sort     | 256  | PipeOrgan          |       974.3 ns |     37.99 ns |    16.87 ns |   1.21 |    0.02 |    3 |         - |          NA |
-| Radsort             | 256  | PipeOrgan          |     7,801.5 ns |    281.72 ns |   147.35 ns |   9.66 |    0.18 |    7 |         - |          NA |
-| RadixLSD10Sort      | 256  | PipeOrgan          |     3,136.0 ns |     10.97 ns |     4.87 ns |   3.88 |    0.03 |    5 |         - |          NA |
-| RadixMSD4Sort       | 256  | PipeOrgan          |     5,545.6 ns |     64.74 ns |    23.09 ns |   6.87 |    0.05 |    6 |         - |          NA |
-| RadixMSD10Sort      | 256  | PipeOrgan          |     4,862.2 ns |    235.29 ns |   123.06 ns |   6.02 |    0.15 |    6 |         - |          NA |
-| AmericanFlagSort    | 256  | PipeOrgan          |     1,881.1 ns |     37.30 ns |    13.30 ns |   2.33 |    0.02 |    4 |         - |          NA |
-| SkaSort             | 256  | PipeOrgan          |     2,692.1 ns |     16.78 ns |     7.45 ns |   3.33 |    0.02 |    5 |         - |          NA |
-| SpreadSort          | 256  | PipeOrgan          |     1,386.1 ns |     58.24 ns |    20.77 ns |   1.72 |    0.03 |    3 |         - |          NA |
-| DotnetSort          | 256  | PipeOrgan          |     1,944.2 ns |    456.38 ns |   238.70 ns |   2.41 |    0.28 |    4 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **256**  | **ManyDuplicates**     |     **1,209.1 ns** |     **24.51 ns** |    **12.82 ns** |   **1.57** |    **0.03** |    **2** |         **-** |          **NA** |
-| CountingSortInteger | 256  | ManyDuplicates     |       771.6 ns |     25.33 ns |    11.25 ns |   1.00 |    0.00 |    1 |         - |          NA |
-| PigeonSort          | 256  | ManyDuplicates     |     1,323.9 ns |    276.26 ns |   144.49 ns |   1.72 |    0.18 |    2 |         - |          NA |
-| PigeonSortInteger   | 256  | ManyDuplicates     |       725.3 ns |    156.62 ns |    81.91 ns |   0.94 |    0.10 |    1 |         - |          NA |
-| BucketSort          | 256  | ManyDuplicates     |     2,159.9 ns |    126.26 ns |    56.06 ns |   2.80 |    0.08 |    3 |         - |          NA |
-| BucketSortInteger   | 256  | ManyDuplicates     |     1,479.7 ns |      5.70 ns |     2.03 ns |   1.92 |    0.03 |    2 |         - |          NA |
-| FlashSort           | 256  | ManyDuplicates     |     3,996.5 ns |    101.91 ns |    45.25 ns |   5.18 |    0.09 |    4 |         - |          NA |
-| RadixLSD4Sort       | 256  | ManyDuplicates     |     1,910.9 ns |    233.66 ns |   122.21 ns |   2.48 |    0.15 |    3 |         - |          NA |
-| RotateLSDRadixSort  | 256  | ManyDuplicates     |    46,503.5 ns |    716.74 ns |   318.24 ns |  60.28 |    0.90 |    7 |         - |          NA |
-| RadixLSD256Sort     | 256  | ManyDuplicates     |     1,045.4 ns |     15.84 ns |     7.03 ns |   1.36 |    0.02 |    2 |         - |          NA |
-| Radsort             | 256  | ManyDuplicates     |     8,991.8 ns |    269.45 ns |   140.93 ns |  11.66 |    0.23 |    6 |         - |          NA |
-| RadixLSD10Sort      | 256  | ManyDuplicates     |     2,206.1 ns |     18.15 ns |     8.06 ns |   2.86 |    0.04 |    3 |         - |          NA |
-| RadixMSD4Sort       | 256  | ManyDuplicates     |     2,727.8 ns |    315.15 ns |   139.93 ns |   3.54 |    0.18 |    3 |         - |          NA |
-| RadixMSD10Sort      | 256  | ManyDuplicates     |     2,972.5 ns |    133.34 ns |    59.20 ns |   3.85 |    0.09 |    3 |         - |          NA |
-| AmericanFlagSort    | 256  | ManyDuplicates     |     2,439.5 ns |    133.92 ns |    59.46 ns |   3.16 |    0.08 |    3 |         - |          NA |
-| SkaSort             | 256  | ManyDuplicates     |     2,832.5 ns |    168.39 ns |    74.77 ns |   3.67 |    0.10 |    3 |         - |          NA |
-| SpreadSort          | 256  | ManyDuplicates     |     5,653.7 ns |    346.28 ns |   181.11 ns |   7.33 |    0.24 |    5 |         - |          NA |
-| DotnetSort          | 256  | ManyDuplicates     |     5,517.3 ns |    232.43 ns |   121.57 ns |   7.15 |    0.18 |    5 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **1024** | **Random**             |     **4,809.2 ns** |    **134.74 ns** |    **59.82 ns** |   **1.47** |    **0.02** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 1024 | Random             |     3,269.4 ns |     37.95 ns |    13.53 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 1024 | Random             |     3,981.0 ns |     18.34 ns |     9.59 ns |   1.22 |    0.01 |    3 |         - |          NA |
-| PigeonSortInteger   | 1024 | Random             |     2,556.1 ns |     34.88 ns |    15.48 ns |   0.78 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 1024 | Random             |     5,428.9 ns |     31.89 ns |    14.16 ns |   1.66 |    0.01 |    3 |         - |          NA |
-| BucketSortInteger   | 1024 | Random             |     4,231.2 ns |     26.27 ns |    11.66 ns |   1.29 |    0.01 |    3 |         - |          NA |
-| FlashSort           | 1024 | Random             |    15,331.6 ns |    181.51 ns |    80.59 ns |   4.69 |    0.03 |    6 |         - |          NA |
-| RadixLSD4Sort       | 1024 | Random             |    10,772.8 ns |    281.57 ns |   147.27 ns |   3.30 |    0.04 |    5 |         - |          NA |
-| RotateLSDRadixSort  | 1024 | Random             |   281,951.8 ns |  2,360.97 ns | 1,048.29 ns |  86.24 |    0.45 |    9 |         - |          NA |
-| RadixLSD256Sort     | 1024 | Random             |     5,267.6 ns |     37.84 ns |    16.80 ns |   1.61 |    0.01 |    3 |         - |          NA |
-| Radsort             | 1024 | Random             |    29,822.5 ns |    240.74 ns |   125.91 ns |   9.12 |    0.05 |    8 |         - |          NA |
-| RadixLSD10Sort      | 1024 | Random             |    16,249.1 ns |    274.28 ns |   143.46 ns |   4.97 |    0.05 |    6 |         - |          NA |
-| RadixMSD4Sort       | 1024 | Random             |    28,951.3 ns |    256.39 ns |   134.10 ns |   8.86 |    0.05 |    8 |         - |          NA |
-| RadixMSD10Sort      | 1024 | Random             |    22,434.4 ns |    262.03 ns |   137.05 ns |   6.86 |    0.05 |    7 |         - |          NA |
-| AmericanFlagSort    | 1024 | Random             |    17,045.0 ns |    362.07 ns |   189.37 ns |   5.21 |    0.06 |    6 |         - |          NA |
-| SkaSort             | 1024 | Random             |    12,311.8 ns |    184.70 ns |    82.01 ns |   3.77 |    0.03 |    5 |         - |          NA |
-| SpreadSort          | 1024 | Random             |     6,832.2 ns |    180.86 ns |    94.59 ns |   2.09 |    0.03 |    4 |         - |          NA |
-| DotnetSort          | 1024 | Random             |    29,879.6 ns |    524.21 ns |   232.75 ns |   9.14 |    0.08 |    8 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **1024** | **SingleElementMoved** |     **5,054.2 ns** |    **199.43 ns** |   **104.31 ns** |   **1.72** |    **0.04** |    **2** |         **-** |          **NA** |
-| CountingSortInteger | 1024 | SingleElementMoved |     2,944.8 ns |     54.18 ns |    24.06 ns |   1.00 |    0.00 |    1 |         - |          NA |
-| PigeonSort          | 1024 | SingleElementMoved |     3,862.6 ns |     11.29 ns |     5.01 ns |   1.31 |    0.01 |    2 |         - |          NA |
-| PigeonSortInteger   | 1024 | SingleElementMoved |     2,629.3 ns |    321.75 ns |   168.28 ns |   0.89 |    0.05 |    1 |         - |          NA |
-| BucketSort          | 1024 | SingleElementMoved |     5,385.7 ns |    152.12 ns |    67.54 ns |   1.83 |    0.03 |    2 |         - |          NA |
-| BucketSortInteger   | 1024 | SingleElementMoved |     4,108.9 ns |     37.85 ns |    16.81 ns |   1.40 |    0.01 |    2 |         - |          NA |
-| FlashSort           | 1024 | SingleElementMoved |    11,964.9 ns |    447.54 ns |   198.71 ns |   4.06 |    0.07 |    4 |         - |          NA |
-| RadixLSD4Sort       | 1024 | SingleElementMoved |    12,689.9 ns |    308.72 ns |   161.47 ns |   4.31 |    0.06 |    4 |         - |          NA |
-| RotateLSDRadixSort  | 1024 | SingleElementMoved |   176,369.5 ns |  1,087.40 ns |   482.81 ns |  59.90 |    0.48 |    7 |         - |          NA |
-| RadixLSD256Sort     | 1024 | SingleElementMoved |     5,199.7 ns |     64.89 ns |    28.81 ns |   1.77 |    0.02 |    2 |         - |          NA |
-| Radsort             | 1024 | SingleElementMoved |    19,384.5 ns |    410.10 ns |   146.25 ns |   6.58 |    0.07 |    6 |         - |          NA |
-| RadixLSD10Sort      | 1024 | SingleElementMoved |    16,025.6 ns |    137.24 ns |    71.78 ns |   5.44 |    0.05 |    5 |         - |          NA |
-| RadixMSD4Sort       | 1024 | SingleElementMoved |    23,789.0 ns |    229.57 ns |   101.93 ns |   8.08 |    0.07 |    6 |         - |          NA |
-| RadixMSD10Sort      | 1024 | SingleElementMoved |    22,310.6 ns |    392.48 ns |   205.27 ns |   7.58 |    0.09 |    6 |         - |          NA |
-| AmericanFlagSort    | 1024 | SingleElementMoved |     9,009.2 ns |    316.45 ns |   165.51 ns |   3.06 |    0.06 |    3 |         - |          NA |
-| SkaSort             | 1024 | SingleElementMoved |     8,311.2 ns |    364.24 ns |   190.50 ns |   2.82 |    0.06 |    3 |         - |          NA |
-| SpreadSort          | 1024 | SingleElementMoved |     4,494.4 ns |     60.72 ns |    26.96 ns |   1.53 |    0.01 |    2 |         - |          NA |
-| DotnetSort          | 1024 | SingleElementMoved |     5,348.5 ns |    284.11 ns |   148.60 ns |   1.82 |    0.05 |    2 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **1024** | **Sorted**             |     **4,867.5 ns** |    **380.28 ns** |   **198.89 ns** |   **1.67** |    **0.08** |    **4** |         **-** |          **NA** |
-| CountingSortInteger | 1024 | Sorted             |     2,918.5 ns |    195.41 ns |    86.76 ns |   1.00 |    0.00 |    3 |         - |          NA |
-| PigeonSort          | 1024 | Sorted             |     3,842.0 ns |      8.15 ns |     2.91 ns |   1.32 |    0.04 |    3 |         - |          NA |
-| PigeonSortInteger   | 1024 | Sorted             |     2,168.6 ns |      9.11 ns |     4.04 ns |   0.74 |    0.02 |    2 |         - |          NA |
-| BucketSort          | 1024 | Sorted             |     4,852.4 ns |     43.15 ns |    19.16 ns |   1.66 |    0.04 |    4 |         - |          NA |
-| BucketSortInteger   | 1024 | Sorted             |     3,833.7 ns |     86.91 ns |    38.59 ns |   1.31 |    0.04 |    3 |         - |          NA |
-| FlashSort           | 1024 | Sorted             |    11,175.5 ns |    418.42 ns |   218.84 ns |   3.83 |    0.12 |    6 |         - |          NA |
-| RadixLSD4Sort       | 1024 | Sorted             |    12,370.7 ns |    323.12 ns |   169.00 ns |   4.24 |    0.13 |    6 |         - |          NA |
-| RotateLSDRadixSort  | 1024 | Sorted             |   174,457.9 ns |    553.18 ns |   197.27 ns |  59.82 |    1.60 |    8 |         - |          NA |
-| RadixLSD256Sort     | 1024 | Sorted             |     4,902.3 ns |     96.01 ns |    42.63 ns |   1.68 |    0.05 |    4 |         - |          NA |
-| Radsort             | 1024 | Sorted             |    18,961.9 ns |    309.78 ns |   162.02 ns |   6.50 |    0.18 |    7 |         - |          NA |
-| RadixLSD10Sort      | 1024 | Sorted             |    15,889.5 ns |    115.05 ns |    60.18 ns |   5.45 |    0.15 |    7 |         - |          NA |
-| RadixMSD4Sort       | 1024 | Sorted             |    23,806.3 ns |    188.72 ns |    98.70 ns |   8.16 |    0.22 |    7 |         - |          NA |
-| RadixMSD10Sort      | 1024 | Sorted             |    22,565.5 ns |    200.06 ns |   104.64 ns |   7.74 |    0.21 |    7 |         - |          NA |
-| AmericanFlagSort    | 1024 | Sorted             |     7,461.6 ns |    262.90 ns |   137.50 ns |   2.56 |    0.08 |    5 |         - |          NA |
-| SkaSort             | 1024 | Sorted             |     7,001.4 ns |    186.83 ns |    97.72 ns |   2.40 |    0.07 |    5 |         - |          NA |
-| SpreadSort          | 1024 | Sorted             |       556.3 ns |     64.94 ns |    33.96 ns |   0.19 |    0.01 |    1 |         - |          NA |
-| DotnetSort          | 1024 | Sorted             |     3,233.3 ns |    210.62 ns |    93.51 ns |   1.11 |    0.04 |    3 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **1024** | **Reversed**           |     **4,529.8 ns** |    **309.89 ns** |   **162.08 ns** |   **1.50** |    **0.09** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 1024 | Reversed           |     3,024.2 ns |    291.98 ns |   152.71 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 1024 | Reversed           |     4,115.5 ns |     24.59 ns |     8.77 ns |   1.36 |    0.06 |    3 |         - |          NA |
-| PigeonSortInteger   | 1024 | Reversed           |     2,178.9 ns |     45.12 ns |    20.03 ns |   0.72 |    0.03 |    1 |         - |          NA |
-| BucketSort          | 1024 | Reversed           |     5,129.5 ns |     23.77 ns |    10.55 ns |   1.70 |    0.08 |    3 |         - |          NA |
-| BucketSortInteger   | 1024 | Reversed           |     3,906.9 ns |     35.10 ns |    15.59 ns |   1.29 |    0.06 |    3 |         - |          NA |
-| FlashSort           | 1024 | Reversed           |    10,765.9 ns |    402.40 ns |   210.46 ns |   3.57 |    0.18 |    5 |         - |          NA |
-| RadixLSD4Sort       | 1024 | Reversed           |    16,342.3 ns |    279.82 ns |   146.35 ns |   5.42 |    0.25 |    6 |         - |          NA |
-| RotateLSDRadixSort  | 1024 | Reversed           |   177,966.4 ns |    807.62 ns |   358.59 ns |  58.97 |    2.72 |    8 |         - |          NA |
-| RadixLSD256Sort     | 1024 | Reversed           |     5,084.4 ns |    128.66 ns |    67.29 ns |   1.68 |    0.08 |    3 |         - |          NA |
-| Radsort             | 1024 | Reversed           |    20,968.2 ns |     63.84 ns |    22.77 ns |   6.95 |    0.32 |    7 |         - |          NA |
-| RadixLSD10Sort      | 1024 | Reversed           |    15,798.9 ns |    128.74 ns |    67.34 ns |   5.24 |    0.24 |    6 |         - |          NA |
-| RadixMSD4Sort       | 1024 | Reversed           |    24,005.1 ns |    210.32 ns |   110.00 ns |   7.95 |    0.37 |    7 |         - |          NA |
-| RadixMSD10Sort      | 1024 | Reversed           |    22,376.8 ns |    208.70 ns |   109.15 ns |   7.42 |    0.34 |    7 |         - |          NA |
-| AmericanFlagSort    | 1024 | Reversed           |     8,364.7 ns |    227.77 ns |   119.13 ns |   2.77 |    0.13 |    4 |         - |          NA |
-| SkaSort             | 1024 | Reversed           |     7,957.7 ns |    336.95 ns |   176.23 ns |   2.64 |    0.13 |    4 |         - |          NA |
-| SpreadSort          | 1024 | Reversed           |     3,899.1 ns |    274.91 ns |   143.78 ns |   1.29 |    0.07 |    3 |         - |          NA |
-| DotnetSort          | 1024 | Reversed           |     5,984.2 ns |  1,240.18 ns |   648.64 ns |   1.98 |    0.22 |    3 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **1024** | **PipeOrgan**          |     **4,465.1 ns** |     **36.70 ns** |    **13.09 ns** |   **1.40** |    **0.06** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 1024 | PipeOrgan          |     3,195.8 ns |    294.59 ns |   154.07 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 1024 | PipeOrgan          |     3,885.5 ns |     10.31 ns |     4.58 ns |   1.22 |    0.05 |    3 |         - |          NA |
-| PigeonSortInteger   | 1024 | PipeOrgan          |     2,462.4 ns |     44.13 ns |    15.74 ns |   0.77 |    0.03 |    1 |         - |          NA |
-| BucketSort          | 1024 | PipeOrgan          |     4,992.1 ns |     17.04 ns |     7.56 ns |   1.57 |    0.07 |    3 |         - |          NA |
-| BucketSortInteger   | 1024 | PipeOrgan          |     4,306.6 ns |     42.82 ns |    22.40 ns |   1.35 |    0.06 |    3 |         - |          NA |
-| FlashSort           | 1024 | PipeOrgan          |    13,372.1 ns |    301.00 ns |   157.43 ns |   4.19 |    0.19 |    4 |         - |          NA |
-| RadixLSD4Sort       | 1024 | PipeOrgan          |    10,693.3 ns |    253.21 ns |   132.43 ns |   3.35 |    0.15 |    4 |         - |          NA |
-| RotateLSDRadixSort  | 1024 | PipeOrgan          |   176,232.8 ns |  1,365.56 ns |   606.32 ns |  55.25 |    2.45 |    6 |         - |          NA |
-| RadixLSD256Sort     | 1024 | PipeOrgan          |     5,635.4 ns |    311.14 ns |   162.73 ns |   1.77 |    0.09 |    3 |         - |          NA |
-| Radsort             | 1024 | PipeOrgan          |    19,189.6 ns |    275.08 ns |   143.87 ns |   6.02 |    0.27 |    4 |         - |          NA |
-| RadixLSD10Sort      | 1024 | PipeOrgan          |    16,042.9 ns |    223.26 ns |   116.77 ns |   5.03 |    0.23 |    4 |         - |          NA |
-| RadixMSD4Sort       | 1024 | PipeOrgan          |    24,112.1 ns |    418.59 ns |   218.93 ns |   7.56 |    0.34 |    5 |         - |          NA |
-| RadixMSD10Sort      | 1024 | PipeOrgan          |    24,956.0 ns |    286.58 ns |   149.89 ns |   7.82 |    0.35 |    5 |         - |          NA |
-| AmericanFlagSort    | 1024 | PipeOrgan          |    11,665.9 ns |    238.98 ns |   106.11 ns |   3.66 |    0.16 |    4 |         - |          NA |
-| SkaSort             | 1024 | PipeOrgan          |    11,103.0 ns |    465.51 ns |   243.47 ns |   3.48 |    0.17 |    4 |         - |          NA |
-| SpreadSort          | 1024 | PipeOrgan          |     4,814.6 ns |    114.46 ns |    50.82 ns |   1.51 |    0.07 |    3 |         - |          NA |
-| DotnetSort          | 1024 | PipeOrgan          |    13,020.9 ns |    267.79 ns |   118.90 ns |   4.08 |    0.18 |    4 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **1024** | **ManyDuplicates**     |     **4,496.6 ns** |    **145.85 ns** |    **64.76 ns** |   **1.58** |    **0.04** |    **2** |         **-** |          **NA** |
-| CountingSortInteger | 1024 | ManyDuplicates     |     2,839.8 ns |    162.99 ns |    72.37 ns |   1.00 |    0.00 |    1 |         - |          NA |
-| PigeonSort          | 1024 | ManyDuplicates     |     4,803.5 ns |     49.05 ns |    25.65 ns |   1.69 |    0.04 |    2 |         - |          NA |
-| PigeonSortInteger   | 1024 | ManyDuplicates     |     2,499.8 ns |    384.85 ns |   201.28 ns |   0.88 |    0.07 |    1 |         - |          NA |
-| BucketSort          | 1024 | ManyDuplicates     |     8,441.8 ns |    311.79 ns |   163.07 ns |   2.97 |    0.09 |    2 |         - |          NA |
-| BucketSortInteger   | 1024 | ManyDuplicates     |     4,172.8 ns |     57.81 ns |    30.24 ns |   1.47 |    0.04 |    2 |         - |          NA |
-| FlashSort           | 1024 | ManyDuplicates     |    13,691.1 ns |    219.15 ns |   114.62 ns |   4.82 |    0.12 |    3 |         - |          NA |
-| RadixLSD4Sort       | 1024 | ManyDuplicates     |     6,898.8 ns |    276.58 ns |   144.66 ns |   2.43 |    0.07 |    2 |         - |          NA |
-| RotateLSDRadixSort  | 1024 | ManyDuplicates     |   191,132.5 ns |  1,535.15 ns |   802.91 ns |  67.34 |    1.57 |    5 |         - |          NA |
-| RadixLSD256Sort     | 1024 | ManyDuplicates     |     3,302.5 ns |     16.39 ns |     7.28 ns |   1.16 |    0.03 |    1 |         - |          NA |
-| Radsort             | 1024 | ManyDuplicates     |    19,955.6 ns |    226.49 ns |   118.46 ns |   7.03 |    0.17 |    4 |         - |          NA |
-| RadixLSD10Sort      | 1024 | ManyDuplicates     |     8,936.6 ns |    230.93 ns |   120.78 ns |   3.15 |    0.08 |    2 |         - |          NA |
-| RadixMSD4Sort       | 1024 | ManyDuplicates     |     7,704.6 ns |    380.76 ns |   199.15 ns |   2.71 |    0.09 |    2 |         - |          NA |
-| RadixMSD10Sort      | 1024 | ManyDuplicates     |     9,759.9 ns |    251.84 ns |   131.72 ns |   3.44 |    0.09 |    2 |         - |          NA |
-| AmericanFlagSort    | 1024 | ManyDuplicates     |     7,414.5 ns |    333.67 ns |   174.52 ns |   2.61 |    0.08 |    2 |         - |          NA |
-| SkaSort             | 1024 | ManyDuplicates     |     6,431.9 ns |    440.72 ns |   195.68 ns |   2.27 |    0.08 |    2 |         - |          NA |
-| SpreadSort          | 1024 | ManyDuplicates     |     5,439.9 ns |    181.56 ns |    94.96 ns |   1.92 |    0.05 |    2 |         - |          NA |
-| DotnetSort          | 1024 | ManyDuplicates     |    23,250.2 ns |    360.40 ns |   188.50 ns |   8.19 |    0.20 |    4 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **4096** | **Random**             |    **19,030.1 ns** |    **466.81 ns** |   **244.15 ns** |   **1.43** |    **0.03** |    **2** |         **-** |          **NA** |
-| CountingSortInteger | 4096 | Random             |    13,328.2 ns |    382.32 ns |   199.96 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 4096 | Random             |    15,591.8 ns |    229.97 ns |   120.28 ns |   1.17 |    0.02 |    2 |         - |          NA |
-| PigeonSortInteger   | 4096 | Random             |     9,909.8 ns |    248.24 ns |   129.83 ns |   0.74 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 4096 | Random             |    21,427.2 ns |    209.01 ns |   109.32 ns |   1.61 |    0.02 |    2 |         - |          NA |
-| BucketSortInteger   | 4096 | Random             |    17,346.4 ns |    126.25 ns |    45.02 ns |   1.30 |    0.02 |    2 |         - |          NA |
-| FlashSort           | 4096 | Random             |    64,745.4 ns | 10,727.72 ns | 5,610.81 ns |   4.86 |    0.40 |    5 |         - |          NA |
-| RadixLSD4Sort       | 4096 | Random             |    48,674.8 ns |    324.80 ns |   144.21 ns |   3.65 |    0.05 |    4 |         - |          NA |
-| RotateLSDRadixSort  | 4096 | Random             | 1,402,296.0 ns |  2,665.49 ns |   950.54 ns | 105.23 |    1.49 |    8 |         - |          NA |
-| RadixLSD256Sort     | 4096 | Random             |    19,997.1 ns |    443.33 ns |   158.10 ns |   1.50 |    0.02 |    2 |         - |          NA |
-| Radsort             | 4096 | Random             |    68,468.3 ns |    495.38 ns |   219.95 ns |   5.14 |    0.07 |    5 |         - |          NA |
-| RadixLSD10Sort      | 4096 | Random             |    64,080.5 ns |    284.57 ns |   126.35 ns |   4.81 |    0.07 |    5 |         - |          NA |
-| RadixMSD4Sort       | 4096 | Random             |    98,369.1 ns |    600.80 ns |   266.76 ns |   7.38 |    0.11 |    6 |         - |          NA |
-| RadixMSD10Sort      | 4096 | Random             |    88,918.6 ns |    564.07 ns |   250.45 ns |   6.67 |    0.10 |    6 |         - |          NA |
-| AmericanFlagSort    | 4096 | Random             |    61,661.6 ns |    693.44 ns |   307.89 ns |   4.63 |    0.07 |    5 |         - |          NA |
-| SkaSort             | 4096 | Random             |    46,658.1 ns |    911.41 ns |   404.67 ns |   3.50 |    0.06 |    4 |         - |          NA |
-| SpreadSort          | 4096 | Random             |    28,353.8 ns |    279.49 ns |   124.10 ns |   2.13 |    0.03 |    3 |         - |          NA |
-| DotnetSort          | 4096 | Random             |   145,114.7 ns |  1,981.24 ns |   879.69 ns |  10.89 |    0.17 |    7 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **4096** | **SingleElementMoved** |    **19,561.8 ns** |    **491.08 ns** |   **256.85 ns** |   **1.63** |    **0.02** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 4096 | SingleElementMoved |    12,030.5 ns |    207.34 ns |   108.44 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 4096 | SingleElementMoved |    15,268.9 ns |    278.72 ns |   123.75 ns |   1.27 |    0.01 |    3 |         - |          NA |
-| PigeonSortInteger   | 4096 | SingleElementMoved |     9,860.5 ns |    342.03 ns |   178.89 ns |   0.82 |    0.02 |    1 |         - |          NA |
-| BucketSort          | 4096 | SingleElementMoved |    20,851.9 ns |    143.80 ns |    63.85 ns |   1.73 |    0.02 |    3 |         - |          NA |
-| BucketSortInteger   | 4096 | SingleElementMoved |    19,007.3 ns |    829.98 ns |   434.10 ns |   1.58 |    0.04 |    3 |         - |          NA |
-| FlashSort           | 4096 | SingleElementMoved |    47,559.7 ns |    874.11 ns |   388.11 ns |   3.95 |    0.05 |    4 |         - |          NA |
-| RadixLSD4Sort       | 4096 | SingleElementMoved |    71,595.1 ns |    711.61 ns |   372.18 ns |   5.95 |    0.06 |    5 |         - |          NA |
-| RotateLSDRadixSort  | 4096 | SingleElementMoved |   857,222.1 ns |  1,767.58 ns |   784.82 ns |  71.26 |    0.61 |    7 |         - |          NA |
-| RadixLSD256Sort     | 4096 | SingleElementMoved |    19,315.2 ns |    518.66 ns |   230.29 ns |   1.61 |    0.02 |    3 |         - |          NA |
-| Radsort             | 4096 | SingleElementMoved |    44,698.7 ns |    258.16 ns |   135.02 ns |   3.72 |    0.03 |    4 |         - |          NA |
-| RadixLSD10Sort      | 4096 | SingleElementMoved |    63,499.3 ns |    364.55 ns |   190.67 ns |   5.28 |    0.05 |    5 |         - |          NA |
-| RadixMSD4Sort       | 4096 | SingleElementMoved |   100,748.6 ns |    640.10 ns |   284.21 ns |   8.38 |    0.08 |    6 |         - |          NA |
-| RadixMSD10Sort      | 4096 | SingleElementMoved |    88,452.5 ns |    837.14 ns |   437.84 ns |   7.35 |    0.07 |    6 |         - |          NA |
-| AmericanFlagSort    | 4096 | SingleElementMoved |    34,180.4 ns |    748.17 ns |   391.31 ns |   2.84 |    0.04 |    3 |         - |          NA |
-| SkaSort             | 4096 | SingleElementMoved |    28,970.2 ns |    186.84 ns |    82.96 ns |   2.41 |    0.02 |    3 |         - |          NA |
-| SpreadSort          | 4096 | SingleElementMoved |    18,047.3 ns |    285.77 ns |   149.46 ns |   1.50 |    0.02 |    3 |         - |          NA |
-| DotnetSort          | 4096 | SingleElementMoved |    24,461.8 ns |    209.26 ns |    92.91 ns |   2.03 |    0.02 |    3 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **4096** | **Sorted**             |    **18,060.4 ns** |    **568.28 ns** |   **297.22 ns** |   **1.54** |    **0.03** |    **4** |         **-** |          **NA** |
-| CountingSortInteger | 4096 | Sorted             |    11,760.9 ns |    236.58 ns |   123.74 ns |   1.00 |    0.00 |    3 |         - |          NA |
-| PigeonSort          | 4096 | Sorted             |    15,370.3 ns |    490.08 ns |   217.60 ns |   1.31 |    0.02 |    4 |         - |          NA |
-| PigeonSortInteger   | 4096 | Sorted             |     8,687.7 ns |    287.26 ns |   150.24 ns |   0.74 |    0.01 |    2 |         - |          NA |
-| BucketSort          | 4096 | Sorted             |    21,756.0 ns |    245.86 ns |   128.59 ns |   1.85 |    0.02 |    4 |         - |          NA |
-| BucketSortInteger   | 4096 | Sorted             |    15,649.2 ns |    432.39 ns |   191.98 ns |   1.33 |    0.02 |    4 |         - |          NA |
-| FlashSort           | 4096 | Sorted             |    44,548.6 ns |     93.10 ns |    48.69 ns |   3.79 |    0.04 |    5 |         - |          NA |
-| RadixLSD4Sort       | 4096 | Sorted             |    68,087.4 ns |  1,307.98 ns |   684.10 ns |   5.79 |    0.08 |    6 |         - |          NA |
-| RotateLSDRadixSort  | 4096 | Sorted             |   852,130.3 ns |  2,696.34 ns | 1,410.24 ns |  72.46 |    0.73 |    8 |         - |          NA |
-| RadixLSD256Sort     | 4096 | Sorted             |    18,007.6 ns |    269.70 ns |   141.06 ns |   1.53 |    0.02 |    4 |         - |          NA |
-| Radsort             | 4096 | Sorted             |    42,044.3 ns |    511.21 ns |   182.30 ns |   3.58 |    0.04 |    5 |         - |          NA |
-| RadixLSD10Sort      | 4096 | Sorted             |    62,975.4 ns |    294.15 ns |   153.85 ns |   5.36 |    0.05 |    6 |         - |          NA |
-| RadixMSD4Sort       | 4096 | Sorted             |    99,751.6 ns |    345.71 ns |   153.50 ns |   8.48 |    0.09 |    7 |         - |          NA |
-| RadixMSD10Sort      | 4096 | Sorted             |    87,667.2 ns |    328.63 ns |   145.91 ns |   7.45 |    0.08 |    7 |         - |          NA |
-| AmericanFlagSort    | 4096 | Sorted             |    28,155.3 ns |    150.23 ns |    66.70 ns |   2.39 |    0.02 |    4 |         - |          NA |
-| SkaSort             | 4096 | Sorted             |    25,744.2 ns |    488.24 ns |   255.36 ns |   2.19 |    0.03 |    4 |         - |          NA |
-| SpreadSort          | 4096 | Sorted             |     1,946.9 ns |    239.61 ns |   125.32 ns |   0.17 |    0.01 |    1 |         - |          NA |
-| DotnetSort          | 4096 | Sorted             |    15,411.1 ns |    381.84 ns |   199.71 ns |   1.31 |    0.02 |    4 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **4096** | **Reversed**           |    **17,523.7 ns** |    **214.46 ns** |   **112.17 ns** |   **1.47** |    **0.02** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 4096 | Reversed           |    11,888.1 ns |    306.98 ns |   160.56 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 4096 | Reversed           |    16,322.5 ns |    134.77 ns |    59.84 ns |   1.37 |    0.02 |    3 |         - |          NA |
-| PigeonSortInteger   | 4096 | Reversed           |     8,756.3 ns |    228.75 ns |   119.64 ns |   0.74 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 4096 | Reversed           |    21,312.6 ns |    245.63 ns |   128.47 ns |   1.79 |    0.03 |    3 |         - |          NA |
-| BucketSortInteger   | 4096 | Reversed           |    15,806.0 ns |    100.50 ns |    44.62 ns |   1.33 |    0.02 |    3 |         - |          NA |
-| FlashSort           | 4096 | Reversed           |    42,793.3 ns |    321.93 ns |   168.37 ns |   3.60 |    0.05 |    5 |         - |          NA |
-| RadixLSD4Sort       | 4096 | Reversed           |    71,079.4 ns |    906.08 ns |   473.90 ns |   5.98 |    0.09 |    6 |         - |          NA |
-| RotateLSDRadixSort  | 4096 | Reversed           |   868,674.2 ns |  2,259.02 ns | 1,003.02 ns |  73.08 |    0.94 |    8 |         - |          NA |
-| RadixLSD256Sort     | 4096 | Reversed           |    18,176.6 ns |    142.57 ns |    63.30 ns |   1.53 |    0.02 |    3 |         - |          NA |
-| Radsort             | 4096 | Reversed           |    41,472.5 ns |    325.77 ns |   170.38 ns |   3.49 |    0.05 |    5 |         - |          NA |
-| RadixLSD10Sort      | 4096 | Reversed           |    62,937.3 ns |    461.16 ns |   204.76 ns |   5.29 |    0.07 |    6 |         - |          NA |
-| RadixMSD4Sort       | 4096 | Reversed           |   101,894.3 ns |    817.00 ns |   362.75 ns |   8.57 |    0.11 |    7 |         - |          NA |
-| RadixMSD10Sort      | 4096 | Reversed           |    87,439.4 ns |    344.21 ns |   152.83 ns |   7.36 |    0.09 |    7 |         - |          NA |
-| AmericanFlagSort    | 4096 | Reversed           |    31,036.8 ns |    285.98 ns |   149.57 ns |   2.61 |    0.04 |    4 |         - |          NA |
-| SkaSort             | 4096 | Reversed           |    28,972.6 ns |    196.19 ns |    87.11 ns |   2.44 |    0.03 |    4 |         - |          NA |
-| SpreadSort          | 4096 | Reversed           |    14,856.0 ns |    162.66 ns |    85.07 ns |   1.25 |    0.02 |    3 |         - |          NA |
-| DotnetSort          | 4096 | Reversed           |    26,406.4 ns |    555.61 ns |   290.59 ns |   2.22 |    0.04 |    4 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **4096** | **PipeOrgan**          |    **18,087.3 ns** |    **105.83 ns** |    **55.35 ns** |   **1.45** |    **0.01** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 4096 | PipeOrgan          |    12,507.8 ns |     97.13 ns |    43.13 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 4096 | PipeOrgan          |    15,528.1 ns |    595.25 ns |   264.30 ns |   1.24 |    0.02 |    3 |         - |          NA |
-| PigeonSortInteger   | 4096 | PipeOrgan          |     9,869.7 ns |    298.56 ns |   156.15 ns |   0.79 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 4096 | PipeOrgan          |    20,241.2 ns |    159.41 ns |    70.78 ns |   1.62 |    0.01 |    3 |         - |          NA |
-| BucketSortInteger   | 4096 | PipeOrgan          |    19,126.2 ns |    197.77 ns |    87.81 ns |   1.53 |    0.01 |    3 |         - |          NA |
-| FlashSort           | 4096 | PipeOrgan          |    51,507.0 ns |    291.33 ns |   129.35 ns |   4.12 |    0.02 |    4 |         - |          NA |
-| RadixLSD4Sort       | 4096 | PipeOrgan          |    58,322.5 ns |    497.60 ns |   260.25 ns |   4.66 |    0.02 |    4 |         - |          NA |
-| RotateLSDRadixSort  | 4096 | PipeOrgan          |   856,821.5 ns |  1,814.66 ns |   949.10 ns |  68.50 |    0.23 |    6 |         - |          NA |
-| RadixLSD256Sort     | 4096 | PipeOrgan          |    19,717.3 ns |    400.33 ns |   209.38 ns |   1.58 |    0.02 |    3 |         - |          NA |
-| Radsort             | 4096 | PipeOrgan          |    42,682.7 ns |    633.46 ns |   281.26 ns |   3.41 |    0.02 |    4 |         - |          NA |
-| RadixLSD10Sort      | 4096 | PipeOrgan          |    63,851.2 ns |    447.69 ns |   159.65 ns |   5.10 |    0.02 |    4 |         - |          NA |
-| RadixMSD4Sort       | 4096 | PipeOrgan          |   104,853.1 ns |  1,133.68 ns |   592.93 ns |   8.38 |    0.05 |    5 |         - |          NA |
-| RadixMSD10Sort      | 4096 | PipeOrgan          |    89,190.1 ns |    510.62 ns |   267.06 ns |   7.13 |    0.03 |    5 |         - |          NA |
-| AmericanFlagSort    | 4096 | PipeOrgan          |    48,046.0 ns |    454.73 ns |   237.83 ns |   3.84 |    0.02 |    4 |         - |          NA |
-| SkaSort             | 4096 | PipeOrgan          |    42,515.9 ns |    314.12 ns |   139.47 ns |   3.40 |    0.02 |    4 |         - |          NA |
-| SpreadSort          | 4096 | PipeOrgan          |    21,247.2 ns |    322.32 ns |   168.58 ns |   1.70 |    0.01 |    3 |         - |          NA |
-| DotnetSort          | 4096 | PipeOrgan          |    72,328.9 ns |  4,994.33 ns | 2,612.13 ns |   5.78 |    0.20 |    4 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **4096** | **ManyDuplicates**     |    **17,305.6 ns** |    **185.81 ns** |    **82.50 ns** |   **1.55** |    **0.02** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 4096 | ManyDuplicates     |    11,147.7 ns |    285.11 ns |   149.12 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 4096 | ManyDuplicates     |    19,776.4 ns |    176.65 ns |    78.43 ns |   1.77 |    0.02 |    3 |         - |          NA |
-| PigeonSortInteger   | 4096 | ManyDuplicates     |     8,745.7 ns |    231.37 ns |   121.01 ns |   0.78 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 4096 | ManyDuplicates     |    30,498.4 ns |    495.45 ns |   176.68 ns |   2.74 |    0.04 |    4 |         - |          NA |
-| BucketSortInteger   | 4096 | ManyDuplicates     |    15,925.3 ns |    249.33 ns |   110.70 ns |   1.43 |    0.02 |    3 |         - |          NA |
-| FlashSort           | 4096 | ManyDuplicates     |    53,410.1 ns |    532.83 ns |   236.58 ns |   4.79 |    0.06 |    5 |         - |          NA |
-| RadixLSD4Sort       | 4096 | ManyDuplicates     |    27,359.9 ns |    184.20 ns |    81.79 ns |   2.45 |    0.03 |    4 |         - |          NA |
-| RotateLSDRadixSort  | 4096 | ManyDuplicates     |   772,650.5 ns |  3,183.06 ns | 1,664.80 ns |  69.32 |    0.89 |    7 |         - |          NA |
-| RadixLSD256Sort     | 4096 | ManyDuplicates     |    12,479.8 ns |    196.90 ns |    70.22 ns |   1.12 |    0.02 |    2 |         - |          NA |
-| Radsort             | 4096 | ManyDuplicates     |    42,487.9 ns |    501.66 ns |   262.38 ns |   3.81 |    0.05 |    4 |         - |          NA |
-| RadixLSD10Sort      | 4096 | ManyDuplicates     |    34,635.8 ns |    149.16 ns |    66.23 ns |   3.11 |    0.04 |    4 |         - |          NA |
-| RadixMSD4Sort       | 4096 | ManyDuplicates     |    28,519.2 ns |    359.30 ns |   187.92 ns |   2.56 |    0.04 |    4 |         - |          NA |
-| RadixMSD10Sort      | 4096 | ManyDuplicates     |    37,039.4 ns |    270.56 ns |   141.51 ns |   3.32 |    0.04 |    4 |         - |          NA |
-| AmericanFlagSort    | 4096 | ManyDuplicates     |    26,509.7 ns |    179.93 ns |    94.11 ns |   2.38 |    0.03 |    4 |         - |          NA |
-| SkaSort             | 4096 | ManyDuplicates     |    18,475.2 ns |  1,049.80 ns |   466.12 ns |   1.66 |    0.04 |    3 |         - |          NA |
-| SpreadSort          | 4096 | ManyDuplicates     |    21,072.9 ns |    374.97 ns |   196.12 ns |   1.89 |    0.03 |    3 |         - |          NA |
-| DotnetSort          | 4096 | ManyDuplicates     |    95,023.4 ns |  1,132.17 ns |   592.15 ns |   8.53 |    0.12 |    6 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **8192** | **Random**             |    **39,938.0 ns** |    **695.46 ns** |   **363.74 ns** |   **1.44** |    **0.02** |    **2** |         **-** |          **NA** |
-| CountingSortInteger | 8192 | Random             |    27,826.3 ns |    514.92 ns |   269.31 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 8192 | Random             |    30,840.4 ns |    443.93 ns |   232.19 ns |   1.11 |    0.01 |    2 |         - |          NA |
-| PigeonSortInteger   | 8192 | Random             |    19,991.1 ns |    508.36 ns |   265.88 ns |   0.72 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 8192 | Random             |    44,371.6 ns |    382.26 ns |   169.72 ns |   1.59 |    0.02 |    2 |         - |          NA |
-| BucketSortInteger   | 8192 | Random             |    36,450.1 ns |    889.25 ns |   465.09 ns |   1.31 |    0.02 |    2 |         - |          NA |
-| FlashSort           | 8192 | Random             |   133,738.5 ns |    583.77 ns |   305.32 ns |   4.81 |    0.04 |    3 |         - |          NA |
-| RadixLSD4Sort       | 8192 | Random             |   113,235.9 ns |    276.72 ns |   122.86 ns |   4.07 |    0.04 |    3 |         - |          NA |
-| RotateLSDRadixSort  | 8192 | Random             | 3,389,209.9 ns |  2,304.82 ns |   821.92 ns | 121.81 |    1.11 |    6 |         - |          NA |
-| RadixLSD256Sort     | 8192 | Random             |    39,250.7 ns |    148.79 ns |    77.82 ns |   1.41 |    0.01 |    2 |         - |          NA |
-| Radsort             | 8192 | Random             |    94,726.6 ns |    647.99 ns |   287.71 ns |   3.40 |    0.03 |    3 |         - |          NA |
-| RadixLSD10Sort      | 8192 | Random             |   128,136.8 ns |    289.90 ns |   128.72 ns |   4.61 |    0.04 |    3 |         - |          NA |
-| RadixMSD4Sort       | 8192 | Random             |   212,942.2 ns |  1,489.16 ns |   661.20 ns |   7.65 |    0.07 |    4 |         - |          NA |
-| RadixMSD10Sort      | 8192 | Random             |   180,821.3 ns |    870.09 ns |   455.07 ns |   6.50 |    0.06 |    4 |         - |          NA |
-| AmericanFlagSort    | 8192 | Random             |   121,472.0 ns |    331.97 ns |   147.40 ns |   4.37 |    0.04 |    3 |         - |          NA |
-| SkaSort             | 8192 | Random             |    91,690.7 ns |    755.03 ns |   335.24 ns |   3.30 |    0.03 |    3 |         - |          NA |
-| SpreadSort          | 8192 | Random             |    99,037.9 ns |    514.76 ns |   228.56 ns |   3.56 |    0.03 |    3 |         - |          NA |
-| DotnetSort          | 8192 | Random             |   314,937.1 ns |  1,559.88 ns |   692.60 ns |  11.32 |    0.11 |    5 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **8192** | **SingleElementMoved** |    **38,292.8 ns** |    **508.82 ns** |   **225.92 ns** |   **1.59** |    **0.02** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 8192 | SingleElementMoved |    24,017.8 ns |    458.48 ns |   239.80 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 8192 | SingleElementMoved |    30,329.5 ns |    381.44 ns |   199.50 ns |   1.26 |    0.01 |    3 |         - |          NA |
-| PigeonSortInteger   | 8192 | SingleElementMoved |    19,425.3 ns |    194.32 ns |   101.63 ns |   0.81 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 8192 | SingleElementMoved |    43,867.1 ns |    500.77 ns |   222.34 ns |   1.83 |    0.02 |    3 |         - |          NA |
-| BucketSortInteger   | 8192 | SingleElementMoved |    33,244.4 ns |    417.92 ns |   218.58 ns |   1.38 |    0.02 |    3 |         - |          NA |
-| FlashSort           | 8192 | SingleElementMoved |    94,200.4 ns |  1,668.50 ns |   872.66 ns |   3.92 |    0.05 |    5 |         - |          NA |
-| RadixLSD4Sort       | 8192 | SingleElementMoved |   159,667.5 ns |  1,820.59 ns |   952.20 ns |   6.65 |    0.07 |    7 |         - |          NA |
-| RotateLSDRadixSort  | 8192 | SingleElementMoved | 2,175,131.4 ns |  6,511.03 ns | 2,890.94 ns |  90.57 |    0.86 |    9 |         - |          NA |
-| RadixLSD256Sort     | 8192 | SingleElementMoved |    40,107.7 ns |    397.53 ns |   176.50 ns |   1.67 |    0.02 |    3 |         - |          NA |
-| Radsort             | 8192 | SingleElementMoved |    61,376.9 ns |    205.41 ns |   107.43 ns |   2.56 |    0.02 |    4 |         - |          NA |
-| RadixLSD10Sort      | 8192 | SingleElementMoved |   127,648.6 ns |    820.76 ns |   292.69 ns |   5.32 |    0.05 |    6 |         - |          NA |
-| RadixMSD4Sort       | 8192 | SingleElementMoved |   217,136.7 ns |  1,410.18 ns |   626.13 ns |   9.04 |    0.09 |    8 |         - |          NA |
-| RadixMSD10Sort      | 8192 | SingleElementMoved |   180,123.5 ns |  1,806.49 ns |   802.09 ns |   7.50 |    0.08 |    7 |         - |          NA |
-| AmericanFlagSort    | 8192 | SingleElementMoved |    67,894.4 ns |  1,003.93 ns |   445.75 ns |   2.83 |    0.03 |    4 |         - |          NA |
-| SkaSort             | 8192 | SingleElementMoved |    56,621.7 ns |    543.35 ns |   284.18 ns |   2.36 |    0.02 |    4 |         - |          NA |
-| SpreadSort          | 8192 | SingleElementMoved |    41,254.5 ns |  2,986.99 ns | 1,562.25 ns |   1.72 |    0.06 |    3 |         - |          NA |
-| DotnetSort          | 8192 | SingleElementMoved |    53,210.7 ns |    496.12 ns |   176.92 ns |   2.22 |    0.02 |    4 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **8192** | **Sorted**             |    **39,760.1 ns** |  **1,794.96 ns** |   **938.80 ns** |   **1.69** |    **0.04** |    **4** |         **-** |          **NA** |
-| CountingSortInteger | 8192 | Sorted             |    23,501.6 ns |    294.02 ns |   153.78 ns |   1.00 |    0.00 |    3 |         - |          NA |
-| PigeonSort          | 8192 | Sorted             |    30,218.2 ns |    503.29 ns |   263.23 ns |   1.29 |    0.01 |    4 |         - |          NA |
-| PigeonSortInteger   | 8192 | Sorted             |    17,332.3 ns |    253.72 ns |   132.70 ns |   0.74 |    0.01 |    2 |         - |          NA |
-| BucketSort          | 8192 | Sorted             |    44,703.1 ns |    336.39 ns |   175.94 ns |   1.90 |    0.01 |    4 |         - |          NA |
-| BucketSortInteger   | 8192 | Sorted             |    33,540.0 ns |    168.41 ns |    88.08 ns |   1.43 |    0.01 |    4 |         - |          NA |
-| FlashSort           | 8192 | Sorted             |    90,007.3 ns |    982.65 ns |   436.30 ns |   3.83 |    0.03 |    5 |         - |          NA |
-| RadixLSD4Sort       | 8192 | Sorted             |   156,227.3 ns |  2,184.52 ns | 1,142.55 ns |   6.65 |    0.06 |    7 |         - |          NA |
-| RotateLSDRadixSort  | 8192 | Sorted             | 2,165,434.2 ns |  3,430.43 ns | 1,794.18 ns |  92.14 |    0.57 |    9 |         - |          NA |
-| RadixLSD256Sort     | 8192 | Sorted             |    37,294.1 ns |    347.63 ns |   181.82 ns |   1.59 |    0.01 |    4 |         - |          NA |
-| Radsort             | 8192 | Sorted             |    57,364.0 ns |    320.25 ns |   167.50 ns |   2.44 |    0.02 |    4 |         - |          NA |
-| RadixLSD10Sort      | 8192 | Sorted             |   126,091.0 ns |    302.19 ns |   107.76 ns |   5.37 |    0.03 |    6 |         - |          NA |
-| RadixMSD4Sort       | 8192 | Sorted             |   213,162.1 ns |  1,006.45 ns |   446.87 ns |   9.07 |    0.06 |    8 |         - |          NA |
-| RadixMSD10Sort      | 8192 | Sorted             |   175,201.6 ns |    788.30 ns |   350.01 ns |   7.46 |    0.05 |    7 |         - |          NA |
-| AmericanFlagSort    | 8192 | Sorted             |    55,688.3 ns |    934.10 ns |   333.11 ns |   2.37 |    0.02 |    4 |         - |          NA |
-| SkaSort             | 8192 | Sorted             |    50,770.6 ns |    552.13 ns |   245.15 ns |   2.16 |    0.02 |    4 |         - |          NA |
-| SpreadSort          | 8192 | Sorted             |     3,515.4 ns |     40.25 ns |    17.87 ns |   0.15 |    0.00 |    1 |         - |          NA |
-| DotnetSort          | 8192 | Sorted             |    33,411.2 ns |  3,449.90 ns | 1,531.78 ns |   1.42 |    0.06 |    4 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **8192** | **Reversed**           |    **35,350.0 ns** |    **302.15 ns** |   **158.03 ns** |   **1.48** |    **0.02** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 8192 | Reversed           |    23,838.2 ns |    487.53 ns |   254.99 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 8192 | Reversed           |    32,518.7 ns |    175.25 ns |    91.66 ns |   1.36 |    0.01 |    3 |         - |          NA |
-| PigeonSortInteger   | 8192 | Reversed           |    17,344.5 ns |    186.29 ns |    82.71 ns |   0.73 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 8192 | Reversed           |    42,131.4 ns |    308.94 ns |   137.17 ns |   1.77 |    0.02 |    3 |         - |          NA |
-| BucketSortInteger   | 8192 | Reversed           |    31,551.7 ns |    163.88 ns |    72.77 ns |   1.32 |    0.01 |    3 |         - |          NA |
-| FlashSort           | 8192 | Reversed           |    83,537.6 ns |    633.12 ns |   281.11 ns |   3.50 |    0.04 |    5 |         - |          NA |
-| RadixLSD4Sort       | 8192 | Reversed           |   159,006.0 ns |    844.85 ns |   375.12 ns |   6.67 |    0.07 |    7 |         - |          NA |
-| RotateLSDRadixSort  | 8192 | Reversed           | 2,205,210.3 ns |  6,731.63 ns | 2,988.88 ns |  92.52 |    0.93 |    9 |         - |          NA |
-| RadixLSD256Sort     | 8192 | Reversed           |    37,169.9 ns |    266.47 ns |   139.37 ns |   1.56 |    0.02 |    3 |         - |          NA |
-| Radsort             | 8192 | Reversed           |    56,740.8 ns |    430.23 ns |   191.02 ns |   2.38 |    0.02 |    4 |         - |          NA |
-| RadixLSD10Sort      | 8192 | Reversed           |   126,043.2 ns |    471.64 ns |   209.41 ns |   5.29 |    0.05 |    6 |         - |          NA |
-| RadixMSD4Sort       | 8192 | Reversed           |   216,647.7 ns |    949.92 ns |   421.77 ns |   9.09 |    0.09 |    8 |         - |          NA |
-| RadixMSD10Sort      | 8192 | Reversed           |   175,477.8 ns |    695.50 ns |   308.80 ns |   7.36 |    0.07 |    7 |         - |          NA |
-| AmericanFlagSort    | 8192 | Reversed           |    61,386.7 ns |    593.57 ns |   310.45 ns |   2.58 |    0.03 |    4 |         - |          NA |
-| SkaSort             | 8192 | Reversed           |    57,621.2 ns |    353.14 ns |   184.70 ns |   2.42 |    0.03 |    4 |         - |          NA |
-| SpreadSort          | 8192 | Reversed           |    55,481.0 ns |    907.13 ns |   402.77 ns |   2.33 |    0.03 |    4 |         - |          NA |
-| DotnetSort          | 8192 | Reversed           |    59,809.8 ns |  3,332.33 ns | 1,742.87 ns |   2.51 |    0.07 |    4 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **8192** | **PipeOrgan**          |    **36,753.7 ns** |    **217.34 ns** |   **113.68 ns** |   **1.39** |    **0.01** |    **2** |         **-** |          **NA** |
-| CountingSortInteger | 8192 | PipeOrgan          |    26,430.7 ns |    407.08 ns |   212.91 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 8192 | PipeOrgan          |    30,395.3 ns |    290.83 ns |   129.13 ns |   1.15 |    0.01 |    2 |         - |          NA |
-| PigeonSortInteger   | 8192 | PipeOrgan          |    19,727.2 ns |    228.60 ns |   119.56 ns |   0.75 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 8192 | PipeOrgan          |    40,497.8 ns |    213.57 ns |    94.82 ns |   1.53 |    0.01 |    2 |         - |          NA |
-| BucketSortInteger   | 8192 | PipeOrgan          |    35,599.9 ns |    521.58 ns |   272.80 ns |   1.35 |    0.01 |    2 |         - |          NA |
-| FlashSort           | 8192 | PipeOrgan          |   114,107.4 ns |  1,383.92 ns |   723.82 ns |   4.32 |    0.04 |    4 |         - |          NA |
-| RadixLSD4Sort       | 8192 | PipeOrgan          |   134,990.8 ns |    548.35 ns |   243.47 ns |   5.11 |    0.04 |    4 |         - |          NA |
-| RotateLSDRadixSort  | 8192 | PipeOrgan          | 2,175,042.0 ns |  4,582.33 ns | 2,034.58 ns |  82.30 |    0.63 |    8 |         - |          NA |
-| RadixLSD256Sort     | 8192 | PipeOrgan          |    40,673.0 ns |    601.64 ns |   314.67 ns |   1.54 |    0.02 |    2 |         - |          NA |
-| Radsort             | 8192 | PipeOrgan          |    59,082.1 ns |    248.72 ns |   130.09 ns |   2.24 |    0.02 |    3 |         - |          NA |
-| RadixLSD10Sort      | 8192 | PipeOrgan          |   127,265.6 ns |    952.87 ns |   339.80 ns |   4.82 |    0.04 |    4 |         - |          NA |
-| RadixMSD4Sort       | 8192 | PipeOrgan          |   221,356.7 ns |    917.44 ns |   407.35 ns |   8.38 |    0.07 |    6 |         - |          NA |
-| RadixMSD10Sort      | 8192 | PipeOrgan          |   179,806.9 ns |    530.85 ns |   235.70 ns |   6.80 |    0.05 |    5 |         - |          NA |
-| AmericanFlagSort    | 8192 | PipeOrgan          |    98,797.0 ns |    471.22 ns |   209.23 ns |   3.74 |    0.03 |    4 |         - |          NA |
-| SkaSort             | 8192 | PipeOrgan          |    86,833.4 ns |  1,450.07 ns |   758.42 ns |   3.29 |    0.04 |    4 |         - |          NA |
-| SpreadSort          | 8192 | PipeOrgan          |    67,015.1 ns |    446.41 ns |   233.48 ns |   2.54 |    0.02 |    3 |         - |          NA |
-| DotnetSort          | 8192 | PipeOrgan          |   283,860.8 ns |  6,061.53 ns | 3,170.30 ns |  10.74 |    0.14 |    7 |         - |          NA |
-|      |                    |                |              |             |        |         |      |           |             |
-| **CountingSort**        | **8192** | **ManyDuplicates**     |    **33,744.1 ns** |    **165.93 ns** |    **73.67 ns** |   **1.52** |    **0.01** |    **3** |         **-** |          **NA** |
-| CountingSortInteger | 8192 | ManyDuplicates     |    22,144.0 ns |    441.18 ns |   195.89 ns |   1.00 |    0.00 |    2 |         - |          NA |
-| PigeonSort          | 8192 | ManyDuplicates     |    54,448.4 ns |    503.08 ns |   223.37 ns |   2.46 |    0.02 |    5 |         - |          NA |
-| PigeonSortInteger   | 8192 | ManyDuplicates     |    17,336.3 ns |    300.76 ns |   133.54 ns |   0.78 |    0.01 |    1 |         - |          NA |
-| BucketSort          | 8192 | ManyDuplicates     |    60,658.3 ns |  1,020.28 ns |   533.62 ns |   2.74 |    0.03 |    5 |         - |          NA |
-| BucketSortInteger   | 8192 | ManyDuplicates     |    32,135.9 ns |    424.97 ns |   222.27 ns |   1.45 |    0.02 |    3 |         - |          NA |
-| FlashSort           | 8192 | ManyDuplicates     |   108,281.6 ns |  3,951.29 ns | 2,066.60 ns |   4.89 |    0.10 |    6 |         - |          NA |
-| RadixLSD4Sort       | 8192 | ManyDuplicates     |    54,244.9 ns |    248.87 ns |   130.16 ns |   2.45 |    0.02 |    5 |         - |          NA |
-| RotateLSDRadixSort  | 8192 | ManyDuplicates     | 1,629,095.2 ns |  6,474.59 ns | 2,874.76 ns |  73.57 |    0.62 |    8 |         - |          NA |
-| RadixLSD256Sort     | 8192 | ManyDuplicates     |    25,028.8 ns |    114.10 ns |    40.69 ns |   1.13 |    0.01 |    2 |         - |          NA |
-| Radsort             | 8192 | ManyDuplicates     |    53,592.4 ns |    215.72 ns |    95.78 ns |   2.42 |    0.02 |    5 |         - |          NA |
-| RadixLSD10Sort      | 8192 | ManyDuplicates     |    69,400.2 ns |  1,283.39 ns |   671.24 ns |   3.13 |    0.04 |    5 |         - |          NA |
-| RadixMSD4Sort       | 8192 | ManyDuplicates     |    56,365.7 ns |    448.89 ns |   234.78 ns |   2.55 |    0.02 |    5 |         - |          NA |
-| RadixMSD10Sort      | 8192 | ManyDuplicates     |    72,384.4 ns |    318.47 ns |   141.40 ns |   3.27 |    0.03 |    5 |         - |          NA |
-| AmericanFlagSort    | 8192 | ManyDuplicates     |    52,591.1 ns |    237.03 ns |   123.97 ns |   2.38 |    0.02 |    5 |         - |          NA |
-| SkaSort             | 8192 | ManyDuplicates     |    33,856.2 ns |    333.75 ns |   174.56 ns |   1.53 |    0.01 |    3 |         - |          NA |
-| SpreadSort          | 8192 | ManyDuplicates     |    42,121.9 ns |    314.66 ns |   139.71 ns |   1.90 |    0.02 |    4 |         - |          NA |
-| DotnetSort          | 8192 | ManyDuplicates     |   190,235.3 ns |    462.43 ns |   205.32 ns |   8.59 |    0.07 |    7 |         - |          NA |
+| Method              | Size | Pattern            | Mean           | Error        | StdDev       | Ratio  | RatioSD | Rank | Allocated | Alloc Ratio |
+| -------------------- |----- |------------------- |---------------:|-------------:|-------------:|-------:|--------:|-----:|----------:|------------:|
+| **CountingSort**        | **256**  | **Random**             |     **1,314.7 ns** |     **24.80 ns** |     **11.01 ns** |   **1.42** |    **0.03** |    **2** |         **-** |          **NA** |
+| CountingSortInteger | 256  | Random             |       923.6 ns |     45.40 ns |     20.16 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 256  | Random             |     2,044.5 ns |    715.86 ns |    374.41 ns |   2.21 |    0.39 |    3 |         - |          NA |
+| PigeonSortInteger   | 256  | Random             |       712.9 ns |     22.38 ns |     11.71 ns |   0.77 |    0.02 |    1 |         - |          NA |
+| BucketSort          | 256  | Random             |     1,429.9 ns |     27.80 ns |     12.34 ns |   1.55 |    0.03 |    2 |         - |          NA |
+| BucketSortInteger   | 256  | Random             |     1,214.1 ns |     24.90 ns |     11.06 ns |   1.32 |    0.03 |    2 |         - |          NA |
+| FlashSort           | 256  | Random             |     4,008.0 ns |    226.84 ns |    118.64 ns |   4.34 |    0.15 |    5 |         - |          NA |
+| RadixLSD4Sort       | 256  | Random             |     2,255.2 ns |     29.37 ns |     10.47 ns |   2.44 |    0.05 |    3 |         - |          NA |
+| RotateLSDRadixSort  | 256  | Random             |    52,954.8 ns |    114.07 ns |     40.68 ns |  57.36 |    1.16 |    8 |         - |          NA |
+| RadixLSD256Sort     | 256  | Random             |     1,059.3 ns |     31.91 ns |     14.17 ns |   1.15 |    0.03 |    2 |         - |          NA |
+| Radsort             | 256  | Random             |     7,942.8 ns |    397.97 ns |    208.15 ns |   8.60 |    0.27 |    7 |         - |          NA |
+| RadixLSD10Sort      | 256  | Random             |     3,189.4 ns |     50.66 ns |     22.49 ns |   3.45 |    0.07 |    4 |         - |          NA |
+| RadixMSD4Sort       | 256  | Random             |     5,241.5 ns |    239.95 ns |    125.50 ns |   5.68 |    0.17 |    6 |         - |          NA |
+| RadixMSD10Sort      | 256  | Random             |     4,860.1 ns |    230.87 ns |    120.75 ns |   5.26 |    0.16 |    6 |         - |          NA |
+| AmericanFlagSort    | 256  | Random             |     2,414.9 ns |     38.15 ns |     19.95 ns |   2.62 |    0.06 |    3 |         - |          NA |
+| SkaSort             | 256  | Random             |     3,218.5 ns |     76.55 ns |     27.30 ns |   3.49 |    0.08 |    4 |         - |          NA |
+| SpreadSort          | 256  | Random             |     6,044.9 ns |    194.20 ns |    101.57 ns |   6.55 |    0.17 |    6 |         - |          NA |
+| DotnetSort          | 256  | Random             |     5,787.2 ns |    184.44 ns |     81.89 ns |   6.27 |    0.15 |    6 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **256**  | **SingleElementMoved** |     **1,255.3 ns** |     **22.38 ns** |      **9.94 ns** |   **1.56** |    **0.02** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 256  | SingleElementMoved |       805.7 ns |     16.04 ns |      7.12 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 256  | SingleElementMoved |     1,136.6 ns |     33.80 ns |     15.01 ns |   1.41 |    0.02 |    3 |         - |          NA |
+| PigeonSortInteger   | 256  | SingleElementMoved |       627.4 ns |      6.89 ns |      3.06 ns |   0.78 |    0.01 |    1 |         - |          NA |
+| BucketSort          | 256  | SingleElementMoved |     1,385.0 ns |     45.33 ns |     20.13 ns |   1.72 |    0.03 |    3 |         - |          NA |
+| BucketSortInteger   | 256  | SingleElementMoved |     1,136.4 ns |     16.68 ns |      7.41 ns |   1.41 |    0.01 |    3 |         - |          NA |
+| FlashSort           | 256  | SingleElementMoved |     3,169.1 ns |     92.61 ns |     48.44 ns |   3.93 |    0.07 |    5 |         - |          NA |
+| RadixLSD4Sort       | 256  | SingleElementMoved |     2,206.6 ns |    123.37 ns |     54.78 ns |   2.74 |    0.07 |    4 |         - |          NA |
+| RotateLSDRadixSort  | 256  | SingleElementMoved |    34,918.4 ns |    485.06 ns |    253.70 ns |  43.34 |    0.46 |    8 |         - |          NA |
+| RadixLSD256Sort     | 256  | SingleElementMoved |     1,017.8 ns |     43.12 ns |     19.15 ns |   1.26 |    0.02 |    3 |         - |          NA |
+| Radsort             | 256  | SingleElementMoved |     7,300.6 ns |     33.34 ns |     14.80 ns |   9.06 |    0.08 |    7 |         - |          NA |
+| RadixLSD10Sort      | 256  | SingleElementMoved |     3,204.2 ns |    292.61 ns |    153.04 ns |   3.98 |    0.18 |    5 |         - |          NA |
+| RadixMSD4Sort       | 256  | SingleElementMoved |     5,580.2 ns |     52.83 ns |     18.84 ns |   6.93 |    0.06 |    6 |         - |          NA |
+| RadixMSD10Sort      | 256  | SingleElementMoved |     4,945.8 ns |    308.51 ns |    161.36 ns |   6.14 |    0.20 |    6 |         - |          NA |
+| AmericanFlagSort    | 256  | SingleElementMoved |     1,660.9 ns |     43.14 ns |     19.16 ns |   2.06 |    0.03 |    3 |         - |          NA |
+| SkaSort             | 256  | SingleElementMoved |     2,406.8 ns |     17.92 ns |      9.37 ns |   2.99 |    0.03 |    4 |         - |          NA |
+| SpreadSort          | 256  | SingleElementMoved |       885.1 ns |    415.69 ns |    184.57 ns |   1.10 |    0.21 |    2 |         - |          NA |
+| DotnetSort          | 256  | SingleElementMoved |     1,067.0 ns |    104.57 ns |     46.43 ns |   1.32 |    0.05 |    3 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **256**  | **Sorted**             |     **1,226.3 ns** |     **62.61 ns** |     **22.33 ns** |   **1.60** |    **0.03** |    **2** |         **-** |          **NA** |
+| CountingSortInteger | 256  | Sorted             |       764.8 ns |     14.91 ns |      5.32 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 256  | Sorted             |     1,109.0 ns |      5.72 ns |      2.54 ns |   1.45 |    0.01 |    2 |         - |          NA |
+| PigeonSortInteger   | 256  | Sorted             |       562.4 ns |      5.31 ns |      2.36 ns |   0.74 |    0.01 |    2 |         - |          NA |
+| BucketSort          | 256  | Sorted             |     1,310.2 ns |     24.81 ns |     11.02 ns |   1.71 |    0.02 |    2 |         - |          NA |
+| BucketSortInteger   | 256  | Sorted             |     1,043.7 ns |      4.91 ns |      2.18 ns |   1.36 |    0.01 |    2 |         - |          NA |
+| FlashSort           | 256  | Sorted             |     2,796.0 ns |     53.14 ns |     27.80 ns |   3.66 |    0.04 |    4 |         - |          NA |
+| RadixLSD4Sort       | 256  | Sorted             |     3,181.3 ns |    848.76 ns |    443.92 ns |   4.16 |    0.55 |    4 |         - |          NA |
+| RotateLSDRadixSort  | 256  | Sorted             |    34,176.0 ns |    254.44 ns |    112.97 ns |  44.69 |    0.32 |    7 |         - |          NA |
+| RadixLSD256Sort     | 256  | Sorted             |       898.5 ns |     21.79 ns |      9.68 ns |   1.17 |    0.01 |    2 |         - |          NA |
+| Radsort             | 256  | Sorted             |     7,282.2 ns |     16.10 ns |      5.74 ns |   9.52 |    0.06 |    6 |         - |          NA |
+| RadixLSD10Sort      | 256  | Sorted             |     3,052.3 ns |     25.39 ns |     11.28 ns |   3.99 |    0.03 |    4 |         - |          NA |
+| RadixMSD4Sort       | 256  | Sorted             |     5,466.9 ns |     27.96 ns |      9.97 ns |   7.15 |    0.05 |    5 |         - |          NA |
+| RadixMSD10Sort      | 256  | Sorted             |     4,698.9 ns |    235.73 ns |    123.29 ns |   6.14 |    0.16 |    5 |         - |          NA |
+| AmericanFlagSort    | 256  | Sorted             |     1,273.5 ns |     11.10 ns |      4.93 ns |   1.67 |    0.01 |    2 |         - |          NA |
+| SkaSort             | 256  | Sorted             |     2,031.6 ns |     62.95 ns |     27.95 ns |   2.66 |    0.04 |    3 |         - |          NA |
+| SpreadSort          | 256  | Sorted             |       254.2 ns |      6.25 ns |      2.23 ns |   0.33 |    0.00 |    1 |         - |          NA |
+| DotnetSort          | 256  | Sorted             |       651.4 ns |      4.81 ns |      2.13 ns |   0.85 |    0.01 |    2 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **256**  | **Reversed**           |     **1,185.3 ns** |     **17.08 ns** |      **7.58 ns** |   **1.55** |    **0.01** |    **4** |         **-** |          **NA** |
+| CountingSortInteger | 256  | Reversed           |       763.1 ns |      7.52 ns |      3.94 ns |   1.00 |    0.00 |    3 |         - |          NA |
+| PigeonSort          | 256  | Reversed           |     1,165.5 ns |      9.09 ns |      4.75 ns |   1.53 |    0.01 |    4 |         - |          NA |
+| PigeonSortInteger   | 256  | Reversed           |       556.4 ns |      7.13 ns |      3.17 ns |   0.73 |    0.01 |    2 |         - |          NA |
+| BucketSort          | 256  | Reversed           |     1,402.5 ns |      6.00 ns |      2.66 ns |   1.84 |    0.01 |    4 |         - |          NA |
+| BucketSortInteger   | 256  | Reversed           |     1,077.3 ns |     19.27 ns |      8.55 ns |   1.41 |    0.01 |    4 |         - |          NA |
+| FlashSort           | 256  | Reversed           |     2,694.8 ns |     22.66 ns |     10.06 ns |   3.53 |    0.02 |    6 |         - |          NA |
+| RadixLSD4Sort       | 256  | Reversed           |     2,124.7 ns |     81.01 ns |     35.97 ns |   2.78 |    0.05 |    5 |         - |          NA |
+| RotateLSDRadixSort  | 256  | Reversed           |    35,069.4 ns |    319.53 ns |    167.12 ns |  45.96 |    0.30 |    9 |         - |          NA |
+| RadixLSD256Sort     | 256  | Reversed           |       928.1 ns |     16.55 ns |      7.35 ns |   1.22 |    0.01 |    4 |         - |          NA |
+| Radsort             | 256  | Reversed           |     7,235.0 ns |     31.74 ns |     14.09 ns |   9.48 |    0.05 |    8 |         - |          NA |
+| RadixLSD10Sort      | 256  | Reversed           |     3,254.8 ns |    235.98 ns |    123.42 ns |   4.27 |    0.15 |    6 |         - |          NA |
+| RadixMSD4Sort       | 256  | Reversed           |     5,633.3 ns |    280.61 ns |    146.76 ns |   7.38 |    0.18 |    7 |         - |          NA |
+| RadixMSD10Sort      | 256  | Reversed           |     4,703.3 ns |    185.71 ns |     97.13 ns |   6.16 |    0.12 |    7 |         - |          NA |
+| AmericanFlagSort    | 256  | Reversed           |     1,370.7 ns |     25.42 ns |     11.29 ns |   1.80 |    0.02 |    4 |         - |          NA |
+| SkaSort             | 256  | Reversed           |     2,206.5 ns |     25.63 ns |     11.38 ns |   2.89 |    0.02 |    5 |         - |          NA |
+| SpreadSort          | 256  | Reversed           |       377.4 ns |      7.68 ns |      4.02 ns |   0.49 |    0.01 |    1 |         - |          NA |
+| DotnetSort          | 256  | Reversed           |     1,109.9 ns |    212.11 ns |     94.18 ns |   1.45 |    0.12 |    4 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **256**  | **PipeOrgan**          |     **1,213.4 ns** |     **23.72 ns** |     **10.53 ns** |   **1.54** |    **0.01** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 256  | PipeOrgan          |       787.1 ns |      4.75 ns |      1.70 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 256  | PipeOrgan          |     1,117.8 ns |     10.96 ns |      4.87 ns |   1.42 |    0.01 |    3 |         - |          NA |
+| PigeonSortInteger   | 256  | PipeOrgan          |       635.6 ns |     19.61 ns |      8.71 ns |   0.81 |    0.01 |    1 |         - |          NA |
+| BucketSort          | 256  | PipeOrgan          |     1,359.3 ns |      8.63 ns |      3.08 ns |   1.73 |    0.00 |    3 |         - |          NA |
+| BucketSortInteger   | 256  | PipeOrgan          |     1,143.8 ns |     23.31 ns |     12.19 ns |   1.45 |    0.01 |    3 |         - |          NA |
+| FlashSort           | 256  | PipeOrgan          |     3,445.0 ns |    220.03 ns |    115.08 ns |   4.38 |    0.14 |    5 |         - |          NA |
+| RadixLSD4Sort       | 256  | PipeOrgan          |     2,162.3 ns |     25.65 ns |      9.15 ns |   2.75 |    0.01 |    4 |         - |          NA |
+| RotateLSDRadixSort  | 256  | PipeOrgan          |    34,472.5 ns |    212.07 ns |    110.91 ns |  43.80 |    0.16 |    8 |         - |          NA |
+| RadixLSD256Sort     | 256  | PipeOrgan          |       984.5 ns |      9.79 ns |      4.35 ns |   1.25 |    0.01 |    3 |         - |          NA |
+| Radsort             | 256  | PipeOrgan          |     7,306.9 ns |     33.10 ns |     11.81 ns |   9.28 |    0.02 |    7 |         - |          NA |
+| RadixLSD10Sort      | 256  | PipeOrgan          |     3,149.8 ns |    199.32 ns |     88.50 ns |   4.00 |    0.11 |    5 |         - |          NA |
+| RadixMSD4Sort       | 256  | PipeOrgan          |     5,498.5 ns |     30.04 ns |     13.34 ns |   6.99 |    0.02 |    6 |         - |          NA |
+| RadixMSD10Sort      | 256  | PipeOrgan          |     4,676.9 ns |     26.16 ns |      9.33 ns |   5.94 |    0.02 |    6 |         - |          NA |
+| AmericanFlagSort    | 256  | PipeOrgan          |     1,885.1 ns |     35.12 ns |     15.59 ns |   2.40 |    0.02 |    4 |         - |          NA |
+| SkaSort             | 256  | PipeOrgan          |     2,701.0 ns |     18.59 ns |      8.26 ns |   3.43 |    0.01 |    5 |         - |          NA |
+| SpreadSort          | 256  | PipeOrgan          |     1,367.5 ns |     24.78 ns |     11.00 ns |   1.74 |    0.01 |    3 |         - |          NA |
+| DotnetSort          | 256  | PipeOrgan          |     1,959.9 ns |    227.42 ns |    118.95 ns |   2.49 |    0.14 |    4 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **256**  | **ManyDuplicates**     |     **1,207.4 ns** |     **16.99 ns** |      **7.54 ns** |   **1.53** |    **0.02** |    **2** |         **-** |          **NA** |
+| CountingSortInteger | 256  | ManyDuplicates     |       790.2 ns |     28.75 ns |     12.76 ns |   1.00 |    0.00 |    1 |         - |          NA |
+| PigeonSort          | 256  | ManyDuplicates     |     1,403.1 ns |    231.78 ns |    121.23 ns |   1.78 |    0.15 |    2 |         - |          NA |
+| PigeonSortInteger   | 256  | ManyDuplicates     |       752.4 ns |    110.44 ns |     57.76 ns |   0.95 |    0.07 |    1 |         - |          NA |
+| BucketSort          | 256  | ManyDuplicates     |     2,154.1 ns |    158.56 ns |     70.40 ns |   2.73 |    0.09 |    4 |         - |          NA |
+| BucketSortInteger   | 256  | ManyDuplicates     |     1,329.9 ns |     73.90 ns |     38.65 ns |   1.68 |    0.05 |    2 |         - |          NA |
+| FlashSort           | 256  | ManyDuplicates     |     3,790.0 ns |    212.15 ns |    110.96 ns |   4.80 |    0.15 |    5 |         - |          NA |
+| RadixLSD4Sort       | 256  | ManyDuplicates     |     1,773.1 ns |     26.52 ns |     11.78 ns |   2.24 |    0.04 |    3 |         - |          NA |
+| RotateLSDRadixSort  | 256  | ManyDuplicates     |    46,345.6 ns |    335.31 ns |    148.88 ns |  58.66 |    0.91 |    8 |         - |          NA |
+| RadixLSD256Sort     | 256  | ManyDuplicates     |     1,069.3 ns |    139.99 ns |     62.16 ns |   1.35 |    0.08 |    2 |         - |          NA |
+| Radsort             | 256  | ManyDuplicates     |     8,860.9 ns |    246.37 ns |    128.86 ns |  11.22 |    0.23 |    7 |         - |          NA |
+| RadixLSD10Sort      | 256  | ManyDuplicates     |     2,202.3 ns |     44.54 ns |     19.78 ns |   2.79 |    0.05 |    4 |         - |          NA |
+| RadixMSD4Sort       | 256  | ManyDuplicates     |     2,643.3 ns |     33.90 ns |     12.09 ns |   3.35 |    0.05 |    4 |         - |          NA |
+| RadixMSD10Sort      | 256  | ManyDuplicates     |     2,958.3 ns |     29.23 ns |     15.29 ns |   3.74 |    0.06 |    4 |         - |          NA |
+| AmericanFlagSort    | 256  | ManyDuplicates     |     2,473.0 ns |    113.04 ns |     59.12 ns |   3.13 |    0.09 |    4 |         - |          NA |
+| SkaSort             | 256  | ManyDuplicates     |     2,811.3 ns |    145.57 ns |     64.63 ns |   3.56 |    0.09 |    4 |         - |          NA |
+| SpreadSort          | 256  | ManyDuplicates     |     5,594.9 ns |    185.95 ns |     97.26 ns |   7.08 |    0.16 |    6 |         - |          NA |
+| DotnetSort          | 256  | ManyDuplicates     |     5,636.0 ns |    394.25 ns |    206.20 ns |   7.13 |    0.27 |    6 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **1024** | **Random**             |     **4,668.7 ns** |     **21.11 ns** |      **9.37 ns** |   **1.39** |    **0.05** |    **2** |         **-** |          **NA** |
+| CountingSortInteger | 1024 | Random             |     3,369.8 ns |    275.77 ns |    144.24 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 1024 | Random             |     3,926.3 ns |     27.90 ns |     12.39 ns |   1.17 |    0.05 |    2 |         - |          NA |
+| PigeonSortInteger   | 1024 | Random             |     2,669.4 ns |    304.71 ns |    159.37 ns |   0.79 |    0.05 |    1 |         - |          NA |
+| BucketSort          | 1024 | Random             |     5,671.4 ns |     39.67 ns |     17.62 ns |   1.69 |    0.07 |    2 |         - |          NA |
+| BucketSortInteger   | 1024 | Random             |     4,602.7 ns |     13.70 ns |      6.08 ns |   1.37 |    0.05 |    2 |         - |          NA |
+| FlashSort           | 1024 | Random             |    15,308.6 ns |    140.78 ns |     73.63 ns |   4.55 |    0.18 |    5 |         - |          NA |
+| RadixLSD4Sort       | 1024 | Random             |    10,405.1 ns |    217.90 ns |     96.75 ns |   3.09 |    0.12 |    4 |         - |          NA |
+| RotateLSDRadixSort  | 1024 | Random             |   280,205.3 ns |  1,106.99 ns |    394.76 ns |  83.28 |    3.24 |    8 |         - |          NA |
+| RadixLSD256Sort     | 1024 | Random             |     5,233.3 ns |    141.74 ns |     62.94 ns |   1.56 |    0.06 |    2 |         - |          NA |
+| Radsort             | 1024 | Random             |    29,204.1 ns |    362.92 ns |    161.14 ns |   8.68 |    0.34 |    7 |         - |          NA |
+| RadixLSD10Sort      | 1024 | Random             |    16,342.8 ns |    259.02 ns |    135.47 ns |   4.86 |    0.19 |    5 |         - |          NA |
+| RadixMSD4Sort       | 1024 | Random             |    22,552.1 ns |    599.06 ns |    265.99 ns |   6.70 |    0.27 |    6 |         - |          NA |
+| RadixMSD10Sort      | 1024 | Random             |    22,995.5 ns |    178.88 ns |     63.79 ns |   6.83 |    0.27 |    6 |         - |          NA |
+| AmericanFlagSort    | 1024 | Random             |    16,906.0 ns |    207.95 ns |     92.33 ns |   5.02 |    0.20 |    5 |         - |          NA |
+| SkaSort             | 1024 | Random             |    12,320.0 ns |    334.72 ns |    175.06 ns |   3.66 |    0.15 |    4 |         - |          NA |
+| SpreadSort          | 1024 | Random             |     7,246.7 ns |    261.78 ns |    136.92 ns |   2.15 |    0.09 |    3 |         - |          NA |
+| DotnetSort          | 1024 | Random             |    29,803.2 ns |    537.46 ns |    238.63 ns |   8.86 |    0.35 |    7 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **1024** | **SingleElementMoved** |     **4,614.5 ns** |     **22.58 ns** |     **10.03 ns** |   **1.56** |    **0.01** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 1024 | SingleElementMoved |     2,951.7 ns |     23.84 ns |     10.59 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 1024 | SingleElementMoved |     3,982.3 ns |    185.70 ns |     97.12 ns |   1.35 |    0.03 |    3 |         - |          NA |
+| PigeonSortInteger   | 1024 | SingleElementMoved |     2,456.8 ns |     53.12 ns |     23.59 ns |   0.83 |    0.01 |    1 |         - |          NA |
+| BucketSort          | 1024 | SingleElementMoved |     5,241.0 ns |    334.00 ns |    174.69 ns |   1.78 |    0.06 |    3 |         - |          NA |
+| BucketSortInteger   | 1024 | SingleElementMoved |     4,522.1 ns |    229.04 ns |    119.79 ns |   1.53 |    0.04 |    3 |         - |          NA |
+| FlashSort           | 1024 | SingleElementMoved |    11,993.9 ns |    344.55 ns |    180.21 ns |   4.06 |    0.06 |    5 |         - |          NA |
+| RadixLSD4Sort       | 1024 | SingleElementMoved |    12,017.3 ns |    322.24 ns |    168.54 ns |   4.07 |    0.06 |    5 |         - |          NA |
+| RotateLSDRadixSort  | 1024 | SingleElementMoved |   177,307.5 ns |  1,617.41 ns |    845.94 ns |  60.07 |    0.34 |    9 |         - |          NA |
+| RadixLSD256Sort     | 1024 | SingleElementMoved |     5,203.0 ns |     61.49 ns |     32.16 ns |   1.76 |    0.01 |    3 |         - |          NA |
+| Radsort             | 1024 | SingleElementMoved |    19,393.3 ns |     71.53 ns |     25.51 ns |   6.57 |    0.02 |    7 |         - |          NA |
+| RadixLSD10Sort      | 1024 | SingleElementMoved |    15,987.5 ns |    236.53 ns |    123.71 ns |   5.42 |    0.04 |    6 |         - |          NA |
+| RadixMSD4Sort       | 1024 | SingleElementMoved |    26,093.3 ns |    153.22 ns |     68.03 ns |   8.84 |    0.04 |    8 |         - |          NA |
+| RadixMSD10Sort      | 1024 | SingleElementMoved |    23,689.1 ns |    197.83 ns |    103.47 ns |   8.03 |    0.04 |    8 |         - |          NA |
+| AmericanFlagSort    | 1024 | SingleElementMoved |     8,972.6 ns |    308.79 ns |    161.50 ns |   3.04 |    0.05 |    4 |         - |          NA |
+| SkaSort             | 1024 | SingleElementMoved |     8,348.7 ns |    277.12 ns |    144.94 ns |   2.83 |    0.05 |    4 |         - |          NA |
+| SpreadSort          | 1024 | SingleElementMoved |     4,736.4 ns |    159.68 ns |     83.51 ns |   1.60 |    0.03 |    3 |         - |          NA |
+| DotnetSort          | 1024 | SingleElementMoved |     5,175.7 ns |    109.23 ns |     48.50 ns |   1.75 |    0.02 |    3 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **1024** | **Sorted**             |     **5,064.0 ns** |    **111.59 ns** |     **49.55 ns** |   **1.76** |    **0.02** |    **5** |         **-** |          **NA** |
+| CountingSortInteger | 1024 | Sorted             |     2,875.6 ns |     17.45 ns |      7.75 ns |   1.00 |    0.00 |    3 |         - |          NA |
+| PigeonSort          | 1024 | Sorted             |     3,859.1 ns |     40.92 ns |     18.17 ns |   1.34 |    0.01 |    4 |         - |          NA |
+| PigeonSortInteger   | 1024 | Sorted             |     2,170.4 ns |     23.04 ns |     10.23 ns |   0.75 |    0.00 |    2 |         - |          NA |
+| BucketSort          | 1024 | Sorted             |     4,892.5 ns |    141.32 ns |     62.75 ns |   1.70 |    0.02 |    5 |         - |          NA |
+| BucketSortInteger   | 1024 | Sorted             |     3,951.1 ns |     37.95 ns |     16.85 ns |   1.37 |    0.01 |    4 |         - |          NA |
+| FlashSort           | 1024 | Sorted             |    10,958.4 ns |    258.50 ns |    135.20 ns |   3.81 |    0.05 |    7 |         - |          NA |
+| RadixLSD4Sort       | 1024 | Sorted             |    12,109.0 ns |    441.10 ns |    230.70 ns |   4.21 |    0.08 |    7 |         - |          NA |
+| RotateLSDRadixSort  | 1024 | Sorted             |   174,798.4 ns |  1,436.76 ns |    637.93 ns |  60.79 |    0.26 |   10 |         - |          NA |
+| RadixLSD256Sort     | 1024 | Sorted             |     4,841.5 ns |     20.65 ns |     10.80 ns |   1.68 |    0.01 |    5 |         - |          NA |
+| Radsort             | 1024 | Sorted             |    19,240.2 ns |    158.79 ns |     83.05 ns |   6.69 |    0.03 |    9 |         - |          NA |
+| RadixLSD10Sort      | 1024 | Sorted             |    15,897.5 ns |     84.97 ns |     37.73 ns |   5.53 |    0.02 |    8 |         - |          NA |
+| RadixMSD4Sort       | 1024 | Sorted             |    23,853.4 ns |    236.01 ns |    123.44 ns |   8.30 |    0.05 |    9 |         - |          NA |
+| RadixMSD10Sort      | 1024 | Sorted             |    22,145.6 ns |    129.05 ns |     67.50 ns |   7.70 |    0.03 |    9 |         - |          NA |
+| AmericanFlagSort    | 1024 | Sorted             |     7,344.5 ns |    238.44 ns |    124.71 ns |   2.55 |    0.04 |    6 |         - |          NA |
+| SkaSort             | 1024 | Sorted             |     6,988.9 ns |    191.53 ns |    100.17 ns |   2.43 |    0.03 |    6 |         - |          NA |
+| SpreadSort          | 1024 | Sorted             |       502.8 ns |     13.45 ns |      4.80 ns |   0.17 |    0.00 |    1 |         - |          NA |
+| DotnetSort          | 1024 | Sorted             |     3,191.2 ns |    144.23 ns |     75.43 ns |   1.11 |    0.02 |    3 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **1024** | **Reversed**           |     **4,337.8 ns** |     **30.83 ns** |     **16.12 ns** |   **1.44** |    **0.05** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 1024 | Reversed           |     3,010.3 ns |    238.94 ns |    124.97 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 1024 | Reversed           |     4,121.9 ns |     14.04 ns |      6.24 ns |   1.37 |    0.05 |    3 |         - |          NA |
+| PigeonSortInteger   | 1024 | Reversed           |     2,198.2 ns |     10.37 ns |      3.70 ns |   0.73 |    0.03 |    1 |         - |          NA |
+| BucketSort          | 1024 | Reversed           |     5,272.0 ns |     36.13 ns |     18.90 ns |   1.75 |    0.07 |    3 |         - |          NA |
+| BucketSortInteger   | 1024 | Reversed           |     3,884.0 ns |     25.43 ns |      9.07 ns |   1.29 |    0.05 |    3 |         - |          NA |
+| FlashSort           | 1024 | Reversed           |    10,636.2 ns |    345.11 ns |    180.50 ns |   3.54 |    0.15 |    5 |         - |          NA |
+| RadixLSD4Sort       | 1024 | Reversed           |    11,641.4 ns |    364.16 ns |    190.46 ns |   3.87 |    0.16 |    5 |         - |          NA |
+| RotateLSDRadixSort  | 1024 | Reversed           |   178,522.6 ns |    474.72 ns |    169.29 ns |  59.39 |    2.25 |    7 |         - |          NA |
+| RadixLSD256Sort     | 1024 | Reversed           |     5,092.5 ns |    162.00 ns |     71.93 ns |   1.69 |    0.07 |    3 |         - |          NA |
+| Radsort             | 1024 | Reversed           |    18,670.0 ns |    478.48 ns |    212.45 ns |   6.21 |    0.24 |    6 |         - |          NA |
+| RadixLSD10Sort      | 1024 | Reversed           |    15,754.5 ns |     67.25 ns |     29.86 ns |   5.24 |    0.20 |    6 |         - |          NA |
+| RadixMSD4Sort       | 1024 | Reversed           |    24,640.5 ns |    207.76 ns |    108.66 ns |   8.20 |    0.31 |    6 |         - |          NA |
+| RadixMSD10Sort      | 1024 | Reversed           |    22,138.9 ns |    191.29 ns |    100.05 ns |   7.37 |    0.28 |    6 |         - |          NA |
+| AmericanFlagSort    | 1024 | Reversed           |     8,376.2 ns |    261.87 ns |    136.96 ns |   2.79 |    0.11 |    4 |         - |          NA |
+| SkaSort             | 1024 | Reversed           |     7,952.7 ns |    260.48 ns |    136.24 ns |   2.65 |    0.11 |    4 |         - |          NA |
+| SpreadSort          | 1024 | Reversed           |     3,738.7 ns |     89.91 ns |     39.92 ns |   1.24 |    0.05 |    3 |         - |          NA |
+| DotnetSort          | 1024 | Reversed           |     5,518.0 ns |    505.54 ns |    224.46 ns |   1.84 |    0.10 |    3 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **1024** | **PipeOrgan**          |     **4,442.9 ns** |     **34.21 ns** |     **15.19 ns** |   **1.46** |    **0.01** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 1024 | PipeOrgan          |     3,033.1 ns |     22.05 ns |      7.86 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 1024 | PipeOrgan          |     4,014.8 ns |    278.56 ns |    145.69 ns |   1.32 |    0.05 |    3 |         - |          NA |
+| PigeonSortInteger   | 1024 | PipeOrgan          |     2,445.5 ns |     11.19 ns |      4.97 ns |   0.81 |    0.00 |    1 |         - |          NA |
+| BucketSort          | 1024 | PipeOrgan          |     5,023.4 ns |     23.16 ns |     10.28 ns |   1.66 |    0.01 |    3 |         - |          NA |
+| BucketSortInteger   | 1024 | PipeOrgan          |     4,346.5 ns |    214.83 ns |    112.36 ns |   1.43 |    0.04 |    3 |         - |          NA |
+| FlashSort           | 1024 | PipeOrgan          |    13,360.4 ns |    321.15 ns |    167.97 ns |   4.40 |    0.05 |    4 |         - |          NA |
+| RadixLSD4Sort       | 1024 | PipeOrgan          |    10,565.4 ns |    340.54 ns |    178.11 ns |   3.48 |    0.06 |    4 |         - |          NA |
+| RotateLSDRadixSort  | 1024 | PipeOrgan          |   176,075.3 ns |    774.52 ns |    343.89 ns |  58.05 |    0.17 |    6 |         - |          NA |
+| RadixLSD256Sort     | 1024 | PipeOrgan          |     5,747.3 ns |    305.38 ns |    159.72 ns |   1.89 |    0.05 |    3 |         - |          NA |
+| Radsort             | 1024 | PipeOrgan          |    19,045.0 ns |    208.05 ns |    108.81 ns |   6.28 |    0.04 |    5 |         - |          NA |
+| RadixLSD10Sort      | 1024 | PipeOrgan          |    16,368.6 ns |    143.39 ns |     63.67 ns |   5.40 |    0.02 |    5 |         - |          NA |
+| RadixMSD4Sort       | 1024 | PipeOrgan          |    24,697.3 ns |    209.67 ns |    109.66 ns |   8.14 |    0.04 |    5 |         - |          NA |
+| RadixMSD10Sort      | 1024 | PipeOrgan          |    22,599.2 ns |    199.99 ns |    104.60 ns |   7.45 |    0.04 |    5 |         - |          NA |
+| AmericanFlagSort    | 1024 | PipeOrgan          |    11,843.3 ns |    334.23 ns |    174.81 ns |   3.90 |    0.06 |    4 |         - |          NA |
+| SkaSort             | 1024 | PipeOrgan          |    11,033.8 ns |    313.17 ns |    163.79 ns |   3.64 |    0.05 |    4 |         - |          NA |
+| SpreadSort          | 1024 | PipeOrgan          |     5,033.1 ns |    254.57 ns |    133.15 ns |   1.66 |    0.04 |    3 |         - |          NA |
+| DotnetSort          | 1024 | PipeOrgan          |    13,091.8 ns |    576.24 ns |    301.39 ns |   4.32 |    0.09 |    4 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **1024** | **ManyDuplicates**     |     **4,252.3 ns** |     **37.28 ns** |     **19.50 ns** |   **1.48** |    **0.05** |    **2** |         **-** |          **NA** |
+| CountingSortInteger | 1024 | ManyDuplicates     |     2,883.2 ns |    182.93 ns |     95.68 ns |   1.00 |    0.00 |    1 |         - |          NA |
+| PigeonSort          | 1024 | ManyDuplicates     |     4,986.2 ns |    256.28 ns |    134.04 ns |   1.73 |    0.07 |    2 |         - |          NA |
+| PigeonSortInteger   | 1024 | ManyDuplicates     |     2,372.6 ns |     27.61 ns |     12.26 ns |   0.82 |    0.03 |    1 |         - |          NA |
+| BucketSort          | 1024 | ManyDuplicates     |     7,702.9 ns |    234.92 ns |    122.87 ns |   2.67 |    0.09 |    2 |         - |          NA |
+| BucketSortInteger   | 1024 | ManyDuplicates     |     4,526.9 ns |    281.06 ns |    147.00 ns |   1.57 |    0.07 |    2 |         - |          NA |
+| FlashSort           | 1024 | ManyDuplicates     |    13,727.2 ns |    209.65 ns |    109.65 ns |   4.77 |    0.15 |    3 |         - |          NA |
+| RadixLSD4Sort       | 1024 | ManyDuplicates     |     6,820.2 ns |    253.09 ns |    132.37 ns |   2.37 |    0.08 |    2 |         - |          NA |
+| RotateLSDRadixSort  | 1024 | ManyDuplicates     |   191,528.2 ns |  2,075.58 ns |  1,085.57 ns |  66.49 |    2.05 |    5 |         - |          NA |
+| RadixLSD256Sort     | 1024 | ManyDuplicates     |     3,361.7 ns |    191.70 ns |    100.26 ns |   1.17 |    0.05 |    1 |         - |          NA |
+| Radsort             | 1024 | ManyDuplicates     |    20,461.1 ns |    272.02 ns |     97.01 ns |   7.10 |    0.22 |    4 |         - |          NA |
+| RadixLSD10Sort      | 1024 | ManyDuplicates     |     8,828.3 ns |    287.89 ns |    150.57 ns |   3.06 |    0.11 |    2 |         - |          NA |
+| RadixMSD4Sort       | 1024 | ManyDuplicates     |     7,825.1 ns |    274.09 ns |    143.35 ns |   2.72 |    0.09 |    2 |         - |          NA |
+| RadixMSD10Sort      | 1024 | ManyDuplicates     |     9,661.2 ns |    242.00 ns |    126.57 ns |   3.35 |    0.11 |    2 |         - |          NA |
+| AmericanFlagSort    | 1024 | ManyDuplicates     |     7,398.4 ns |    301.41 ns |    157.65 ns |   2.57 |    0.09 |    2 |         - |          NA |
+| SkaSort             | 1024 | ManyDuplicates     |     6,388.1 ns |    423.85 ns |    221.68 ns |   2.22 |    0.10 |    2 |         - |          NA |
+| SpreadSort          | 1024 | ManyDuplicates     |     5,494.1 ns |    306.70 ns |    160.41 ns |   1.91 |    0.08 |    2 |         - |          NA |
+| DotnetSort          | 1024 | ManyDuplicates     |    23,321.9 ns |    255.12 ns |    133.43 ns |   8.10 |    0.25 |    4 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **4096** | **Random**             |    **18,949.8 ns** |    **148.37 ns** |     **65.88 ns** |   **1.41** |    **0.02** |    **2** |         **-** |          **NA** |
+| CountingSortInteger | 4096 | Random             |    13,488.0 ns |    413.83 ns |    216.44 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 4096 | Random             |    15,452.4 ns |    248.61 ns |    130.03 ns |   1.15 |    0.02 |    2 |         - |          NA |
+| PigeonSortInteger   | 4096 | Random             |     9,965.6 ns |    277.02 ns |    144.89 ns |   0.74 |    0.02 |    1 |         - |          NA |
+| BucketSort          | 4096 | Random             |    21,517.1 ns |    608.93 ns |    318.48 ns |   1.60 |    0.03 |    2 |         - |          NA |
+| BucketSortInteger   | 4096 | Random             |    17,548.4 ns |    191.96 ns |    100.40 ns |   1.30 |    0.02 |    2 |         - |          NA |
+| FlashSort           | 4096 | Random             |    60,850.7 ns |    200.51 ns |    104.87 ns |   4.51 |    0.07 |    5 |         - |          NA |
+| RadixLSD4Sort       | 4096 | Random             |    49,656.0 ns |    277.89 ns |    123.38 ns |   3.68 |    0.06 |    4 |         - |          NA |
+| RotateLSDRadixSort  | 4096 | Random             | 1,402,041.9 ns |  3,113.73 ns |  1,628.54 ns | 103.97 |    1.58 |    8 |         - |          NA |
+| RadixLSD256Sort     | 4096 | Random             |    19,708.2 ns |    275.04 ns |    143.85 ns |   1.46 |    0.02 |    2 |         - |          NA |
+| Radsort             | 4096 | Random             |    68,881.1 ns |    417.14 ns |    185.21 ns |   5.11 |    0.08 |    5 |         - |          NA |
+| RadixLSD10Sort      | 4096 | Random             |    64,469.5 ns |    529.64 ns |    235.16 ns |   4.78 |    0.07 |    5 |         - |          NA |
+| RadixMSD4Sort       | 4096 | Random             |    97,377.5 ns |    291.74 ns |    104.04 ns |   7.22 |    0.11 |    6 |         - |          NA |
+| RadixMSD10Sort      | 4096 | Random             |    89,523.2 ns |  1,276.36 ns |    667.56 ns |   6.64 |    0.11 |    6 |         - |          NA |
+| AmericanFlagSort    | 4096 | Random             |    61,717.4 ns |    204.79 ns |    107.11 ns |   4.58 |    0.07 |    5 |         - |          NA |
+| SkaSort             | 4096 | Random             |    46,711.6 ns |    713.04 ns |    372.94 ns |   3.46 |    0.06 |    4 |         - |          NA |
+| SpreadSort          | 4096 | Random             |    28,763.4 ns |    219.58 ns |    114.84 ns |   2.13 |    0.03 |    3 |         - |          NA |
+| DotnetSort          | 4096 | Random             |   144,750.2 ns |    737.51 ns |    327.46 ns |  10.73 |    0.16 |    7 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **4096** | **SingleElementMoved** |    **18,484.0 ns** |    **239.24 ns** |    **125.13 ns** |   **1.57** |    **0.02** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 4096 | SingleElementMoved |    11,809.8 ns |    286.29 ns |    127.12 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 4096 | SingleElementMoved |    15,406.4 ns |    163.74 ns |     85.64 ns |   1.30 |    0.01 |    3 |         - |          NA |
+| PigeonSortInteger   | 4096 | SingleElementMoved |     9,813.8 ns |    321.98 ns |    142.96 ns |   0.83 |    0.01 |    1 |         - |          NA |
+| BucketSort          | 4096 | SingleElementMoved |    22,593.2 ns |    420.85 ns |    220.11 ns |   1.91 |    0.03 |    3 |         - |          NA |
+| BucketSortInteger   | 4096 | SingleElementMoved |    16,953.8 ns |    113.33 ns |     50.32 ns |   1.44 |    0.01 |    3 |         - |          NA |
+| FlashSort           | 4096 | SingleElementMoved |    46,971.6 ns |    265.33 ns |    138.77 ns |   3.98 |    0.04 |    4 |         - |          NA |
+| RadixLSD4Sort       | 4096 | SingleElementMoved |    64,595.7 ns |    468.69 ns |    208.10 ns |   5.47 |    0.06 |    5 |         - |          NA |
+| RotateLSDRadixSort  | 4096 | SingleElementMoved |   857,809.5 ns |  2,193.71 ns |  1,147.35 ns |  72.64 |    0.74 |    7 |         - |          NA |
+| RadixLSD256Sort     | 4096 | SingleElementMoved |    19,139.0 ns |    395.18 ns |    175.46 ns |   1.62 |    0.02 |    3 |         - |          NA |
+| Radsort             | 4096 | SingleElementMoved |    44,508.1 ns |    224.19 ns |    117.26 ns |   3.77 |    0.04 |    4 |         - |          NA |
+| RadixLSD10Sort      | 4096 | SingleElementMoved |    64,473.8 ns |    471.12 ns |    209.18 ns |   5.46 |    0.06 |    5 |         - |          NA |
+| RadixMSD4Sort       | 4096 | SingleElementMoved |   101,033.5 ns |    772.56 ns |    343.02 ns |   8.56 |    0.09 |    6 |         - |          NA |
+| RadixMSD10Sort      | 4096 | SingleElementMoved |    88,339.9 ns |    934.22 ns |    488.62 ns |   7.48 |    0.08 |    6 |         - |          NA |
+| AmericanFlagSort    | 4096 | SingleElementMoved |    33,977.7 ns |    539.63 ns |    239.60 ns |   2.88 |    0.03 |    3 |         - |          NA |
+| SkaSort             | 4096 | SingleElementMoved |    29,107.9 ns |     92.17 ns |     40.92 ns |   2.46 |    0.02 |    3 |         - |          NA |
+| SpreadSort          | 4096 | SingleElementMoved |    17,921.6 ns |    268.63 ns |    119.27 ns |   1.52 |    0.02 |    3 |         - |          NA |
+| DotnetSort          | 4096 | SingleElementMoved |    24,632.1 ns |    477.17 ns |    249.57 ns |   2.09 |    0.03 |    3 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **4096** | **Sorted**             |    **18,898.2 ns** |    **720.27 ns** |    **376.72 ns** |   **1.62** |    **0.03** |    **4** |         **-** |          **NA** |
+| CountingSortInteger | 4096 | Sorted             |    11,685.2 ns |    224.06 ns |    117.19 ns |   1.00 |    0.00 |    3 |         - |          NA |
+| PigeonSort          | 4096 | Sorted             |    15,192.3 ns |    269.23 ns |    119.54 ns |   1.30 |    0.02 |    4 |         - |          NA |
+| PigeonSortInteger   | 4096 | Sorted             |     8,691.5 ns |    253.54 ns |    132.61 ns |   0.74 |    0.01 |    2 |         - |          NA |
+| BucketSort          | 4096 | Sorted             |    21,855.5 ns |    224.76 ns |    117.56 ns |   1.87 |    0.02 |    4 |         - |          NA |
+| BucketSortInteger   | 4096 | Sorted             |    17,242.3 ns |    374.32 ns |    195.78 ns |   1.48 |    0.02 |    4 |         - |          NA |
+| FlashSort           | 4096 | Sorted             |    44,861.4 ns |    323.35 ns |    169.12 ns |   3.84 |    0.04 |    5 |         - |          NA |
+| RadixLSD4Sort       | 4096 | Sorted             |    66,541.5 ns |    706.46 ns |    369.49 ns |   5.70 |    0.06 |    6 |         - |          NA |
+| RotateLSDRadixSort  | 4096 | Sorted             |   853,430.3 ns |  2,694.31 ns |  1,409.18 ns |  73.04 |    0.70 |    8 |         - |          NA |
+| RadixLSD256Sort     | 4096 | Sorted             |    18,023.1 ns |    225.60 ns |    117.99 ns |   1.54 |    0.02 |    4 |         - |          NA |
+| Radsort             | 4096 | Sorted             |    42,069.2 ns |    654.32 ns |    342.22 ns |   3.60 |    0.04 |    5 |         - |          NA |
+| RadixLSD10Sort      | 4096 | Sorted             |    62,976.6 ns |    257.12 ns |    134.48 ns |   5.39 |    0.05 |    6 |         - |          NA |
+| RadixMSD4Sort       | 4096 | Sorted             |    99,411.4 ns |    286.04 ns |    102.00 ns |   8.51 |    0.08 |    7 |         - |          NA |
+| RadixMSD10Sort      | 4096 | Sorted             |    87,393.4 ns |    239.43 ns |     85.38 ns |   7.48 |    0.07 |    7 |         - |          NA |
+| AmericanFlagSort    | 4096 | Sorted             |    28,187.2 ns |    242.16 ns |    107.52 ns |   2.41 |    0.02 |    4 |         - |          NA |
+| SkaSort             | 4096 | Sorted             |    25,900.4 ns |    766.93 ns |    401.12 ns |   2.22 |    0.04 |    4 |         - |          NA |
+| SpreadSort          | 4096 | Sorted             |     1,854.0 ns |    166.31 ns |     73.84 ns |   0.16 |    0.01 |    1 |         - |          NA |
+| DotnetSort          | 4096 | Sorted             |    15,194.2 ns |    473.78 ns |    210.36 ns |   1.30 |    0.02 |    4 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **4096** | **Reversed**           |    **17,592.1 ns** |    **240.38 ns** |    **125.72 ns** |   **1.49** |    **0.03** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 4096 | Reversed           |    11,845.0 ns |    378.40 ns |    197.91 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 4096 | Reversed           |    16,497.7 ns |    183.62 ns |     96.04 ns |   1.39 |    0.02 |    3 |         - |          NA |
+| PigeonSortInteger   | 4096 | Reversed           |     8,697.2 ns |    249.53 ns |    130.51 ns |   0.73 |    0.02 |    1 |         - |          NA |
+| BucketSort          | 4096 | Reversed           |    21,026.5 ns |    225.14 ns |    117.75 ns |   1.78 |    0.03 |    3 |         - |          NA |
+| BucketSortInteger   | 4096 | Reversed           |    16,014.4 ns |    243.52 ns |    127.36 ns |   1.35 |    0.02 |    3 |         - |          NA |
+| FlashSort           | 4096 | Reversed           |    42,709.0 ns |    382.78 ns |    200.20 ns |   3.61 |    0.06 |    5 |         - |          NA |
+| RadixLSD4Sort       | 4096 | Reversed           |    74,857.9 ns |    834.19 ns |    370.39 ns |   6.32 |    0.10 |    6 |         - |          NA |
+| RotateLSDRadixSort  | 4096 | Reversed           |   868,651.0 ns |  3,215.02 ns |  1,427.49 ns |  73.35 |    1.17 |    7 |         - |          NA |
+| RadixLSD256Sort     | 4096 | Reversed           |    17,983.1 ns |    148.52 ns |     77.68 ns |   1.52 |    0.02 |    3 |         - |          NA |
+| Radsort             | 4096 | Reversed           |    41,721.6 ns |    253.87 ns |    132.78 ns |   3.52 |    0.06 |    5 |         - |          NA |
+| RadixLSD10Sort      | 4096 | Reversed           |    63,592.7 ns |    291.01 ns |    152.20 ns |   5.37 |    0.09 |    6 |         - |          NA |
+| RadixMSD4Sort       | 4096 | Reversed           |   101,804.0 ns |    577.27 ns |    256.31 ns |   8.60 |    0.14 |    6 |         - |          NA |
+| RadixMSD10Sort      | 4096 | Reversed           |    87,571.2 ns |    627.84 ns |    278.77 ns |   7.39 |    0.12 |    6 |         - |          NA |
+| AmericanFlagSort    | 4096 | Reversed           |    31,248.5 ns |    550.23 ns |    244.30 ns |   2.64 |    0.05 |    4 |         - |          NA |
+| SkaSort             | 4096 | Reversed           |    29,408.3 ns |    490.91 ns |    256.76 ns |   2.48 |    0.04 |    4 |         - |          NA |
+| SpreadSort          | 4096 | Reversed           |    15,043.0 ns |    133.82 ns |     69.99 ns |   1.27 |    0.02 |    3 |         - |          NA |
+| DotnetSort          | 4096 | Reversed           |    27,485.7 ns |  1,073.44 ns |    476.61 ns |   2.32 |    0.05 |    4 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **4096** | **PipeOrgan**          |    **18,946.5 ns** |    **351.06 ns** |    **183.61 ns** |   **1.50** |    **0.02** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 4096 | PipeOrgan          |    12,602.1 ns |    245.90 ns |    128.61 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 4096 | PipeOrgan          |    15,294.1 ns |     68.88 ns |     30.58 ns |   1.21 |    0.01 |    3 |         - |          NA |
+| PigeonSortInteger   | 4096 | PipeOrgan          |     9,908.8 ns |    382.38 ns |    169.78 ns |   0.79 |    0.01 |    1 |         - |          NA |
+| BucketSort          | 4096 | PipeOrgan          |    21,270.5 ns |    193.88 ns |    101.40 ns |   1.69 |    0.02 |    3 |         - |          NA |
+| BucketSortInteger   | 4096 | PipeOrgan          |    16,889.5 ns |     47.20 ns |     16.83 ns |   1.34 |    0.01 |    3 |         - |          NA |
+| FlashSort           | 4096 | PipeOrgan          |    51,910.6 ns |    310.21 ns |    162.24 ns |   4.12 |    0.04 |    4 |         - |          NA |
+| RadixLSD4Sort       | 4096 | PipeOrgan          |    53,587.5 ns |    460.35 ns |    240.77 ns |   4.25 |    0.05 |    4 |         - |          NA |
+| RotateLSDRadixSort  | 4096 | PipeOrgan          |   856,618.8 ns |  1,429.10 ns |    634.53 ns |  67.98 |    0.67 |    6 |         - |          NA |
+| RadixLSD256Sort     | 4096 | PipeOrgan          |    20,059.9 ns |  2,105.43 ns |    934.82 ns |   1.59 |    0.07 |    3 |         - |          NA |
+| Radsort             | 4096 | PipeOrgan          |    42,668.9 ns |    162.71 ns |     85.10 ns |   3.39 |    0.03 |    4 |         - |          NA |
+| RadixLSD10Sort      | 4096 | PipeOrgan          |    63,938.5 ns |    533.57 ns |    190.28 ns |   5.07 |    0.05 |    4 |         - |          NA |
+| RadixMSD4Sort       | 4096 | PipeOrgan          |   104,800.0 ns |    595.06 ns |    264.21 ns |   8.32 |    0.08 |    5 |         - |          NA |
+| RadixMSD10Sort      | 4096 | PipeOrgan          |    95,291.7 ns | 14,166.60 ns |  7,409.41 ns |   7.56 |    0.56 |    5 |         - |          NA |
+| AmericanFlagSort    | 4096 | PipeOrgan          |    48,831.6 ns |  3,625.58 ns |  1,609.78 ns |   3.88 |    0.13 |    4 |         - |          NA |
+| SkaSort             | 4096 | PipeOrgan          |    42,424.1 ns |    294.26 ns |    153.90 ns |   3.37 |    0.03 |    4 |         - |          NA |
+| SpreadSort          | 4096 | PipeOrgan          |    20,616.9 ns |    247.86 ns |    110.05 ns |   1.64 |    0.02 |    3 |         - |          NA |
+| DotnetSort          | 4096 | PipeOrgan          |    72,208.7 ns |  3,884.59 ns |  2,031.71 ns |   5.73 |    0.16 |    4 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **4096** | **ManyDuplicates**     |    **17,127.5 ns** |    **298.50 ns** |    **156.12 ns** |   **1.52** |    **0.02** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 4096 | ManyDuplicates     |    11,247.6 ns |    270.94 ns |    141.71 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 4096 | ManyDuplicates     |    19,724.9 ns |    194.42 ns |     86.32 ns |   1.75 |    0.02 |    3 |         - |          NA |
+| PigeonSortInteger   | 4096 | ManyDuplicates     |     8,889.0 ns |    455.45 ns |    238.21 ns |   0.79 |    0.02 |    1 |         - |          NA |
+| BucketSort          | 4096 | ManyDuplicates     |    30,403.4 ns |    378.69 ns |    168.14 ns |   2.70 |    0.04 |    4 |         - |          NA |
+| BucketSortInteger   | 4096 | ManyDuplicates     |    15,904.1 ns |    290.65 ns |    152.01 ns |   1.41 |    0.02 |    3 |         - |          NA |
+| FlashSort           | 4096 | ManyDuplicates     |    53,545.7 ns |    610.16 ns |    319.13 ns |   4.76 |    0.06 |    5 |         - |          NA |
+| RadixLSD4Sort       | 4096 | ManyDuplicates     |    27,158.2 ns |    148.93 ns |     77.89 ns |   2.41 |    0.03 |    4 |         - |          NA |
+| RotateLSDRadixSort  | 4096 | ManyDuplicates     |   771,297.1 ns |  1,669.66 ns |    741.34 ns |  68.58 |    0.82 |    7 |         - |          NA |
+| RadixLSD256Sort     | 4096 | ManyDuplicates     |    12,560.0 ns |    395.91 ns |    207.07 ns |   1.12 |    0.02 |    2 |         - |          NA |
+| Radsort             | 4096 | ManyDuplicates     |    42,182.6 ns |    188.09 ns |     83.51 ns |   3.75 |    0.05 |    4 |         - |          NA |
+| RadixLSD10Sort      | 4096 | ManyDuplicates     |    34,786.5 ns |    295.93 ns |    154.78 ns |   3.09 |    0.04 |    4 |         - |          NA |
+| RadixMSD4Sort       | 4096 | ManyDuplicates     |    28,436.1 ns |    255.85 ns |    113.60 ns |   2.53 |    0.03 |    4 |         - |          NA |
+| RadixMSD10Sort      | 4096 | ManyDuplicates     |    36,723.6 ns |    182.19 ns |     80.90 ns |   3.27 |    0.04 |    4 |         - |          NA |
+| AmericanFlagSort    | 4096 | ManyDuplicates     |    26,818.2 ns |    221.84 ns |    116.03 ns |   2.38 |    0.03 |    4 |         - |          NA |
+| SkaSort             | 4096 | ManyDuplicates     |    18,207.4 ns |    117.23 ns |     52.05 ns |   1.62 |    0.02 |    3 |         - |          NA |
+| SpreadSort          | 4096 | ManyDuplicates     |    21,214.6 ns |    173.67 ns |     77.11 ns |   1.89 |    0.02 |    3 |         - |          NA |
+| DotnetSort          | 4096 | ManyDuplicates     |    94,640.6 ns |    475.77 ns |    211.25 ns |   8.42 |    0.10 |    6 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **8192** | **Random**             |    **39,520.2 ns** |    **600.19 ns** |    **313.91 ns** |   **1.42** |    **0.01** |    **2** |         **-** |          **NA** |
+| CountingSortInteger | 8192 | Random             |    27,835.9 ns |    310.14 ns |    162.21 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 8192 | Random             |    30,779.3 ns |    579.84 ns |    257.45 ns |   1.11 |    0.01 |    2 |         - |          NA |
+| PigeonSortInteger   | 8192 | Random             |    19,877.1 ns |    211.39 ns |     93.86 ns |   0.71 |    0.01 |    1 |         - |          NA |
+| BucketSort          | 8192 | Random             |    43,778.7 ns |    458.10 ns |    203.40 ns |   1.57 |    0.01 |    2 |         - |          NA |
+| BucketSortInteger   | 8192 | Random             |    36,145.7 ns |    372.10 ns |    194.62 ns |   1.30 |    0.01 |    2 |         - |          NA |
+| FlashSort           | 8192 | Random             |   133,018.1 ns |    502.72 ns |    262.93 ns |   4.78 |    0.03 |    3 |         - |          NA |
+| RadixLSD4Sort       | 8192 | Random             |   114,724.0 ns |    382.56 ns |    169.86 ns |   4.12 |    0.02 |    3 |         - |          NA |
+| RotateLSDRadixSort  | 8192 | Random             | 3,399,550.9 ns | 33,858.52 ns | 15,033.39 ns | 122.13 |    0.84 |    7 |         - |          NA |
+| RadixLSD256Sort     | 8192 | Random             |    39,747.0 ns |    106.26 ns |     47.18 ns |   1.43 |    0.01 |    2 |         - |          NA |
+| Radsort             | 8192 | Random             |    95,470.9 ns |    932.23 ns |    413.92 ns |   3.43 |    0.02 |    3 |         - |          NA |
+| RadixLSD10Sort      | 8192 | Random             |   128,149.3 ns |  1,215.94 ns |    539.88 ns |   4.60 |    0.03 |    3 |         - |          NA |
+| RadixMSD4Sort       | 8192 | Random             |   218,621.0 ns |    592.85 ns |    211.42 ns |   7.85 |    0.04 |    5 |         - |          NA |
+| RadixMSD10Sort      | 8192 | Random             |   180,128.2 ns |    947.28 ns |    337.81 ns |   6.47 |    0.04 |    4 |         - |          NA |
+| AmericanFlagSort    | 8192 | Random             |   122,331.4 ns |    554.63 ns |    246.26 ns |   4.39 |    0.03 |    3 |         - |          NA |
+| SkaSort             | 8192 | Random             |    91,799.9 ns |    518.09 ns |    230.03 ns |   3.30 |    0.02 |    3 |         - |          NA |
+| SpreadSort          | 8192 | Random             |    98,649.7 ns |    896.26 ns |    468.76 ns |   3.54 |    0.03 |    3 |         - |          NA |
+| DotnetSort          | 8192 | Random             |   314,458.1 ns |  3,403.61 ns |  1,780.15 ns |  11.30 |    0.09 |    6 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **8192** | **SingleElementMoved** |    **37,865.4 ns** |    **444.60 ns** |    **197.40 ns** |   **1.57** |    **0.01** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 8192 | SingleElementMoved |    24,109.5 ns |    276.76 ns |    144.75 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 8192 | SingleElementMoved |    30,523.3 ns |    230.22 ns |    120.41 ns |   1.27 |    0.01 |    3 |         - |          NA |
+| PigeonSortInteger   | 8192 | SingleElementMoved |    19,519.8 ns |    154.41 ns |     68.56 ns |   0.81 |    0.01 |    1 |         - |          NA |
+| BucketSort          | 8192 | SingleElementMoved |    41,814.0 ns |    299.54 ns |    133.00 ns |   1.73 |    0.01 |    3 |         - |          NA |
+| BucketSortInteger   | 8192 | SingleElementMoved |    33,143.8 ns |    240.10 ns |    106.61 ns |   1.37 |    0.01 |    3 |         - |          NA |
+| FlashSort           | 8192 | SingleElementMoved |    94,454.5 ns |  1,405.56 ns |    624.08 ns |   3.92 |    0.03 |    5 |         - |          NA |
+| RadixLSD4Sort       | 8192 | SingleElementMoved |   168,968.8 ns |  2,021.83 ns |    897.71 ns |   7.01 |    0.05 |    7 |         - |          NA |
+| RotateLSDRadixSort  | 8192 | SingleElementMoved | 2,175,213.2 ns |  5,144.90 ns |  2,690.88 ns |  90.23 |    0.52 |    9 |         - |          NA |
+| RadixLSD256Sort     | 8192 | SingleElementMoved |    40,826.2 ns |    282.46 ns |    125.41 ns |   1.69 |    0.01 |    3 |         - |          NA |
+| Radsort             | 8192 | SingleElementMoved |    60,682.5 ns |    841.72 ns |    440.24 ns |   2.52 |    0.02 |    4 |         - |          NA |
+| RadixLSD10Sort      | 8192 | SingleElementMoved |   128,174.9 ns |    811.44 ns |    360.28 ns |   5.32 |    0.03 |    6 |         - |          NA |
+| RadixMSD4Sort       | 8192 | SingleElementMoved |   213,841.6 ns |  3,925.40 ns |  1,399.84 ns |   8.87 |    0.07 |    8 |         - |          NA |
+| RadixMSD10Sort      | 8192 | SingleElementMoved |   176,740.9 ns |    392.25 ns |    174.16 ns |   7.33 |    0.04 |    7 |         - |          NA |
+| AmericanFlagSort    | 8192 | SingleElementMoved |    68,252.7 ns |  1,478.46 ns |    656.45 ns |   2.83 |    0.03 |    4 |         - |          NA |
+| SkaSort             | 8192 | SingleElementMoved |    56,864.6 ns |    760.20 ns |    271.09 ns |   2.36 |    0.02 |    4 |         - |          NA |
+| SpreadSort          | 8192 | SingleElementMoved |    40,466.8 ns |    369.55 ns |    193.28 ns |   1.68 |    0.01 |    3 |         - |          NA |
+| DotnetSort          | 8192 | SingleElementMoved |    54,460.5 ns |  2,933.26 ns |  1,534.15 ns |   2.26 |    0.06 |    4 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **8192** | **Sorted**             |    **42,211.7 ns** | **18,223.02 ns** |  **9,530.99 ns** |   **1.78** |    **0.38** |    **4** |         **-** |          **NA** |
+| CountingSortInteger | 8192 | Sorted             |    23,725.9 ns |    687.14 ns |    359.39 ns |   1.00 |    0.00 |    3 |         - |          NA |
+| PigeonSort          | 8192 | Sorted             |    30,210.5 ns |    480.10 ns |    251.10 ns |   1.27 |    0.02 |    4 |         - |          NA |
+| PigeonSortInteger   | 8192 | Sorted             |    17,293.1 ns |    357.88 ns |    187.18 ns |   0.73 |    0.01 |    2 |         - |          NA |
+| BucketSort          | 8192 | Sorted             |    42,185.2 ns |    657.99 ns |    344.14 ns |   1.78 |    0.03 |    4 |         - |          NA |
+| BucketSortInteger   | 8192 | Sorted             |    33,708.0 ns |    212.03 ns |    110.90 ns |   1.42 |    0.02 |    4 |         - |          NA |
+| FlashSort           | 8192 | Sorted             |    90,198.7 ns |    663.39 ns |    294.55 ns |   3.80 |    0.05 |    6 |         - |          NA |
+| RadixLSD4Sort       | 8192 | Sorted             |   160,289.7 ns |  2,623.93 ns |  1,372.36 ns |   6.76 |    0.11 |    8 |         - |          NA |
+| RotateLSDRadixSort  | 8192 | Sorted             | 2,164,766.9 ns |  3,970.35 ns |  2,076.57 ns |  91.26 |    1.29 |   10 |         - |          NA |
+| RadixLSD256Sort     | 8192 | Sorted             |    37,697.6 ns |    696.39 ns |    364.22 ns |   1.59 |    0.03 |    4 |         - |          NA |
+| Radsort             | 8192 | Sorted             |    57,820.8 ns |    376.88 ns |    197.12 ns |   2.44 |    0.04 |    5 |         - |          NA |
+| RadixLSD10Sort      | 8192 | Sorted             |   125,909.3 ns |    775.90 ns |    276.69 ns |   5.31 |    0.08 |    7 |         - |          NA |
+| RadixMSD4Sort       | 8192 | Sorted             |   220,306.8 ns | 13,316.59 ns |  6,964.83 ns |   9.29 |    0.31 |    9 |         - |          NA |
+| RadixMSD10Sort      | 8192 | Sorted             |   175,267.7 ns |    615.43 ns |    273.26 ns |   7.39 |    0.11 |    8 |         - |          NA |
+| AmericanFlagSort    | 8192 | Sorted             |    55,646.1 ns |    389.79 ns |    203.87 ns |   2.35 |    0.03 |    5 |         - |          NA |
+| SkaSort             | 8192 | Sorted             |    50,889.5 ns |    923.89 ns |    410.21 ns |   2.15 |    0.03 |    5 |         - |          NA |
+| SpreadSort          | 8192 | Sorted             |     3,506.5 ns |     39.78 ns |     14.18 ns |   0.15 |    0.00 |    1 |         - |          NA |
+| DotnetSort          | 8192 | Sorted             |    34,452.1 ns |  4,302.88 ns |  2,250.49 ns |   1.45 |    0.09 |    4 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **8192** | **Reversed**           |    **34,662.2 ns** |    **250.02 ns** |    **130.77 ns** |   **1.45** |    **0.01** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 8192 | Reversed           |    23,965.4 ns |    390.81 ns |    204.40 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 8192 | Reversed           |    32,557.6 ns |     63.01 ns |     27.98 ns |   1.36 |    0.01 |    3 |         - |          NA |
+| PigeonSortInteger   | 8192 | Reversed           |    17,427.7 ns |    312.75 ns |    163.57 ns |   0.73 |    0.01 |    1 |         - |          NA |
+| BucketSort          | 8192 | Reversed           |    42,258.3 ns |    502.76 ns |    262.95 ns |   1.76 |    0.02 |    3 |         - |          NA |
+| BucketSortInteger   | 8192 | Reversed           |    31,412.8 ns |    189.21 ns |     67.47 ns |   1.31 |    0.01 |    3 |         - |          NA |
+| FlashSort           | 8192 | Reversed           |    83,600.1 ns |    633.46 ns |    331.31 ns |   3.49 |    0.03 |    5 |         - |          NA |
+| RadixLSD4Sort       | 8192 | Reversed           |   160,251.8 ns |  1,071.00 ns |    475.53 ns |   6.69 |    0.06 |    7 |         - |          NA |
+| RotateLSDRadixSort  | 8192 | Reversed           | 2,209,599.4 ns | 10,935.80 ns |  4,855.56 ns |  92.21 |    0.76 |    9 |         - |          NA |
+| RadixLSD256Sort     | 8192 | Reversed           |    37,184.9 ns |    617.94 ns |    274.37 ns |   1.55 |    0.02 |    3 |         - |          NA |
+| Radsort             | 8192 | Reversed           |    57,862.9 ns |    590.67 ns |    262.26 ns |   2.41 |    0.02 |    4 |         - |          NA |
+| RadixLSD10Sort      | 8192 | Reversed           |   125,574.2 ns |    369.32 ns |    131.70 ns |   5.24 |    0.04 |    6 |         - |          NA |
+| RadixMSD4Sort       | 8192 | Reversed           |   216,740.9 ns |  1,157.95 ns |    605.63 ns |   9.04 |    0.08 |    8 |         - |          NA |
+| RadixMSD10Sort      | 8192 | Reversed           |   177,554.0 ns |  1,836.57 ns |    960.56 ns |   7.41 |    0.07 |    7 |         - |          NA |
+| AmericanFlagSort    | 8192 | Reversed           |    61,473.5 ns |  1,009.34 ns |    527.91 ns |   2.57 |    0.03 |    4 |         - |          NA |
+| SkaSort             | 8192 | Reversed           |    57,456.7 ns |    325.95 ns |    170.48 ns |   2.40 |    0.02 |    4 |         - |          NA |
+| SpreadSort          | 8192 | Reversed           |    57,061.8 ns |  1,107.89 ns |    491.91 ns |   2.38 |    0.03 |    4 |         - |          NA |
+| DotnetSort          | 8192 | Reversed           |    60,686.1 ns |  3,444.46 ns |  1,529.36 ns |   2.53 |    0.06 |    4 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **8192** | **PipeOrgan**          |    **36,514.0 ns** |    **496.49 ns** |    **259.67 ns** |   **1.44** |    **0.02** |    **2** |         **-** |          **NA** |
+| CountingSortInteger | 8192 | PipeOrgan          |    25,355.2 ns |    612.66 ns |    320.43 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 8192 | PipeOrgan          |    30,316.0 ns |    384.57 ns |    201.14 ns |   1.20 |    0.02 |    2 |         - |          NA |
+| PigeonSortInteger   | 8192 | PipeOrgan          |    19,499.4 ns |    337.03 ns |    149.64 ns |   0.77 |    0.01 |    1 |         - |          NA |
+| BucketSort          | 8192 | PipeOrgan          |    40,574.8 ns |    399.50 ns |    177.38 ns |   1.60 |    0.02 |    2 |         - |          NA |
+| BucketSortInteger   | 8192 | PipeOrgan          |    33,588.8 ns |    350.86 ns |    155.79 ns |   1.32 |    0.02 |    2 |         - |          NA |
+| FlashSort           | 8192 | PipeOrgan          |   114,100.0 ns |    930.85 ns |    413.30 ns |   4.50 |    0.06 |    4 |         - |          NA |
+| RadixLSD4Sort       | 8192 | PipeOrgan          |   132,098.6 ns |    526.50 ns |    233.77 ns |   5.21 |    0.06 |    4 |         - |          NA |
+| RotateLSDRadixSort  | 8192 | PipeOrgan          | 2,179,597.9 ns | 13,455.02 ns |  7,037.23 ns |  85.97 |    1.05 |    8 |         - |          NA |
+| RadixLSD256Sort     | 8192 | PipeOrgan          |    40,579.7 ns |    332.10 ns |    173.70 ns |   1.60 |    0.02 |    2 |         - |          NA |
+| Radsort             | 8192 | PipeOrgan          |    59,740.2 ns |    448.87 ns |    199.30 ns |   2.36 |    0.03 |    3 |         - |          NA |
+| RadixLSD10Sort      | 8192 | PipeOrgan          |   127,683.4 ns |  3,455.28 ns |  1,232.19 ns |   5.04 |    0.07 |    4 |         - |          NA |
+| RadixMSD4Sort       | 8192 | PipeOrgan          |   221,204.8 ns |  1,620.17 ns |    847.38 ns |   8.73 |    0.11 |    6 |         - |          NA |
+| RadixMSD10Sort      | 8192 | PipeOrgan          |   178,103.0 ns |    758.09 ns |    336.60 ns |   7.03 |    0.08 |    5 |         - |          NA |
+| AmericanFlagSort    | 8192 | PipeOrgan          |    97,539.9 ns |    703.11 ns |    312.19 ns |   3.85 |    0.05 |    4 |         - |          NA |
+| SkaSort             | 8192 | PipeOrgan          |    86,339.9 ns |    626.59 ns |    278.21 ns |   3.41 |    0.04 |    4 |         - |          NA |
+| SpreadSort          | 8192 | PipeOrgan          |    67,542.7 ns |    551.80 ns |    288.60 ns |   2.66 |    0.03 |    3 |         - |          NA |
+| DotnetSort          | 8192 | PipeOrgan          |   281,938.2 ns |  6,416.46 ns |  3,355.93 ns |  11.12 |    0.18 |    7 |         - |          NA |
+|      |                    |                |              |              |        |         |      |           |             |
+| **CountingSort**        | **8192** | **ManyDuplicates**     |    **33,890.4 ns** |    **236.90 ns** |    **105.18 ns** |   **1.52** |    **0.00** |    **3** |         **-** |          **NA** |
+| CountingSortInteger | 8192 | ManyDuplicates     |    22,225.9 ns |     56.22 ns |     24.96 ns |   1.00 |    0.00 |    2 |         - |          NA |
+| PigeonSort          | 8192 | ManyDuplicates     |    54,524.7 ns |    216.63 ns |     96.19 ns |   2.45 |    0.00 |    5 |         - |          NA |
+| PigeonSortInteger   | 8192 | ManyDuplicates     |    17,121.6 ns |     50.18 ns |     26.25 ns |   0.77 |    0.00 |    1 |         - |          NA |
+| BucketSort          | 8192 | ManyDuplicates     |    59,964.3 ns |    327.96 ns |    116.96 ns |   2.70 |    0.01 |    5 |         - |          NA |
+| BucketSortInteger   | 8192 | ManyDuplicates     |    32,014.4 ns |    562.74 ns |    294.32 ns |   1.44 |    0.01 |    3 |         - |          NA |
+| FlashSort           | 8192 | ManyDuplicates     |   106,846.5 ns |    755.07 ns |    335.25 ns |   4.81 |    0.01 |    6 |         - |          NA |
+| RadixLSD4Sort       | 8192 | ManyDuplicates     |    54,425.2 ns |    383.79 ns |    200.73 ns |   2.45 |    0.01 |    5 |         - |          NA |
+| RotateLSDRadixSort  | 8192 | ManyDuplicates     | 1,629,306.9 ns |  5,446.31 ns |  2,418.20 ns |  73.31 |    0.13 |    8 |         - |          NA |
+| RadixLSD256Sort     | 8192 | ManyDuplicates     |    25,240.2 ns |    580.71 ns |    303.72 ns |   1.14 |    0.01 |    2 |         - |          NA |
+| Radsort             | 8192 | ManyDuplicates     |    53,448.3 ns |    487.16 ns |    216.30 ns |   2.40 |    0.01 |    5 |         - |          NA |
+| RadixLSD10Sort      | 8192 | ManyDuplicates     |    69,113.4 ns |    431.54 ns |    191.61 ns |   3.11 |    0.01 |    5 |         - |          NA |
+| RadixMSD4Sort       | 8192 | ManyDuplicates     |    56,788.5 ns |    620.76 ns |    275.62 ns |   2.56 |    0.01 |    5 |         - |          NA |
+| RadixMSD10Sort      | 8192 | ManyDuplicates     |    73,464.1 ns |    568.44 ns |    252.39 ns |   3.31 |    0.01 |    5 |         - |          NA |
+| AmericanFlagSort    | 8192 | ManyDuplicates     |    52,501.8 ns |    181.57 ns |     80.62 ns |   2.36 |    0.00 |    5 |         - |          NA |
+| SkaSort             | 8192 | ManyDuplicates     |    34,665.9 ns |    297.31 ns |    132.01 ns |   1.56 |    0.01 |    3 |         - |          NA |
+| SpreadSort          | 8192 | ManyDuplicates     |    42,351.3 ns |    324.67 ns |    169.81 ns |   1.91 |    0.01 |    4 |         - |          NA |
+| DotnetSort          | 8192 | ManyDuplicates     |   190,953.5 ns |  1,116.00 ns |    583.69 ns |   8.59 |    0.03 |    7 |         - |          NA |
 
 ### ExchangeBenchmark
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V74 3.69GHz, 1 CPU, 4 logical and 2 physical cores
-Memory: 15.61 GB Total, 12.49 GB Available
+AMD EPYC 9V74 3.59GHz, 1 CPU, 4 logical and 2 physical cores
+Memory: 15.61 GB Total, 12.44 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
@@ -548,96 +548,96 @@ UnrollFactor=1  WarmupCount=2
 
 | Method             | Size | Pattern            | Mean         | Error       | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
 | ------------------- |----- |------------------- |-------------:|------------:|------------:|------:|--------:|-----:|----------:|------------:|
-| **BubbleSort**         | **256**  | **Random**             |  **41,875.1 ns** |   **313.95 ns** |   **164.20 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| CocktailShakerSort | 256  | Random             |  27,288.0 ns |   214.66 ns |   112.27 ns |  0.65 |    0.00 |    3 |         - |          NA |
-| OddEvenSort        | 256  | Random             |  42,002.6 ns |   287.20 ns |   150.21 ns |  1.00 |    0.01 |    4 |         - |          NA |
-| CombSort           | 256  | Random             |   7,871.7 ns |    67.16 ns |    29.82 ns |  0.19 |    0.00 |    2 |         - |          NA |
-| CircleSort         | 256  | Random             |  23,031.0 ns |   124.72 ns |    55.38 ns |  0.55 |    0.00 |    3 |         - |          NA |
-| DotnetSort         | 256  | Random             |   5,917.1 ns |   412.66 ns |   215.83 ns |  0.14 |    0.00 |    1 |         - |          NA |
+| **BubbleSort**         | **256**  | **Random**             |  **42,036.7 ns** |   **383.51 ns** |   **170.28 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| CocktailShakerSort | 256  | Random             |  27,138.5 ns |   225.19 ns |    99.99 ns |  0.65 |    0.00 |    3 |         - |          NA |
+| OddEvenSort        | 256  | Random             |  41,972.2 ns |   231.76 ns |   102.90 ns |  1.00 |    0.00 |    4 |         - |          NA |
+| CombSort           | 256  | Random             |   8,124.1 ns |   159.60 ns |    83.47 ns |  0.19 |    0.00 |    2 |         - |          NA |
+| CircleSort         | 256  | Random             |  22,933.2 ns |   381.36 ns |   199.46 ns |  0.55 |    0.00 |    3 |         - |          NA |
+| DotnetSort         | 256  | Random             |   5,987.8 ns |   187.65 ns |    98.15 ns |  0.14 |    0.00 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **BubbleSort**         | **256**  | **SingleElementMoved** |   **4,476.0 ns** |    **18.52 ns** |     **6.60 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| CocktailShakerSort | 256  | SingleElementMoved |     304.0 ns |    12.64 ns |     6.61 ns |  0.07 |    0.00 |    1 |         - |          NA |
-| OddEvenSort        | 256  | SingleElementMoved |   8,598.0 ns |   347.01 ns |   181.49 ns |  1.92 |    0.04 |    5 |         - |          NA |
-| CombSort           | 256  | SingleElementMoved |   2,672.4 ns |    37.00 ns |    13.19 ns |  0.60 |    0.00 |    3 |         - |          NA |
-| CircleSort         | 256  | SingleElementMoved |  10,248.0 ns |   237.17 ns |   124.04 ns |  2.29 |    0.03 |    5 |         - |          NA |
-| DotnetSort         | 256  | SingleElementMoved |   1,070.0 ns |   131.73 ns |    68.90 ns |  0.24 |    0.01 |    2 |         - |          NA |
+| **BubbleSort**         | **256**  | **SingleElementMoved** |   **4,521.4 ns** |   **133.96 ns** |    **59.48 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| CocktailShakerSort | 256  | SingleElementMoved |     304.4 ns |    10.45 ns |     4.64 ns |  0.07 |    0.00 |    1 |         - |          NA |
+| OddEvenSort        | 256  | SingleElementMoved |   8,554.1 ns |   284.85 ns |   148.98 ns |  1.89 |    0.04 |    5 |         - |          NA |
+| CombSort           | 256  | SingleElementMoved |   2,731.5 ns |   310.23 ns |   137.74 ns |  0.60 |    0.03 |    3 |         - |          NA |
+| CircleSort         | 256  | SingleElementMoved |  10,487.1 ns |   360.84 ns |   188.73 ns |  2.32 |    0.05 |    6 |         - |          NA |
+| DotnetSort         | 256  | SingleElementMoved |   1,141.6 ns |   195.07 ns |   102.03 ns |  0.25 |    0.02 |    2 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **BubbleSort**         | **256**  | **Sorted**             |     **220.0 ns** |    **12.62 ns** |     **5.60 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| CocktailShakerSort | 256  | Sorted             |     179.8 ns |     4.80 ns |     1.71 ns |  0.82 |    0.02 |    1 |         - |          NA |
-| OddEvenSort        | 256  | Sorted             |     208.0 ns |    23.75 ns |    10.54 ns |  0.95 |    0.05 |    1 |         - |          NA |
-| CombSort           | 256  | Sorted             |   2,279.5 ns |    48.91 ns |    17.44 ns | 10.37 |    0.25 |    4 |         - |          NA |
-| CircleSort         | 256  | Sorted             |   1,737.5 ns |   237.04 ns |   105.25 ns |  7.90 |    0.48 |    3 |         - |          NA |
-| DotnetSort         | 256  | Sorted             |     660.3 ns |    30.07 ns |    13.35 ns |  3.00 |    0.09 |    2 |         - |          NA |
+| **BubbleSort**         | **256**  | **Sorted**             |     **220.7 ns** |     **5.57 ns** |     **2.47 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| CocktailShakerSort | 256  | Sorted             |     159.7 ns |     4.58 ns |     1.63 ns |  0.72 |    0.01 |    1 |         - |          NA |
+| OddEvenSort        | 256  | Sorted             |     212.3 ns |    25.54 ns |    13.36 ns |  0.96 |    0.06 |    2 |         - |          NA |
+| CombSort           | 256  | Sorted             |   2,264.1 ns |    67.62 ns |    24.11 ns | 10.26 |    0.15 |    5 |         - |          NA |
+| CircleSort         | 256  | Sorted             |   1,699.3 ns |    48.06 ns |    21.34 ns |  7.70 |    0.12 |    4 |         - |          NA |
+| DotnetSort         | 256  | Sorted             |     637.8 ns |    27.75 ns |    12.32 ns |  2.89 |    0.06 |    3 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **BubbleSort**         | **256**  | **Reversed**           |  **22,927.8 ns** |   **230.86 ns** |   **120.75 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| CocktailShakerSort | 256  | Reversed           |  21,660.8 ns |   167.46 ns |    74.35 ns |  0.94 |    0.01 |    4 |         - |          NA |
-| OddEvenSort        | 256  | Reversed           |  19,808.7 ns |   657.82 ns |   344.05 ns |  0.86 |    0.01 |    4 |         - |          NA |
-| CombSort           | 256  | Reversed           |   2,481.9 ns |   280.84 ns |   146.89 ns |  0.11 |    0.01 |    2 |         - |          NA |
-| CircleSort         | 256  | Reversed           |   3,417.5 ns |    76.59 ns |    34.01 ns |  0.15 |    0.00 |    3 |         - |          NA |
-| DotnetSort         | 256  | Reversed           |   1,112.5 ns |   182.07 ns |    95.23 ns |  0.05 |    0.00 |    1 |         - |          NA |
+| **BubbleSort**         | **256**  | **Reversed**           |  **23,024.5 ns** |   **196.51 ns** |   **102.78 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| CocktailShakerSort | 256  | Reversed           |  21,562.7 ns |   190.07 ns |    99.41 ns |  0.94 |    0.01 |    4 |         - |          NA |
+| OddEvenSort        | 256  | Reversed           |  19,592.6 ns |   137.99 ns |    61.27 ns |  0.85 |    0.00 |    4 |         - |          NA |
+| CombSort           | 256  | Reversed           |   2,466.0 ns |   168.66 ns |    74.89 ns |  0.11 |    0.00 |    2 |         - |          NA |
+| CircleSort         | 256  | Reversed           |   3,370.2 ns |   154.35 ns |    68.53 ns |  0.15 |    0.00 |    3 |         - |          NA |
+| DotnetSort         | 256  | Reversed           |   1,150.7 ns |   124.59 ns |    55.32 ns |  0.05 |    0.00 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **BubbleSort**         | **256**  | **PipeOrgan**          |  **26,867.0 ns** |   **503.70 ns** |   **263.44 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| CocktailShakerSort | 256  | PipeOrgan          |  14,044.1 ns |   281.37 ns |   147.16 ns |  0.52 |    0.01 |    3 |         - |          NA |
-| OddEvenSort        | 256  | PipeOrgan          |  21,852.5 ns |   157.00 ns |    82.11 ns |  0.81 |    0.01 |    4 |         - |          NA |
-| CombSort           | 256  | PipeOrgan          |   2,433.4 ns |    48.43 ns |    21.50 ns |  0.09 |    0.00 |    2 |         - |          NA |
-| CircleSort         | 256  | PipeOrgan          |  15,426.9 ns |   101.18 ns |    52.92 ns |  0.57 |    0.01 |    3 |         - |          NA |
-| DotnetSort         | 256  | PipeOrgan          |   1,817.2 ns |   196.65 ns |    87.31 ns |  0.07 |    0.00 |    1 |         - |          NA |
+| **BubbleSort**         | **256**  | **PipeOrgan**          |  **26,880.1 ns** |   **418.94 ns** |   **186.01 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| CocktailShakerSort | 256  | PipeOrgan          |  13,984.3 ns |   233.51 ns |   122.13 ns |  0.52 |    0.01 |    3 |         - |          NA |
+| OddEvenSort        | 256  | PipeOrgan          |  21,856.6 ns |   281.39 ns |   147.17 ns |  0.81 |    0.01 |    4 |         - |          NA |
+| CombSort           | 256  | PipeOrgan          |   2,444.9 ns |    46.21 ns |    20.52 ns |  0.09 |    0.00 |    2 |         - |          NA |
+| CircleSort         | 256  | PipeOrgan          |  15,415.0 ns |   249.36 ns |   110.72 ns |  0.57 |    0.01 |    3 |         - |          NA |
+| DotnetSort         | 256  | PipeOrgan          |   1,938.6 ns |   276.14 ns |   122.61 ns |  0.07 |    0.00 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **BubbleSort**         | **256**  | **ManyDuplicates**     |  **41,085.7 ns** |   **258.42 ns** |   **135.16 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| CocktailShakerSort | 256  | ManyDuplicates     |  26,803.5 ns |   543.82 ns |   284.43 ns |  0.65 |    0.01 |    3 |         - |          NA |
-| OddEvenSort        | 256  | ManyDuplicates     |  43,904.4 ns |   449.97 ns |   199.79 ns |  1.07 |    0.01 |    4 |         - |          NA |
-| CombSort           | 256  | ManyDuplicates     |   6,190.8 ns |   405.25 ns |   211.95 ns |  0.15 |    0.00 |    1 |         - |          NA |
-| CircleSort         | 256  | ManyDuplicates     |  19,964.7 ns |   141.04 ns |    73.77 ns |  0.49 |    0.00 |    2 |         - |          NA |
-| DotnetSort         | 256  | ManyDuplicates     |   5,659.8 ns |   376.58 ns |   196.96 ns |  0.14 |    0.00 |    1 |         - |          NA |
+| **BubbleSort**         | **256**  | **ManyDuplicates**     |  **41,144.8 ns** |   **122.16 ns** |    **54.24 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| CocktailShakerSort | 256  | ManyDuplicates     |  26,766.6 ns |   214.25 ns |   112.05 ns |  0.65 |    0.00 |    3 |         - |          NA |
+| OddEvenSort        | 256  | ManyDuplicates     |  43,795.2 ns |   279.88 ns |   124.27 ns |  1.06 |    0.00 |    4 |         - |          NA |
+| CombSort           | 256  | ManyDuplicates     |   6,207.1 ns |   461.43 ns |   241.34 ns |  0.15 |    0.01 |    1 |         - |          NA |
+| CircleSort         | 256  | ManyDuplicates     |  19,916.7 ns |   357.83 ns |   187.15 ns |  0.48 |    0.00 |    2 |         - |          NA |
+| DotnetSort         | 256  | ManyDuplicates     |   5,543.3 ns |   352.86 ns |   184.55 ns |  0.13 |    0.00 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **BubbleSort**         | **1024** | **Random**             | **531,175.7 ns** | **2,861.42 ns** | **1,270.49 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| CocktailShakerSort | 1024 | Random             | 296,992.0 ns |   816.53 ns |   362.54 ns |  0.56 |    0.00 |    4 |         - |          NA |
-| OddEvenSort        | 1024 | Random             | 479,929.0 ns | 1,098.56 ns |   487.77 ns |  0.90 |    0.00 |    5 |         - |          NA |
-| CombSort           | 1024 | Random             |  42,468.7 ns |   289.80 ns |   151.57 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| CircleSort         | 1024 | Random             | 127,349.5 ns |   441.60 ns |   196.07 ns |  0.24 |    0.00 |    3 |         - |          NA |
-| DotnetSort         | 1024 | Random             |  29,948.6 ns |   493.17 ns |   257.94 ns |  0.06 |    0.00 |    1 |         - |          NA |
+| **BubbleSort**         | **1024** | **Random**             | **533,323.3 ns** | **4,657.24 ns** | **2,067.84 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| CocktailShakerSort | 1024 | Random             | 297,315.2 ns |   772.93 ns |   404.26 ns |  0.56 |    0.00 |    4 |         - |          NA |
+| OddEvenSort        | 1024 | Random             | 480,478.4 ns | 1,675.03 ns |   743.72 ns |  0.90 |    0.00 |    5 |         - |          NA |
+| CombSort           | 1024 | Random             |  42,491.5 ns |   246.39 ns |   128.87 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| CircleSort         | 1024 | Random             | 127,720.1 ns |   999.79 ns |   522.91 ns |  0.24 |    0.00 |    3 |         - |          NA |
+| DotnetSort         | 1024 | Random             |  29,828.9 ns |   307.30 ns |   160.72 ns |  0.06 |    0.00 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **BubbleSort**         | **1024** | **SingleElementMoved** |  **66,627.3 ns** |   **122.29 ns** |    **54.30 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| CocktailShakerSort | 1024 | SingleElementMoved |   1,088.7 ns |     6.30 ns |     2.25 ns |  0.02 |    0.00 |    1 |         - |          NA |
-| OddEvenSort        | 1024 | SingleElementMoved | 122,190.7 ns |   817.43 ns |   362.94 ns |  1.83 |    0.01 |    5 |         - |          NA |
-| CombSort           | 1024 | SingleElementMoved |  12,724.7 ns |   209.32 ns |   109.48 ns |  0.19 |    0.00 |    3 |         - |          NA |
-| CircleSort         | 1024 | SingleElementMoved |  57,737.8 ns |   195.43 ns |    86.77 ns |  0.87 |    0.00 |    4 |         - |          NA |
-| DotnetSort         | 1024 | SingleElementMoved |   5,359.5 ns |   339.88 ns |   177.76 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| **BubbleSort**         | **1024** | **SingleElementMoved** |  **66,560.5 ns** |   **268.31 ns** |   **119.13 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| CocktailShakerSort | 1024 | SingleElementMoved |   1,113.1 ns |    70.99 ns |    31.52 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| OddEvenSort        | 1024 | SingleElementMoved | 122,832.0 ns |   583.85 ns |   259.23 ns |  1.85 |    0.00 |    5 |         - |          NA |
+| CombSort           | 1024 | SingleElementMoved |  12,746.8 ns |   146.05 ns |    76.39 ns |  0.19 |    0.00 |    3 |         - |          NA |
+| CircleSort         | 1024 | SingleElementMoved | 120,072.8 ns |   311.67 ns |   138.39 ns |  1.80 |    0.00 |    5 |         - |          NA |
+| DotnetSort         | 1024 | SingleElementMoved |   5,519.6 ns |   263.33 ns |   137.73 ns |  0.08 |    0.00 |    2 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **BubbleSort**         | **1024** | **Sorted**             |     **885.4 ns** |    **55.09 ns** |    **19.65 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| CocktailShakerSort | 1024 | Sorted             |     624.3 ns |    41.17 ns |    21.53 ns |  0.71 |    0.03 |    1 |         - |          NA |
-| OddEvenSort        | 1024 | Sorted             |     775.2 ns |    35.65 ns |    15.83 ns |  0.88 |    0.02 |    2 |         - |          NA |
-| CombSort           | 1024 | Sorted             |  11,668.2 ns |   261.59 ns |   136.82 ns | 13.18 |    0.30 |    5 |         - |          NA |
-| CircleSort         | 1024 | Sorted             |   7,295.8 ns |   299.15 ns |   132.82 ns |  8.24 |    0.22 |    4 |         - |          NA |
-| DotnetSort         | 1024 | Sorted             |   3,146.7 ns |    39.28 ns |    17.44 ns |  3.56 |    0.07 |    3 |         - |          NA |
+| **BubbleSort**         | **1024** | **Sorted**             |     **860.3 ns** |    **44.39 ns** |    **19.71 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| CocktailShakerSort | 1024 | Sorted             |     606.8 ns |    12.78 ns |     6.68 ns |  0.71 |    0.02 |    1 |         - |          NA |
+| OddEvenSort        | 1024 | Sorted             |     764.8 ns |    69.26 ns |    30.75 ns |  0.89 |    0.04 |    2 |         - |          NA |
+| CombSort           | 1024 | Sorted             |  11,720.0 ns |   478.79 ns |   250.42 ns | 13.63 |    0.40 |    5 |         - |          NA |
+| CircleSort         | 1024 | Sorted             |   7,491.6 ns |   325.06 ns |   170.01 ns |  8.71 |    0.26 |    4 |         - |          NA |
+| DotnetSort         | 1024 | Sorted             |   3,167.5 ns |   151.43 ns |    67.24 ns |  3.68 |    0.11 |    3 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **BubbleSort**         | **1024** | **Reversed**           | **340,463.4 ns** | **2,019.41 ns** |   **896.63 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| CocktailShakerSort | 1024 | Reversed           | 338,494.6 ns |   685.58 ns |   304.40 ns |  0.99 |    0.00 |    3 |         - |          NA |
-| OddEvenSort        | 1024 | Reversed           | 316,982.4 ns | 1,414.98 ns |   628.26 ns |  0.93 |    0.00 |    3 |         - |          NA |
-| CombSort           | 1024 | Reversed           |  12,827.9 ns |   277.68 ns |   145.23 ns |  0.04 |    0.00 |    2 |         - |          NA |
-| CircleSort         | 1024 | Reversed           |  14,764.7 ns |   233.14 ns |   121.93 ns |  0.04 |    0.00 |    2 |         - |          NA |
-| DotnetSort         | 1024 | Reversed           |   5,982.5 ns | 1,174.28 ns |   614.17 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| **BubbleSort**         | **1024** | **Reversed**           | **340,463.6 ns** | **1,866.26 ns** |   **976.09 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| CocktailShakerSort | 1024 | Reversed           | 339,307.5 ns | 1,660.49 ns |   868.47 ns |  1.00 |    0.00 |    3 |         - |          NA |
+| OddEvenSort        | 1024 | Reversed           | 319,285.8 ns | 3,824.70 ns | 2,000.39 ns |  0.94 |    0.01 |    3 |         - |          NA |
+| CombSort           | 1024 | Reversed           |  12,791.9 ns |   188.73 ns |    98.71 ns |  0.04 |    0.00 |    2 |         - |          NA |
+| CircleSort         | 1024 | Reversed           |  14,745.7 ns |   234.76 ns |   122.78 ns |  0.04 |    0.00 |    2 |         - |          NA |
+| DotnetSort         | 1024 | Reversed           |   6,212.0 ns | 1,039.18 ns |   543.51 ns |  0.02 |    0.00 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **BubbleSort**         | **1024** | **PipeOrgan**          | **394,238.3 ns** | **1,310.47 ns** |   **581.86 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| CocktailShakerSort | 1024 | PipeOrgan          | 220,652.6 ns | 1,176.66 ns |   615.41 ns |  0.56 |    0.00 |    3 |         - |          NA |
-| OddEvenSort        | 1024 | PipeOrgan          | 349,043.2 ns | 1,470.64 ns |   652.97 ns |  0.89 |    0.00 |    4 |         - |          NA |
-| CombSort           | 1024 | PipeOrgan          |  12,717.7 ns |   292.82 ns |   130.01 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| CircleSort         | 1024 | PipeOrgan          |  81,851.0 ns | 1,293.33 ns |   676.44 ns |  0.21 |    0.00 |    2 |         - |          NA |
-| DotnetSort         | 1024 | PipeOrgan          |  12,953.4 ns |   227.70 ns |    81.20 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| **BubbleSort**         | **1024** | **PipeOrgan**          | **396,461.7 ns** | **9,832.97 ns** | **4,365.90 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| CocktailShakerSort | 1024 | PipeOrgan          | 220,979.2 ns | 1,594.44 ns |   568.59 ns |  0.56 |    0.01 |    3 |         - |          NA |
+| OddEvenSort        | 1024 | PipeOrgan          | 349,286.1 ns | 2,474.19 ns | 1,098.56 ns |  0.88 |    0.01 |    4 |         - |          NA |
+| CombSort           | 1024 | PipeOrgan          |  12,993.7 ns |   327.77 ns |   171.43 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| CircleSort         | 1024 | PipeOrgan          |  81,343.5 ns |   737.04 ns |   327.25 ns |  0.21 |    0.00 |    2 |         - |          NA |
+| DotnetSort         | 1024 | PipeOrgan          |  15,927.7 ns | 8,000.59 ns | 4,184.46 ns |  0.04 |    0.01 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **BubbleSort**         | **1024** | **ManyDuplicates**     | **529,007.8 ns** | **3,242.02 ns** | **1,439.48 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| CocktailShakerSort | 1024 | ManyDuplicates     | 291,145.5 ns | 2,346.37 ns | 1,041.80 ns |  0.55 |    0.00 |    4 |         - |          NA |
-| OddEvenSort        | 1024 | ManyDuplicates     | 496,308.7 ns | 4,888.21 ns | 1,743.18 ns |  0.94 |    0.00 |    5 |         - |          NA |
-| CombSort           | 1024 | ManyDuplicates     |  28,228.6 ns |   238.94 ns |   124.97 ns |  0.05 |    0.00 |    2 |         - |          NA |
-| CircleSort         | 1024 | ManyDuplicates     |  98,362.8 ns |   291.49 ns |   129.42 ns |  0.19 |    0.00 |    3 |         - |          NA |
-| DotnetSort         | 1024 | ManyDuplicates     |  23,109.5 ns |   222.31 ns |    79.28 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| **BubbleSort**         | **1024** | **ManyDuplicates**     | **529,950.6 ns** | **2,345.26 ns** | **1,226.62 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| CocktailShakerSort | 1024 | ManyDuplicates     | 291,336.3 ns | 1,477.28 ns |   772.65 ns |  0.55 |    0.00 |    4 |         - |          NA |
+| OddEvenSort        | 1024 | ManyDuplicates     | 495,729.5 ns |   588.32 ns |   209.80 ns |  0.94 |    0.00 |    5 |         - |          NA |
+| CombSort           | 1024 | ManyDuplicates     |  28,319.8 ns |   409.65 ns |   214.26 ns |  0.05 |    0.00 |    2 |         - |          NA |
+| CircleSort         | 1024 | ManyDuplicates     |  98,480.8 ns |   570.14 ns |   253.15 ns |  0.19 |    0.00 |    3 |         - |          NA |
+| DotnetSort         | 1024 | ManyDuplicates     |  23,261.4 ns |   382.16 ns |   199.87 ns |  0.04 |    0.00 |    1 |         - |          NA |
 
 ### HeapBenchmark
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V74 3.69GHz, 1 CPU, 4 logical and 2 physical cores
-Memory: 15.61 GB Total, 12.49 GB Available
+AMD EPYC 9V74 3.59GHz, 1 CPU, 4 logical and 2 physical cores
+Memory: 15.61 GB Total, 12.44 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
@@ -647,300 +647,300 @@ UnrollFactor=1  WarmupCount=2
 
 | Method           | Size | Pattern            | Mean           | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
 | ----------------- |----- |------------------- |---------------:|-------------:|-------------:|------:|--------:|-----:|----------:|------------:|
-| **HeapSort**         | **256**  | **Random**             |     **6,934.5 ns** |     **95.09 ns** |     **42.22 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| MinHeapSort      | 256  | Random             |     6,898.4 ns |    175.45 ns |     91.76 ns |  0.99 |    0.01 |    1 |         - |          NA |
-| TernaryHeapSort  | 256  | Random             |    10,624.3 ns |    281.70 ns |    147.34 ns |  1.53 |    0.02 |    2 |         - |          NA |
-| BottomupHeapSort | 256  | Random             |     7,046.6 ns |    131.62 ns |     58.44 ns |  1.02 |    0.01 |    1 |         - |          NA |
-| WeakHeapSort     | 256  | Random             |    12,495.9 ns |    269.74 ns |    119.77 ns |  1.80 |    0.02 |    2 |         - |          NA |
-| SmoothSort       | 256  | Random             |    13,618.3 ns |    323.22 ns |    169.05 ns |  1.96 |    0.03 |    2 |         - |          NA |
-| PoplarHeapSort   | 256  | Random             |    13,472.9 ns |    165.67 ns |     73.56 ns |  1.94 |    0.01 |    2 |         - |          NA |
-| TournamentSort   | 256  | Random             |    13,250.0 ns |    257.81 ns |    114.47 ns |  1.91 |    0.02 |    2 |         - |          NA |
-| BinomialHeapSort | 256  | Random             |    27,562.9 ns |    357.17 ns |    186.80 ns |  3.97 |    0.03 |    3 |         - |          NA |
-| PairingHeapSort  | 256  | Random             |    16,141.7 ns |     31.68 ns |     14.07 ns |  2.33 |    0.01 |    2 |         - |          NA |
-| DotnetSort       | 256  | Random             |     5,960.1 ns |    218.16 ns |    114.10 ns |  0.86 |    0.02 |    1 |         - |          NA |
+| **HeapSort**         | **256**  | **Random**             |     **6,752.3 ns** |    **143.59 ns** |     **63.75 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| MinHeapSort      | 256  | Random             |     7,051.2 ns |    254.25 ns |    132.98 ns |  1.04 |    0.02 |    1 |         - |          NA |
+| TernaryHeapSort  | 256  | Random             |    10,688.1 ns |    255.70 ns |    133.74 ns |  1.58 |    0.02 |    2 |         - |          NA |
+| BottomupHeapSort | 256  | Random             |     7,034.8 ns |    198.60 ns |    103.87 ns |  1.04 |    0.02 |    1 |         - |          NA |
+| WeakHeapSort     | 256  | Random             |    12,511.5 ns |    269.49 ns |    119.65 ns |  1.85 |    0.02 |    2 |         - |          NA |
+| SmoothSort       | 256  | Random             |    13,565.6 ns |    285.90 ns |    149.53 ns |  2.01 |    0.03 |    2 |         - |          NA |
+| PoplarHeapSort   | 256  | Random             |    13,722.1 ns |    271.01 ns |    141.74 ns |  2.03 |    0.03 |    2 |         - |          NA |
+| TournamentSort   | 256  | Random             |    13,468.4 ns |    101.04 ns |     44.86 ns |  1.99 |    0.02 |    2 |         - |          NA |
+| BinomialHeapSort | 256  | Random             |    27,345.5 ns |    495.07 ns |    258.93 ns |  4.05 |    0.05 |    3 |         - |          NA |
+| PairingHeapSort  | 256  | Random             |    16,193.4 ns |    164.00 ns |     85.77 ns |  2.40 |    0.02 |    2 |         - |          NA |
+| DotnetSort       | 256  | Random             |     5,894.1 ns |    183.35 ns |     95.89 ns |  0.87 |    0.02 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **256**  | **SingleElementMoved** |     **5,875.4 ns** |    **185.23 ns** |     **96.88 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| MinHeapSort      | 256  | SingleElementMoved |     5,504.1 ns |    245.08 ns |    128.18 ns |  0.94 |    0.03 |    5 |         - |          NA |
-| TernaryHeapSort  | 256  | SingleElementMoved |     3,802.6 ns |    276.83 ns |    122.92 ns |  0.65 |    0.02 |    4 |         - |          NA |
-| BottomupHeapSort | 256  | SingleElementMoved |     5,728.4 ns |    224.65 ns |    117.50 ns |  0.98 |    0.02 |    5 |         - |          NA |
-| WeakHeapSort     | 256  | SingleElementMoved |     5,341.4 ns |     59.13 ns |     21.09 ns |  0.91 |    0.01 |    5 |         - |          NA |
-| SmoothSort       | 256  | SingleElementMoved |     1,315.5 ns |    111.31 ns |     49.42 ns |  0.22 |    0.01 |    2 |         - |          NA |
-| PoplarHeapSort   | 256  | SingleElementMoved |     3,010.6 ns |    137.82 ns |     61.19 ns |  0.51 |    0.01 |    3 |         - |          NA |
-| TournamentSort   | 256  | SingleElementMoved |     4,460.3 ns |    380.73 ns |    199.13 ns |  0.76 |    0.03 |    4 |         - |          NA |
-| BinomialHeapSort | 256  | SingleElementMoved |     6,106.4 ns |    166.59 ns |     87.13 ns |  1.04 |    0.02 |    5 |         - |          NA |
-| PairingHeapSort  | 256  | SingleElementMoved |     4,411.8 ns |    257.93 ns |    134.90 ns |  0.75 |    0.02 |    4 |         - |          NA |
-| DotnetSort       | 256  | SingleElementMoved |     1,053.9 ns |    132.11 ns |     69.09 ns |  0.18 |    0.01 |    1 |         - |          NA |
+| **HeapSort**         | **256**  | **SingleElementMoved** |     **5,879.8 ns** |    **356.39 ns** |    **186.40 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| MinHeapSort      | 256  | SingleElementMoved |     5,610.4 ns |    300.69 ns |    157.27 ns |  0.96 |    0.04 |    4 |         - |          NA |
+| TernaryHeapSort  | 256  | SingleElementMoved |     4,091.2 ns |    649.26 ns |    339.58 ns |  0.70 |    0.06 |    3 |         - |          NA |
+| BottomupHeapSort | 256  | SingleElementMoved |     5,693.5 ns |    305.95 ns |    160.02 ns |  0.97 |    0.04 |    4 |         - |          NA |
+| WeakHeapSort     | 256  | SingleElementMoved |     5,557.3 ns |    369.74 ns |    193.38 ns |  0.95 |    0.04 |    4 |         - |          NA |
+| SmoothSort       | 256  | SingleElementMoved |     1,268.4 ns |     75.68 ns |     33.60 ns |  0.22 |    0.01 |    1 |         - |          NA |
+| PoplarHeapSort   | 256  | SingleElementMoved |     2,981.5 ns |     37.93 ns |     13.53 ns |  0.51 |    0.01 |    2 |         - |          NA |
+| TournamentSort   | 256  | SingleElementMoved |     4,499.7 ns |    580.56 ns |    303.64 ns |  0.77 |    0.05 |    3 |         - |          NA |
+| BinomialHeapSort | 256  | SingleElementMoved |     6,114.3 ns |    382.96 ns |    170.04 ns |  1.04 |    0.04 |    4 |         - |          NA |
+| PairingHeapSort  | 256  | SingleElementMoved |     4,352.5 ns |    195.03 ns |     86.59 ns |  0.74 |    0.03 |    3 |         - |          NA |
+| DotnetSort       | 256  | SingleElementMoved |     1,111.0 ns |    207.69 ns |     92.21 ns |  0.19 |    0.02 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **256**  | **Sorted**             |     **5,614.7 ns** |    **247.57 ns** |    **129.49 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| MinHeapSort      | 256  | Sorted             |     5,231.7 ns |    190.46 ns |     99.62 ns |  0.93 |    0.03 |    5 |         - |          NA |
-| TernaryHeapSort  | 256  | Sorted             |     3,251.0 ns |    194.57 ns |     86.39 ns |  0.58 |    0.02 |    4 |         - |          NA |
-| BottomupHeapSort | 256  | Sorted             |     5,447.3 ns |    202.57 ns |     89.94 ns |  0.97 |    0.03 |    5 |         - |          NA |
-| WeakHeapSort     | 256  | Sorted             |     5,043.5 ns |    280.59 ns |    146.76 ns |  0.90 |    0.03 |    5 |         - |          NA |
-| SmoothSort       | 256  | Sorted             |       912.0 ns |      8.37 ns |      3.72 ns |  0.16 |    0.00 |    2 |         - |          NA |
-| PoplarHeapSort   | 256  | Sorted             |     2,639.4 ns |    151.74 ns |     67.38 ns |  0.47 |    0.02 |    3 |         - |          NA |
-| TournamentSort   | 256  | Sorted             |     4,284.1 ns |    407.03 ns |    212.88 ns |  0.76 |    0.04 |    5 |         - |          NA |
-| BinomialHeapSort | 256  | Sorted             |     5,266.1 ns |    313.61 ns |    164.03 ns |  0.94 |    0.03 |    5 |         - |          NA |
-| PairingHeapSort  | 256  | Sorted             |     4,134.4 ns |     55.19 ns |     19.68 ns |  0.74 |    0.02 |    5 |         - |          NA |
-| DotnetSort       | 256  | Sorted             |       656.1 ns |     14.68 ns |      6.52 ns |  0.12 |    0.00 |    1 |         - |          NA |
+| **HeapSort**         | **256**  | **Sorted**             |     **5,598.7 ns** |    **221.18 ns** |    **115.68 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| MinHeapSort      | 256  | Sorted             |     5,290.2 ns |    255.53 ns |    133.65 ns |  0.95 |    0.03 |    5 |         - |          NA |
+| TernaryHeapSort  | 256  | Sorted             |     3,281.0 ns |    252.45 ns |    112.09 ns |  0.59 |    0.02 |    4 |         - |          NA |
+| BottomupHeapSort | 256  | Sorted             |     5,389.0 ns |     29.83 ns |     13.24 ns |  0.96 |    0.02 |    5 |         - |          NA |
+| WeakHeapSort     | 256  | Sorted             |     4,958.3 ns |    151.29 ns |     79.13 ns |  0.89 |    0.02 |    5 |         - |          NA |
+| SmoothSort       | 256  | Sorted             |       944.6 ns |     22.02 ns |      9.78 ns |  0.17 |    0.00 |    2 |         - |          NA |
+| PoplarHeapSort   | 256  | Sorted             |     2,611.0 ns |     31.37 ns |     11.19 ns |  0.47 |    0.01 |    3 |         - |          NA |
+| TournamentSort   | 256  | Sorted             |     4,274.2 ns |    315.90 ns |    165.22 ns |  0.76 |    0.03 |    5 |         - |          NA |
+| BinomialHeapSort | 256  | Sorted             |     5,191.1 ns |     68.65 ns |     35.90 ns |  0.93 |    0.02 |    5 |         - |          NA |
+| PairingHeapSort  | 256  | Sorted             |     4,142.7 ns |     63.38 ns |     22.60 ns |  0.74 |    0.01 |    5 |         - |          NA |
+| DotnetSort       | 256  | Sorted             |       627.7 ns |     11.32 ns |      4.04 ns |  0.11 |    0.00 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **256**  | **Reversed**           |     **5,100.7 ns** |     **51.54 ns** |     **18.38 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| MinHeapSort      | 256  | Reversed           |     5,739.3 ns |    248.23 ns |    129.83 ns |  1.13 |    0.02 |    4 |         - |          NA |
-| TernaryHeapSort  | 256  | Reversed           |     2,790.2 ns |    285.39 ns |    149.26 ns |  0.55 |    0.03 |    3 |         - |          NA |
-| BottomupHeapSort | 256  | Reversed           |     5,632.1 ns |    194.98 ns |     86.57 ns |  1.10 |    0.02 |    4 |         - |          NA |
-| WeakHeapSort     | 256  | Reversed           |     5,678.9 ns |    212.84 ns |    111.32 ns |  1.11 |    0.02 |    4 |         - |          NA |
-| SmoothSort       | 256  | Reversed           |     3,873.6 ns |    198.30 ns |    103.72 ns |  0.76 |    0.02 |    4 |         - |          NA |
-| PoplarHeapSort   | 256  | Reversed           |     4,672.4 ns |    324.12 ns |    169.52 ns |  0.92 |    0.03 |    4 |         - |          NA |
-| TournamentSort   | 256  | Reversed           |     4,420.5 ns |    432.30 ns |    226.10 ns |  0.87 |    0.04 |    4 |         - |          NA |
-| BinomialHeapSort | 256  | Reversed           |     5,278.5 ns |    404.32 ns |    211.47 ns |  1.03 |    0.04 |    4 |         - |          NA |
-| PairingHeapSort  | 256  | Reversed           |     2,004.8 ns |      9.07 ns |      4.03 ns |  0.39 |    0.00 |    2 |         - |          NA |
-| DotnetSort       | 256  | Reversed           |     1,115.5 ns |    169.62 ns |     88.72 ns |  0.22 |    0.02 |    1 |         - |          NA |
+| **HeapSort**         | **256**  | **Reversed**           |     **5,194.6 ns** |    **184.59 ns** |     **96.54 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| MinHeapSort      | 256  | Reversed           |     5,645.5 ns |    208.02 ns |     92.36 ns |  1.09 |    0.03 |    4 |         - |          NA |
+| TernaryHeapSort  | 256  | Reversed           |     2,782.3 ns |    136.35 ns |     60.54 ns |  0.54 |    0.01 |    3 |         - |          NA |
+| BottomupHeapSort | 256  | Reversed           |     5,717.5 ns |    376.86 ns |    197.10 ns |  1.10 |    0.04 |    4 |         - |          NA |
+| WeakHeapSort     | 256  | Reversed           |     5,769.5 ns |    366.41 ns |    191.64 ns |  1.11 |    0.04 |    4 |         - |          NA |
+| SmoothSort       | 256  | Reversed           |     3,919.4 ns |    294.08 ns |    153.81 ns |  0.75 |    0.03 |    4 |         - |          NA |
+| PoplarHeapSort   | 256  | Reversed           |     4,699.2 ns |    399.94 ns |    209.18 ns |  0.90 |    0.04 |    4 |         - |          NA |
+| TournamentSort   | 256  | Reversed           |     4,355.9 ns |    215.44 ns |    112.68 ns |  0.84 |    0.03 |    4 |         - |          NA |
+| BinomialHeapSort | 256  | Reversed           |     5,163.3 ns |    155.30 ns |     68.95 ns |  0.99 |    0.02 |    4 |         - |          NA |
+| PairingHeapSort  | 256  | Reversed           |     1,993.2 ns |     29.41 ns |     10.49 ns |  0.38 |    0.01 |    2 |         - |          NA |
+| DotnetSort       | 256  | Reversed           |     1,057.6 ns |    239.20 ns |    125.10 ns |  0.20 |    0.02 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **256**  | **PipeOrgan**          |     **5,439.0 ns** |    **223.87 ns** |    **117.09 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| MinHeapSort      | 256  | PipeOrgan          |     5,186.5 ns |    231.96 ns |    121.32 ns |  0.95 |    0.03 |    3 |         - |          NA |
-| TernaryHeapSort  | 256  | PipeOrgan          |     3,034.6 ns |    161.98 ns |     71.92 ns |  0.56 |    0.02 |    2 |         - |          NA |
-| BottomupHeapSort | 256  | PipeOrgan          |     5,492.2 ns |    172.86 ns |     76.75 ns |  1.01 |    0.02 |    3 |         - |          NA |
-| WeakHeapSort     | 256  | PipeOrgan          |     5,271.3 ns |    134.46 ns |     70.32 ns |  0.97 |    0.02 |    3 |         - |          NA |
-| SmoothSort       | 256  | PipeOrgan          |     3,962.3 ns |    160.64 ns |     84.02 ns |  0.73 |    0.02 |    3 |         - |          NA |
-| PoplarHeapSort   | 256  | PipeOrgan          |     4,613.8 ns |    205.43 ns |     91.21 ns |  0.85 |    0.02 |    3 |         - |          NA |
-| TournamentSort   | 256  | PipeOrgan          |     3,136.8 ns |    308.34 ns |    161.27 ns |  0.58 |    0.03 |    2 |         - |          NA |
-| BinomialHeapSort | 256  | PipeOrgan          |     6,001.4 ns |    278.33 ns |    145.57 ns |  1.10 |    0.03 |    3 |         - |          NA |
-| PairingHeapSort  | 256  | PipeOrgan          |     5,284.0 ns |     43.45 ns |     15.50 ns |  0.97 |    0.02 |    3 |         - |          NA |
-| DotnetSort       | 256  | PipeOrgan          |     1,964.1 ns |    271.04 ns |    141.76 ns |  0.36 |    0.03 |    1 |         - |          NA |
+| **HeapSort**         | **256**  | **PipeOrgan**          |     **5,439.8 ns** |    **235.27 ns** |    **123.05 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| MinHeapSort      | 256  | PipeOrgan          |     5,185.2 ns |    164.29 ns |     85.93 ns |  0.95 |    0.03 |    3 |         - |          NA |
+| TernaryHeapSort  | 256  | PipeOrgan          |     3,135.2 ns |    358.09 ns |    187.29 ns |  0.58 |    0.03 |    2 |         - |          NA |
+| BottomupHeapSort | 256  | PipeOrgan          |     5,537.1 ns |    216.50 ns |    113.23 ns |  1.02 |    0.03 |    3 |         - |          NA |
+| WeakHeapSort     | 256  | PipeOrgan          |     5,322.7 ns |    248.96 ns |    130.21 ns |  0.98 |    0.03 |    3 |         - |          NA |
+| SmoothSort       | 256  | PipeOrgan          |     4,083.8 ns |    423.43 ns |    221.46 ns |  0.75 |    0.04 |    3 |         - |          NA |
+| PoplarHeapSort   | 256  | PipeOrgan          |     4,665.8 ns |    239.14 ns |    125.07 ns |  0.86 |    0.03 |    3 |         - |          NA |
+| TournamentSort   | 256  | PipeOrgan          |     3,200.0 ns |    309.13 ns |    137.26 ns |  0.59 |    0.03 |    2 |         - |          NA |
+| BinomialHeapSort | 256  | PipeOrgan          |     5,983.8 ns |    257.03 ns |    134.43 ns |  1.10 |    0.03 |    3 |         - |          NA |
+| PairingHeapSort  | 256  | PipeOrgan          |     5,467.6 ns |    329.58 ns |    172.38 ns |  1.01 |    0.04 |    3 |         - |          NA |
+| DotnetSort       | 256  | PipeOrgan          |     1,879.7 ns |    244.75 ns |    128.01 ns |  0.35 |    0.02 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **256**  | **ManyDuplicates**     |     **6,765.6 ns** |    **367.33 ns** |    **192.12 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| MinHeapSort      | 256  | ManyDuplicates     |     6,884.8 ns |    146.14 ns |     76.43 ns |  1.02 |    0.03 |    2 |         - |          NA |
-| TernaryHeapSort  | 256  | ManyDuplicates     |    10,119.4 ns |    409.59 ns |    214.22 ns |  1.50 |    0.05 |    3 |         - |          NA |
-| BottomupHeapSort | 256  | ManyDuplicates     |     7,030.6 ns |    228.47 ns |    119.49 ns |  1.04 |    0.03 |    2 |         - |          NA |
-| WeakHeapSort     | 256  | ManyDuplicates     |    10,789.6 ns |    197.47 ns |    103.28 ns |  1.60 |    0.05 |    3 |         - |          NA |
-| SmoothSort       | 256  | ManyDuplicates     |    12,628.4 ns |    314.43 ns |    164.45 ns |  1.87 |    0.06 |    3 |         - |          NA |
-| PoplarHeapSort   | 256  | ManyDuplicates     |    12,926.6 ns |    241.65 ns |    107.29 ns |  1.91 |    0.05 |    3 |         - |          NA |
-| TournamentSort   | 256  | ManyDuplicates     |    13,306.1 ns |    300.23 ns |    157.03 ns |  1.97 |    0.06 |    3 |         - |          NA |
-| BinomialHeapSort | 256  | ManyDuplicates     |    24,615.3 ns |    337.03 ns |    149.64 ns |  3.64 |    0.10 |    4 |         - |          NA |
-| PairingHeapSort  | 256  | ManyDuplicates     |    15,333.7 ns |    309.24 ns |    161.74 ns |  2.27 |    0.07 |    3 |         - |          NA |
-| DotnetSort       | 256  | ManyDuplicates     |     5,437.6 ns |    111.74 ns |     39.85 ns |  0.80 |    0.02 |    1 |         - |          NA |
+| **HeapSort**         | **256**  | **ManyDuplicates**     |     **6,634.3 ns** |    **209.86 ns** |    **109.76 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| MinHeapSort      | 256  | ManyDuplicates     |     6,709.1 ns |    294.54 ns |    154.05 ns |  1.01 |    0.03 |    1 |         - |          NA |
+| TernaryHeapSort  | 256  | ManyDuplicates     |    10,177.8 ns |    352.50 ns |    184.36 ns |  1.53 |    0.04 |    2 |         - |          NA |
+| BottomupHeapSort | 256  | ManyDuplicates     |     6,760.8 ns |    189.09 ns |     83.96 ns |  1.02 |    0.02 |    1 |         - |          NA |
+| WeakHeapSort     | 256  | ManyDuplicates     |    10,704.3 ns |    446.12 ns |    233.33 ns |  1.61 |    0.04 |    2 |         - |          NA |
+| SmoothSort       | 256  | ManyDuplicates     |    12,656.0 ns |    294.01 ns |    130.54 ns |  1.91 |    0.03 |    2 |         - |          NA |
+| PoplarHeapSort   | 256  | ManyDuplicates     |    12,794.8 ns |    352.37 ns |    156.46 ns |  1.93 |    0.04 |    2 |         - |          NA |
+| TournamentSort   | 256  | ManyDuplicates     |    13,310.3 ns |    671.21 ns |    298.02 ns |  2.01 |    0.05 |    2 |         - |          NA |
+| BinomialHeapSort | 256  | ManyDuplicates     |    24,784.9 ns |    620.83 ns |    275.65 ns |  3.74 |    0.07 |    3 |         - |          NA |
+| PairingHeapSort  | 256  | ManyDuplicates     |    15,389.8 ns |    174.91 ns |     91.48 ns |  2.32 |    0.04 |    2 |         - |          NA |
+| DotnetSort       | 256  | ManyDuplicates     |     5,645.3 ns |    238.78 ns |    106.02 ns |  0.85 |    0.02 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **1024** | **Random**             |    **30,543.0 ns** |    **166.99 ns** |     **59.55 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| MinHeapSort      | 1024 | Random             |    30,865.4 ns |    233.25 ns |    122.00 ns |  1.01 |    0.00 |    1 |         - |          NA |
-| TernaryHeapSort  | 1024 | Random             |    52,671.1 ns |    322.84 ns |    115.13 ns |  1.72 |    0.00 |    2 |         - |          NA |
-| BottomupHeapSort | 1024 | Random             |    32,398.3 ns |    213.74 ns |     94.90 ns |  1.06 |    0.00 |    1 |         - |          NA |
-| WeakHeapSort     | 1024 | Random             |    64,505.6 ns |    847.71 ns |    302.30 ns |  2.11 |    0.01 |    3 |         - |          NA |
-| SmoothSort       | 1024 | Random             |    70,923.3 ns |    271.72 ns |    120.64 ns |  2.32 |    0.01 |    3 |         - |          NA |
-| PoplarHeapSort   | 1024 | Random             |    65,941.1 ns |    193.78 ns |    101.35 ns |  2.16 |    0.00 |    3 |         - |          NA |
-| TournamentSort   | 1024 | Random             |    65,527.7 ns |    421.00 ns |    186.93 ns |  2.15 |    0.01 |    3 |         - |          NA |
-| BinomialHeapSort | 1024 | Random             |   156,392.5 ns |    668.54 ns |    296.84 ns |  5.12 |    0.01 |    4 |         - |          NA |
-| PairingHeapSort  | 1024 | Random             |    80,850.2 ns |    272.28 ns |    120.89 ns |  2.65 |    0.01 |    3 |         - |          NA |
-| DotnetSort       | 1024 | Random             |    29,819.2 ns |    479.02 ns |    212.69 ns |  0.98 |    0.01 |    1 |         - |          NA |
+| **HeapSort**         | **1024** | **Random**             |    **30,664.5 ns** |    **167.70 ns** |     **74.46 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| MinHeapSort      | 1024 | Random             |    30,989.5 ns |    327.30 ns |    171.18 ns |  1.01 |    0.01 |    1 |         - |          NA |
+| TernaryHeapSort  | 1024 | Random             |    52,798.9 ns |    335.46 ns |    119.63 ns |  1.72 |    0.01 |    2 |         - |          NA |
+| BottomupHeapSort | 1024 | Random             |    32,518.1 ns |    279.02 ns |    123.89 ns |  1.06 |    0.00 |    1 |         - |          NA |
+| WeakHeapSort     | 1024 | Random             |    64,275.8 ns |    163.21 ns |     85.36 ns |  2.10 |    0.01 |    3 |         - |          NA |
+| SmoothSort       | 1024 | Random             |    70,930.5 ns |    159.82 ns |     70.96 ns |  2.31 |    0.01 |    3 |         - |          NA |
+| PoplarHeapSort   | 1024 | Random             |    66,364.3 ns |    274.88 ns |    122.05 ns |  2.16 |    0.01 |    3 |         - |          NA |
+| TournamentSort   | 1024 | Random             |    65,647.9 ns |    183.03 ns |     95.73 ns |  2.14 |    0.01 |    3 |         - |          NA |
+| BinomialHeapSort | 1024 | Random             |   156,969.9 ns |  1,332.06 ns |    696.69 ns |  5.12 |    0.02 |    4 |         - |          NA |
+| PairingHeapSort  | 1024 | Random             |    80,824.9 ns |    388.94 ns |    138.70 ns |  2.64 |    0.01 |    3 |         - |          NA |
+| DotnetSort       | 1024 | Random             |    29,876.0 ns |    250.30 ns |    130.91 ns |  0.97 |    0.00 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **1024** | **SingleElementMoved** |    **25,717.2 ns** |    **546.27 ns** |    **285.71 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| MinHeapSort      | 1024 | SingleElementMoved |    24,848.7 ns |    206.42 ns |     73.61 ns |  0.97 |    0.01 |    3 |         - |          NA |
-| TernaryHeapSort  | 1024 | SingleElementMoved |    19,261.8 ns |    395.81 ns |    175.74 ns |  0.75 |    0.01 |    3 |         - |          NA |
-| BottomupHeapSort | 1024 | SingleElementMoved |    25,027.1 ns |    317.87 ns |    141.13 ns |  0.97 |    0.01 |    3 |         - |          NA |
-| WeakHeapSort     | 1024 | SingleElementMoved |    25,731.3 ns |    343.09 ns |    179.44 ns |  1.00 |    0.01 |    3 |         - |          NA |
-| SmoothSort       | 1024 | SingleElementMoved |     4,806.4 ns |    222.50 ns |     98.79 ns |  0.19 |    0.00 |    1 |         - |          NA |
-| PoplarHeapSort   | 1024 | SingleElementMoved |    12,996.9 ns |    258.83 ns |    135.37 ns |  0.51 |    0.01 |    2 |         - |          NA |
-| TournamentSort   | 1024 | SingleElementMoved |    21,563.0 ns |    622.57 ns |    276.43 ns |  0.84 |    0.01 |    3 |         - |          NA |
-| BinomialHeapSort | 1024 | SingleElementMoved |    26,245.5 ns |    337.64 ns |    176.59 ns |  1.02 |    0.01 |    3 |         - |          NA |
-| PairingHeapSort  | 1024 | SingleElementMoved |    17,305.4 ns |    186.60 ns |     66.54 ns |  0.67 |    0.01 |    3 |         - |          NA |
-| DotnetSort       | 1024 | SingleElementMoved |     5,266.1 ns |    315.94 ns |    140.28 ns |  0.20 |    0.01 |    1 |         - |          NA |
+| **HeapSort**         | **1024** | **SingleElementMoved** |    **25,515.1 ns** |    **122.78 ns** |     **54.51 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| MinHeapSort      | 1024 | SingleElementMoved |    25,093.9 ns |    388.48 ns |    203.18 ns |  0.98 |    0.01 |    3 |         - |          NA |
+| TernaryHeapSort  | 1024 | SingleElementMoved |    19,416.6 ns |    449.21 ns |    199.45 ns |  0.76 |    0.01 |    3 |         - |          NA |
+| BottomupHeapSort | 1024 | SingleElementMoved |    25,044.2 ns |    367.13 ns |    192.02 ns |  0.98 |    0.01 |    3 |         - |          NA |
+| WeakHeapSort     | 1024 | SingleElementMoved |    25,799.8 ns |    365.65 ns |    162.35 ns |  1.01 |    0.01 |    3 |         - |          NA |
+| SmoothSort       | 1024 | SingleElementMoved |     4,769.8 ns |    118.87 ns |     62.17 ns |  0.19 |    0.00 |    1 |         - |          NA |
+| PoplarHeapSort   | 1024 | SingleElementMoved |    12,962.4 ns |    415.20 ns |    217.16 ns |  0.51 |    0.01 |    2 |         - |          NA |
+| TournamentSort   | 1024 | SingleElementMoved |    21,658.6 ns |    206.89 ns |     91.86 ns |  0.85 |    0.00 |    3 |         - |          NA |
+| BinomialHeapSort | 1024 | SingleElementMoved |    26,126.9 ns |    552.46 ns |    197.01 ns |  1.02 |    0.01 |    3 |         - |          NA |
+| PairingHeapSort  | 1024 | SingleElementMoved |    17,310.7 ns |    331.12 ns |    173.18 ns |  0.68 |    0.01 |    3 |         - |          NA |
+| DotnetSort       | 1024 | SingleElementMoved |     5,167.7 ns |    139.09 ns |     49.60 ns |  0.20 |    0.00 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **1024** | **Sorted**             |    **24,900.3 ns** |    **225.76 ns** |    **118.08 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| MinHeapSort      | 1024 | Sorted             |    23,275.0 ns |    206.39 ns |    107.95 ns |  0.93 |    0.01 |    3 |         - |          NA |
-| TernaryHeapSort  | 1024 | Sorted             |    15,304.4 ns |    589.77 ns |    308.46 ns |  0.61 |    0.01 |    3 |         - |          NA |
-| BottomupHeapSort | 1024 | Sorted             |    24,381.9 ns |    231.57 ns |    121.12 ns |  0.98 |    0.01 |    3 |         - |          NA |
-| WeakHeapSort     | 1024 | Sorted             |    24,807.9 ns |    282.06 ns |    147.52 ns |  1.00 |    0.01 |    3 |         - |          NA |
-| SmoothSort       | 1024 | Sorted             |     3,702.3 ns |    100.28 ns |     44.53 ns |  0.15 |    0.00 |    1 |         - |          NA |
-| PoplarHeapSort   | 1024 | Sorted             |    11,577.0 ns |    294.67 ns |    154.12 ns |  0.46 |    0.01 |    2 |         - |          NA |
-| TournamentSort   | 1024 | Sorted             |    20,373.9 ns |    183.87 ns |     65.57 ns |  0.82 |    0.00 |    3 |         - |          NA |
-| BinomialHeapSort | 1024 | Sorted             |    22,884.3 ns |    339.41 ns |    177.52 ns |  0.92 |    0.01 |    3 |         - |          NA |
-| PairingHeapSort  | 1024 | Sorted             |    17,555.2 ns |    530.25 ns |    277.33 ns |  0.71 |    0.01 |    3 |         - |          NA |
-| DotnetSort       | 1024 | Sorted             |     3,205.4 ns |    160.35 ns |     71.20 ns |  0.13 |    0.00 |    1 |         - |          NA |
+| **HeapSort**         | **1024** | **Sorted**             |    **24,875.2 ns** |    **426.74 ns** |    **223.19 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| MinHeapSort      | 1024 | Sorted             |    23,211.7 ns |    301.90 ns |    157.90 ns |  0.93 |    0.01 |    5 |         - |          NA |
+| TernaryHeapSort  | 1024 | Sorted             |    15,389.5 ns |    637.93 ns |    333.65 ns |  0.62 |    0.01 |    4 |         - |          NA |
+| BottomupHeapSort | 1024 | Sorted             |    24,407.1 ns |    230.10 ns |    120.35 ns |  0.98 |    0.01 |    5 |         - |          NA |
+| WeakHeapSort     | 1024 | Sorted             |    24,896.5 ns |    268.43 ns |    140.39 ns |  1.00 |    0.01 |    5 |         - |          NA |
+| SmoothSort       | 1024 | Sorted             |     3,860.5 ns |    294.75 ns |    154.16 ns |  0.16 |    0.01 |    2 |         - |          NA |
+| PoplarHeapSort   | 1024 | Sorted             |    11,496.2 ns |    231.63 ns |    102.84 ns |  0.46 |    0.01 |    3 |         - |          NA |
+| TournamentSort   | 1024 | Sorted             |    20,680.8 ns |    780.52 ns |    408.23 ns |  0.83 |    0.02 |    5 |         - |          NA |
+| BinomialHeapSort | 1024 | Sorted             |    22,967.2 ns |    190.02 ns |     99.39 ns |  0.92 |    0.01 |    5 |         - |          NA |
+| PairingHeapSort  | 1024 | Sorted             |    17,125.6 ns |    177.22 ns |     92.69 ns |  0.69 |    0.01 |    4 |         - |          NA |
+| DotnetSort       | 1024 | Sorted             |     3,220.8 ns |    205.02 ns |    107.23 ns |  0.13 |    0.00 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **1024** | **Reversed**           |    **22,904.0 ns** |    **280.04 ns** |    **146.46 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| MinHeapSort      | 1024 | Reversed           |    25,056.2 ns |    199.91 ns |    104.56 ns |  1.09 |    0.01 |    4 |         - |          NA |
-| TernaryHeapSort  | 1024 | Reversed           |    13,045.5 ns |    229.31 ns |    101.81 ns |  0.57 |    0.01 |    3 |         - |          NA |
-| BottomupHeapSort | 1024 | Reversed           |    25,166.6 ns |    259.65 ns |    135.80 ns |  1.10 |    0.01 |    4 |         - |          NA |
-| WeakHeapSort     | 1024 | Reversed           |    27,790.0 ns |    389.78 ns |    203.86 ns |  1.21 |    0.01 |    4 |         - |          NA |
-| SmoothSort       | 1024 | Reversed           |    18,696.2 ns |    418.43 ns |    185.78 ns |  0.82 |    0.01 |    4 |         - |          NA |
-| PoplarHeapSort   | 1024 | Reversed           |    21,225.7 ns |    658.89 ns |    344.61 ns |  0.93 |    0.02 |    4 |         - |          NA |
-| TournamentSort   | 1024 | Reversed           |    21,043.3 ns |    999.48 ns |    522.75 ns |  0.92 |    0.02 |    4 |         - |          NA |
-| BinomialHeapSort | 1024 | Reversed           |    22,720.7 ns |    246.29 ns |    128.81 ns |  0.99 |    0.01 |    4 |         - |          NA |
-| PairingHeapSort  | 1024 | Reversed           |     8,010.4 ns |    283.61 ns |    148.34 ns |  0.35 |    0.01 |    2 |         - |          NA |
-| DotnetSort       | 1024 | Reversed           |     5,270.2 ns |    113.56 ns |     50.42 ns |  0.23 |    0.00 |    1 |         - |          NA |
+| **HeapSort**         | **1024** | **Reversed**           |    **22,909.7 ns** |    **334.08 ns** |    **148.34 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| MinHeapSort      | 1024 | Reversed           |    25,032.5 ns |    387.32 ns |    202.58 ns |  1.09 |    0.01 |    4 |         - |          NA |
+| TernaryHeapSort  | 1024 | Reversed           |    13,220.3 ns |    720.35 ns |    376.76 ns |  0.58 |    0.02 |    3 |         - |          NA |
+| BottomupHeapSort | 1024 | Reversed           |    25,082.3 ns |    209.98 ns |    109.82 ns |  1.09 |    0.01 |    4 |         - |          NA |
+| WeakHeapSort     | 1024 | Reversed           |    27,772.7 ns |    299.59 ns |    133.02 ns |  1.21 |    0.01 |    4 |         - |          NA |
+| SmoothSort       | 1024 | Reversed           |    18,792.4 ns |    416.30 ns |    184.84 ns |  0.82 |    0.01 |    4 |         - |          NA |
+| PoplarHeapSort   | 1024 | Reversed           |    21,263.9 ns |    637.38 ns |    283.00 ns |  0.93 |    0.01 |    4 |         - |          NA |
+| TournamentSort   | 1024 | Reversed           |    21,460.4 ns |    811.92 ns |    424.65 ns |  0.94 |    0.02 |    4 |         - |          NA |
+| BinomialHeapSort | 1024 | Reversed           |    22,971.1 ns |    437.53 ns |    194.26 ns |  1.00 |    0.01 |    4 |         - |          NA |
+| PairingHeapSort  | 1024 | Reversed           |     7,967.3 ns |    263.76 ns |    137.95 ns |  0.35 |    0.01 |    2 |         - |          NA |
+| DotnetSort       | 1024 | Reversed           |     5,522.6 ns |    423.51 ns |    221.50 ns |  0.24 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **1024** | **PipeOrgan**          |    **24,422.0 ns** |    **179.15 ns** |     **93.70 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| MinHeapSort      | 1024 | PipeOrgan          |    23,263.5 ns |    177.14 ns |     92.65 ns |  0.95 |    0.00 |    2 |         - |          NA |
-| TernaryHeapSort  | 1024 | PipeOrgan          |    14,613.1 ns |    642.60 ns |    336.09 ns |  0.60 |    0.01 |    1 |         - |          NA |
-| BottomupHeapSort | 1024 | PipeOrgan          |    24,473.6 ns |    184.47 ns |     96.48 ns |  1.00 |    0.01 |    2 |         - |          NA |
-| WeakHeapSort     | 1024 | PipeOrgan          |    26,971.7 ns |    257.38 ns |    134.62 ns |  1.10 |    0.01 |    2 |         - |          NA |
-| SmoothSort       | 1024 | PipeOrgan          |    20,220.8 ns |    426.61 ns |    189.42 ns |  0.83 |    0.01 |    2 |         - |          NA |
-| PoplarHeapSort   | 1024 | PipeOrgan          |    21,727.0 ns |    355.26 ns |    157.74 ns |  0.89 |    0.01 |    2 |         - |          NA |
-| TournamentSort   | 1024 | PipeOrgan          |    15,141.6 ns |    689.80 ns |    306.28 ns |  0.62 |    0.01 |    1 |         - |          NA |
-| BinomialHeapSort | 1024 | PipeOrgan          |    25,793.5 ns |    280.21 ns |    146.56 ns |  1.06 |    0.01 |    2 |         - |          NA |
-| PairingHeapSort  | 1024 | PipeOrgan          |    22,481.2 ns |    241.62 ns |    126.37 ns |  0.92 |    0.01 |    2 |         - |          NA |
-| DotnetSort       | 1024 | PipeOrgan          |    12,990.4 ns |    511.92 ns |    227.29 ns |  0.53 |    0.01 |    1 |         - |          NA |
+| **HeapSort**         | **1024** | **PipeOrgan**          |    **24,474.5 ns** |    **240.21 ns** |    **125.64 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| MinHeapSort      | 1024 | PipeOrgan          |    23,143.4 ns |    275.08 ns |    143.87 ns |  0.95 |    0.01 |    2 |         - |          NA |
+| TernaryHeapSort  | 1024 | PipeOrgan          |    14,509.1 ns |    542.28 ns |    240.77 ns |  0.59 |    0.01 |    1 |         - |          NA |
+| BottomupHeapSort | 1024 | PipeOrgan          |    24,440.9 ns |    213.30 ns |    111.56 ns |  1.00 |    0.01 |    2 |         - |          NA |
+| WeakHeapSort     | 1024 | PipeOrgan          |    27,035.2 ns |    527.33 ns |    275.80 ns |  1.10 |    0.01 |    2 |         - |          NA |
+| SmoothSort       | 1024 | PipeOrgan          |    20,569.0 ns |    487.40 ns |    254.92 ns |  0.84 |    0.01 |    2 |         - |          NA |
+| PoplarHeapSort   | 1024 | PipeOrgan          |    21,855.4 ns |    378.80 ns |    168.19 ns |  0.89 |    0.01 |    2 |         - |          NA |
+| TournamentSort   | 1024 | PipeOrgan          |    15,183.7 ns |    946.39 ns |    494.98 ns |  0.62 |    0.02 |    1 |         - |          NA |
+| BinomialHeapSort | 1024 | PipeOrgan          |    25,745.6 ns |    292.52 ns |    152.99 ns |  1.05 |    0.01 |    2 |         - |          NA |
+| PairingHeapSort  | 1024 | PipeOrgan          |    22,503.0 ns |    244.95 ns |    128.11 ns |  0.92 |    0.01 |    2 |         - |          NA |
+| DotnetSort       | 1024 | PipeOrgan          |    12,961.7 ns |    436.37 ns |    228.23 ns |  0.53 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **1024** | **ManyDuplicates**     |    **29,238.7 ns** |    **199.37 ns** |     **88.52 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| MinHeapSort      | 1024 | ManyDuplicates     |    29,120.2 ns |    437.24 ns |    228.69 ns |  1.00 |    0.01 |    2 |         - |          NA |
-| TernaryHeapSort  | 1024 | ManyDuplicates     |    48,147.5 ns |    823.19 ns |    430.54 ns |  1.65 |    0.01 |    3 |         - |          NA |
-| BottomupHeapSort | 1024 | ManyDuplicates     |    29,969.3 ns |    187.94 ns |     98.30 ns |  1.02 |    0.00 |    2 |         - |          NA |
-| WeakHeapSort     | 1024 | ManyDuplicates     |    51,507.7 ns |  5,496.81 ns |  2,874.94 ns |  1.76 |    0.09 |    3 |         - |          NA |
-| SmoothSort       | 1024 | ManyDuplicates     |    64,103.5 ns |    161.19 ns |     71.57 ns |  2.19 |    0.01 |    4 |         - |          NA |
-| PoplarHeapSort   | 1024 | ManyDuplicates     |    61,996.7 ns |    140.25 ns |     62.27 ns |  2.12 |    0.01 |    4 |         - |          NA |
-| TournamentSort   | 1024 | ManyDuplicates     |    65,313.0 ns |    788.85 ns |    350.26 ns |  2.23 |    0.01 |    4 |         - |          NA |
-| BinomialHeapSort | 1024 | ManyDuplicates     |   121,985.6 ns |    685.55 ns |    304.39 ns |  4.17 |    0.02 |    5 |         - |          NA |
-| PairingHeapSort  | 1024 | ManyDuplicates     |    69,702.9 ns |    649.41 ns |    288.34 ns |  2.38 |    0.01 |    4 |         - |          NA |
-| DotnetSort       | 1024 | ManyDuplicates     |    23,299.8 ns |    328.86 ns |    172.00 ns |  0.80 |    0.01 |    1 |         - |          NA |
+| **HeapSort**         | **1024** | **ManyDuplicates**     |    **29,372.6 ns** |    **324.08 ns** |    **169.50 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| MinHeapSort      | 1024 | ManyDuplicates     |    29,472.6 ns |    616.03 ns |    322.20 ns |  1.00 |    0.01 |    2 |         - |          NA |
+| TernaryHeapSort  | 1024 | ManyDuplicates     |    48,514.4 ns |    196.75 ns |    102.91 ns |  1.65 |    0.01 |    3 |         - |          NA |
+| BottomupHeapSort | 1024 | ManyDuplicates     |    30,078.4 ns |    336.58 ns |    176.04 ns |  1.02 |    0.01 |    2 |         - |          NA |
+| WeakHeapSort     | 1024 | ManyDuplicates     |    49,430.1 ns |    704.34 ns |    368.38 ns |  1.68 |    0.01 |    3 |         - |          NA |
+| SmoothSort       | 1024 | ManyDuplicates     |    63,745.5 ns |    536.91 ns |    238.39 ns |  2.17 |    0.01 |    4 |         - |          NA |
+| PoplarHeapSort   | 1024 | ManyDuplicates     |    62,077.1 ns |    283.86 ns |    148.47 ns |  2.11 |    0.01 |    4 |         - |          NA |
+| TournamentSort   | 1024 | ManyDuplicates     |    64,813.1 ns |  3,238.06 ns |  1,693.57 ns |  2.21 |    0.06 |    4 |         - |          NA |
+| BinomialHeapSort | 1024 | ManyDuplicates     |   122,254.3 ns |  1,922.31 ns |    853.52 ns |  4.16 |    0.04 |    5 |         - |          NA |
+| PairingHeapSort  | 1024 | ManyDuplicates     |    69,708.6 ns |    889.19 ns |    465.06 ns |  2.37 |    0.02 |    4 |         - |          NA |
+| DotnetSort       | 1024 | ManyDuplicates     |    23,310.7 ns |    193.42 ns |    101.16 ns |  0.79 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **4096** | **Random**             |   **130,550.1 ns** |    **600.98 ns** |    **314.33 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| MinHeapSort      | 4096 | Random             |   132,977.8 ns |  1,350.68 ns |    706.43 ns |  1.02 |    0.01 |    1 |         - |          NA |
-| TernaryHeapSort  | 4096 | Random             |   250,701.5 ns |  1,287.61 ns |    571.70 ns |  1.92 |    0.01 |    2 |         - |          NA |
-| BottomupHeapSort | 4096 | Random             |   143,789.4 ns |    558.41 ns |    247.94 ns |  1.10 |    0.00 |    1 |         - |          NA |
-| WeakHeapSort     | 4096 | Random             |   309,960.6 ns |  1,209.50 ns |    537.03 ns |  2.37 |    0.01 |    3 |         - |          NA |
-| SmoothSort       | 4096 | Random             |   342,572.3 ns |  2,482.79 ns |  1,298.55 ns |  2.62 |    0.01 |    3 |         - |          NA |
-| PoplarHeapSort   | 4096 | Random             |   309,626.9 ns |    740.74 ns |    387.42 ns |  2.37 |    0.01 |    3 |         - |          NA |
-| TournamentSort   | 4096 | Random             |   312,849.9 ns |    613.61 ns |    272.45 ns |  2.40 |    0.01 |    3 |         - |          NA |
-| BinomialHeapSort | 4096 | Random             |   809,653.6 ns |  3,715.83 ns |  1,649.85 ns |  6.20 |    0.02 |    4 |         - |          NA |
-| PairingHeapSort  | 4096 | Random             |   391,877.0 ns |  2,011.00 ns |    892.90 ns |  3.00 |    0.01 |    3 |         - |          NA |
-| DotnetSort       | 4096 | Random             |   144,402.8 ns |  2,028.96 ns |  1,061.19 ns |  1.11 |    0.01 |    1 |         - |          NA |
+| **HeapSort**         | **4096** | **Random**             |   **130,554.9 ns** |    **726.43 ns** |    **322.54 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| MinHeapSort      | 4096 | Random             |   131,913.1 ns |  1,219.97 ns |    541.67 ns |  1.01 |    0.00 |    1 |         - |          NA |
+| TernaryHeapSort  | 4096 | Random             |   251,288.9 ns |  1,689.64 ns |    750.21 ns |  1.92 |    0.01 |    2 |         - |          NA |
+| BottomupHeapSort | 4096 | Random             |   143,946.5 ns |    614.68 ns |    272.92 ns |  1.10 |    0.00 |    1 |         - |          NA |
+| WeakHeapSort     | 4096 | Random             |   311,069.2 ns |  1,550.93 ns |    688.62 ns |  2.38 |    0.01 |    3 |         - |          NA |
+| SmoothSort       | 4096 | Random             |   343,556.2 ns |  3,649.36 ns |  1,620.34 ns |  2.63 |    0.01 |    3 |         - |          NA |
+| PoplarHeapSort   | 4096 | Random             |   309,964.0 ns |  1,797.96 ns |    798.30 ns |  2.37 |    0.01 |    3 |         - |          NA |
+| TournamentSort   | 4096 | Random             |   317,176.0 ns |  9,918.88 ns |  5,187.76 ns |  2.43 |    0.04 |    3 |         - |          NA |
+| BinomialHeapSort | 4096 | Random             |   811,777.7 ns |  4,051.82 ns |  1,799.04 ns |  6.22 |    0.02 |    4 |         - |          NA |
+| PairingHeapSort  | 4096 | Random             |   391,190.7 ns |    749.06 ns |    267.12 ns |  3.00 |    0.01 |    3 |         - |          NA |
+| DotnetSort       | 4096 | Random             |   145,081.9 ns |  1,030.11 ns |    457.38 ns |  1.11 |    0.00 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **4096** | **SingleElementMoved** |   **102,590.6 ns** |    **577.61 ns** |    **302.10 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| MinHeapSort      | 4096 | SingleElementMoved |   105,433.2 ns |    537.70 ns |    238.74 ns |  1.03 |    0.00 |    5 |         - |          NA |
-| TernaryHeapSort  | 4096 | SingleElementMoved |   121,133.6 ns |  4,563.70 ns |  2,026.31 ns |  1.18 |    0.02 |    5 |         - |          NA |
-| BottomupHeapSort | 4096 | SingleElementMoved |   111,045.7 ns |    388.45 ns |    172.48 ns |  1.08 |    0.00 |    5 |         - |          NA |
-| WeakHeapSort     | 4096 | SingleElementMoved |   123,986.9 ns |    575.35 ns |    255.46 ns |  1.21 |    0.00 |    5 |         - |          NA |
-| SmoothSort       | 4096 | SingleElementMoved |    18,872.2 ns |    498.37 ns |    260.66 ns |  0.18 |    0.00 |    1 |         - |          NA |
-| PoplarHeapSort   | 4096 | SingleElementMoved |    56,108.6 ns |    331.78 ns |    147.31 ns |  0.55 |    0.00 |    3 |         - |          NA |
-| TournamentSort   | 4096 | SingleElementMoved |   128,050.4 ns | 23,084.77 ns | 12,073.78 ns |  1.25 |    0.11 |    5 |         - |          NA |
-| BinomialHeapSort | 4096 | SingleElementMoved |   114,442.5 ns |    345.66 ns |    153.47 ns |  1.12 |    0.00 |    5 |         - |          NA |
-| PairingHeapSort  | 4096 | SingleElementMoved |    68,941.5 ns |    234.54 ns |    104.14 ns |  0.67 |    0.00 |    4 |         - |          NA |
-| DotnetSort       | 4096 | SingleElementMoved |    24,658.3 ns |    443.72 ns |    197.01 ns |  0.24 |    0.00 |    2 |         - |          NA |
+| **HeapSort**         | **4096** | **SingleElementMoved** |   **102,529.5 ns** |  **1,005.39 ns** |    **446.40 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| MinHeapSort      | 4096 | SingleElementMoved |   105,390.0 ns |  1,046.07 ns |    464.46 ns |  1.03 |    0.01 |    5 |         - |          NA |
+| TernaryHeapSort  | 4096 | SingleElementMoved |   121,178.9 ns |  3,505.35 ns |  1,833.37 ns |  1.18 |    0.02 |    5 |         - |          NA |
+| BottomupHeapSort | 4096 | SingleElementMoved |   111,825.6 ns |  1,225.63 ns |    641.03 ns |  1.09 |    0.01 |    5 |         - |          NA |
+| WeakHeapSort     | 4096 | SingleElementMoved |   124,051.4 ns |    751.62 ns |    333.72 ns |  1.21 |    0.01 |    5 |         - |          NA |
+| SmoothSort       | 4096 | SingleElementMoved |    18,933.4 ns |    202.14 ns |    105.72 ns |  0.18 |    0.00 |    1 |         - |          NA |
+| PoplarHeapSort   | 4096 | SingleElementMoved |    56,542.6 ns |    369.46 ns |    164.04 ns |  0.55 |    0.00 |    3 |         - |          NA |
+| TournamentSort   | 4096 | SingleElementMoved |   126,192.1 ns | 22,300.21 ns |  9,901.43 ns |  1.23 |    0.09 |    5 |         - |          NA |
+| BinomialHeapSort | 4096 | SingleElementMoved |   115,902.8 ns |  3,128.67 ns |  1,389.15 ns |  1.13 |    0.01 |    5 |         - |          NA |
+| PairingHeapSort  | 4096 | SingleElementMoved |    69,379.8 ns |    765.50 ns |    400.37 ns |  0.68 |    0.00 |    4 |         - |          NA |
+| DotnetSort       | 4096 | SingleElementMoved |    25,094.7 ns |    841.00 ns |    439.86 ns |  0.24 |    0.00 |    2 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **4096** | **Sorted**             |   **100,115.3 ns** |  **1,692.41 ns** |    **885.16 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| MinHeapSort      | 4096 | Sorted             |    98,101.8 ns |    893.62 ns |    467.38 ns |  0.98 |    0.01 |    4 |         - |          NA |
-| TernaryHeapSort  | 4096 | Sorted             |    76,564.3 ns |  2,170.05 ns |    963.52 ns |  0.76 |    0.01 |    3 |         - |          NA |
-| BottomupHeapSort | 4096 | Sorted             |   108,897.1 ns |    225.71 ns |    100.22 ns |  1.09 |    0.01 |    4 |         - |          NA |
-| WeakHeapSort     | 4096 | Sorted             |   121,250.0 ns |  1,007.14 ns |    526.75 ns |  1.21 |    0.01 |    4 |         - |          NA |
-| SmoothSort       | 4096 | Sorted             |    15,046.2 ns |    108.73 ns |     48.28 ns |  0.15 |    0.00 |    1 |         - |          NA |
-| PoplarHeapSort   | 4096 | Sorted             |    51,315.4 ns |    232.05 ns |    121.37 ns |  0.51 |    0.00 |    2 |         - |          NA |
-| TournamentSort   | 4096 | Sorted             |   105,967.8 ns |  8,421.39 ns |  4,404.55 ns |  1.06 |    0.04 |    4 |         - |          NA |
-| BinomialHeapSort | 4096 | Sorted             |   102,266.0 ns |    684.98 ns |    304.14 ns |  1.02 |    0.01 |    4 |         - |          NA |
-| PairingHeapSort  | 4096 | Sorted             |    69,908.4 ns |    413.42 ns |    183.56 ns |  0.70 |    0.01 |    3 |         - |          NA |
-| DotnetSort       | 4096 | Sorted             |    15,124.0 ns |    276.44 ns |     98.58 ns |  0.15 |    0.00 |    1 |         - |          NA |
+| **HeapSort**         | **4096** | **Sorted**             |   **100,638.9 ns** |  **1,194.14 ns** |    **530.20 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| MinHeapSort      | 4096 | Sorted             |    98,428.3 ns |  1,091.26 ns |    484.53 ns |  0.98 |    0.01 |    4 |         - |          NA |
+| TernaryHeapSort  | 4096 | Sorted             |    75,653.1 ns |  1,569.46 ns |    820.86 ns |  0.75 |    0.01 |    3 |         - |          NA |
+| BottomupHeapSort | 4096 | Sorted             |   109,205.7 ns |    997.88 ns |    443.07 ns |  1.09 |    0.01 |    4 |         - |          NA |
+| WeakHeapSort     | 4096 | Sorted             |   122,107.4 ns |    608.99 ns |    270.40 ns |  1.21 |    0.01 |    4 |         - |          NA |
+| SmoothSort       | 4096 | Sorted             |    15,157.0 ns |    207.44 ns |    108.50 ns |  0.15 |    0.00 |    1 |         - |          NA |
+| PoplarHeapSort   | 4096 | Sorted             |    51,386.2 ns |    172.34 ns |     76.52 ns |  0.51 |    0.00 |    2 |         - |          NA |
+| TournamentSort   | 4096 | Sorted             |   101,698.7 ns |  2,140.78 ns |  1,119.67 ns |  1.01 |    0.01 |    4 |         - |          NA |
+| BinomialHeapSort | 4096 | Sorted             |   102,225.6 ns |    540.19 ns |    239.85 ns |  1.02 |    0.01 |    4 |         - |          NA |
+| PairingHeapSort  | 4096 | Sorted             |    70,199.1 ns |    407.33 ns |    180.86 ns |  0.70 |    0.00 |    3 |         - |          NA |
+| DotnetSort       | 4096 | Sorted             |    15,657.9 ns |    627.19 ns |    328.03 ns |  0.16 |    0.00 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **4096** | **Reversed**           |    **97,650.0 ns** |    **415.09 ns** |    **217.10 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| MinHeapSort      | 4096 | Reversed           |   102,536.8 ns |  5,291.19 ns |  2,767.39 ns |  1.05 |    0.03 |    3 |         - |          NA |
-| TernaryHeapSort  | 4096 | Reversed           |    65,032.5 ns |  1,748.25 ns |    914.37 ns |  0.67 |    0.01 |    2 |         - |          NA |
-| BottomupHeapSort | 4096 | Reversed           |   111,597.1 ns |    742.14 ns |    329.52 ns |  1.14 |    0.00 |    3 |         - |          NA |
-| WeakHeapSort     | 4096 | Reversed           |   131,116.5 ns |    739.46 ns |    328.32 ns |  1.34 |    0.00 |    3 |         - |          NA |
-| SmoothSort       | 4096 | Reversed           |   103,448.4 ns |  3,858.21 ns |  1,713.07 ns |  1.06 |    0.02 |    3 |         - |          NA |
-| PoplarHeapSort   | 4096 | Reversed           |    96,451.8 ns |  2,118.27 ns |  1,107.90 ns |  0.99 |    0.01 |    3 |         - |          NA |
-| TournamentSort   | 4096 | Reversed           |   181,252.2 ns | 30,803.34 ns | 16,110.74 ns |  1.86 |    0.16 |    4 |         - |          NA |
-| BinomialHeapSort | 4096 | Reversed           |   100,454.0 ns |    517.18 ns |    184.43 ns |  1.03 |    0.00 |    3 |         - |          NA |
-| PairingHeapSort  | 4096 | Reversed           |    31,825.2 ns |    556.95 ns |    291.30 ns |  0.33 |    0.00 |    1 |         - |          NA |
-| DotnetSort       | 4096 | Reversed           |    28,483.2 ns |  2,487.67 ns |  1,301.10 ns |  0.29 |    0.01 |    1 |         - |          NA |
+| **HeapSort**         | **4096** | **Reversed**           |    **97,723.2 ns** |    **628.52 ns** |    **279.06 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| MinHeapSort      | 4096 | Reversed           |   102,348.6 ns |  4,453.95 ns |  2,329.50 ns |  1.05 |    0.02 |    3 |         - |          NA |
+| TernaryHeapSort  | 4096 | Reversed           |    65,553.7 ns |  1,140.92 ns |    506.58 ns |  0.67 |    0.01 |    2 |         - |          NA |
+| BottomupHeapSort | 4096 | Reversed           |   111,847.0 ns |    804.07 ns |    357.01 ns |  1.14 |    0.00 |    3 |         - |          NA |
+| WeakHeapSort     | 4096 | Reversed           |   131,812.3 ns |  1,334.44 ns |    592.50 ns |  1.35 |    0.01 |    3 |         - |          NA |
+| SmoothSort       | 4096 | Reversed           |   104,048.2 ns |  3,824.94 ns |  1,698.29 ns |  1.06 |    0.02 |    3 |         - |          NA |
+| PoplarHeapSort   | 4096 | Reversed           |    96,910.2 ns |  1,272.64 ns |    565.06 ns |  0.99 |    0.01 |    3 |         - |          NA |
+| TournamentSort   | 4096 | Reversed           |   177,657.6 ns | 13,452.39 ns |  7,035.86 ns |  1.82 |    0.07 |    4 |         - |          NA |
+| BinomialHeapSort | 4096 | Reversed           |   100,640.2 ns |    240.93 ns |     85.92 ns |  1.03 |    0.00 |    3 |         - |          NA |
+| PairingHeapSort  | 4096 | Reversed           |    31,830.7 ns |    223.22 ns |     99.11 ns |  0.33 |    0.00 |    1 |         - |          NA |
+| DotnetSort       | 4096 | Reversed           |    28,308.4 ns |  2,983.41 ns |  1,324.65 ns |  0.29 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **4096** | **PipeOrgan**          |   **101,596.9 ns** |    **604.26 ns** |    **215.48 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| MinHeapSort      | 4096 | PipeOrgan          |   100,011.7 ns |    445.70 ns |    197.89 ns |  0.98 |    0.00 |    1 |         - |          NA |
-| TernaryHeapSort  | 4096 | PipeOrgan          |    72,453.9 ns |  1,683.44 ns |    880.47 ns |  0.71 |    0.01 |    1 |         - |          NA |
-| BottomupHeapSort | 4096 | PipeOrgan          |   109,995.8 ns |    421.16 ns |    187.00 ns |  1.08 |    0.00 |    1 |         - |          NA |
-| WeakHeapSort     | 4096 | PipeOrgan          |   131,891.9 ns |    727.22 ns |    322.89 ns |  1.30 |    0.00 |    1 |         - |          NA |
-| SmoothSort       | 4096 | PipeOrgan          |   208,779.5 ns |  4,800.97 ns |  2,131.66 ns |  2.05 |    0.02 |    2 |         - |          NA |
-| PoplarHeapSort   | 4096 | PipeOrgan          |   107,119.2 ns |  2,138.52 ns |    949.52 ns |  1.05 |    0.01 |    1 |         - |          NA |
-| TournamentSort   | 4096 | PipeOrgan          |    79,178.4 ns |  5,004.28 ns |  2,617.34 ns |  0.78 |    0.02 |    1 |         - |          NA |
-| BinomialHeapSort | 4096 | PipeOrgan          |   112,877.7 ns |    893.77 ns |    396.84 ns |  1.11 |    0.00 |    1 |         - |          NA |
-| PairingHeapSort  | 4096 | PipeOrgan          |    93,439.4 ns |    413.50 ns |    183.60 ns |  0.92 |    0.00 |    1 |         - |          NA |
-| DotnetSort       | 4096 | PipeOrgan          |    70,958.5 ns |  2,404.84 ns |  1,067.76 ns |  0.70 |    0.01 |    1 |         - |          NA |
+| **HeapSort**         | **4096** | **PipeOrgan**          |   **101,936.9 ns** |  **1,076.83 ns** |    **563.20 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| MinHeapSort      | 4096 | PipeOrgan          |   100,345.6 ns |    938.70 ns |    416.79 ns |  0.98 |    0.01 |    2 |         - |          NA |
+| TernaryHeapSort  | 4096 | PipeOrgan          |    73,653.6 ns |  2,538.78 ns |  1,327.83 ns |  0.72 |    0.01 |    1 |         - |          NA |
+| BottomupHeapSort | 4096 | PipeOrgan          |   110,325.5 ns |  1,208.86 ns |    536.74 ns |  1.08 |    0.01 |    2 |         - |          NA |
+| WeakHeapSort     | 4096 | PipeOrgan          |   133,139.5 ns |    763.55 ns |    399.35 ns |  1.31 |    0.01 |    2 |         - |          NA |
+| SmoothSort       | 4096 | PipeOrgan          |   209,065.6 ns |  3,292.51 ns |  1,722.05 ns |  2.05 |    0.02 |    3 |         - |          NA |
+| PoplarHeapSort   | 4096 | PipeOrgan          |   110,290.1 ns |  7,754.61 ns |  4,055.81 ns |  1.08 |    0.04 |    2 |         - |          NA |
+| TournamentSort   | 4096 | PipeOrgan          |    76,410.7 ns |  8,435.35 ns |  4,411.85 ns |  0.75 |    0.04 |    1 |         - |          NA |
+| BinomialHeapSort | 4096 | PipeOrgan          |   112,986.2 ns |  1,036.57 ns |    460.24 ns |  1.11 |    0.01 |    2 |         - |          NA |
+| PairingHeapSort  | 4096 | PipeOrgan          |    93,385.4 ns |    792.41 ns |    351.83 ns |  0.92 |    0.01 |    2 |         - |          NA |
+| DotnetSort       | 4096 | PipeOrgan          |    75,032.5 ns |  3,228.60 ns |  1,688.62 ns |  0.74 |    0.02 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **4096** | **ManyDuplicates**     |   **120,634.7 ns** |    **547.24 ns** |    **242.98 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| MinHeapSort      | 4096 | ManyDuplicates     |   121,736.9 ns |    467.54 ns |    207.59 ns |  1.01 |    0.00 |    2 |         - |          NA |
-| TernaryHeapSort  | 4096 | ManyDuplicates     |   228,665.7 ns |    626.79 ns |    278.30 ns |  1.90 |    0.00 |    3 |         - |          NA |
-| BottomupHeapSort | 4096 | ManyDuplicates     |   127,469.7 ns |    422.68 ns |    187.67 ns |  1.06 |    0.00 |    2 |         - |          NA |
-| WeakHeapSort     | 4096 | ManyDuplicates     |   222,193.8 ns |    635.68 ns |    282.25 ns |  1.84 |    0.00 |    3 |         - |          NA |
-| SmoothSort       | 4096 | ManyDuplicates     |   296,937.8 ns |  1,158.82 ns |    514.52 ns |  2.46 |    0.01 |    4 |         - |          NA |
-| PoplarHeapSort   | 4096 | ManyDuplicates     |   290,950.9 ns |    484.41 ns |    253.36 ns |  2.41 |    0.00 |    4 |         - |          NA |
-| TournamentSort   | 4096 | ManyDuplicates     |   310,822.6 ns |    978.28 ns |    511.66 ns |  2.58 |    0.01 |    4 |         - |          NA |
-| BinomialHeapSort | 4096 | ManyDuplicates     |   546,055.5 ns |  2,722.79 ns |  1,424.07 ns |  4.53 |    0.01 |    5 |         - |          NA |
-| PairingHeapSort  | 4096 | ManyDuplicates     |   303,857.8 ns |    897.79 ns |    398.62 ns |  2.52 |    0.01 |    4 |         - |          NA |
-| DotnetSort       | 4096 | ManyDuplicates     |    94,272.1 ns |    560.29 ns |    199.80 ns |  0.78 |    0.00 |    1 |         - |          NA |
+| **HeapSort**         | **4096** | **ManyDuplicates**     |   **120,817.5 ns** |    **318.84 ns** |    **141.57 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| MinHeapSort      | 4096 | ManyDuplicates     |   122,450.8 ns |  1,985.24 ns |    881.46 ns |  1.01 |    0.01 |    2 |         - |          NA |
+| TernaryHeapSort  | 4096 | ManyDuplicates     |   227,222.5 ns |  3,766.07 ns |  1,969.73 ns |  1.88 |    0.02 |    3 |         - |          NA |
+| BottomupHeapSort | 4096 | ManyDuplicates     |   127,754.1 ns |    602.64 ns |    267.58 ns |  1.06 |    0.00 |    2 |         - |          NA |
+| WeakHeapSort     | 4096 | ManyDuplicates     |   222,544.2 ns |    997.32 ns |    521.62 ns |  1.84 |    0.00 |    3 |         - |          NA |
+| SmoothSort       | 4096 | ManyDuplicates     |   298,147.6 ns |  1,629.64 ns |    852.33 ns |  2.47 |    0.01 |    4 |         - |          NA |
+| PoplarHeapSort   | 4096 | ManyDuplicates     |   291,602.9 ns |    752.70 ns |    334.20 ns |  2.41 |    0.00 |    4 |         - |          NA |
+| TournamentSort   | 4096 | ManyDuplicates     |   310,703.1 ns |  1,036.57 ns |    460.24 ns |  2.57 |    0.00 |    4 |         - |          NA |
+| BinomialHeapSort | 4096 | ManyDuplicates     |   547,142.9 ns |  4,310.33 ns |  1,913.81 ns |  4.53 |    0.02 |    5 |         - |          NA |
+| PairingHeapSort  | 4096 | ManyDuplicates     |   304,464.0 ns |  2,201.90 ns |    977.66 ns |  2.52 |    0.01 |    4 |         - |          NA |
+| DotnetSort       | 4096 | ManyDuplicates     |    94,686.7 ns |    883.16 ns |    392.13 ns |  0.78 |    0.00 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **8192** | **Random**             |   **268,387.5 ns** |    **844.54 ns** |    **374.98 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| MinHeapSort      | 8192 | Random             |   272,228.3 ns |  1,832.70 ns |    958.54 ns |  1.01 |    0.00 |    1 |         - |          NA |
-| TernaryHeapSort  | 8192 | Random             |   542,139.6 ns |  1,937.00 ns |    860.04 ns |  2.02 |    0.00 |    2 |         - |          NA |
-| BottomupHeapSort | 8192 | Random             |   308,995.3 ns |    853.36 ns |    446.32 ns |  1.15 |    0.00 |    1 |         - |          NA |
-| WeakHeapSort     | 8192 | Random             |   673,809.3 ns |  1,021.46 ns |    534.24 ns |  2.51 |    0.00 |    3 |         - |          NA |
-| SmoothSort       | 8192 | Random             |   743,263.8 ns |  3,414.80 ns |  1,786.00 ns |  2.77 |    0.01 |    3 |         - |          NA |
-| PoplarHeapSort   | 8192 | Random             |   663,095.6 ns |    953.79 ns |    423.49 ns |  2.47 |    0.00 |    3 |         - |          NA |
-| TournamentSort   | 8192 | Random             |   691,464.1 ns |  1,104.69 ns |    490.49 ns |  2.58 |    0.00 |    3 |         - |          NA |
-| BinomialHeapSort | 8192 | Random             | 1,782,314.3 ns |  8,303.98 ns |  4,343.14 ns |  6.64 |    0.02 |    4 |         - |          NA |
-| PairingHeapSort  | 8192 | Random             |   871,657.7 ns |  6,376.76 ns |  3,335.17 ns |  3.25 |    0.01 |    3 |         - |          NA |
-| DotnetSort       | 8192 | Random             |   315,398.0 ns |  1,501.59 ns |    785.36 ns |  1.18 |    0.00 |    1 |         - |          NA |
+| **HeapSort**         | **8192** | **Random**             |   **268,896.9 ns** |    **211.09 ns** |     **75.28 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| MinHeapSort      | 8192 | Random             |   272,919.5 ns |  1,277.10 ns |    667.95 ns |  1.01 |    0.00 |    1 |         - |          NA |
+| TernaryHeapSort  | 8192 | Random             |   539,476.5 ns |  3,957.73 ns |  2,069.97 ns |  2.01 |    0.01 |    2 |         - |          NA |
+| BottomupHeapSort | 8192 | Random             |   309,182.5 ns |    778.47 ns |    345.64 ns |  1.15 |    0.00 |    1 |         - |          NA |
+| WeakHeapSort     | 8192 | Random             |   674,757.8 ns |  1,425.39 ns |    632.88 ns |  2.51 |    0.00 |    3 |         - |          NA |
+| SmoothSort       | 8192 | Random             |   741,051.4 ns |  1,193.65 ns |    624.30 ns |  2.76 |    0.00 |    3 |         - |          NA |
+| PoplarHeapSort   | 8192 | Random             |   663,223.7 ns |  1,441.16 ns |    639.89 ns |  2.47 |    0.00 |    3 |         - |          NA |
+| TournamentSort   | 8192 | Random             |   690,066.6 ns |  7,103.32 ns |  3,153.92 ns |  2.57 |    0.01 |    3 |         - |          NA |
+| BinomialHeapSort | 8192 | Random             | 1,781,751.2 ns |  6,543.82 ns |  3,422.55 ns |  6.63 |    0.01 |    4 |         - |          NA |
+| PairingHeapSort  | 8192 | Random             |   870,227.5 ns |  3,603.73 ns |  1,600.08 ns |  3.24 |    0.01 |    3 |         - |          NA |
+| DotnetSort       | 8192 | Random             |   316,344.0 ns |  2,209.22 ns |  1,155.47 ns |  1.18 |    0.00 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **8192** | **SingleElementMoved** |   **216,444.3 ns** |  **1,647.48 ns** |    **861.67 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| MinHeapSort      | 8192 | SingleElementMoved |   216,161.8 ns |  1,429.65 ns |    634.77 ns |  1.00 |    0.00 |    4 |         - |          NA |
-| TernaryHeapSort  | 8192 | SingleElementMoved |   347,759.5 ns |  8,735.87 ns |  4,569.03 ns |  1.61 |    0.02 |    5 |         - |          NA |
-| BottomupHeapSort | 8192 | SingleElementMoved |   243,340.0 ns |  1,524.62 ns |    676.94 ns |  1.12 |    0.01 |    4 |         - |          NA |
-| WeakHeapSort     | 8192 | SingleElementMoved |   270,623.8 ns |  3,022.29 ns |  1,341.92 ns |  1.25 |    0.01 |    4 |         - |          NA |
-| SmoothSort       | 8192 | SingleElementMoved |    37,713.3 ns |    417.44 ns |    185.35 ns |  0.17 |    0.00 |    1 |         - |          NA |
-| PoplarHeapSort   | 8192 | SingleElementMoved |   117,917.0 ns |    365.54 ns |    162.30 ns |  0.54 |    0.00 |    3 |         - |          NA |
-| TournamentSort   | 8192 | SingleElementMoved |   382,423.4 ns |  1,616.39 ns |    717.69 ns |  1.77 |    0.01 |    5 |         - |          NA |
-| BinomialHeapSort | 8192 | SingleElementMoved |   238,199.4 ns |  2,012.67 ns |    893.64 ns |  1.10 |    0.01 |    4 |         - |          NA |
-| PairingHeapSort  | 8192 | SingleElementMoved |   140,368.6 ns |    273.15 ns |     97.41 ns |  0.65 |    0.00 |    3 |         - |          NA |
-| DotnetSort       | 8192 | SingleElementMoved |    52,887.5 ns |    851.66 ns |    445.43 ns |  0.24 |    0.00 |    2 |         - |          NA |
+| **HeapSort**         | **8192** | **SingleElementMoved** |   **216,569.0 ns** |  **1,023.45 ns** |    **454.42 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| MinHeapSort      | 8192 | SingleElementMoved |   215,624.7 ns |    174.81 ns |     77.62 ns |  1.00 |    0.00 |    4 |         - |          NA |
+| TernaryHeapSort  | 8192 | SingleElementMoved |   349,438.4 ns |  1,012.30 ns |    449.47 ns |  1.61 |    0.00 |    5 |         - |          NA |
+| BottomupHeapSort | 8192 | SingleElementMoved |   243,847.1 ns |  1,258.93 ns |    558.97 ns |  1.13 |    0.00 |    4 |         - |          NA |
+| WeakHeapSort     | 8192 | SingleElementMoved |   271,513.1 ns |    694.11 ns |    308.19 ns |  1.25 |    0.00 |    4 |         - |          NA |
+| SmoothSort       | 8192 | SingleElementMoved |    37,488.6 ns |    529.87 ns |    277.13 ns |  0.17 |    0.00 |    1 |         - |          NA |
+| PoplarHeapSort   | 8192 | SingleElementMoved |   118,367.6 ns |  2,305.39 ns |  1,205.76 ns |  0.55 |    0.01 |    3 |         - |          NA |
+| TournamentSort   | 8192 | SingleElementMoved |   383,178.1 ns |  2,797.26 ns |  1,242.00 ns |  1.77 |    0.01 |    5 |         - |          NA |
+| BinomialHeapSort | 8192 | SingleElementMoved |   269,014.0 ns | 87,654.13 ns | 45,844.80 ns |  1.24 |    0.20 |    4 |         - |          NA |
+| PairingHeapSort  | 8192 | SingleElementMoved |   139,436.0 ns |  1,015.23 ns |    450.77 ns |  0.64 |    0.00 |    3 |         - |          NA |
+| DotnetSort       | 8192 | SingleElementMoved |    53,016.6 ns |    513.31 ns |    268.47 ns |  0.24 |    0.00 |    2 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **8192** | **Sorted**             |   **214,075.9 ns** |    **976.02 ns** |    **433.36 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| MinHeapSort      | 8192 | Sorted             |   199,772.4 ns |    566.01 ns |    251.31 ns |  0.93 |    0.00 |    4 |         - |          NA |
-| TernaryHeapSort  | 8192 | Sorted             |   333,752.5 ns |  2,412.85 ns |  1,071.32 ns |  1.56 |    0.01 |    5 |         - |          NA |
-| BottomupHeapSort | 8192 | Sorted             |   239,410.0 ns |    937.68 ns |    416.33 ns |  1.12 |    0.00 |    4 |         - |          NA |
-| WeakHeapSort     | 8192 | Sorted             |   266,025.2 ns |  1,064.00 ns |    556.49 ns |  1.24 |    0.00 |    4 |         - |          NA |
-| SmoothSort       | 8192 | Sorted             |    29,916.6 ns |    302.24 ns |    158.08 ns |  0.14 |    0.00 |    1 |         - |          NA |
-| PoplarHeapSort   | 8192 | Sorted             |   108,759.6 ns |  1,048.60 ns |    548.44 ns |  0.51 |    0.00 |    2 |         - |          NA |
-| TournamentSort   | 8192 | Sorted             |   386,848.4 ns | 25,635.28 ns | 13,407.75 ns |  1.81 |    0.06 |    5 |         - |          NA |
-| BinomialHeapSort | 8192 | Sorted             |   213,778.4 ns |  1,628.47 ns |    723.05 ns |  1.00 |    0.00 |    4 |         - |          NA |
-| PairingHeapSort  | 8192 | Sorted             |   140,717.1 ns |  1,043.24 ns |    545.63 ns |  0.66 |    0.00 |    3 |         - |          NA |
-| DotnetSort       | 8192 | Sorted             |    34,235.4 ns |  2,190.80 ns |    972.73 ns |  0.16 |    0.00 |    1 |         - |          NA |
+| **HeapSort**         | **8192** | **Sorted**             |   **216,275.3 ns** |  **7,777.35 ns** |  **3,453.19 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| MinHeapSort      | 8192 | Sorted             |   200,792.4 ns |  1,783.60 ns |    932.86 ns |  0.93 |    0.01 |    4 |         - |          NA |
+| TernaryHeapSort  | 8192 | Sorted             |   334,477.3 ns |  6,810.60 ns |  3,023.95 ns |  1.55 |    0.03 |    5 |         - |          NA |
+| BottomupHeapSort | 8192 | Sorted             |   239,915.4 ns |    664.36 ns |    294.98 ns |  1.11 |    0.02 |    4 |         - |          NA |
+| WeakHeapSort     | 8192 | Sorted             |   266,299.8 ns |  1,780.94 ns |    931.47 ns |  1.23 |    0.02 |    4 |         - |          NA |
+| SmoothSort       | 8192 | Sorted             |    30,050.6 ns |    519.57 ns |    230.69 ns |  0.14 |    0.00 |    1 |         - |          NA |
+| PoplarHeapSort   | 8192 | Sorted             |   108,434.9 ns |    686.21 ns |    304.68 ns |  0.50 |    0.01 |    2 |         - |          NA |
+| TournamentSort   | 8192 | Sorted             |   391,823.1 ns |  8,950.53 ns |  3,974.09 ns |  1.81 |    0.03 |    5 |         - |          NA |
+| BinomialHeapSort | 8192 | Sorted             |   213,469.3 ns |    780.15 ns |    346.39 ns |  0.99 |    0.01 |    4 |         - |          NA |
+| PairingHeapSort  | 8192 | Sorted             |   138,754.8 ns |    862.75 ns |    383.07 ns |  0.64 |    0.01 |    3 |         - |          NA |
+| DotnetSort       | 8192 | Sorted             |    35,200.9 ns |  3,692.30 ns |  1,639.40 ns |  0.16 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **8192** | **Reversed**           |   **198,711.9 ns** |    **770.36 ns** |    **342.04 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| MinHeapSort      | 8192 | Reversed           |   218,563.1 ns |    695.38 ns |    363.69 ns |  1.10 |    0.00 |    2 |         - |          NA |
-| TernaryHeapSort  | 8192 | Reversed           |   328,803.1 ns |  1,505.33 ns |    668.38 ns |  1.65 |    0.00 |    2 |         - |          NA |
-| BottomupHeapSort | 8192 | Reversed           |   244,620.6 ns |    894.59 ns |    397.20 ns |  1.23 |    0.00 |    2 |         - |          NA |
-| WeakHeapSort     | 8192 | Reversed           |   285,397.4 ns |  1,624.93 ns |    849.87 ns |  1.44 |    0.00 |    2 |         - |          NA |
-| SmoothSort       | 8192 | Reversed           |   439,161.8 ns |  1,139.33 ns |    595.89 ns |  2.21 |    0.00 |    3 |         - |          NA |
-| PoplarHeapSort   | 8192 | Reversed           |   322,080.3 ns |  3,132.38 ns |  1,390.80 ns |  1.62 |    0.01 |    2 |         - |          NA |
-| TournamentSort   | 8192 | Reversed           |   505,629.2 ns |  4,069.37 ns |  2,128.36 ns |  2.54 |    0.01 |    3 |         - |          NA |
-| BinomialHeapSort | 8192 | Reversed           |   212,390.6 ns |  1,333.50 ns |    592.08 ns |  1.07 |    0.00 |    2 |         - |          NA |
-| PairingHeapSort  | 8192 | Reversed           |    63,489.1 ns |    380.74 ns |    199.14 ns |  0.32 |    0.00 |    1 |         - |          NA |
-| DotnetSort       | 8192 | Reversed           |    59,874.9 ns |  3,095.14 ns |  1,618.82 ns |  0.30 |    0.01 |    1 |         - |          NA |
+| **HeapSort**         | **8192** | **Reversed**           |   **199,266.0 ns** |    **840.17 ns** |    **373.04 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| MinHeapSort      | 8192 | Reversed           |   218,816.4 ns |  1,912.48 ns |  1,000.27 ns |  1.10 |    0.01 |    2 |         - |          NA |
+| TernaryHeapSort  | 8192 | Reversed           |   329,144.5 ns |  2,407.80 ns |  1,069.08 ns |  1.65 |    0.01 |    2 |         - |          NA |
+| BottomupHeapSort | 8192 | Reversed           |   245,034.5 ns |  1,693.27 ns |    751.82 ns |  1.23 |    0.00 |    2 |         - |          NA |
+| WeakHeapSort     | 8192 | Reversed           |   286,109.9 ns |    859.61 ns |    449.59 ns |  1.44 |    0.00 |    2 |         - |          NA |
+| SmoothSort       | 8192 | Reversed           |   440,140.9 ns |  2,739.88 ns |  1,433.01 ns |  2.21 |    0.01 |    3 |         - |          NA |
+| PoplarHeapSort   | 8192 | Reversed           |   322,279.2 ns |  6,213.53 ns |  2,758.85 ns |  1.62 |    0.01 |    2 |         - |          NA |
+| TournamentSort   | 8192 | Reversed           |   502,859.1 ns | 18,622.47 ns |  9,739.91 ns |  2.52 |    0.05 |    3 |         - |          NA |
+| BinomialHeapSort | 8192 | Reversed           |   212,696.6 ns |    775.49 ns |    344.32 ns |  1.07 |    0.00 |    2 |         - |          NA |
+| PairingHeapSort  | 8192 | Reversed           |    63,531.7 ns |    335.11 ns |    175.27 ns |  0.32 |    0.00 |    1 |         - |          NA |
+| DotnetSort       | 8192 | Reversed           |    62,159.6 ns |  6,514.21 ns |  3,407.06 ns |  0.31 |    0.02 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **8192** | **PipeOrgan**          |   **213,309.9 ns** |  **3,293.06 ns** |  **1,462.14 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| MinHeapSort      | 8192 | PipeOrgan          |   205,666.8 ns |  4,339.41 ns |  2,269.60 ns |  0.96 |    0.01 |    1 |         - |          NA |
-| TernaryHeapSort  | 8192 | PipeOrgan          |   374,505.9 ns |  1,090.23 ns |    388.79 ns |  1.76 |    0.01 |    2 |         - |          NA |
-| BottomupHeapSort | 8192 | PipeOrgan          |   242,930.4 ns |  2,029.14 ns |    900.95 ns |  1.14 |    0.01 |    1 |         - |          NA |
-| WeakHeapSort     | 8192 | PipeOrgan          |   290,265.5 ns |  2,676.57 ns |  1,188.41 ns |  1.36 |    0.01 |    1 |         - |          NA |
-| SmoothSort       | 8192 | PipeOrgan          |   550,705.1 ns |  2,155.91 ns |  1,127.58 ns |  2.58 |    0.02 |    3 |         - |          NA |
-| PoplarHeapSort   | 8192 | PipeOrgan          |   453,443.7 ns |  1,462.37 ns |    764.85 ns |  2.13 |    0.01 |    2 |         - |          NA |
-| TournamentSort   | 8192 | PipeOrgan          |   414,244.5 ns | 24,411.44 ns | 12,767.65 ns |  1.94 |    0.06 |    2 |         - |          NA |
-| BinomialHeapSort | 8192 | PipeOrgan          |   235,998.5 ns |  2,297.56 ns |  1,201.67 ns |  1.11 |    0.01 |    1 |         - |          NA |
-| PairingHeapSort  | 8192 | PipeOrgan          |   190,749.6 ns |    969.52 ns |    430.47 ns |  0.89 |    0.01 |    1 |         - |          NA |
-| DotnetSort       | 8192 | PipeOrgan          |   281,005.0 ns |  5,680.72 ns |  2,522.27 ns |  1.32 |    0.01 |    1 |         - |          NA |
+| **HeapSort**         | **8192** | **PipeOrgan**          |   **211,959.3 ns** |  **1,172.87 ns** |    **520.76 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| MinHeapSort      | 8192 | PipeOrgan          |   203,519.6 ns |  2,026.70 ns |  1,060.00 ns |  0.96 |    0.01 |    1 |         - |          NA |
+| TernaryHeapSort  | 8192 | PipeOrgan          |   374,522.1 ns |  1,825.98 ns |    955.02 ns |  1.77 |    0.01 |    2 |         - |          NA |
+| BottomupHeapSort | 8192 | PipeOrgan          |   243,916.5 ns |  1,804.81 ns |    801.35 ns |  1.15 |    0.00 |    1 |         - |          NA |
+| WeakHeapSort     | 8192 | PipeOrgan          |   289,928.5 ns |  1,418.65 ns |    741.98 ns |  1.37 |    0.00 |    1 |         - |          NA |
+| SmoothSort       | 8192 | PipeOrgan          |   551,840.3 ns |  2,882.74 ns |  1,507.73 ns |  2.60 |    0.01 |    3 |         - |          NA |
+| PoplarHeapSort   | 8192 | PipeOrgan          |   453,237.0 ns |  1,750.72 ns |    777.33 ns |  2.14 |    0.01 |    2 |         - |          NA |
+| TournamentSort   | 8192 | PipeOrgan          |   396,457.2 ns |  2,223.57 ns |  1,162.97 ns |  1.87 |    0.01 |    2 |         - |          NA |
+| BinomialHeapSort | 8192 | PipeOrgan          |   236,082.5 ns |  2,340.65 ns |  1,224.21 ns |  1.11 |    0.01 |    1 |         - |          NA |
+| PairingHeapSort  | 8192 | PipeOrgan          |   189,161.3 ns |    780.10 ns |    346.37 ns |  0.89 |    0.00 |    1 |         - |          NA |
+| DotnetSort       | 8192 | PipeOrgan          |   281,006.9 ns |  5,467.87 ns |  2,859.80 ns |  1.33 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |              |       |         |      |           |             |
-| **HeapSort**         | **8192** | **ManyDuplicates**     |   **243,600.9 ns** |    **982.68 ns** |    **436.31 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| MinHeapSort      | 8192 | ManyDuplicates     |   248,191.1 ns |    912.00 ns |    476.99 ns |  1.02 |    0.00 |    2 |         - |          NA |
-| TernaryHeapSort  | 8192 | ManyDuplicates     |   497,245.1 ns |  4,515.04 ns |  2,361.46 ns |  2.04 |    0.01 |    3 |         - |          NA |
-| BottomupHeapSort | 8192 | ManyDuplicates     |   274,425.9 ns |  1,432.06 ns |    635.84 ns |  1.13 |    0.00 |    2 |         - |          NA |
-| WeakHeapSort     | 8192 | ManyDuplicates     |   466,386.8 ns |  2,018.14 ns |    896.07 ns |  1.91 |    0.00 |    3 |         - |          NA |
-| SmoothSort       | 8192 | ManyDuplicates     |   624,146.4 ns |  1,419.84 ns |    742.60 ns |  2.56 |    0.01 |    4 |         - |          NA |
-| PoplarHeapSort   | 8192 | ManyDuplicates     |   615,608.2 ns |    624.98 ns |    277.50 ns |  2.53 |    0.00 |    4 |         - |          NA |
-| TournamentSort   | 8192 | ManyDuplicates     |   660,313.6 ns |  6,238.41 ns |  2,769.89 ns |  2.71 |    0.01 |    4 |         - |          NA |
-| BinomialHeapSort | 8192 | ManyDuplicates     | 1,136,178.5 ns |  6,450.78 ns |  2,864.18 ns |  4.66 |    0.01 |    5 |         - |          NA |
-| PairingHeapSort  | 8192 | ManyDuplicates     |   641,459.5 ns |  5,294.35 ns |  2,350.72 ns |  2.63 |    0.01 |    4 |         - |          NA |
-| DotnetSort       | 8192 | ManyDuplicates     |   190,198.4 ns |    575.73 ns |    255.63 ns |  0.78 |    0.00 |    1 |         - |          NA |
+| **HeapSort**         | **8192** | **ManyDuplicates**     |   **243,951.8 ns** |    **847.70 ns** |    **443.37 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| MinHeapSort      | 8192 | ManyDuplicates     |   249,496.9 ns |  2,158.88 ns |  1,129.13 ns |  1.02 |    0.00 |    2 |         - |          NA |
+| TernaryHeapSort  | 8192 | ManyDuplicates     |   496,680.1 ns |  2,018.68 ns |    896.30 ns |  2.04 |    0.00 |    3 |         - |          NA |
+| BottomupHeapSort | 8192 | ManyDuplicates     |   274,527.2 ns |    671.22 ns |    298.02 ns |  1.13 |    0.00 |    2 |         - |          NA |
+| WeakHeapSort     | 8192 | ManyDuplicates     |   466,181.3 ns |  2,605.66 ns |  1,362.81 ns |  1.91 |    0.01 |    3 |         - |          NA |
+| SmoothSort       | 8192 | ManyDuplicates     |   625,564.0 ns |  1,214.26 ns |    635.08 ns |  2.56 |    0.01 |    4 |         - |          NA |
+| PoplarHeapSort   | 8192 | ManyDuplicates     |   616,444.4 ns |  1,078.83 ns |    564.25 ns |  2.53 |    0.00 |    4 |         - |          NA |
+| TournamentSort   | 8192 | ManyDuplicates     |   667,525.9 ns |  1,075.87 ns |    562.70 ns |  2.74 |    0.01 |    4 |         - |          NA |
+| BinomialHeapSort | 8192 | ManyDuplicates     | 1,136,284.4 ns |  5,340.25 ns |  2,793.06 ns |  4.66 |    0.01 |    5 |         - |          NA |
+| PairingHeapSort  | 8192 | ManyDuplicates     |   642,292.3 ns |  3,425.03 ns |  1,520.73 ns |  2.63 |    0.01 |    4 |         - |          NA |
+| DotnetSort       | 8192 | ManyDuplicates     |   190,073.0 ns |    495.51 ns |    220.01 ns |  0.78 |    0.00 |    1 |         - |          NA |
 
 ### InsertionBenchmark
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V74 3.69GHz, 1 CPU, 4 logical and 2 physical cores
-Memory: 15.61 GB Total, 12.49 GB Available
+AMD EPYC 9V74 3.59GHz, 1 CPU, 4 logical and 2 physical cores
+Memory: 15.61 GB Total, 12.44 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
@@ -948,326 +948,326 @@ EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCo
 UnrollFactor=1  WarmupCount=2  
 ```
 
-| Method                 | Size | Pattern            | Mean            | Error         | StdDev        | Ratio    | RatioSD | Rank | Allocated | Alloc Ratio |
-| ----------------------- |----- |------------------- |----------------:|--------------:|--------------:|---------:|--------:|-----:|----------:|------------:|
-| **InsertionSort**          | **256**  | **Random**             |      **7,284.7 ns** |     **318.17 ns** |     **113.46 ns** |     **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| PairInsertionSort      | 256  | Random             |      7,274.7 ns |     129.95 ns |      57.70 ns |     1.00 |    0.02 |    2 |         - |          NA |
-| BinaryInsertSort       | 256  | Random             |     11,516.5 ns |     263.05 ns |     137.58 ns |     1.58 |    0.03 |    3 |         - |          NA |
-| GnomeSort              | 256  | Random             |     10,837.2 ns |     309.02 ns |     161.62 ns |     1.49 |    0.03 |    3 |         - |          NA |
-| LibrarySort            | 256  | Random             |     22,648.5 ns |     377.16 ns |     197.26 ns |     3.11 |    0.05 |    4 |         - |          NA |
-| MergeInsertionSort     | 256  | Random             |     20,281.5 ns |     187.54 ns |      83.27 ns |     2.78 |    0.04 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 256  | Random             |      8,180.0 ns |     213.14 ns |     111.47 ns |     1.12 |    0.02 |    2 |         - |          NA |
-| ShellSortSedgewick1986 | 256  | Random             |      8,178.5 ns |     179.22 ns |      79.58 ns |     1.12 |    0.02 |    2 |         - |          NA |
-| ShellSortTokuda1992    | 256  | Random             |      8,618.6 ns |     303.80 ns |     158.89 ns |     1.18 |    0.03 |    2 |         - |          NA |
-| ShellSortCiura2001     | 256  | Random             |      8,420.9 ns |     257.29 ns |     134.57 ns |     1.16 |    0.02 |    2 |         - |          NA |
-| ShellSortLee2021       | 256  | Random             |      8,839.8 ns |     285.94 ns |     149.55 ns |     1.21 |    0.03 |    2 |         - |          NA |
-| DotnetSort             | 256  | Random             |      5,889.1 ns |     333.81 ns |     174.59 ns |     0.81 |    0.03 |    1 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **256**  | **SingleElementMoved** |        **228.9 ns** |      **17.40 ns** |       **7.73 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| PairInsertionSort      | 256  | SingleElementMoved |        260.8 ns |      17.52 ns |       7.78 ns |     1.14 |    0.05 |    1 |         - |          NA |
-| BinaryInsertSort       | 256  | SingleElementMoved |      1,002.9 ns |      38.86 ns |      13.86 ns |     4.39 |    0.15 |    3 |         - |          NA |
-| GnomeSort              | 256  | SingleElementMoved |        319.4 ns |       5.71 ns |       2.98 ns |     1.40 |    0.04 |    2 |         - |          NA |
-| LibrarySort            | 256  | SingleElementMoved |     21,671.9 ns |     142.14 ns |      74.34 ns |    94.75 |    2.92 |    5 |         - |          NA |
-| MergeInsertionSort     | 256  | SingleElementMoved |     10,047.8 ns |     252.79 ns |     112.24 ns |    43.93 |    1.43 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 256  | SingleElementMoved |        817.1 ns |      33.76 ns |      14.99 ns |     3.57 |    0.13 |    3 |         - |          NA |
-| ShellSortSedgewick1986 | 256  | SingleElementMoved |        821.1 ns |      11.54 ns |       5.12 ns |     3.59 |    0.11 |    3 |         - |          NA |
-| ShellSortTokuda1992    | 256  | SingleElementMoved |      1,010.1 ns |      67.48 ns |      29.96 ns |     4.42 |    0.18 |    3 |         - |          NA |
-| ShellSortCiura2001     | 256  | SingleElementMoved |        898.8 ns |     142.50 ns |      63.27 ns |     3.93 |    0.29 |    3 |         - |          NA |
-| ShellSortLee2021       | 256  | SingleElementMoved |        995.4 ns |      53.52 ns |      19.09 ns |     4.35 |    0.15 |    3 |         - |          NA |
-| DotnetSort             | 256  | SingleElementMoved |      1,067.0 ns |     108.76 ns |      48.29 ns |     4.67 |    0.24 |    3 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **256**  | **Sorted**             |        **151.1 ns** |       **7.17 ns** |       **3.75 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| PairInsertionSort      | 256  | Sorted             |        183.0 ns |       0.91 ns |       0.32 ns |     1.21 |    0.03 |    2 |         - |          NA |
-| BinaryInsertSort       | 256  | Sorted             |        909.2 ns |      19.56 ns |       8.69 ns |     6.02 |    0.15 |    4 |         - |          NA |
-| GnomeSort              | 256  | Sorted             |        233.2 ns |      33.64 ns |      14.94 ns |     1.54 |    0.10 |    3 |         - |          NA |
-| LibrarySort            | 256  | Sorted             |     21,894.0 ns |     209.85 ns |      93.17 ns |   144.95 |    3.37 |    6 |         - |          NA |
-| MergeInsertionSort     | 256  | Sorted             |     10,096.3 ns |     239.56 ns |     125.30 ns |    66.84 |    1.72 |    5 |         - |          NA |
-| ShellSortKnuth1973     | 256  | Sorted             |        635.1 ns |       4.00 ns |       1.77 ns |     4.20 |    0.10 |    4 |         - |          NA |
-| ShellSortSedgewick1986 | 256  | Sorted             |        653.0 ns |      31.39 ns |      13.94 ns |     4.32 |    0.13 |    4 |         - |          NA |
-| ShellSortTokuda1992    | 256  | Sorted             |        785.9 ns |      15.14 ns |       5.40 ns |     5.20 |    0.12 |    4 |         - |          NA |
-| ShellSortCiura2001     | 256  | Sorted             |        712.9 ns |      22.08 ns |      11.55 ns |     4.72 |    0.13 |    4 |         - |          NA |
-| ShellSortLee2021       | 256  | Sorted             |        817.7 ns |      20.92 ns |       9.29 ns |     5.41 |    0.14 |    4 |         - |          NA |
-| DotnetSort             | 256  | Sorted             |        655.1 ns |      21.76 ns |      11.38 ns |     4.34 |    0.12 |    4 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **256**  | **Reversed**           |     **11,848.9 ns** |     **212.36 ns** |      **94.29 ns** |     **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| PairInsertionSort      | 256  | Reversed           |      9,408.2 ns |     267.98 ns |     140.16 ns |     0.79 |    0.01 |    3 |         - |          NA |
-| BinaryInsertSort       | 256  | Reversed           |      4,671.5 ns |      21.69 ns |       7.73 ns |     0.39 |    0.00 |    2 |         - |          NA |
-| GnomeSort              | 256  | Reversed           |     21,165.1 ns |     507.81 ns |     225.47 ns |     1.79 |    0.02 |    4 |         - |          NA |
-| LibrarySort            | 256  | Reversed           |     17,632.1 ns |     234.52 ns |     104.13 ns |     1.49 |    0.01 |    4 |         - |          NA |
-| MergeInsertionSort     | 256  | Reversed           |      9,886.4 ns |     218.42 ns |     114.24 ns |     0.83 |    0.01 |    3 |         - |          NA |
-| ShellSortKnuth1973     | 256  | Reversed           |      1,165.0 ns |      14.39 ns |       6.39 ns |     0.10 |    0.00 |    1 |         - |          NA |
-| ShellSortSedgewick1986 | 256  | Reversed           |      1,093.8 ns |      25.24 ns |      13.20 ns |     0.09 |    0.00 |    1 |         - |          NA |
-| ShellSortTokuda1992    | 256  | Reversed           |      1,127.2 ns |      37.17 ns |      16.50 ns |     0.10 |    0.00 |    1 |         - |          NA |
-| ShellSortCiura2001     | 256  | Reversed           |      1,164.9 ns |     140.66 ns |      62.45 ns |     0.10 |    0.00 |    1 |         - |          NA |
-| ShellSortLee2021       | 256  | Reversed           |      1,151.6 ns |      44.73 ns |      19.86 ns |     0.10 |    0.00 |    1 |         - |          NA |
-| DotnetSort             | 256  | Reversed           |      1,103.7 ns |     173.51 ns |      90.75 ns |     0.09 |    0.01 |    1 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **256**  | **PipeOrgan**          |      **6,197.7 ns** |     **238.92 ns** |     **124.96 ns** |     **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| PairInsertionSort      | 256  | PipeOrgan          |      4,944.6 ns |     272.49 ns |     142.52 ns |     0.80 |    0.03 |    4 |         - |          NA |
-| BinaryInsertSort       | 256  | PipeOrgan          |      3,010.7 ns |     197.21 ns |      87.56 ns |     0.49 |    0.02 |    3 |         - |          NA |
-| GnomeSort              | 256  | PipeOrgan          |      9,891.0 ns |     293.05 ns |     153.27 ns |     1.60 |    0.04 |    6 |         - |          NA |
-| LibrarySort            | 256  | PipeOrgan          |     15,057.1 ns |     150.00 ns |      66.60 ns |     2.43 |    0.05 |    7 |         - |          NA |
-| MergeInsertionSort     | 256  | PipeOrgan          |     10,068.3 ns |     336.03 ns |     175.75 ns |     1.63 |    0.04 |    6 |         - |          NA |
-| ShellSortKnuth1973     | 256  | PipeOrgan          |      1,017.9 ns |      18.03 ns |       8.01 ns |     0.16 |    0.00 |    1 |         - |          NA |
-| ShellSortSedgewick1986 | 256  | PipeOrgan          |      1,058.8 ns |      77.31 ns |      34.33 ns |     0.17 |    0.01 |    1 |         - |          NA |
-| ShellSortTokuda1992    | 256  | PipeOrgan          |      1,099.8 ns |      48.18 ns |      21.39 ns |     0.18 |    0.00 |    1 |         - |          NA |
-| ShellSortCiura2001     | 256  | PipeOrgan          |      1,058.1 ns |      36.24 ns |      16.09 ns |     0.17 |    0.00 |    1 |         - |          NA |
-| ShellSortLee2021       | 256  | PipeOrgan          |      1,147.9 ns |      64.19 ns |      28.50 ns |     0.19 |    0.01 |    1 |         - |          NA |
-| DotnetSort             | 256  | PipeOrgan          |      1,892.8 ns |     296.32 ns |     154.98 ns |     0.31 |    0.02 |    2 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **256**  | **ManyDuplicates**     |      **7,347.8 ns** |     **192.16 ns** |      **85.32 ns** |     **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| PairInsertionSort      | 256  | ManyDuplicates     |      7,368.6 ns |     342.32 ns |     151.99 ns |     1.00 |    0.02 |    2 |         - |          NA |
-| BinaryInsertSort       | 256  | ManyDuplicates     |     11,056.9 ns |     256.04 ns |     113.69 ns |     1.50 |    0.02 |    3 |         - |          NA |
-| GnomeSort              | 256  | ManyDuplicates     |     10,610.9 ns |     219.77 ns |     114.94 ns |     1.44 |    0.02 |    3 |         - |          NA |
-| LibrarySort            | 256  | ManyDuplicates     |     23,884.7 ns |     374.38 ns |     195.81 ns |     3.25 |    0.04 |    4 |         - |          NA |
-| MergeInsertionSort     | 256  | ManyDuplicates     |     20,428.3 ns |     385.31 ns |     201.52 ns |     2.78 |    0.04 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 256  | ManyDuplicates     |      7,367.5 ns |     360.28 ns |     188.43 ns |     1.00 |    0.03 |    2 |         - |          NA |
-| ShellSortSedgewick1986 | 256  | ManyDuplicates     |      7,608.3 ns |     211.34 ns |      93.84 ns |     1.04 |    0.02 |    2 |         - |          NA |
-| ShellSortTokuda1992    | 256  | ManyDuplicates     |      7,471.8 ns |     307.25 ns |     160.70 ns |     1.02 |    0.02 |    2 |         - |          NA |
-| ShellSortCiura2001     | 256  | ManyDuplicates     |      7,282.5 ns |     226.41 ns |     100.53 ns |     0.99 |    0.02 |    2 |         - |          NA |
-| ShellSortLee2021       | 256  | ManyDuplicates     |      7,311.2 ns |     159.34 ns |      83.34 ns |     1.00 |    0.02 |    2 |         - |          NA |
-| DotnetSort             | 256  | ManyDuplicates     |      5,505.5 ns |     209.09 ns |     109.36 ns |     0.75 |    0.02 |    1 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **1024** | **Random**             |     **94,681.5 ns** |   **2,709.41 ns** |   **1,203.00 ns** |     **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| PairInsertionSort      | 1024 | Random             |     89,935.2 ns |     490.79 ns |     217.91 ns |     0.95 |    0.01 |    4 |         - |          NA |
-| BinaryInsertSort       | 1024 | Random             |     62,871.6 ns |      74.89 ns |      26.70 ns |     0.66 |    0.01 |    3 |         - |          NA |
-| GnomeSort              | 1024 | Random             |    150,778.2 ns |     555.90 ns |     246.82 ns |     1.59 |    0.02 |    5 |         - |          NA |
-| LibrarySort            | 1024 | Random             |    106,820.9 ns |     307.10 ns |     136.35 ns |     1.13 |    0.01 |    4 |         - |          NA |
-| MergeInsertionSort     | 1024 | Random             |    106,691.0 ns |   2,035.75 ns |     903.89 ns |     1.13 |    0.02 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 1024 | Random             |     43,897.7 ns |     251.00 ns |     131.28 ns |     0.46 |    0.01 |    2 |         - |          NA |
-| ShellSortSedgewick1986 | 1024 | Random             |     46,165.5 ns |     183.48 ns |      95.97 ns |     0.49 |    0.01 |    2 |         - |          NA |
-| ShellSortTokuda1992    | 1024 | Random             |     47,905.8 ns |     379.35 ns |     198.41 ns |     0.51 |    0.01 |    2 |         - |          NA |
-| ShellSortCiura2001     | 1024 | Random             |     47,154.5 ns |     281.14 ns |     147.04 ns |     0.50 |    0.01 |    2 |         - |          NA |
-| ShellSortLee2021       | 1024 | Random             |     47,753.9 ns |     226.14 ns |     118.28 ns |     0.50 |    0.01 |    2 |         - |          NA |
-| DotnetSort             | 1024 | Random             |     29,986.3 ns |     478.78 ns |     250.41 ns |     0.32 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **1024** | **SingleElementMoved** |        **753.9 ns** |      **82.38 ns** |      **36.58 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| PairInsertionSort      | 1024 | SingleElementMoved |        893.7 ns |     154.73 ns |      68.70 ns |     1.19 |    0.10 |    1 |         - |          NA |
-| BinaryInsertSort       | 1024 | SingleElementMoved |      4,677.1 ns |     345.34 ns |     180.62 ns |     6.22 |    0.35 |    3 |         - |          NA |
-| GnomeSort              | 1024 | SingleElementMoved |      1,132.4 ns |       9.32 ns |       4.88 ns |     1.51 |    0.07 |    2 |         - |          NA |
-| LibrarySort            | 1024 | SingleElementMoved |    192,652.4 ns |     846.01 ns |     375.63 ns |   256.05 |   11.18 |    5 |         - |          NA |
-| MergeInsertionSort     | 1024 | SingleElementMoved |     48,956.1 ns |     481.75 ns |     251.97 ns |    65.07 |    2.85 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 1024 | SingleElementMoved |      3,747.5 ns |     291.42 ns |     152.42 ns |     4.98 |    0.29 |    3 |         - |          NA |
-| ShellSortSedgewick1986 | 1024 | SingleElementMoved |      3,844.2 ns |      14.18 ns |       5.06 ns |     5.11 |    0.22 |    3 |         - |          NA |
-| ShellSortTokuda1992    | 1024 | SingleElementMoved |      4,332.3 ns |     229.35 ns |     119.95 ns |     5.76 |    0.29 |    3 |         - |          NA |
-| ShellSortCiura2001     | 1024 | SingleElementMoved |      4,135.9 ns |      29.58 ns |      10.55 ns |     5.50 |    0.24 |    3 |         - |          NA |
-| ShellSortLee2021       | 1024 | SingleElementMoved |      4,209.3 ns |     161.26 ns |      71.60 ns |     5.59 |    0.26 |    3 |         - |          NA |
-| DotnetSort             | 1024 | SingleElementMoved |      5,179.2 ns |     206.10 ns |      91.51 ns |     6.88 |    0.32 |    3 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **1024** | **Sorted**             |        **589.6 ns** |      **15.67 ns** |       **6.96 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| PairInsertionSort      | 1024 | Sorted             |        764.2 ns |      13.99 ns |       4.99 ns |     1.30 |    0.02 |    2 |         - |          NA |
-| BinaryInsertSort       | 1024 | Sorted             |      4,508.7 ns |     951.56 ns |     497.68 ns |     7.65 |    0.80 |    3 |         - |          NA |
-| GnomeSort              | 1024 | Sorted             |        864.2 ns |      57.47 ns |      25.52 ns |     1.47 |    0.04 |    2 |         - |          NA |
-| LibrarySort            | 1024 | Sorted             |    192,441.3 ns |     375.02 ns |     133.74 ns |   326.41 |    3.59 |    5 |         - |          NA |
-| MergeInsertionSort     | 1024 | Sorted             |     49,039.4 ns |     355.23 ns |     185.79 ns |    83.18 |    0.96 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 1024 | Sorted             |      3,107.6 ns |      19.19 ns |       8.52 ns |     5.27 |    0.06 |    3 |         - |          NA |
-| ShellSortSedgewick1986 | 1024 | Sorted             |      3,606.1 ns |     292.97 ns |     153.23 ns |     6.12 |    0.25 |    3 |         - |          NA |
-| ShellSortTokuda1992    | 1024 | Sorted             |      4,054.4 ns |     215.73 ns |     112.83 ns |     6.88 |    0.20 |    3 |         - |          NA |
-| ShellSortCiura2001     | 1024 | Sorted             |      3,761.0 ns |     218.85 ns |     114.46 ns |     6.38 |    0.20 |    3 |         - |          NA |
-| ShellSortLee2021       | 1024 | Sorted             |      3,764.7 ns |      38.44 ns |      17.07 ns |     6.39 |    0.08 |    3 |         - |          NA |
-| DotnetSort             | 1024 | Sorted             |      3,228.7 ns |     194.00 ns |      86.14 ns |     5.48 |    0.15 |    3 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **1024** | **Reversed**           |    **178,680.1 ns** |   **1,364.96 ns** |     **606.05 ns** |     **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| PairInsertionSort      | 1024 | Reversed           |    145,785.1 ns |     370.48 ns |     132.12 ns |     0.82 |    0.00 |    4 |         - |          NA |
-| BinaryInsertSort       | 1024 | Reversed           |     34,470.3 ns |     279.79 ns |     146.33 ns |     0.19 |    0.00 |    2 |         - |          NA |
-| GnomeSort              | 1024 | Reversed           |    301,298.3 ns |   4,601.80 ns |   2,406.83 ns |     1.69 |    0.01 |    5 |         - |          NA |
-| LibrarySort            | 1024 | Reversed           |    151,583.1 ns |   1,210.52 ns |     537.48 ns |     0.85 |    0.00 |    4 |         - |          NA |
-| MergeInsertionSort     | 1024 | Reversed           |     48,518.0 ns |     640.14 ns |     334.81 ns |     0.27 |    0.00 |    3 |         - |          NA |
-| ShellSortKnuth1973     | 1024 | Reversed           |      5,490.0 ns |      35.63 ns |      15.82 ns |     0.03 |    0.00 |    1 |         - |          NA |
-| ShellSortSedgewick1986 | 1024 | Reversed           |      5,758.6 ns |     455.04 ns |     238.00 ns |     0.03 |    0.00 |    1 |         - |          NA |
-| ShellSortTokuda1992    | 1024 | Reversed           |      6,083.3 ns |     352.13 ns |     184.17 ns |     0.03 |    0.00 |    1 |         - |          NA |
-| ShellSortCiura2001     | 1024 | Reversed           |      5,793.1 ns |     262.47 ns |     137.28 ns |     0.03 |    0.00 |    1 |         - |          NA |
-| ShellSortLee2021       | 1024 | Reversed           |      6,007.9 ns |     264.86 ns |     138.53 ns |     0.03 |    0.00 |    1 |         - |          NA |
-| DotnetSort             | 1024 | Reversed           |      6,055.4 ns |   1,316.36 ns |     688.48 ns |     0.03 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **1024** | **PipeOrgan**          |     **90,009.8 ns** |     **458.25 ns** |     **203.47 ns** |     **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| PairInsertionSort      | 1024 | PipeOrgan          |     73,972.7 ns |     307.88 ns |     161.03 ns |     0.82 |    0.00 |    5 |         - |          NA |
-| BinaryInsertSort       | 1024 | PipeOrgan          |     19,889.6 ns |     329.67 ns |     146.38 ns |     0.22 |    0.00 |    3 |         - |          NA |
-| GnomeSort              | 1024 | PipeOrgan          |    147,487.3 ns |     977.41 ns |     348.55 ns |     1.64 |    0.00 |    7 |         - |          NA |
-| LibrarySort            | 1024 | PipeOrgan          |     92,425.2 ns |   2,804.31 ns |   1,466.71 ns |     1.03 |    0.02 |    6 |         - |          NA |
-| MergeInsertionSort     | 1024 | PipeOrgan          |     50,334.5 ns |     420.03 ns |     219.68 ns |     0.56 |    0.00 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 1024 | PipeOrgan          |      5,118.9 ns |     362.45 ns |     189.57 ns |     0.06 |    0.00 |    1 |         - |          NA |
-| ShellSortSedgewick1986 | 1024 | PipeOrgan          |      5,546.3 ns |     344.40 ns |     180.13 ns |     0.06 |    0.00 |    1 |         - |          NA |
-| ShellSortTokuda1992    | 1024 | PipeOrgan          |      5,599.5 ns |     116.93 ns |      61.15 ns |     0.06 |    0.00 |    1 |         - |          NA |
-| ShellSortCiura2001     | 1024 | PipeOrgan          |      5,698.9 ns |     251.54 ns |     131.56 ns |     0.06 |    0.00 |    1 |         - |          NA |
-| ShellSortLee2021       | 1024 | PipeOrgan          |      5,729.7 ns |     233.54 ns |     103.70 ns |     0.06 |    0.00 |    1 |         - |          NA |
-| DotnetSort             | 1024 | PipeOrgan          |     12,797.1 ns |     485.44 ns |     215.54 ns |     0.14 |    0.00 |    2 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **1024** | **ManyDuplicates**     |     **94,478.0 ns** |   **6,246.32 ns** |   **3,266.95 ns** |     **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| PairInsertionSort      | 1024 | ManyDuplicates     |     89,724.1 ns |   4,066.46 ns |   2,126.84 ns |     0.95 |    0.04 |    4 |         - |          NA |
-| BinaryInsertSort       | 1024 | ManyDuplicates     |     60,056.9 ns |     699.84 ns |     310.74 ns |     0.64 |    0.02 |    3 |         - |          NA |
-| GnomeSort              | 1024 | ManyDuplicates     |    147,545.8 ns |     507.21 ns |     225.20 ns |     1.56 |    0.05 |    5 |         - |          NA |
-| LibrarySort            | 1024 | ManyDuplicates     |    112,495.6 ns |     449.37 ns |     235.03 ns |     1.19 |    0.04 |    4 |         - |          NA |
-| MergeInsertionSort     | 1024 | ManyDuplicates     |    104,614.0 ns |   1,053.93 ns |     467.95 ns |     1.11 |    0.04 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 1024 | ManyDuplicates     |     33,783.3 ns |     298.44 ns |     156.09 ns |     0.36 |    0.01 |    2 |         - |          NA |
-| ShellSortSedgewick1986 | 1024 | ManyDuplicates     |     35,113.2 ns |     461.02 ns |     241.12 ns |     0.37 |    0.01 |    2 |         - |          NA |
-| ShellSortTokuda1992    | 1024 | ManyDuplicates     |     34,990.0 ns |     130.29 ns |      57.85 ns |     0.37 |    0.01 |    2 |         - |          NA |
-| ShellSortCiura2001     | 1024 | ManyDuplicates     |     34,114.6 ns |     747.62 ns |     391.02 ns |     0.36 |    0.01 |    2 |         - |          NA |
-| ShellSortLee2021       | 1024 | ManyDuplicates     |     33,449.7 ns |     213.80 ns |      94.93 ns |     0.35 |    0.01 |    2 |         - |          NA |
-| DotnetSort             | 1024 | ManyDuplicates     |     23,304.5 ns |     423.83 ns |     221.67 ns |     0.25 |    0.01 |    1 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **4096** | **Random**             |  **1,415,119.1 ns** |   **5,095.81 ns** |   **2,665.21 ns** |     **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| PairInsertionSort      | 4096 | Random             |  1,347,902.9 ns |  22,042.43 ns |   9,786.98 ns |     0.95 |    0.01 |    6 |         - |          NA |
-| BinaryInsertSort       | 4096 | Random             |    399,610.7 ns |   1,860.78 ns |     973.23 ns |     0.28 |    0.00 |    3 |         - |          NA |
-| GnomeSort              | 4096 | Random             |  2,328,072.3 ns |  13,121.58 ns |   6,862.84 ns |     1.65 |    0.01 |    7 |         - |          NA |
-| LibrarySort            | 4096 | Random             |    479,360.5 ns |   1,344.97 ns |     597.17 ns |     0.34 |    0.00 |    4 |         - |          NA |
-| MergeInsertionSort     | 4096 | Random             |    748,883.2 ns |   1,462.49 ns |     649.35 ns |     0.53 |    0.00 |    5 |         - |          NA |
-| ShellSortKnuth1973     | 4096 | Random             |    217,120.6 ns |     652.18 ns |     289.57 ns |     0.15 |    0.00 |    2 |         - |          NA |
-| ShellSortSedgewick1986 | 4096 | Random             |    231,441.8 ns |     612.18 ns |     271.81 ns |     0.16 |    0.00 |    2 |         - |          NA |
-| ShellSortTokuda1992    | 4096 | Random             |    241,512.6 ns |   1,271.35 ns |     564.49 ns |     0.17 |    0.00 |    2 |         - |          NA |
-| ShellSortCiura2001     | 4096 | Random             |    238,128.4 ns |     375.55 ns |     166.74 ns |     0.17 |    0.00 |    2 |         - |          NA |
-| ShellSortLee2021       | 4096 | Random             |    243,628.8 ns |   5,693.97 ns |   2,528.16 ns |     0.17 |    0.00 |    2 |         - |          NA |
-| DotnetSort             | 4096 | Random             |    144,908.7 ns |     958.04 ns |     501.08 ns |     0.10 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **4096** | **SingleElementMoved** |      **2,757.2 ns** |      **28.75 ns** |      **10.25 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| PairInsertionSort      | 4096 | SingleElementMoved |      3,679.5 ns |     480.10 ns |     213.17 ns |     1.33 |    0.07 |    2 |         - |          NA |
-| BinaryInsertSort       | 4096 | SingleElementMoved |     21,812.7 ns |     463.30 ns |     205.71 ns |     7.91 |    0.07 |    3 |         - |          NA |
-| GnomeSort              | 4096 | SingleElementMoved |      4,479.5 ns |     337.26 ns |     176.39 ns |     1.62 |    0.06 |    2 |         - |          NA |
-| LibrarySort            | 4096 | SingleElementMoved |  2,358,659.0 ns |   8,028.49 ns |   4,199.05 ns |   855.45 |    3.26 |    5 |         - |          NA |
-| MergeInsertionSort     | 4096 | SingleElementMoved |    373,552.5 ns |   1,928.91 ns |     856.45 ns |   135.48 |    0.55 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 4096 | SingleElementMoved |     16,148.5 ns |     229.99 ns |     102.12 ns |     5.86 |    0.04 |    3 |         - |          NA |
-| ShellSortSedgewick1986 | 4096 | SingleElementMoved |     18,268.4 ns |     191.15 ns |      84.87 ns |     6.63 |    0.04 |    3 |         - |          NA |
-| ShellSortTokuda1992    | 4096 | SingleElementMoved |     20,688.8 ns |     360.10 ns |     159.89 ns |     7.50 |    0.06 |    3 |         - |          NA |
-| ShellSortCiura2001     | 4096 | SingleElementMoved |     20,118.7 ns |     438.17 ns |     229.17 ns |     7.30 |    0.08 |    3 |         - |          NA |
-| ShellSortLee2021       | 4096 | SingleElementMoved |     20,551.5 ns |     193.70 ns |     101.31 ns |     7.45 |    0.04 |    3 |         - |          NA |
-| DotnetSort             | 4096 | SingleElementMoved |     24,390.2 ns |     252.09 ns |      89.90 ns |     8.85 |    0.04 |    3 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **4096** | **Sorted**             |      **2,314.7 ns** |      **76.23 ns** |      **33.85 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| PairInsertionSort      | 4096 | Sorted             |      2,872.5 ns |     149.18 ns |      78.02 ns |     1.24 |    0.04 |    2 |         - |          NA |
-| BinaryInsertSort       | 4096 | Sorted             |     21,570.0 ns |     938.04 ns |     416.50 ns |     9.32 |    0.21 |    3 |         - |          NA |
-| GnomeSort              | 4096 | Sorted             |      3,347.6 ns |      23.77 ns |       8.47 ns |     1.45 |    0.02 |    2 |         - |          NA |
-| LibrarySort            | 4096 | Sorted             |  2,356,057.5 ns |   6,304.56 ns |   2,799.26 ns | 1,018.07 |   13.77 |    5 |         - |          NA |
-| MergeInsertionSort     | 4096 | Sorted             |    370,371.8 ns |   1,972.50 ns |     875.80 ns |   160.04 |    2.19 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 4096 | Sorted             |     14,986.8 ns |     188.01 ns |      98.34 ns |     6.48 |    0.10 |    3 |         - |          NA |
-| ShellSortSedgewick1986 | 4096 | Sorted             |     17,145.3 ns |     220.41 ns |      97.86 ns |     7.41 |    0.11 |    3 |         - |          NA |
-| ShellSortTokuda1992    | 4096 | Sorted             |     19,235.6 ns |     149.87 ns |      78.38 ns |     8.31 |    0.12 |    3 |         - |          NA |
-| ShellSortCiura2001     | 4096 | Sorted             |     18,783.0 ns |     262.95 ns |     137.53 ns |     8.12 |    0.12 |    3 |         - |          NA |
-| ShellSortLee2021       | 4096 | Sorted             |     19,192.1 ns |     248.54 ns |     129.99 ns |     8.29 |    0.12 |    3 |         - |          NA |
-| DotnetSort             | 4096 | Sorted             |     15,017.4 ns |     373.75 ns |     165.95 ns |     6.49 |    0.11 |    3 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **4096** | **Reversed**           |  **2,785,094.5 ns** |   **5,836.24 ns** |   **2,081.26 ns** |    **1.000** |    **0.00** |    **5** |         **-** |          **NA** |
-| PairInsertionSort      | 4096 | Reversed           |  2,302,368.0 ns |   5,047.25 ns |   1,799.90 ns |    0.827 |    0.00 |    4 |         - |          NA |
-| BinaryInsertSort       | 4096 | Reversed           |    365,612.9 ns |   1,130.78 ns |     502.07 ns |    0.131 |    0.00 |    2 |         - |          NA |
-| GnomeSort              | 4096 | Reversed           |  4,674,975.2 ns |  94,303.18 ns |  49,322.38 ns |    1.679 |    0.02 |    6 |         - |          NA |
-| LibrarySort            | 4096 | Reversed           |  1,796,728.6 ns |   2,258.81 ns |   1,002.92 ns |    0.645 |    0.00 |    3 |         - |          NA |
-| MergeInsertionSort     | 4096 | Reversed           |    377,346.5 ns |   1,989.94 ns |   1,040.78 ns |    0.135 |    0.00 |    2 |         - |          NA |
-| ShellSortKnuth1973     | 4096 | Reversed           |     25,726.7 ns |     357.30 ns |     186.88 ns |    0.009 |    0.00 |    1 |         - |          NA |
-| ShellSortSedgewick1986 | 4096 | Reversed           |     28,042.8 ns |     388.67 ns |     203.28 ns |    0.010 |    0.00 |    1 |         - |          NA |
-| ShellSortTokuda1992    | 4096 | Reversed           |     29,117.0 ns |     293.49 ns |     153.50 ns |    0.010 |    0.00 |    1 |         - |          NA |
-| ShellSortCiura2001     | 4096 | Reversed           |     28,155.5 ns |     394.86 ns |     206.52 ns |    0.010 |    0.00 |    1 |         - |          NA |
-| ShellSortLee2021       | 4096 | Reversed           |     29,654.6 ns |     207.29 ns |     108.42 ns |    0.011 |    0.00 |    1 |         - |          NA |
-| DotnetSort             | 4096 | Reversed           |     26,640.2 ns |   1,357.99 ns |     710.26 ns |    0.010 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **4096** | **PipeOrgan**          |  **1,396,934.5 ns** |   **1,623.03 ns** |     **848.87 ns** |     **1.00** |    **0.00** |    **7** |         **-** |          **NA** |
-| PairInsertionSort      | 4096 | PipeOrgan          |  1,155,123.4 ns |   4,373.77 ns |   1,941.98 ns |     0.83 |    0.00 |    6 |         - |          NA |
-| BinaryInsertSort       | 4096 | PipeOrgan          |    201,240.9 ns |   2,406.14 ns |   1,068.34 ns |     0.14 |    0.00 |    3 |         - |          NA |
-| GnomeSort              | 4096 | PipeOrgan          |  2,307,135.9 ns |   3,707.91 ns |   1,646.34 ns |     1.65 |    0.00 |    8 |         - |          NA |
-| LibrarySort            | 4096 | PipeOrgan          |    797,898.6 ns |  10,012.52 ns |   5,236.74 ns |     0.57 |    0.00 |    5 |         - |          NA |
-| MergeInsertionSort     | 4096 | PipeOrgan          |    377,463.2 ns |   2,035.08 ns |     903.59 ns |     0.27 |    0.00 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 4096 | PipeOrgan          |     24,847.4 ns |     363.58 ns |     190.16 ns |     0.02 |    0.00 |    1 |         - |          NA |
-| ShellSortSedgewick1986 | 4096 | PipeOrgan          |     26,569.9 ns |     450.36 ns |     235.55 ns |     0.02 |    0.00 |    1 |         - |          NA |
-| ShellSortTokuda1992    | 4096 | PipeOrgan          |     28,670.6 ns |     338.37 ns |     176.97 ns |     0.02 |    0.00 |    1 |         - |          NA |
-| ShellSortCiura2001     | 4096 | PipeOrgan          |     28,303.6 ns |     472.56 ns |     247.16 ns |     0.02 |    0.00 |    1 |         - |          NA |
-| ShellSortLee2021       | 4096 | PipeOrgan          |     28,932.6 ns |     435.58 ns |     227.82 ns |     0.02 |    0.00 |    1 |         - |          NA |
-| DotnetSort             | 4096 | PipeOrgan          |     71,894.6 ns |   3,103.03 ns |   1,622.95 ns |     0.05 |    0.00 |    2 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **4096** | **ManyDuplicates**     |  **1,386,594.8 ns** |  **20,640.43 ns** |   **9,164.48 ns** |     **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| PairInsertionSort      | 4096 | ManyDuplicates     |  1,292,661.1 ns |  18,548.93 ns |   8,235.84 ns |     0.93 |    0.01 |    6 |         - |          NA |
-| BinaryInsertSort       | 4096 | ManyDuplicates     |    364,394.5 ns |   2,536.30 ns |   1,326.53 ns |     0.26 |    0.00 |    3 |         - |          NA |
-| GnomeSort              | 4096 | ManyDuplicates     |  2,264,788.9 ns |   5,157.47 ns |   2,697.46 ns |     1.63 |    0.01 |    7 |         - |          NA |
-| LibrarySort            | 4096 | ManyDuplicates     |    505,212.3 ns |   1,940.61 ns |   1,014.98 ns |     0.36 |    0.00 |    4 |         - |          NA |
-| MergeInsertionSort     | 4096 | ManyDuplicates     |    732,975.3 ns |   1,147.56 ns |     509.52 ns |     0.53 |    0.00 |    5 |         - |          NA |
-| ShellSortKnuth1973     | 4096 | ManyDuplicates     |    152,619.5 ns |     735.77 ns |     384.82 ns |     0.11 |    0.00 |    2 |         - |          NA |
-| ShellSortSedgewick1986 | 4096 | ManyDuplicates     |    144,547.0 ns |     441.47 ns |     196.02 ns |     0.10 |    0.00 |    2 |         - |          NA |
-| ShellSortTokuda1992    | 4096 | ManyDuplicates     |    146,465.0 ns |     746.73 ns |     390.55 ns |     0.11 |    0.00 |    2 |         - |          NA |
-| ShellSortCiura2001     | 4096 | ManyDuplicates     |    144,639.3 ns |   2,469.06 ns |   1,096.28 ns |     0.10 |    0.00 |    2 |         - |          NA |
-| ShellSortLee2021       | 4096 | ManyDuplicates     |    142,684.0 ns |     518.17 ns |     271.01 ns |     0.10 |    0.00 |    2 |         - |          NA |
-| DotnetSort             | 4096 | ManyDuplicates     |     94,406.7 ns |     442.34 ns |     196.40 ns |     0.07 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **8192** | **Random**             |  **5,592,390.3 ns** |  **20,657.29 ns** |  **10,804.16 ns** |     **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| PairInsertionSort      | 8192 | Random             |  5,268,744.8 ns |  98,314.14 ns |  51,420.19 ns |     0.94 |    0.01 |    5 |         - |          NA |
-| BinaryInsertSort       | 8192 | Random             |  1,140,399.2 ns |   1,551.68 ns |     811.56 ns |     0.20 |    0.00 |    3 |         - |          NA |
-| GnomeSort              | 8192 | Random             |  9,222,730.5 ns |  21,743.70 ns |   9,654.34 ns |     1.65 |    0.00 |    6 |         - |          NA |
-| LibrarySort            | 8192 | Random             |  1,038,061.8 ns |   3,854.79 ns |   2,016.13 ns |     0.19 |    0.00 |    3 |         - |          NA |
-| MergeInsertionSort     | 8192 | Random             |  2,360,205.8 ns |   5,560.63 ns |   2,468.95 ns |     0.42 |    0.00 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 8192 | Random             |    481,896.1 ns |     643.14 ns |     336.37 ns |     0.09 |    0.00 |    2 |         - |          NA |
-| ShellSortSedgewick1986 | 8192 | Random             |    515,604.8 ns |   2,019.58 ns |     896.70 ns |     0.09 |    0.00 |    2 |         - |          NA |
-| ShellSortTokuda1992    | 8192 | Random             |    531,107.4 ns |   1,224.86 ns |     640.62 ns |     0.09 |    0.00 |    2 |         - |          NA |
-| ShellSortCiura2001     | 8192 | Random             |    523,844.2 ns |   1,406.34 ns |     624.43 ns |     0.09 |    0.00 |    2 |         - |          NA |
-| ShellSortLee2021       | 8192 | Random             |    532,304.0 ns |   8,721.38 ns |   4,561.45 ns |     0.10 |    0.00 |    2 |         - |          NA |
-| DotnetSort             | 8192 | Random             |    314,198.9 ns |   2,508.41 ns |   1,311.95 ns |     0.06 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **8192** | **SingleElementMoved** |      **5,549.2 ns** |     **181.95 ns** |      **80.79 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| PairInsertionSort      | 8192 | SingleElementMoved |      6,509.0 ns |     282.66 ns |     147.84 ns |     1.17 |    0.03 |    1 |         - |          NA |
-| BinaryInsertSort       | 8192 | SingleElementMoved |     50,042.6 ns |   1,832.77 ns |     958.57 ns |     9.02 |    0.20 |    4 |         - |          NA |
-| GnomeSort              | 8192 | SingleElementMoved |      8,991.1 ns |     367.36 ns |     192.14 ns |     1.62 |    0.04 |    2 |         - |          NA |
-| LibrarySort            | 8192 | SingleElementMoved |  8,951,027.2 ns |   7,320.12 ns |   3,250.18 ns | 1,613.32 |   21.72 |    6 |         - |          NA |
-| MergeInsertionSort     | 8192 | SingleElementMoved |  1,283,883.8 ns |   3,920.14 ns |   1,740.57 ns |   231.40 |    3.13 |    5 |         - |          NA |
-| ShellSortKnuth1973     | 8192 | SingleElementMoved |     35,662.4 ns |     453.22 ns |     237.04 ns |     6.43 |    0.10 |    3 |         - |          NA |
-| ShellSortSedgewick1986 | 8192 | SingleElementMoved |     43,016.8 ns |     210.14 ns |     109.91 ns |     7.75 |    0.11 |    4 |         - |          NA |
-| ShellSortTokuda1992    | 8192 | SingleElementMoved |     45,012.9 ns |     191.96 ns |      85.23 ns |     8.11 |    0.11 |    4 |         - |          NA |
-| ShellSortCiura2001     | 8192 | SingleElementMoved |     43,775.3 ns |     301.96 ns |     134.07 ns |     7.89 |    0.11 |    4 |         - |          NA |
-| ShellSortLee2021       | 8192 | SingleElementMoved |     44,841.3 ns |     223.01 ns |     116.64 ns |     8.08 |    0.11 |    4 |         - |          NA |
-| DotnetSort             | 8192 | SingleElementMoved |     53,485.8 ns |   1,224.21 ns |     543.56 ns |     9.64 |    0.16 |    4 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **8192** | **Sorted**             |      **4,524.2 ns** |     **180.89 ns** |      **80.32 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| PairInsertionSort      | 8192 | Sorted             |      5,724.5 ns |     235.68 ns |     123.26 ns |     1.27 |    0.03 |    2 |         - |          NA |
-| BinaryInsertSort       | 8192 | Sorted             |     46,061.9 ns |     285.13 ns |     101.68 ns |    10.18 |    0.17 |    4 |         - |          NA |
-| GnomeSort              | 8192 | Sorted             |      6,804.3 ns |     289.97 ns |     151.66 ns |     1.50 |    0.04 |    2 |         - |          NA |
-| LibrarySort            | 8192 | Sorted             |  8,885,122.2 ns |  28,539.22 ns |  14,926.56 ns | 1,964.44 |   32.27 |    6 |         - |          NA |
-| MergeInsertionSort     | 8192 | Sorted             |  1,283,633.2 ns |   2,431.05 ns |   1,079.40 ns |   283.80 |    4.65 |    5 |         - |          NA |
-| ShellSortKnuth1973     | 8192 | Sorted             |     33,579.8 ns |     380.42 ns |     168.91 ns |     7.42 |    0.13 |    3 |         - |          NA |
-| ShellSortSedgewick1986 | 8192 | Sorted             |     41,045.6 ns |     147.44 ns |      52.58 ns |     9.07 |    0.15 |    4 |         - |          NA |
-| ShellSortTokuda1992    | 8192 | Sorted             |     42,780.7 ns |     598.53 ns |     265.75 ns |     9.46 |    0.16 |    4 |         - |          NA |
-| ShellSortCiura2001     | 8192 | Sorted             |     41,452.5 ns |     482.69 ns |     252.45 ns |     9.16 |    0.16 |    4 |         - |          NA |
-| ShellSortLee2021       | 8192 | Sorted             |     42,650.4 ns |     435.20 ns |     227.62 ns |     9.43 |    0.16 |    4 |         - |          NA |
-| DotnetSort             | 8192 | Sorted             |     34,069.4 ns |   3,242.57 ns |   1,695.92 ns |     7.53 |    0.37 |    3 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **8192** | **Reversed**           | **11,182,644.6 ns** | **285,179.44 ns** | **126,621.44 ns** |    **1.000** |    **0.00** |    **5** |         **-** |          **NA** |
-| PairInsertionSort      | 8192 | Reversed           |  9,226,288.4 ns |  90,400.71 ns |  47,281.32 ns |    0.825 |    0.01 |    4 |         - |          NA |
-| BinaryInsertSort       | 8192 | Reversed           |  1,368,462.7 ns |   5,401.28 ns |   2,824.98 ns |    0.122 |    0.00 |    2 |         - |          NA |
-| GnomeSort              | 8192 | Reversed           | 18,496,367.0 ns |  78,791.21 ns |  34,983.79 ns |    1.654 |    0.02 |    6 |         - |          NA |
-| LibrarySort            | 8192 | Reversed           |  6,723,175.9 ns |  13,601.73 ns |   6,039.25 ns |    0.601 |    0.01 |    3 |         - |          NA |
-| MergeInsertionSort     | 8192 | Reversed           |  1,284,753.9 ns |   3,922.79 ns |   1,741.74 ns |    0.115 |    0.00 |    2 |         - |          NA |
-| ShellSortKnuth1973     | 8192 | Reversed           |     52,983.9 ns |   1,103.45 ns |     577.13 ns |    0.005 |    0.00 |    1 |         - |          NA |
-| ShellSortSedgewick1986 | 8192 | Reversed           |     63,541.8 ns |     575.23 ns |     300.86 ns |    0.006 |    0.00 |    1 |         - |          NA |
-| ShellSortTokuda1992    | 8192 | Reversed           |     65,878.6 ns |     442.63 ns |     196.53 ns |    0.006 |    0.00 |    1 |         - |          NA |
-| ShellSortCiura2001     | 8192 | Reversed           |     60,865.0 ns |     485.08 ns |     215.38 ns |    0.005 |    0.00 |    1 |         - |          NA |
-| ShellSortLee2021       | 8192 | Reversed           |     67,472.0 ns |   1,041.36 ns |     462.37 ns |    0.006 |    0.00 |    1 |         - |          NA |
-| DotnetSort             | 8192 | Reversed           |     59,998.2 ns |   4,079.40 ns |   2,133.60 ns |    0.005 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **8192** | **PipeOrgan**          |  **5,566,619.5 ns** |  **14,091.02 ns** |   **7,369.87 ns** |    **1.000** |    **0.00** |    **7** |         **-** |          **NA** |
-| PairInsertionSort      | 8192 | PipeOrgan          |  4,600,348.3 ns |   6,684.68 ns |   3,496.22 ns |    0.826 |    0.00 |    6 |         - |          NA |
-| BinaryInsertSort       | 8192 | PipeOrgan          |    769,040.3 ns |   3,290.98 ns |   1,461.22 ns |    0.138 |    0.00 |    3 |         - |          NA |
-| GnomeSort              | 8192 | PipeOrgan          |  9,208,443.6 ns |   9,567.90 ns |   4,248.21 ns |    1.654 |    0.00 |    8 |         - |          NA |
-| LibrarySort            | 8192 | PipeOrgan          |  2,942,208.0 ns |  16,089.58 ns |   8,415.16 ns |    0.529 |    0.00 |    5 |         - |          NA |
-| MergeInsertionSort     | 8192 | PipeOrgan          |  1,286,610.2 ns |   2,515.07 ns |   1,116.71 ns |    0.231 |    0.00 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 8192 | PipeOrgan          |     53,673.9 ns |     294.21 ns |     130.63 ns |    0.010 |    0.00 |    1 |         - |          NA |
-| ShellSortSedgewick1986 | 8192 | PipeOrgan          |     60,573.0 ns |     383.96 ns |     200.82 ns |    0.011 |    0.00 |    1 |         - |          NA |
-| ShellSortTokuda1992    | 8192 | PipeOrgan          |     61,177.2 ns |     774.80 ns |     344.02 ns |    0.011 |    0.00 |    1 |         - |          NA |
-| ShellSortCiura2001     | 8192 | PipeOrgan          |     62,775.1 ns |     533.14 ns |     278.84 ns |    0.011 |    0.00 |    1 |         - |          NA |
-| ShellSortLee2021       | 8192 | PipeOrgan          |     62,569.0 ns |     860.17 ns |     449.89 ns |    0.011 |    0.00 |    1 |         - |          NA |
-| DotnetSort             | 8192 | PipeOrgan          |    280,341.3 ns |   6,765.79 ns |   3,538.64 ns |    0.050 |    0.00 |    2 |         - |          NA |
-|      |                    |                 |               |               |          |         |      |           |             |
-| **InsertionSort**          | **8192** | **ManyDuplicates**     |  **5,447,574.0 ns** |  **12,719.30 ns** |   **4,535.83 ns** |     **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| PairInsertionSort      | 8192 | ManyDuplicates     |  5,089,487.0 ns |  55,969.15 ns |  24,850.65 ns |     0.93 |    0.00 |    5 |         - |          NA |
-| BinaryInsertSort       | 8192 | ManyDuplicates     |  1,021,229.3 ns |   1,466.60 ns |     523.00 ns |     0.19 |    0.00 |    3 |         - |          NA |
-| GnomeSort              | 8192 | ManyDuplicates     |  8,997,794.5 ns |  13,889.18 ns |   6,166.88 ns |     1.65 |    0.00 |    6 |         - |          NA |
-| LibrarySort            | 8192 | ManyDuplicates     |  1,081,401.7 ns |   3,524.52 ns |   1,564.91 ns |     0.20 |    0.00 |    3 |         - |          NA |
-| MergeInsertionSort     | 8192 | ManyDuplicates     |  2,306,034.6 ns |   4,137.39 ns |   1,837.02 ns |     0.42 |    0.00 |    4 |         - |          NA |
-| ShellSortKnuth1973     | 8192 | ManyDuplicates     |    318,907.9 ns |   5,758.90 ns |   3,012.01 ns |     0.06 |    0.00 |    2 |         - |          NA |
-| ShellSortSedgewick1986 | 8192 | ManyDuplicates     |    280,340.6 ns |   1,205.75 ns |     630.63 ns |     0.05 |    0.00 |    2 |         - |          NA |
-| ShellSortTokuda1992    | 8192 | ManyDuplicates     |    296,667.1 ns |     822.15 ns |     365.04 ns |     0.05 |    0.00 |    2 |         - |          NA |
-| ShellSortCiura2001     | 8192 | ManyDuplicates     |    297,607.8 ns |   1,128.52 ns |     590.24 ns |     0.05 |    0.00 |    2 |         - |          NA |
-| ShellSortLee2021       | 8192 | ManyDuplicates     |    290,671.4 ns |     976.00 ns |     510.47 ns |     0.05 |    0.00 |    2 |         - |          NA |
-| DotnetSort             | 8192 | ManyDuplicates     |    190,106.9 ns |     187.94 ns |      83.45 ns |     0.03 |    0.00 |    1 |         - |          NA |
+| Method                 | Size | Pattern            | Mean            | Error         | StdDev       | Ratio    | RatioSD | Rank | Allocated | Alloc Ratio |
+| ----------------------- |----- |------------------- |----------------:|--------------:|-------------:|---------:|--------:|-----:|----------:|------------:|
+| **InsertionSort**          | **256**  | **Random**             |      **7,277.3 ns** |     **154.93 ns** |     **68.79 ns** |     **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| PairInsertionSort      | 256  | Random             |      7,625.2 ns |     213.70 ns |    111.77 ns |     1.05 |    0.02 |    2 |         - |          NA |
+| BinaryInsertSort       | 256  | Random             |     11,621.4 ns |     650.38 ns |    340.16 ns |     1.60 |    0.05 |    3 |         - |          NA |
+| GnomeSort              | 256  | Random             |     10,959.0 ns |     271.19 ns |    141.84 ns |     1.51 |    0.02 |    3 |         - |          NA |
+| LibrarySort            | 256  | Random             |     22,897.3 ns |     420.27 ns |    219.81 ns |     3.15 |    0.04 |    4 |         - |          NA |
+| MergeInsertionSort     | 256  | Random             |     20,274.1 ns |     224.59 ns |     99.72 ns |     2.79 |    0.03 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 256  | Random             |      8,129.1 ns |     227.25 ns |    118.85 ns |     1.12 |    0.02 |    2 |         - |          NA |
+| ShellSortSedgewick1986 | 256  | Random             |      8,089.4 ns |     162.96 ns |     72.36 ns |     1.11 |    0.01 |    2 |         - |          NA |
+| ShellSortTokuda1992    | 256  | Random             |      8,655.1 ns |     315.48 ns |    165.00 ns |     1.19 |    0.02 |    2 |         - |          NA |
+| ShellSortCiura2001     | 256  | Random             |      8,411.1 ns |      85.95 ns |     38.16 ns |     1.16 |    0.01 |    2 |         - |          NA |
+| ShellSortLee2021       | 256  | Random             |      8,717.6 ns |     130.24 ns |     57.83 ns |     1.20 |    0.01 |    2 |         - |          NA |
+| DotnetSort             | 256  | Random             |      5,934.2 ns |     317.42 ns |    166.02 ns |     0.82 |    0.02 |    1 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **256**  | **SingleElementMoved** |        **202.5 ns** |      **14.57 ns** |      **6.47 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| PairInsertionSort      | 256  | SingleElementMoved |        236.3 ns |       9.57 ns |      4.25 ns |     1.17 |    0.04 |    1 |         - |          NA |
+| BinaryInsertSort       | 256  | SingleElementMoved |        975.5 ns |      49.17 ns |     21.83 ns |     4.82 |    0.17 |    3 |         - |          NA |
+| GnomeSort              | 256  | SingleElementMoved |        331.3 ns |      28.72 ns |     15.02 ns |     1.64 |    0.08 |    2 |         - |          NA |
+| LibrarySort            | 256  | SingleElementMoved |     21,735.8 ns |     295.12 ns |    131.04 ns |   107.42 |    3.19 |    5 |         - |          NA |
+| MergeInsertionSort     | 256  | SingleElementMoved |     10,151.0 ns |     265.16 ns |    138.68 ns |    50.17 |    1.60 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 256  | SingleElementMoved |        826.5 ns |      40.13 ns |     17.82 ns |     4.08 |    0.14 |    3 |         - |          NA |
+| ShellSortSedgewick1986 | 256  | SingleElementMoved |        807.4 ns |      26.30 ns |     11.68 ns |     3.99 |    0.13 |    3 |         - |          NA |
+| ShellSortTokuda1992    | 256  | SingleElementMoved |        976.2 ns |      32.87 ns |     14.59 ns |     4.82 |    0.16 |    3 |         - |          NA |
+| ShellSortCiura2001     | 256  | SingleElementMoved |        894.1 ns |      15.00 ns |      6.66 ns |     4.42 |    0.13 |    3 |         - |          NA |
+| ShellSortLee2021       | 256  | SingleElementMoved |        994.7 ns |      25.44 ns |     11.30 ns |     4.92 |    0.15 |    3 |         - |          NA |
+| DotnetSort             | 256  | SingleElementMoved |      1,122.6 ns |     151.04 ns |     79.00 ns |     5.55 |    0.40 |    3 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **256**  | **Sorted**             |        **150.1 ns** |      **13.11 ns** |      **4.67 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| PairInsertionSort      | 256  | Sorted             |        214.9 ns |      15.87 ns |      7.05 ns |     1.43 |    0.06 |    2 |         - |          NA |
+| BinaryInsertSort       | 256  | Sorted             |        910.2 ns |       8.61 ns |      4.50 ns |     6.07 |    0.17 |    3 |         - |          NA |
+| GnomeSort              | 256  | Sorted             |        223.6 ns |      22.84 ns |     10.14 ns |     1.49 |    0.08 |    2 |         - |          NA |
+| LibrarySort            | 256  | Sorted             |     21,252.6 ns |     257.91 ns |    134.89 ns |   141.68 |    3.97 |    5 |         - |          NA |
+| MergeInsertionSort     | 256  | Sorted             |      9,853.4 ns |     305.80 ns |    159.94 ns |    65.69 |    2.06 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 256  | Sorted             |        662.5 ns |      16.44 ns |      7.30 ns |     4.42 |    0.13 |    3 |         - |          NA |
+| ShellSortSedgewick1986 | 256  | Sorted             |        641.9 ns |       4.30 ns |      1.91 ns |     4.28 |    0.12 |    3 |         - |          NA |
+| ShellSortTokuda1992    | 256  | Sorted             |        790.1 ns |      24.03 ns |     12.57 ns |     5.27 |    0.16 |    3 |         - |          NA |
+| ShellSortCiura2001     | 256  | Sorted             |        691.2 ns |      20.40 ns |      9.06 ns |     4.61 |    0.14 |    3 |         - |          NA |
+| ShellSortLee2021       | 256  | Sorted             |        785.2 ns |      17.07 ns |      7.58 ns |     5.23 |    0.15 |    3 |         - |          NA |
+| DotnetSort             | 256  | Sorted             |        664.2 ns |      69.38 ns |     30.81 ns |     4.43 |    0.23 |    3 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **256**  | **Reversed**           |     **11,872.5 ns** |     **189.10 ns** |     **98.90 ns** |     **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| PairInsertionSort      | 256  | Reversed           |      9,525.3 ns |     291.50 ns |    152.46 ns |     0.80 |    0.01 |    3 |         - |          NA |
+| BinaryInsertSort       | 256  | Reversed           |      4,634.1 ns |      41.25 ns |     18.31 ns |     0.39 |    0.00 |    2 |         - |          NA |
+| GnomeSort              | 256  | Reversed           |     21,443.9 ns |     867.52 ns |    453.73 ns |     1.81 |    0.04 |    6 |         - |          NA |
+| LibrarySort            | 256  | Reversed           |     17,674.2 ns |     165.77 ns |     86.70 ns |     1.49 |    0.01 |    5 |         - |          NA |
+| MergeInsertionSort     | 256  | Reversed           |      9,896.4 ns |     278.69 ns |    145.76 ns |     0.83 |    0.01 |    3 |         - |          NA |
+| ShellSortKnuth1973     | 256  | Reversed           |      1,139.6 ns |      65.89 ns |     34.46 ns |     0.10 |    0.00 |    1 |         - |          NA |
+| ShellSortSedgewick1986 | 256  | Reversed           |      1,094.4 ns |      48.08 ns |     21.35 ns |     0.09 |    0.00 |    1 |         - |          NA |
+| ShellSortTokuda1992    | 256  | Reversed           |      1,118.9 ns |      32.02 ns |     14.22 ns |     0.09 |    0.00 |    1 |         - |          NA |
+| ShellSortCiura2001     | 256  | Reversed           |      1,169.1 ns |      44.92 ns |     19.95 ns |     0.10 |    0.00 |    1 |         - |          NA |
+| ShellSortLee2021       | 256  | Reversed           |      1,155.3 ns |      16.84 ns |      7.48 ns |     0.10 |    0.00 |    1 |         - |          NA |
+| DotnetSort             | 256  | Reversed           |      1,058.1 ns |     187.86 ns |     98.25 ns |     0.09 |    0.01 |    1 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **256**  | **PipeOrgan**          |      **6,292.9 ns** |     **256.01 ns** |    **133.90 ns** |     **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| PairInsertionSort      | 256  | PipeOrgan          |      4,827.4 ns |     140.55 ns |     62.41 ns |     0.77 |    0.02 |    4 |         - |          NA |
+| BinaryInsertSort       | 256  | PipeOrgan          |      2,999.1 ns |     191.61 ns |     85.08 ns |     0.48 |    0.02 |    3 |         - |          NA |
+| GnomeSort              | 256  | PipeOrgan          |      9,877.1 ns |     272.06 ns |    142.29 ns |     1.57 |    0.04 |    6 |         - |          NA |
+| LibrarySort            | 256  | PipeOrgan          |     14,988.5 ns |     236.33 ns |    123.60 ns |     2.38 |    0.05 |    7 |         - |          NA |
+| MergeInsertionSort     | 256  | PipeOrgan          |     10,151.6 ns |     228.89 ns |    119.71 ns |     1.61 |    0.04 |    6 |         - |          NA |
+| ShellSortKnuth1973     | 256  | PipeOrgan          |      1,060.6 ns |     136.47 ns |     71.37 ns |     0.17 |    0.01 |    1 |         - |          NA |
+| ShellSortSedgewick1986 | 256  | PipeOrgan          |      1,028.5 ns |      42.75 ns |     18.98 ns |     0.16 |    0.00 |    1 |         - |          NA |
+| ShellSortTokuda1992    | 256  | PipeOrgan          |      1,119.0 ns |      89.58 ns |     39.77 ns |     0.18 |    0.01 |    1 |         - |          NA |
+| ShellSortCiura2001     | 256  | PipeOrgan          |      1,115.6 ns |     177.36 ns |     78.75 ns |     0.18 |    0.01 |    1 |         - |          NA |
+| ShellSortLee2021       | 256  | PipeOrgan          |      1,156.6 ns |      36.93 ns |     19.31 ns |     0.18 |    0.00 |    1 |         - |          NA |
+| DotnetSort             | 256  | PipeOrgan          |      1,808.6 ns |     154.75 ns |     68.71 ns |     0.29 |    0.01 |    2 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **256**  | **ManyDuplicates**     |      **7,576.9 ns** |     **355.77 ns** |    **186.08 ns** |     **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| PairInsertionSort      | 256  | ManyDuplicates     |      7,149.9 ns |     211.97 ns |     94.11 ns |     0.94 |    0.02 |    2 |         - |          NA |
+| BinaryInsertSort       | 256  | ManyDuplicates     |     11,331.1 ns |     326.66 ns |    170.85 ns |     1.50 |    0.04 |    3 |         - |          NA |
+| GnomeSort              | 256  | ManyDuplicates     |     10,805.7 ns |     407.17 ns |    212.96 ns |     1.43 |    0.04 |    3 |         - |          NA |
+| LibrarySort            | 256  | ManyDuplicates     |     23,885.5 ns |     288.60 ns |    150.94 ns |     3.15 |    0.07 |    4 |         - |          NA |
+| MergeInsertionSort     | 256  | ManyDuplicates     |     20,553.8 ns |     267.63 ns |    139.98 ns |     2.71 |    0.06 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 256  | ManyDuplicates     |      7,575.4 ns |     154.41 ns |     80.76 ns |     1.00 |    0.03 |    2 |         - |          NA |
+| ShellSortSedgewick1986 | 256  | ManyDuplicates     |      7,392.0 ns |     112.99 ns |     50.17 ns |     0.98 |    0.02 |    2 |         - |          NA |
+| ShellSortTokuda1992    | 256  | ManyDuplicates     |      7,541.8 ns |      74.26 ns |     32.97 ns |     1.00 |    0.02 |    2 |         - |          NA |
+| ShellSortCiura2001     | 256  | ManyDuplicates     |      7,388.6 ns |     213.96 ns |     95.00 ns |     0.98 |    0.03 |    2 |         - |          NA |
+| ShellSortLee2021       | 256  | ManyDuplicates     |      7,185.2 ns |      35.33 ns |     12.60 ns |     0.95 |    0.02 |    2 |         - |          NA |
+| DotnetSort             | 256  | ManyDuplicates     |      5,515.8 ns |     390.57 ns |    204.27 ns |     0.73 |    0.03 |    1 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **1024** | **Random**             |     **95,967.4 ns** |   **4,682.31 ns** |  **2,448.94 ns** |     **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| PairInsertionSort      | 1024 | Random             |     90,571.8 ns |   1,712.97 ns |    895.91 ns |     0.94 |    0.02 |    4 |         - |          NA |
+| BinaryInsertSort       | 1024 | Random             |     62,732.8 ns |     336.87 ns |    149.57 ns |     0.65 |    0.02 |    3 |         - |          NA |
+| GnomeSort              | 1024 | Random             |    150,780.9 ns |     462.18 ns |    164.82 ns |     1.57 |    0.04 |    5 |         - |          NA |
+| LibrarySort            | 1024 | Random             |    106,530.8 ns |     535.18 ns |    237.62 ns |     1.11 |    0.03 |    4 |         - |          NA |
+| MergeInsertionSort     | 1024 | Random             |    106,055.8 ns |     517.43 ns |    229.74 ns |     1.11 |    0.03 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 1024 | Random             |     43,973.2 ns |     262.34 ns |    116.48 ns |     0.46 |    0.01 |    2 |         - |          NA |
+| ShellSortSedgewick1986 | 1024 | Random             |     46,194.0 ns |     125.57 ns |     65.68 ns |     0.48 |    0.01 |    2 |         - |          NA |
+| ShellSortTokuda1992    | 1024 | Random             |     47,727.5 ns |     309.31 ns |    161.78 ns |     0.50 |    0.01 |    2 |         - |          NA |
+| ShellSortCiura2001     | 1024 | Random             |     47,228.4 ns |     260.53 ns |    115.68 ns |     0.49 |    0.01 |    2 |         - |          NA |
+| ShellSortLee2021       | 1024 | Random             |     47,991.2 ns |     330.69 ns |    172.96 ns |     0.50 |    0.01 |    2 |         - |          NA |
+| DotnetSort             | 1024 | Random             |     30,083.4 ns |     600.53 ns |    314.09 ns |     0.31 |    0.01 |    1 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **1024** | **SingleElementMoved** |        **769.0 ns** |     **132.17 ns** |     **58.68 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| PairInsertionSort      | 1024 | SingleElementMoved |        882.4 ns |      46.25 ns |     20.54 ns |     1.15 |    0.08 |    1 |         - |          NA |
+| BinaryInsertSort       | 1024 | SingleElementMoved |      4,700.2 ns |     189.29 ns |     84.04 ns |     6.14 |    0.41 |    3 |         - |          NA |
+| GnomeSort              | 1024 | SingleElementMoved |      1,135.9 ns |      15.78 ns |      7.01 ns |     1.48 |    0.10 |    2 |         - |          NA |
+| LibrarySort            | 1024 | SingleElementMoved |    193,935.5 ns |   1,591.00 ns |    832.12 ns |   253.34 |   16.50 |    6 |         - |          NA |
+| MergeInsertionSort     | 1024 | SingleElementMoved |     48,328.6 ns |     289.33 ns |    151.33 ns |    63.13 |    4.11 |    5 |         - |          NA |
+| ShellSortKnuth1973     | 1024 | SingleElementMoved |      3,603.1 ns |     302.73 ns |    158.33 ns |     4.71 |    0.36 |    3 |         - |          NA |
+| ShellSortSedgewick1986 | 1024 | SingleElementMoved |      7,099.0 ns |   2,487.46 ns |  1,300.99 ns |     9.27 |    1.72 |    4 |         - |          NA |
+| ShellSortTokuda1992    | 1024 | SingleElementMoved |      4,147.9 ns |      28.70 ns |     10.23 ns |     5.42 |    0.35 |    3 |         - |          NA |
+| ShellSortCiura2001     | 1024 | SingleElementMoved |      4,144.9 ns |      63.97 ns |     28.40 ns |     5.41 |    0.35 |    3 |         - |          NA |
+| ShellSortLee2021       | 1024 | SingleElementMoved |      4,180.0 ns |      47.73 ns |     24.96 ns |     5.46 |    0.36 |    3 |         - |          NA |
+| DotnetSort             | 1024 | SingleElementMoved |      5,191.9 ns |     161.83 ns |     71.86 ns |     6.78 |    0.45 |    3 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **1024** | **Sorted**             |        **611.2 ns** |      **18.22 ns** |      **8.09 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| PairInsertionSort      | 1024 | Sorted             |        731.0 ns |      13.12 ns |      5.82 ns |     1.20 |    0.02 |    1 |         - |          NA |
+| BinaryInsertSort       | 1024 | Sorted             |      4,263.5 ns |     284.66 ns |    126.39 ns |     6.98 |    0.21 |    3 |         - |          NA |
+| GnomeSort              | 1024 | Sorted             |        888.5 ns |      32.42 ns |     14.39 ns |     1.45 |    0.03 |    2 |         - |          NA |
+| LibrarySort            | 1024 | Sorted             |    193,072.7 ns |   2,003.52 ns |  1,047.88 ns |   315.92 |    4.21 |    5 |         - |          NA |
+| MergeInsertionSort     | 1024 | Sorted             |     48,210.4 ns |     202.98 ns |    106.16 ns |    78.89 |    0.99 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 1024 | Sorted             |      3,155.2 ns |      80.59 ns |     35.78 ns |     5.16 |    0.08 |    3 |         - |          NA |
+| ShellSortSedgewick1986 | 1024 | Sorted             |      3,513.8 ns |      26.01 ns |     13.60 ns |     5.75 |    0.07 |    3 |         - |          NA |
+| ShellSortTokuda1992    | 1024 | Sorted             |      3,757.5 ns |      28.68 ns |     15.00 ns |     6.15 |    0.08 |    3 |         - |          NA |
+| ShellSortCiura2001     | 1024 | Sorted             |      3,701.3 ns |      23.50 ns |     10.43 ns |     6.06 |    0.08 |    3 |         - |          NA |
+| ShellSortLee2021       | 1024 | Sorted             |      3,767.2 ns |      41.35 ns |     18.36 ns |     6.16 |    0.08 |    3 |         - |          NA |
+| DotnetSort             | 1024 | Sorted             |      3,225.0 ns |     313.35 ns |    139.13 ns |     5.28 |    0.22 |    3 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **1024** | **Reversed**           |    **178,697.1 ns** |   **1,620.79 ns** |    **847.71 ns** |     **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| PairInsertionSort      | 1024 | Reversed           |    145,791.3 ns |     192.87 ns |    100.87 ns |     0.82 |    0.00 |    5 |         - |          NA |
+| BinaryInsertSort       | 1024 | Reversed           |     34,667.2 ns |     750.53 ns |    333.24 ns |     0.19 |    0.00 |    3 |         - |          NA |
+| GnomeSort              | 1024 | Reversed           |    301,200.3 ns |   2,839.39 ns |  1,485.06 ns |     1.69 |    0.01 |    6 |         - |          NA |
+| LibrarySort            | 1024 | Reversed           |    151,638.9 ns |     808.52 ns |    288.33 ns |     0.85 |    0.00 |    5 |         - |          NA |
+| MergeInsertionSort     | 1024 | Reversed           |     48,403.7 ns |     261.91 ns |    136.99 ns |     0.27 |    0.00 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 1024 | Reversed           |      5,616.5 ns |     268.86 ns |    140.62 ns |     0.03 |    0.00 |    1 |         - |          NA |
+| ShellSortSedgewick1986 | 1024 | Reversed           |      5,751.6 ns |     226.82 ns |    118.63 ns |     0.03 |    0.00 |    1 |         - |          NA |
+| ShellSortTokuda1992    | 1024 | Reversed           |      6,034.5 ns |     212.28 ns |    111.03 ns |     0.03 |    0.00 |    1 |         - |          NA |
+| ShellSortCiura2001     | 1024 | Reversed           |      5,708.7 ns |     312.71 ns |    138.85 ns |     0.03 |    0.00 |    1 |         - |          NA |
+| ShellSortLee2021       | 1024 | Reversed           |      9,754.9 ns |   2,999.57 ns |  1,568.83 ns |     0.05 |    0.01 |    2 |         - |          NA |
+| DotnetSort             | 1024 | Reversed           |      5,791.5 ns |     713.28 ns |    373.06 ns |     0.03 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **1024** | **PipeOrgan**          |    **138,775.8 ns** |  **48,410.74 ns** | **21,494.67 ns** |     **1.00** |    **0.00** |    **7** |         **-** |          **NA** |
+| PairInsertionSort      | 1024 | PipeOrgan          |     75,185.5 ns |   4,121.04 ns |  1,469.60 ns |     0.56 |    0.11 |    5 |         - |          NA |
+| BinaryInsertSort       | 1024 | PipeOrgan          |     20,254.6 ns |     305.26 ns |    159.66 ns |     0.15 |    0.03 |    3 |         - |          NA |
+| GnomeSort              | 1024 | PipeOrgan          |    148,016.8 ns |   1,189.69 ns |    528.23 ns |     1.10 |    0.22 |    7 |         - |          NA |
+| LibrarySort            | 1024 | PipeOrgan          |     91,419.8 ns |   1,914.80 ns |    850.18 ns |     0.68 |    0.14 |    6 |         - |          NA |
+| MergeInsertionSort     | 1024 | PipeOrgan          |     49,069.0 ns |     163.67 ns |     85.60 ns |     0.36 |    0.07 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 1024 | PipeOrgan          |      5,259.7 ns |     146.68 ns |     76.72 ns |     0.04 |    0.01 |    1 |         - |          NA |
+| ShellSortSedgewick1986 | 1024 | PipeOrgan          |      5,380.1 ns |      51.03 ns |     18.20 ns |     0.04 |    0.01 |    1 |         - |          NA |
+| ShellSortTokuda1992    | 1024 | PipeOrgan          |      5,681.5 ns |     157.26 ns |     82.25 ns |     0.04 |    0.01 |    1 |         - |          NA |
+| ShellSortCiura2001     | 1024 | PipeOrgan          |      5,534.8 ns |     107.90 ns |     47.91 ns |     0.04 |    0.01 |    1 |         - |          NA |
+| ShellSortLee2021       | 1024 | PipeOrgan          |      5,774.9 ns |     150.57 ns |     78.75 ns |     0.04 |    0.01 |    1 |         - |          NA |
+| DotnetSort             | 1024 | PipeOrgan          |     12,909.8 ns |     432.90 ns |    192.21 ns |     0.10 |    0.02 |    2 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **1024** | **ManyDuplicates**     |     **92,111.9 ns** |     **955.61 ns** |    **424.30 ns** |     **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| PairInsertionSort      | 1024 | ManyDuplicates     |     87,782.4 ns |     371.73 ns |    132.56 ns |     0.95 |    0.00 |    4 |         - |          NA |
+| BinaryInsertSort       | 1024 | ManyDuplicates     |     60,906.5 ns |     184.85 ns |     96.68 ns |     0.66 |    0.00 |    3 |         - |          NA |
+| GnomeSort              | 1024 | ManyDuplicates     |    147,775.9 ns |   1,990.12 ns |  1,040.87 ns |     1.60 |    0.01 |    5 |         - |          NA |
+| LibrarySort            | 1024 | ManyDuplicates     |    112,928.1 ns |     591.76 ns |    309.50 ns |     1.23 |    0.01 |    4 |         - |          NA |
+| MergeInsertionSort     | 1024 | ManyDuplicates     |    105,405.7 ns |     935.81 ns |    415.50 ns |     1.14 |    0.01 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 1024 | ManyDuplicates     |     33,813.7 ns |     391.57 ns |    173.86 ns |     0.37 |    0.00 |    2 |         - |          NA |
+| ShellSortSedgewick1986 | 1024 | ManyDuplicates     |     34,860.7 ns |     124.97 ns |     55.49 ns |     0.38 |    0.00 |    2 |         - |          NA |
+| ShellSortTokuda1992    | 1024 | ManyDuplicates     |     35,001.8 ns |     188.70 ns |     98.69 ns |     0.38 |    0.00 |    2 |         - |          NA |
+| ShellSortCiura2001     | 1024 | ManyDuplicates     |     34,346.5 ns |     160.16 ns |     83.77 ns |     0.37 |    0.00 |    2 |         - |          NA |
+| ShellSortLee2021       | 1024 | ManyDuplicates     |     33,468.6 ns |     275.01 ns |    122.11 ns |     0.36 |    0.00 |    2 |         - |          NA |
+| DotnetSort             | 1024 | ManyDuplicates     |     23,269.4 ns |     353.37 ns |    184.82 ns |     0.25 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **4096** | **Random**             |  **1,421,290.5 ns** |  **17,111.59 ns** |  **7,597.65 ns** |     **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| PairInsertionSort      | 4096 | Random             |  1,343,373.8 ns |  15,992.23 ns |  8,364.25 ns |     0.95 |    0.01 |    6 |         - |          NA |
+| BinaryInsertSort       | 4096 | Random             |    399,396.5 ns |   1,865.04 ns |    975.45 ns |     0.28 |    0.00 |    3 |         - |          NA |
+| GnomeSort              | 4096 | Random             |  2,328,574.9 ns |  17,603.47 ns |  7,816.05 ns |     1.64 |    0.01 |    7 |         - |          NA |
+| LibrarySort            | 4096 | Random             |    480,078.0 ns |   2,095.96 ns |  1,096.23 ns |     0.34 |    0.00 |    4 |         - |          NA |
+| MergeInsertionSort     | 4096 | Random             |    745,469.3 ns |   1,759.76 ns |    781.34 ns |     0.52 |    0.00 |    5 |         - |          NA |
+| ShellSortKnuth1973     | 4096 | Random             |    217,133.2 ns |   1,276.12 ns |    667.44 ns |     0.15 |    0.00 |    2 |         - |          NA |
+| ShellSortSedgewick1986 | 4096 | Random             |    231,742.8 ns |   1,160.67 ns |    607.05 ns |     0.16 |    0.00 |    2 |         - |          NA |
+| ShellSortTokuda1992    | 4096 | Random             |    241,485.7 ns |   1,106.59 ns |    491.33 ns |     0.17 |    0.00 |    2 |         - |          NA |
+| ShellSortCiura2001     | 4096 | Random             |    238,104.3 ns |     952.81 ns |    423.05 ns |     0.17 |    0.00 |    2 |         - |          NA |
+| ShellSortLee2021       | 4096 | Random             |    242,736.1 ns |   1,152.39 ns |    602.72 ns |     0.17 |    0.00 |    2 |         - |          NA |
+| DotnetSort             | 4096 | Random             |    145,378.9 ns |   2,234.21 ns |    992.00 ns |     0.10 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **4096** | **SingleElementMoved** |      **2,816.6 ns** |      **64.36 ns** |     **22.95 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| PairInsertionSort      | 4096 | SingleElementMoved |      3,406.1 ns |     402.60 ns |    210.57 ns |     1.21 |    0.07 |    1 |         - |          NA |
+| BinaryInsertSort       | 4096 | SingleElementMoved |     22,123.3 ns |     594.06 ns |    263.77 ns |     7.86 |    0.11 |    3 |         - |          NA |
+| GnomeSort              | 4096 | SingleElementMoved |      4,409.3 ns |     253.77 ns |    132.73 ns |     1.57 |    0.05 |    2 |         - |          NA |
+| LibrarySort            | 4096 | SingleElementMoved |  2,358,290.6 ns |   9,242.93 ns |  4,834.23 ns |   837.34 |    6.50 |    5 |         - |          NA |
+| MergeInsertionSort     | 4096 | SingleElementMoved |    371,735.1 ns |   2,470.54 ns |  1,292.14 ns |   131.99 |    1.08 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 4096 | SingleElementMoved |     16,281.5 ns |     300.27 ns |    133.32 ns |     5.78 |    0.06 |    3 |         - |          NA |
+| ShellSortSedgewick1986 | 4096 | SingleElementMoved |     18,534.2 ns |     250.86 ns |    131.20 ns |     6.58 |    0.07 |    3 |         - |          NA |
+| ShellSortTokuda1992    | 4096 | SingleElementMoved |     20,550.3 ns |     404.57 ns |    211.60 ns |     7.30 |    0.09 |    3 |         - |          NA |
+| ShellSortCiura2001     | 4096 | SingleElementMoved |     20,137.3 ns |     329.33 ns |    172.25 ns |     7.15 |    0.08 |    3 |         - |          NA |
+| ShellSortLee2021       | 4096 | SingleElementMoved |     20,735.3 ns |     261.87 ns |    116.27 ns |     7.36 |    0.07 |    3 |         - |          NA |
+| DotnetSort             | 4096 | SingleElementMoved |     24,825.3 ns |     360.52 ns |    160.07 ns |     8.81 |    0.09 |    3 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **4096** | **Sorted**             |      **2,365.8 ns** |     **256.51 ns** |    **134.16 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| PairInsertionSort      | 4096 | Sorted             |      2,907.9 ns |     233.38 ns |    103.62 ns |     1.23 |    0.07 |    2 |         - |          NA |
+| BinaryInsertSort       | 4096 | Sorted             |     21,118.6 ns |     974.81 ns |    509.84 ns |     8.95 |    0.50 |    3 |         - |          NA |
+| GnomeSort              | 4096 | Sorted             |      3,441.4 ns |     274.04 ns |    121.68 ns |     1.46 |    0.09 |    2 |         - |          NA |
+| LibrarySort            | 4096 | Sorted             |  2,356,595.0 ns |   6,046.67 ns |  3,162.53 ns |   998.76 |   50.73 |    5 |         - |          NA |
+| MergeInsertionSort     | 4096 | Sorted             |    369,631.1 ns |   1,913.69 ns |    849.69 ns |   156.66 |    7.97 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 4096 | Sorted             |     15,115.6 ns |     316.59 ns |    165.58 ns |     6.41 |    0.33 |    3 |         - |          NA |
+| ShellSortSedgewick1986 | 4096 | Sorted             |     17,252.4 ns |     430.69 ns |    191.23 ns |     7.31 |    0.38 |    3 |         - |          NA |
+| ShellSortTokuda1992    | 4096 | Sorted             |     19,331.8 ns |     390.69 ns |    204.34 ns |     8.19 |    0.42 |    3 |         - |          NA |
+| ShellSortCiura2001     | 4096 | Sorted             |     18,783.4 ns |     337.40 ns |    149.81 ns |     7.96 |    0.41 |    3 |         - |          NA |
+| ShellSortLee2021       | 4096 | Sorted             |     19,509.2 ns |     488.30 ns |    255.39 ns |     8.27 |    0.43 |    3 |         - |          NA |
+| DotnetSort             | 4096 | Sorted             |     15,956.7 ns |   1,737.74 ns |    908.87 ns |     6.76 |    0.50 |    3 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **4096** | **Reversed**           |  **2,785,561.4 ns** |   **4,722.56 ns** |  **2,096.84 ns** |    **1.000** |    **0.00** |    **5** |         **-** |          **NA** |
+| PairInsertionSort      | 4096 | Reversed           |  2,304,133.9 ns |   8,256.92 ns |  3,666.12 ns |    0.827 |    0.00 |    4 |         - |          NA |
+| BinaryInsertSort       | 4096 | Reversed           |    365,668.2 ns |   1,365.91 ns |    714.40 ns |    0.131 |    0.00 |    2 |         - |          NA |
+| GnomeSort              | 4096 | Reversed           |  4,687,456.9 ns |  90,477.50 ns | 47,321.48 ns |    1.683 |    0.02 |    6 |         - |          NA |
+| LibrarySort            | 4096 | Reversed           |  1,798,026.6 ns |   1,227.37 ns |    544.96 ns |    0.645 |    0.00 |    3 |         - |          NA |
+| MergeInsertionSort     | 4096 | Reversed           |    371,991.9 ns |     603.33 ns |    267.88 ns |    0.134 |    0.00 |    2 |         - |          NA |
+| ShellSortKnuth1973     | 4096 | Reversed           |     25,753.7 ns |     534.71 ns |    237.42 ns |    0.009 |    0.00 |    1 |         - |          NA |
+| ShellSortSedgewick1986 | 4096 | Reversed           |     27,914.5 ns |     363.66 ns |    190.20 ns |    0.010 |    0.00 |    1 |         - |          NA |
+| ShellSortTokuda1992    | 4096 | Reversed           |     29,203.7 ns |     348.53 ns |    182.29 ns |    0.010 |    0.00 |    1 |         - |          NA |
+| ShellSortCiura2001     | 4096 | Reversed           |     28,115.4 ns |     275.74 ns |    122.43 ns |    0.010 |    0.00 |    1 |         - |          NA |
+| ShellSortLee2021       | 4096 | Reversed           |     29,627.4 ns |     265.62 ns |     94.72 ns |    0.011 |    0.00 |    1 |         - |          NA |
+| DotnetSort             | 4096 | Reversed           |     28,619.0 ns |   4,116.40 ns |  2,152.96 ns |    0.010 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **4096** | **PipeOrgan**          |  **1,395,603.3 ns** |   **1,398.58 ns** |    **620.98 ns** |     **1.00** |    **0.00** |    **7** |         **-** |          **NA** |
+| PairInsertionSort      | 4096 | PipeOrgan          |  1,154,302.4 ns |   2,865.36 ns |  1,272.24 ns |     0.83 |    0.00 |    6 |         - |          NA |
+| BinaryInsertSort       | 4096 | PipeOrgan          |    203,177.1 ns |   1,613.51 ns |    843.90 ns |     0.15 |    0.00 |    3 |         - |          NA |
+| GnomeSort              | 4096 | PipeOrgan          |  2,309,332.9 ns |   5,013.36 ns |  2,622.09 ns |     1.65 |    0.00 |    8 |         - |          NA |
+| LibrarySort            | 4096 | PipeOrgan          |    847,384.1 ns |  15,691.32 ns |  8,206.86 ns |     0.61 |    0.01 |    5 |         - |          NA |
+| MergeInsertionSort     | 4096 | PipeOrgan          |    374,170.3 ns |   4,254.34 ns |  1,888.95 ns |     0.27 |    0.00 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 4096 | PipeOrgan          |     24,918.1 ns |     225.13 ns |    117.75 ns |     0.02 |    0.00 |    1 |         - |          NA |
+| ShellSortSedgewick1986 | 4096 | PipeOrgan          |     26,374.3 ns |     449.20 ns |    199.45 ns |     0.02 |    0.00 |    1 |         - |          NA |
+| ShellSortTokuda1992    | 4096 | PipeOrgan          |     28,575.4 ns |     148.62 ns |     53.00 ns |     0.02 |    0.00 |    1 |         - |          NA |
+| ShellSortCiura2001     | 4096 | PipeOrgan          |     28,291.3 ns |     388.45 ns |    203.17 ns |     0.02 |    0.00 |    1 |         - |          NA |
+| ShellSortLee2021       | 4096 | PipeOrgan          |     28,779.4 ns |     243.26 ns |    108.01 ns |     0.02 |    0.00 |    1 |         - |          NA |
+| DotnetSort             | 4096 | PipeOrgan          |     72,358.2 ns |   4,038.73 ns |  2,112.33 ns |     0.05 |    0.00 |    2 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **4096** | **ManyDuplicates**     |  **1,383,465.2 ns** |  **10,266.99 ns** |  **5,369.83 ns** |     **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| PairInsertionSort      | 4096 | ManyDuplicates     |  1,296,053.0 ns |  11,057.19 ns |  5,783.13 ns |     0.94 |    0.01 |    6 |         - |          NA |
+| BinaryInsertSort       | 4096 | ManyDuplicates     |    365,049.1 ns |   6,278.30 ns |  2,787.60 ns |     0.26 |    0.00 |    3 |         - |          NA |
+| GnomeSort              | 4096 | ManyDuplicates     |  2,265,215.4 ns |   5,802.08 ns |  2,069.08 ns |     1.64 |    0.01 |    7 |         - |          NA |
+| LibrarySort            | 4096 | ManyDuplicates     |    509,304.9 ns |   1,702.19 ns |    890.28 ns |     0.37 |    0.00 |    4 |         - |          NA |
+| MergeInsertionSort     | 4096 | ManyDuplicates     |    733,204.8 ns |   1,069.99 ns |    559.62 ns |     0.53 |    0.00 |    5 |         - |          NA |
+| ShellSortKnuth1973     | 4096 | ManyDuplicates     |    152,982.2 ns |   1,006.21 ns |    526.27 ns |     0.11 |    0.00 |    2 |         - |          NA |
+| ShellSortSedgewick1986 | 4096 | ManyDuplicates     |    144,840.3 ns |     297.95 ns |    132.29 ns |     0.10 |    0.00 |    2 |         - |          NA |
+| ShellSortTokuda1992    | 4096 | ManyDuplicates     |    146,213.3 ns |     301.22 ns |    133.74 ns |     0.11 |    0.00 |    2 |         - |          NA |
+| ShellSortCiura2001     | 4096 | ManyDuplicates     |    144,988.7 ns |   1,040.67 ns |    544.29 ns |     0.10 |    0.00 |    2 |         - |          NA |
+| ShellSortLee2021       | 4096 | ManyDuplicates     |    142,671.7 ns |     577.84 ns |    302.22 ns |     0.10 |    0.00 |    2 |         - |          NA |
+| DotnetSort             | 4096 | ManyDuplicates     |     94,615.3 ns |     705.91 ns |    313.43 ns |     0.07 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **8192** | **Random**             |  **5,599,056.6 ns** |  **35,740.83 ns** | **15,869.15 ns** |     **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| PairInsertionSort      | 8192 | Random             |  5,308,189.2 ns |  45,745.68 ns | 20,311.37 ns |     0.95 |    0.00 |    5 |         - |          NA |
+| BinaryInsertSort       | 8192 | Random             |  1,135,364.9 ns |   3,080.88 ns |  1,367.93 ns |     0.20 |    0.00 |    3 |         - |          NA |
+| GnomeSort              | 8192 | Random             |  9,243,153.4 ns |  35,001.26 ns | 15,540.78 ns |     1.65 |    0.01 |    6 |         - |          NA |
+| LibrarySort            | 8192 | Random             |  1,043,337.0 ns |   5,492.78 ns |  2,872.83 ns |     0.19 |    0.00 |    3 |         - |          NA |
+| MergeInsertionSort     | 8192 | Random             |  2,376,420.4 ns |  50,520.14 ns | 22,431.26 ns |     0.42 |    0.00 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 8192 | Random             |    482,198.6 ns |   1,166.93 ns |    610.33 ns |     0.09 |    0.00 |    2 |         - |          NA |
+| ShellSortSedgewick1986 | 8192 | Random             |    514,304.9 ns |   5,211.82 ns |  2,314.08 ns |     0.09 |    0.00 |    2 |         - |          NA |
+| ShellSortTokuda1992    | 8192 | Random             |    531,102.3 ns |   1,271.97 ns |    453.60 ns |     0.09 |    0.00 |    2 |         - |          NA |
+| ShellSortCiura2001     | 8192 | Random             |    523,791.6 ns |   1,064.60 ns |    556.81 ns |     0.09 |    0.00 |    2 |         - |          NA |
+| ShellSortLee2021       | 8192 | Random             |    535,506.7 ns |     901.73 ns |    471.62 ns |     0.10 |    0.00 |    2 |         - |          NA |
+| DotnetSort             | 8192 | Random             |    314,031.9 ns |   2,868.97 ns |  1,500.53 ns |     0.06 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **8192** | **SingleElementMoved** |      **5,713.0 ns** |     **273.85 ns** |    **121.59 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| PairInsertionSort      | 8192 | SingleElementMoved |      6,487.1 ns |     263.93 ns |    117.19 ns |     1.14 |    0.03 |    1 |         - |          NA |
+| BinaryInsertSort       | 8192 | SingleElementMoved |     48,324.4 ns |   1,424.70 ns |    632.57 ns |     8.46 |    0.20 |    4 |         - |          NA |
+| GnomeSort              | 8192 | SingleElementMoved |      8,827.5 ns |     447.71 ns |    159.66 ns |     1.55 |    0.04 |    2 |         - |          NA |
+| LibrarySort            | 8192 | SingleElementMoved |  9,190,198.5 ns |  10,388.22 ns |  4,612.43 ns | 1,609.27 |   31.67 |    6 |         - |          NA |
+| MergeInsertionSort     | 8192 | SingleElementMoved |  1,280,708.1 ns |   2,976.51 ns |  1,556.77 ns |   224.26 |    4.41 |    5 |         - |          NA |
+| ShellSortKnuth1973     | 8192 | SingleElementMoved |     35,530.4 ns |     324.65 ns |    144.15 ns |     6.22 |    0.12 |    3 |         - |          NA |
+| ShellSortSedgewick1986 | 8192 | SingleElementMoved |     43,182.0 ns |     402.01 ns |    178.50 ns |     7.56 |    0.15 |    4 |         - |          NA |
+| ShellSortTokuda1992    | 8192 | SingleElementMoved |     45,055.2 ns |     282.48 ns |    125.42 ns |     7.89 |    0.16 |    4 |         - |          NA |
+| ShellSortCiura2001     | 8192 | SingleElementMoved |     43,589.3 ns |     274.90 ns |    143.78 ns |     7.63 |    0.15 |    4 |         - |          NA |
+| ShellSortLee2021       | 8192 | SingleElementMoved |     44,969.2 ns |     406.05 ns |    180.29 ns |     7.87 |    0.16 |    4 |         - |          NA |
+| DotnetSort             | 8192 | SingleElementMoved |     54,427.8 ns |   2,596.37 ns |  1,152.80 ns |     9.53 |    0.27 |    4 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **8192** | **Sorted**             |      **4,518.5 ns** |     **226.71 ns** |    **100.66 ns** |     **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| PairInsertionSort      | 8192 | Sorted             |      5,595.6 ns |      34.61 ns |     12.34 ns |     1.24 |    0.03 |    2 |         - |          NA |
+| BinaryInsertSort       | 8192 | Sorted             |     46,967.8 ns |   2,207.70 ns |  1,154.67 ns |    10.40 |    0.32 |    4 |         - |          NA |
+| GnomeSort              | 8192 | Sorted             |      6,948.2 ns |     414.57 ns |    216.83 ns |     1.54 |    0.05 |    3 |         - |          NA |
+| LibrarySort            | 8192 | Sorted             |  8,895,774.4 ns |  67,699.24 ns | 30,058.88 ns | 1,969.54 |   40.12 |    6 |         - |          NA |
+| MergeInsertionSort     | 8192 | Sorted             |  1,286,373.5 ns |   6,363.20 ns |  3,328.08 ns |   284.81 |    5.77 |    5 |         - |          NA |
+| ShellSortKnuth1973     | 8192 | Sorted             |     33,689.0 ns |     225.98 ns |    100.34 ns |     7.46 |    0.15 |    4 |         - |          NA |
+| ShellSortSedgewick1986 | 8192 | Sorted             |     41,411.7 ns |     367.36 ns |    192.14 ns |     9.17 |    0.19 |    4 |         - |          NA |
+| ShellSortTokuda1992    | 8192 | Sorted             |     43,032.8 ns |     522.30 ns |    231.90 ns |     9.53 |    0.20 |    4 |         - |          NA |
+| ShellSortCiura2001     | 8192 | Sorted             |     41,694.3 ns |     296.28 ns |    154.96 ns |     9.23 |    0.19 |    4 |         - |          NA |
+| ShellSortLee2021       | 8192 | Sorted             |     42,921.4 ns |     345.46 ns |    180.68 ns |     9.50 |    0.19 |    4 |         - |          NA |
+| DotnetSort             | 8192 | Sorted             |     35,277.6 ns |   4,287.12 ns |  2,242.25 ns |     7.81 |    0.49 |    4 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **8192** | **Reversed**           | **11,099,064.1 ns** |  **14,067.57 ns** |  **7,357.61 ns** |    **1.000** |    **0.00** |    **5** |         **-** |          **NA** |
+| PairInsertionSort      | 8192 | Reversed           |  9,245,166.7 ns | 169,749.80 ns | 88,782.43 ns |    0.833 |    0.01 |    4 |         - |          NA |
+| BinaryInsertSort       | 8192 | Reversed           |  1,353,533.0 ns |   3,153.02 ns |  1,649.09 ns |    0.122 |    0.00 |    2 |         - |          NA |
+| GnomeSort              | 8192 | Reversed           | 18,550,690.5 ns | 107,672.91 ns | 56,315.01 ns |    1.671 |    0.00 |    6 |         - |          NA |
+| LibrarySort            | 8192 | Reversed           |  6,759,929.6 ns |  84,572.56 ns | 44,233.08 ns |    0.609 |    0.00 |    3 |         - |          NA |
+| MergeInsertionSort     | 8192 | Reversed           |  1,279,523.0 ns |   2,204.64 ns |  1,153.07 ns |    0.115 |    0.00 |    2 |         - |          NA |
+| ShellSortKnuth1973     | 8192 | Reversed           |     53,038.8 ns |     364.18 ns |    190.47 ns |    0.005 |    0.00 |    1 |         - |          NA |
+| ShellSortSedgewick1986 | 8192 | Reversed           |     63,771.1 ns |     988.56 ns |    438.93 ns |    0.006 |    0.00 |    1 |         - |          NA |
+| ShellSortTokuda1992    | 8192 | Reversed           |     66,903.0 ns |   2,028.87 ns |    900.83 ns |    0.006 |    0.00 |    1 |         - |          NA |
+| ShellSortCiura2001     | 8192 | Reversed           |     61,216.2 ns |     281.80 ns |    147.39 ns |    0.006 |    0.00 |    1 |         - |          NA |
+| ShellSortLee2021       | 8192 | Reversed           |     67,549.2 ns |     318.95 ns |    141.61 ns |    0.006 |    0.00 |    1 |         - |          NA |
+| DotnetSort             | 8192 | Reversed           |     61,128.0 ns |   2,164.82 ns |  1,132.24 ns |    0.006 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **8192** | **PipeOrgan**          |  **5,566,870.3 ns** |  **21,211.58 ns** |  **9,418.07 ns** |    **1.000** |    **0.00** |    **7** |         **-** |          **NA** |
+| PairInsertionSort      | 8192 | PipeOrgan          |  4,637,379.0 ns |  97,367.00 ns | 50,924.83 ns |    0.833 |    0.01 |    6 |         - |          NA |
+| BinaryInsertSort       | 8192 | PipeOrgan          |    774,751.4 ns |   1,758.00 ns |    780.56 ns |    0.139 |    0.00 |    3 |         - |          NA |
+| GnomeSort              | 8192 | PipeOrgan          |  9,248,615.2 ns | 106,779.76 ns | 55,847.88 ns |    1.661 |    0.01 |    8 |         - |          NA |
+| LibrarySort            | 8192 | PipeOrgan          |  2,834,904.3 ns |   8,096.91 ns |  3,595.08 ns |    0.509 |    0.00 |    5 |         - |          NA |
+| MergeInsertionSort     | 8192 | PipeOrgan          |  1,300,477.9 ns |   3,649.13 ns |  1,620.24 ns |    0.234 |    0.00 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 8192 | PipeOrgan          |     54,299.3 ns |     500.75 ns |    261.90 ns |    0.010 |    0.00 |    1 |         - |          NA |
+| ShellSortSedgewick1986 | 8192 | PipeOrgan          |     60,636.5 ns |     478.67 ns |    250.35 ns |    0.011 |    0.00 |    1 |         - |          NA |
+| ShellSortTokuda1992    | 8192 | PipeOrgan          |     61,276.9 ns |     952.43 ns |    422.89 ns |    0.011 |    0.00 |    1 |         - |          NA |
+| ShellSortCiura2001     | 8192 | PipeOrgan          |     62,987.6 ns |     588.20 ns |    307.64 ns |    0.011 |    0.00 |    1 |         - |          NA |
+| ShellSortLee2021       | 8192 | PipeOrgan          |     62,280.9 ns |     676.66 ns |    353.90 ns |    0.011 |    0.00 |    1 |         - |          NA |
+| DotnetSort             | 8192 | PipeOrgan          |    280,616.8 ns |   5,096.11 ns |  2,262.70 ns |    0.050 |    0.00 |    2 |         - |          NA |
+|      |                    |                 |               |              |          |         |      |           |             |
+| **InsertionSort**          | **8192** | **ManyDuplicates**     |  **5,498,509.3 ns** |  **90,300.65 ns** | **47,228.99 ns** |     **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| PairInsertionSort      | 8192 | ManyDuplicates     |  5,084,124.9 ns |  20,112.12 ns | 10,519.03 ns |     0.92 |    0.01 |    5 |         - |          NA |
+| BinaryInsertSort       | 8192 | ManyDuplicates     |  1,032,707.4 ns |  29,866.44 ns | 15,620.73 ns |     0.19 |    0.00 |    3 |         - |          NA |
+| GnomeSort              | 8192 | ManyDuplicates     |  9,011,916.0 ns |  67,800.31 ns | 24,178.24 ns |     1.64 |    0.01 |    6 |         - |          NA |
+| LibrarySort            | 8192 | ManyDuplicates     |  1,083,710.9 ns |   4,002.24 ns |  1,777.02 ns |     0.20 |    0.00 |    3 |         - |          NA |
+| MergeInsertionSort     | 8192 | ManyDuplicates     |  2,307,532.4 ns |   5,761.16 ns |  2,557.99 ns |     0.42 |    0.00 |    4 |         - |          NA |
+| ShellSortKnuth1973     | 8192 | ManyDuplicates     |    319,592.7 ns |   1,579.54 ns |    701.33 ns |     0.06 |    0.00 |    2 |         - |          NA |
+| ShellSortSedgewick1986 | 8192 | ManyDuplicates     |    280,528.2 ns |   1,054.40 ns |    551.47 ns |     0.05 |    0.00 |    2 |         - |          NA |
+| ShellSortTokuda1992    | 8192 | ManyDuplicates     |    297,105.0 ns |   1,155.22 ns |    604.20 ns |     0.05 |    0.00 |    2 |         - |          NA |
+| ShellSortCiura2001     | 8192 | ManyDuplicates     |    297,590.1 ns |     880.08 ns |    390.76 ns |     0.05 |    0.00 |    2 |         - |          NA |
+| ShellSortLee2021       | 8192 | ManyDuplicates     |    290,390.7 ns |     708.01 ns |    314.36 ns |     0.05 |    0.00 |    2 |         - |          NA |
+| DotnetSort             | 8192 | ManyDuplicates     |    190,559.7 ns |   1,247.68 ns |    652.56 ns |     0.03 |    0.00 |    1 |         - |          NA |
 
 ### MergeBenchmark
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V74 3.69GHz, 1 CPU, 4 logical and 2 physical cores
-Memory: 15.61 GB Total, 12.49 GB Available
+AMD EPYC 9V74 3.59GHz, 1 CPU, 4 logical and 2 physical cores
+Memory: 15.61 GB Total, 12.44 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
@@ -1275,542 +1275,542 @@ EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCo
 UnrollFactor=1  WarmupCount=2  
 ```
 
-| Method                   | Size | Pattern            | Mean           | Error        | StdDev       | Median         | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
-| ------------------------- |----- |------------------- |---------------:|-------------:|-------------:|---------------:|------:|--------:|-----:|----------:|------------:|
-| **MergeSort**                | **256**  | **Random**             |    **12,692.8 ns** |    **129.97 ns** |     **67.98 ns** |    **12,695.1 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| PingpongMergeSort        | 256  | Random             |    11,974.8 ns |    297.41 ns |    132.05 ns |    11,973.3 ns |  0.94 |    0.01 |    4 |         - |          NA |
-| BottomupMergeSort        | 256  | Random             |     9,041.1 ns |    344.69 ns |    153.04 ns |     9,013.5 ns |  0.71 |    0.01 |    4 |         - |          NA |
-| StdStableSort            | 256  | Random             |     5,329.7 ns |    235.79 ns |    104.69 ns |     5,381.2 ns |  0.42 |    0.01 |    3 |         - |          NA |
-| RotateMergeSort          | 256  | Random             |    18,755.7 ns |    499.86 ns |    261.43 ns |    18,775.0 ns |  1.48 |    0.02 |    5 |         - |          NA |
-| RotateMergeSortRecursive | 256  | Random             |    22,648.7 ns |    414.43 ns |    184.01 ns |    22,727.6 ns |  1.78 |    0.02 |    6 |         - |          NA |
-| SymMergeSort             | 256  | Random             |    12,438.6 ns |    104.46 ns |     37.25 ns |    12,441.5 ns |  0.98 |    0.01 |    4 |         - |          NA |
-| BlockMergeSort           | 256  | Random             |     9,660.1 ns |    228.83 ns |    101.60 ns |     9,702.6 ns |  0.76 |    0.01 |    4 |         - |          NA |
-| NaturalMergeSort         | 256  | Random             |     9,194.0 ns |    195.73 ns |     86.90 ns |     9,215.8 ns |  0.72 |    0.01 |    4 |         - |          NA |
-| PatienceSort             | 256  | Random             |    13,063.4 ns |    323.34 ns |    143.56 ns |    13,077.7 ns |  1.03 |    0.01 |    4 |         - |          NA |
-| DropMergeSort            | 256  | Random             |     9,347.2 ns |    164.15 ns |     72.88 ns |     9,356.3 ns |  0.74 |    0.01 |    4 |         - |          NA |
-| TimSort                  | 256  | Random             |    10,203.2 ns |    267.91 ns |    140.12 ns |    10,202.0 ns |  0.80 |    0.01 |    4 |         - |          NA |
-| PowerSort                | 256  | Random             |     6,512.9 ns |    307.64 ns |    160.90 ns |     6,432.7 ns |  0.51 |    0.01 |    3 |         - |          NA |
-| ShiftSort                | 256  | Random             |    10,079.2 ns |    294.63 ns |    130.82 ns |    10,162.7 ns |  0.79 |    0.01 |    4 |         - |          NA |
-| SpinSort                 | 256  | Random             |     5,959.1 ns |    206.88 ns |    108.20 ns |     5,988.4 ns |  0.47 |    0.01 |    3 |         - |          NA |
-| Glidesort                | 256  | Random             |     5,706.2 ns |    109.24 ns |     48.50 ns |     5,688.9 ns |  0.45 |    0.00 |    3 |         - |          NA |
-| Driftsort                | 256  | Random             |     4,841.8 ns |    368.03 ns |    192.49 ns |     4,757.5 ns |  0.38 |    0.01 |    3 |         - |          NA |
-| FlatStableSort           | 256  | Random             |     6,561.6 ns |    144.06 ns |     75.34 ns |     6,535.6 ns |  0.52 |    0.01 |    3 |         - |          NA |
-| QuadSort                 | 256  | Random             |     3,567.4 ns |    252.15 ns |    131.88 ns |     3,523.2 ns |  0.28 |    0.01 |    2 |         - |          NA |
-| SimdMergeSort            | 256  | Random             |     1,935.2 ns |     37.71 ns |     16.74 ns |     1,932.8 ns |  0.15 |    0.00 |    1 |         - |          NA |
-| DotnetSort               | 256  | Random             |     5,831.5 ns |    254.16 ns |    132.93 ns |     5,781.4 ns |  0.46 |    0.01 |    3 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **256**  | **SingleElementMoved** |     **3,506.3 ns** |     **33.24 ns** |     **11.85 ns** |     **3,502.2 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| PingpongMergeSort        | 256  | SingleElementMoved |     4,227.6 ns |    191.82 ns |     85.17 ns |     4,197.8 ns |  1.21 |    0.02 |    6 |         - |          NA |
-| BottomupMergeSort        | 256  | SingleElementMoved |     1,450.7 ns |    220.90 ns |    115.54 ns |     1,386.7 ns |  0.41 |    0.03 |    4 |         - |          NA |
-| StdStableSort            | 256  | SingleElementMoved |       549.7 ns |     16.37 ns |      7.27 ns |       548.5 ns |  0.16 |    0.00 |    2 |         - |          NA |
-| RotateMergeSort          | 256  | SingleElementMoved |       528.1 ns |     44.03 ns |     19.55 ns |       525.0 ns |  0.15 |    0.01 |    2 |         - |          NA |
-| RotateMergeSortRecursive | 256  | SingleElementMoved |       738.0 ns |     66.30 ns |     29.44 ns |       725.9 ns |  0.21 |    0.01 |    2 |         - |          NA |
-| SymMergeSort             | 256  | SingleElementMoved |       400.5 ns |     21.55 ns |      9.57 ns |       400.0 ns |  0.11 |    0.00 |    1 |         - |          NA |
-| BlockMergeSort           | 256  | SingleElementMoved |     2,246.2 ns |     88.82 ns |     39.44 ns |     2,226.2 ns |  0.64 |    0.01 |    5 |         - |          NA |
-| NaturalMergeSort         | 256  | SingleElementMoved |       344.3 ns |      7.50 ns |      2.67 ns |       344.3 ns |  0.10 |    0.00 |    1 |         - |          NA |
-| PatienceSort             | 256  | SingleElementMoved |     7,275.3 ns |    634.33 ns |    331.77 ns |     7,208.9 ns |  2.07 |    0.09 |    7 |         - |          NA |
-| DropMergeSort            | 256  | SingleElementMoved |       521.3 ns |     21.60 ns |     11.30 ns |       517.5 ns |  0.15 |    0.00 |    2 |         - |          NA |
-| TimSort                  | 256  | SingleElementMoved |       294.2 ns |     28.10 ns |     12.48 ns |       293.7 ns |  0.08 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 256  | SingleElementMoved |       341.6 ns |     26.69 ns |      9.52 ns |       339.2 ns |  0.10 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 256  | SingleElementMoved |       387.2 ns |     13.56 ns |      7.09 ns |       384.7 ns |  0.11 |    0.00 |    1 |         - |          NA |
-| SpinSort                 | 256  | SingleElementMoved |       671.5 ns |     19.53 ns |      8.67 ns |       669.9 ns |  0.19 |    0.00 |    2 |         - |          NA |
-| Glidesort                | 256  | SingleElementMoved |       655.7 ns |     18.52 ns |      8.22 ns |       655.0 ns |  0.19 |    0.00 |    2 |         - |          NA |
-| Driftsort                | 256  | SingleElementMoved |       572.4 ns |     39.64 ns |     20.73 ns |       562.5 ns |  0.16 |    0.01 |    2 |         - |          NA |
-| FlatStableSort           | 256  | SingleElementMoved |     1,086.1 ns |     46.24 ns |     20.53 ns |     1,079.9 ns |  0.31 |    0.01 |    3 |         - |          NA |
-| QuadSort                 | 256  | SingleElementMoved |       526.3 ns |     29.31 ns |     13.01 ns |       522.2 ns |  0.15 |    0.00 |    2 |         - |          NA |
-| SimdMergeSort            | 256  | SingleElementMoved |     2,062.2 ns |    259.47 ns |    135.71 ns |     1,972.8 ns |  0.59 |    0.04 |    5 |         - |          NA |
-| DotnetSort               | 256  | SingleElementMoved |     1,101.8 ns |    144.70 ns |     64.25 ns |     1,072.7 ns |  0.31 |    0.02 |    3 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **256**  | **Sorted**             |     **3,506.5 ns** |    **459.53 ns** |    **240.34 ns** |     **3,451.7 ns** |  **1.00** |    **0.00** |    **7** |         **-** |          **NA** |
-| PingpongMergeSort        | 256  | Sorted             |     4,037.4 ns |     24.87 ns |     11.04 ns |     4,033.3 ns |  1.16 |    0.07 |    7 |         - |          NA |
-| BottomupMergeSort        | 256  | Sorted             |     1,171.1 ns |      7.08 ns |      3.14 ns |     1,171.0 ns |  0.34 |    0.02 |    5 |         - |          NA |
-| StdStableSort            | 256  | Sorted             |       468.1 ns |      6.61 ns |      2.36 ns |       466.9 ns |  0.13 |    0.01 |    3 |         - |          NA |
-| RotateMergeSort          | 256  | Sorted             |       236.4 ns |      2.57 ns |      0.92 ns |       236.5 ns |  0.07 |    0.00 |    2 |         - |          NA |
-| RotateMergeSortRecursive | 256  | Sorted             |       410.6 ns |      2.30 ns |      1.02 ns |       410.9 ns |  0.12 |    0.01 |    3 |         - |          NA |
-| SymMergeSort             | 256  | Sorted             |       229.6 ns |      0.76 ns |      0.27 ns |       229.6 ns |  0.07 |    0.00 |    2 |         - |          NA |
-| BlockMergeSort           | 256  | Sorted             |     1,968.3 ns |      7.29 ns |      3.24 ns |     1,967.9 ns |  0.56 |    0.04 |    6 |         - |          NA |
-| NaturalMergeSort         | 256  | Sorted             |       196.8 ns |      8.44 ns |      4.41 ns |       197.0 ns |  0.06 |    0.00 |    2 |         - |          NA |
-| PatienceSort             | 256  | Sorted             |     6,133.6 ns |    246.41 ns |    109.41 ns |     6,105.6 ns |  1.76 |    0.11 |    8 |         - |          NA |
-| DropMergeSort            | 256  | Sorted             |       481.2 ns |     11.31 ns |      5.02 ns |       479.3 ns |  0.14 |    0.01 |    3 |         - |          NA |
-| TimSort                  | 256  | Sorted             |       142.5 ns |      3.25 ns |      1.44 ns |       142.9 ns |  0.04 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 256  | Sorted             |       135.5 ns |      5.15 ns |      2.29 ns |       134.6 ns |  0.04 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 256  | Sorted             |       203.2 ns |      2.80 ns |      1.24 ns |       203.6 ns |  0.06 |    0.00 |    2 |         - |          NA |
-| SpinSort                 | 256  | Sorted             |       141.2 ns |      4.72 ns |      2.09 ns |       141.1 ns |  0.04 |    0.00 |    1 |         - |          NA |
-| Glidesort                | 256  | Sorted             |       178.5 ns |     13.28 ns |      6.95 ns |       181.7 ns |  0.05 |    0.00 |    2 |         - |          NA |
-| Driftsort                | 256  | Sorted             |       231.7 ns |     96.67 ns |     50.56 ns |       247.6 ns |  0.07 |    0.01 |    2 |         - |          NA |
-| FlatStableSort           | 256  | Sorted             |       993.7 ns |     10.83 ns |      4.81 ns |       992.2 ns |  0.28 |    0.02 |    5 |         - |          NA |
-| QuadSort                 | 256  | Sorted             |       265.4 ns |     10.67 ns |      3.81 ns |       267.0 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| SimdMergeSort            | 256  | Sorted             |     1,925.4 ns |     25.42 ns |     13.30 ns |     1,921.8 ns |  0.55 |    0.04 |    6 |         - |          NA |
-| DotnetSort               | 256  | Sorted             |       632.0 ns |     11.21 ns |      5.86 ns |       630.7 ns |  0.18 |    0.01 |    4 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **256**  | **Reversed**           |     **7,075.7 ns** |    **137.37 ns** |     **61.00 ns** |     **7,096.2 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| PingpongMergeSort        | 256  | Reversed           |     6,159.7 ns |     13.40 ns |      4.78 ns |     6,159.5 ns |  0.87 |    0.01 |    6 |         - |          NA |
-| BottomupMergeSort        | 256  | Reversed           |     3,726.5 ns |     13.21 ns |      4.71 ns |     3,728.2 ns |  0.53 |    0.00 |    5 |         - |          NA |
-| StdStableSort            | 256  | Reversed           |     3,181.6 ns |     34.12 ns |     15.15 ns |     3,186.3 ns |  0.45 |    0.00 |    5 |         - |          NA |
-| RotateMergeSort          | 256  | Reversed           |     4,334.2 ns |    128.23 ns |     56.93 ns |     4,308.8 ns |  0.61 |    0.01 |    5 |         - |          NA |
-| RotateMergeSortRecursive | 256  | Reversed           |     6,213.0 ns |    287.86 ns |    150.55 ns |     6,293.9 ns |  0.88 |    0.02 |    6 |         - |          NA |
-| SymMergeSort             | 256  | Reversed           |     1,765.8 ns |     29.88 ns |     10.65 ns |     1,765.9 ns |  0.25 |    0.00 |    3 |         - |          NA |
-| BlockMergeSort           | 256  | Reversed           |     2,446.5 ns |     13.81 ns |      4.92 ns |     2,446.0 ns |  0.35 |    0.00 |    4 |         - |          NA |
-| NaturalMergeSort         | 256  | Reversed           |       227.2 ns |      7.10 ns |      3.15 ns |       226.4 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| PatienceSort             | 256  | Reversed           |     1,257.0 ns |      6.63 ns |      2.94 ns |     1,256.2 ns |  0.18 |    0.00 |    2 |         - |          NA |
-| DropMergeSort            | 256  | Reversed           |     1,211.1 ns |     24.26 ns |     10.77 ns |     1,205.7 ns |  0.17 |    0.00 |    2 |         - |          NA |
-| TimSort                  | 256  | Reversed           |       197.4 ns |      3.55 ns |      1.86 ns |       196.9 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 256  | Reversed           |       209.5 ns |     14.98 ns |      7.84 ns |       209.9 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 256  | Reversed           |     3,221.7 ns |     41.43 ns |     18.40 ns |     3,219.4 ns |  0.46 |    0.00 |    5 |         - |          NA |
-| SpinSort                 | 256  | Reversed           |       228.8 ns |     12.04 ns |      6.30 ns |       225.5 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| Glidesort                | 256  | Reversed           |       223.2 ns |      3.72 ns |      1.65 ns |       223.5 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| Driftsort                | 256  | Reversed           |       231.2 ns |      4.77 ns |      2.12 ns |       230.8 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 256  | Reversed           |     1,734.2 ns |      9.96 ns |      3.55 ns |     1,733.0 ns |  0.25 |    0.00 |    3 |         - |          NA |
-| QuadSort                 | 256  | Reversed           |       239.2 ns |     15.71 ns |      8.22 ns |       242.2 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| SimdMergeSort            | 256  | Reversed           |     2,589.2 ns |    213.23 ns |    111.53 ns |     2,530.9 ns |  0.37 |    0.02 |    4 |         - |          NA |
-| DotnetSort               | 256  | Reversed           |     1,113.1 ns |    132.32 ns |     69.20 ns |     1,151.5 ns |  0.16 |    0.01 |    2 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **256**  | **PipeOrgan**          |     **9,650.3 ns** |  **6,912.21 ns** |  **3,615.22 ns** |     **7,831.9 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| PingpongMergeSort        | 256  | PipeOrgan          |     5,211.6 ns |     59.76 ns |     26.53 ns |     5,201.1 ns |  0.60 |    0.18 |    5 |         - |          NA |
-| BottomupMergeSort        | 256  | PipeOrgan          |     2,501.8 ns |     20.17 ns |      8.95 ns |     2,496.8 ns |  0.29 |    0.09 |    4 |         - |          NA |
-| StdStableSort            | 256  | PipeOrgan          |     1,934.8 ns |     11.44 ns |      5.08 ns |     1,934.4 ns |  0.22 |    0.07 |    4 |         - |          NA |
-| RotateMergeSort          | 256  | PipeOrgan          |     4,337.2 ns |    344.80 ns |    180.33 ns |     4,225.7 ns |  0.50 |    0.15 |    5 |         - |          NA |
-| RotateMergeSortRecursive | 256  | PipeOrgan          |     5,635.2 ns |    336.41 ns |    175.95 ns |     5,513.3 ns |  0.65 |    0.20 |    5 |         - |          NA |
-| SymMergeSort             | 256  | PipeOrgan          |     2,710.6 ns |    275.21 ns |    143.94 ns |     2,621.3 ns |  0.31 |    0.09 |    4 |         - |          NA |
-| BlockMergeSort           | 256  | PipeOrgan          |     2,406.8 ns |     13.58 ns |      6.03 ns |     2,405.0 ns |  0.28 |    0.08 |    4 |         - |          NA |
-| NaturalMergeSort         | 256  | PipeOrgan          |       384.5 ns |      6.77 ns |      3.54 ns |       384.0 ns |  0.04 |    0.01 |    1 |         - |          NA |
-| PatienceSort             | 256  | PipeOrgan          |     4,599.0 ns |    255.11 ns |    133.43 ns |     4,547.9 ns |  0.53 |    0.16 |    5 |         - |          NA |
-| DropMergeSort            | 256  | PipeOrgan          |     5,089.4 ns |    322.73 ns |    168.80 ns |     5,064.5 ns |  0.59 |    0.18 |    5 |         - |          NA |
-| TimSort                  | 256  | PipeOrgan          |       617.2 ns |     34.53 ns |     18.06 ns |       614.9 ns |  0.07 |    0.02 |    2 |         - |          NA |
-| PowerSort                | 256  | PipeOrgan          |       385.3 ns |      5.76 ns |      2.56 ns |       384.8 ns |  0.04 |    0.01 |    1 |         - |          NA |
-| ShiftSort                | 256  | PipeOrgan          |     2,090.2 ns |     16.01 ns |      5.71 ns |     2,089.4 ns |  0.24 |    0.07 |    4 |         - |          NA |
-| SpinSort                 | 256  | PipeOrgan          |     1,611.7 ns |     31.54 ns |     16.50 ns |     1,610.1 ns |  0.19 |    0.06 |    4 |         - |          NA |
-| Glidesort                | 256  | PipeOrgan          |       973.6 ns |      8.74 ns |      3.88 ns |       971.3 ns |  0.11 |    0.03 |    3 |         - |          NA |
-| Driftsort                | 256  | PipeOrgan          |       352.4 ns |      3.74 ns |      1.33 ns |       352.5 ns |  0.04 |    0.01 |    1 |         - |          NA |
-| FlatStableSort           | 256  | PipeOrgan          |     1,446.4 ns |      7.59 ns |      2.71 ns |     1,446.7 ns |  0.17 |    0.05 |    4 |         - |          NA |
-| QuadSort                 | 256  | PipeOrgan          |       671.3 ns |     13.12 ns |      5.82 ns |       670.4 ns |  0.08 |    0.02 |    2 |         - |          NA |
-| SimdMergeSort            | 256  | PipeOrgan          |     1,921.8 ns |     36.41 ns |     12.98 ns |     1,916.9 ns |  0.22 |    0.07 |    4 |         - |          NA |
-| DotnetSort               | 256  | PipeOrgan          |     1,922.8 ns |    380.49 ns |    199.00 ns |     1,836.1 ns |  0.22 |    0.07 |    4 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **256**  | **ManyDuplicates**     |    **12,238.2 ns** |    **294.15 ns** |    **153.85 ns** |    **12,216.4 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| PingpongMergeSort        | 256  | ManyDuplicates     |    11,623.4 ns |    286.10 ns |    127.03 ns |    11,688.2 ns |  0.95 |    0.01 |    4 |         - |          NA |
-| BottomupMergeSort        | 256  | ManyDuplicates     |     8,794.4 ns |    125.42 ns |     65.60 ns |     8,803.4 ns |  0.72 |    0.01 |    4 |         - |          NA |
-| StdStableSort            | 256  | ManyDuplicates     |     5,029.0 ns |    466.18 ns |    243.82 ns |     4,954.5 ns |  0.41 |    0.02 |    3 |         - |          NA |
-| RotateMergeSort          | 256  | ManyDuplicates     |    18,179.9 ns |    445.61 ns |    197.85 ns |    18,250.5 ns |  1.49 |    0.02 |    5 |         - |          NA |
-| RotateMergeSortRecursive | 256  | ManyDuplicates     |    22,093.6 ns |    655.46 ns |    342.82 ns |    22,137.2 ns |  1.81 |    0.03 |    6 |         - |          NA |
-| SymMergeSort             | 256  | ManyDuplicates     |    12,018.2 ns |    389.70 ns |    203.82 ns |    11,945.3 ns |  0.98 |    0.02 |    4 |         - |          NA |
-| BlockMergeSort           | 256  | ManyDuplicates     |     9,408.6 ns |    235.44 ns |    123.14 ns |     9,390.3 ns |  0.77 |    0.01 |    4 |         - |          NA |
-| NaturalMergeSort         | 256  | ManyDuplicates     |     8,847.9 ns |    371.87 ns |    165.11 ns |     8,769.7 ns |  0.72 |    0.02 |    4 |         - |          NA |
-| PatienceSort             | 256  | ManyDuplicates     |    11,061.0 ns |    466.03 ns |    243.74 ns |    11,017.7 ns |  0.90 |    0.02 |    4 |         - |          NA |
-| DropMergeSort            | 256  | ManyDuplicates     |     8,132.0 ns |    329.62 ns |    172.40 ns |     8,129.6 ns |  0.66 |    0.02 |    4 |         - |          NA |
-| TimSort                  | 256  | ManyDuplicates     |     9,620.9 ns |    204.09 ns |    106.74 ns |     9,645.4 ns |  0.79 |    0.01 |    4 |         - |          NA |
-| PowerSort                | 256  | ManyDuplicates     |     6,256.3 ns |    343.22 ns |    179.51 ns |     6,256.8 ns |  0.51 |    0.02 |    3 |         - |          NA |
-| ShiftSort                | 256  | ManyDuplicates     |     9,732.8 ns |    227.71 ns |    101.10 ns |     9,767.8 ns |  0.80 |    0.01 |    4 |         - |          NA |
-| SpinSort                 | 256  | ManyDuplicates     |     5,459.5 ns |    339.91 ns |    177.78 ns |     5,400.4 ns |  0.45 |    0.01 |    3 |         - |          NA |
-| Glidesort                | 256  | ManyDuplicates     |     5,459.2 ns |    266.61 ns |     95.08 ns |     5,494.9 ns |  0.45 |    0.01 |    3 |         - |          NA |
-| Driftsort                | 256  | ManyDuplicates     |     4,788.0 ns |    333.16 ns |    174.25 ns |     4,810.9 ns |  0.39 |    0.01 |    3 |         - |          NA |
-| FlatStableSort           | 256  | ManyDuplicates     |     6,329.7 ns |    151.05 ns |     79.00 ns |     6,312.2 ns |  0.52 |    0.01 |    3 |         - |          NA |
-| QuadSort                 | 256  | ManyDuplicates     |     3,571.4 ns |    316.77 ns |    165.68 ns |     3,587.2 ns |  0.29 |    0.01 |    2 |         - |          NA |
-| SimdMergeSort            | 256  | ManyDuplicates     |     2,514.2 ns |     55.19 ns |     19.68 ns |     2,522.6 ns |  0.21 |    0.00 |    1 |         - |          NA |
-| DotnetSort               | 256  | ManyDuplicates     |     5,594.8 ns |    454.49 ns |    237.71 ns |     5,543.9 ns |  0.46 |    0.02 |    3 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **1024** | **Random**             |    **58,632.4 ns** |    **310.98 ns** |    **162.65 ns** |    **58,657.6 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| PingpongMergeSort        | 1024 | Random             |    56,128.7 ns |    275.42 ns |    144.05 ns |    56,160.6 ns |  0.96 |    0.00 |    4 |         - |          NA |
-| BottomupMergeSort        | 1024 | Random             |    42,748.2 ns |    145.77 ns |     64.72 ns |    42,769.4 ns |  0.73 |    0.00 |    4 |         - |          NA |
-| StdStableSort            | 1024 | Random             |    29,652.9 ns |  1,281.88 ns |    670.45 ns |    29,597.7 ns |  0.51 |    0.01 |    3 |         - |          NA |
-| RotateMergeSort          | 1024 | Random             |   108,378.2 ns |    870.51 ns |    386.51 ns |   108,324.2 ns |  1.85 |    0.01 |    5 |         - |          NA |
-| RotateMergeSortRecursive | 1024 | Random             |   127,304.9 ns |    816.86 ns |    362.69 ns |   127,461.5 ns |  2.17 |    0.01 |    5 |         - |          NA |
-| SymMergeSort             | 1024 | Random             |    72,499.8 ns |    584.57 ns |    259.55 ns |    72,454.9 ns |  1.24 |    0.01 |    4 |         - |          NA |
-| BlockMergeSort           | 1024 | Random             |    49,495.3 ns |    368.49 ns |    163.61 ns |    49,533.2 ns |  0.84 |    0.00 |    4 |         - |          NA |
-| NaturalMergeSort         | 1024 | Random             |    44,697.7 ns |    497.52 ns |    260.21 ns |    44,612.6 ns |  0.76 |    0.00 |    4 |         - |          NA |
-| PatienceSort             | 1024 | Random             |    64,393.1 ns |    393.20 ns |    174.58 ns |    64,367.2 ns |  1.10 |    0.00 |    4 |         - |          NA |
-| DropMergeSort            | 1024 | Random             |    43,760.9 ns |    407.75 ns |    213.26 ns |    43,701.5 ns |  0.75 |    0.00 |    4 |         - |          NA |
-| TimSort                  | 1024 | Random             |    50,100.2 ns |    386.80 ns |    202.31 ns |    50,010.1 ns |  0.85 |    0.00 |    4 |         - |          NA |
-| PowerSort                | 1024 | Random             |    35,115.7 ns |    563.46 ns |    250.18 ns |    35,119.8 ns |  0.60 |    0.00 |    3 |         - |          NA |
-| ShiftSort                | 1024 | Random             |    50,305.3 ns |    125.94 ns |     65.87 ns |    50,311.5 ns |  0.86 |    0.00 |    4 |         - |          NA |
-| SpinSort                 | 1024 | Random             |    31,511.7 ns |    239.08 ns |    125.04 ns |    31,454.1 ns |  0.54 |    0.00 |    3 |         - |          NA |
-| Glidesort                | 1024 | Random             |    24,459.2 ns |    537.70 ns |    238.74 ns |    24,396.0 ns |  0.42 |    0.00 |    2 |         - |          NA |
-| Driftsort                | 1024 | Random             |    21,001.0 ns |    304.91 ns |    159.48 ns |    21,065.8 ns |  0.36 |    0.00 |    2 |         - |          NA |
-| FlatStableSort           | 1024 | Random             |    34,280.0 ns |    183.13 ns |     81.31 ns |    34,273.5 ns |  0.58 |    0.00 |    3 |         - |          NA |
-| QuadSort                 | 1024 | Random             |    17,946.9 ns |    259.25 ns |    115.11 ns |    17,916.9 ns |  0.31 |    0.00 |    2 |         - |          NA |
-| SimdMergeSort            | 1024 | Random             |    12,959.6 ns |    319.89 ns |    167.31 ns |    12,966.0 ns |  0.22 |    0.00 |    1 |         - |          NA |
-| DotnetSort               | 1024 | Random             |    29,995.7 ns |    113.42 ns |     50.36 ns |    30,004.6 ns |  0.51 |    0.00 |    3 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **1024** | **SingleElementMoved** |    **13,913.9 ns** |    **130.91 ns** |     **68.47 ns** |    **13,896.8 ns** |  **1.00** |    **0.00** |    **7** |         **-** |          **NA** |
-| PingpongMergeSort        | 1024 | SingleElementMoved |    16,852.7 ns |    197.75 ns |    103.43 ns |    16,856.5 ns |  1.21 |    0.01 |    8 |         - |          NA |
-| BottomupMergeSort        | 1024 | SingleElementMoved |     5,161.2 ns |    273.73 ns |    143.16 ns |     5,144.4 ns |  0.37 |    0.01 |    5 |         - |          NA |
-| StdStableSort            | 1024 | SingleElementMoved |     2,685.3 ns |     31.42 ns |     13.95 ns |     2,685.5 ns |  0.19 |    0.00 |    4 |         - |          NA |
-| RotateMergeSort          | 1024 | SingleElementMoved |     1,500.0 ns |    113.37 ns |     50.33 ns |     1,492.0 ns |  0.11 |    0.00 |    2 |         - |          NA |
-| RotateMergeSortRecursive | 1024 | SingleElementMoved |     2,170.3 ns |     22.12 ns |      7.89 ns |     2,170.0 ns |  0.16 |    0.00 |    3 |         - |          NA |
-| SymMergeSort             | 1024 | SingleElementMoved |     1,239.8 ns |     51.26 ns |     22.76 ns |     1,238.5 ns |  0.09 |    0.00 |    2 |         - |          NA |
-| BlockMergeSort           | 1024 | SingleElementMoved |     9,905.1 ns |    247.54 ns |    129.47 ns |     9,922.1 ns |  0.71 |    0.01 |    6 |         - |          NA |
-| NaturalMergeSort         | 1024 | SingleElementMoved |     1,053.3 ns |     11.45 ns |      5.08 ns |     1,051.4 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| PatienceSort             | 1024 | SingleElementMoved |    38,167.3 ns |    416.77 ns |    185.05 ns |    38,161.9 ns |  2.74 |    0.02 |    9 |         - |          NA |
-| DropMergeSort            | 1024 | SingleElementMoved |     1,954.1 ns |    139.90 ns |     62.11 ns |     1,931.4 ns |  0.14 |    0.00 |    3 |         - |          NA |
-| TimSort                  | 1024 | SingleElementMoved |       754.0 ns |     20.64 ns |     10.80 ns |       749.6 ns |  0.05 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 1024 | SingleElementMoved |     1,060.4 ns |      6.94 ns |      3.08 ns |     1,061.4 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| ShiftSort                | 1024 | SingleElementMoved |     1,226.7 ns |     16.32 ns |      5.82 ns |     1,226.6 ns |  0.09 |    0.00 |    2 |         - |          NA |
-| SpinSort                 | 1024 | SingleElementMoved |     2,920.4 ns |    186.50 ns |     97.54 ns |     2,875.4 ns |  0.21 |    0.01 |    4 |         - |          NA |
-| Glidesort                | 1024 | SingleElementMoved |     1,862.1 ns |     32.17 ns |     14.28 ns |     1,860.7 ns |  0.13 |    0.00 |    3 |         - |          NA |
-| Driftsort                | 1024 | SingleElementMoved |     1,090.9 ns |      8.71 ns |      4.56 ns |     1,090.6 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| FlatStableSort           | 1024 | SingleElementMoved |     4,448.8 ns |     27.70 ns |     12.30 ns |     4,444.0 ns |  0.32 |    0.00 |    5 |         - |          NA |
-| QuadSort                 | 1024 | SingleElementMoved |     1,199.0 ns |     11.85 ns |      4.23 ns |     1,198.1 ns |  0.09 |    0.00 |    2 |         - |          NA |
-| SimdMergeSort            | 1024 | SingleElementMoved |    12,396.7 ns |    288.67 ns |    150.98 ns |    12,426.0 ns |  0.89 |    0.01 |    7 |         - |          NA |
-| DotnetSort               | 1024 | SingleElementMoved |     5,102.1 ns |    107.06 ns |     47.53 ns |     5,091.6 ns |  0.37 |    0.00 |    5 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **1024** | **Sorted**             |    **13,395.0 ns** |    **258.27 ns** |    **114.67 ns** |    **13,431.4 ns** |  **1.00** |    **0.00** |    **9** |         **-** |          **NA** |
-| PingpongMergeSort        | 1024 | Sorted             |    16,346.8 ns |     32.94 ns |     17.23 ns |    16,348.7 ns |  1.22 |    0.01 |   10 |         - |          NA |
-| BottomupMergeSort        | 1024 | Sorted             |     4,503.1 ns |     23.93 ns |     10.63 ns |     4,498.8 ns |  0.34 |    0.00 |    7 |         - |          NA |
-| StdStableSort            | 1024 | Sorted             |     2,528.5 ns |    288.16 ns |    150.72 ns |     2,424.8 ns |  0.19 |    0.01 |    5 |         - |          NA |
-| RotateMergeSort          | 1024 | Sorted             |     1,013.0 ns |    220.85 ns |    115.51 ns |       937.3 ns |  0.08 |    0.01 |    3 |         - |          NA |
-| RotateMergeSortRecursive | 1024 | Sorted             |     1,561.2 ns |      9.00 ns |      3.21 ns |     1,561.9 ns |  0.12 |    0.00 |    4 |         - |          NA |
-| SymMergeSort             | 1024 | Sorted             |       912.8 ns |      8.55 ns |      3.05 ns |       912.8 ns |  0.07 |    0.00 |    3 |         - |          NA |
-| BlockMergeSort           | 1024 | Sorted             |     8,481.9 ns |    276.03 ns |    144.37 ns |     8,470.7 ns |  0.63 |    0.01 |    8 |         - |          NA |
-| NaturalMergeSort         | 1024 | Sorted             |       525.3 ns |     29.93 ns |     13.29 ns |       518.6 ns |  0.04 |    0.00 |    1 |         - |          NA |
-| PatienceSort             | 1024 | Sorted             |    30,840.8 ns |    188.01 ns |     67.05 ns |    30,839.4 ns |  2.30 |    0.02 |   11 |         - |          NA |
-| DropMergeSort            | 1024 | Sorted             |     1,747.8 ns |    171.07 ns |     75.96 ns |     1,711.1 ns |  0.13 |    0.01 |    4 |         - |          NA |
-| TimSort                  | 1024 | Sorted             |       509.4 ns |      7.58 ns |      3.96 ns |       510.5 ns |  0.04 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 1024 | Sorted             |       510.9 ns |     27.34 ns |     12.14 ns |       514.5 ns |  0.04 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 1024 | Sorted             |       653.4 ns |     34.27 ns |     15.21 ns |       650.8 ns |  0.05 |    0.00 |    2 |         - |          NA |
-| SpinSort                 | 1024 | Sorted             |       451.9 ns |     22.35 ns |     11.69 ns |       452.5 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| Glidesort                | 1024 | Sorted             |       441.3 ns |     12.98 ns |      5.76 ns |       444.6 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| Driftsort                | 1024 | Sorted             |       518.9 ns |     10.74 ns |      5.62 ns |       518.3 ns |  0.04 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 1024 | Sorted             |     4,275.1 ns |    333.90 ns |    148.26 ns |     4,342.8 ns |  0.32 |    0.01 |    7 |         - |          NA |
-| QuadSort                 | 1024 | Sorted             |       675.2 ns |     21.66 ns |      9.62 ns |       670.2 ns |  0.05 |    0.00 |    2 |         - |          NA |
-| SimdMergeSort            | 1024 | Sorted             |    12,355.2 ns |    293.11 ns |    153.30 ns |    12,360.7 ns |  0.92 |    0.01 |    9 |         - |          NA |
-| DotnetSort               | 1024 | Sorted             |     3,139.7 ns |     41.52 ns |     18.44 ns |     3,135.4 ns |  0.23 |    0.00 |    6 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **1024** | **Reversed**           |    **29,061.6 ns** |    **275.72 ns** |    **122.42 ns** |    **29,039.1 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| PingpongMergeSort        | 1024 | Reversed           |    25,487.4 ns |    201.97 ns |     72.02 ns |    25,513.0 ns |  0.88 |    0.00 |    6 |         - |          NA |
-| BottomupMergeSort        | 1024 | Reversed           |    15,434.8 ns |     81.30 ns |     42.52 ns |    15,442.0 ns |  0.53 |    0.00 |    5 |         - |          NA |
-| StdStableSort            | 1024 | Reversed           |    13,720.1 ns |    287.83 ns |    127.80 ns |    13,772.7 ns |  0.47 |    0.00 |    5 |         - |          NA |
-| RotateMergeSort          | 1024 | Reversed           |    20,418.8 ns |    228.91 ns |    101.64 ns |    20,422.2 ns |  0.70 |    0.00 |    5 |         - |          NA |
-| RotateMergeSortRecursive | 1024 | Reversed           |    27,968.1 ns |    268.48 ns |    119.21 ns |    28,007.4 ns |  0.96 |    0.01 |    6 |         - |          NA |
-| SymMergeSort             | 1024 | Reversed           |     7,641.0 ns |    246.12 ns |    128.72 ns |     7,665.5 ns |  0.26 |    0.00 |    4 |         - |          NA |
-| BlockMergeSort           | 1024 | Reversed           |    11,674.9 ns |    207.94 ns |    108.76 ns |    11,682.8 ns |  0.40 |    0.00 |    5 |         - |          NA |
-| NaturalMergeSort         | 1024 | Reversed           |       799.9 ns |     16.38 ns |      7.27 ns |       802.4 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| PatienceSort             | 1024 | Reversed           |     4,286.0 ns |     19.16 ns |      8.51 ns |     4,281.5 ns |  0.15 |    0.00 |    2 |         - |          NA |
-| DropMergeSort            | 1024 | Reversed           |     5,399.5 ns |     97.79 ns |     43.42 ns |     5,402.3 ns |  0.19 |    0.00 |    3 |         - |          NA |
-| TimSort                  | 1024 | Reversed           |       743.1 ns |      9.08 ns |      4.75 ns |       742.8 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 1024 | Reversed           |       753.2 ns |     17.60 ns |      7.81 ns |       754.5 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 1024 | Reversed           |    14,514.0 ns |     36.22 ns |     16.08 ns |    14,523.3 ns |  0.50 |    0.00 |    5 |         - |          NA |
-| SpinSort                 | 1024 | Reversed           |       793.3 ns |     14.98 ns |      7.84 ns |       792.2 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| Glidesort                | 1024 | Reversed           |       773.6 ns |     28.14 ns |     10.03 ns |       772.0 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| Driftsort                | 1024 | Reversed           |       779.5 ns |     15.60 ns |      6.93 ns |       778.3 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 1024 | Reversed           |     7,074.0 ns |    313.80 ns |    164.12 ns |     7,061.8 ns |  0.24 |    0.01 |    4 |         - |          NA |
-| QuadSort                 | 1024 | Reversed           |       782.3 ns |     13.85 ns |      6.15 ns |       782.2 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| SimdMergeSort            | 1024 | Reversed           |    17,464.0 ns |    145.80 ns |     76.25 ns |    17,467.9 ns |  0.60 |    0.00 |    5 |         - |          NA |
-| DotnetSort               | 1024 | Reversed           |     5,427.1 ns |    985.61 ns |    437.62 ns |     5,251.3 ns |  0.19 |    0.01 |    3 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **1024** | **PipeOrgan**          |    **21,637.1 ns** |    **362.19 ns** |    **189.43 ns** |    **21,591.8 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| PingpongMergeSort        | 1024 | PipeOrgan          |    21,452.2 ns |    207.17 ns |    108.35 ns |    21,453.1 ns |  0.99 |    0.01 |    6 |         - |          NA |
-| BottomupMergeSort        | 1024 | PipeOrgan          |    10,420.5 ns |    322.03 ns |    142.98 ns |    10,496.3 ns |  0.48 |    0.01 |    5 |         - |          NA |
-| StdStableSort            | 1024 | PipeOrgan          |     8,518.8 ns |    341.42 ns |    178.57 ns |     8,567.1 ns |  0.39 |    0.01 |    5 |         - |          NA |
-| RotateMergeSort          | 1024 | PipeOrgan          |    19,905.5 ns |    587.36 ns |    307.20 ns |    19,801.6 ns |  0.92 |    0.02 |    6 |         - |          NA |
-| RotateMergeSortRecursive | 1024 | PipeOrgan          |    25,104.0 ns |    128.67 ns |     67.29 ns |    25,087.8 ns |  1.16 |    0.01 |    6 |         - |          NA |
-| SymMergeSort             | 1024 | PipeOrgan          |    11,662.9 ns |    239.55 ns |    106.36 ns |    11,658.8 ns |  0.54 |    0.01 |    5 |         - |          NA |
-| BlockMergeSort           | 1024 | PipeOrgan          |    12,093.5 ns |    156.43 ns |     81.82 ns |    12,129.1 ns |  0.56 |    0.01 |    5 |         - |          NA |
-| NaturalMergeSort         | 1024 | PipeOrgan          |     1,383.3 ns |     56.26 ns |     24.98 ns |     1,374.8 ns |  0.06 |    0.00 |    1 |         - |          NA |
-| PatienceSort             | 1024 | PipeOrgan          |    21,988.0 ns |    140.19 ns |     49.99 ns |    21,992.5 ns |  1.02 |    0.01 |    6 |         - |          NA |
-| DropMergeSort            | 1024 | PipeOrgan          |    21,769.5 ns |    543.28 ns |    284.15 ns |    21,712.0 ns |  1.01 |    0.01 |    6 |         - |          NA |
-| TimSort                  | 1024 | PipeOrgan          |     2,168.4 ns |     58.11 ns |     25.80 ns |     2,160.1 ns |  0.10 |    0.00 |    2 |         - |          NA |
-| PowerSort                | 1024 | PipeOrgan          |     1,383.1 ns |     31.51 ns |     16.48 ns |     1,380.4 ns |  0.06 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 1024 | PipeOrgan          |     9,418.0 ns |    298.82 ns |    156.29 ns |     9,500.7 ns |  0.44 |    0.01 |    5 |         - |          NA |
-| SpinSort                 | 1024 | PipeOrgan          |     7,062.5 ns |    290.96 ns |    152.18 ns |     7,003.8 ns |  0.33 |    0.01 |    4 |         - |          NA |
-| Glidesort                | 1024 | PipeOrgan          |     3,750.5 ns |     69.65 ns |     30.93 ns |     3,737.5 ns |  0.17 |    0.00 |    3 |         - |          NA |
-| Driftsort                | 1024 | PipeOrgan          |     1,251.0 ns |    135.57 ns |     60.20 ns |     1,226.0 ns |  0.06 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 1024 | PipeOrgan          |     6,359.4 ns |    301.62 ns |    133.92 ns |     6,287.9 ns |  0.29 |    0.01 |    4 |         - |          NA |
-| QuadSort                 | 1024 | PipeOrgan          |     2,479.4 ns |    296.57 ns |    155.11 ns |     2,369.9 ns |  0.11 |    0.01 |    2 |         - |          NA |
-| SimdMergeSort            | 1024 | PipeOrgan          |    12,588.5 ns |    258.77 ns |    135.34 ns |    12,590.4 ns |  0.58 |    0.01 |    5 |         - |          NA |
-| DotnetSort               | 1024 | PipeOrgan          |    12,983.7 ns |    309.75 ns |    137.53 ns |    13,041.9 ns |  0.60 |    0.01 |    5 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **1024** | **ManyDuplicates**     |    **52,259.0 ns** |    **403.98 ns** |    **211.29 ns** |    **52,193.2 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| PingpongMergeSort        | 1024 | ManyDuplicates     |    49,300.0 ns |    343.60 ns |    179.71 ns |    49,269.7 ns |  0.94 |    0.00 |    2 |         - |          NA |
-| BottomupMergeSort        | 1024 | ManyDuplicates     |    37,092.2 ns |    199.45 ns |    104.32 ns |    37,111.2 ns |  0.71 |    0.00 |    2 |         - |          NA |
-| StdStableSort            | 1024 | ManyDuplicates     |    23,703.8 ns |  1,461.62 ns |    764.45 ns |    23,807.1 ns |  0.45 |    0.01 |    2 |         - |          NA |
-| RotateMergeSort          | 1024 | ManyDuplicates     |    95,636.9 ns |  1,390.58 ns |    617.43 ns |    95,598.2 ns |  1.83 |    0.01 |    3 |         - |          NA |
-| RotateMergeSortRecursive | 1024 | ManyDuplicates     |   111,930.4 ns |    886.76 ns |    463.79 ns |   111,729.4 ns |  2.14 |    0.01 |    3 |         - |          NA |
-| SymMergeSort             | 1024 | ManyDuplicates     |    62,735.7 ns |    803.84 ns |    356.91 ns |    62,699.5 ns |  1.20 |    0.01 |    2 |         - |          NA |
-| BlockMergeSort           | 1024 | ManyDuplicates     |    46,514.5 ns |    117.02 ns |     61.21 ns |    46,517.6 ns |  0.89 |    0.00 |    2 |         - |          NA |
-| NaturalMergeSort         | 1024 | ManyDuplicates     |    38,614.9 ns |    187.32 ns |     83.17 ns |    38,605.9 ns |  0.74 |    0.00 |    2 |         - |          NA |
-| PatienceSort             | 1024 | ManyDuplicates     |    41,095.0 ns |    817.13 ns |    362.81 ns |    40,991.4 ns |  0.79 |    0.01 |    2 |         - |          NA |
-| DropMergeSort            | 1024 | ManyDuplicates     |    30,986.1 ns |    246.56 ns |    109.47 ns |    30,937.4 ns |  0.59 |    0.00 |    2 |         - |          NA |
-| TimSort                  | 1024 | ManyDuplicates     |    43,758.3 ns |    253.45 ns |    132.56 ns |    43,758.3 ns |  0.84 |    0.00 |    2 |         - |          NA |
-| PowerSort                | 1024 | ManyDuplicates     |    28,359.2 ns |    399.62 ns |    209.01 ns |    28,386.7 ns |  0.54 |    0.00 |    2 |         - |          NA |
-| ShiftSort                | 1024 | ManyDuplicates     |    43,307.2 ns |    457.34 ns |    239.20 ns |    43,178.8 ns |  0.83 |    0.01 |    2 |         - |          NA |
-| SpinSort                 | 1024 | ManyDuplicates     |    25,427.4 ns |    685.93 ns |    358.75 ns |    25,389.7 ns |  0.49 |    0.01 |    2 |         - |          NA |
-| Glidesort                | 1024 | ManyDuplicates     |    14,001.7 ns |    276.06 ns |    122.57 ns |    13,986.1 ns |  0.27 |    0.00 |    1 |         - |          NA |
-| Driftsort                | 1024 | ManyDuplicates     |    11,744.5 ns |    500.52 ns |    261.78 ns |    11,732.7 ns |  0.22 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 1024 | ManyDuplicates     |    28,719.0 ns |    373.87 ns |    195.54 ns |    28,730.1 ns |  0.55 |    0.00 |    2 |         - |          NA |
-| QuadSort                 | 1024 | ManyDuplicates     |    17,836.1 ns |    301.59 ns |    157.74 ns |    17,789.7 ns |  0.34 |    0.00 |    1 |         - |          NA |
-| SimdMergeSort            | 1024 | ManyDuplicates     |    15,765.2 ns |    120.44 ns |     53.47 ns |    15,734.2 ns |  0.30 |    0.00 |    1 |         - |          NA |
-| DotnetSort               | 1024 | ManyDuplicates     |    23,318.7 ns |    378.61 ns |    198.02 ns |    23,331.3 ns |  0.45 |    0.00 |    2 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **4096** | **Random**             |   **266,211.4 ns** |  **1,641.18 ns** |    **728.69 ns** |   **265,876.1 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| PingpongMergeSort        | 4096 | Random             |   253,212.6 ns |    832.20 ns |    435.26 ns |   253,256.6 ns |  0.95 |    0.00 |    3 |         - |          NA |
-| BottomupMergeSort        | 4096 | Random             |   224,182.9 ns | 49,256.83 ns | 25,762.27 ns |   219,868.3 ns |  0.84 |    0.09 |    3 |         - |          NA |
-| StdStableSort            | 4096 | Random             |   148,034.5 ns |  2,225.99 ns |    988.35 ns |   148,043.8 ns |  0.56 |    0.00 |    3 |         - |          NA |
-| RotateMergeSort          | 4096 | Random             |   573,564.3 ns |  2,560.11 ns |  1,338.99 ns |   573,613.7 ns |  2.15 |    0.01 |    5 |         - |          NA |
-| RotateMergeSortRecursive | 4096 | Random             |   663,594.5 ns |  2,017.63 ns |  1,055.26 ns |   663,233.0 ns |  2.49 |    0.01 |    5 |         - |          NA |
-| SymMergeSort             | 4096 | Random             |   385,719.5 ns |  1,630.70 ns |    724.04 ns |   385,754.2 ns |  1.45 |    0.00 |    4 |         - |          NA |
-| BlockMergeSort           | 4096 | Random             |   243,168.5 ns |    715.87 ns |    317.85 ns |   243,154.6 ns |  0.91 |    0.00 |    3 |         - |          NA |
-| NaturalMergeSort         | 4096 | Random             |   208,059.0 ns |    793.73 ns |    352.42 ns |   208,039.8 ns |  0.78 |    0.00 |    3 |         - |          NA |
-| PatienceSort             | 4096 | Random             |   303,010.8 ns |    944.85 ns |    336.94 ns |   303,040.3 ns |  1.14 |    0.00 |    3 |         - |          NA |
-| DropMergeSort            | 4096 | Random             |   199,640.2 ns |  4,442.03 ns |  1,972.29 ns |   198,822.9 ns |  0.75 |    0.01 |    3 |         - |          NA |
-| TimSort                  | 4096 | Random             |   234,806.4 ns |    930.69 ns |    413.23 ns |   234,787.1 ns |  0.88 |    0.00 |    3 |         - |          NA |
-| PowerSort                | 4096 | Random             |   174,532.5 ns |    712.72 ns |    316.45 ns |   174,523.1 ns |  0.66 |    0.00 |    3 |         - |          NA |
-| ShiftSort                | 4096 | Random             |   241,668.8 ns |    643.95 ns |    285.92 ns |   241,729.8 ns |  0.91 |    0.00 |    3 |         - |          NA |
-| SpinSort                 | 4096 | Random             |   156,375.4 ns |  1,435.67 ns |    750.89 ns |   156,112.3 ns |  0.59 |    0.00 |    3 |         - |          NA |
-| Glidesort                | 4096 | Random             |    99,802.6 ns |    393.72 ns |    174.81 ns |    99,781.8 ns |  0.37 |    0.00 |    2 |         - |          NA |
-| Driftsort                | 4096 | Random             |    85,872.4 ns |  1,035.53 ns |    541.60 ns |    85,604.0 ns |  0.32 |    0.00 |    2 |         - |          NA |
-| FlatStableSort           | 4096 | Random             |   163,212.2 ns |  1,340.86 ns |    595.35 ns |   163,147.6 ns |  0.61 |    0.00 |    3 |         - |          NA |
-| QuadSort                 | 4096 | Random             |    82,626.8 ns |    351.16 ns |    155.92 ns |    82,698.1 ns |  0.31 |    0.00 |    2 |         - |          NA |
-| SimdMergeSort            | 4096 | Random             |    68,026.2 ns |    374.57 ns |    166.31 ns |    67,992.2 ns |  0.26 |    0.00 |    1 |         - |          NA |
-| DotnetSort               | 4096 | Random             |   144,643.7 ns |  1,123.64 ns |    498.90 ns |   144,892.9 ns |  0.54 |    0.00 |    3 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **4096** | **SingleElementMoved** |    **54,948.5 ns** |    **292.07 ns** |    **152.76 ns** |    **54,951.3 ns** |  **1.00** |    **0.00** |    **9** |         **-** |          **NA** |
-| PingpongMergeSort        | 4096 | SingleElementMoved |    67,100.5 ns |  1,076.31 ns |    477.89 ns |    66,799.8 ns |  1.22 |    0.01 |   10 |         - |          NA |
-| BottomupMergeSort        | 4096 | SingleElementMoved |    20,190.4 ns |    184.21 ns |     81.79 ns |    20,171.6 ns |  0.37 |    0.00 |    6 |         - |          NA |
-| StdStableSort            | 4096 | SingleElementMoved |    12,906.5 ns |    230.51 ns |    120.56 ns |    12,964.4 ns |  0.23 |    0.00 |    4 |         - |          NA |
-| RotateMergeSort          | 4096 | SingleElementMoved |     4,996.9 ns |    197.60 ns |     87.74 ns |     4,996.4 ns |  0.09 |    0.00 |    2 |         - |          NA |
-| RotateMergeSortRecursive | 4096 | SingleElementMoved |     7,457.3 ns |    347.89 ns |    154.46 ns |     7,357.7 ns |  0.14 |    0.00 |    3 |         - |          NA |
-| SymMergeSort             | 4096 | SingleElementMoved |     4,426.7 ns |    217.95 ns |    113.99 ns |     4,376.6 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| BlockMergeSort           | 4096 | SingleElementMoved |    38,663.8 ns |    234.65 ns |    104.18 ns |    38,660.6 ns |  0.70 |    0.00 |    8 |         - |          NA |
-| NaturalMergeSort         | 4096 | SingleElementMoved |     3,798.3 ns |     49.51 ns |     17.66 ns |     3,794.0 ns |  0.07 |    0.00 |    2 |         - |          NA |
-| PatienceSort             | 4096 | SingleElementMoved |   267,082.1 ns | 14,114.14 ns |  7,381.97 ns |   267,529.5 ns |  4.86 |    0.13 |   11 |         - |          NA |
-| DropMergeSort            | 4096 | SingleElementMoved |     7,442.7 ns |    327.41 ns |    171.24 ns |     7,462.2 ns |  0.14 |    0.00 |    3 |         - |          NA |
-| TimSort                  | 4096 | SingleElementMoved |     2,460.9 ns |     38.32 ns |     17.01 ns |     2,452.5 ns |  0.04 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 4096 | SingleElementMoved |     3,857.5 ns |     31.76 ns |     11.32 ns |     3,861.0 ns |  0.07 |    0.00 |    2 |         - |          NA |
-| ShiftSort                | 4096 | SingleElementMoved |     4,363.3 ns |     39.13 ns |     13.95 ns |     4,360.4 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| SpinSort                 | 4096 | SingleElementMoved |     8,525.6 ns |    405.77 ns |    212.22 ns |     8,585.2 ns |  0.16 |    0.00 |    3 |         - |          NA |
-| Glidesort                | 4096 | SingleElementMoved |     6,877.1 ns |    215.82 ns |    112.88 ns |     6,841.3 ns |  0.13 |    0.00 |    3 |         - |          NA |
-| Driftsort                | 4096 | SingleElementMoved |     3,709.5 ns |     16.22 ns |      7.20 ns |     3,709.2 ns |  0.07 |    0.00 |    2 |         - |          NA |
-| FlatStableSort           | 4096 | SingleElementMoved |    16,573.3 ns |    117.22 ns |     52.05 ns |    16,576.8 ns |  0.30 |    0.00 |    5 |         - |          NA |
-| QuadSort                 | 4096 | SingleElementMoved |     3,886.5 ns |    142.72 ns |     63.37 ns |     3,861.0 ns |  0.07 |    0.00 |    2 |         - |          NA |
-| SimdMergeSort            | 4096 | SingleElementMoved |    67,168.0 ns |    218.40 ns |     96.97 ns |    67,184.6 ns |  1.22 |    0.00 |   10 |         - |          NA |
-| DotnetSort               | 4096 | SingleElementMoved |    24,532.9 ns |    282.26 ns |    147.63 ns |    24,558.1 ns |  0.45 |    0.00 |    7 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **4096** | **Sorted**             |    **53,118.1 ns** |    **285.81 ns** |    **126.90 ns** |    **53,118.4 ns** |  **1.00** |    **0.00** |    **8** |         **-** |          **NA** |
-| PingpongMergeSort        | 4096 | Sorted             |    65,232.0 ns |    640.47 ns |    334.98 ns |    65,063.3 ns |  1.23 |    0.01 |    9 |         - |          NA |
-| BottomupMergeSort        | 4096 | Sorted             |    18,570.6 ns |    109.37 ns |     57.20 ns |    18,576.3 ns |  0.35 |    0.00 |    6 |         - |          NA |
-| StdStableSort            | 4096 | Sorted             |    12,206.1 ns |    229.05 ns |    119.80 ns |    12,239.3 ns |  0.23 |    0.00 |    5 |         - |          NA |
-| RotateMergeSort          | 4096 | Sorted             |     3,697.0 ns |      5.83 ns |      2.08 ns |     3,696.8 ns |  0.07 |    0.00 |    3 |         - |          NA |
-| RotateMergeSortRecursive | 4096 | Sorted             |     6,234.0 ns |    215.50 ns |    112.71 ns |     6,225.8 ns |  0.12 |    0.00 |    4 |         - |          NA |
-| SymMergeSort             | 4096 | Sorted             |     3,605.9 ns |     24.16 ns |      8.61 ns |     3,603.3 ns |  0.07 |    0.00 |    3 |         - |          NA |
-| BlockMergeSort           | 4096 | Sorted             |    33,630.5 ns |    174.79 ns |     91.42 ns |    33,659.3 ns |  0.63 |    0.00 |    7 |         - |          NA |
-| NaturalMergeSort         | 4096 | Sorted             |     1,856.5 ns |     13.08 ns |      4.67 ns |     1,856.0 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| PatienceSort             | 4096 | Sorted             |   176,376.0 ns | 22,037.59 ns | 11,526.08 ns |   171,314.6 ns |  3.32 |    0.20 |   10 |         - |          NA |
-| DropMergeSort            | 4096 | Sorted             |     6,838.0 ns |    261.94 ns |    137.00 ns |     6,744.1 ns |  0.13 |    0.00 |    4 |         - |          NA |
-| TimSort                  | 4096 | Sorted             |     1,823.7 ns |     35.60 ns |     12.70 ns |     1,822.2 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 4096 | Sorted             |     1,780.5 ns |     10.22 ns |      3.64 ns |     1,781.2 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 4096 | Sorted             |     2,317.3 ns |      9.17 ns |      4.07 ns |     2,316.9 ns |  0.04 |    0.00 |    2 |         - |          NA |
-| SpinSort                 | 4096 | Sorted             |     1,569.7 ns |     37.43 ns |     19.58 ns |     1,567.5 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| Glidesort                | 4096 | Sorted             |     1,660.9 ns |    232.64 ns |    121.68 ns |     1,611.3 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| Driftsort                | 4096 | Sorted             |     1,831.1 ns |     24.31 ns |     10.80 ns |     1,831.0 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 4096 | Sorted             |    14,495.7 ns |    204.46 ns |    106.94 ns |    14,482.2 ns |  0.27 |    0.00 |    5 |         - |          NA |
-| QuadSort                 | 4096 | Sorted             |     2,395.3 ns |     36.24 ns |     16.09 ns |     2,388.1 ns |  0.05 |    0.00 |    2 |         - |          NA |
-| SimdMergeSort            | 4096 | Sorted             |    69,207.5 ns |    261.37 ns |    136.70 ns |    69,220.3 ns |  1.30 |    0.00 |    9 |         - |          NA |
-| DotnetSort               | 4096 | Sorted             |    15,030.8 ns |    371.21 ns |    132.38 ns |    15,009.2 ns |  0.28 |    0.00 |    5 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **4096** | **Reversed**           |   **119,535.3 ns** |    **755.59 ns** |    **335.49 ns** |   **119,488.4 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| PingpongMergeSort        | 4096 | Reversed           |   104,757.2 ns |    713.65 ns |    254.50 ns |   104,864.6 ns |  0.88 |    0.00 |    5 |         - |          NA |
-| BottomupMergeSort        | 4096 | Reversed           |    63,714.8 ns |    371.19 ns |    164.81 ns |    63,647.0 ns |  0.53 |    0.00 |    4 |         - |          NA |
-| StdStableSort            | 4096 | Reversed           |    57,970.3 ns |    228.59 ns |    101.49 ns |    57,989.0 ns |  0.48 |    0.00 |    4 |         - |          NA |
-| RotateMergeSort          | 4096 | Reversed           |    94,118.1 ns |    625.38 ns |    277.67 ns |    94,158.0 ns |  0.79 |    0.00 |    5 |         - |          NA |
-| RotateMergeSortRecursive | 4096 | Reversed           |   124,175.5 ns |    770.66 ns |    342.18 ns |   124,013.8 ns |  1.04 |    0.00 |    5 |         - |          NA |
-| SymMergeSort             | 4096 | Reversed           |    32,448.4 ns |    238.67 ns |    105.97 ns |    32,447.4 ns |  0.27 |    0.00 |    3 |         - |          NA |
-| BlockMergeSort           | 4096 | Reversed           |    52,274.5 ns |    381.37 ns |    169.33 ns |    52,211.1 ns |  0.44 |    0.00 |    4 |         - |          NA |
-| NaturalMergeSort         | 4096 | Reversed           |     2,998.0 ns |    262.12 ns |    137.09 ns |     2,938.3 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| PatienceSort             | 4096 | Reversed           |    16,687.5 ns |    206.82 ns |     91.83 ns |    16,669.4 ns |  0.14 |    0.00 |    2 |         - |          NA |
-| DropMergeSort            | 4096 | Reversed           |    24,281.0 ns |    367.39 ns |    192.15 ns |    24,256.5 ns |  0.20 |    0.00 |    3 |         - |          NA |
-| TimSort                  | 4096 | Reversed           |     2,818.9 ns |     41.66 ns |     18.50 ns |     2,811.3 ns |  0.02 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 4096 | Reversed           |     2,881.4 ns |    209.28 ns |    109.46 ns |     2,807.6 ns |  0.02 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 4096 | Reversed           |    65,283.5 ns |    216.71 ns |     96.22 ns |    65,253.3 ns |  0.55 |    0.00 |    4 |         - |          NA |
-| SpinSort                 | 4096 | Reversed           |     2,956.9 ns |     25.98 ns |      9.26 ns |     2,956.5 ns |  0.02 |    0.00 |    1 |         - |          NA |
-| Glidesort                | 4096 | Reversed           |     2,876.9 ns |     49.41 ns |     21.94 ns |     2,878.6 ns |  0.02 |    0.00 |    1 |         - |          NA |
-| Driftsort                | 4096 | Reversed           |     3,028.3 ns |    413.91 ns |    216.48 ns |     2,940.4 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 4096 | Reversed           |    31,622.6 ns |    586.35 ns |    260.34 ns |    31,581.8 ns |  0.26 |    0.00 |    3 |         - |          NA |
-| QuadSort                 | 4096 | Reversed           |     3,063.3 ns |    117.28 ns |     61.34 ns |     3,064.7 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| SimdMergeSort            | 4096 | Reversed           |    68,395.7 ns |    201.90 ns |    105.60 ns |    68,424.6 ns |  0.57 |    0.00 |    4 |         - |          NA |
-| DotnetSort               | 4096 | Reversed           |    26,709.6 ns |  1,447.60 ns |    757.12 ns |    26,601.7 ns |  0.22 |    0.01 |    3 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **4096** | **PipeOrgan**          |    **87,641.3 ns** |    **861.23 ns** |    **307.12 ns** |    **87,570.1 ns** |  **1.00** |    **0.00** |    **8** |         **-** |          **NA** |
-| PingpongMergeSort        | 4096 | PipeOrgan          |    86,499.5 ns |  1,123.51 ns |    498.84 ns |    86,347.7 ns |  0.99 |    0.01 |    8 |         - |          NA |
-| BottomupMergeSort        | 4096 | PipeOrgan          |    42,590.3 ns |    675.09 ns |    299.74 ns |    42,494.1 ns |  0.49 |    0.00 |    6 |         - |          NA |
-| StdStableSort            | 4096 | PipeOrgan          |    36,837.0 ns |  1,356.04 ns |    602.09 ns |    36,490.2 ns |  0.42 |    0.01 |    6 |         - |          NA |
-| RotateMergeSort          | 4096 | PipeOrgan          |    88,290.9 ns |    709.00 ns |    314.80 ns |    88,394.3 ns |  1.01 |    0.00 |    8 |         - |          NA |
-| RotateMergeSortRecursive | 4096 | PipeOrgan          |   108,346.4 ns |    368.79 ns |    163.74 ns |   108,378.5 ns |  1.24 |    0.00 |    9 |         - |          NA |
-| SymMergeSort             | 4096 | PipeOrgan          |    48,620.0 ns |    749.84 ns |    392.18 ns |    48,720.2 ns |  0.55 |    0.00 |    6 |         - |          NA |
-| BlockMergeSort           | 4096 | PipeOrgan          |    48,800.9 ns |    179.32 ns |     79.62 ns |    48,801.7 ns |  0.56 |    0.00 |    6 |         - |          NA |
-| NaturalMergeSort         | 4096 | PipeOrgan          |     5,490.6 ns |    346.87 ns |    181.42 ns |     5,529.9 ns |  0.06 |    0.00 |    1 |         - |          NA |
-| PatienceSort             | 4096 | PipeOrgan          |   135,936.7 ns | 16,133.72 ns |  8,438.25 ns |   133,269.6 ns |  1.55 |    0.09 |   10 |         - |          NA |
-| DropMergeSort            | 4096 | PipeOrgan          |    89,662.7 ns |    522.92 ns |    273.50 ns |    89,652.4 ns |  1.02 |    0.00 |    8 |         - |          NA |
-| TimSort                  | 4096 | PipeOrgan          |     8,303.0 ns |    259.86 ns |    135.91 ns |     8,321.4 ns |  0.09 |    0.00 |    3 |         - |          NA |
-| PowerSort                | 4096 | PipeOrgan          |     5,192.6 ns |     63.26 ns |     22.56 ns |     5,184.5 ns |  0.06 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 4096 | PipeOrgan          |    40,726.3 ns |    843.07 ns |    374.33 ns |    40,601.6 ns |  0.46 |    0.00 |    6 |         - |          NA |
-| SpinSort                 | 4096 | PipeOrgan          |     6,645.9 ns |    444.41 ns |    232.43 ns |     6,536.1 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| Glidesort                | 4096 | PipeOrgan          |    14,715.2 ns |    276.55 ns |    144.64 ns |    14,698.9 ns |  0.17 |    0.00 |    4 |         - |          NA |
-| Driftsort                | 4096 | PipeOrgan          |     6,388.2 ns |  4,922.28 ns |  2,574.45 ns |     4,860.5 ns |  0.07 |    0.03 |    1 |         - |          NA |
-| FlatStableSort           | 4096 | PipeOrgan          |    28,452.9 ns |    330.50 ns |    172.86 ns |    28,438.3 ns |  0.32 |    0.00 |    5 |         - |          NA |
-| QuadSort                 | 4096 | PipeOrgan          |     9,255.8 ns |    327.36 ns |    171.21 ns |     9,206.1 ns |  0.11 |    0.00 |    3 |         - |          NA |
-| SimdMergeSort            | 4096 | PipeOrgan          |    68,872.0 ns |    492.03 ns |    257.34 ns |    68,804.6 ns |  0.79 |    0.00 |    7 |         - |          NA |
-| DotnetSort               | 4096 | PipeOrgan          |    71,715.0 ns |  1,294.20 ns |    574.63 ns |    71,675.9 ns |  0.82 |    0.01 |    7 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **4096** | **ManyDuplicates**     |   **215,833.3 ns** |    **798.35 ns** |    **354.47 ns** |   **215,977.7 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| PingpongMergeSort        | 4096 | ManyDuplicates     |   202,879.0 ns |    609.08 ns |    270.43 ns |   202,887.3 ns |  0.94 |    0.00 |    4 |         - |          NA |
-| BottomupMergeSort        | 4096 | ManyDuplicates     |   153,068.2 ns |  1,312.96 ns |    582.96 ns |   152,891.5 ns |  0.71 |    0.00 |    4 |         - |          NA |
-| StdStableSort            | 4096 | ManyDuplicates     |   101,093.8 ns |  3,087.00 ns |  1,614.56 ns |   101,071.2 ns |  0.47 |    0.01 |    4 |         - |          NA |
-| RotateMergeSort          | 4096 | ManyDuplicates     |   428,087.0 ns |  2,424.94 ns |  1,268.29 ns |   427,860.1 ns |  1.98 |    0.01 |    6 |         - |          NA |
-| RotateMergeSortRecursive | 4096 | ManyDuplicates     |   504,442.6 ns |  2,794.14 ns |  1,240.62 ns |   504,310.2 ns |  2.34 |    0.01 |    6 |         - |          NA |
-| SymMergeSort             | 4096 | ManyDuplicates     |   287,805.7 ns |  1,415.10 ns |    740.13 ns |   287,630.3 ns |  1.33 |    0.00 |    5 |         - |          NA |
-| BlockMergeSort           | 4096 | ManyDuplicates     |   213,172.6 ns |    514.31 ns |    183.41 ns |   213,215.5 ns |  0.99 |    0.00 |    4 |         - |          NA |
-| NaturalMergeSort         | 4096 | ManyDuplicates     |   158,569.2 ns |  1,057.09 ns |    469.36 ns |   158,504.5 ns |  0.73 |    0.00 |    4 |         - |          NA |
-| PatienceSort             | 4096 | ManyDuplicates     |   139,931.2 ns |    757.53 ns |    396.20 ns |   140,010.7 ns |  0.65 |    0.00 |    4 |         - |          NA |
-| DropMergeSort            | 4096 | ManyDuplicates     |   118,052.2 ns |    727.10 ns |    322.84 ns |   118,018.8 ns |  0.55 |    0.00 |    4 |         - |          NA |
-| TimSort                  | 4096 | ManyDuplicates     |   183,451.0 ns |    386.35 ns |    171.54 ns |   183,501.9 ns |  0.85 |    0.00 |    4 |         - |          NA |
-| PowerSort                | 4096 | ManyDuplicates     |   120,052.4 ns |    848.96 ns |    376.94 ns |   119,987.2 ns |  0.56 |    0.00 |    4 |         - |          NA |
-| ShiftSort                | 4096 | ManyDuplicates     |   184,933.9 ns |  2,688.40 ns |  1,193.67 ns |   184,209.0 ns |  0.86 |    0.01 |    4 |         - |          NA |
-| SpinSort                 | 4096 | ManyDuplicates     |   109,268.5 ns |  1,252.95 ns |    655.32 ns |   109,142.5 ns |  0.51 |    0.00 |    4 |         - |          NA |
-| Glidesort                | 4096 | ManyDuplicates     |    22,346.8 ns |    400.50 ns |    209.47 ns |    22,271.7 ns |  0.10 |    0.00 |    2 |         - |          NA |
-| Driftsort                | 4096 | ManyDuplicates     |    17,028.0 ns |    209.57 ns |     93.05 ns |    16,997.6 ns |  0.08 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 4096 | ManyDuplicates     |   116,221.0 ns |    952.34 ns |    422.84 ns |   116,169.4 ns |  0.54 |    0.00 |    4 |         - |          NA |
-| QuadSort                 | 4096 | ManyDuplicates     |    76,753.3 ns |    192.63 ns |     85.53 ns |    76,766.1 ns |  0.36 |    0.00 |    3 |         - |          NA |
-| SimdMergeSort            | 4096 | ManyDuplicates     |    67,726.6 ns |    243.19 ns |    107.98 ns |    67,742.2 ns |  0.31 |    0.00 |    3 |         - |          NA |
-| DotnetSort               | 4096 | ManyDuplicates     |    94,579.2 ns |    351.27 ns |    155.97 ns |    94,539.8 ns |  0.44 |    0.00 |    4 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **8192** | **Random**             |   **563,755.2 ns** |  **2,116.43 ns** |    **939.71 ns** |   **563,509.8 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| PingpongMergeSort        | 8192 | Random             |   534,164.5 ns |  2,719.78 ns |  1,207.60 ns |   534,009.4 ns |  0.95 |    0.00 |    2 |         - |          NA |
-| BottomupMergeSort        | 8192 | Random             |   422,554.9 ns |    987.59 ns |    438.50 ns |   422,547.3 ns |  0.75 |    0.00 |    2 |         - |          NA |
-| StdStableSort            | 8192 | Random             |   341,910.3 ns |  6,001.97 ns |  3,139.15 ns |   342,126.4 ns |  0.61 |    0.01 |    2 |         - |          NA |
-| RotateMergeSort          | 8192 | Random             | 1,288,268.2 ns |  4,870.30 ns |  2,547.26 ns | 1,287,334.0 ns |  2.29 |    0.01 |    4 |         - |          NA |
-| RotateMergeSortRecursive | 8192 | Random             | 1,487,589.1 ns |  4,011.34 ns |  1,781.06 ns | 1,487,560.0 ns |  2.64 |    0.01 |    4 |         - |          NA |
-| SymMergeSort             | 8192 | Random             |   869,341.1 ns |  3,511.61 ns |  1,559.18 ns |   869,750.5 ns |  1.54 |    0.00 |    3 |         - |          NA |
-| BlockMergeSort           | 8192 | Random             |   525,532.3 ns |  2,445.13 ns |  1,085.65 ns |   525,329.8 ns |  0.93 |    0.00 |    2 |         - |          NA |
-| NaturalMergeSort         | 8192 | Random             |   446,050.8 ns |    802.63 ns |    356.37 ns |   445,958.0 ns |  0.79 |    0.00 |    2 |         - |          NA |
-| PatienceSort             | 8192 | Random             |   656,188.9 ns |  2,523.37 ns |  1,319.77 ns |   655,943.1 ns |  1.16 |    0.00 |    2 |         - |          NA |
-| DropMergeSort            | 8192 | Random             |   421,019.1 ns |  2,135.36 ns |  1,116.84 ns |   421,248.3 ns |  0.75 |    0.00 |    2 |         - |          NA |
-| TimSort                  | 8192 | Random             |   514,585.1 ns |  1,955.02 ns |  1,022.51 ns |   514,534.1 ns |  0.91 |    0.00 |    2 |         - |          NA |
-| PowerSort                | 8192 | Random             |   383,812.0 ns |  1,006.27 ns |    526.30 ns |   383,822.2 ns |  0.68 |    0.00 |    2 |         - |          NA |
-| ShiftSort                | 8192 | Random             |   529,749.7 ns |  1,771.52 ns |    926.54 ns |   529,769.6 ns |  0.94 |    0.00 |    2 |         - |          NA |
-| SpinSort                 | 8192 | Random             |   343,648.9 ns |  1,761.16 ns |    781.97 ns |   343,631.7 ns |  0.61 |    0.00 |    2 |         - |          NA |
-| Glidesort                | 8192 | Random             |   204,833.7 ns |  1,887.67 ns |    987.29 ns |   205,032.5 ns |  0.36 |    0.00 |    1 |         - |          NA |
-| Driftsort                | 8192 | Random             |   173,676.9 ns |    634.17 ns |    281.57 ns |   173,775.6 ns |  0.31 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 8192 | Random             |   369,112.3 ns |    888.97 ns |    394.71 ns |   369,088.8 ns |  0.65 |    0.00 |    2 |         - |          NA |
-| QuadSort                 | 8192 | Random             |   176,936.4 ns |    351.25 ns |    155.96 ns |   176,948.9 ns |  0.31 |    0.00 |    1 |         - |          NA |
-| SimdMergeSort            | 8192 | Random             |   161,230.7 ns |  1,438.61 ns |    638.75 ns |   160,989.6 ns |  0.29 |    0.00 |    1 |         - |          NA |
-| DotnetSort               | 8192 | Random             |   315,469.4 ns |  2,141.54 ns |    950.86 ns |   315,703.8 ns |  0.56 |    0.00 |    2 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **8192** | **SingleElementMoved** |   **110,414.4 ns** |  **1,883.53 ns** |    **836.30 ns** |   **110,077.6 ns** |  **1.00** |    **0.00** |    **8** |         **-** |          **NA** |
-| PingpongMergeSort        | 8192 | SingleElementMoved |   135,149.9 ns |    498.63 ns |    221.40 ns |   135,101.8 ns |  1.22 |    0.01 |    9 |         - |          NA |
-| BottomupMergeSort        | 8192 | SingleElementMoved |    42,594.5 ns |    330.87 ns |    173.05 ns |    42,520.6 ns |  0.39 |    0.00 |    5 |         - |          NA |
-| StdStableSort            | 8192 | SingleElementMoved |    24,828.3 ns |  1,592.50 ns |    707.08 ns |    24,934.8 ns |  0.22 |    0.01 |    4 |         - |          NA |
-| RotateMergeSort          | 8192 | SingleElementMoved |     9,793.9 ns |    658.42 ns |    344.37 ns |     9,700.4 ns |  0.09 |    0.00 |    2 |         - |          NA |
-| RotateMergeSortRecursive | 8192 | SingleElementMoved |    14,390.2 ns |    262.13 ns |    137.10 ns |    14,420.8 ns |  0.13 |    0.00 |    3 |         - |          NA |
-| SymMergeSort             | 8192 | SingleElementMoved |     8,407.6 ns |     22.01 ns |      9.77 ns |     8,407.6 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| BlockMergeSort           | 8192 | SingleElementMoved |    76,308.8 ns |    598.60 ns |    265.78 ns |    76,307.1 ns |  0.69 |    0.01 |    7 |         - |          NA |
-| NaturalMergeSort         | 8192 | SingleElementMoved |     7,557.1 ns |    169.96 ns |     88.89 ns |     7,520.9 ns |  0.07 |    0.00 |    2 |         - |          NA |
-| PatienceSort             | 8192 | SingleElementMoved |   622,890.5 ns |  3,045.92 ns |  1,593.07 ns |   622,399.2 ns |  5.64 |    0.04 |   10 |         - |          NA |
-| DropMergeSort            | 8192 | SingleElementMoved |    14,627.6 ns |    297.62 ns |    132.15 ns |    14,613.1 ns |  0.13 |    0.00 |    3 |         - |          NA |
-| TimSort                  | 8192 | SingleElementMoved |     4,880.0 ns |    326.99 ns |    171.02 ns |     4,774.1 ns |  0.04 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 8192 | SingleElementMoved |     7,817.7 ns |    311.02 ns |    162.67 ns |     7,795.8 ns |  0.07 |    0.00 |    2 |         - |          NA |
-| ShiftSort                | 8192 | SingleElementMoved |     9,101.0 ns |    622.53 ns |    325.60 ns |     9,076.9 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| SpinSort                 | 8192 | SingleElementMoved |    14,291.3 ns |    353.53 ns |    184.90 ns |    14,288.0 ns |  0.13 |    0.00 |    3 |         - |          NA |
-| Glidesort                | 8192 | SingleElementMoved |    13,518.6 ns |    404.49 ns |    179.59 ns |    13,513.5 ns |  0.12 |    0.00 |    3 |         - |          NA |
-| Driftsort                | 8192 | SingleElementMoved |     7,935.1 ns |    449.16 ns |    234.92 ns |     7,902.9 ns |  0.07 |    0.00 |    2 |         - |          NA |
-| FlatStableSort           | 8192 | SingleElementMoved |    23,312.4 ns |    369.35 ns |    164.00 ns |    23,279.7 ns |  0.21 |    0.00 |    4 |         - |          NA |
-| QuadSort                 | 8192 | SingleElementMoved |     7,734.4 ns |    311.75 ns |    163.05 ns |     7,680.6 ns |  0.07 |    0.00 |    2 |         - |          NA |
-| SimdMergeSort            | 8192 | SingleElementMoved |   156,914.3 ns |  1,032.82 ns |    458.58 ns |   156,830.2 ns |  1.42 |    0.01 |    9 |         - |          NA |
-| DotnetSort               | 8192 | SingleElementMoved |    52,989.1 ns |    537.61 ns |    281.18 ns |    53,018.5 ns |  0.48 |    0.00 |    6 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **8192** | **Sorted**             |   **106,197.9 ns** |    **317.69 ns** |    **141.06 ns** |   **106,203.4 ns** |  **1.00** |    **0.00** |    **9** |         **-** |          **NA** |
-| PingpongMergeSort        | 8192 | Sorted             |   131,884.7 ns |    291.21 ns |    129.30 ns |   131,845.5 ns |  1.24 |    0.00 |   10 |         - |          NA |
-| BottomupMergeSort        | 8192 | Sorted             |    39,560.9 ns |    205.70 ns |    107.58 ns |    39,593.2 ns |  0.37 |    0.00 |    7 |         - |          NA |
-| StdStableSort            | 8192 | Sorted             |    23,069.9 ns |    559.03 ns |    292.38 ns |    22,938.1 ns |  0.22 |    0.00 |    5 |         - |          NA |
-| RotateMergeSort          | 8192 | Sorted             |     7,434.8 ns |     20.02 ns |      7.14 ns |     7,432.6 ns |  0.07 |    0.00 |    3 |         - |          NA |
-| RotateMergeSortRecursive | 8192 | Sorted             |    12,395.5 ns |    149.02 ns |     77.94 ns |    12,421.8 ns |  0.12 |    0.00 |    4 |         - |          NA |
-| SymMergeSort             | 8192 | Sorted             |     7,177.3 ns |     16.09 ns |      7.14 ns |     7,177.5 ns |  0.07 |    0.00 |    3 |         - |          NA |
-| BlockMergeSort           | 8192 | Sorted             |    66,606.0 ns |    699.00 ns |    310.36 ns |    66,499.5 ns |  0.63 |    0.00 |    8 |         - |          NA |
-| NaturalMergeSort         | 8192 | Sorted             |     3,618.4 ns |    102.92 ns |     36.70 ns |     3,608.6 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| PatienceSort             | 8192 | Sorted             |   611,119.0 ns |  3,339.26 ns |  1,746.50 ns |   610,831.5 ns |  5.75 |    0.02 |   12 |         - |          NA |
-| DropMergeSort            | 8192 | Sorted             |    13,708.7 ns |    346.04 ns |    180.98 ns |    13,677.8 ns |  0.13 |    0.00 |    4 |         - |          NA |
-| TimSort                  | 8192 | Sorted             |     3,562.6 ns |     10.56 ns |      3.77 ns |     3,561.1 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 8192 | Sorted             |     3,553.4 ns |     55.01 ns |     19.62 ns |     3,545.0 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 8192 | Sorted             |     4,620.8 ns |    247.26 ns |    129.32 ns |     4,537.7 ns |  0.04 |    0.00 |    2 |         - |          NA |
-| SpinSort                 | 8192 | Sorted             |     3,149.5 ns |    227.07 ns |    100.82 ns |     3,095.3 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| Glidesort                | 8192 | Sorted             |     3,072.3 ns |    109.23 ns |     48.50 ns |     3,051.2 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| Driftsort                | 8192 | Sorted             |     3,626.6 ns |     28.76 ns |     10.26 ns |     3,626.2 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 8192 | Sorted             |     3,264.3 ns |    282.91 ns |    125.61 ns |     3,209.9 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| QuadSort                 | 8192 | Sorted             |     4,689.8 ns |    156.83 ns |     69.63 ns |     4,653.1 ns |  0.04 |    0.00 |    2 |         - |          NA |
-| SimdMergeSort            | 8192 | Sorted             |   195,841.2 ns |  1,096.08 ns |    486.66 ns |   195,723.6 ns |  1.84 |    0.00 |   11 |         - |          NA |
-| DotnetSort               | 8192 | Sorted             |    33,549.7 ns |  3,132.53 ns |  1,638.37 ns |    32,805.3 ns |  0.32 |    0.01 |    6 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **8192** | **Reversed**           |   **241,723.6 ns** |    **437.95 ns** |    **194.45 ns** |   **241,654.1 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| PingpongMergeSort        | 8192 | Reversed           |   211,459.4 ns |  1,660.00 ns |    868.21 ns |   211,367.2 ns |  0.87 |    0.00 |    6 |         - |          NA |
-| BottomupMergeSort        | 8192 | Reversed           |   130,879.3 ns |    279.76 ns |    124.22 ns |   130,900.8 ns |  0.54 |    0.00 |    5 |         - |          NA |
-| StdStableSort            | 8192 | Reversed           |   206,675.4 ns |  1,640.93 ns |    728.58 ns |   206,851.3 ns |  0.86 |    0.00 |    6 |         - |          NA |
-| RotateMergeSort          | 8192 | Reversed           |   198,506.9 ns |  1,031.13 ns |    457.83 ns |   198,480.7 ns |  0.82 |    0.00 |    6 |         - |          NA |
-| RotateMergeSortRecursive | 8192 | Reversed           |   260,429.2 ns |  3,878.39 ns |  2,028.47 ns |   259,366.0 ns |  1.08 |    0.01 |    6 |         - |          NA |
-| SymMergeSort             | 8192 | Reversed           |    66,594.0 ns |    251.97 ns |    111.88 ns |    66,644.1 ns |  0.28 |    0.00 |    3 |         - |          NA |
-| BlockMergeSort           | 8192 | Reversed           |   109,033.2 ns |  1,004.88 ns |    446.17 ns |   108,949.5 ns |  0.45 |    0.00 |    4 |         - |          NA |
-| NaturalMergeSort         | 8192 | Reversed           |     5,546.4 ns |     30.44 ns |     10.86 ns |     5,546.2 ns |  0.02 |    0.00 |    1 |         - |          NA |
-| PatienceSort             | 8192 | Reversed           |    33,221.5 ns |    767.15 ns |    273.57 ns |    33,119.1 ns |  0.14 |    0.00 |    2 |         - |          NA |
-| DropMergeSort            | 8192 | Reversed           |    50,633.9 ns |    479.43 ns |    250.75 ns |    50,678.8 ns |  0.21 |    0.00 |    3 |         - |          NA |
-| TimSort                  | 8192 | Reversed           |     5,653.3 ns |    321.99 ns |    168.41 ns |     5,584.5 ns |  0.02 |    0.00 |    1 |         - |          NA |
-| PowerSort                | 8192 | Reversed           |     5,638.6 ns |    261.90 ns |    136.98 ns |     5,555.7 ns |  0.02 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 8192 | Reversed           |   144,159.9 ns |  1,505.72 ns |    668.55 ns |   143,978.1 ns |  0.60 |    0.00 |    5 |         - |          NA |
-| SpinSort                 | 8192 | Reversed           |     6,140.5 ns |    202.66 ns |    106.00 ns |     6,166.0 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| Glidesort                | 8192 | Reversed           |     5,603.5 ns |    152.57 ns |     67.74 ns |     5,576.8 ns |  0.02 |    0.00 |    1 |         - |          NA |
-| Driftsort                | 8192 | Reversed           |     5,635.3 ns |    182.56 ns |     95.48 ns |     5,574.6 ns |  0.02 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 8192 | Reversed           |     6,143.9 ns |    413.29 ns |    216.16 ns |     5,998.9 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| QuadSort                 | 8192 | Reversed           |     6,068.4 ns |    252.27 ns |    131.94 ns |     6,051.0 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| SimdMergeSort            | 8192 | Reversed           |   194,313.4 ns |    503.82 ns |    223.70 ns |   194,336.6 ns |  0.80 |    0.00 |    6 |         - |          NA |
-| DotnetSort               | 8192 | Reversed           |    59,820.0 ns |  4,705.05 ns |  2,460.83 ns |    59,271.8 ns |  0.25 |    0.01 |    3 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **8192** | **PipeOrgan**          |   **177,431.1 ns** |    **457.25 ns** |    **203.02 ns** |   **177,355.5 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| PingpongMergeSort        | 8192 | PipeOrgan          |   175,312.1 ns |  3,414.54 ns |  1,516.08 ns |   174,529.6 ns |  0.99 |    0.01 |    6 |         - |          NA |
-| BottomupMergeSort        | 8192 | PipeOrgan          |    87,105.6 ns |    891.64 ns |    395.89 ns |    86,866.8 ns |  0.49 |    0.00 |    5 |         - |          NA |
-| StdStableSort            | 8192 | PipeOrgan          |   118,717.5 ns |  1,331.90 ns |    696.61 ns |   118,756.1 ns |  0.67 |    0.00 |    5 |         - |          NA |
-| RotateMergeSort          | 8192 | PipeOrgan          |   185,343.5 ns |    859.45 ns |    381.60 ns |   185,470.1 ns |  1.04 |    0.00 |    6 |         - |          NA |
-| RotateMergeSortRecursive | 8192 | PipeOrgan          |   225,535.7 ns |  3,392.18 ns |  1,506.15 ns |   224,941.9 ns |  1.27 |    0.01 |    6 |         - |          NA |
-| SymMergeSort             | 8192 | PipeOrgan          |    99,280.1 ns |  1,763.88 ns |    922.55 ns |    99,355.7 ns |  0.56 |    0.00 |    5 |         - |          NA |
-| BlockMergeSort           | 8192 | PipeOrgan          |   100,302.5 ns |    520.38 ns |    231.05 ns |   100,299.1 ns |  0.57 |    0.00 |    5 |         - |          NA |
-| NaturalMergeSort         | 8192 | PipeOrgan          |    10,585.6 ns |    402.23 ns |    210.37 ns |    10,571.1 ns |  0.06 |    0.00 |    1 |         - |          NA |
-| PatienceSort             | 8192 | PipeOrgan          |   492,389.7 ns |  4,636.99 ns |  2,425.24 ns |   492,493.0 ns |  2.78 |    0.01 |    8 |         - |          NA |
-| DropMergeSort            | 8192 | PipeOrgan          |   182,190.6 ns |  2,024.51 ns |  1,058.86 ns |   181,815.4 ns |  1.03 |    0.01 |    6 |         - |          NA |
-| TimSort                  | 8192 | PipeOrgan          |    16,534.8 ns |    402.80 ns |    210.67 ns |    16,468.4 ns |  0.09 |    0.00 |    2 |         - |          NA |
-| PowerSort                | 8192 | PipeOrgan          |    10,453.8 ns |    388.50 ns |    172.50 ns |    10,524.4 ns |  0.06 |    0.00 |    1 |         - |          NA |
-| ShiftSort                | 8192 | PipeOrgan          |    81,881.8 ns |    275.65 ns |    144.17 ns |    81,908.7 ns |  0.46 |    0.00 |    5 |         - |          NA |
-| SpinSort                 | 8192 | PipeOrgan          |    14,158.3 ns |    334.27 ns |    148.42 ns |    14,232.7 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| Glidesort                | 8192 | PipeOrgan          |    29,451.0 ns |    255.14 ns |    113.28 ns |    29,492.9 ns |  0.17 |    0.00 |    3 |         - |          NA |
-| Driftsort                | 8192 | PipeOrgan          |     8,818.2 ns |    311.64 ns |    138.37 ns |     8,757.9 ns |  0.05 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 8192 | PipeOrgan          |    51,595.8 ns |    708.29 ns |    370.45 ns |    51,463.2 ns |  0.29 |    0.00 |    4 |         - |          NA |
-| QuadSort                 | 8192 | PipeOrgan          |    18,786.7 ns |    477.93 ns |    249.97 ns |    18,670.3 ns |  0.11 |    0.00 |    2 |         - |          NA |
-| SimdMergeSort            | 8192 | PipeOrgan          |   199,764.0 ns |  2,055.48 ns |  1,075.06 ns |   199,251.3 ns |  1.13 |    0.01 |    6 |         - |          NA |
-| DotnetSort               | 8192 | PipeOrgan          |   281,133.8 ns |  7,494.09 ns |  3,919.55 ns |   279,922.2 ns |  1.58 |    0.02 |    7 |         - |          NA |
-|      |                    |                |              |              |                |       |         |      |           |             |
-| **MergeSort**                | **8192** | **ManyDuplicates**     |   **438,469.5 ns** |  **4,370.76 ns** |  **2,285.99 ns** |   **438,042.4 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| PingpongMergeSort        | 8192 | ManyDuplicates     |   411,098.4 ns |    989.29 ns |    439.25 ns |   411,034.3 ns |  0.94 |    0.00 |    4 |         - |          NA |
-| BottomupMergeSort        | 8192 | ManyDuplicates     |   309,300.3 ns |  1,723.98 ns |    901.68 ns |   309,061.3 ns |  0.71 |    0.00 |    4 |         - |          NA |
-| StdStableSort            | 8192 | ManyDuplicates     |   220,788.2 ns |  4,305.16 ns |  2,251.68 ns |   220,855.4 ns |  0.50 |    0.01 |    4 |         - |          NA |
-| RotateMergeSort          | 8192 | ManyDuplicates     |   884,669.1 ns |  1,716.91 ns |    762.32 ns |   884,728.7 ns |  2.02 |    0.01 |    6 |         - |          NA |
-| RotateMergeSortRecursive | 8192 | ManyDuplicates     | 1,045,445.0 ns |  3,394.46 ns |  1,775.37 ns | 1,045,656.3 ns |  2.38 |    0.01 |    6 |         - |          NA |
-| SymMergeSort             | 8192 | ManyDuplicates     |   601,036.0 ns |  1,670.35 ns |    873.63 ns |   601,229.0 ns |  1.37 |    0.01 |    5 |         - |          NA |
-| BlockMergeSort           | 8192 | ManyDuplicates     |   439,909.3 ns |  3,080.55 ns |  1,611.19 ns |   439,579.4 ns |  1.00 |    0.01 |    4 |         - |          NA |
-| NaturalMergeSort         | 8192 | ManyDuplicates     |   319,460.1 ns |    630.51 ns |    279.95 ns |   319,488.0 ns |  0.73 |    0.00 |    4 |         - |          NA |
-| PatienceSort             | 8192 | ManyDuplicates     |   280,227.6 ns |    905.76 ns |    473.73 ns |   280,071.2 ns |  0.64 |    0.00 |    4 |         - |          NA |
-| DropMergeSort            | 8192 | ManyDuplicates     |   233,295.4 ns |    873.64 ns |    387.90 ns |   233,259.4 ns |  0.53 |    0.00 |    4 |         - |          NA |
-| TimSort                  | 8192 | ManyDuplicates     |   371,025.8 ns |    984.43 ns |    514.88 ns |   370,904.3 ns |  0.85 |    0.00 |    4 |         - |          NA |
-| PowerSort                | 8192 | ManyDuplicates     |   247,426.8 ns |  1,337.78 ns |    699.68 ns |   247,149.8 ns |  0.56 |    0.00 |    4 |         - |          NA |
-| ShiftSort                | 8192 | ManyDuplicates     |   384,314.8 ns |  1,591.03 ns |    832.14 ns |   384,376.5 ns |  0.88 |    0.00 |    4 |         - |          NA |
-| SpinSort                 | 8192 | ManyDuplicates     |   223,714.5 ns |  1,736.35 ns |    770.95 ns |   223,873.8 ns |  0.51 |    0.00 |    4 |         - |          NA |
-| Glidesort                | 8192 | ManyDuplicates     |    35,547.9 ns |  1,431.49 ns |    748.70 ns |    35,398.8 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| Driftsort                | 8192 | ManyDuplicates     |    24,305.3 ns |    254.07 ns |    112.81 ns |    24,299.5 ns |  0.06 |    0.00 |    1 |         - |          NA |
-| FlatStableSort           | 8192 | ManyDuplicates     |   246,951.5 ns |    784.44 ns |    279.74 ns |   247,005.0 ns |  0.56 |    0.00 |    4 |         - |          NA |
-| QuadSort                 | 8192 | ManyDuplicates     |   156,148.7 ns |    615.21 ns |    273.16 ns |   156,020.1 ns |  0.36 |    0.00 |    3 |         - |          NA |
-| SimdMergeSort            | 8192 | ManyDuplicates     |   194,793.0 ns |    606.68 ns |    269.37 ns |   194,879.1 ns |  0.44 |    0.00 |    4 |         - |          NA |
-| DotnetSort               | 8192 | ManyDuplicates     |   190,628.9 ns |  1,039.17 ns |    543.51 ns |   190,498.0 ns |  0.43 |    0.00 |    4 |         - |          NA |
+| Method                   | Size | Pattern            | Mean           | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+| ------------------------- |----- |------------------- |---------------:|-------------:|-------------:|------:|--------:|-----:|----------:|------------:|
+| **MergeSort**                | **256**  | **Random**             |    **12,657.7 ns** |    **222.51 ns** |    **116.38 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| PingpongMergeSort        | 256  | Random             |    12,046.7 ns |    288.73 ns |    151.01 ns |  0.95 |    0.01 |    4 |         - |          NA |
+| BottomupMergeSort        | 256  | Random             |     9,072.0 ns |    322.89 ns |    168.88 ns |  0.72 |    0.01 |    4 |         - |          NA |
+| StdStableSort            | 256  | Random             |     5,406.8 ns |    271.20 ns |    141.84 ns |  0.43 |    0.01 |    3 |         - |          NA |
+| RotateMergeSort          | 256  | Random             |    18,644.9 ns |    398.86 ns |    177.10 ns |  1.47 |    0.02 |    5 |         - |          NA |
+| RotateMergeSortRecursive | 256  | Random             |    22,724.0 ns |    521.86 ns |    231.71 ns |  1.80 |    0.02 |    6 |         - |          NA |
+| SymMergeSort             | 256  | Random             |    12,410.2 ns |    366.08 ns |    162.54 ns |  0.98 |    0.01 |    4 |         - |          NA |
+| BlockMergeSort           | 256  | Random             |     9,790.1 ns |    250.22 ns |    130.87 ns |  0.77 |    0.01 |    4 |         - |          NA |
+| NaturalMergeSort         | 256  | Random             |     9,144.6 ns |    301.89 ns |    134.04 ns |  0.72 |    0.01 |    4 |         - |          NA |
+| PatienceSort             | 256  | Random             |    13,136.4 ns |    390.53 ns |    204.26 ns |  1.04 |    0.02 |    4 |         - |          NA |
+| DropMergeSort            | 256  | Random             |     9,432.8 ns |    368.06 ns |    192.50 ns |  0.75 |    0.02 |    4 |         - |          NA |
+| TimSort                  | 256  | Random             |    10,195.0 ns |    240.79 ns |    125.94 ns |  0.81 |    0.01 |    4 |         - |          NA |
+| PowerSort                | 256  | Random             |     6,701.7 ns |    156.59 ns |     69.53 ns |  0.53 |    0.01 |    3 |         - |          NA |
+| ShiftSort                | 256  | Random             |    10,120.9 ns |    337.40 ns |    176.47 ns |  0.80 |    0.01 |    4 |         - |          NA |
+| SpinSort                 | 256  | Random             |     5,925.4 ns |    268.97 ns |    140.68 ns |  0.47 |    0.01 |    3 |         - |          NA |
+| Glidesort                | 256  | Random             |     5,658.4 ns |    161.05 ns |     71.51 ns |  0.45 |    0.01 |    3 |         - |          NA |
+| Driftsort                | 256  | Random             |     4,943.2 ns |    594.43 ns |    310.90 ns |  0.39 |    0.02 |    3 |         - |          NA |
+| FlatStableSort           | 256  | Random             |     6,659.2 ns |    325.08 ns |    170.02 ns |  0.53 |    0.01 |    3 |         - |          NA |
+| QuadSort                 | 256  | Random             |     3,516.1 ns |    357.10 ns |    186.77 ns |  0.28 |    0.01 |    2 |         - |          NA |
+| SimdMergeSort            | 256  | Random             |     2,651.3 ns |    288.63 ns |    150.96 ns |  0.21 |    0.01 |    1 |         - |          NA |
+| DotnetSort               | 256  | Random             |     5,798.7 ns |    100.20 ns |     44.49 ns |  0.46 |    0.01 |    3 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **256**  | **SingleElementMoved** |     **3,575.0 ns** |    **269.14 ns** |    **140.77 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| PingpongMergeSort        | 256  | SingleElementMoved |     4,283.0 ns |    251.31 ns |    111.58 ns |  1.20 |    0.05 |    7 |         - |          NA |
+| BottomupMergeSort        | 256  | SingleElementMoved |     1,352.5 ns |     67.38 ns |     29.92 ns |  0.38 |    0.02 |    4 |         - |          NA |
+| StdStableSort            | 256  | SingleElementMoved |       579.1 ns |     30.61 ns |     13.59 ns |  0.16 |    0.01 |    2 |         - |          NA |
+| RotateMergeSort          | 256  | SingleElementMoved |       508.8 ns |     34.21 ns |     15.19 ns |  0.14 |    0.01 |    2 |         - |          NA |
+| RotateMergeSortRecursive | 256  | SingleElementMoved |       728.1 ns |     83.44 ns |     37.05 ns |  0.20 |    0.01 |    2 |         - |          NA |
+| SymMergeSort             | 256  | SingleElementMoved |       396.1 ns |     41.83 ns |     18.57 ns |  0.11 |    0.01 |    1 |         - |          NA |
+| BlockMergeSort           | 256  | SingleElementMoved |     2,271.6 ns |     32.58 ns |     14.47 ns |  0.64 |    0.02 |    5 |         - |          NA |
+| NaturalMergeSort         | 256  | SingleElementMoved |       366.6 ns |     22.28 ns |      9.89 ns |  0.10 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 256  | SingleElementMoved |     7,376.2 ns |    708.63 ns |    370.63 ns |  2.07 |    0.12 |    8 |         - |          NA |
+| DropMergeSort            | 256  | SingleElementMoved |       517.5 ns |      9.95 ns |      4.42 ns |  0.14 |    0.01 |    2 |         - |          NA |
+| TimSort                  | 256  | SingleElementMoved |       306.2 ns |     36.11 ns |     18.89 ns |  0.09 |    0.01 |    1 |         - |          NA |
+| PowerSort                | 256  | SingleElementMoved |       344.9 ns |     18.96 ns |      9.91 ns |  0.10 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 256  | SingleElementMoved |       388.5 ns |     38.21 ns |     16.97 ns |  0.11 |    0.01 |    1 |         - |          NA |
+| SpinSort                 | 256  | SingleElementMoved |       672.6 ns |     34.42 ns |     15.28 ns |  0.19 |    0.01 |    2 |         - |          NA |
+| Glidesort                | 256  | SingleElementMoved |       690.5 ns |    133.24 ns |     59.16 ns |  0.19 |    0.02 |    2 |         - |          NA |
+| Driftsort                | 256  | SingleElementMoved |       585.0 ns |     16.14 ns |      7.17 ns |  0.16 |    0.01 |    2 |         - |          NA |
+| FlatStableSort           | 256  | SingleElementMoved |     1,084.9 ns |     60.14 ns |     26.70 ns |  0.30 |    0.01 |    3 |         - |          NA |
+| QuadSort                 | 256  | SingleElementMoved |       535.4 ns |     38.77 ns |     17.21 ns |  0.15 |    0.01 |    2 |         - |          NA |
+| SimdMergeSort            | 256  | SingleElementMoved |     1,946.7 ns |     39.46 ns |     17.52 ns |  0.55 |    0.02 |    5 |         - |          NA |
+| DotnetSort               | 256  | SingleElementMoved |     1,166.7 ns |    295.39 ns |    154.49 ns |  0.33 |    0.04 |    3 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **256**  | **Sorted**             |     **3,332.0 ns** |     **42.10 ns** |     **15.01 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| PingpongMergeSort        | 256  | Sorted             |     4,043.2 ns |     49.76 ns |     22.09 ns |  1.21 |    0.01 |    7 |         - |          NA |
+| BottomupMergeSort        | 256  | Sorted             |     1,164.2 ns |     74.48 ns |     33.07 ns |  0.35 |    0.01 |    4 |         - |          NA |
+| StdStableSort            | 256  | Sorted             |       491.1 ns |      4.00 ns |      2.09 ns |  0.15 |    0.00 |    2 |         - |          NA |
+| RotateMergeSort          | 256  | Sorted             |       255.4 ns |     36.96 ns |     19.33 ns |  0.08 |    0.01 |    1 |         - |          NA |
+| RotateMergeSortRecursive | 256  | Sorted             |       410.4 ns |      4.32 ns |      1.54 ns |  0.12 |    0.00 |    2 |         - |          NA |
+| SymMergeSort             | 256  | Sorted             |       234.1 ns |     14.40 ns |      6.39 ns |  0.07 |    0.00 |    1 |         - |          NA |
+| BlockMergeSort           | 256  | Sorted             |     2,100.6 ns |    263.58 ns |    137.86 ns |  0.63 |    0.04 |    5 |         - |          NA |
+| NaturalMergeSort         | 256  | Sorted             |       199.7 ns |     24.25 ns |     12.68 ns |  0.06 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 256  | Sorted             |     6,162.5 ns |    176.51 ns |     92.32 ns |  1.85 |    0.03 |    8 |         - |          NA |
+| DropMergeSort            | 256  | Sorted             |       460.5 ns |      7.49 ns |      3.32 ns |  0.14 |    0.00 |    2 |         - |          NA |
+| TimSort                  | 256  | Sorted             |       150.8 ns |     34.57 ns |     15.35 ns |  0.05 |    0.00 |    1 |         - |          NA |
+| PowerSort                | 256  | Sorted             |       134.5 ns |      3.28 ns |      1.17 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 256  | Sorted             |       214.5 ns |     29.25 ns |     12.99 ns |  0.06 |    0.00 |    1 |         - |          NA |
+| SpinSort                 | 256  | Sorted             |       122.4 ns |      0.92 ns |      0.33 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| Glidesort                | 256  | Sorted             |       168.0 ns |     27.12 ns |     12.04 ns |  0.05 |    0.00 |    1 |         - |          NA |
+| Driftsort                | 256  | Sorted             |       192.1 ns |      6.08 ns |      2.70 ns |  0.06 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 256  | Sorted             |       998.4 ns |      9.47 ns |      4.20 ns |  0.30 |    0.00 |    4 |         - |          NA |
+| QuadSort                 | 256  | Sorted             |       262.4 ns |     53.97 ns |     23.96 ns |  0.08 |    0.01 |    1 |         - |          NA |
+| SimdMergeSort            | 256  | Sorted             |     1,970.1 ns |     79.58 ns |     35.33 ns |  0.59 |    0.01 |    5 |         - |          NA |
+| DotnetSort               | 256  | Sorted             |       634.6 ns |     24.38 ns |     10.83 ns |  0.19 |    0.00 |    3 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **256**  | **Reversed**           |     **7,095.2 ns** |     **82.09 ns** |     **36.45 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| PingpongMergeSort        | 256  | Reversed           |     6,336.7 ns |    341.67 ns |    178.70 ns |  0.89 |    0.02 |    6 |         - |          NA |
+| BottomupMergeSort        | 256  | Reversed           |     3,822.8 ns |    323.41 ns |    169.15 ns |  0.54 |    0.02 |    5 |         - |          NA |
+| StdStableSort            | 256  | Reversed           |     3,189.7 ns |      9.27 ns |      3.31 ns |  0.45 |    0.00 |    5 |         - |          NA |
+| RotateMergeSort          | 256  | Reversed           |     4,451.9 ns |    317.27 ns |    165.94 ns |  0.63 |    0.02 |    5 |         - |          NA |
+| RotateMergeSortRecursive | 256  | Reversed           |     6,038.3 ns |    180.28 ns |     80.04 ns |  0.85 |    0.01 |    6 |         - |          NA |
+| SymMergeSort             | 256  | Reversed           |     1,739.3 ns |     21.18 ns |      9.41 ns |  0.25 |    0.00 |    3 |         - |          NA |
+| BlockMergeSort           | 256  | Reversed           |     2,416.7 ns |      5.57 ns |      1.99 ns |  0.34 |    0.00 |    4 |         - |          NA |
+| NaturalMergeSort         | 256  | Reversed           |       231.8 ns |     15.01 ns |      7.85 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 256  | Reversed           |     1,296.9 ns |     72.84 ns |     32.34 ns |  0.18 |    0.00 |    2 |         - |          NA |
+| DropMergeSort            | 256  | Reversed           |     1,231.2 ns |     68.56 ns |     30.44 ns |  0.17 |    0.00 |    2 |         - |          NA |
+| TimSort                  | 256  | Reversed           |       202.1 ns |     21.54 ns |      9.56 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| PowerSort                | 256  | Reversed           |       184.8 ns |      1.56 ns |      0.56 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 256  | Reversed           |     3,198.9 ns |      9.06 ns |      3.23 ns |  0.45 |    0.00 |    5 |         - |          NA |
+| SpinSort                 | 256  | Reversed           |       223.2 ns |      4.13 ns |      1.47 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| Glidesort                | 256  | Reversed           |       222.9 ns |      3.76 ns |      1.34 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| Driftsort                | 256  | Reversed           |       231.9 ns |     14.37 ns |      6.38 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 256  | Reversed           |     1,737.4 ns |     15.35 ns |      6.81 ns |  0.24 |    0.00 |    3 |         - |          NA |
+| QuadSort                 | 256  | Reversed           |       215.1 ns |      5.48 ns |      2.44 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| SimdMergeSort            | 256  | Reversed           |     2,541.7 ns |     44.46 ns |     15.86 ns |  0.36 |    0.00 |    4 |         - |          NA |
+| DotnetSort               | 256  | Reversed           |     1,173.8 ns |     49.96 ns |     22.18 ns |  0.17 |    0.00 |    2 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **256**  | **PipeOrgan**          |     **5,246.8 ns** |    **143.72 ns** |     **75.17 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| PingpongMergeSort        | 256  | PipeOrgan          |     5,321.9 ns |    322.67 ns |    168.76 ns |  1.01 |    0.03 |    5 |         - |          NA |
+| BottomupMergeSort        | 256  | PipeOrgan          |     2,593.1 ns |    168.00 ns |     74.59 ns |  0.49 |    0.01 |    4 |         - |          NA |
+| StdStableSort            | 256  | PipeOrgan          |     1,912.1 ns |     19.69 ns |     10.30 ns |  0.36 |    0.01 |    4 |         - |          NA |
+| RotateMergeSort          | 256  | PipeOrgan          |     4,432.5 ns |    294.08 ns |    153.81 ns |  0.84 |    0.03 |    5 |         - |          NA |
+| RotateMergeSortRecursive | 256  | PipeOrgan          |     5,616.0 ns |    318.06 ns |    141.22 ns |  1.07 |    0.03 |    5 |         - |          NA |
+| SymMergeSort             | 256  | PipeOrgan          |     2,631.3 ns |     61.90 ns |     22.07 ns |  0.50 |    0.01 |    4 |         - |          NA |
+| BlockMergeSort           | 256  | PipeOrgan          |     2,407.1 ns |     27.29 ns |     12.12 ns |  0.46 |    0.01 |    4 |         - |          NA |
+| NaturalMergeSort         | 256  | PipeOrgan          |       385.2 ns |      7.34 ns |      3.26 ns |  0.07 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 256  | PipeOrgan          |     4,664.1 ns |    326.35 ns |    170.69 ns |  0.89 |    0.03 |    5 |         - |          NA |
+| DropMergeSort            | 256  | PipeOrgan          |     5,188.3 ns |    307.52 ns |    160.84 ns |  0.99 |    0.03 |    5 |         - |          NA |
+| TimSort                  | 256  | PipeOrgan          |       592.9 ns |     12.23 ns |      4.36 ns |  0.11 |    0.00 |    2 |         - |          NA |
+| PowerSort                | 256  | PipeOrgan          |       386.2 ns |      8.45 ns |      4.42 ns |  0.07 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 256  | PipeOrgan          |     2,120.7 ns |    268.82 ns |    119.36 ns |  0.40 |    0.02 |    4 |         - |          NA |
+| SpinSort                 | 256  | PipeOrgan          |     1,594.9 ns |     24.80 ns |     11.01 ns |  0.30 |    0.00 |    4 |         - |          NA |
+| Glidesort                | 256  | PipeOrgan          |       998.4 ns |     32.94 ns |     14.63 ns |  0.19 |    0.00 |    3 |         - |          NA |
+| Driftsort                | 256  | PipeOrgan          |       352.1 ns |      4.30 ns |      1.91 ns |  0.07 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 256  | PipeOrgan          |     1,470.8 ns |     23.01 ns |     10.22 ns |  0.28 |    0.00 |    4 |         - |          NA |
+| QuadSort                 | 256  | PipeOrgan          |       688.2 ns |     20.25 ns |      8.99 ns |  0.13 |    0.00 |    2 |         - |          NA |
+| SimdMergeSort            | 256  | PipeOrgan          |     1,968.8 ns |    255.31 ns |    113.36 ns |  0.38 |    0.02 |    4 |         - |          NA |
+| DotnetSort               | 256  | PipeOrgan          |     1,791.4 ns |    132.37 ns |     58.77 ns |  0.34 |    0.01 |    4 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **256**  | **ManyDuplicates**     |    **12,331.7 ns** |    **420.32 ns** |    **219.84 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| PingpongMergeSort        | 256  | ManyDuplicates     |    11,606.0 ns |    209.77 ns |    109.71 ns |  0.94 |    0.02 |    4 |         - |          NA |
+| BottomupMergeSort        | 256  | ManyDuplicates     |     8,716.3 ns |    265.19 ns |    138.70 ns |  0.71 |    0.02 |    4 |         - |          NA |
+| StdStableSort            | 256  | ManyDuplicates     |     4,915.7 ns |    336.66 ns |    176.08 ns |  0.40 |    0.02 |    3 |         - |          NA |
+| RotateMergeSort          | 256  | ManyDuplicates     |    18,231.7 ns |    405.56 ns |    180.07 ns |  1.48 |    0.03 |    5 |         - |          NA |
+| RotateMergeSortRecursive | 256  | ManyDuplicates     |    22,290.6 ns |    448.52 ns |    234.59 ns |  1.81 |    0.04 |    6 |         - |          NA |
+| SymMergeSort             | 256  | ManyDuplicates     |    12,061.5 ns |    273.43 ns |    143.01 ns |  0.98 |    0.02 |    4 |         - |          NA |
+| BlockMergeSort           | 256  | ManyDuplicates     |     9,486.7 ns |    336.23 ns |    175.85 ns |  0.77 |    0.02 |    4 |         - |          NA |
+| NaturalMergeSort         | 256  | ManyDuplicates     |     8,963.9 ns |    287.59 ns |    150.41 ns |  0.73 |    0.02 |    4 |         - |          NA |
+| PatienceSort             | 256  | ManyDuplicates     |    11,066.2 ns |    316.40 ns |    140.48 ns |  0.90 |    0.02 |    4 |         - |          NA |
+| DropMergeSort            | 256  | ManyDuplicates     |     8,030.5 ns |    261.28 ns |    116.01 ns |  0.65 |    0.01 |    4 |         - |          NA |
+| TimSort                  | 256  | ManyDuplicates     |     9,721.0 ns |    405.82 ns |    212.25 ns |  0.79 |    0.02 |    4 |         - |          NA |
+| PowerSort                | 256  | ManyDuplicates     |     6,117.5 ns |    193.11 ns |    101.00 ns |  0.50 |    0.01 |    3 |         - |          NA |
+| ShiftSort                | 256  | ManyDuplicates     |     9,715.2 ns |    358.99 ns |    187.76 ns |  0.79 |    0.02 |    4 |         - |          NA |
+| SpinSort                 | 256  | ManyDuplicates     |     5,398.1 ns |    229.27 ns |    119.91 ns |  0.44 |    0.01 |    3 |         - |          NA |
+| Glidesort                | 256  | ManyDuplicates     |     5,381.3 ns |    320.38 ns |    142.25 ns |  0.44 |    0.01 |    3 |         - |          NA |
+| Driftsort                | 256  | ManyDuplicates     |     4,761.9 ns |    292.21 ns |    152.83 ns |  0.39 |    0.01 |    3 |         - |          NA |
+| FlatStableSort           | 256  | ManyDuplicates     |     6,410.6 ns |    291.09 ns |    152.25 ns |  0.52 |    0.01 |    3 |         - |          NA |
+| QuadSort                 | 256  | ManyDuplicates     |     3,536.7 ns |    320.28 ns |    167.51 ns |  0.29 |    0.01 |    2 |         - |          NA |
+| SimdMergeSort            | 256  | ManyDuplicates     |     2,668.1 ns |    283.92 ns |    148.49 ns |  0.22 |    0.01 |    1 |         - |          NA |
+| DotnetSort               | 256  | ManyDuplicates     |     5,598.4 ns |    468.87 ns |    245.23 ns |  0.45 |    0.02 |    3 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **1024** | **Random**             |    **58,527.4 ns** |    **530.96 ns** |    **235.75 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| PingpongMergeSort        | 1024 | Random             |    58,772.6 ns |  7,570.20 ns |  3,361.22 ns |  1.00 |    0.05 |    3 |         - |          NA |
+| BottomupMergeSort        | 1024 | Random             |    42,693.6 ns |    259.96 ns |    135.96 ns |  0.73 |    0.00 |    3 |         - |          NA |
+| StdStableSort            | 1024 | Random             |    29,238.1 ns |    330.84 ns |    173.04 ns |  0.50 |    0.00 |    2 |         - |          NA |
+| RotateMergeSort          | 1024 | Random             |   108,329.1 ns |  1,729.32 ns |    767.83 ns |  1.85 |    0.01 |    4 |         - |          NA |
+| RotateMergeSortRecursive | 1024 | Random             |   127,676.3 ns |    417.64 ns |    185.43 ns |  2.18 |    0.01 |    4 |         - |          NA |
+| SymMergeSort             | 1024 | Random             |    72,331.8 ns |    307.75 ns |    136.64 ns |  1.24 |    0.01 |    3 |         - |          NA |
+| BlockMergeSort           | 1024 | Random             |    49,488.5 ns |    219.91 ns |    115.02 ns |  0.85 |    0.00 |    3 |         - |          NA |
+| NaturalMergeSort         | 1024 | Random             |    44,547.8 ns |    401.78 ns |    210.14 ns |  0.76 |    0.00 |    3 |         - |          NA |
+| PatienceSort             | 1024 | Random             |    64,593.3 ns |    278.82 ns |    145.83 ns |  1.10 |    0.00 |    3 |         - |          NA |
+| DropMergeSort            | 1024 | Random             |    43,788.2 ns |    401.86 ns |    210.18 ns |  0.75 |    0.00 |    3 |         - |          NA |
+| TimSort                  | 1024 | Random             |    50,169.5 ns |    285.86 ns |    149.51 ns |  0.86 |    0.00 |    3 |         - |          NA |
+| PowerSort                | 1024 | Random             |    35,312.5 ns |    533.03 ns |    278.79 ns |  0.60 |    0.01 |    2 |         - |          NA |
+| ShiftSort                | 1024 | Random             |    50,510.4 ns |    247.73 ns |    110.00 ns |  0.86 |    0.00 |    3 |         - |          NA |
+| SpinSort                 | 1024 | Random             |    31,485.3 ns |    252.13 ns |    131.87 ns |  0.54 |    0.00 |    2 |         - |          NA |
+| Glidesort                | 1024 | Random             |    24,378.4 ns |    207.74 ns |     92.24 ns |  0.42 |    0.00 |    1 |         - |          NA |
+| Driftsort                | 1024 | Random             |    20,992.3 ns |    286.10 ns |    127.03 ns |  0.36 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 1024 | Random             |    34,339.5 ns |    398.33 ns |    208.34 ns |  0.59 |    0.00 |    2 |         - |          NA |
+| QuadSort                 | 1024 | Random             |    17,828.8 ns |    251.63 ns |    131.61 ns |  0.30 |    0.00 |    1 |         - |          NA |
+| SimdMergeSort            | 1024 | Random             |    16,479.3 ns |    121.03 ns |     53.74 ns |  0.28 |    0.00 |    1 |         - |          NA |
+| DotnetSort               | 1024 | Random             |    30,154.1 ns |    510.87 ns |    267.19 ns |  0.52 |    0.00 |    2 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **1024** | **SingleElementMoved** |    **13,871.2 ns** |    **216.29 ns** |    **113.12 ns** |  **1.00** |    **0.00** |    **7** |         **-** |          **NA** |
+| PingpongMergeSort        | 1024 | SingleElementMoved |    16,952.7 ns |    121.25 ns |     53.84 ns |  1.22 |    0.01 |    8 |         - |          NA |
+| BottomupMergeSort        | 1024 | SingleElementMoved |     5,182.0 ns |    121.99 ns |     54.17 ns |  0.37 |    0.00 |    5 |         - |          NA |
+| StdStableSort            | 1024 | SingleElementMoved |     2,611.6 ns |     42.06 ns |     15.00 ns |  0.19 |    0.00 |    4 |         - |          NA |
+| RotateMergeSort          | 1024 | SingleElementMoved |     1,500.9 ns |     99.87 ns |     44.34 ns |  0.11 |    0.00 |    3 |         - |          NA |
+| RotateMergeSortRecursive | 1024 | SingleElementMoved |     2,184.9 ns |     43.46 ns |     19.29 ns |  0.16 |    0.00 |    4 |         - |          NA |
+| SymMergeSort             | 1024 | SingleElementMoved |     1,221.2 ns |     33.42 ns |     14.84 ns |  0.09 |    0.00 |    2 |         - |          NA |
+| BlockMergeSort           | 1024 | SingleElementMoved |     9,671.3 ns |    351.86 ns |    184.03 ns |  0.70 |    0.01 |    6 |         - |          NA |
+| NaturalMergeSort         | 1024 | SingleElementMoved |     1,043.5 ns |     25.22 ns |     11.20 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| PatienceSort             | 1024 | SingleElementMoved |    38,155.6 ns |    718.42 ns |    318.98 ns |  2.75 |    0.03 |    9 |         - |          NA |
+| DropMergeSort            | 1024 | SingleElementMoved |     1,884.9 ns |     42.64 ns |     22.30 ns |  0.14 |    0.00 |    4 |         - |          NA |
+| TimSort                  | 1024 | SingleElementMoved |       743.4 ns |     35.78 ns |     15.89 ns |  0.05 |    0.00 |    1 |         - |          NA |
+| PowerSort                | 1024 | SingleElementMoved |     1,053.0 ns |     14.84 ns |      7.76 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| ShiftSort                | 1024 | SingleElementMoved |     1,237.8 ns |     33.93 ns |     15.07 ns |  0.09 |    0.00 |    2 |         - |          NA |
+| SpinSort                 | 1024 | SingleElementMoved |     2,841.0 ns |     45.72 ns |     20.30 ns |  0.20 |    0.00 |    4 |         - |          NA |
+| Glidesort                | 1024 | SingleElementMoved |     1,850.1 ns |     10.68 ns |      3.81 ns |  0.13 |    0.00 |    4 |         - |          NA |
+| Driftsort                | 1024 | SingleElementMoved |     1,102.8 ns |     45.82 ns |     16.34 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| FlatStableSort           | 1024 | SingleElementMoved |     4,597.7 ns |     22.40 ns |      7.99 ns |  0.33 |    0.00 |    5 |         - |          NA |
+| QuadSort                 | 1024 | SingleElementMoved |     1,215.2 ns |     45.36 ns |     20.14 ns |  0.09 |    0.00 |    2 |         - |          NA |
+| SimdMergeSort            | 1024 | SingleElementMoved |    12,501.0 ns |     44.92 ns |     16.02 ns |  0.90 |    0.01 |    7 |         - |          NA |
+| DotnetSort               | 1024 | SingleElementMoved |     5,266.6 ns |    215.23 ns |     95.56 ns |  0.38 |    0.01 |    5 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **1024** | **Sorted**             |    **13,374.0 ns** |    **243.44 ns** |    **127.32 ns** |  **1.00** |    **0.00** |    **8** |         **-** |          **NA** |
+| PingpongMergeSort        | 1024 | Sorted             |    16,425.4 ns |    270.78 ns |    120.23 ns |  1.23 |    0.01 |    9 |         - |          NA |
+| BottomupMergeSort        | 1024 | Sorted             |     4,521.9 ns |     18.44 ns |      8.19 ns |  0.34 |    0.00 |    6 |         - |          NA |
+| StdStableSort            | 1024 | Sorted             |     2,386.1 ns |      7.80 ns |      3.46 ns |  0.18 |    0.00 |    4 |         - |          NA |
+| RotateMergeSort          | 1024 | Sorted             |       966.1 ns |     24.28 ns |      8.66 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| RotateMergeSortRecursive | 1024 | Sorted             |     1,566.7 ns |     22.70 ns |     10.08 ns |  0.12 |    0.00 |    3 |         - |          NA |
+| SymMergeSort             | 1024 | Sorted             |       938.5 ns |     12.50 ns |      6.54 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| BlockMergeSort           | 1024 | Sorted             |     8,501.2 ns |    286.34 ns |    149.76 ns |  0.64 |    0.01 |    7 |         - |          NA |
+| NaturalMergeSort         | 1024 | Sorted             |       561.3 ns |     41.91 ns |     18.61 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 1024 | Sorted             |    31,758.7 ns |    601.71 ns |    267.16 ns |  2.37 |    0.03 |   10 |         - |          NA |
+| DropMergeSort            | 1024 | Sorted             |     1,736.8 ns |     19.00 ns |      8.43 ns |  0.13 |    0.00 |    3 |         - |          NA |
+| TimSort                  | 1024 | Sorted             |       494.0 ns |      8.97 ns |      3.98 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| PowerSort                | 1024 | Sorted             |       506.2 ns |     47.89 ns |     21.27 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 1024 | Sorted             |       635.6 ns |     39.40 ns |     17.49 ns |  0.05 |    0.00 |    1 |         - |          NA |
+| SpinSort                 | 1024 | Sorted             |       433.1 ns |     12.66 ns |      5.62 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| Glidesort                | 1024 | Sorted             |       467.5 ns |     12.83 ns |      5.70 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| Driftsort                | 1024 | Sorted             |       513.6 ns |      8.15 ns |      2.91 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 1024 | Sorted             |     4,301.4 ns |    173.15 ns |     90.56 ns |  0.32 |    0.01 |    6 |         - |          NA |
+| QuadSort                 | 1024 | Sorted             |       691.4 ns |     18.93 ns |      8.41 ns |  0.05 |    0.00 |    1 |         - |          NA |
+| SimdMergeSort            | 1024 | Sorted             |    12,283.0 ns |    230.49 ns |    102.34 ns |  0.92 |    0.01 |    8 |         - |          NA |
+| DotnetSort               | 1024 | Sorted             |     3,498.8 ns |    557.94 ns |    291.81 ns |  0.26 |    0.02 |    5 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **1024** | **Reversed**           |    **29,066.1 ns** |    **280.94 ns** |    **124.74 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| PingpongMergeSort        | 1024 | Reversed           |    25,617.0 ns |    425.56 ns |    188.95 ns |  0.88 |    0.01 |    6 |         - |          NA |
+| BottomupMergeSort        | 1024 | Reversed           |    15,466.8 ns |    128.81 ns |     67.37 ns |  0.53 |    0.00 |    4 |         - |          NA |
+| StdStableSort            | 1024 | Reversed           |    13,781.7 ns |     82.07 ns |     36.44 ns |  0.47 |    0.00 |    4 |         - |          NA |
+| RotateMergeSort          | 1024 | Reversed           |    20,506.2 ns |    242.22 ns |    126.69 ns |  0.71 |    0.00 |    5 |         - |          NA |
+| RotateMergeSortRecursive | 1024 | Reversed           |    27,856.3 ns |    218.53 ns |    114.30 ns |  0.96 |    0.01 |    6 |         - |          NA |
+| SymMergeSort             | 1024 | Reversed           |     7,717.1 ns |    522.01 ns |    273.02 ns |  0.27 |    0.01 |    3 |         - |          NA |
+| BlockMergeSort           | 1024 | Reversed           |    11,688.3 ns |    287.65 ns |    150.45 ns |  0.40 |    0.01 |    4 |         - |          NA |
+| NaturalMergeSort         | 1024 | Reversed           |       776.8 ns |     22.61 ns |     10.04 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 1024 | Reversed           |     4,295.9 ns |     19.79 ns |      8.79 ns |  0.15 |    0.00 |    2 |         - |          NA |
+| DropMergeSort            | 1024 | Reversed           |     5,510.1 ns |    195.77 ns |    102.39 ns |  0.19 |    0.00 |    3 |         - |          NA |
+| TimSort                  | 1024 | Reversed           |       766.8 ns |      8.51 ns |      3.78 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| PowerSort                | 1024 | Reversed           |       736.6 ns |     17.38 ns |      7.72 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 1024 | Reversed           |    14,568.9 ns |    260.63 ns |    136.31 ns |  0.50 |    0.00 |    4 |         - |          NA |
+| SpinSort                 | 1024 | Reversed           |       793.0 ns |     58.22 ns |     25.85 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| Glidesort                | 1024 | Reversed           |       776.0 ns |     34.55 ns |     15.34 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| Driftsort                | 1024 | Reversed           |       789.5 ns |     33.88 ns |     12.08 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 1024 | Reversed           |     7,044.3 ns |    329.75 ns |    172.47 ns |  0.24 |    0.01 |    3 |         - |          NA |
+| QuadSort                 | 1024 | Reversed           |       817.4 ns |     93.60 ns |     41.56 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| SimdMergeSort            | 1024 | Reversed           |    15,641.0 ns |    172.48 ns |     76.58 ns |  0.54 |    0.00 |    4 |         - |          NA |
+| DotnetSort               | 1024 | Reversed           |     6,270.5 ns |  1,347.73 ns |    480.61 ns |  0.22 |    0.02 |    3 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **1024** | **PipeOrgan**          |    **21,592.1 ns** |    **236.32 ns** |    **123.60 ns** |  **1.00** |    **0.00** |    **7** |         **-** |          **NA** |
+| PingpongMergeSort        | 1024 | PipeOrgan          |    21,448.8 ns |    296.58 ns |    155.12 ns |  0.99 |    0.01 |    7 |         - |          NA |
+| BottomupMergeSort        | 1024 | PipeOrgan          |    10,479.9 ns |    279.67 ns |    146.27 ns |  0.49 |    0.01 |    5 |         - |          NA |
+| StdStableSort            | 1024 | PipeOrgan          |     8,577.3 ns |    575.30 ns |    300.89 ns |  0.40 |    0.01 |    5 |         - |          NA |
+| RotateMergeSort          | 1024 | PipeOrgan          |    20,211.4 ns |    902.67 ns |    472.11 ns |  0.94 |    0.02 |    7 |         - |          NA |
+| RotateMergeSortRecursive | 1024 | PipeOrgan          |    25,078.3 ns |    340.26 ns |    177.96 ns |  1.16 |    0.01 |    7 |         - |          NA |
+| SymMergeSort             | 1024 | PipeOrgan          |    11,646.9 ns |    571.27 ns |    298.79 ns |  0.54 |    0.01 |    5 |         - |          NA |
+| BlockMergeSort           | 1024 | PipeOrgan          |    12,063.2 ns |    262.71 ns |    137.40 ns |  0.56 |    0.01 |    5 |         - |          NA |
+| NaturalMergeSort         | 1024 | PipeOrgan          |     1,460.3 ns |    142.91 ns |     74.74 ns |  0.07 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 1024 | PipeOrgan          |    22,216.6 ns |    605.91 ns |    269.03 ns |  1.03 |    0.01 |    7 |         - |          NA |
+| DropMergeSort            | 1024 | PipeOrgan          |    21,658.7 ns |    403.13 ns |    210.85 ns |  1.00 |    0.01 |    7 |         - |          NA |
+| TimSort                  | 1024 | PipeOrgan          |     2,161.6 ns |     61.67 ns |     27.38 ns |  0.10 |    0.00 |    2 |         - |          NA |
+| PowerSort                | 1024 | PipeOrgan          |     1,430.6 ns |    171.20 ns |     76.01 ns |  0.07 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 1024 | PipeOrgan          |     9,372.9 ns |    268.90 ns |    140.64 ns |  0.43 |    0.01 |    5 |         - |          NA |
+| SpinSort                 | 1024 | PipeOrgan          |     7,086.7 ns |    384.20 ns |    200.94 ns |  0.33 |    0.01 |    4 |         - |          NA |
+| Glidesort                | 1024 | PipeOrgan          |     3,751.9 ns |     44.49 ns |     19.75 ns |  0.17 |    0.00 |    3 |         - |          NA |
+| Driftsort                | 1024 | PipeOrgan          |     1,228.2 ns |     26.90 ns |     11.94 ns |  0.06 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 1024 | PipeOrgan          |     6,431.7 ns |    383.27 ns |    170.17 ns |  0.30 |    0.01 |    4 |         - |          NA |
+| QuadSort                 | 1024 | PipeOrgan          |     2,426.2 ns |    154.83 ns |     68.75 ns |  0.11 |    0.00 |    2 |         - |          NA |
+| SimdMergeSort            | 1024 | PipeOrgan          |    15,679.3 ns |    209.34 ns |     92.95 ns |  0.73 |    0.01 |    6 |         - |          NA |
+| DotnetSort               | 1024 | PipeOrgan          |    12,822.3 ns |    464.93 ns |    206.43 ns |  0.59 |    0.01 |    5 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **1024** | **ManyDuplicates**     |    **52,345.1 ns** |    **480.33 ns** |    **251.22 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| PingpongMergeSort        | 1024 | ManyDuplicates     |    49,716.6 ns |    242.65 ns |    126.91 ns |  0.95 |    0.00 |    4 |         - |          NA |
+| BottomupMergeSort        | 1024 | ManyDuplicates     |    37,411.7 ns |    337.05 ns |    149.65 ns |  0.71 |    0.00 |    4 |         - |          NA |
+| StdStableSort            | 1024 | ManyDuplicates     |    23,658.6 ns |  1,520.63 ns |    795.32 ns |  0.45 |    0.01 |    3 |         - |          NA |
+| RotateMergeSort          | 1024 | ManyDuplicates     |    96,530.3 ns |  7,378.96 ns |  3,276.30 ns |  1.84 |    0.06 |    6 |         - |          NA |
+| RotateMergeSortRecursive | 1024 | ManyDuplicates     |   112,925.5 ns |  2,049.72 ns |    910.09 ns |  2.16 |    0.02 |    6 |         - |          NA |
+| SymMergeSort             | 1024 | ManyDuplicates     |    62,871.5 ns |    576.79 ns |    301.67 ns |  1.20 |    0.01 |    5 |         - |          NA |
+| BlockMergeSort           | 1024 | ManyDuplicates     |    46,491.1 ns |    212.75 ns |     94.46 ns |  0.89 |    0.00 |    4 |         - |          NA |
+| NaturalMergeSort         | 1024 | ManyDuplicates     |    38,515.6 ns |    238.44 ns |    124.71 ns |  0.74 |    0.00 |    4 |         - |          NA |
+| PatienceSort             | 1024 | ManyDuplicates     |    41,046.5 ns |    424.50 ns |    222.02 ns |  0.78 |    0.01 |    4 |         - |          NA |
+| DropMergeSort            | 1024 | ManyDuplicates     |    31,026.6 ns |    261.59 ns |    116.15 ns |  0.59 |    0.00 |    3 |         - |          NA |
+| TimSort                  | 1024 | ManyDuplicates     |    43,722.9 ns |    162.16 ns |     72.00 ns |  0.84 |    0.00 |    4 |         - |          NA |
+| PowerSort                | 1024 | ManyDuplicates     |    28,214.7 ns |    397.74 ns |    208.02 ns |  0.54 |    0.00 |    3 |         - |          NA |
+| ShiftSort                | 1024 | ManyDuplicates     |    43,282.8 ns |    277.65 ns |    123.28 ns |  0.83 |    0.00 |    4 |         - |          NA |
+| SpinSort                 | 1024 | ManyDuplicates     |    25,274.6 ns |    406.64 ns |    212.68 ns |  0.48 |    0.00 |    3 |         - |          NA |
+| Glidesort                | 1024 | ManyDuplicates     |    14,130.0 ns |    461.24 ns |    241.24 ns |  0.27 |    0.00 |    2 |         - |          NA |
+| Driftsort                | 1024 | ManyDuplicates     |    11,617.2 ns |    383.74 ns |    200.71 ns |  0.22 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 1024 | ManyDuplicates     |    28,678.2 ns |    232.54 ns |    121.62 ns |  0.55 |    0.00 |    3 |         - |          NA |
+| QuadSort                 | 1024 | ManyDuplicates     |    17,859.7 ns |    172.77 ns |     90.36 ns |  0.34 |    0.00 |    2 |         - |          NA |
+| SimdMergeSort            | 1024 | ManyDuplicates     |    15,768.0 ns |    214.58 ns |    112.23 ns |  0.30 |    0.00 |    2 |         - |          NA |
+| DotnetSort               | 1024 | ManyDuplicates     |    23,303.8 ns |    545.87 ns |    285.50 ns |  0.45 |    0.01 |    3 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **4096** | **Random**             |   **266,139.5 ns** |    **281.62 ns** |    **125.04 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| PingpongMergeSort        | 4096 | Random             |   253,729.9 ns |  2,593.61 ns |  1,356.51 ns |  0.95 |    0.00 |    3 |         - |          NA |
+| BottomupMergeSort        | 4096 | Random             |   197,588.8 ns |    843.25 ns |    374.41 ns |  0.74 |    0.00 |    3 |         - |          NA |
+| StdStableSort            | 4096 | Random             |   148,936.2 ns |  2,584.40 ns |  1,147.49 ns |  0.56 |    0.00 |    3 |         - |          NA |
+| RotateMergeSort          | 4096 | Random             |   573,367.7 ns |  2,238.47 ns |  1,170.76 ns |  2.15 |    0.00 |    5 |         - |          NA |
+| RotateMergeSortRecursive | 4096 | Random             |   663,511.0 ns |    947.57 ns |    495.60 ns |  2.49 |    0.00 |    5 |         - |          NA |
+| SymMergeSort             | 4096 | Random             |   386,172.5 ns |  1,742.69 ns |    773.77 ns |  1.45 |    0.00 |    4 |         - |          NA |
+| BlockMergeSort           | 4096 | Random             |   243,196.3 ns |    905.65 ns |    402.11 ns |  0.91 |    0.00 |    3 |         - |          NA |
+| NaturalMergeSort         | 4096 | Random             |   207,758.3 ns |    353.86 ns |    126.19 ns |  0.78 |    0.00 |    3 |         - |          NA |
+| PatienceSort             | 4096 | Random             |   304,210.3 ns |    812.22 ns |    360.63 ns |  1.14 |    0.00 |    3 |         - |          NA |
+| DropMergeSort            | 4096 | Random             |   198,992.6 ns |  1,205.74 ns |    630.62 ns |  0.75 |    0.00 |    3 |         - |          NA |
+| TimSort                  | 4096 | Random             |   261,537.0 ns | 70,942.00 ns | 37,104.04 ns |  0.98 |    0.13 |    3 |         - |          NA |
+| PowerSort                | 4096 | Random             |   175,002.2 ns |    655.34 ns |    290.97 ns |  0.66 |    0.00 |    3 |         - |          NA |
+| ShiftSort                | 4096 | Random             |   241,564.4 ns |    377.35 ns |    167.54 ns |  0.91 |    0.00 |    3 |         - |          NA |
+| SpinSort                 | 4096 | Random             |   156,283.1 ns |  1,548.63 ns |    809.96 ns |  0.59 |    0.00 |    3 |         - |          NA |
+| Glidesort                | 4096 | Random             |   100,791.1 ns |    992.11 ns |    518.89 ns |  0.38 |    0.00 |    2 |         - |          NA |
+| Driftsort                | 4096 | Random             |    87,062.9 ns |  1,424.76 ns |    745.18 ns |  0.33 |    0.00 |    2 |         - |          NA |
+| FlatStableSort           | 4096 | Random             |   163,763.8 ns |  1,834.44 ns |    959.45 ns |  0.62 |    0.00 |    3 |         - |          NA |
+| QuadSort                 | 4096 | Random             |    82,917.0 ns |    360.86 ns |    160.22 ns |  0.31 |    0.00 |    2 |         - |          NA |
+| SimdMergeSort            | 4096 | Random             |    68,141.0 ns |    285.06 ns |    126.57 ns |  0.26 |    0.00 |    1 |         - |          NA |
+| DotnetSort               | 4096 | Random             |   145,339.6 ns |    421.14 ns |    186.99 ns |  0.55 |    0.00 |    3 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **4096** | **SingleElementMoved** |    **54,950.4 ns** |    **129.28 ns** |     **57.40 ns** |  **1.00** |    **0.00** |    **8** |         **-** |          **NA** |
+| PingpongMergeSort        | 4096 | SingleElementMoved |    67,526.4 ns |    140.27 ns |     62.28 ns |  1.23 |    0.00 |    9 |         - |          NA |
+| BottomupMergeSort        | 4096 | SingleElementMoved |    20,064.6 ns |    179.76 ns |     94.02 ns |  0.37 |    0.00 |    5 |         - |          NA |
+| StdStableSort            | 4096 | SingleElementMoved |    12,652.1 ns |     50.74 ns |     22.53 ns |  0.23 |    0.00 |    4 |         - |          NA |
+| RotateMergeSort          | 4096 | SingleElementMoved |     5,082.7 ns |    255.85 ns |    133.82 ns |  0.09 |    0.00 |    2 |         - |          NA |
+| RotateMergeSortRecursive | 4096 | SingleElementMoved |     7,489.5 ns |    259.14 ns |    135.53 ns |  0.14 |    0.00 |    3 |         - |          NA |
+| SymMergeSort             | 4096 | SingleElementMoved |     4,482.3 ns |    296.00 ns |    154.81 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| BlockMergeSort           | 4096 | SingleElementMoved |    38,786.2 ns |    362.38 ns |    189.53 ns |  0.71 |    0.00 |    7 |         - |          NA |
+| NaturalMergeSort         | 4096 | SingleElementMoved |     3,984.5 ns |    357.48 ns |    158.72 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| PatienceSort             | 4096 | SingleElementMoved |   267,252.9 ns |  8,337.89 ns |  4,360.88 ns |  4.86 |    0.08 |   11 |         - |          NA |
+| DropMergeSort            | 4096 | SingleElementMoved |     7,399.0 ns |    288.22 ns |    150.75 ns |  0.13 |    0.00 |    3 |         - |          NA |
+| TimSort                  | 4096 | SingleElementMoved |     2,530.1 ns |    190.12 ns |     99.44 ns |  0.05 |    0.00 |    1 |         - |          NA |
+| PowerSort                | 4096 | SingleElementMoved |     4,036.6 ns |    389.82 ns |    203.88 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| ShiftSort                | 4096 | SingleElementMoved |     4,692.4 ns |    679.75 ns |    355.52 ns |  0.09 |    0.01 |    2 |         - |          NA |
+| SpinSort                 | 4096 | SingleElementMoved |     8,410.8 ns |    309.94 ns |    162.10 ns |  0.15 |    0.00 |    3 |         - |          NA |
+| Glidesort                | 4096 | SingleElementMoved |     6,921.0 ns |    280.25 ns |    146.58 ns |  0.13 |    0.00 |    3 |         - |          NA |
+| Driftsort                | 4096 | SingleElementMoved |     3,691.0 ns |     61.88 ns |     27.47 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| FlatStableSort           | 4096 | SingleElementMoved |    16,787.5 ns |    284.82 ns |    126.46 ns |  0.31 |    0.00 |    5 |         - |          NA |
+| QuadSort                 | 4096 | SingleElementMoved |     4,007.7 ns |    277.70 ns |    123.30 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| SimdMergeSort            | 4096 | SingleElementMoved |    94,141.2 ns |    323.70 ns |    143.73 ns |  1.71 |    0.00 |   10 |         - |          NA |
+| DotnetSort               | 4096 | SingleElementMoved |    24,559.9 ns |    547.76 ns |    243.21 ns |  0.45 |    0.00 |    6 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **4096** | **Sorted**             |    **53,411.0 ns** |  **1,538.68 ns** |    **683.18 ns** |  **1.00** |    **0.00** |    **7** |         **-** |          **NA** |
+| PingpongMergeSort        | 4096 | Sorted             |    65,631.2 ns |    356.73 ns |    186.58 ns |  1.23 |    0.01 |    8 |         - |          NA |
+| BottomupMergeSort        | 4096 | Sorted             |    18,625.7 ns |     70.55 ns |     31.32 ns |  0.35 |    0.00 |    5 |         - |          NA |
+| StdStableSort            | 4096 | Sorted             |    12,181.5 ns |    334.51 ns |    174.95 ns |  0.23 |    0.00 |    4 |         - |          NA |
+| RotateMergeSort          | 4096 | Sorted             |     3,899.9 ns |    441.31 ns |    230.81 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| RotateMergeSortRecursive | 4096 | Sorted             |     6,305.1 ns |    277.95 ns |    145.37 ns |  0.12 |    0.00 |    3 |         - |          NA |
+| SymMergeSort             | 4096 | Sorted             |     3,621.0 ns |    163.12 ns |     72.43 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| BlockMergeSort           | 4096 | Sorted             |    33,592.2 ns |    196.05 ns |     87.05 ns |  0.63 |    0.01 |    6 |         - |          NA |
+| NaturalMergeSort         | 4096 | Sorted             |     2,003.6 ns |    274.84 ns |    143.75 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 4096 | Sorted             |   178,667.2 ns | 11,676.98 ns |  6,107.29 ns |  3.35 |    0.11 |   10 |         - |          NA |
+| DropMergeSort            | 4096 | Sorted             |     6,883.5 ns |    390.31 ns |    204.14 ns |  0.13 |    0.00 |    3 |         - |          NA |
+| TimSort                  | 4096 | Sorted             |     1,871.8 ns |     57.90 ns |     20.65 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| PowerSort                | 4096 | Sorted             |     1,906.2 ns |    128.78 ns |     57.18 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 4096 | Sorted             |     2,384.7 ns |    217.42 ns |     96.54 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| SpinSort                 | 4096 | Sorted             |     1,669.9 ns |    186.51 ns |     82.81 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| Glidesort                | 4096 | Sorted             |     1,720.0 ns |    256.52 ns |    134.17 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| Driftsort                | 4096 | Sorted             |     1,899.7 ns |    175.96 ns |     78.13 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 4096 | Sorted             |    14,572.1 ns |    199.11 ns |    104.14 ns |  0.27 |    0.00 |    4 |         - |          NA |
+| QuadSort                 | 4096 | Sorted             |     2,712.8 ns |    270.64 ns |    141.55 ns |  0.05 |    0.00 |    1 |         - |          NA |
+| SimdMergeSort            | 4096 | Sorted             |    84,955.1 ns |    378.38 ns |    168.01 ns |  1.59 |    0.02 |    9 |         - |          NA |
+| DotnetSort               | 4096 | Sorted             |    15,187.8 ns |    354.18 ns |    157.26 ns |  0.28 |    0.00 |    4 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **4096** | **Reversed**           |   **119,394.0 ns** |  **1,018.65 ns** |    **452.29 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| PingpongMergeSort        | 4096 | Reversed           |   104,938.7 ns |    257.77 ns |    114.45 ns |  0.88 |    0.00 |    6 |         - |          NA |
+| BottomupMergeSort        | 4096 | Reversed           |    63,513.8 ns |    184.02 ns |     65.62 ns |  0.53 |    0.00 |    5 |         - |          NA |
+| StdStableSort            | 4096 | Reversed           |    57,962.5 ns |    232.28 ns |    103.13 ns |  0.49 |    0.00 |    5 |         - |          NA |
+| RotateMergeSort          | 4096 | Reversed           |    93,912.1 ns |    478.76 ns |    212.57 ns |  0.79 |    0.00 |    6 |         - |          NA |
+| RotateMergeSortRecursive | 4096 | Reversed           |   124,141.9 ns |    533.25 ns |    236.77 ns |  1.04 |    0.00 |    6 |         - |          NA |
+| SymMergeSort             | 4096 | Reversed           |    32,458.1 ns |    407.56 ns |    213.16 ns |  0.27 |    0.00 |    4 |         - |          NA |
+| BlockMergeSort           | 4096 | Reversed           |    52,371.8 ns |    131.89 ns |     68.98 ns |  0.44 |    0.00 |    5 |         - |          NA |
+| NaturalMergeSort         | 4096 | Reversed           |     2,997.8 ns |    334.40 ns |    174.90 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 4096 | Reversed           |    16,824.8 ns |    165.71 ns |     73.58 ns |  0.14 |    0.00 |    2 |         - |          NA |
+| DropMergeSort            | 4096 | Reversed           |    24,100.0 ns |    299.07 ns |    156.42 ns |  0.20 |    0.00 |    3 |         - |          NA |
+| TimSort                  | 4096 | Reversed           |     2,905.2 ns |    193.44 ns |    101.17 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| PowerSort                | 4096 | Reversed           |     2,839.1 ns |    199.13 ns |    104.15 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 4096 | Reversed           |    65,437.2 ns |    456.33 ns |    238.67 ns |  0.55 |    0.00 |    5 |         - |          NA |
+| SpinSort                 | 4096 | Reversed           |     2,971.3 ns |     54.13 ns |     24.03 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| Glidesort                | 4096 | Reversed           |     2,924.8 ns |    249.05 ns |    130.26 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| Driftsort                | 4096 | Reversed           |     2,841.6 ns |     54.39 ns |     24.15 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 4096 | Reversed           |    32,264.3 ns |    710.52 ns |    371.62 ns |  0.27 |    0.00 |    4 |         - |          NA |
+| QuadSort                 | 4096 | Reversed           |     2,981.8 ns |     10.88 ns |      3.88 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| SimdMergeSort            | 4096 | Reversed           |    67,980.1 ns |    516.01 ns |    229.11 ns |  0.57 |    0.00 |    5 |         - |          NA |
+| DotnetSort               | 4096 | Reversed           |    26,845.7 ns |    591.12 ns |    210.80 ns |  0.22 |    0.00 |    3 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **4096** | **PipeOrgan**          |    **87,736.4 ns** |    **468.78 ns** |    **167.17 ns** |  **1.00** |    **0.00** |    **8** |         **-** |          **NA** |
+| PingpongMergeSort        | 4096 | PipeOrgan          |    86,595.4 ns |    477.45 ns |    211.99 ns |  0.99 |    0.00 |    8 |         - |          NA |
+| BottomupMergeSort        | 4096 | PipeOrgan          |    42,365.4 ns |    453.75 ns |    237.32 ns |  0.48 |    0.00 |    6 |         - |          NA |
+| StdStableSort            | 4096 | PipeOrgan          |    36,632.9 ns |    515.19 ns |    228.75 ns |  0.42 |    0.00 |    6 |         - |          NA |
+| RotateMergeSort          | 4096 | PipeOrgan          |    88,879.1 ns |    843.30 ns |    374.43 ns |  1.01 |    0.00 |    8 |         - |          NA |
+| RotateMergeSortRecursive | 4096 | PipeOrgan          |   108,724.8 ns |    474.02 ns |    247.92 ns |  1.24 |    0.00 |    9 |         - |          NA |
+| SymMergeSort             | 4096 | PipeOrgan          |    48,354.5 ns |  1,438.33 ns |    638.63 ns |  0.55 |    0.01 |    6 |         - |          NA |
+| BlockMergeSort           | 4096 | PipeOrgan          |    49,056.6 ns |    306.50 ns |    136.09 ns |  0.56 |    0.00 |    6 |         - |          NA |
+| NaturalMergeSort         | 4096 | PipeOrgan          |     5,521.2 ns |    415.26 ns |    217.19 ns |  0.06 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 4096 | PipeOrgan          |   134,834.9 ns |  8,906.23 ns |  4,658.13 ns |  1.54 |    0.05 |   10 |         - |          NA |
+| DropMergeSort            | 4096 | PipeOrgan          |    90,107.1 ns |  1,257.93 ns |    558.53 ns |  1.03 |    0.01 |    8 |         - |          NA |
+| TimSort                  | 4096 | PipeOrgan          |     8,350.5 ns |    415.67 ns |    217.40 ns |  0.10 |    0.00 |    3 |         - |          NA |
+| PowerSort                | 4096 | PipeOrgan          |     5,312.3 ns |    347.00 ns |    154.07 ns |  0.06 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 4096 | PipeOrgan          |    40,753.2 ns |    208.56 ns |     92.60 ns |  0.46 |    0.00 |    6 |         - |          NA |
+| SpinSort                 | 4096 | PipeOrgan          |     6,846.7 ns |    409.96 ns |    214.42 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| Glidesort                | 4096 | PipeOrgan          |    14,847.8 ns |    367.51 ns |    163.18 ns |  0.17 |    0.00 |    4 |         - |          NA |
+| Driftsort                | 4096 | PipeOrgan          |     4,603.9 ns |    270.68 ns |    120.18 ns |  0.05 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 4096 | PipeOrgan          |    28,423.2 ns |    181.95 ns |     64.89 ns |  0.32 |    0.00 |    5 |         - |          NA |
+| QuadSort                 | 4096 | PipeOrgan          |     9,544.5 ns |    437.99 ns |    229.08 ns |  0.11 |    0.00 |    3 |         - |          NA |
+| SimdMergeSort            | 4096 | PipeOrgan          |    84,914.9 ns |    458.60 ns |    203.62 ns |  0.97 |    0.00 |    8 |         - |          NA |
+| DotnetSort               | 4096 | PipeOrgan          |    71,037.3 ns |  1,575.16 ns |    823.84 ns |  0.81 |    0.01 |    7 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **4096** | **ManyDuplicates**     |   **215,943.6 ns** |  **1,769.28 ns** |    **785.57 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| PingpongMergeSort        | 4096 | ManyDuplicates     |   203,232.1 ns |    995.15 ns |    441.85 ns |  0.94 |    0.00 |    3 |         - |          NA |
+| BottomupMergeSort        | 4096 | ManyDuplicates     |   152,877.3 ns |  1,453.25 ns |    645.25 ns |  0.71 |    0.00 |    3 |         - |          NA |
+| StdStableSort            | 4096 | ManyDuplicates     |    99,760.6 ns |  3,022.89 ns |  1,342.18 ns |  0.46 |    0.01 |    3 |         - |          NA |
+| RotateMergeSort          | 4096 | ManyDuplicates     |   428,344.5 ns |  1,682.76 ns |    880.12 ns |  1.98 |    0.01 |    5 |         - |          NA |
+| RotateMergeSortRecursive | 4096 | ManyDuplicates     |   503,921.1 ns |  1,083.95 ns |    481.28 ns |  2.33 |    0.01 |    5 |         - |          NA |
+| SymMergeSort             | 4096 | ManyDuplicates     |   287,544.6 ns |  1,086.92 ns |    482.60 ns |  1.33 |    0.00 |    4 |         - |          NA |
+| BlockMergeSort           | 4096 | ManyDuplicates     |   213,379.7 ns |    611.23 ns |    271.39 ns |  0.99 |    0.00 |    3 |         - |          NA |
+| NaturalMergeSort         | 4096 | ManyDuplicates     |   158,566.9 ns |  1,275.67 ns |    566.40 ns |  0.73 |    0.00 |    3 |         - |          NA |
+| PatienceSort             | 4096 | ManyDuplicates     |   139,905.9 ns |    854.01 ns |    379.18 ns |  0.65 |    0.00 |    3 |         - |          NA |
+| DropMergeSort            | 4096 | ManyDuplicates     |   117,985.1 ns |    621.41 ns |    275.91 ns |  0.55 |    0.00 |    3 |         - |          NA |
+| TimSort                  | 4096 | ManyDuplicates     |   184,117.4 ns |    940.65 ns |    417.66 ns |  0.85 |    0.00 |    3 |         - |          NA |
+| PowerSort                | 4096 | ManyDuplicates     |   120,187.5 ns |    729.79 ns |    324.03 ns |  0.56 |    0.00 |    3 |         - |          NA |
+| ShiftSort                | 4096 | ManyDuplicates     |   183,520.1 ns |    366.70 ns |    162.82 ns |  0.85 |    0.00 |    3 |         - |          NA |
+| SpinSort                 | 4096 | ManyDuplicates     |   109,119.1 ns |  1,420.78 ns |    743.09 ns |  0.51 |    0.00 |    3 |         - |          NA |
+| Glidesort                | 4096 | ManyDuplicates     |    22,454.5 ns |    624.23 ns |    326.48 ns |  0.10 |    0.00 |    2 |         - |          NA |
+| Driftsort                | 4096 | ManyDuplicates     |    16,902.6 ns |    513.08 ns |    227.81 ns |  0.08 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 4096 | ManyDuplicates     |   115,974.9 ns |  1,394.40 ns |    619.12 ns |  0.54 |    0.00 |    3 |         - |          NA |
+| QuadSort                 | 4096 | ManyDuplicates     |    76,968.8 ns |    980.23 ns |    435.23 ns |  0.36 |    0.00 |    3 |         - |          NA |
+| SimdMergeSort            | 4096 | ManyDuplicates     |    80,945.0 ns |    618.20 ns |    274.48 ns |  0.37 |    0.00 |    3 |         - |          NA |
+| DotnetSort               | 4096 | ManyDuplicates     |    94,620.3 ns |    748.81 ns |    332.48 ns |  0.44 |    0.00 |    3 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **8192** | **Random**             |   **563,940.4 ns** |  **1,057.19 ns** |    **469.40 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| PingpongMergeSort        | 8192 | Random             |   534,276.1 ns |  1,889.17 ns |    988.07 ns |  0.95 |    0.00 |    2 |         - |          NA |
+| BottomupMergeSort        | 8192 | Random             |   432,871.7 ns | 40,460.24 ns | 17,964.60 ns |  0.77 |    0.03 |    2 |         - |          NA |
+| StdStableSort            | 8192 | Random             |   339,494.2 ns |  6,991.36 ns |  3,104.21 ns |  0.60 |    0.01 |    2 |         - |          NA |
+| RotateMergeSort          | 8192 | Random             | 1,285,676.0 ns |  5,173.39 ns |  2,705.78 ns |  2.28 |    0.00 |    4 |         - |          NA |
+| RotateMergeSortRecursive | 8192 | Random             | 1,488,500.7 ns | 15,559.92 ns |  6,908.70 ns |  2.64 |    0.01 |    4 |         - |          NA |
+| SymMergeSort             | 8192 | Random             |   869,500.8 ns |  3,496.67 ns |  1,552.54 ns |  1.54 |    0.00 |    3 |         - |          NA |
+| BlockMergeSort           | 8192 | Random             |   524,899.2 ns |  1,200.75 ns |    533.14 ns |  0.93 |    0.00 |    2 |         - |          NA |
+| NaturalMergeSort         | 8192 | Random             |   445,309.0 ns |  2,236.86 ns |  1,169.92 ns |  0.79 |    0.00 |    2 |         - |          NA |
+| PatienceSort             | 8192 | Random             |   656,803.9 ns |  3,264.28 ns |  1,707.28 ns |  1.16 |    0.00 |    2 |         - |          NA |
+| DropMergeSort            | 8192 | Random             |   421,296.0 ns |  3,618.91 ns |  1,892.76 ns |  0.75 |    0.00 |    2 |         - |          NA |
+| TimSort                  | 8192 | Random             |   514,352.7 ns |  1,927.62 ns |    687.41 ns |  0.91 |    0.00 |    2 |         - |          NA |
+| PowerSort                | 8192 | Random             |   384,209.0 ns |  1,471.27 ns |    769.50 ns |  0.68 |    0.00 |    2 |         - |          NA |
+| ShiftSort                | 8192 | Random             |   530,515.2 ns |  1,796.52 ns |    797.66 ns |  0.94 |    0.00 |    2 |         - |          NA |
+| SpinSort                 | 8192 | Random             |   344,325.1 ns |  2,796.05 ns |  1,462.39 ns |  0.61 |    0.00 |    2 |         - |          NA |
+| Glidesort                | 8192 | Random             |   203,169.8 ns |  1,178.24 ns |    523.15 ns |  0.36 |    0.00 |    1 |         - |          NA |
+| Driftsort                | 8192 | Random             |   176,111.2 ns |    764.18 ns |    339.30 ns |  0.31 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 8192 | Random             |   369,994.3 ns |  1,816.85 ns |    806.69 ns |  0.66 |    0.00 |    2 |         - |          NA |
+| QuadSort                 | 8192 | Random             |   177,275.5 ns |  1,321.42 ns |    691.13 ns |  0.31 |    0.00 |    1 |         - |          NA |
+| SimdMergeSort            | 8192 | Random             |   195,359.8 ns |    667.08 ns |    348.89 ns |  0.35 |    0.00 |    1 |         - |          NA |
+| DotnetSort               | 8192 | Random             |   314,872.7 ns |  3,567.93 ns |  1,866.10 ns |  0.56 |    0.00 |    2 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **8192** | **SingleElementMoved** |   **110,298.5 ns** |    **356.22 ns** |    **127.03 ns** |  **1.00** |    **0.00** |    **8** |         **-** |          **NA** |
+| PingpongMergeSort        | 8192 | SingleElementMoved |   135,577.2 ns |  1,277.80 ns |    668.32 ns |  1.23 |    0.01 |    9 |         - |          NA |
+| BottomupMergeSort        | 8192 | SingleElementMoved |    42,986.0 ns |    753.29 ns |    393.98 ns |  0.39 |    0.00 |    5 |         - |          NA |
+| StdStableSort            | 8192 | SingleElementMoved |    24,851.6 ns |    400.18 ns |    209.30 ns |  0.23 |    0.00 |    4 |         - |          NA |
+| RotateMergeSort          | 8192 | SingleElementMoved |     9,793.8 ns |    561.21 ns |    249.18 ns |  0.09 |    0.00 |    2 |         - |          NA |
+| RotateMergeSortRecursive | 8192 | SingleElementMoved |    14,479.0 ns |     70.77 ns |     37.02 ns |  0.13 |    0.00 |    3 |         - |          NA |
+| SymMergeSort             | 8192 | SingleElementMoved |     8,880.3 ns |    640.58 ns |    335.04 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| BlockMergeSort           | 8192 | SingleElementMoved |    76,312.2 ns |    424.34 ns |    151.32 ns |  0.69 |    0.00 |    7 |         - |          NA |
+| NaturalMergeSort         | 8192 | SingleElementMoved |     7,587.1 ns |    154.30 ns |     68.51 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| PatienceSort             | 8192 | SingleElementMoved |   623,316.4 ns |  3,006.18 ns |  1,572.29 ns |  5.65 |    0.01 |   10 |         - |          NA |
+| DropMergeSort            | 8192 | SingleElementMoved |    14,922.6 ns |    533.56 ns |    279.06 ns |  0.14 |    0.00 |    3 |         - |          NA |
+| TimSort                  | 8192 | SingleElementMoved |     5,049.8 ns |    214.13 ns |     95.07 ns |  0.05 |    0.00 |    1 |         - |          NA |
+| PowerSort                | 8192 | SingleElementMoved |     8,200.4 ns |    578.93 ns |    302.79 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| ShiftSort                | 8192 | SingleElementMoved |     9,429.7 ns |    340.47 ns |    178.07 ns |  0.09 |    0.00 |    2 |         - |          NA |
+| SpinSort                 | 8192 | SingleElementMoved |    15,079.7 ns |    200.43 ns |     88.99 ns |  0.14 |    0.00 |    3 |         - |          NA |
+| Glidesort                | 8192 | SingleElementMoved |    14,177.2 ns |    554.64 ns |    290.09 ns |  0.13 |    0.00 |    3 |         - |          NA |
+| Driftsort                | 8192 | SingleElementMoved |     7,907.4 ns |    319.91 ns |    167.32 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| FlatStableSort           | 8192 | SingleElementMoved |    23,944.3 ns |    613.88 ns |    321.07 ns |  0.22 |    0.00 |    4 |         - |          NA |
+| QuadSort                 | 8192 | SingleElementMoved |     8,008.1 ns |    402.05 ns |    210.28 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| SimdMergeSort            | 8192 | SingleElementMoved |   158,276.9 ns |    771.50 ns |    342.55 ns |  1.43 |    0.00 |    9 |         - |          NA |
+| DotnetSort               | 8192 | SingleElementMoved |    53,729.8 ns |    317.33 ns |    165.97 ns |  0.49 |    0.00 |    6 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **8192** | **Sorted**             |   **106,640.4 ns** |    **336.64 ns** |    **149.47 ns** |  **1.00** |    **0.00** |    **7** |         **-** |          **NA** |
+| PingpongMergeSort        | 8192 | Sorted             |   132,548.3 ns |    610.05 ns |    270.87 ns |  1.24 |    0.00 |    8 |         - |          NA |
+| BottomupMergeSort        | 8192 | Sorted             |    40,217.2 ns |    320.94 ns |    167.86 ns |  0.38 |    0.00 |    5 |         - |          NA |
+| StdStableSort            | 8192 | Sorted             |    23,503.8 ns |    599.91 ns |    313.76 ns |  0.22 |    0.00 |    4 |         - |          NA |
+| RotateMergeSort          | 8192 | Sorted             |     8,112.8 ns |    996.70 ns |    355.43 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| RotateMergeSortRecursive | 8192 | Sorted             |    12,592.8 ns |    462.47 ns |    241.88 ns |  0.12 |    0.00 |    3 |         - |          NA |
+| SymMergeSort             | 8192 | Sorted             |     7,639.2 ns |    609.90 ns |    318.99 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| BlockMergeSort           | 8192 | Sorted             |    67,041.8 ns |  1,545.29 ns |    686.12 ns |  0.63 |    0.01 |    6 |         - |          NA |
+| NaturalMergeSort         | 8192 | Sorted             |     3,981.1 ns |    226.25 ns |    118.33 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 8192 | Sorted             |   611,855.5 ns |  3,276.55 ns |  1,454.81 ns |  5.74 |    0.01 |    9 |         - |          NA |
+| DropMergeSort            | 8192 | Sorted             |    13,729.6 ns |    240.12 ns |    125.59 ns |  0.13 |    0.00 |    3 |         - |          NA |
+| TimSort                  | 8192 | Sorted             |     4,012.9 ns |    431.66 ns |    191.66 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| PowerSort                | 8192 | Sorted             |     3,972.1 ns |    439.47 ns |    195.13 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 8192 | Sorted             |     4,784.9 ns |    648.77 ns |    339.32 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| SpinSort                 | 8192 | Sorted             |     3,317.9 ns |    574.76 ns |    255.20 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| Glidesort                | 8192 | Sorted             |     3,347.3 ns |    405.63 ns |    212.15 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| Driftsort                | 8192 | Sorted             |     3,991.2 ns |    754.78 ns |    394.77 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 8192 | Sorted             |     3,399.9 ns |    396.65 ns |    207.45 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| QuadSort                 | 8192 | Sorted             |     4,729.9 ns |     61.52 ns |     21.94 ns |  0.04 |    0.00 |    1 |         - |          NA |
+| SimdMergeSort            | 8192 | Sorted             |   155,660.4 ns |    682.40 ns |    243.35 ns |  1.46 |    0.00 |    8 |         - |          NA |
+| DotnetSort               | 8192 | Sorted             |    34,704.1 ns |  3,714.88 ns |  1,649.43 ns |  0.33 |    0.01 |    5 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **8192** | **Reversed**           |   **250,181.7 ns** | **19,648.36 ns** | **10,276.47 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| PingpongMergeSort        | 8192 | Reversed           |   212,516.4 ns |  2,173.44 ns |    965.02 ns |  0.85 |    0.03 |    6 |         - |          NA |
+| BottomupMergeSort        | 8192 | Reversed           |   130,016.9 ns |    313.10 ns |    163.76 ns |  0.52 |    0.02 |    5 |         - |          NA |
+| StdStableSort            | 8192 | Reversed           |   208,315.1 ns |  2,051.39 ns |  1,072.92 ns |  0.83 |    0.03 |    6 |         - |          NA |
+| RotateMergeSort          | 8192 | Reversed           |   199,601.3 ns |  2,678.97 ns |  1,189.48 ns |  0.80 |    0.03 |    6 |         - |          NA |
+| RotateMergeSortRecursive | 8192 | Reversed           |   260,381.6 ns |  4,440.76 ns |  1,971.73 ns |  1.04 |    0.04 |    6 |         - |          NA |
+| SymMergeSort             | 8192 | Reversed           |    66,691.6 ns |    234.49 ns |    104.12 ns |  0.27 |    0.01 |    4 |         - |          NA |
+| BlockMergeSort           | 8192 | Reversed           |   110,719.6 ns |  5,934.18 ns |  3,103.69 ns |  0.44 |    0.02 |    5 |         - |          NA |
+| NaturalMergeSort         | 8192 | Reversed           |     5,635.6 ns |    282.57 ns |    125.46 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 8192 | Reversed           |    33,333.2 ns |    382.10 ns |    199.85 ns |  0.13 |    0.01 |    2 |         - |          NA |
+| DropMergeSort            | 8192 | Reversed           |    50,991.7 ns |    607.86 ns |    269.90 ns |  0.20 |    0.01 |    3 |         - |          NA |
+| TimSort                  | 8192 | Reversed           |     5,873.2 ns |    605.84 ns |    316.87 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| PowerSort                | 8192 | Reversed           |     5,797.0 ns |    276.63 ns |    122.83 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 8192 | Reversed           |   144,436.9 ns |  1,985.03 ns |    881.36 ns |  0.58 |    0.02 |    5 |         - |          NA |
+| SpinSort                 | 8192 | Reversed           |     6,101.0 ns |    380.44 ns |    168.92 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| Glidesort                | 8192 | Reversed           |     5,885.2 ns |    553.46 ns |    289.47 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| Driftsort                | 8192 | Reversed           |     5,917.4 ns |    204.16 ns |    106.78 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 8192 | Reversed           |     6,309.6 ns |    649.54 ns |    339.72 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| QuadSort                 | 8192 | Reversed           |     6,111.9 ns |    363.01 ns |    161.18 ns |  0.02 |    0.00 |    1 |         - |          NA |
+| SimdMergeSort            | 8192 | Reversed           |   192,411.1 ns |    459.03 ns |    203.81 ns |  0.77 |    0.03 |    6 |         - |          NA |
+| DotnetSort               | 8192 | Reversed           |    62,746.1 ns |  4,344.92 ns |  2,272.48 ns |  0.25 |    0.01 |    4 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **8192** | **PipeOrgan**          |   **177,034.9 ns** |    **574.49 ns** |    **255.08 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| PingpongMergeSort        | 8192 | PipeOrgan          |   174,697.8 ns |    643.85 ns |    285.87 ns |  0.99 |    0.00 |    6 |         - |          NA |
+| BottomupMergeSort        | 8192 | PipeOrgan          |    87,514.6 ns |    925.79 ns |    411.06 ns |  0.49 |    0.00 |    5 |         - |          NA |
+| StdStableSort            | 8192 | PipeOrgan          |   118,751.4 ns |  1,762.67 ns |    782.64 ns |  0.67 |    0.00 |    5 |         - |          NA |
+| RotateMergeSort          | 8192 | PipeOrgan          |   184,028.7 ns |    936.48 ns |    415.80 ns |  1.04 |    0.00 |    6 |         - |          NA |
+| RotateMergeSortRecursive | 8192 | PipeOrgan          |   225,209.6 ns |  3,111.44 ns |  1,381.50 ns |  1.27 |    0.01 |    6 |         - |          NA |
+| SymMergeSort             | 8192 | PipeOrgan          |    99,989.0 ns |  3,120.23 ns |  1,631.94 ns |  0.56 |    0.01 |    5 |         - |          NA |
+| BlockMergeSort           | 8192 | PipeOrgan          |   100,848.1 ns |    537.51 ns |    281.13 ns |  0.57 |    0.00 |    5 |         - |          NA |
+| NaturalMergeSort         | 8192 | PipeOrgan          |    10,961.9 ns |    451.23 ns |    236.00 ns |  0.06 |    0.00 |    1 |         - |          NA |
+| PatienceSort             | 8192 | PipeOrgan          |   491,266.9 ns |  4,787.46 ns |  2,125.66 ns |  2.77 |    0.01 |    8 |         - |          NA |
+| DropMergeSort            | 8192 | PipeOrgan          |   183,084.8 ns |  2,597.08 ns |  1,358.32 ns |  1.03 |    0.01 |    6 |         - |          NA |
+| TimSort                  | 8192 | PipeOrgan          |    16,480.5 ns |    237.09 ns |    124.00 ns |  0.09 |    0.00 |    2 |         - |          NA |
+| PowerSort                | 8192 | PipeOrgan          |    10,648.7 ns |    601.31 ns |    314.50 ns |  0.06 |    0.00 |    1 |         - |          NA |
+| ShiftSort                | 8192 | PipeOrgan          |    82,856.5 ns |  1,038.14 ns |    460.94 ns |  0.47 |    0.00 |    5 |         - |          NA |
+| SpinSort                 | 8192 | PipeOrgan          |    14,187.3 ns |    495.88 ns |    259.36 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| Glidesort                | 8192 | PipeOrgan          |    29,871.5 ns |    453.26 ns |    237.06 ns |  0.17 |    0.00 |    3 |         - |          NA |
+| Driftsort                | 8192 | PipeOrgan          |     9,046.9 ns |    346.24 ns |    153.73 ns |  0.05 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 8192 | PipeOrgan          |    52,026.1 ns |  1,062.28 ns |    555.60 ns |  0.29 |    0.00 |    4 |         - |          NA |
+| QuadSort                 | 8192 | PipeOrgan          |    19,223.2 ns |    518.47 ns |    271.17 ns |  0.11 |    0.00 |    2 |         - |          NA |
+| SimdMergeSort            | 8192 | PipeOrgan          |   192,723.3 ns |    953.04 ns |    498.46 ns |  1.09 |    0.00 |    6 |         - |          NA |
+| DotnetSort               | 8192 | PipeOrgan          |   282,328.4 ns |  6,565.02 ns |  2,341.15 ns |  1.59 |    0.01 |    7 |         - |          NA |
+|      |                    |                |              |              |       |         |      |           |             |
+| **MergeSort**                | **8192** | **ManyDuplicates**     |   **437,991.9 ns** |  **2,608.01 ns** |  **1,364.04 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| PingpongMergeSort        | 8192 | ManyDuplicates     |   411,268.6 ns |  2,606.87 ns |  1,363.45 ns |  0.94 |    0.00 |    4 |         - |          NA |
+| BottomupMergeSort        | 8192 | ManyDuplicates     |   308,874.9 ns |  1,298.05 ns |    576.34 ns |  0.71 |    0.00 |    4 |         - |          NA |
+| StdStableSort            | 8192 | ManyDuplicates     |   221,863.8 ns |  4,544.31 ns |  2,376.76 ns |  0.51 |    0.01 |    4 |         - |          NA |
+| RotateMergeSort          | 8192 | ManyDuplicates     |   887,139.6 ns |  2,709.46 ns |  1,203.02 ns |  2.03 |    0.01 |    6 |         - |          NA |
+| RotateMergeSortRecursive | 8192 | ManyDuplicates     | 1,043,929.9 ns |  2,157.56 ns |    957.97 ns |  2.38 |    0.01 |    6 |         - |          NA |
+| SymMergeSort             | 8192 | ManyDuplicates     |   602,795.9 ns |  3,990.60 ns |  2,087.16 ns |  1.38 |    0.01 |    5 |         - |          NA |
+| BlockMergeSort           | 8192 | ManyDuplicates     |   438,548.3 ns |  2,506.37 ns |  1,112.85 ns |  1.00 |    0.00 |    4 |         - |          NA |
+| NaturalMergeSort         | 8192 | ManyDuplicates     |   319,841.4 ns |  1,018.41 ns |    452.18 ns |  0.73 |    0.00 |    4 |         - |          NA |
+| PatienceSort             | 8192 | ManyDuplicates     |   279,966.3 ns |    386.00 ns |    171.39 ns |  0.64 |    0.00 |    4 |         - |          NA |
+| DropMergeSort            | 8192 | ManyDuplicates     |   233,701.2 ns |    987.15 ns |    438.30 ns |  0.53 |    0.00 |    4 |         - |          NA |
+| TimSort                  | 8192 | ManyDuplicates     |   371,690.2 ns |  1,101.41 ns |    489.03 ns |  0.85 |    0.00 |    4 |         - |          NA |
+| PowerSort                | 8192 | ManyDuplicates     |   247,002.0 ns |  2,456.95 ns |  1,285.03 ns |  0.56 |    0.00 |    4 |         - |          NA |
+| ShiftSort                | 8192 | ManyDuplicates     |   385,115.0 ns |    975.03 ns |    432.92 ns |  0.88 |    0.00 |    4 |         - |          NA |
+| SpinSort                 | 8192 | ManyDuplicates     |   223,246.7 ns |  1,263.65 ns |    561.07 ns |  0.51 |    0.00 |    4 |         - |          NA |
+| Glidesort                | 8192 | ManyDuplicates     |    36,858.6 ns |    347.48 ns |    154.28 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| Driftsort                | 8192 | ManyDuplicates     |    25,849.2 ns |  1,038.55 ns |    543.18 ns |  0.06 |    0.00 |    1 |         - |          NA |
+| FlatStableSort           | 8192 | ManyDuplicates     |   248,620.7 ns |  1,809.59 ns |    946.45 ns |  0.57 |    0.00 |    4 |         - |          NA |
+| QuadSort                 | 8192 | ManyDuplicates     |   156,781.3 ns |    747.79 ns |    332.02 ns |  0.36 |    0.00 |    3 |         - |          NA |
+| SimdMergeSort            | 8192 | ManyDuplicates     |   156,968.8 ns |  1,801.60 ns |    942.27 ns |  0.36 |    0.00 |    3 |         - |          NA |
+| DotnetSort               | 8192 | ManyDuplicates     |   190,380.8 ns |    332.92 ns |    147.82 ns |  0.43 |    0.00 |    4 |         - |          NA |
 
 ### MergeSlowBenchmark
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V74 3.69GHz, 1 CPU, 4 logical and 2 physical cores
-Memory: 15.61 GB Total, 12.49 GB Available
+AMD EPYC 9V74 3.59GHz, 1 CPU, 4 logical and 2 physical cores
+Memory: 15.61 GB Total, 12.44 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
@@ -1820,48 +1820,48 @@ UnrollFactor=1  WarmupCount=2
 
 | Method     | Size | Pattern            | Mean         | Error       | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
 | ----------- |----- |------------------- |-------------:|------------:|------------:|------:|--------:|-----:|----------:|------------:|
-| **StrandSort** | **256**  | **Random**             |   **9,104.2 ns** |   **256.46 ns** |   **113.87 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| DotnetSort | 256  | Random             |   5,731.9 ns |    37.03 ns |    13.20 ns |  0.63 |    0.01 |    1 |         - |          NA |
+| **StrandSort** | **256**  | **Random**             |   **9,295.8 ns** |   **872.65 ns** |   **387.46 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| DotnetSort | 256  | Random             |   5,866.5 ns |   277.76 ns |   145.27 ns |  0.63 |    0.03 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **StrandSort** | **256**  | **SingleElementMoved** |     **715.5 ns** |    **36.14 ns** |    **16.05 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| DotnetSort | 256  | SingleElementMoved |   1,083.3 ns |    45.14 ns |    20.04 ns |  1.51 |    0.04 |    2 |         - |          NA |
+| **StrandSort** | **256**  | **SingleElementMoved** |     **711.6 ns** |    **22.42 ns** |     **9.95 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| DotnetSort | 256  | SingleElementMoved |   1,103.3 ns |   116.32 ns |    51.65 ns |  1.55 |    0.07 |    2 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **StrandSort** | **256**  | **Sorted**             |     **472.5 ns** |    **12.53 ns** |     **5.56 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| DotnetSort | 256  | Sorted             |     666.2 ns |    49.57 ns |    25.93 ns |  1.41 |    0.05 |    2 |         - |          NA |
+| **StrandSort** | **256**  | **Sorted**             |     **495.1 ns** |    **10.98 ns** |     **5.74 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| DotnetSort | 256  | Sorted             |     650.8 ns |    51.40 ns |    26.89 ns |  1.31 |    0.05 |    2 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **StrandSort** | **256**  | **Reversed**           |  **38,911.3 ns** | **1,238.84 ns** |   **647.94 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| DotnetSort | 256  | Reversed           |   1,144.1 ns |   164.41 ns |    73.00 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| **StrandSort** | **256**  | **Reversed**           |  **38,293.4 ns** |   **316.54 ns** |   **140.55 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| DotnetSort | 256  | Reversed           |   1,083.6 ns |   176.27 ns |    92.19 ns |  0.03 |    0.00 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **StrandSort** | **256**  | **PipeOrgan**          |  **22,865.9 ns** |   **577.82 ns** |   **302.21 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| DotnetSort | 256  | PipeOrgan          |   1,827.2 ns |   185.70 ns |    82.45 ns |  0.08 |    0.00 |    1 |         - |          NA |
+| **StrandSort** | **256**  | **PipeOrgan**          |  **23,290.4 ns** |   **162.81 ns** |    **85.15 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| DotnetSort | 256  | PipeOrgan          |   2,012.0 ns |   574.63 ns |   300.54 ns |  0.09 |    0.01 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **StrandSort** | **256**  | **ManyDuplicates**     |   **8,001.7 ns** |   **128.10 ns** |    **67.00 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| DotnetSort | 256  | ManyDuplicates     |   5,575.1 ns |   263.46 ns |   137.79 ns |  0.70 |    0.02 |    1 |         - |          NA |
+| **StrandSort** | **256**  | **ManyDuplicates**     |   **7,998.2 ns** |   **335.20 ns** |   **175.31 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| DotnetSort | 256  | ManyDuplicates     |   5,539.9 ns |   378.75 ns |   198.09 ns |  0.69 |    0.03 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **StrandSort** | **1024** | **Random**             |  **57,671.0 ns** |   **844.61 ns** |   **375.01 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| DotnetSort | 1024 | Random             |  29,741.6 ns |   371.91 ns |   194.51 ns |  0.52 |    0.00 |    1 |         - |          NA |
+| **StrandSort** | **1024** | **Random**             |  **57,285.2 ns** |   **153.73 ns** |    **54.82 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| DotnetSort | 1024 | Random             |  29,913.1 ns |   771.09 ns |   403.29 ns |  0.52 |    0.01 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **StrandSort** | **1024** | **SingleElementMoved** |   **2,178.4 ns** |    **27.06 ns** |    **12.01 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| DotnetSort | 1024 | SingleElementMoved |   5,122.2 ns |   107.82 ns |    47.87 ns |  2.35 |    0.02 |    2 |         - |          NA |
+| **StrandSort** | **1024** | **SingleElementMoved** |   **2,219.1 ns** |    **35.78 ns** |    **15.89 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| DotnetSort | 1024 | SingleElementMoved |   5,373.1 ns |   225.10 ns |   117.73 ns |  2.42 |    0.05 |    2 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **StrandSort** | **1024** | **Sorted**             |   **1,413.8 ns** |    **13.68 ns** |     **4.88 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
-| DotnetSort | 1024 | Sorted             |   3,211.5 ns |   219.54 ns |   114.83 ns |  2.27 |    0.08 |    2 |         - |          NA |
+| **StrandSort** | **1024** | **Sorted**             |   **1,457.2 ns** |    **62.15 ns** |    **27.60 ns** |  **1.00** |    **0.00** |    **1** |         **-** |          **NA** |
+| DotnetSort | 1024 | Sorted             |   3,267.8 ns |   235.20 ns |   123.02 ns |  2.24 |    0.09 |    2 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **StrandSort** | **1024** | **Reversed**           | **627,755.3 ns** | **4,795.81 ns** | **2,508.30 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| DotnetSort | 1024 | Reversed           |   6,352.4 ns |   514.59 ns |   269.14 ns |  0.01 |    0.00 |    1 |         - |          NA |
+| **StrandSort** | **1024** | **Reversed**           | **626,247.0 ns** | **4,634.32 ns** | **2,057.67 ns** | **1.000** |    **0.00** |    **2** |         **-** |          **NA** |
+| DotnetSort | 1024 | Reversed           |   5,662.1 ns |   610.86 ns |   319.49 ns | 0.009 |    0.00 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **StrandSort** | **1024** | **PipeOrgan**          | **372,380.8 ns** | **2,851.42 ns** | **1,266.05 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| DotnetSort | 1024 | PipeOrgan          |  12,729.4 ns |   249.89 ns |   110.95 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| **StrandSort** | **1024** | **PipeOrgan**          | **371,380.0 ns** | **1,118.02 ns** |   **496.41 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| DotnetSort | 1024 | PipeOrgan          |  13,007.7 ns |   523.59 ns |   232.48 ns |  0.04 |    0.00 |    1 |         - |          NA |
 |      |                    |              |             |             |       |         |      |           |             |
-| **StrandSort** | **1024** | **ManyDuplicates**     |  **35,484.5 ns** |   **155.93 ns** |    **81.56 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| DotnetSort | 1024 | ManyDuplicates     |  23,402.1 ns |   468.46 ns |   208.00 ns |  0.66 |    0.01 |    1 |         - |          NA |
+| **StrandSort** | **1024** | **ManyDuplicates**     |  **35,791.4 ns** |   **412.53 ns** |   **215.76 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| DotnetSort | 1024 | ManyDuplicates     |  23,388.1 ns |   475.49 ns |   248.69 ns |  0.65 |    0.01 |    1 |         - |          NA |
 
 ### NetworkBenchmark
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V74 3.69GHz, 1 CPU, 4 logical and 2 physical cores
-Memory: 15.61 GB Total, 12.49 GB Available
+AMD EPYC 9V74 3.59GHz, 1 CPU, 4 logical and 2 physical cores
+Memory: 15.61 GB Total, 12.44 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
@@ -1871,276 +1871,276 @@ UnrollFactor=1  WarmupCount=2
 
 | Method                            | Size | Pattern            | Mean           | Error        | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
 | ---------------------------------- |----- |------------------- |---------------:|-------------:|------------:|------:|--------:|-----:|----------:|------------:|
-| **BitonicSort**                       | **256**  | **Random**             |    **13,132.9 ns** |    **296.58 ns** |   **131.68 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| BitonicSortBranchless             | 256  | Random             |     3,706.6 ns |     54.01 ns |    23.98 ns |  0.28 |    0.00 |    2 |         - |          NA |
-| BitonicRecursiveSort              | 256  | Random             |    26,163.2 ns |    279.33 ns |   124.02 ns |  1.99 |    0.02 |    6 |         - |          NA |
-| BitonicSortAnyLength              | 256  | Random             |    20,475.4 ns |    592.62 ns |   263.13 ns |  1.56 |    0.02 |    5 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 256  | Random             |     1,089.2 ns |     41.82 ns |    18.57 ns |  0.08 |    0.00 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 256  | Random             |    10,515.3 ns |    301.32 ns |   133.79 ns |  0.80 |    0.01 |    4 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 256  | Random             |     3,455.9 ns |    206.78 ns |    91.81 ns |  0.26 |    0.01 |    2 |         - |          NA |
-| PairwiseSortingNetwork            | 256  | Random             |    12,118.6 ns |    240.97 ns |   126.03 ns |  0.92 |    0.01 |    4 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 256  | Random             |     3,320.3 ns |     32.36 ns |    14.37 ns |  0.25 |    0.00 |    2 |         - |          NA |
-| DotnetSort                        | 256  | Random             |     5,918.1 ns |    349.21 ns |   182.64 ns |  0.45 |    0.01 |    3 |         - |          NA |
+| **BitonicSort**                       | **256**  | **Random**             |    **12,970.4 ns** |    **179.65 ns** |    **79.77 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| BitonicSortBranchless             | 256  | Random             |     3,755.2 ns |    206.18 ns |    91.55 ns |  0.29 |    0.01 |    2 |         - |          NA |
+| BitonicRecursiveSort              | 256  | Random             |    26,405.1 ns |    411.75 ns |   215.35 ns |  2.04 |    0.02 |    6 |         - |          NA |
+| BitonicSortAnyLength              | 256  | Random             |    20,472.1 ns |    349.09 ns |   155.00 ns |  1.58 |    0.01 |    5 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 256  | Random             |     1,151.3 ns |     10.02 ns |     5.24 ns |  0.09 |    0.00 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 256  | Random             |    10,530.4 ns |    402.20 ns |   210.36 ns |  0.81 |    0.02 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 256  | Random             |     3,401.9 ns |     71.57 ns |    31.78 ns |  0.26 |    0.00 |    2 |         - |          NA |
+| PairwiseSortingNetwork            | 256  | Random             |    12,155.2 ns |    361.95 ns |   189.31 ns |  0.94 |    0.01 |    4 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 256  | Random             |     3,341.7 ns |     32.21 ns |    14.30 ns |  0.26 |    0.00 |    2 |         - |          NA |
+| DotnetSort                        | 256  | Random             |     5,909.2 ns |    224.79 ns |   117.57 ns |  0.46 |    0.01 |    3 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **256**  | **SingleElementMoved** |     **3,886.3 ns** |    **402.56 ns** |   **178.74 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| BitonicSortBranchless             | 256  | SingleElementMoved |     3,715.9 ns |     49.17 ns |    21.83 ns |  0.96 |    0.04 |    2 |         - |          NA |
-| BitonicRecursiveSort              | 256  | SingleElementMoved |    18,007.7 ns |     37.89 ns |    13.51 ns |  4.64 |    0.20 |    4 |         - |          NA |
-| BitonicSortAnyLength              | 256  | SingleElementMoved |    11,618.2 ns |    292.68 ns |   153.08 ns |  2.99 |    0.13 |    3 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 256  | SingleElementMoved |     1,141.7 ns |      7.27 ns |     3.23 ns |  0.29 |    0.01 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 256  | SingleElementMoved |     3,811.3 ns |    225.09 ns |   117.73 ns |  0.98 |    0.05 |    2 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 256  | SingleElementMoved |     3,481.4 ns |    330.99 ns |   173.11 ns |  0.90 |    0.06 |    2 |         - |          NA |
-| PairwiseSortingNetwork            | 256  | SingleElementMoved |     2,954.0 ns |    361.56 ns |   189.10 ns |  0.76 |    0.06 |    2 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 256  | SingleElementMoved |     3,338.3 ns |    145.63 ns |    64.66 ns |  0.86 |    0.04 |    2 |         - |          NA |
-| DotnetSort                        | 256  | SingleElementMoved |     1,082.2 ns |     60.94 ns |    27.06 ns |  0.28 |    0.01 |    1 |         - |          NA |
+| **BitonicSort**                       | **256**  | **SingleElementMoved** |     **3,834.1 ns** |    **246.58 ns** |   **128.96 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| BitonicSortBranchless             | 256  | SingleElementMoved |     3,731.0 ns |     36.85 ns |    16.36 ns |  0.97 |    0.03 |    2 |         - |          NA |
+| BitonicRecursiveSort              | 256  | SingleElementMoved |    18,198.0 ns |    138.62 ns |    72.50 ns |  4.75 |    0.15 |    4 |         - |          NA |
+| BitonicSortAnyLength              | 256  | SingleElementMoved |    11,733.7 ns |    281.90 ns |   147.44 ns |  3.06 |    0.10 |    3 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 256  | SingleElementMoved |     1,132.0 ns |      4.90 ns |     2.17 ns |  0.30 |    0.01 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 256  | SingleElementMoved |     3,959.8 ns |    425.08 ns |   222.32 ns |  1.03 |    0.06 |    2 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 256  | SingleElementMoved |     3,386.3 ns |    143.26 ns |    63.61 ns |  0.88 |    0.03 |    2 |         - |          NA |
+| PairwiseSortingNetwork            | 256  | SingleElementMoved |     3,040.9 ns |    241.04 ns |   126.07 ns |  0.79 |    0.04 |    2 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 256  | SingleElementMoved |     3,311.1 ns |     23.09 ns |     8.23 ns |  0.86 |    0.03 |    2 |         - |          NA |
+| DotnetSort                        | 256  | SingleElementMoved |     1,076.0 ns |    109.77 ns |    57.41 ns |  0.28 |    0.02 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **256**  | **Sorted**             |     **3,456.1 ns** |     **71.77 ns** |    **31.87 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| BitonicSortBranchless             | 256  | Sorted             |     3,732.4 ns |     40.86 ns |    14.57 ns |  1.08 |    0.01 |    3 |         - |          NA |
-| BitonicRecursiveSort              | 256  | Sorted             |    18,145.1 ns |    214.17 ns |   112.02 ns |  5.25 |    0.05 |    5 |         - |          NA |
-| BitonicSortAnyLength              | 256  | Sorted             |    11,526.9 ns |    184.96 ns |    96.74 ns |  3.34 |    0.04 |    4 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 256  | Sorted             |     1,134.1 ns |     46.41 ns |    20.61 ns |  0.33 |    0.01 |    2 |         - |          NA |
-| BatcherOddEvenMergeSort           | 256  | Sorted             |     3,713.4 ns |     45.05 ns |    16.07 ns |  1.07 |    0.01 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 256  | Sorted             |     3,402.5 ns |     35.32 ns |    15.68 ns |  0.98 |    0.01 |    3 |         - |          NA |
-| PairwiseSortingNetwork            | 256  | Sorted             |     2,881.6 ns |    342.51 ns |   152.08 ns |  0.83 |    0.04 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 256  | Sorted             |     3,338.3 ns |     17.47 ns |     6.23 ns |  0.97 |    0.01 |    3 |         - |          NA |
-| DotnetSort                        | 256  | Sorted             |       652.1 ns |      8.35 ns |     3.71 ns |  0.19 |    0.00 |    1 |         - |          NA |
+| **BitonicSort**                       | **256**  | **Sorted**             |     **3,557.2 ns** |    **232.75 ns** |   **121.73 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| BitonicSortBranchless             | 256  | Sorted             |     3,737.2 ns |     44.38 ns |    15.83 ns |  1.05 |    0.03 |    4 |         - |          NA |
+| BitonicRecursiveSort              | 256  | Sorted             |    18,010.6 ns |    160.59 ns |    71.30 ns |  5.07 |    0.16 |    6 |         - |          NA |
+| BitonicSortAnyLength              | 256  | Sorted             |    11,559.4 ns |    275.42 ns |   144.05 ns |  3.25 |    0.11 |    5 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 256  | Sorted             |     1,142.4 ns |     31.00 ns |    13.77 ns |  0.32 |    0.01 |    2 |         - |          NA |
+| BatcherOddEvenMergeSort           | 256  | Sorted             |     3,741.9 ns |    141.87 ns |    74.20 ns |  1.05 |    0.04 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 256  | Sorted             |     3,453.7 ns |    282.75 ns |   147.88 ns |  0.97 |    0.05 |    4 |         - |          NA |
+| PairwiseSortingNetwork            | 256  | Sorted             |     2,667.6 ns |     23.51 ns |    10.44 ns |  0.75 |    0.02 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 256  | Sorted             |     3,337.4 ns |     26.16 ns |     9.33 ns |  0.94 |    0.03 |    4 |         - |          NA |
+| DotnetSort                        | 256  | Sorted             |       633.5 ns |     18.00 ns |     9.41 ns |  0.18 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **256**  | **Reversed**           |     **3,581.1 ns** |    **167.36 ns** |    **74.31 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| BitonicSortBranchless             | 256  | Reversed           |     3,725.0 ns |     41.40 ns |    14.76 ns |  1.04 |    0.02 |    3 |         - |          NA |
-| BitonicRecursiveSort              | 256  | Reversed           |    18,013.4 ns |    134.26 ns |    70.22 ns |  5.03 |    0.10 |    5 |         - |          NA |
-| BitonicSortAnyLength              | 256  | Reversed           |    11,663.1 ns |    247.93 ns |   129.67 ns |  3.26 |    0.07 |    4 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 256  | Reversed           |     1,145.1 ns |     11.73 ns |     5.21 ns |  0.32 |    0.01 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 256  | Reversed           |     3,594.3 ns |    457.14 ns |   239.09 ns |  1.00 |    0.07 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 256  | Reversed           |     3,418.4 ns |    143.94 ns |    75.28 ns |  0.95 |    0.03 |    3 |         - |          NA |
-| PairwiseSortingNetwork            | 256  | Reversed           |     2,682.6 ns |      9.88 ns |     3.52 ns |  0.75 |    0.01 |    2 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 256  | Reversed           |     3,330.5 ns |     26.58 ns |     9.48 ns |  0.93 |    0.02 |    3 |         - |          NA |
-| DotnetSort                        | 256  | Reversed           |     1,163.0 ns |     26.54 ns |    11.78 ns |  0.32 |    0.01 |    1 |         - |          NA |
+| **BitonicSort**                       | **256**  | **Reversed**           |     **3,602.7 ns** |    **150.71 ns** |    **66.92 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| BitonicSortBranchless             | 256  | Reversed           |     3,878.1 ns |    303.31 ns |   158.64 ns |  1.08 |    0.05 |    2 |         - |          NA |
+| BitonicRecursiveSort              | 256  | Reversed           |    17,964.9 ns |     36.92 ns |    16.39 ns |  4.99 |    0.08 |    4 |         - |          NA |
+| BitonicSortAnyLength              | 256  | Reversed           |    11,709.5 ns |     92.81 ns |    48.54 ns |  3.25 |    0.06 |    3 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 256  | Reversed           |     1,122.7 ns |     19.61 ns |     8.71 ns |  0.31 |    0.01 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 256  | Reversed           |     3,532.3 ns |    220.03 ns |   115.08 ns |  0.98 |    0.03 |    2 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 256  | Reversed           |     3,393.4 ns |     12.92 ns |     4.61 ns |  0.94 |    0.02 |    2 |         - |          NA |
+| PairwiseSortingNetwork            | 256  | Reversed           |     2,877.6 ns |    323.78 ns |   169.34 ns |  0.80 |    0.05 |    2 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 256  | Reversed           |     3,335.2 ns |    145.68 ns |    64.68 ns |  0.93 |    0.02 |    2 |         - |          NA |
+| DotnetSort                        | 256  | Reversed           |     1,024.9 ns |    113.60 ns |    50.44 ns |  0.28 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **256**  | **PipeOrgan**          |     **3,746.5 ns** |    **286.12 ns** |   **127.04 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| BitonicSortBranchless             | 256  | PipeOrgan          |     3,846.5 ns |    281.50 ns |   147.23 ns |  1.03 |    0.05 |    3 |         - |          NA |
-| BitonicRecursiveSort              | 256  | PipeOrgan          |    17,988.8 ns |     56.89 ns |    25.26 ns |  4.81 |    0.14 |    5 |         - |          NA |
-| BitonicSortAnyLength              | 256  | PipeOrgan          |    11,568.5 ns |    264.54 ns |   117.46 ns |  3.09 |    0.10 |    4 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 256  | PipeOrgan          |     1,052.5 ns |      7.56 ns |     2.70 ns |  0.28 |    0.01 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 256  | PipeOrgan          |     3,443.0 ns |    305.52 ns |   135.65 ns |  0.92 |    0.04 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 256  | PipeOrgan          |     3,401.7 ns |    193.18 ns |    85.77 ns |  0.91 |    0.03 |    3 |         - |          NA |
-| PairwiseSortingNetwork            | 256  | PipeOrgan          |     2,826.1 ns |    343.73 ns |   152.62 ns |  0.76 |    0.04 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 256  | PipeOrgan          |     3,425.4 ns |    354.71 ns |   185.52 ns |  0.92 |    0.05 |    3 |         - |          NA |
-| DotnetSort                        | 256  | PipeOrgan          |     1,939.4 ns |    374.31 ns |   195.77 ns |  0.52 |    0.05 |    2 |         - |          NA |
+| **BitonicSort**                       | **256**  | **PipeOrgan**          |     **3,871.7 ns** |    **358.02 ns** |   **187.25 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| BitonicSortBranchless             | 256  | PipeOrgan          |     3,759.5 ns |    180.52 ns |    94.42 ns |  0.97 |    0.05 |    4 |         - |          NA |
+| BitonicRecursiveSort              | 256  | PipeOrgan          |    18,021.7 ns |    348.50 ns |   182.27 ns |  4.66 |    0.22 |    6 |         - |          NA |
+| BitonicSortAnyLength              | 256  | PipeOrgan          |    11,514.5 ns |    252.02 ns |   131.81 ns |  2.98 |    0.14 |    5 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 256  | PipeOrgan          |     1,147.1 ns |     20.09 ns |     8.92 ns |  0.30 |    0.01 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 256  | PipeOrgan          |     3,423.7 ns |     92.60 ns |    41.11 ns |  0.89 |    0.04 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 256  | PipeOrgan          |     3,403.8 ns |    163.41 ns |    72.55 ns |  0.88 |    0.04 |    4 |         - |          NA |
+| PairwiseSortingNetwork            | 256  | PipeOrgan          |     2,760.3 ns |    332.61 ns |   173.96 ns |  0.71 |    0.05 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 256  | PipeOrgan          |     3,371.1 ns |    182.10 ns |    95.24 ns |  0.87 |    0.05 |    4 |         - |          NA |
+| DotnetSort                        | 256  | PipeOrgan          |     1,780.6 ns |     48.10 ns |    25.16 ns |  0.46 |    0.02 |    2 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **256**  | **ManyDuplicates**     |    **11,502.4 ns** |    **283.92 ns** |   **126.06 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| BitonicSortBranchless             | 256  | ManyDuplicates     |     3,720.8 ns |     36.30 ns |    12.95 ns |  0.32 |    0.00 |    2 |         - |          NA |
-| BitonicRecursiveSort              | 256  | ManyDuplicates     |    25,449.2 ns |    311.69 ns |   138.39 ns |  2.21 |    0.03 |    6 |         - |          NA |
-| BitonicSortAnyLength              | 256  | ManyDuplicates     |    20,022.6 ns |    420.57 ns |   219.97 ns |  1.74 |    0.03 |    5 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 256  | ManyDuplicates     |     1,146.2 ns |     24.96 ns |     8.90 ns |  0.10 |    0.00 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 256  | ManyDuplicates     |     9,973.8 ns |    435.49 ns |   227.77 ns |  0.87 |    0.02 |    4 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 256  | ManyDuplicates     |     3,407.8 ns |     58.96 ns |    26.18 ns |  0.30 |    0.00 |    2 |         - |          NA |
-| PairwiseSortingNetwork            | 256  | ManyDuplicates     |    11,337.3 ns |    252.07 ns |   111.92 ns |  0.99 |    0.01 |    4 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 256  | ManyDuplicates     |     3,330.5 ns |     37.85 ns |    13.50 ns |  0.29 |    0.00 |    2 |         - |          NA |
-| DotnetSort                        | 256  | ManyDuplicates     |     5,490.4 ns |    244.28 ns |   127.76 ns |  0.48 |    0.01 |    3 |         - |          NA |
+| **BitonicSort**                       | **256**  | **ManyDuplicates**     |    **11,418.0 ns** |    **299.46 ns** |   **132.96 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| BitonicSortBranchless             | 256  | ManyDuplicates     |     3,784.8 ns |    190.01 ns |    99.38 ns |  0.33 |    0.01 |    2 |         - |          NA |
+| BitonicRecursiveSort              | 256  | ManyDuplicates     |    25,556.9 ns |    239.11 ns |   106.17 ns |  2.24 |    0.03 |    6 |         - |          NA |
+| BitonicSortAnyLength              | 256  | ManyDuplicates     |    19,893.8 ns |    461.34 ns |   241.29 ns |  1.74 |    0.03 |    5 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 256  | ManyDuplicates     |     1,153.9 ns |     17.29 ns |     6.17 ns |  0.10 |    0.00 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 256  | ManyDuplicates     |     9,875.9 ns |    334.12 ns |   148.35 ns |  0.87 |    0.02 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 256  | ManyDuplicates     |     3,395.9 ns |     78.00 ns |    34.63 ns |  0.30 |    0.00 |    2 |         - |          NA |
+| PairwiseSortingNetwork            | 256  | ManyDuplicates     |    11,311.4 ns |    333.75 ns |   174.56 ns |  0.99 |    0.02 |    4 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 256  | ManyDuplicates     |     3,314.2 ns |     36.99 ns |    13.19 ns |  0.29 |    0.00 |    2 |         - |          NA |
+| DotnetSort                        | 256  | ManyDuplicates     |     5,425.1 ns |     71.92 ns |    25.65 ns |  0.48 |    0.01 |    3 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **1024** | **Random**             |    **66,448.4 ns** |    **563.40 ns** |   **200.91 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| BitonicSortBranchless             | 1024 | Random             |    22,762.8 ns |    234.42 ns |   122.61 ns |  0.34 |    0.00 |    2 |         - |          NA |
-| BitonicRecursiveSort              | 1024 | Random             |   138,244.4 ns |    666.90 ns |   296.11 ns |  2.08 |    0.01 |    7 |         - |          NA |
-| BitonicSortAnyLength              | 1024 | Random             |   111,220.8 ns |  1,564.88 ns |   694.82 ns |  1.67 |    0.01 |    6 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 1024 | Random             |     6,945.5 ns |    181.13 ns |    94.74 ns |  0.10 |    0.00 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 1024 | Random             |    54,643.2 ns |    750.25 ns |   392.39 ns |  0.82 |    0.01 |    4 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 1024 | Random             |    20,827.0 ns |    534.03 ns |   237.11 ns |  0.31 |    0.00 |    2 |         - |          NA |
-| PairwiseSortingNetwork            | 1024 | Random             |    66,623.5 ns |    375.41 ns |   166.68 ns |  1.00 |    0.00 |    5 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 1024 | Random             |    20,549.3 ns |    296.08 ns |   154.86 ns |  0.31 |    0.00 |    2 |         - |          NA |
-| DotnetSort                        | 1024 | Random             |    29,959.3 ns |    361.60 ns |   189.13 ns |  0.45 |    0.00 |    3 |         - |          NA |
+| **BitonicSort**                       | **1024** | **Random**             |    **66,678.5 ns** |  **1,206.47 ns** |   **535.68 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| BitonicSortBranchless             | 1024 | Random             |    22,814.6 ns |    205.55 ns |   107.50 ns |  0.34 |    0.00 |    2 |         - |          NA |
+| BitonicRecursiveSort              | 1024 | Random             |   138,279.1 ns |    817.72 ns |   363.07 ns |  2.07 |    0.02 |    7 |         - |          NA |
+| BitonicSortAnyLength              | 1024 | Random             |   110,240.9 ns |    749.83 ns |   332.93 ns |  1.65 |    0.01 |    6 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 1024 | Random             |     6,949.8 ns |    307.85 ns |   161.01 ns |  0.10 |    0.00 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 1024 | Random             |    54,264.1 ns |    400.55 ns |   177.85 ns |  0.81 |    0.01 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 1024 | Random             |    20,746.7 ns |    386.87 ns |   202.34 ns |  0.31 |    0.00 |    2 |         - |          NA |
+| PairwiseSortingNetwork            | 1024 | Random             |    66,235.6 ns |    652.65 ns |   341.35 ns |  0.99 |    0.01 |    5 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 1024 | Random             |    20,431.7 ns |    125.17 ns |    55.58 ns |  0.31 |    0.00 |    2 |         - |          NA |
+| DotnetSort                        | 1024 | Random             |    29,882.5 ns |    390.32 ns |   204.14 ns |  0.45 |    0.00 |    3 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **1024** | **SingleElementMoved** |    **21,602.5 ns** |    **855.12 ns** |   **447.25 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| BitonicSortBranchless             | 1024 | SingleElementMoved |    23,013.3 ns |    941.38 ns |   492.36 ns |  1.07 |    0.03 |    4 |         - |          NA |
-| BitonicRecursiveSort              | 1024 | SingleElementMoved |    93,795.5 ns |  1,088.29 ns |   483.21 ns |  4.34 |    0.09 |    6 |         - |          NA |
-| BitonicSortAnyLength              | 1024 | SingleElementMoved |    61,808.1 ns |    158.35 ns |    70.31 ns |  2.86 |    0.06 |    5 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 1024 | SingleElementMoved |     6,787.8 ns |    314.25 ns |   164.36 ns |  0.31 |    0.01 |    2 |         - |          NA |
-| BatcherOddEvenMergeSort           | 1024 | SingleElementMoved |    23,016.4 ns |  1,264.55 ns |   561.47 ns |  1.07 |    0.03 |    4 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 1024 | SingleElementMoved |    20,462.9 ns |    226.45 ns |   100.55 ns |  0.95 |    0.02 |    4 |         - |          NA |
-| PairwiseSortingNetwork            | 1024 | SingleElementMoved |    17,184.7 ns |  1,545.42 ns |   808.28 ns |  0.80 |    0.04 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 1024 | SingleElementMoved |    20,692.0 ns |    440.04 ns |   230.15 ns |  0.96 |    0.02 |    4 |         - |          NA |
-| DotnetSort                        | 1024 | SingleElementMoved |     5,410.3 ns |    299.39 ns |   156.59 ns |  0.25 |    0.01 |    1 |         - |          NA |
+| **BitonicSort**                       | **1024** | **SingleElementMoved** |    **21,418.2 ns** |    **511.70 ns** |   **227.20 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| BitonicSortBranchless             | 1024 | SingleElementMoved |    22,672.1 ns |    361.91 ns |   189.29 ns |  1.06 |    0.01 |    4 |         - |          NA |
+| BitonicRecursiveSort              | 1024 | SingleElementMoved |    93,922.4 ns |    240.31 ns |   106.70 ns |  4.39 |    0.04 |    6 |         - |          NA |
+| BitonicSortAnyLength              | 1024 | SingleElementMoved |    62,019.0 ns |    161.57 ns |    71.74 ns |  2.90 |    0.03 |    5 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 1024 | SingleElementMoved |     6,854.9 ns |    308.82 ns |   161.52 ns |  0.32 |    0.01 |    2 |         - |          NA |
+| BatcherOddEvenMergeSort           | 1024 | SingleElementMoved |    23,218.4 ns |    722.10 ns |   320.62 ns |  1.08 |    0.02 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 1024 | SingleElementMoved |    20,664.2 ns |    346.99 ns |   181.48 ns |  0.96 |    0.01 |    4 |         - |          NA |
+| PairwiseSortingNetwork            | 1024 | SingleElementMoved |    16,978.9 ns |  1,196.58 ns |   625.84 ns |  0.79 |    0.03 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 1024 | SingleElementMoved |    20,524.2 ns |    246.20 ns |   128.77 ns |  0.96 |    0.01 |    4 |         - |          NA |
+| DotnetSort                        | 1024 | SingleElementMoved |     5,257.9 ns |    262.56 ns |   137.33 ns |  0.25 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **1024** | **Sorted**             |    **20,992.4 ns** |    **532.80 ns** |   **278.66 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| BitonicSortBranchless             | 1024 | Sorted             |    22,742.8 ns |    170.85 ns |    89.36 ns |  1.08 |    0.01 |    3 |         - |          NA |
-| BitonicRecursiveSort              | 1024 | Sorted             |    94,165.5 ns |    643.11 ns |   336.36 ns |  4.49 |    0.06 |    5 |         - |          NA |
-| BitonicSortAnyLength              | 1024 | Sorted             |    61,570.6 ns |    174.86 ns |    91.46 ns |  2.93 |    0.04 |    4 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 1024 | Sorted             |     6,859.3 ns |    308.12 ns |   161.15 ns |  0.33 |    0.01 |    2 |         - |          NA |
-| BatcherOddEvenMergeSort           | 1024 | Sorted             |    23,150.7 ns |    394.01 ns |   206.08 ns |  1.10 |    0.02 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 1024 | Sorted             |    20,651.9 ns |    207.38 ns |   108.46 ns |  0.98 |    0.01 |    3 |         - |          NA |
-| PairwiseSortingNetwork            | 1024 | Sorted             |    17,572.7 ns |    858.72 ns |   449.13 ns |  0.84 |    0.02 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 1024 | Sorted             |    20,571.2 ns |    356.28 ns |   127.05 ns |  0.98 |    0.01 |    3 |         - |          NA |
-| DotnetSort                        | 1024 | Sorted             |     3,125.8 ns |     46.26 ns |    16.50 ns |  0.15 |    0.00 |    1 |         - |          NA |
+| **BitonicSort**                       | **1024** | **Sorted**             |    **21,210.3 ns** |    **436.96 ns** |   **228.54 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| BitonicSortBranchless             | 1024 | Sorted             |    22,633.3 ns |    331.72 ns |   147.29 ns |  1.07 |    0.01 |    4 |         - |          NA |
+| BitonicRecursiveSort              | 1024 | Sorted             |    93,970.3 ns |  2,167.03 ns |   962.18 ns |  4.43 |    0.06 |    6 |         - |          NA |
+| BitonicSortAnyLength              | 1024 | Sorted             |    61,915.8 ns |     92.44 ns |    41.04 ns |  2.92 |    0.03 |    5 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 1024 | Sorted             |     6,853.9 ns |    226.53 ns |   118.48 ns |  0.32 |    0.01 |    2 |         - |          NA |
+| BatcherOddEvenMergeSort           | 1024 | Sorted             |    23,442.1 ns |  1,286.46 ns |   571.20 ns |  1.11 |    0.03 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 1024 | Sorted             |    20,448.2 ns |    129.17 ns |    57.35 ns |  0.96 |    0.01 |    4 |         - |          NA |
+| PairwiseSortingNetwork            | 1024 | Sorted             |    17,145.7 ns |  1,565.97 ns |   819.03 ns |  0.81 |    0.04 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 1024 | Sorted             |    20,625.3 ns |    263.24 ns |   137.68 ns |  0.97 |    0.01 |    4 |         - |          NA |
+| DotnetSort                        | 1024 | Sorted             |     3,326.6 ns |    450.03 ns |   199.82 ns |  0.16 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **1024** | **Reversed**           |    **22,456.1 ns** |  **1,904.63 ns** |   **996.16 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| BitonicSortBranchless             | 1024 | Reversed           |    22,684.9 ns |    385.86 ns |   201.81 ns |  1.01 |    0.04 |    2 |         - |          NA |
-| BitonicRecursiveSort              | 1024 | Reversed           |    93,025.1 ns |    187.90 ns |    83.43 ns |  4.15 |    0.17 |    4 |         - |          NA |
-| BitonicSortAnyLength              | 1024 | Reversed           |    62,155.2 ns |    266.41 ns |   139.34 ns |  2.77 |    0.12 |    3 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 1024 | Reversed           |     6,741.7 ns |    207.53 ns |   108.54 ns |  0.30 |    0.01 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 1024 | Reversed           |    21,879.7 ns |    876.18 ns |   458.26 ns |  0.98 |    0.05 |    2 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 1024 | Reversed           |    20,655.3 ns |    147.03 ns |    76.90 ns |  0.92 |    0.04 |    2 |         - |          NA |
-| PairwiseSortingNetwork            | 1024 | Reversed           |    17,868.0 ns |    890.14 ns |   465.56 ns |  0.80 |    0.04 |    2 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 1024 | Reversed           |    20,501.4 ns |    503.16 ns |   263.16 ns |  0.91 |    0.04 |    2 |         - |          NA |
-| DotnetSort                        | 1024 | Reversed           |     6,593.6 ns |    394.65 ns |   175.23 ns |  0.29 |    0.01 |    1 |         - |          NA |
+| **BitonicSort**                       | **1024** | **Reversed**           |    **21,529.8 ns** |    **498.93 ns** |   **221.53 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| BitonicSortBranchless             | 1024 | Reversed           |    22,731.8 ns |    322.11 ns |   168.47 ns |  1.06 |    0.01 |    2 |         - |          NA |
+| BitonicRecursiveSort              | 1024 | Reversed           |    92,926.0 ns |    340.09 ns |   151.00 ns |  4.32 |    0.04 |    4 |         - |          NA |
+| BitonicSortAnyLength              | 1024 | Reversed           |    61,992.3 ns |    263.57 ns |   117.02 ns |  2.88 |    0.03 |    3 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 1024 | Reversed           |     6,753.9 ns |    310.04 ns |   162.16 ns |  0.31 |    0.01 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 1024 | Reversed           |    21,736.9 ns |    584.33 ns |   305.61 ns |  1.01 |    0.02 |    2 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 1024 | Reversed           |    20,673.2 ns |    160.36 ns |    83.87 ns |  0.96 |    0.01 |    2 |         - |          NA |
+| PairwiseSortingNetwork            | 1024 | Reversed           |    17,374.4 ns |  1,584.20 ns |   828.57 ns |  0.81 |    0.04 |    2 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 1024 | Reversed           |    20,559.0 ns |    229.73 ns |   120.15 ns |  0.95 |    0.01 |    2 |         - |          NA |
+| DotnetSort                        | 1024 | Reversed           |     6,111.8 ns |  1,149.91 ns |   601.43 ns |  0.28 |    0.03 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **1024** | **PipeOrgan**          |    **21,382.9 ns** |    **579.15 ns** |   **302.91 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| BitonicSortBranchless             | 1024 | PipeOrgan          |    22,674.4 ns |    341.21 ns |   178.46 ns |  1.06 |    0.02 |    4 |         - |          NA |
-| BitonicRecursiveSort              | 1024 | PipeOrgan          |    93,441.0 ns |    691.67 ns |   307.11 ns |  4.37 |    0.06 |    6 |         - |          NA |
-| BitonicSortAnyLength              | 1024 | PipeOrgan          |    61,603.0 ns |    179.88 ns |    94.08 ns |  2.88 |    0.04 |    5 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 1024 | PipeOrgan          |     6,394.5 ns |    294.69 ns |   154.13 ns |  0.30 |    0.01 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 1024 | PipeOrgan          |    22,279.2 ns |    678.96 ns |   355.11 ns |  1.04 |    0.02 |    4 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 1024 | PipeOrgan          |    20,550.8 ns |    187.11 ns |    97.86 ns |  0.96 |    0.01 |    4 |         - |          NA |
-| PairwiseSortingNetwork            | 1024 | PipeOrgan          |    16,707.8 ns |    810.75 ns |   359.98 ns |  0.78 |    0.02 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 1024 | PipeOrgan          |    20,444.9 ns |    143.57 ns |    75.09 ns |  0.96 |    0.01 |    4 |         - |          NA |
-| DotnetSort                        | 1024 | PipeOrgan          |    12,848.5 ns |    517.22 ns |   229.65 ns |  0.60 |    0.01 |    2 |         - |          NA |
+| **BitonicSort**                       | **1024** | **PipeOrgan**          |    **21,291.9 ns** |    **426.37 ns** |   **223.00 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| BitonicSortBranchless             | 1024 | PipeOrgan          |    22,777.1 ns |    246.23 ns |   128.79 ns |  1.07 |    0.01 |    4 |         - |          NA |
+| BitonicRecursiveSort              | 1024 | PipeOrgan          |    93,280.9 ns |    296.39 ns |   155.02 ns |  4.38 |    0.04 |    6 |         - |          NA |
+| BitonicSortAnyLength              | 1024 | PipeOrgan          |    61,510.8 ns |    256.77 ns |   134.30 ns |  2.89 |    0.03 |    5 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 1024 | PipeOrgan          |     6,973.3 ns |    258.58 ns |   135.24 ns |  0.33 |    0.01 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 1024 | PipeOrgan          |    22,565.6 ns |    306.17 ns |   135.94 ns |  1.06 |    0.01 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 1024 | PipeOrgan          |    20,765.7 ns |    151.31 ns |    67.18 ns |  0.98 |    0.01 |    4 |         - |          NA |
+| PairwiseSortingNetwork            | 1024 | PipeOrgan          |    16,447.0 ns |    299.27 ns |   106.72 ns |  0.77 |    0.01 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 1024 | PipeOrgan          |    20,505.6 ns |    147.82 ns |    77.31 ns |  0.96 |    0.01 |    4 |         - |          NA |
+| DotnetSort                        | 1024 | PipeOrgan          |    13,105.8 ns |    755.25 ns |   395.01 ns |  0.62 |    0.02 |    2 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **1024** | **ManyDuplicates**     |    **55,081.3 ns** |    **545.56 ns** |   **285.34 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| BitonicSortBranchless             | 1024 | ManyDuplicates     |    22,667.3 ns |    218.28 ns |   114.16 ns |  0.41 |    0.00 |    2 |         - |          NA |
-| BitonicRecursiveSort              | 1024 | ManyDuplicates     |   128,559.7 ns |    990.63 ns |   439.84 ns |  2.33 |    0.01 |    5 |         - |          NA |
-| BitonicSortAnyLength              | 1024 | ManyDuplicates     |   100,689.3 ns |  2,330.05 ns | 1,034.56 ns |  1.83 |    0.02 |    4 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 1024 | ManyDuplicates     |     6,956.6 ns |    283.79 ns |   148.43 ns |  0.13 |    0.00 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 1024 | ManyDuplicates     |    48,861.9 ns |    750.94 ns |   392.76 ns |  0.89 |    0.01 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 1024 | ManyDuplicates     |    20,734.5 ns |    325.30 ns |   170.14 ns |  0.38 |    0.00 |    2 |         - |          NA |
-| PairwiseSortingNetwork            | 1024 | ManyDuplicates     |    54,368.4 ns |    517.05 ns |   229.57 ns |  0.99 |    0.01 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 1024 | ManyDuplicates     |    20,324.8 ns |    160.43 ns |    83.91 ns |  0.37 |    0.00 |    2 |         - |          NA |
-| DotnetSort                        | 1024 | ManyDuplicates     |    23,312.7 ns |    330.15 ns |   172.68 ns |  0.42 |    0.00 |    2 |         - |          NA |
+| **BitonicSort**                       | **1024** | **ManyDuplicates**     |    **55,253.6 ns** |    **824.38 ns** |   **431.17 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| BitonicSortBranchless             | 1024 | ManyDuplicates     |    22,725.4 ns |    411.74 ns |   182.82 ns |  0.41 |    0.00 |    2 |         - |          NA |
+| BitonicRecursiveSort              | 1024 | ManyDuplicates     |   128,914.4 ns |    830.69 ns |   368.83 ns |  2.33 |    0.02 |    5 |         - |          NA |
+| BitonicSortAnyLength              | 1024 | ManyDuplicates     |   100,614.3 ns |  1,562.94 ns |   693.96 ns |  1.82 |    0.02 |    4 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 1024 | ManyDuplicates     |     6,851.7 ns |    277.86 ns |   145.32 ns |  0.12 |    0.00 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 1024 | ManyDuplicates     |    48,729.4 ns |    217.18 ns |    96.43 ns |  0.88 |    0.01 |    3 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 1024 | ManyDuplicates     |    20,603.3 ns |    148.44 ns |    77.63 ns |  0.37 |    0.00 |    2 |         - |          NA |
+| PairwiseSortingNetwork            | 1024 | ManyDuplicates     |    54,493.8 ns |    699.74 ns |   365.98 ns |  0.99 |    0.01 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 1024 | ManyDuplicates     |    20,344.4 ns |     85.15 ns |    44.54 ns |  0.37 |    0.00 |    2 |         - |          NA |
+| DotnetSort                        | 1024 | ManyDuplicates     |    23,325.8 ns |    396.71 ns |   207.49 ns |  0.42 |    0.00 |    2 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **4096** | **Random**             |   **337,885.1 ns** | **15,782.20 ns** | **8,254.40 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| BitonicSortBranchless             | 4096 | Random             |   126,535.2 ns |    519.31 ns |   230.58 ns |  0.37 |    0.01 |    2 |         - |          NA |
-| BitonicRecursiveSort              | 4096 | Random             |   692,558.0 ns |  1,261.13 ns |   659.59 ns |  2.05 |    0.05 |    6 |         - |          NA |
-| BitonicSortAnyLength              | 4096 | Random             |   558,721.3 ns |  4,541.03 ns | 2,016.24 ns |  1.65 |    0.04 |    5 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 4096 | Random             |    37,991.6 ns |    225.26 ns |   117.82 ns |  0.11 |    0.00 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 4096 | Random             |   276,201.8 ns |  1,621.77 ns |   720.08 ns |  0.82 |    0.02 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 4096 | Random             |   116,341.3 ns |  1,779.22 ns |   930.57 ns |  0.34 |    0.01 |    2 |         - |          NA |
-| PairwiseSortingNetwork            | 4096 | Random             |   349,656.6 ns |  1,509.00 ns |   670.00 ns |  1.04 |    0.02 |    4 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 4096 | Random             |   115,119.6 ns |  1,650.09 ns |   732.65 ns |  0.34 |    0.01 |    2 |         - |          NA |
-| DotnetSort                        | 4096 | Random             |   144,876.5 ns |  1,977.13 ns | 1,034.08 ns |  0.43 |    0.01 |    2 |         - |          NA |
+| **BitonicSort**                       | **4096** | **Random**             |   **330,519.8 ns** |  **1,901.89 ns** |   **844.45 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| BitonicSortBranchless             | 4096 | Random             |   127,135.3 ns |    843.28 ns |   374.42 ns |  0.38 |    0.00 |    2 |         - |          NA |
+| BitonicRecursiveSort              | 4096 | Random             |   698,574.4 ns | 16,597.47 ns | 7,369.38 ns |  2.11 |    0.02 |    5 |         - |          NA |
+| BitonicSortAnyLength              | 4096 | Random             |   560,090.3 ns |  3,675.40 ns | 1,922.31 ns |  1.69 |    0.01 |    4 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 4096 | Random             |    38,098.7 ns |    258.77 ns |   114.89 ns |  0.12 |    0.00 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 4096 | Random             |   276,321.5 ns |    519.59 ns |   230.70 ns |  0.84 |    0.00 |    3 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 4096 | Random             |   116,245.3 ns |  1,648.72 ns |   862.31 ns |  0.35 |    0.00 |    2 |         - |          NA |
+| PairwiseSortingNetwork            | 4096 | Random             |   348,295.3 ns | 19,445.17 ns | 8,633.78 ns |  1.05 |    0.02 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 4096 | Random             |   115,052.2 ns |    565.39 ns |   251.04 ns |  0.35 |    0.00 |    2 |         - |          NA |
+| DotnetSort                        | 4096 | Random             |   145,314.2 ns |  1,677.63 ns |   744.88 ns |  0.44 |    0.00 |    2 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **4096** | **SingleElementMoved** |   **117,261.8 ns** |  **1,148.35 ns** |   **509.87 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| BitonicSortBranchless             | 4096 | SingleElementMoved |   126,385.7 ns |    316.31 ns |   140.44 ns |  1.08 |    0.00 |    4 |         - |          NA |
-| BitonicRecursiveSort              | 4096 | SingleElementMoved |   465,444.4 ns |  1,326.59 ns |   589.01 ns |  3.97 |    0.02 |    6 |         - |          NA |
-| BitonicSortAnyLength              | 4096 | SingleElementMoved |   314,823.8 ns |    145.23 ns |    51.79 ns |  2.68 |    0.01 |    5 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 4096 | SingleElementMoved |    37,301.9 ns |    237.23 ns |   105.33 ns |  0.32 |    0.00 |    2 |         - |          NA |
-| BatcherOddEvenMergeSort           | 4096 | SingleElementMoved |   128,699.9 ns |  2,739.25 ns | 1,216.24 ns |  1.10 |    0.01 |    4 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 4096 | SingleElementMoved |   116,168.2 ns |  1,609.79 ns |   841.95 ns |  0.99 |    0.01 |    4 |         - |          NA |
-| PairwiseSortingNetwork            | 4096 | SingleElementMoved |    95,703.8 ns |  3,313.45 ns | 1,471.19 ns |  0.82 |    0.01 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 4096 | SingleElementMoved |   114,889.0 ns |    690.26 ns |   306.48 ns |  0.98 |    0.00 |    4 |         - |          NA |
-| DotnetSort                        | 4096 | SingleElementMoved |    24,472.8 ns |    298.44 ns |   156.09 ns |  0.21 |    0.00 |    1 |         - |          NA |
+| **BitonicSort**                       | **4096** | **SingleElementMoved** |   **118,078.8 ns** |  **1,129.61 ns** |   **501.55 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| BitonicSortBranchless             | 4096 | SingleElementMoved |   127,323.1 ns |  1,028.15 ns |   537.74 ns |  1.08 |    0.01 |    3 |         - |          NA |
+| BitonicRecursiveSort              | 4096 | SingleElementMoved |   466,422.5 ns |  2,868.14 ns | 1,500.09 ns |  3.95 |    0.02 |    5 |         - |          NA |
+| BitonicSortAnyLength              | 4096 | SingleElementMoved |   316,142.9 ns |  2,519.15 ns | 1,317.56 ns |  2.68 |    0.01 |    4 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 4096 | SingleElementMoved |    37,282.9 ns |    261.93 ns |   136.99 ns |  0.32 |    0.00 |    2 |         - |          NA |
+| BatcherOddEvenMergeSort           | 4096 | SingleElementMoved |   129,401.8 ns |  3,451.24 ns | 1,805.06 ns |  1.10 |    0.02 |    3 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 4096 | SingleElementMoved |   116,113.4 ns |  1,372.19 ns |   609.26 ns |  0.98 |    0.01 |    3 |         - |          NA |
+| PairwiseSortingNetwork            | 4096 | SingleElementMoved |    96,621.0 ns |  3,008.25 ns | 1,335.68 ns |  0.82 |    0.01 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 4096 | SingleElementMoved |   115,764.1 ns |  1,877.86 ns |   982.16 ns |  0.98 |    0.01 |    3 |         - |          NA |
+| DotnetSort                        | 4096 | SingleElementMoved |    25,545.2 ns |  2,035.53 ns | 1,064.62 ns |  0.22 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **4096** | **Sorted**             |   **116,831.9 ns** |    **996.39 ns** |   **442.40 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| BitonicSortBranchless             | 4096 | Sorted             |   126,719.5 ns |  1,074.90 ns |   477.26 ns |  1.08 |    0.01 |    4 |         - |          NA |
-| BitonicRecursiveSort              | 4096 | Sorted             |   466,659.9 ns |  2,410.09 ns | 1,070.10 ns |  3.99 |    0.02 |    6 |         - |          NA |
-| BitonicSortAnyLength              | 4096 | Sorted             |   315,088.7 ns |  2,146.83 ns | 1,122.83 ns |  2.70 |    0.01 |    5 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 4096 | Sorted             |    36,926.4 ns |    254.68 ns |   113.08 ns |  0.32 |    0.00 |    2 |         - |          NA |
-| BatcherOddEvenMergeSort           | 4096 | Sorted             |   130,133.1 ns |  2,646.18 ns | 1,384.01 ns |  1.11 |    0.01 |    4 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 4096 | Sorted             |   116,205.7 ns |  1,675.67 ns |   744.01 ns |  0.99 |    0.01 |    4 |         - |          NA |
-| PairwiseSortingNetwork            | 4096 | Sorted             |    95,130.4 ns |  2,920.84 ns | 1,527.66 ns |  0.81 |    0.01 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 4096 | Sorted             |   115,131.4 ns |    545.57 ns |   242.24 ns |  0.99 |    0.00 |    4 |         - |          NA |
-| DotnetSort                        | 4096 | Sorted             |    15,176.1 ns |    561.34 ns |   293.59 ns |  0.13 |    0.00 |    1 |         - |          NA |
+| **BitonicSort**                       | **4096** | **Sorted**             |   **116,580.0 ns** |  **1,026.63 ns** |   **455.83 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| BitonicSortBranchless             | 4096 | Sorted             |   126,740.0 ns |    978.69 ns |   434.54 ns |  1.09 |    0.01 |    4 |         - |          NA |
+| BitonicRecursiveSort              | 4096 | Sorted             |   466,856.4 ns |  5,639.83 ns | 2,504.12 ns |  4.00 |    0.02 |    6 |         - |          NA |
+| BitonicSortAnyLength              | 4096 | Sorted             |   314,989.8 ns |  1,434.46 ns |   636.91 ns |  2.70 |    0.01 |    5 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 4096 | Sorted             |    37,158.2 ns |    199.63 ns |   104.41 ns |  0.32 |    0.00 |    2 |         - |          NA |
+| BatcherOddEvenMergeSort           | 4096 | Sorted             |   129,851.5 ns |    589.28 ns |   261.64 ns |  1.11 |    0.00 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 4096 | Sorted             |   116,911.5 ns |  1,055.22 ns |   468.52 ns |  1.00 |    0.01 |    4 |         - |          NA |
+| PairwiseSortingNetwork            | 4096 | Sorted             |    96,870.9 ns |  6,651.33 ns | 2,953.23 ns |  0.83 |    0.02 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 4096 | Sorted             |   115,331.8 ns |  1,896.86 ns |   842.22 ns |  0.99 |    0.01 |    4 |         - |          NA |
+| DotnetSort                        | 4096 | Sorted             |    15,841.7 ns |  1,175.98 ns |   522.14 ns |  0.14 |    0.00 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **4096** | **Reversed**           |   **120,097.0 ns** |  **1,908.55 ns** |   **998.21 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| BitonicSortBranchless             | 4096 | Reversed           |   126,337.7 ns |    773.28 ns |   343.34 ns |  1.05 |    0.01 |    3 |         - |          NA |
-| BitonicRecursiveSort              | 4096 | Reversed           |   464,087.3 ns |  2,719.58 ns | 1,207.51 ns |  3.86 |    0.03 |    5 |         - |          NA |
-| BitonicSortAnyLength              | 4096 | Reversed           |   315,867.3 ns |  1,231.24 ns |   546.68 ns |  2.63 |    0.02 |    4 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 4096 | Reversed           |    37,185.6 ns |    142.21 ns |    74.38 ns |  0.31 |    0.00 |    2 |         - |          NA |
-| BatcherOddEvenMergeSort           | 4096 | Reversed           |   125,300.0 ns |  2,169.22 ns |   963.15 ns |  1.04 |    0.01 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 4096 | Reversed           |   116,326.8 ns |    989.29 ns |   439.25 ns |  0.97 |    0.01 |    3 |         - |          NA |
-| PairwiseSortingNetwork            | 4096 | Reversed           |    96,181.1 ns |  5,747.37 ns | 2,551.87 ns |  0.80 |    0.02 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 4096 | Reversed           |   115,009.6 ns |    548.44 ns |   243.51 ns |  0.96 |    0.01 |    3 |         - |          NA |
-| DotnetSort                        | 4096 | Reversed           |    27,495.8 ns |  3,430.09 ns | 1,794.01 ns |  0.23 |    0.01 |    1 |         - |          NA |
+| **BitonicSort**                       | **4096** | **Reversed**           |   **119,778.8 ns** |  **1,800.18 ns** |   **799.29 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| BitonicSortBranchless             | 4096 | Reversed           |   127,020.5 ns |    627.95 ns |   278.82 ns |  1.06 |    0.01 |    3 |         - |          NA |
+| BitonicRecursiveSort              | 4096 | Reversed           |   466,181.2 ns |  4,813.31 ns | 2,517.46 ns |  3.89 |    0.03 |    5 |         - |          NA |
+| BitonicSortAnyLength              | 4096 | Reversed           |   316,181.8 ns |  1,964.37 ns |   872.19 ns |  2.64 |    0.02 |    4 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 4096 | Reversed           |    37,067.0 ns |    282.84 ns |   147.93 ns |  0.31 |    0.00 |    2 |         - |          NA |
+| BatcherOddEvenMergeSort           | 4096 | Reversed           |   126,305.8 ns |  5,567.74 ns | 2,912.04 ns |  1.05 |    0.02 |    3 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 4096 | Reversed           |   116,387.3 ns |  1,340.32 ns |   595.11 ns |  0.97 |    0.01 |    3 |         - |          NA |
+| PairwiseSortingNetwork            | 4096 | Reversed           |    99,070.3 ns |  5,757.51 ns | 3,011.29 ns |  0.83 |    0.02 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 4096 | Reversed           |   114,829.6 ns |    459.10 ns |   163.72 ns |  0.96 |    0.01 |    3 |         - |          NA |
+| DotnetSort                        | 4096 | Reversed           |    28,652.1 ns |  2,781.64 ns | 1,454.85 ns |  0.24 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **4096** | **PipeOrgan**          |   **118,313.9 ns** |  **1,059.58 ns** |   **554.18 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| BitonicSortBranchless             | 4096 | PipeOrgan          |   126,985.8 ns |    555.17 ns |   246.50 ns |  1.07 |    0.01 |    3 |         - |          NA |
-| BitonicRecursiveSort              | 4096 | PipeOrgan          |   466,517.6 ns |  5,320.45 ns | 2,782.70 ns |  3.94 |    0.03 |    5 |         - |          NA |
-| BitonicSortAnyLength              | 4096 | PipeOrgan          |   314,891.4 ns |  1,232.96 ns |   439.69 ns |  2.66 |    0.01 |    4 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 4096 | PipeOrgan          |    34,389.0 ns |    170.02 ns |    88.92 ns |  0.29 |    0.00 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 4096 | PipeOrgan          |   125,673.7 ns |  3,362.04 ns | 1,492.76 ns |  1.06 |    0.01 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 4096 | PipeOrgan          |   116,630.6 ns |  1,329.14 ns |   590.15 ns |  0.99 |    0.01 |    3 |         - |          NA |
-| PairwiseSortingNetwork            | 4096 | PipeOrgan          |    97,519.3 ns |  6,483.82 ns | 3,391.16 ns |  0.82 |    0.03 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 4096 | PipeOrgan          |   114,834.3 ns |    259.49 ns |   115.21 ns |  0.97 |    0.00 |    3 |         - |          NA |
-| DotnetSort                        | 4096 | PipeOrgan          |    72,384.6 ns |  3,799.03 ns | 1,986.96 ns |  0.61 |    0.02 |    2 |         - |          NA |
+| **BitonicSort**                       | **4096** | **PipeOrgan**          |   **118,213.3 ns** |  **1,295.65 ns** |   **575.28 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| BitonicSortBranchless             | 4096 | PipeOrgan          |   127,147.0 ns |    831.64 ns |   369.25 ns |  1.08 |    0.01 |    3 |         - |          NA |
+| BitonicRecursiveSort              | 4096 | PipeOrgan          |   465,108.2 ns |  2,193.19 ns |   973.79 ns |  3.93 |    0.02 |    5 |         - |          NA |
+| BitonicSortAnyLength              | 4096 | PipeOrgan          |   315,281.6 ns |  2,430.93 ns | 1,271.42 ns |  2.67 |    0.02 |    4 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 4096 | PipeOrgan          |    34,477.8 ns |    229.15 ns |   119.85 ns |  0.29 |    0.00 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 4096 | PipeOrgan          |   124,118.7 ns |  3,200.65 ns | 1,421.11 ns |  1.05 |    0.01 |    3 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 4096 | PipeOrgan          |   116,731.0 ns |  1,281.63 ns |   569.05 ns |  0.99 |    0.01 |    3 |         - |          NA |
+| PairwiseSortingNetwork            | 4096 | PipeOrgan          |    97,670.0 ns |  4,061.84 ns | 2,124.42 ns |  0.83 |    0.02 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 4096 | PipeOrgan          |   115,003.7 ns |    325.60 ns |   144.57 ns |  0.97 |    0.00 |    3 |         - |          NA |
+| DotnetSort                        | 4096 | PipeOrgan          |    72,166.2 ns |  3,955.01 ns | 1,756.05 ns |  0.61 |    0.01 |    2 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **4096** | **ManyDuplicates**     |   **253,850.2 ns** |    **591.05 ns** |   **262.43 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| BitonicSortBranchless             | 4096 | ManyDuplicates     |   126,741.2 ns |  1,017.68 ns |   362.92 ns |  0.50 |    0.00 |    3 |         - |          NA |
-| BitonicRecursiveSort              | 4096 | ManyDuplicates     |   613,923.4 ns |  2,069.29 ns | 1,082.28 ns |  2.42 |    0.00 |    6 |         - |          NA |
-| BitonicSortAnyLength              | 4096 | ManyDuplicates     |   476,512.8 ns |  1,471.00 ns |   653.13 ns |  1.88 |    0.00 |    5 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 4096 | ManyDuplicates     |    36,961.2 ns |    318.05 ns |   166.35 ns |  0.15 |    0.00 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 4096 | ManyDuplicates     |   231,451.6 ns |  1,924.39 ns |   854.44 ns |  0.91 |    0.00 |    4 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 4096 | ManyDuplicates     |   116,066.0 ns |  1,122.08 ns |   400.15 ns |  0.46 |    0.00 |    3 |         - |          NA |
-| PairwiseSortingNetwork            | 4096 | ManyDuplicates     |   251,295.2 ns |  2,157.06 ns | 1,128.18 ns |  0.99 |    0.00 |    4 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 4096 | ManyDuplicates     |   115,205.7 ns |    624.59 ns |   277.32 ns |  0.45 |    0.00 |    3 |         - |          NA |
-| DotnetSort                        | 4096 | ManyDuplicates     |    94,466.0 ns |    465.71 ns |   243.58 ns |  0.37 |    0.00 |    2 |         - |          NA |
+| **BitonicSort**                       | **4096** | **ManyDuplicates**     |   **253,631.3 ns** |  **1,757.60 ns** |   **780.39 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| BitonicSortBranchless             | 4096 | ManyDuplicates     |   126,684.2 ns |    636.66 ns |   282.68 ns |  0.50 |    0.00 |    3 |         - |          NA |
+| BitonicRecursiveSort              | 4096 | ManyDuplicates     |   614,173.1 ns |  1,495.52 ns |   782.18 ns |  2.42 |    0.01 |    6 |         - |          NA |
+| BitonicSortAnyLength              | 4096 | ManyDuplicates     |   477,845.0 ns |  3,264.28 ns | 1,707.28 ns |  1.88 |    0.01 |    5 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 4096 | ManyDuplicates     |    36,967.3 ns |    241.61 ns |   126.37 ns |  0.15 |    0.00 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 4096 | ManyDuplicates     |   232,557.2 ns |  4,182.55 ns | 2,187.56 ns |  0.92 |    0.01 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 4096 | ManyDuplicates     |   117,092.5 ns |  2,056.41 ns |   913.06 ns |  0.46 |    0.00 |    3 |         - |          NA |
+| PairwiseSortingNetwork            | 4096 | ManyDuplicates     |   252,389.6 ns |  1,971.76 ns | 1,031.27 ns |  1.00 |    0.00 |    4 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 4096 | ManyDuplicates     |   115,748.2 ns |  1,521.21 ns |   675.43 ns |  0.46 |    0.00 |    3 |         - |          NA |
+| DotnetSort                        | 4096 | ManyDuplicates     |    94,649.5 ns |    704.06 ns |   312.60 ns |  0.37 |    0.00 |    2 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **8192** | **Random**             |   **732,822.4 ns** |  **1,348.17 ns** |   **598.59 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| BitonicSortBranchless             | 8192 | Random             |   293,639.9 ns |    893.20 ns |   396.59 ns |  0.40 |    0.00 |    2 |         - |          NA |
-| BitonicRecursiveSort              | 8192 | Random             | 1,552,330.3 ns |  3,140.61 ns | 1,394.45 ns |  2.12 |    0.00 |    5 |         - |          NA |
-| BitonicSortAnyLength              | 8192 | Random             | 1,255,178.2 ns |  7,357.20 ns | 3,847.96 ns |  1.71 |    0.01 |    4 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 8192 | Random             |    88,449.7 ns |    691.82 ns |   307.17 ns |  0.12 |    0.00 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 8192 | Random             |   615,382.2 ns |  1,414.74 ns |   739.94 ns |  0.84 |    0.00 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 8192 | Random             |   270,179.7 ns |  2,062.28 ns | 1,078.61 ns |  0.37 |    0.00 |    2 |         - |          NA |
-| PairwiseSortingNetwork            | 8192 | Random             |   791,842.4 ns |  1,636.48 ns |   855.91 ns |  1.08 |    0.00 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 8192 | Random             |   268,657.5 ns |  2,377.65 ns | 1,243.56 ns |  0.37 |    0.00 |    2 |         - |          NA |
-| DotnetSort                        | 8192 | Random             |   315,340.5 ns |  1,706.91 ns |   892.75 ns |  0.43 |    0.00 |    2 |         - |          NA |
+| **BitonicSort**                       | **8192** | **Random**             |   **735,241.2 ns** |  **4,611.52 ns** | **2,047.54 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| BitonicSortBranchless             | 8192 | Random             |   293,721.3 ns |  1,145.43 ns |   599.08 ns |  0.40 |    0.00 |    2 |         - |          NA |
+| BitonicRecursiveSort              | 8192 | Random             | 1,551,366.7 ns |  1,772.39 ns |   786.95 ns |  2.11 |    0.01 |    5 |         - |          NA |
+| BitonicSortAnyLength              | 8192 | Random             | 1,258,047.5 ns |  9,785.91 ns | 3,489.75 ns |  1.71 |    0.01 |    4 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 8192 | Random             |    89,814.2 ns |  1,813.84 ns |   805.36 ns |  0.12 |    0.00 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 8192 | Random             |   614,860.8 ns |  1,677.97 ns |   877.61 ns |  0.84 |    0.00 |    3 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 8192 | Random             |   270,643.0 ns |  3,313.97 ns | 1,733.27 ns |  0.37 |    0.00 |    2 |         - |          NA |
+| PairwiseSortingNetwork            | 8192 | Random             |   791,608.3 ns |    509.40 ns |   181.66 ns |  1.08 |    0.00 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 8192 | Random             |   268,814.9 ns |  2,004.67 ns |   890.09 ns |  0.37 |    0.00 |    2 |         - |          NA |
+| DotnetSort                        | 8192 | Random             |   316,149.0 ns |  3,313.43 ns | 1,732.99 ns |  0.43 |    0.00 |    2 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **8192** | **SingleElementMoved** |   **270,101.7 ns** |  **2,635.38 ns** | **1,170.12 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| BitonicSortBranchless             | 8192 | SingleElementMoved |   293,521.2 ns |  1,417.68 ns |   741.47 ns |  1.09 |    0.01 |    4 |         - |          NA |
-| BitonicRecursiveSort              | 8192 | SingleElementMoved | 1,049,269.5 ns |  2,599.09 ns | 1,154.01 ns |  3.88 |    0.02 |    6 |         - |          NA |
-| BitonicSortAnyLength              | 8192 | SingleElementMoved |   709,720.9 ns |  2,451.32 ns | 1,282.09 ns |  2.63 |    0.01 |    5 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 8192 | SingleElementMoved |    85,733.5 ns |    618.99 ns |   274.84 ns |  0.32 |    0.00 |    2 |         - |          NA |
-| BatcherOddEvenMergeSort           | 8192 | SingleElementMoved |   296,719.0 ns |  3,446.33 ns | 1,530.19 ns |  1.10 |    0.01 |    4 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 8192 | SingleElementMoved |   271,908.0 ns |  3,207.00 ns | 1,677.32 ns |  1.01 |    0.01 |    4 |         - |          NA |
-| PairwiseSortingNetwork            | 8192 | SingleElementMoved |   221,123.6 ns |  9,631.60 ns | 4,276.49 ns |  0.82 |    0.02 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 8192 | SingleElementMoved |   268,116.0 ns |    579.23 ns |   257.18 ns |  0.99 |    0.00 |    4 |         - |          NA |
-| DotnetSort                        | 8192 | SingleElementMoved |    54,268.2 ns |  3,352.69 ns | 1,753.52 ns |  0.20 |    0.01 |    1 |         - |          NA |
+| **BitonicSort**                       | **8192** | **SingleElementMoved** |   **271,424.2 ns** |  **4,639.41 ns** | **2,426.50 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| BitonicSortBranchless             | 8192 | SingleElementMoved |   293,776.2 ns |  1,174.99 ns |   614.54 ns |  1.08 |    0.01 |    4 |         - |          NA |
+| BitonicRecursiveSort              | 8192 | SingleElementMoved | 1,048,255.4 ns |  1,578.69 ns |   700.95 ns |  3.86 |    0.03 |    6 |         - |          NA |
+| BitonicSortAnyLength              | 8192 | SingleElementMoved |   710,104.5 ns |  2,320.49 ns | 1,213.66 ns |  2.62 |    0.02 |    5 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 8192 | SingleElementMoved |    86,060.5 ns |    527.11 ns |   234.04 ns |  0.32 |    0.00 |    2 |         - |          NA |
+| BatcherOddEvenMergeSort           | 8192 | SingleElementMoved |   300,715.5 ns |  3,460.95 ns | 1,810.15 ns |  1.11 |    0.01 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 8192 | SingleElementMoved |   271,386.1 ns |  1,210.45 ns |   537.45 ns |  1.00 |    0.01 |    4 |         - |          NA |
+| PairwiseSortingNetwork            | 8192 | SingleElementMoved |   222,960.2 ns |  3,990.23 ns | 2,086.97 ns |  0.82 |    0.01 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 8192 | SingleElementMoved |   269,175.4 ns |  2,545.97 ns | 1,130.43 ns |  0.99 |    0.01 |    4 |         - |          NA |
+| DotnetSort                        | 8192 | SingleElementMoved |    53,797.4 ns |  2,153.72 ns |   956.27 ns |  0.20 |    0.00 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **8192** | **Sorted**             |   **270,337.4 ns** |  **3,075.08 ns** | **1,608.33 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| BitonicSortBranchless             | 8192 | Sorted             |   293,379.1 ns |    918.82 ns |   327.66 ns |  1.09 |    0.01 |    3 |         - |          NA |
-| BitonicRecursiveSort              | 8192 | Sorted             | 1,048,498.6 ns |  2,008.71 ns |   891.88 ns |  3.88 |    0.02 |    5 |         - |          NA |
-| BitonicSortAnyLength              | 8192 | Sorted             |   708,952.8 ns |  1,832.19 ns |   958.27 ns |  2.62 |    0.02 |    4 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 8192 | Sorted             |    85,494.7 ns |    706.35 ns |   251.89 ns |  0.32 |    0.00 |    2 |         - |          NA |
-| BatcherOddEvenMergeSort           | 8192 | Sorted             |   300,976.6 ns |  1,926.28 ns |   855.28 ns |  1.11 |    0.01 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 8192 | Sorted             |   272,083.9 ns |  8,283.75 ns | 3,678.04 ns |  1.01 |    0.01 |    3 |         - |          NA |
-| PairwiseSortingNetwork            | 8192 | Sorted             |   223,595.8 ns |  3,808.30 ns | 1,991.81 ns |  0.83 |    0.01 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 8192 | Sorted             |   268,067.3 ns |  1,681.84 ns |   879.63 ns |  0.99 |    0.01 |    3 |         - |          NA |
-| DotnetSort                        | 8192 | Sorted             |    32,436.3 ns |    602.16 ns |   267.36 ns |  0.12 |    0.00 |    1 |         - |          NA |
+| **BitonicSort**                       | **8192** | **Sorted**             |   **269,014.5 ns** |  **1,745.24 ns** |   **774.90 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| BitonicSortBranchless             | 8192 | Sorted             |   294,050.1 ns |    787.92 ns |   349.84 ns |  1.09 |    0.00 |    3 |         - |          NA |
+| BitonicRecursiveSort              | 8192 | Sorted             | 1,050,682.4 ns |  3,980.26 ns | 1,767.26 ns |  3.91 |    0.01 |    5 |         - |          NA |
+| BitonicSortAnyLength              | 8192 | Sorted             |   710,398.7 ns |  3,436.44 ns | 1,525.80 ns |  2.64 |    0.01 |    4 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 8192 | Sorted             |    86,124.7 ns |  1,005.55 ns |   446.47 ns |  0.32 |    0.00 |    2 |         - |          NA |
+| BatcherOddEvenMergeSort           | 8192 | Sorted             |   302,617.1 ns |  2,558.06 ns | 1,337.91 ns |  1.12 |    0.01 |    3 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 8192 | Sorted             |   270,572.0 ns |    775.45 ns |   276.53 ns |  1.01 |    0.00 |    3 |         - |          NA |
+| PairwiseSortingNetwork            | 8192 | Sorted             |   223,309.5 ns |  4,127.75 ns | 1,832.75 ns |  0.83 |    0.01 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 8192 | Sorted             |   268,101.8 ns |    459.67 ns |   204.09 ns |  1.00 |    0.00 |    3 |         - |          NA |
+| DotnetSort                        | 8192 | Sorted             |    33,553.4 ns |  4,218.01 ns | 1,872.82 ns |  0.12 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **8192** | **Reversed**           |   **276,772.5 ns** |  **2,631.79 ns** | **1,376.48 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| BitonicSortBranchless             | 8192 | Reversed           |   294,345.0 ns |  2,431.76 ns | 1,271.86 ns |  1.06 |    0.01 |    3 |         - |          NA |
-| BitonicRecursiveSort              | 8192 | Reversed           | 1,044,807.2 ns |  3,529.37 ns | 1,567.06 ns |  3.78 |    0.02 |    5 |         - |          NA |
-| BitonicSortAnyLength              | 8192 | Reversed           |   709,590.8 ns |  2,075.51 ns |   921.54 ns |  2.56 |    0.01 |    4 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 8192 | Reversed           |    86,154.0 ns |    629.22 ns |   279.38 ns |  0.31 |    0.00 |    2 |         - |          NA |
-| BatcherOddEvenMergeSort           | 8192 | Reversed           |   289,556.7 ns |  3,119.82 ns | 1,631.73 ns |  1.05 |    0.01 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 8192 | Reversed           |   270,347.5 ns |  2,667.92 ns | 1,184.57 ns |  0.98 |    0.01 |    3 |         - |          NA |
-| PairwiseSortingNetwork            | 8192 | Reversed           |   227,769.2 ns |  4,790.79 ns | 2,505.68 ns |  0.82 |    0.01 |    3 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 8192 | Reversed           |   267,450.2 ns |    782.86 ns |   347.60 ns |  0.97 |    0.00 |    3 |         - |          NA |
-| DotnetSort                        | 8192 | Reversed           |    59,717.4 ns |  4,034.07 ns | 2,109.90 ns |  0.22 |    0.01 |    1 |         - |          NA |
+| **BitonicSort**                       | **8192** | **Reversed**           |   **275,132.6 ns** |  **1,084.10 ns** |   **481.35 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| BitonicSortBranchless             | 8192 | Reversed           |   295,637.0 ns |  4,459.29 ns | 2,332.29 ns |  1.07 |    0.01 |    3 |         - |          NA |
+| BitonicRecursiveSort              | 8192 | Reversed           | 1,045,786.3 ns |  2,935.01 ns | 1,303.16 ns |  3.80 |    0.01 |    5 |         - |          NA |
+| BitonicSortAnyLength              | 8192 | Reversed           |   710,431.0 ns |  1,803.00 ns |   943.00 ns |  2.58 |    0.01 |    4 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 8192 | Reversed           |    85,423.4 ns |    440.74 ns |   195.69 ns |  0.31 |    0.00 |    2 |         - |          NA |
+| BatcherOddEvenMergeSort           | 8192 | Reversed           |   288,198.9 ns |  3,712.12 ns | 1,941.51 ns |  1.05 |    0.01 |    3 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 8192 | Reversed           |   270,918.6 ns |  3,575.15 ns | 1,587.39 ns |  0.98 |    0.01 |    3 |         - |          NA |
+| PairwiseSortingNetwork            | 8192 | Reversed           |   224,714.6 ns |  3,418.54 ns | 1,517.85 ns |  0.82 |    0.01 |    3 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 8192 | Reversed           |   267,921.6 ns |  1,513.04 ns |   671.80 ns |  0.97 |    0.00 |    3 |         - |          NA |
+| DotnetSort                        | 8192 | Reversed           |    59,582.4 ns |  4,179.74 ns | 1,855.83 ns |  0.22 |    0.01 |    1 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **8192** | **PipeOrgan**          |   **273,370.7 ns** |  **1,962.48 ns** | **1,026.42 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| BitonicSortBranchless             | 8192 | PipeOrgan          |   294,004.2 ns |  1,573.90 ns |   823.18 ns |  1.08 |    0.00 |    3 |         - |          NA |
-| BitonicRecursiveSort              | 8192 | PipeOrgan          | 1,047,200.6 ns |  3,290.91 ns | 1,721.21 ns |  3.83 |    0.01 |    5 |         - |          NA |
-| BitonicSortAnyLength              | 8192 | PipeOrgan          |   708,767.7 ns |    957.49 ns |   500.79 ns |  2.59 |    0.01 |    4 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 8192 | PipeOrgan          |    79,118.6 ns |    428.87 ns |   152.94 ns |  0.29 |    0.00 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 8192 | PipeOrgan          |   288,732.3 ns |  4,989.10 ns | 2,609.40 ns |  1.06 |    0.01 |    3 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 8192 | PipeOrgan          |   269,626.9 ns |  1,958.71 ns |   869.68 ns |  0.99 |    0.00 |    3 |         - |          NA |
-| PairwiseSortingNetwork            | 8192 | PipeOrgan          |   220,396.4 ns |  1,840.64 ns |   817.25 ns |  0.81 |    0.00 |    2 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 8192 | PipeOrgan          |   267,382.4 ns |    767.10 ns |   340.60 ns |  0.98 |    0.00 |    3 |         - |          NA |
-| DotnetSort                        | 8192 | PipeOrgan          |   278,538.0 ns |  3,062.53 ns | 1,601.76 ns |  1.02 |    0.01 |    3 |         - |          NA |
+| **BitonicSort**                       | **8192** | **PipeOrgan**          |   **273,827.2 ns** |  **2,685.75 ns** | **1,404.70 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| BitonicSortBranchless             | 8192 | PipeOrgan          |   294,353.4 ns |    994.68 ns |   441.64 ns |  1.07 |    0.01 |    2 |         - |          NA |
+| BitonicRecursiveSort              | 8192 | PipeOrgan          | 1,048,444.2 ns |  4,481.75 ns | 2,344.04 ns |  3.83 |    0.02 |    4 |         - |          NA |
+| BitonicSortAnyLength              | 8192 | PipeOrgan          |   709,253.6 ns |  2,775.37 ns | 1,451.57 ns |  2.59 |    0.01 |    3 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 8192 | PipeOrgan          |    87,833.2 ns |    624.88 ns |   222.84 ns |  0.32 |    0.00 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 8192 | PipeOrgan          |   289,416.7 ns |  5,717.48 ns | 2,538.60 ns |  1.06 |    0.01 |    2 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 8192 | PipeOrgan          |   271,956.1 ns |  3,155.86 ns | 1,650.57 ns |  0.99 |    0.01 |    2 |         - |          NA |
+| PairwiseSortingNetwork            | 8192 | PipeOrgan          |   224,761.6 ns |  3,568.40 ns | 1,866.34 ns |  0.82 |    0.01 |    2 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 8192 | PipeOrgan          |   267,752.9 ns |    637.77 ns |   283.17 ns |  0.98 |    0.00 |    2 |         - |          NA |
+| DotnetSort                        | 8192 | PipeOrgan          |   277,992.7 ns |  3,140.54 ns | 1,394.42 ns |  1.02 |    0.01 |    2 |         - |          NA |
 |      |                    |                |              |             |       |         |      |           |             |
-| **BitonicSort**                       | **8192** | **ManyDuplicates**     |   **542,667.2 ns** |  **1,388.33 ns** |   **495.09 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| BitonicSortBranchless             | 8192 | ManyDuplicates     |   293,665.7 ns |    609.95 ns |   270.82 ns |  0.54 |    0.00 |    3 |         - |          NA |
-| BitonicRecursiveSort              | 8192 | ManyDuplicates     | 1,348,613.5 ns |  2,313.24 ns | 1,209.87 ns |  2.49 |    0.00 |    6 |         - |          NA |
-| BitonicSortAnyLength              | 8192 | ManyDuplicates     | 1,039,898.2 ns |  4,812.88 ns | 2,517.23 ns |  1.92 |    0.00 |    5 |         - |          NA |
-| BitonicSortAnyLengthSimd          | 8192 | ManyDuplicates     |    87,359.3 ns |    188.36 ns |    83.63 ns |  0.16 |    0.00 |    1 |         - |          NA |
-| BatcherOddEvenMergeSort           | 8192 | ManyDuplicates     |   502,722.6 ns |  3,347.31 ns | 1,486.23 ns |  0.93 |    0.00 |    4 |         - |          NA |
-| BatcherOddEvenMergeSortBranchless | 8192 | ManyDuplicates     |   269,755.7 ns |  2,536.82 ns | 1,326.81 ns |  0.50 |    0.00 |    3 |         - |          NA |
-| PairwiseSortingNetwork            | 8192 | ManyDuplicates     |   538,482.7 ns |  6,258.95 ns | 2,779.01 ns |  0.99 |    0.00 |    4 |         - |          NA |
-| PairwiseSortingNetworkBranchless  | 8192 | ManyDuplicates     |   267,808.5 ns |  2,565.60 ns | 1,139.14 ns |  0.49 |    0.00 |    3 |         - |          NA |
-| DotnetSort                        | 8192 | ManyDuplicates     |   190,186.9 ns |    955.36 ns |   424.19 ns |  0.35 |    0.00 |    2 |         - |          NA |
+| **BitonicSort**                       | **8192** | **ManyDuplicates**     |   **543,374.3 ns** |  **1,638.26 ns** |   **727.40 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| BitonicSortBranchless             | 8192 | ManyDuplicates     |   293,305.5 ns |    435.56 ns |   155.33 ns |  0.54 |    0.00 |    3 |         - |          NA |
+| BitonicRecursiveSort              | 8192 | ManyDuplicates     | 1,349,140.7 ns |  1,880.88 ns |   983.74 ns |  2.48 |    0.00 |    6 |         - |          NA |
+| BitonicSortAnyLength              | 8192 | ManyDuplicates     | 1,039,854.1 ns |  2,457.89 ns | 1,091.32 ns |  1.91 |    0.00 |    5 |         - |          NA |
+| BitonicSortAnyLengthSimd          | 8192 | ManyDuplicates     |    86,239.9 ns |    301.26 ns |   133.76 ns |  0.16 |    0.00 |    1 |         - |          NA |
+| BatcherOddEvenMergeSort           | 8192 | ManyDuplicates     |   503,382.0 ns |  3,803.26 ns | 1,688.67 ns |  0.93 |    0.00 |    4 |         - |          NA |
+| BatcherOddEvenMergeSortBranchless | 8192 | ManyDuplicates     |   271,127.8 ns |  2,402.49 ns | 1,256.55 ns |  0.50 |    0.00 |    3 |         - |          NA |
+| PairwiseSortingNetwork            | 8192 | ManyDuplicates     |   539,711.7 ns |  2,480.04 ns | 1,101.16 ns |  0.99 |    0.00 |    4 |         - |          NA |
+| PairwiseSortingNetworkBranchless  | 8192 | ManyDuplicates     |   268,741.8 ns |  2,507.69 ns | 1,311.57 ns |  0.49 |    0.00 |    3 |         - |          NA |
+| DotnetSort                        | 8192 | ManyDuplicates     |   190,512.3 ns |    604.01 ns |   268.18 ns |  0.35 |    0.00 |    2 |         - |          NA |
 
 ### PartitionBenchmark
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V74 3.69GHz, 1 CPU, 4 logical and 2 physical cores
-Memory: 15.61 GB Total, 12.49 GB Available
+AMD EPYC 9V74 3.59GHz, 1 CPU, 4 logical and 2 physical cores
+Memory: 15.61 GB Total, 12.44 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
@@ -2148,566 +2148,566 @@ EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCo
 UnrollFactor=1  WarmupCount=2  
 ```
 
-| Method                       | Size | Pattern            | Mean           | Error        | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
-| ----------------------------- |----- |------------------- |---------------:|-------------:|------------:|------:|--------:|-----:|----------:|------------:|
-| **QuickSort**                    | **256**  | **Random**             |     **8,660.5 ns** |    **163.19 ns** |    **85.35 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 256  | Random             |     9,373.9 ns |    274.34 ns |   143.48 ns |  1.08 |    0.02 |    4 |         - |          NA |
-| QuickSortMedian3             | 256  | Random             |     9,102.3 ns |    321.69 ns |   168.25 ns |  1.05 |    0.02 |    4 |         - |          NA |
-| QuickSortMedian9             | 256  | Random             |     9,683.3 ns |    373.21 ns |   195.19 ns |  1.12 |    0.02 |    4 |         - |          NA |
-| SampleSort                   | 256  | Random             |    10,955.7 ns |    250.36 ns |   130.94 ns |  1.27 |    0.02 |    4 |         - |          NA |
-| SimdQuickSort                | 256  | Random             |       919.4 ns |     24.16 ns |    10.73 ns |  0.11 |    0.00 |    1 |         - |          NA |
-| DualPivotQuickSort           | 256  | Random             |     5,879.4 ns |    215.71 ns |   112.82 ns |  0.68 |    0.01 |    3 |         - |          NA |
-| StableQuickSort              | 256  | Random             |    19,856.7 ns |    453.18 ns |   201.21 ns |  2.29 |    0.03 |    5 |         - |          NA |
-| BidirectionalStableQuickSort | 256  | Random             |    11,610.2 ns |    202.92 ns |   106.13 ns |  1.34 |    0.02 |    4 |         - |          NA |
-| DestswapStableQuickSort      | 256  | Random             |    19,380.5 ns |    357.73 ns |   187.10 ns |  2.24 |    0.03 |    5 |         - |          NA |
-| IntroSort                    | 256  | Random             |     7,146.4 ns |    100.54 ns |    44.64 ns |  0.83 |    0.01 |    3 |         - |          NA |
-| IntroSortDotnet              | 256  | Random             |     6,353.3 ns |    143.22 ns |    74.91 ns |  0.73 |    0.01 |    3 |         - |          NA |
-| PDQSort                      | 256  | Random             |     6,021.8 ns |    313.97 ns |   164.21 ns |  0.70 |    0.02 |    3 |         - |          NA |
-| PDQSortBranchless            | 256  | Random             |     4,354.6 ns |    411.99 ns |   215.48 ns |  0.50 |    0.02 |    2 |         - |          NA |
-| Ipnsort                      | 256  | Random             |     3,817.4 ns |    360.74 ns |   188.67 ns |  0.44 |    0.02 |    2 |         - |          NA |
-| StdSort                      | 256  | Random             |     4,440.8 ns |    200.51 ns |   104.87 ns |  0.51 |    0.01 |    2 |         - |          NA |
-| BlockQuickSort               | 256  | Random             |     4,690.8 ns |    202.31 ns |   105.81 ns |  0.54 |    0.01 |    2 |         - |          NA |
-| Ips4oSort                    | 256  | Random             |    10,722.2 ns |    204.27 ns |   106.84 ns |  1.24 |    0.02 |    4 |         - |          NA |
-| FluxSort                     | 256  | Random             |     6,087.0 ns |    369.61 ns |   193.32 ns |  0.70 |    0.02 |    3 |         - |          NA |
-| CrumSort                     | 256  | Random             |     3,638.8 ns |    546.24 ns |   285.69 ns |  0.42 |    0.03 |    2 |         - |          NA |
-| BlitSort                     | 256  | Random             |     6,632.8 ns |  1,478.68 ns |   773.38 ns |  0.77 |    0.08 |    3 |         - |          NA |
-| DotnetSort                   | 256  | Random             |     5,966.9 ns |    327.23 ns |   171.15 ns |  0.69 |    0.02 |    3 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **256**  | **SingleElementMoved** |     **1,128.4 ns** |     **91.41 ns** |    **40.59 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| QuickSort3way                | 256  | SingleElementMoved |     2,185.2 ns |    366.68 ns |   191.78 ns |  1.94 |    0.17 |    4 |         - |          NA |
-| QuickSortMedian3             | 256  | SingleElementMoved |     1,652.1 ns |    327.03 ns |   145.20 ns |  1.47 |    0.13 |    4 |         - |          NA |
-| QuickSortMedian9             | 256  | SingleElementMoved |     1,774.8 ns |    131.57 ns |    68.81 ns |  1.57 |    0.08 |    4 |         - |          NA |
-| SampleSort                   | 256  | SingleElementMoved |     5,682.0 ns |    369.36 ns |   193.18 ns |  5.04 |    0.23 |    6 |         - |          NA |
-| SimdQuickSort                | 256  | SingleElementMoved |       656.5 ns |      5.81 ns |     2.07 ns |  0.58 |    0.02 |    2 |         - |          NA |
-| DualPivotQuickSort           | 256  | SingleElementMoved |       827.0 ns |     50.02 ns |    26.16 ns |  0.73 |    0.03 |    3 |         - |          NA |
-| StableQuickSort              | 256  | SingleElementMoved |     6,186.0 ns |    205.52 ns |   107.49 ns |  5.49 |    0.20 |    6 |         - |          NA |
-| BidirectionalStableQuickSort | 256  | SingleElementMoved |     3,719.6 ns |    294.40 ns |   153.98 ns |  3.30 |    0.17 |    5 |         - |          NA |
-| DestswapStableQuickSort      | 256  | SingleElementMoved |     7,686.9 ns |    189.51 ns |    99.12 ns |  6.82 |    0.24 |    7 |         - |          NA |
-| IntroSort                    | 256  | SingleElementMoved |     2,070.0 ns |     44.81 ns |    15.98 ns |  1.84 |    0.06 |    4 |         - |          NA |
-| IntroSortDotnet              | 256  | SingleElementMoved |     1,090.6 ns |     95.71 ns |    42.49 ns |  0.97 |    0.05 |    3 |         - |          NA |
-| PDQSort                      | 256  | SingleElementMoved |       857.8 ns |     59.67 ns |    26.49 ns |  0.76 |    0.03 |    3 |         - |          NA |
-| PDQSortBranchless            | 256  | SingleElementMoved |     1,036.5 ns |     93.48 ns |    41.51 ns |  0.92 |    0.05 |    3 |         - |          NA |
-| Ipnsort                      | 256  | SingleElementMoved |     2,902.7 ns |     83.14 ns |    29.65 ns |  2.58 |    0.09 |    4 |         - |          NA |
-| StdSort                      | 256  | SingleElementMoved |       992.6 ns |    104.65 ns |    54.73 ns |  0.88 |    0.05 |    3 |         - |          NA |
-| BlockQuickSort               | 256  | SingleElementMoved |     1,577.9 ns |    131.30 ns |    58.30 ns |  1.40 |    0.07 |    4 |         - |          NA |
-| Ips4oSort                    | 256  | SingleElementMoved |       454.5 ns |     11.24 ns |     5.88 ns |  0.40 |    0.01 |    1 |         - |          NA |
-| FluxSort                     | 256  | SingleElementMoved |     1,249.6 ns |     98.79 ns |    51.67 ns |  1.11 |    0.06 |    3 |         - |          NA |
-| CrumSort                     | 256  | SingleElementMoved |       529.6 ns |     76.81 ns |    34.10 ns |  0.47 |    0.03 |    1 |         - |          NA |
-| BlitSort                     | 256  | SingleElementMoved |     2,426.5 ns |     47.90 ns |    25.05 ns |  2.15 |    0.07 |    4 |         - |          NA |
-| DotnetSort                   | 256  | SingleElementMoved |     1,089.5 ns |     85.13 ns |    44.53 ns |  0.97 |    0.05 |    3 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **256**  | **Sorted**             |       **694.5 ns** |     **19.84 ns** |    **10.38 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| QuickSort3way                | 256  | Sorted             |     1,411.5 ns |     13.11 ns |     4.68 ns |  2.03 |    0.03 |    4 |         - |          NA |
-| QuickSortMedian3             | 256  | Sorted             |       944.7 ns |     13.92 ns |     6.18 ns |  1.36 |    0.02 |    3 |         - |          NA |
-| QuickSortMedian9             | 256  | Sorted             |     1,013.2 ns |     27.21 ns |    14.23 ns |  1.46 |    0.03 |    3 |         - |          NA |
-| SampleSort                   | 256  | Sorted             |     3,649.6 ns |    347.02 ns |   181.50 ns |  5.26 |    0.26 |    5 |         - |          NA |
-| SimdQuickSort                | 256  | Sorted             |       925.2 ns |      9.91 ns |     4.40 ns |  1.33 |    0.02 |    3 |         - |          NA |
-| DualPivotQuickSort           | 256  | Sorted             |       581.4 ns |      9.29 ns |     4.86 ns |  0.84 |    0.01 |    3 |         - |          NA |
-| StableQuickSort              | 256  | Sorted             |     6,014.5 ns |    301.50 ns |   157.69 ns |  8.66 |    0.25 |    6 |         - |          NA |
-| BidirectionalStableQuickSort | 256  | Sorted             |     3,442.7 ns |     24.99 ns |     8.91 ns |  4.96 |    0.07 |    5 |         - |          NA |
-| DestswapStableQuickSort      | 256  | Sorted             |     7,366.4 ns |    378.26 ns |   167.95 ns | 10.61 |    0.27 |    7 |         - |          NA |
-| IntroSort                    | 256  | Sorted             |       629.0 ns |     37.00 ns |    13.19 ns |  0.91 |    0.02 |    3 |         - |          NA |
-| IntroSortDotnet              | 256  | Sorted             |       775.6 ns |      3.83 ns |     1.70 ns |  1.12 |    0.02 |    3 |         - |          NA |
-| PDQSort                      | 256  | Sorted             |       328.5 ns |     14.08 ns |     6.25 ns |  0.47 |    0.01 |    2 |         - |          NA |
-| PDQSortBranchless            | 256  | Sorted             |       314.1 ns |     20.63 ns |    10.79 ns |  0.45 |    0.02 |    2 |         - |          NA |
-| Ipnsort                      | 256  | Sorted             |       148.9 ns |     16.92 ns |     6.04 ns |  0.21 |    0.01 |    1 |         - |          NA |
-| StdSort                      | 256  | Sorted             |       352.9 ns |     30.00 ns |    15.69 ns |  0.51 |    0.02 |    2 |         - |          NA |
-| BlockQuickSort               | 256  | Sorted             |     1,246.9 ns |     14.89 ns |     5.31 ns |  1.80 |    0.03 |    4 |         - |          NA |
-| Ips4oSort                    | 256  | Sorted             |       146.3 ns |      5.19 ns |     2.31 ns |  0.21 |    0.00 |    1 |         - |          NA |
-| FluxSort                     | 256  | Sorted             |       203.4 ns |     23.71 ns |    10.53 ns |  0.29 |    0.01 |    2 |         - |          NA |
-| CrumSort                     | 256  | Sorted             |       271.7 ns |      8.48 ns |     4.44 ns |  0.39 |    0.01 |    2 |         - |          NA |
-| BlitSort                     | 256  | Sorted             |       235.2 ns |     17.10 ns |     8.94 ns |  0.34 |    0.01 |    2 |         - |          NA |
-| DotnetSort                   | 256  | Sorted             |       628.9 ns |      5.16 ns |     2.29 ns |  0.91 |    0.01 |    3 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **256**  | **Reversed**           |       **824.3 ns** |     **33.83 ns** |    **17.69 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 256  | Reversed           |     1,603.8 ns |     20.18 ns |    10.56 ns |  1.95 |    0.04 |    6 |         - |          NA |
-| QuickSortMedian3             | 256  | Reversed           |       996.9 ns |     17.16 ns |     8.97 ns |  1.21 |    0.03 |    5 |         - |          NA |
-| QuickSortMedian9             | 256  | Reversed           |     1,113.4 ns |     49.87 ns |    22.14 ns |  1.35 |    0.04 |    5 |         - |          NA |
-| SampleSort                   | 256  | Reversed           |     3,965.3 ns |    387.95 ns |   202.91 ns |  4.81 |    0.25 |    7 |         - |          NA |
-| SimdQuickSort                | 256  | Reversed           |       659.3 ns |      9.26 ns |     4.84 ns |  0.80 |    0.02 |    4 |         - |          NA |
-| DualPivotQuickSort           | 256  | Reversed           |       751.7 ns |     12.21 ns |     5.42 ns |  0.91 |    0.02 |    4 |         - |          NA |
-| StableQuickSort              | 256  | Reversed           |     6,167.9 ns |    241.53 ns |   126.33 ns |  7.49 |    0.21 |    8 |         - |          NA |
-| BidirectionalStableQuickSort | 256  | Reversed           |     3,447.9 ns |    148.37 ns |    65.88 ns |  4.18 |    0.11 |    7 |         - |          NA |
-| DestswapStableQuickSort      | 256  | Reversed           |     6,829.5 ns |     48.91 ns |    21.72 ns |  8.29 |    0.17 |    8 |         - |          NA |
-| IntroSort                    | 256  | Reversed           |       681.1 ns |     15.86 ns |     7.04 ns |  0.83 |    0.02 |    4 |         - |          NA |
-| IntroSortDotnet              | 256  | Reversed           |     1,097.0 ns |     15.77 ns |     8.25 ns |  1.33 |    0.03 |    5 |         - |          NA |
-| PDQSort                      | 256  | Reversed           |       427.3 ns |      8.34 ns |     3.70 ns |  0.52 |    0.01 |    3 |         - |          NA |
-| PDQSortBranchless            | 256  | Reversed           |       573.0 ns |     11.25 ns |     4.99 ns |  0.70 |    0.02 |    4 |         - |          NA |
-| Ipnsort                      | 256  | Reversed           |       188.2 ns |      3.12 ns |     1.63 ns |  0.23 |    0.00 |    1 |         - |          NA |
-| StdSort                      | 256  | Reversed           |       661.5 ns |     10.59 ns |     4.70 ns |  0.80 |    0.02 |    4 |         - |          NA |
-| BlockQuickSort               | 256  | Reversed           |     1,668.8 ns |     24.62 ns |     8.78 ns |  2.03 |    0.04 |    6 |         - |          NA |
-| Ips4oSort                    | 256  | Reversed           |       218.4 ns |    145.63 ns |    64.66 ns |  0.26 |    0.07 |    1 |         - |          NA |
-| FluxSort                     | 256  | Reversed           |       280.0 ns |      8.95 ns |     4.68 ns |  0.34 |    0.01 |    2 |         - |          NA |
-| CrumSort                     | 256  | Reversed           |       243.9 ns |      4.71 ns |     2.09 ns |  0.30 |    0.01 |    2 |         - |          NA |
-| BlitSort                     | 256  | Reversed           |       294.9 ns |     10.66 ns |     4.73 ns |  0.36 |    0.01 |    2 |         - |          NA |
-| DotnetSort                   | 256  | Reversed           |     1,117.7 ns |    134.09 ns |    70.13 ns |  1.36 |    0.08 |    5 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **256**  | **PipeOrgan**          |     **5,884.1 ns** |    **452.08 ns** |   **236.45 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 256  | PipeOrgan          |     2,911.6 ns |    322.87 ns |   168.87 ns |  0.50 |    0.03 |    3 |         - |          NA |
-| QuickSortMedian3             | 256  | PipeOrgan          |     2,451.3 ns |    133.55 ns |    59.30 ns |  0.42 |    0.02 |    3 |         - |          NA |
-| QuickSortMedian9             | 256  | PipeOrgan          |     1,997.6 ns |     96.14 ns |    50.28 ns |  0.34 |    0.01 |    3 |         - |          NA |
-| SampleSort                   | 256  | PipeOrgan          |     3,788.1 ns |    249.22 ns |   110.65 ns |  0.64 |    0.03 |    3 |         - |          NA |
-| SimdQuickSort                | 256  | PipeOrgan          |       669.4 ns |      8.72 ns |     3.87 ns |  0.11 |    0.00 |    1 |         - |          NA |
-| DualPivotQuickSort           | 256  | PipeOrgan          |     1,610.6 ns |    188.28 ns |    83.60 ns |  0.27 |    0.02 |    3 |         - |          NA |
-| StableQuickSort              | 256  | PipeOrgan          |     5,888.7 ns |     52.76 ns |    23.42 ns |  1.00 |    0.04 |    4 |         - |          NA |
-| BidirectionalStableQuickSort | 256  | PipeOrgan          |     3,448.5 ns |     16.68 ns |     7.41 ns |  0.59 |    0.02 |    3 |         - |          NA |
-| DestswapStableQuickSort      | 256  | PipeOrgan          |     8,954.3 ns |    267.87 ns |   140.10 ns |  1.52 |    0.06 |    5 |         - |          NA |
-| IntroSort                    | 256  | PipeOrgan          |     3,115.5 ns |     36.18 ns |    12.90 ns |  0.53 |    0.02 |    3 |         - |          NA |
-| IntroSortDotnet              | 256  | PipeOrgan          |     1,673.7 ns |     35.49 ns |    15.76 ns |  0.28 |    0.01 |    3 |         - |          NA |
-| PDQSort                      | 256  | PipeOrgan          |     1,233.1 ns |     43.88 ns |    19.48 ns |  0.21 |    0.01 |    2 |         - |          NA |
-| PDQSortBranchless            | 256  | PipeOrgan          |     2,040.9 ns |     46.06 ns |    24.09 ns |  0.35 |    0.01 |    3 |         - |          NA |
-| Ipnsort                      | 256  | PipeOrgan          |     3,181.6 ns |    281.80 ns |   147.39 ns |  0.54 |    0.03 |    3 |         - |          NA |
-| StdSort                      | 256  | PipeOrgan          |     3,762.0 ns |    215.37 ns |   112.64 ns |  0.64 |    0.03 |    3 |         - |          NA |
-| BlockQuickSort               | 256  | PipeOrgan          |     3,728.4 ns |    298.79 ns |   132.67 ns |  0.63 |    0.03 |    3 |         - |          NA |
-| Ips4oSort                    | 256  | PipeOrgan          |     9,862.9 ns |    316.67 ns |   140.60 ns |  1.68 |    0.07 |    5 |         - |          NA |
-| FluxSort                     | 256  | PipeOrgan          |     3,021.6 ns |    110.10 ns |    48.88 ns |  0.51 |    0.02 |    3 |         - |          NA |
-| CrumSort                     | 256  | PipeOrgan          |       693.6 ns |     13.81 ns |     6.13 ns |  0.12 |    0.00 |    1 |         - |          NA |
-| BlitSort                     | 256  | PipeOrgan          |     3,133.8 ns |     24.36 ns |     8.69 ns |  0.53 |    0.02 |    3 |         - |          NA |
-| DotnetSort                   | 256  | PipeOrgan          |     1,914.6 ns |    228.78 ns |   119.66 ns |  0.33 |    0.02 |    3 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **256**  | **ManyDuplicates**     |     **6,662.9 ns** |    **225.41 ns** |   **100.08 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| QuickSort3way                | 256  | ManyDuplicates     |     5,873.2 ns |    118.43 ns |    52.58 ns |  0.88 |    0.01 |    2 |         - |          NA |
-| QuickSortMedian3             | 256  | ManyDuplicates     |     7,768.6 ns |    385.25 ns |   201.49 ns |  1.17 |    0.03 |    2 |         - |          NA |
-| QuickSortMedian9             | 256  | ManyDuplicates     |     8,329.9 ns |    300.50 ns |   157.17 ns |  1.25 |    0.03 |    2 |         - |          NA |
-| SampleSort                   | 256  | ManyDuplicates     |     9,737.2 ns |    292.41 ns |   152.94 ns |  1.46 |    0.03 |    2 |         - |          NA |
-| SimdQuickSort                | 256  | ManyDuplicates     |       656.5 ns |      5.01 ns |     2.22 ns |  0.10 |    0.00 |    1 |         - |          NA |
-| DualPivotQuickSort           | 256  | ManyDuplicates     |     5,190.1 ns |    222.01 ns |   116.11 ns |  0.78 |    0.02 |    2 |         - |          NA |
-| StableQuickSort              | 256  | ManyDuplicates     |    12,717.6 ns |    440.70 ns |   230.49 ns |  1.91 |    0.04 |    2 |         - |          NA |
-| BidirectionalStableQuickSort | 256  | ManyDuplicates     |     6,216.9 ns |     77.44 ns |    34.38 ns |  0.93 |    0.01 |    2 |         - |          NA |
-| DestswapStableQuickSort      | 256  | ManyDuplicates     |    10,943.4 ns |    321.23 ns |   168.01 ns |  1.64 |    0.03 |    2 |         - |          NA |
-| IntroSort                    | 256  | ManyDuplicates     |     6,383.0 ns |    240.78 ns |   106.91 ns |  0.96 |    0.02 |    2 |         - |          NA |
-| IntroSortDotnet              | 256  | ManyDuplicates     |     5,947.3 ns |     43.99 ns |    15.69 ns |  0.89 |    0.01 |    2 |         - |          NA |
-| PDQSort                      | 256  | ManyDuplicates     |     5,641.5 ns |    476.87 ns |   249.41 ns |  0.85 |    0.04 |    2 |         - |          NA |
-| PDQSortBranchless            | 256  | ManyDuplicates     |     3,832.0 ns |    292.27 ns |   152.86 ns |  0.58 |    0.02 |    2 |         - |          NA |
-| Ipnsort                      | 256  | ManyDuplicates     |     3,786.1 ns |    389.49 ns |   203.71 ns |  0.57 |    0.03 |    2 |         - |          NA |
-| StdSort                      | 256  | ManyDuplicates     |     4,130.8 ns |    312.32 ns |   163.35 ns |  0.62 |    0.02 |    2 |         - |          NA |
-| BlockQuickSort               | 256  | ManyDuplicates     |     4,395.8 ns |    347.92 ns |   181.97 ns |  0.66 |    0.03 |    2 |         - |          NA |
-| Ips4oSort                    | 256  | ManyDuplicates     |    10,580.6 ns |    280.20 ns |   146.55 ns |  1.59 |    0.03 |    2 |         - |          NA |
-| FluxSort                     | 256  | ManyDuplicates     |     5,974.6 ns |    148.68 ns |    77.76 ns |  0.90 |    0.02 |    2 |         - |          NA |
-| CrumSort                     | 256  | ManyDuplicates     |     3,561.1 ns |    305.21 ns |   159.63 ns |  0.53 |    0.02 |    2 |         - |          NA |
-| BlitSort                     | 256  | ManyDuplicates     |     6,189.9 ns |    179.98 ns |    94.14 ns |  0.93 |    0.02 |    2 |         - |          NA |
-| DotnetSort                   | 256  | ManyDuplicates     |     5,603.0 ns |    261.25 ns |   136.64 ns |  0.84 |    0.02 |    2 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **1024** | **Random**             |    **40,806.2 ns** |  **1,016.80 ns** |   **531.81 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| QuickSort3way                | 1024 | Random             |    44,198.4 ns |    424.61 ns |   222.08 ns |  1.08 |    0.01 |    2 |         - |          NA |
-| QuickSortMedian3             | 1024 | Random             |    42,641.2 ns |    417.12 ns |   185.20 ns |  1.05 |    0.01 |    2 |         - |          NA |
-| QuickSortMedian9             | 1024 | Random             |    45,190.6 ns |    851.45 ns |   445.33 ns |  1.11 |    0.02 |    2 |         - |          NA |
-| SampleSort                   | 1024 | Random             |    51,690.6 ns |    385.54 ns |   201.64 ns |  1.27 |    0.02 |    2 |         - |          NA |
-| SimdQuickSort                | 1024 | Random             |     3,895.1 ns |    452.74 ns |   236.79 ns |  0.10 |    0.01 |    1 |         - |          NA |
-| DualPivotQuickSort           | 1024 | Random             |    29,994.7 ns |    561.36 ns |   293.60 ns |  0.74 |    0.01 |    2 |         - |          NA |
-| StableQuickSort              | 1024 | Random             |    98,420.3 ns |    430.55 ns |   153.54 ns |  2.41 |    0.03 |    3 |         - |          NA |
-| BidirectionalStableQuickSort | 1024 | Random             |    53,612.7 ns |    553.01 ns |   245.54 ns |  1.31 |    0.02 |    2 |         - |          NA |
-| DestswapStableQuickSort      | 1024 | Random             |    86,948.5 ns |    300.18 ns |   133.28 ns |  2.13 |    0.03 |    3 |         - |          NA |
-| IntroSort                    | 1024 | Random             |    34,101.9 ns |    213.43 ns |    94.76 ns |  0.84 |    0.01 |    2 |         - |          NA |
-| IntroSortDotnet              | 1024 | Random             |    32,433.9 ns |    235.33 ns |   123.08 ns |  0.79 |    0.01 |    2 |         - |          NA |
-| PDQSort                      | 1024 | Random             |    30,771.9 ns |    235.66 ns |   123.25 ns |  0.75 |    0.01 |    2 |         - |          NA |
-| PDQSortBranchless            | 1024 | Random             |    19,415.4 ns |     60.79 ns |    21.68 ns |  0.48 |    0.01 |    2 |         - |          NA |
-| Ipnsort                      | 1024 | Random             |    19,142.6 ns |    241.36 ns |   126.24 ns |  0.47 |    0.01 |    2 |         - |          NA |
-| StdSort                      | 1024 | Random             |    20,425.3 ns |    149.61 ns |    78.25 ns |  0.50 |    0.01 |    2 |         - |          NA |
-| BlockQuickSort               | 1024 | Random             |    21,811.0 ns |    313.28 ns |   139.10 ns |  0.53 |    0.01 |    2 |         - |          NA |
-| Ips4oSort                    | 1024 | Random             |    18,898.6 ns |    193.28 ns |   101.09 ns |  0.46 |    0.01 |    2 |         - |          NA |
-| FluxSort                     | 1024 | Random             |    25,619.7 ns |    241.93 ns |   107.42 ns |  0.63 |    0.01 |    2 |         - |          NA |
-| CrumSort                     | 1024 | Random             |    25,641.6 ns |    364.16 ns |   190.46 ns |  0.63 |    0.01 |    2 |         - |          NA |
-| BlitSort                     | 1024 | Random             |    26,497.4 ns |    306.43 ns |   160.27 ns |  0.65 |    0.01 |    2 |         - |          NA |
-| DotnetSort                   | 1024 | Random             |    29,841.9 ns |    237.91 ns |   124.43 ns |  0.73 |    0.01 |    2 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **1024** | **SingleElementMoved** |     **4,370.3 ns** |    **100.68 ns** |    **52.66 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
-| QuickSort3way                | 1024 | SingleElementMoved |     8,234.6 ns |    578.06 ns |   256.66 ns |  1.88 |    0.06 |    3 |         - |          NA |
-| QuickSortMedian3             | 1024 | SingleElementMoved |     6,545.1 ns |    325.37 ns |   170.17 ns |  1.50 |    0.04 |    3 |         - |          NA |
-| QuickSortMedian9             | 1024 | SingleElementMoved |     7,394.2 ns |    239.16 ns |   125.09 ns |  1.69 |    0.03 |    3 |         - |          NA |
-| SampleSort                   | 1024 | SingleElementMoved |    25,963.1 ns |    952.72 ns |   498.29 ns |  5.94 |    0.13 |    7 |         - |          NA |
-| SimdQuickSort                | 1024 | SingleElementMoved |     4,523.1 ns |     25.97 ns |    11.53 ns |  1.04 |    0.01 |    2 |         - |          NA |
-| DualPivotQuickSort           | 1024 | SingleElementMoved |     3,899.6 ns |    279.43 ns |   146.15 ns |  0.89 |    0.03 |    2 |         - |          NA |
-| StableQuickSort              | 1024 | SingleElementMoved |    31,567.7 ns |  1,403.04 ns |   622.96 ns |  7.22 |    0.16 |    8 |         - |          NA |
-| BidirectionalStableQuickSort | 1024 | SingleElementMoved |    16,073.0 ns |    205.87 ns |   107.67 ns |  3.68 |    0.05 |    5 |         - |          NA |
-| DestswapStableQuickSort      | 1024 | SingleElementMoved |    32,690.0 ns |    746.83 ns |   390.61 ns |  7.48 |    0.12 |    8 |         - |          NA |
-| IntroSort                    | 1024 | SingleElementMoved |    11,164.2 ns |    267.30 ns |   139.80 ns |  2.55 |    0.04 |    4 |         - |          NA |
-| IntroSortDotnet              | 1024 | SingleElementMoved |     4,766.4 ns |     99.94 ns |    44.37 ns |  1.09 |    0.02 |    2 |         - |          NA |
-| PDQSort                      | 1024 | SingleElementMoved |     3,098.5 ns |    163.44 ns |    72.57 ns |  0.71 |    0.02 |    2 |         - |          NA |
-| PDQSortBranchless            | 1024 | SingleElementMoved |     3,941.6 ns |    234.75 ns |   104.23 ns |  0.90 |    0.02 |    2 |         - |          NA |
-| Ipnsort                      | 1024 | SingleElementMoved |    18,890.4 ns |  4,180.28 ns | 2,186.37 ns |  4.32 |    0.47 |    6 |         - |          NA |
-| StdSort                      | 1024 | SingleElementMoved |     3,570.5 ns |    361.10 ns |   188.86 ns |  0.82 |    0.04 |    2 |         - |          NA |
-| BlockQuickSort               | 1024 | SingleElementMoved |     7,355.4 ns |    292.12 ns |   152.78 ns |  1.68 |    0.04 |    3 |         - |          NA |
-| Ips4oSort                    | 1024 | SingleElementMoved |    11,093.3 ns |    235.86 ns |   123.36 ns |  2.54 |    0.04 |    4 |         - |          NA |
-| FluxSort                     | 1024 | SingleElementMoved |     1,384.3 ns |     71.91 ns |    37.61 ns |  0.32 |    0.01 |    1 |         - |          NA |
-| CrumSort                     | 1024 | SingleElementMoved |     1,324.1 ns |     65.36 ns |    34.19 ns |  0.30 |    0.01 |    1 |         - |          NA |
-| BlitSort                     | 1024 | SingleElementMoved |     1,314.7 ns |     34.66 ns |    12.36 ns |  0.30 |    0.00 |    1 |         - |          NA |
-| DotnetSort                   | 1024 | SingleElementMoved |     5,221.4 ns |     81.73 ns |    36.29 ns |  1.19 |    0.02 |    2 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **1024** | **Sorted**             |     **3,303.2 ns** |     **13.82 ns** |     **6.14 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 1024 | Sorted             |     6,112.9 ns |     35.58 ns |    15.80 ns |  1.85 |    0.01 |    5 |         - |          NA |
-| QuickSortMedian3             | 1024 | Sorted             |     4,551.5 ns |    173.12 ns |    90.55 ns |  1.38 |    0.03 |    4 |         - |          NA |
-| QuickSortMedian9             | 1024 | Sorted             |     4,598.1 ns |     37.84 ns |    19.79 ns |  1.39 |    0.01 |    4 |         - |          NA |
-| SampleSort                   | 1024 | Sorted             |    15,554.5 ns |    656.91 ns |   343.57 ns |  4.71 |    0.10 |    6 |         - |          NA |
-| SimdQuickSort                | 1024 | Sorted             |     4,284.1 ns |     30.85 ns |    13.70 ns |  1.30 |    0.00 |    4 |         - |          NA |
-| DualPivotQuickSort           | 1024 | Sorted             |     3,174.2 ns |     17.14 ns |     8.96 ns |  0.96 |    0.00 |    4 |         - |          NA |
-| StableQuickSort              | 1024 | Sorted             |    30,507.4 ns |    400.10 ns |   177.65 ns |  9.24 |    0.05 |    7 |         - |          NA |
-| BidirectionalStableQuickSort | 1024 | Sorted             |    15,799.8 ns |     86.16 ns |    38.26 ns |  4.78 |    0.01 |    6 |         - |          NA |
-| DestswapStableQuickSort      | 1024 | Sorted             |    32,896.2 ns |    380.79 ns |   199.16 ns |  9.96 |    0.06 |    7 |         - |          NA |
-| IntroSort                    | 1024 | Sorted             |     3,137.6 ns |     15.81 ns |     8.27 ns |  0.95 |    0.00 |    4 |         - |          NA |
-| IntroSortDotnet              | 1024 | Sorted             |     3,635.5 ns |     25.88 ns |     9.23 ns |  1.10 |    0.00 |    4 |         - |          NA |
-| PDQSort                      | 1024 | Sorted             |     1,183.1 ns |     29.24 ns |    12.98 ns |  0.36 |    0.00 |    3 |         - |          NA |
-| PDQSortBranchless            | 1024 | Sorted             |     1,206.9 ns |     39.18 ns |    17.39 ns |  0.37 |    0.00 |    3 |         - |          NA |
-| Ipnsort                      | 1024 | Sorted             |       481.8 ns |     17.68 ns |     7.85 ns |  0.15 |    0.00 |    1 |         - |          NA |
-| StdSort                      | 1024 | Sorted             |     1,258.0 ns |     23.50 ns |    10.43 ns |  0.38 |    0.00 |    3 |         - |          NA |
-| BlockQuickSort               | 1024 | Sorted             |     6,239.7 ns |     73.01 ns |    32.42 ns |  1.89 |    0.01 |    5 |         - |          NA |
-| Ips4oSort                    | 1024 | Sorted             |       402.7 ns |      6.57 ns |     3.44 ns |  0.12 |    0.00 |    1 |         - |          NA |
-| FluxSort                     | 1024 | Sorted             |       637.1 ns |     15.57 ns |     6.91 ns |  0.19 |    0.00 |    2 |         - |          NA |
-| CrumSort                     | 1024 | Sorted             |       636.4 ns |     35.52 ns |    15.77 ns |  0.19 |    0.00 |    2 |         - |          NA |
-| BlitSort                     | 1024 | Sorted             |       642.1 ns |     22.64 ns |    10.05 ns |  0.19 |    0.00 |    2 |         - |          NA |
-| DotnetSort                   | 1024 | Sorted             |     3,255.2 ns |    314.79 ns |   164.64 ns |  0.99 |    0.05 |    4 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **1024** | **Reversed**           |     **3,741.9 ns** |    **122.45 ns** |    **64.04 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 1024 | Reversed           |     7,079.8 ns |    607.56 ns |   317.77 ns |  1.89 |    0.09 |    5 |         - |          NA |
-| QuickSortMedian3             | 1024 | Reversed           |     4,710.0 ns |    352.96 ns |   156.72 ns |  1.26 |    0.04 |    5 |         - |          NA |
-| QuickSortMedian9             | 1024 | Reversed           |     4,883.0 ns |     55.85 ns |    24.80 ns |  1.31 |    0.02 |    5 |         - |          NA |
-| SampleSort                   | 1024 | Reversed           |    16,899.6 ns |    613.97 ns |   321.12 ns |  4.52 |    0.11 |    7 |         - |          NA |
-| SimdQuickSort                | 1024 | Reversed           |     3,242.3 ns |     34.30 ns |    12.23 ns |  0.87 |    0.01 |    4 |         - |          NA |
-| DualPivotQuickSort           | 1024 | Reversed           |     3,653.7 ns |    227.54 ns |   101.03 ns |  0.98 |    0.03 |    4 |         - |          NA |
-| StableQuickSort              | 1024 | Reversed           |    31,393.8 ns |    810.47 ns |   423.89 ns |  8.39 |    0.17 |    8 |         - |          NA |
-| BidirectionalStableQuickSort | 1024 | Reversed           |    15,765.7 ns |    194.38 ns |   101.66 ns |  4.21 |    0.07 |    7 |         - |          NA |
-| DestswapStableQuickSort      | 1024 | Reversed           |    30,722.4 ns |    704.96 ns |   368.71 ns |  8.21 |    0.16 |    8 |         - |          NA |
-| IntroSort                    | 1024 | Reversed           |     3,211.5 ns |     13.66 ns |     6.07 ns |  0.86 |    0.01 |    4 |         - |          NA |
-| IntroSortDotnet              | 1024 | Reversed           |     5,527.7 ns |    232.51 ns |   103.24 ns |  1.48 |    0.04 |    5 |         - |          NA |
-| PDQSort                      | 1024 | Reversed           |     1,612.6 ns |     14.37 ns |     6.38 ns |  0.43 |    0.01 |    2 |         - |          NA |
-| PDQSortBranchless            | 1024 | Reversed           |     2,026.4 ns |      9.48 ns |     4.21 ns |  0.54 |    0.01 |    3 |         - |          NA |
-| Ipnsort                      | 1024 | Reversed           |       761.3 ns |     48.62 ns |    21.59 ns |  0.20 |    0.01 |    1 |         - |          NA |
-| StdSort                      | 1024 | Reversed           |     2,380.7 ns |     19.07 ns |     8.47 ns |  0.64 |    0.01 |    3 |         - |          NA |
-| BlockQuickSort               | 1024 | Reversed           |     8,563.3 ns |    404.68 ns |   179.68 ns |  2.29 |    0.06 |    6 |         - |          NA |
-| Ips4oSort                    | 1024 | Reversed           |       725.6 ns |      9.65 ns |     5.05 ns |  0.19 |    0.00 |    1 |         - |          NA |
-| FluxSort                     | 1024 | Reversed           |       884.8 ns |      7.08 ns |     2.53 ns |  0.24 |    0.00 |    1 |         - |          NA |
-| CrumSort                     | 1024 | Reversed           |       910.9 ns |      9.91 ns |     5.18 ns |  0.24 |    0.00 |    1 |         - |          NA |
-| BlitSort                     | 1024 | Reversed           |       905.0 ns |     15.29 ns |     6.79 ns |  0.24 |    0.00 |    1 |         - |          NA |
-| DotnetSort                   | 1024 | Reversed           |     6,299.3 ns |    942.48 ns |   418.47 ns |  1.68 |    0.11 |    5 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **1024** | **PipeOrgan**          |    **83,637.4 ns** |    **472.38 ns** |   **209.74 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| QuickSort3way                | 1024 | PipeOrgan          |    15,281.4 ns |    739.52 ns |   328.35 ns |  0.18 |    0.00 |    2 |         - |          NA |
-| QuickSortMedian3             | 1024 | PipeOrgan          |    12,880.8 ns |    627.80 ns |   328.35 ns |  0.15 |    0.00 |    2 |         - |          NA |
-| QuickSortMedian9             | 1024 | PipeOrgan          |     9,169.6 ns |    238.79 ns |   106.02 ns |  0.11 |    0.00 |    2 |         - |          NA |
-| SampleSort                   | 1024 | PipeOrgan          |    16,892.0 ns |    764.57 ns |   399.88 ns |  0.20 |    0.00 |    2 |         - |          NA |
-| SimdQuickSort                | 1024 | PipeOrgan          |     5,923.4 ns |    296.94 ns |   155.30 ns |  0.07 |    0.00 |    2 |         - |          NA |
-| DualPivotQuickSort           | 1024 | PipeOrgan          |     7,658.7 ns |    171.42 ns |    89.66 ns |  0.09 |    0.00 |    2 |         - |          NA |
-| StableQuickSort              | 1024 | PipeOrgan          |    30,790.4 ns |    596.20 ns |   311.82 ns |  0.37 |    0.00 |    3 |         - |          NA |
-| BidirectionalStableQuickSort | 1024 | PipeOrgan          |    15,885.3 ns |    302.71 ns |   134.41 ns |  0.19 |    0.00 |    2 |         - |          NA |
-| DestswapStableQuickSort      | 1024 | PipeOrgan          |    43,180.7 ns |    435.94 ns |   193.56 ns |  0.52 |    0.00 |    4 |         - |          NA |
-| IntroSort                    | 1024 | PipeOrgan          |    20,325.8 ns |    244.16 ns |   108.41 ns |  0.24 |    0.00 |    2 |         - |          NA |
-| IntroSortDotnet              | 1024 | PipeOrgan          |    11,092.9 ns |    225.65 ns |   100.19 ns |  0.13 |    0.00 |    2 |         - |          NA |
-| PDQSort                      | 1024 | PipeOrgan          |     6,582.6 ns |    268.40 ns |   140.38 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| PDQSortBranchless            | 1024 | PipeOrgan          |    10,416.5 ns |    357.04 ns |   186.74 ns |  0.12 |    0.00 |    2 |         - |          NA |
-| Ipnsort                      | 1024 | PipeOrgan          |    16,660.9 ns |    179.34 ns |    93.80 ns |  0.20 |    0.00 |    2 |         - |          NA |
-| StdSort                      | 1024 | PipeOrgan          |    18,188.0 ns |     76.27 ns |    33.87 ns |  0.22 |    0.00 |    2 |         - |          NA |
-| BlockQuickSort               | 1024 | PipeOrgan          |    17,916.1 ns |    204.35 ns |    90.73 ns |  0.21 |    0.00 |    2 |         - |          NA |
-| Ips4oSort                    | 1024 | PipeOrgan          |    13,643.7 ns |    198.05 ns |   103.58 ns |  0.16 |    0.00 |    2 |         - |          NA |
-| FluxSort                     | 1024 | PipeOrgan          |     2,274.6 ns |     10.66 ns |     4.73 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| CrumSort                     | 1024 | PipeOrgan          |     2,327.6 ns |     17.32 ns |     7.69 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| BlitSort                     | 1024 | PipeOrgan          |     2,305.8 ns |     28.21 ns |    12.53 ns |  0.03 |    0.00 |    1 |         - |          NA |
-| DotnetSort                   | 1024 | PipeOrgan          |    12,842.0 ns |    470.22 ns |   245.93 ns |  0.15 |    0.00 |    2 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **1024** | **ManyDuplicates**     |    **26,491.1 ns** |    **154.18 ns** |    **80.64 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| QuickSort3way                | 1024 | ManyDuplicates     |    20,241.0 ns |    373.85 ns |   165.99 ns |  0.76 |    0.01 |    5 |         - |          NA |
-| QuickSortMedian3             | 1024 | ManyDuplicates     |    29,947.4 ns |    304.11 ns |   159.05 ns |  1.13 |    0.01 |    5 |         - |          NA |
-| QuickSortMedian9             | 1024 | ManyDuplicates     |    31,405.2 ns |    374.40 ns |   195.82 ns |  1.19 |    0.01 |    5 |         - |          NA |
-| SampleSort                   | 1024 | ManyDuplicates     |    39,343.1 ns |    279.14 ns |   145.99 ns |  1.49 |    0.01 |    5 |         - |          NA |
-| SimdQuickSort                | 1024 | ManyDuplicates     |     4,779.7 ns |    437.80 ns |   228.98 ns |  0.18 |    0.01 |    1 |         - |          NA |
-| DualPivotQuickSort           | 1024 | ManyDuplicates     |    19,592.3 ns |    675.49 ns |   299.92 ns |  0.74 |    0.01 |    5 |         - |          NA |
-| StableQuickSort              | 1024 | ManyDuplicates     |    45,960.8 ns |  1,403.04 ns |   733.82 ns |  1.73 |    0.03 |    5 |         - |          NA |
-| BidirectionalStableQuickSort | 1024 | ManyDuplicates     |    20,947.6 ns |    293.07 ns |   130.12 ns |  0.79 |    0.01 |    5 |         - |          NA |
-| DestswapStableQuickSort      | 1024 | ManyDuplicates     |    35,425.0 ns |    339.61 ns |   150.79 ns |  1.34 |    0.01 |    5 |         - |          NA |
-| IntroSort                    | 1024 | ManyDuplicates     |    24,888.4 ns |    229.11 ns |   119.83 ns |  0.94 |    0.01 |    5 |         - |          NA |
-| IntroSortDotnet              | 1024 | ManyDuplicates     |    25,416.6 ns |    262.01 ns |   137.04 ns |  0.96 |    0.01 |    5 |         - |          NA |
-| PDQSort                      | 1024 | ManyDuplicates     |    20,459.5 ns |    131.35 ns |    68.70 ns |  0.77 |    0.00 |    5 |         - |          NA |
-| PDQSortBranchless            | 1024 | ManyDuplicates     |     9,622.6 ns |    308.91 ns |   161.57 ns |  0.36 |    0.01 |    2 |         - |          NA |
-| Ipnsort                      | 1024 | ManyDuplicates     |    15,286.9 ns |    138.18 ns |    72.27 ns |  0.58 |    0.00 |    4 |         - |          NA |
-| StdSort                      | 1024 | ManyDuplicates     |    15,067.2 ns |    294.30 ns |   153.92 ns |  0.57 |    0.01 |    4 |         - |          NA |
-| BlockQuickSort               | 1024 | ManyDuplicates     |    16,188.9 ns |    189.81 ns |    99.27 ns |  0.61 |    0.00 |    4 |         - |          NA |
-| Ips4oSort                    | 1024 | ManyDuplicates     |    12,329.9 ns |    264.44 ns |   138.31 ns |  0.47 |    0.01 |    3 |         - |          NA |
-| FluxSort                     | 1024 | ManyDuplicates     |    24,723.7 ns |    288.44 ns |   150.86 ns |  0.93 |    0.01 |    5 |         - |          NA |
-| CrumSort                     | 1024 | ManyDuplicates     |    24,893.9 ns |    267.74 ns |   140.03 ns |  0.94 |    0.01 |    5 |         - |          NA |
-| BlitSort                     | 1024 | ManyDuplicates     |    25,816.3 ns |    280.86 ns |   146.89 ns |  0.97 |    0.01 |    5 |         - |          NA |
-| DotnetSort                   | 1024 | ManyDuplicates     |    23,260.3 ns |    388.23 ns |   203.05 ns |  0.88 |    0.01 |    5 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **4096** | **Random**             |   **185,004.5 ns** |  **1,245.82 ns** |   **651.59 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| QuickSort3way                | 4096 | Random             |   202,322.5 ns |    725.84 ns |   322.28 ns |  1.09 |    0.00 |    3 |         - |          NA |
-| QuickSortMedian3             | 4096 | Random             |   194,335.4 ns |  1,740.40 ns |   910.26 ns |  1.05 |    0.01 |    3 |         - |          NA |
-| QuickSortMedian9             | 4096 | Random             |   205,791.4 ns |  1,501.61 ns |   666.72 ns |  1.11 |    0.00 |    3 |         - |          NA |
-| SampleSort                   | 4096 | Random             |   234,211.2 ns |    910.21 ns |   476.06 ns |  1.27 |    0.00 |    3 |         - |          NA |
-| SimdQuickSort                | 4096 | Random             |    19,532.7 ns |    159.46 ns |    70.80 ns |  0.11 |    0.00 |    1 |         - |          NA |
-| DualPivotQuickSort           | 4096 | Random             |   143,809.0 ns |    565.05 ns |   250.89 ns |  0.78 |    0.00 |    3 |         - |          NA |
-| StableQuickSort              | 4096 | Random             |   468,827.2 ns |  1,847.80 ns |   966.44 ns |  2.53 |    0.01 |    5 |         - |          NA |
-| BidirectionalStableQuickSort | 4096 | Random             |   242,416.3 ns |  2,772.42 ns | 1,450.03 ns |  1.31 |    0.01 |    3 |         - |          NA |
-| DestswapStableQuickSort      | 4096 | Random             |   389,733.3 ns |  1,612.68 ns |   716.04 ns |  2.11 |    0.01 |    4 |         - |          NA |
-| IntroSort                    | 4096 | Random             |   160,361.2 ns |    193.53 ns |    69.01 ns |  0.87 |    0.00 |    3 |         - |          NA |
-| IntroSortDotnet              | 4096 | Random             |   155,652.4 ns |  1,435.15 ns |   750.61 ns |  0.84 |    0.00 |    3 |         - |          NA |
-| PDQSort                      | 4096 | Random             |   148,963.6 ns |  1,105.36 ns |   578.12 ns |  0.81 |    0.00 |    3 |         - |          NA |
-| PDQSortBranchless            | 4096 | Random             |    83,658.2 ns |    998.86 ns |   522.42 ns |  0.45 |    0.00 |    2 |         - |          NA |
-| Ipnsort                      | 4096 | Random             |    90,489.0 ns |    576.85 ns |   301.70 ns |  0.49 |    0.00 |    2 |         - |          NA |
-| StdSort                      | 4096 | Random             |    88,786.2 ns |    509.36 ns |   266.40 ns |  0.48 |    0.00 |    2 |         - |          NA |
-| BlockQuickSort               | 4096 | Random             |    95,985.8 ns |    410.30 ns |   182.18 ns |  0.52 |    0.00 |    2 |         - |          NA |
-| Ips4oSort                    | 4096 | Random             |    79,647.7 ns |    248.63 ns |    88.67 ns |  0.43 |    0.00 |    2 |         - |          NA |
-| FluxSort                     | 4096 | Random             |   109,807.3 ns |    543.28 ns |   284.15 ns |  0.59 |    0.00 |    2 |         - |          NA |
-| CrumSort                     | 4096 | Random             |   109,350.5 ns |    157.44 ns |    82.34 ns |  0.59 |    0.00 |    2 |         - |          NA |
-| BlitSort                     | 4096 | Random             |   117,796.2 ns |    388.07 ns |   172.30 ns |  0.64 |    0.00 |    2 |         - |          NA |
-| DotnetSort                   | 4096 | Random             |   145,499.5 ns |  1,960.25 ns | 1,025.25 ns |  0.79 |    0.01 |    3 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **4096** | **SingleElementMoved** |    **19,288.1 ns** |    **501.59 ns** |   **262.34 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 4096 | SingleElementMoved |    33,577.6 ns |  2,757.35 ns | 1,442.15 ns |  1.74 |    0.07 |    4 |         - |          NA |
-| QuickSortMedian3             | 4096 | SingleElementMoved |    26,490.5 ns |    403.81 ns |   211.20 ns |  1.37 |    0.02 |    4 |         - |          NA |
-| QuickSortMedian9             | 4096 | SingleElementMoved |    30,411.8 ns |    271.34 ns |   120.48 ns |  1.58 |    0.02 |    4 |         - |          NA |
-| SampleSort                   | 4096 | SingleElementMoved |   131,173.2 ns |    988.54 ns |   438.92 ns |  6.80 |    0.09 |    7 |         - |          NA |
-| SimdQuickSort                | 4096 | SingleElementMoved |    43,429.7 ns |    445.64 ns |   233.08 ns |  2.25 |    0.03 |    5 |         - |          NA |
-| DualPivotQuickSort           | 4096 | SingleElementMoved |    16,906.8 ns |  1,176.41 ns |   615.28 ns |  0.88 |    0.03 |    4 |         - |          NA |
-| StableQuickSort              | 4096 | SingleElementMoved |   149,620.4 ns |  2,838.93 ns | 1,484.82 ns |  7.76 |    0.12 |    7 |         - |          NA |
-| BidirectionalStableQuickSort | 4096 | SingleElementMoved |    71,549.9 ns |    260.76 ns |   115.78 ns |  3.71 |    0.05 |    6 |         - |          NA |
-| DestswapStableQuickSort      | 4096 | SingleElementMoved |   141,300.5 ns |    509.82 ns |   226.36 ns |  7.33 |    0.09 |    7 |         - |          NA |
-| IntroSort                    | 4096 | SingleElementMoved |    51,679.5 ns |    233.14 ns |   121.94 ns |  2.68 |    0.03 |    5 |         - |          NA |
-| IntroSortDotnet              | 4096 | SingleElementMoved |    20,985.2 ns |    279.12 ns |   145.99 ns |  1.09 |    0.02 |    4 |         - |          NA |
-| PDQSort                      | 4096 | SingleElementMoved |    12,060.3 ns |    287.35 ns |   150.29 ns |  0.63 |    0.01 |    3 |         - |          NA |
-| PDQSortBranchless            | 4096 | SingleElementMoved |    13,814.9 ns |    207.62 ns |   108.59 ns |  0.72 |    0.01 |    3 |         - |          NA |
-| Ipnsort                      | 4096 | SingleElementMoved |    70,468.2 ns |    704.74 ns |   312.91 ns |  3.65 |    0.05 |    6 |         - |          NA |
-| StdSort                      | 4096 | SingleElementMoved |    12,919.0 ns |    169.78 ns |    88.80 ns |  0.67 |    0.01 |    3 |         - |          NA |
-| BlockQuickSort               | 4096 | SingleElementMoved |    34,084.7 ns |    358.64 ns |   159.24 ns |  1.77 |    0.02 |    4 |         - |          NA |
-| Ips4oSort                    | 4096 | SingleElementMoved |    50,504.3 ns |    332.11 ns |   147.46 ns |  2.62 |    0.03 |    5 |         - |          NA |
-| FluxSort                     | 4096 | SingleElementMoved |     4,347.8 ns |    173.84 ns |    90.92 ns |  0.23 |    0.01 |    1 |         - |          NA |
-| CrumSort                     | 4096 | SingleElementMoved |     5,693.3 ns |    235.62 ns |   123.24 ns |  0.30 |    0.01 |    2 |         - |          NA |
-| BlitSort                     | 4096 | SingleElementMoved |     5,698.4 ns |    221.37 ns |   115.78 ns |  0.30 |    0.01 |    2 |         - |          NA |
-| DotnetSort                   | 4096 | SingleElementMoved |    24,964.7 ns |  1,772.65 ns |   927.13 ns |  1.29 |    0.05 |    4 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **4096** | **Sorted**             |    **15,643.2 ns** |    **260.17 ns** |   **136.07 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 4096 | Sorted             |    27,732.1 ns |  1,611.13 ns |   842.65 ns |  1.77 |    0.05 |    5 |         - |          NA |
-| QuickSortMedian3             | 4096 | Sorted             |    19,778.5 ns |    217.36 ns |   113.68 ns |  1.26 |    0.01 |    4 |         - |          NA |
-| QuickSortMedian9             | 4096 | Sorted             |    21,003.0 ns |    358.86 ns |   187.69 ns |  1.34 |    0.02 |    4 |         - |          NA |
-| SampleSort                   | 4096 | Sorted             |    69,681.5 ns |  2,101.75 ns | 1,099.25 ns |  4.45 |    0.08 |    7 |         - |          NA |
-| SimdQuickSort                | 4096 | Sorted             |    45,089.9 ns |    242.11 ns |   126.63 ns |  2.88 |    0.02 |    6 |         - |          NA |
-| DualPivotQuickSort           | 4096 | Sorted             |    15,264.8 ns |  1,700.95 ns |   889.63 ns |  0.98 |    0.05 |    4 |         - |          NA |
-| StableQuickSort              | 4096 | Sorted             |   148,333.3 ns |  3,240.47 ns | 1,694.83 ns |  9.48 |    0.13 |    8 |         - |          NA |
-| BidirectionalStableQuickSort | 4096 | Sorted             |    70,455.4 ns |    147.34 ns |    52.54 ns |  4.50 |    0.04 |    7 |         - |          NA |
-| DestswapStableQuickSort      | 4096 | Sorted             |   140,282.3 ns |  1,398.66 ns |   621.01 ns |  8.97 |    0.08 |    8 |         - |          NA |
-| IntroSort                    | 4096 | Sorted             |    14,990.6 ns |    123.35 ns |    64.51 ns |  0.96 |    0.01 |    4 |         - |          NA |
-| IntroSortDotnet              | 4096 | Sorted             |    17,114.1 ns |    174.48 ns |    77.47 ns |  1.09 |    0.01 |    4 |         - |          NA |
-| PDQSort                      | 4096 | Sorted             |     4,640.5 ns |    257.00 ns |   134.41 ns |  0.30 |    0.01 |    3 |         - |          NA |
-| PDQSortBranchless            | 4096 | Sorted             |     4,538.7 ns |     22.53 ns |     8.03 ns |  0.29 |    0.00 |    3 |         - |          NA |
-| Ipnsort                      | 4096 | Sorted             |     1,793.4 ns |     52.46 ns |    23.29 ns |  0.11 |    0.00 |    1 |         - |          NA |
-| StdSort                      | 4096 | Sorted             |     4,726.5 ns |    287.60 ns |   150.42 ns |  0.30 |    0.01 |    3 |         - |          NA |
-| BlockQuickSort               | 4096 | Sorted             |    30,401.2 ns |    244.96 ns |   128.12 ns |  1.94 |    0.02 |    5 |         - |          NA |
-| Ips4oSort                    | 4096 | Sorted             |     1,513.1 ns |     45.14 ns |    16.10 ns |  0.10 |    0.00 |    1 |         - |          NA |
-| FluxSort                     | 4096 | Sorted             |     2,222.7 ns |      9.55 ns |     3.41 ns |  0.14 |    0.00 |    2 |         - |          NA |
-| CrumSort                     | 4096 | Sorted             |     2,246.7 ns |     31.74 ns |    11.32 ns |  0.14 |    0.00 |    2 |         - |          NA |
-| BlitSort                     | 4096 | Sorted             |     2,265.6 ns |    143.48 ns |    63.70 ns |  0.14 |    0.00 |    2 |         - |          NA |
-| DotnetSort                   | 4096 | Sorted             |    15,853.9 ns |  2,305.05 ns | 1,205.59 ns |  1.01 |    0.07 |    4 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **4096** | **Reversed**           |    **17,186.9 ns** |    **456.06 ns** |   **202.49 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 4096 | Reversed           |    30,741.2 ns |  1,582.86 ns |   827.87 ns |  1.79 |    0.05 |    6 |         - |          NA |
-| QuickSortMedian3             | 4096 | Reversed           |    20,906.5 ns |    316.26 ns |   140.42 ns |  1.22 |    0.02 |    5 |         - |          NA |
-| QuickSortMedian9             | 4096 | Reversed           |    22,097.7 ns |    234.75 ns |   122.78 ns |  1.29 |    0.02 |    5 |         - |          NA |
-| SampleSort                   | 4096 | Reversed           |    74,371.7 ns |  1,869.97 ns |   978.03 ns |  4.33 |    0.07 |    8 |         - |          NA |
-| SimdQuickSort                | 4096 | Reversed           |    27,637.4 ns |    335.98 ns |   175.72 ns |  1.61 |    0.02 |    6 |         - |          NA |
-| DualPivotQuickSort           | 4096 | Reversed           |    16,761.4 ns |  1,099.30 ns |   574.95 ns |  0.98 |    0.03 |    4 |         - |          NA |
-| StableQuickSort              | 4096 | Reversed           |   151,638.6 ns |  2,406.70 ns | 1,258.75 ns |  8.82 |    0.12 |    9 |         - |          NA |
-| BidirectionalStableQuickSort | 4096 | Reversed           |    70,665.4 ns |    336.82 ns |   176.16 ns |  4.11 |    0.05 |    8 |         - |          NA |
-| DestswapStableQuickSort      | 4096 | Reversed           |   136,866.7 ns |  1,387.02 ns |   725.44 ns |  7.96 |    0.10 |    9 |         - |          NA |
-| IntroSort                    | 4096 | Reversed           |    15,535.9 ns |    116.70 ns |    51.82 ns |  0.90 |    0.01 |    4 |         - |          NA |
-| IntroSortDotnet              | 4096 | Reversed           |    26,869.0 ns |    340.93 ns |   178.31 ns |  1.56 |    0.02 |    6 |         - |          NA |
-| PDQSort                      | 4096 | Reversed           |     6,399.3 ns |    271.68 ns |   142.09 ns |  0.37 |    0.01 |    2 |         - |          NA |
-| PDQSortBranchless            | 4096 | Reversed           |     7,870.9 ns |    329.01 ns |   172.08 ns |  0.46 |    0.01 |    3 |         - |          NA |
-| Ipnsort                      | 4096 | Reversed           |     2,790.6 ns |     50.30 ns |    17.94 ns |  0.16 |    0.00 |    1 |         - |          NA |
-| StdSort                      | 4096 | Reversed           |     9,199.4 ns |    316.78 ns |   165.68 ns |  0.54 |    0.01 |    3 |         - |          NA |
-| BlockQuickSort               | 4096 | Reversed           |    37,490.1 ns |    387.47 ns |   202.65 ns |  2.18 |    0.03 |    7 |         - |          NA |
-| Ips4oSort                    | 4096 | Reversed           |     2,672.2 ns |     54.55 ns |    24.22 ns |  0.16 |    0.00 |    1 |         - |          NA |
-| FluxSort                     | 4096 | Reversed           |     3,341.2 ns |     29.95 ns |    13.30 ns |  0.19 |    0.00 |    1 |         - |          NA |
-| CrumSort                     | 4096 | Reversed           |     3,370.5 ns |     15.95 ns |     5.69 ns |  0.20 |    0.00 |    1 |         - |          NA |
-| BlitSort                     | 4096 | Reversed           |     3,347.2 ns |     24.41 ns |     8.70 ns |  0.19 |    0.00 |    1 |         - |          NA |
-| DotnetSort                   | 4096 | Reversed           |    27,079.2 ns |  2,314.81 ns | 1,027.79 ns |  1.58 |    0.06 |    6 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **4096** | **PipeOrgan**          | **1,216,233.4 ns** |  **5,046.13 ns** | **2,639.22 ns** | **1.000** |    **0.00** |    **6** |         **-** |          **NA** |
-| QuickSort3way                | 4096 | PipeOrgan          |    79,837.4 ns |  2,311.11 ns | 1,208.76 ns | 0.066 |    0.00 |    3 |         - |          NA |
-| QuickSortMedian3             | 4096 | PipeOrgan          |    63,828.4 ns |  1,812.93 ns |   948.20 ns | 0.052 |    0.00 |    3 |         - |          NA |
-| QuickSortMedian9             | 4096 | PipeOrgan          |    41,630.3 ns |  1,937.17 ns | 1,013.18 ns | 0.034 |    0.00 |    2 |         - |          NA |
-| SampleSort                   | 4096 | PipeOrgan          |    76,306.5 ns |  1,699.84 ns |   889.05 ns | 0.063 |    0.00 |    3 |         - |          NA |
-| SimdQuickSort                | 4096 | PipeOrgan          |    32,638.5 ns |    433.98 ns |   226.98 ns | 0.027 |    0.00 |    2 |         - |          NA |
-| DualPivotQuickSort           | 4096 | PipeOrgan          |    35,648.8 ns |    913.39 ns |   477.72 ns | 0.029 |    0.00 |    2 |         - |          NA |
-| StableQuickSort              | 4096 | PipeOrgan          |   149,957.8 ns |  2,390.61 ns | 1,250.33 ns | 0.123 |    0.00 |    5 |         - |          NA |
-| BidirectionalStableQuickSort | 4096 | PipeOrgan          |    71,274.8 ns |    776.78 ns |   406.27 ns | 0.059 |    0.00 |    3 |         - |          NA |
-| DestswapStableQuickSort      | 4096 | PipeOrgan          |   179,083.8 ns |    724.40 ns |   321.64 ns | 0.147 |    0.00 |    5 |         - |          NA |
-| IntroSort                    | 4096 | PipeOrgan          |   104,906.2 ns |    702.68 ns |   311.99 ns | 0.086 |    0.00 |    4 |         - |          NA |
-| IntroSortDotnet              | 4096 | PipeOrgan          |    64,897.9 ns |  1,208.26 ns |   631.95 ns | 0.053 |    0.00 |    3 |         - |          NA |
-| PDQSort                      | 4096 | PipeOrgan          |    31,502.9 ns |    687.11 ns |   359.37 ns | 0.026 |    0.00 |    2 |         - |          NA |
-| PDQSortBranchless            | 4096 | PipeOrgan          |    47,055.1 ns |    330.56 ns |   117.88 ns | 0.039 |    0.00 |    2 |         - |          NA |
-| Ipnsort                      | 4096 | PipeOrgan          |    83,335.8 ns |    568.23 ns |   252.30 ns | 0.069 |    0.00 |    3 |         - |          NA |
-| StdSort                      | 4096 | PipeOrgan          |   102,100.2 ns |    648.36 ns |   339.11 ns | 0.084 |    0.00 |    4 |         - |          NA |
-| BlockQuickSort               | 4096 | PipeOrgan          |    80,828.3 ns |    626.45 ns |   278.15 ns | 0.066 |    0.00 |    3 |         - |          NA |
-| Ips4oSort                    | 4096 | PipeOrgan          |    59,871.6 ns |    259.06 ns |   115.03 ns | 0.049 |    0.00 |    3 |         - |          NA |
-| FluxSort                     | 4096 | PipeOrgan          |     8,987.6 ns |    208.58 ns |   109.09 ns | 0.007 |    0.00 |    1 |         - |          NA |
-| CrumSort                     | 4096 | PipeOrgan          |    10,752.7 ns |    351.83 ns |   184.02 ns | 0.009 |    0.00 |    1 |         - |          NA |
-| BlitSort                     | 4096 | PipeOrgan          |    10,592.1 ns |    237.80 ns |   124.37 ns | 0.009 |    0.00 |    1 |         - |          NA |
-| DotnetSort                   | 4096 | PipeOrgan          |    71,364.5 ns |  2,119.92 ns | 1,108.76 ns | 0.059 |    0.00 |    3 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **4096** | **ManyDuplicates**     |   **103,318.9 ns** |    **757.86 ns** |   **396.37 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 4096 | ManyDuplicates     |    74,956.8 ns |    546.25 ns |   285.70 ns |  0.73 |    0.00 |    3 |         - |          NA |
-| QuickSortMedian3             | 4096 | ManyDuplicates     |   113,343.6 ns |    447.17 ns |   233.88 ns |  1.10 |    0.00 |    4 |         - |          NA |
-| QuickSortMedian9             | 4096 | ManyDuplicates     |   118,965.9 ns |    719.78 ns |   376.46 ns |  1.15 |    0.01 |    4 |         - |          NA |
-| SampleSort                   | 4096 | ManyDuplicates     |   156,013.5 ns |  1,620.05 ns |   847.32 ns |  1.51 |    0.01 |    5 |         - |          NA |
-| SimdQuickSort                | 4096 | ManyDuplicates     |    24,327.0 ns |    268.87 ns |   140.62 ns |  0.24 |    0.00 |    1 |         - |          NA |
-| DualPivotQuickSort           | 4096 | ManyDuplicates     |    73,078.6 ns |    840.20 ns |   439.44 ns |  0.71 |    0.00 |    3 |         - |          NA |
-| StableQuickSort              | 4096 | ManyDuplicates     |   178,205.8 ns |  3,036.82 ns | 1,588.31 ns |  1.72 |    0.02 |    5 |         - |          NA |
-| BidirectionalStableQuickSort | 4096 | ManyDuplicates     |    78,356.6 ns |  2,373.52 ns | 1,053.86 ns |  0.76 |    0.01 |    3 |         - |          NA |
-| DestswapStableQuickSort      | 4096 | ManyDuplicates     |   129,909.1 ns |    414.03 ns |   183.83 ns |  1.26 |    0.00 |    4 |         - |          NA |
-| IntroSort                    | 4096 | ManyDuplicates     |    96,957.9 ns |    540.33 ns |   239.91 ns |  0.94 |    0.00 |    4 |         - |          NA |
-| IntroSortDotnet              | 4096 | ManyDuplicates     |   103,463.5 ns |    567.36 ns |   296.74 ns |  1.00 |    0.00 |    4 |         - |          NA |
-| PDQSort                      | 4096 | ManyDuplicates     |    73,893.0 ns |    567.64 ns |   296.88 ns |  0.72 |    0.00 |    3 |         - |          NA |
-| PDQSortBranchless            | 4096 | ManyDuplicates     |    26,815.0 ns |     93.45 ns |    41.49 ns |  0.26 |    0.00 |    1 |         - |          NA |
-| Ipnsort                      | 4096 | ManyDuplicates     |    48,788.7 ns |    198.69 ns |   103.92 ns |  0.47 |    0.00 |    2 |         - |          NA |
-| StdSort                      | 4096 | ManyDuplicates     |    42,502.0 ns |    316.22 ns |   140.41 ns |  0.41 |    0.00 |    2 |         - |          NA |
-| BlockQuickSort               | 4096 | ManyDuplicates     |    55,681.6 ns |    926.18 ns |   330.28 ns |  0.54 |    0.00 |    2 |         - |          NA |
-| Ips4oSort                    | 4096 | ManyDuplicates     |    41,279.8 ns |  1,371.99 ns |   717.58 ns |  0.40 |    0.01 |    2 |         - |          NA |
-| FluxSort                     | 4096 | ManyDuplicates     |    34,175.6 ns |    254.87 ns |   113.16 ns |  0.33 |    0.00 |    2 |         - |          NA |
-| CrumSort                     | 4096 | ManyDuplicates     |    34,511.5 ns |    696.94 ns |   309.45 ns |  0.33 |    0.00 |    2 |         - |          NA |
-| BlitSort                     | 4096 | ManyDuplicates     |    42,284.8 ns |    263.77 ns |   137.96 ns |  0.41 |    0.00 |    2 |         - |          NA |
-| DotnetSort                   | 4096 | ManyDuplicates     |    94,678.5 ns |    752.94 ns |   393.80 ns |  0.92 |    0.00 |    4 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **8192** | **Random**             |   **393,385.1 ns** |  **1,966.13 ns** |   **872.97 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
-| QuickSort3way                | 8192 | Random             |   431,248.9 ns |  1,222.71 ns |   542.89 ns |  1.10 |    0.00 |    3 |         - |          NA |
-| QuickSortMedian3             | 8192 | Random             |   412,476.7 ns |  2,182.77 ns | 1,141.63 ns |  1.05 |    0.00 |    3 |         - |          NA |
-| QuickSortMedian9             | 8192 | Random             |   438,561.8 ns |  2,262.19 ns | 1,183.17 ns |  1.11 |    0.00 |    3 |         - |          NA |
-| SampleSort                   | 8192 | Random             |   497,805.2 ns |  2,598.57 ns | 1,153.78 ns |  1.27 |    0.00 |    3 |         - |          NA |
-| SimdQuickSort                | 8192 | Random             |    41,937.8 ns |    296.39 ns |   131.60 ns |  0.11 |    0.00 |    1 |         - |          NA |
-| DualPivotQuickSort           | 8192 | Random             |   311,963.4 ns |    768.65 ns |   274.11 ns |  0.79 |    0.00 |    3 |         - |          NA |
-| StableQuickSort              | 8192 | Random             | 1,010,841.3 ns |  1,672.59 ns |   742.64 ns |  2.57 |    0.01 |    5 |         - |          NA |
-| BidirectionalStableQuickSort | 8192 | Random             |   519,109.3 ns |  1,706.28 ns |   757.60 ns |  1.32 |    0.00 |    3 |         - |          NA |
-| DestswapStableQuickSort      | 8192 | Random             |   822,474.8 ns |  2,441.24 ns | 1,083.92 ns |  2.09 |    0.01 |    4 |         - |          NA |
-| IntroSort                    | 8192 | Random             |   346,260.1 ns |    524.18 ns |   232.74 ns |  0.88 |    0.00 |    3 |         - |          NA |
-| IntroSortDotnet              | 8192 | Random             |   336,646.5 ns |    673.73 ns |   299.14 ns |  0.86 |    0.00 |    3 |         - |          NA |
-| PDQSort                      | 8192 | Random             |   323,140.3 ns |    477.26 ns |   211.90 ns |  0.82 |    0.00 |    3 |         - |          NA |
-| PDQSortBranchless            | 8192 | Random             |   173,527.7 ns |    465.46 ns |   206.67 ns |  0.44 |    0.00 |    2 |         - |          NA |
-| Ipnsort                      | 8192 | Random             |   196,213.2 ns |  1,285.56 ns |   570.80 ns |  0.50 |    0.00 |    2 |         - |          NA |
-| StdSort                      | 8192 | Random             |   187,045.4 ns |    360.36 ns |   160.00 ns |  0.48 |    0.00 |    2 |         - |          NA |
-| BlockQuickSort               | 8192 | Random             |   199,500.8 ns |    530.03 ns |   235.33 ns |  0.51 |    0.00 |    2 |         - |          NA |
-| Ips4oSort                    | 8192 | Random             |   173,598.9 ns |  1,083.17 ns |   480.94 ns |  0.44 |    0.00 |    2 |         - |          NA |
-| FluxSort                     | 8192 | Random             |   226,753.4 ns |  1,392.77 ns |   618.40 ns |  0.58 |    0.00 |    2 |         - |          NA |
-| CrumSort                     | 8192 | Random             |   227,366.4 ns |  1,372.72 ns |   717.96 ns |  0.58 |    0.00 |    2 |         - |          NA |
-| BlitSort                     | 8192 | Random             |   251,331.1 ns |  1,018.67 ns |   452.29 ns |  0.64 |    0.00 |    2 |         - |          NA |
-| DotnetSort                   | 8192 | Random             |   314,778.8 ns |  2,852.66 ns | 1,492.00 ns |  0.80 |    0.00 |    3 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **8192** | **SingleElementMoved** |    **40,488.5 ns** |    **977.37 ns** |   **433.96 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 8192 | SingleElementMoved |    69,158.7 ns |  3,277.37 ns | 1,714.13 ns |  1.71 |    0.04 |    4 |         - |          NA |
-| QuickSortMedian3             | 8192 | SingleElementMoved |    54,153.8 ns |    241.20 ns |   126.15 ns |  1.34 |    0.01 |    4 |         - |          NA |
-| QuickSortMedian9             | 8192 | SingleElementMoved |    63,033.2 ns |    895.58 ns |   319.37 ns |  1.56 |    0.02 |    4 |         - |          NA |
-| SampleSort                   | 8192 | SingleElementMoved |   318,708.3 ns |  3,013.97 ns | 1,576.36 ns |  7.87 |    0.09 |    7 |         - |          NA |
-| SimdQuickSort                | 8192 | SingleElementMoved |   136,801.9 ns |    476.87 ns |   249.41 ns |  3.38 |    0.03 |    6 |         - |          NA |
-| DualPivotQuickSort           | 8192 | SingleElementMoved |    38,417.7 ns |  2,748.90 ns | 1,220.53 ns |  0.95 |    0.03 |    4 |         - |          NA |
-| StableQuickSort              | 8192 | SingleElementMoved |   324,191.8 ns |  2,084.72 ns | 1,090.35 ns |  8.01 |    0.09 |    7 |         - |          NA |
-| BidirectionalStableQuickSort | 8192 | SingleElementMoved |   151,682.2 ns |  1,032.48 ns |   540.01 ns |  3.75 |    0.04 |    6 |         - |          NA |
-| DestswapStableQuickSort      | 8192 | SingleElementMoved |   294,254.0 ns |  1,901.49 ns |   844.27 ns |  7.27 |    0.08 |    7 |         - |          NA |
-| IntroSort                    | 8192 | SingleElementMoved |   108,426.1 ns |    864.29 ns |   308.21 ns |  2.68 |    0.03 |    5 |         - |          NA |
-| IntroSortDotnet              | 8192 | SingleElementMoved |    44,190.8 ns |    127.28 ns |    56.51 ns |  1.09 |    0.01 |    4 |         - |          NA |
-| PDQSort                      | 8192 | SingleElementMoved |    23,605.0 ns |    297.17 ns |   131.94 ns |  0.58 |    0.01 |    3 |         - |          NA |
-| PDQSortBranchless            | 8192 | SingleElementMoved |    27,200.8 ns |    332.10 ns |   173.69 ns |  0.67 |    0.01 |    3 |         - |          NA |
-| Ipnsort                      | 8192 | SingleElementMoved |   154,013.2 ns |    959.03 ns |   501.59 ns |  3.80 |    0.04 |    6 |         - |          NA |
-| StdSort                      | 8192 | SingleElementMoved |    25,293.0 ns |    591.74 ns |   262.74 ns |  0.62 |    0.01 |    3 |         - |          NA |
-| BlockQuickSort               | 8192 | SingleElementMoved |    73,471.8 ns |  1,638.26 ns |   727.40 ns |  1.81 |    0.02 |    4 |         - |          NA |
-| Ips4oSort                    | 8192 | SingleElementMoved |    98,616.4 ns |  2,101.90 ns | 1,099.33 ns |  2.44 |    0.04 |    5 |         - |          NA |
-| FluxSort                     | 8192 | SingleElementMoved |     8,632.3 ns |    405.01 ns |   211.83 ns |  0.21 |    0.01 |    1 |         - |          NA |
-| CrumSort                     | 8192 | SingleElementMoved |    11,247.7 ns |    267.29 ns |   139.80 ns |  0.28 |    0.00 |    2 |         - |          NA |
-| BlitSort                     | 8192 | SingleElementMoved |    11,295.0 ns |    309.21 ns |   161.72 ns |  0.28 |    0.00 |    2 |         - |          NA |
-| DotnetSort                   | 8192 | SingleElementMoved |    52,483.1 ns |  1,204.24 ns |   534.69 ns |  1.30 |    0.02 |    4 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **8192** | **Sorted**             |    **33,777.2 ns** |    **756.41 ns** |   **335.85 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 8192 | Sorted             |    59,105.9 ns |  3,472.34 ns | 1,541.74 ns |  1.75 |    0.05 |    5 |         - |          NA |
-| QuickSortMedian3             | 8192 | Sorted             |    41,675.3 ns |    314.91 ns |   164.70 ns |  1.23 |    0.01 |    4 |         - |          NA |
-| QuickSortMedian9             | 8192 | Sorted             |    44,101.0 ns |    259.82 ns |   135.89 ns |  1.31 |    0.01 |    4 |         - |          NA |
-| SampleSort                   | 8192 | Sorted             |   199,919.0 ns |  7,880.93 ns | 4,121.88 ns |  5.92 |    0.13 |    7 |         - |          NA |
-| SimdQuickSort                | 8192 | Sorted             |   141,623.8 ns |    668.63 ns |   296.88 ns |  4.19 |    0.04 |    6 |         - |          NA |
-| DualPivotQuickSort           | 8192 | Sorted             |    37,566.4 ns |  2,694.05 ns | 1,409.04 ns |  1.11 |    0.04 |    4 |         - |          NA |
-| StableQuickSort              | 8192 | Sorted             |   324,310.4 ns |  2,635.74 ns | 1,378.54 ns |  9.60 |    0.10 |    8 |         - |          NA |
-| BidirectionalStableQuickSort | 8192 | Sorted             |   150,029.3 ns |  1,252.76 ns |   655.22 ns |  4.44 |    0.04 |    6 |         - |          NA |
-| DestswapStableQuickSort      | 8192 | Sorted             |   291,963.0 ns |  1,737.48 ns |   908.74 ns |  8.64 |    0.08 |    8 |         - |          NA |
-| IntroSort                    | 8192 | Sorted             |    32,034.6 ns |    354.80 ns |   185.57 ns |  0.95 |    0.01 |    4 |         - |          NA |
-| IntroSortDotnet              | 8192 | Sorted             |    36,596.6 ns |    221.87 ns |    98.51 ns |  1.08 |    0.01 |    4 |         - |          NA |
-| PDQSort                      | 8192 | Sorted             |     9,198.8 ns |    445.07 ns |   232.78 ns |  0.27 |    0.01 |    3 |         - |          NA |
-| PDQSortBranchless            | 8192 | Sorted             |     9,237.3 ns |    106.66 ns |    55.78 ns |  0.27 |    0.00 |    3 |         - |          NA |
-| Ipnsort                      | 8192 | Sorted             |     3,634.1 ns |    227.27 ns |   100.91 ns |  0.11 |    0.00 |    1 |         - |          NA |
-| StdSort                      | 8192 | Sorted             |     9,183.2 ns |    285.88 ns |   149.52 ns |  0.27 |    0.00 |    3 |         - |          NA |
-| BlockQuickSort               | 8192 | Sorted             |    66,082.9 ns |    221.27 ns |    98.24 ns |  1.96 |    0.02 |    5 |         - |          NA |
-| Ips4oSort                    | 8192 | Sorted             |     3,009.0 ns |     23.88 ns |    12.49 ns |  0.09 |    0.00 |    1 |         - |          NA |
-| FluxSort                     | 8192 | Sorted             |     4,328.8 ns |     27.64 ns |     9.86 ns |  0.13 |    0.00 |    2 |         - |          NA |
-| CrumSort                     | 8192 | Sorted             |     4,373.6 ns |     23.49 ns |    10.43 ns |  0.13 |    0.00 |    2 |         - |          NA |
-| BlitSort                     | 8192 | Sorted             |     4,492.9 ns |    422.19 ns |   220.81 ns |  0.13 |    0.01 |    2 |         - |          NA |
-| DotnetSort                   | 8192 | Sorted             |    32,274.4 ns |    581.04 ns |   257.98 ns |  0.96 |    0.01 |    4 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **8192** | **Reversed**           |    **36,878.1 ns** |  **1,332.84 ns** |   **697.10 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 8192 | Reversed           |    65,279.6 ns |  2,979.79 ns | 1,558.49 ns |  1.77 |    0.05 |    5 |         - |          NA |
-| QuickSortMedian3             | 8192 | Reversed           |    43,623.6 ns |    214.31 ns |    95.15 ns |  1.18 |    0.02 |    4 |         - |          NA |
-| QuickSortMedian9             | 8192 | Reversed           |    46,495.7 ns |    345.75 ns |   153.52 ns |  1.26 |    0.02 |    4 |         - |          NA |
-| SampleSort                   | 8192 | Reversed           |   276,541.2 ns |  2,291.97 ns | 1,017.65 ns |  7.50 |    0.14 |    7 |         - |          NA |
-| SimdQuickSort                | 8192 | Reversed           |    68,168.1 ns |    107.15 ns |    56.04 ns |  1.85 |    0.03 |    5 |         - |          NA |
-| DualPivotQuickSort           | 8192 | Reversed           |    38,726.9 ns |  1,370.92 ns |   717.02 ns |  1.05 |    0.03 |    4 |         - |          NA |
-| StableQuickSort              | 8192 | Reversed           |   330,712.4 ns |  4,996.09 ns | 2,218.29 ns |  8.97 |    0.17 |    7 |         - |          NA |
-| BidirectionalStableQuickSort | 8192 | Reversed           |   149,982.8 ns |  1,714.42 ns |   896.67 ns |  4.07 |    0.08 |    6 |         - |          NA |
-| DestswapStableQuickSort      | 8192 | Reversed           |   281,823.9 ns |  4,069.17 ns | 1,806.74 ns |  7.64 |    0.14 |    7 |         - |          NA |
-| IntroSort                    | 8192 | Reversed           |    33,552.5 ns |    662.82 ns |   346.67 ns |  0.91 |    0.02 |    4 |         - |          NA |
-| IntroSortDotnet              | 8192 | Reversed           |    58,145.9 ns |    334.59 ns |   175.00 ns |  1.58 |    0.03 |    5 |         - |          NA |
-| PDQSort                      | 8192 | Reversed           |    12,858.7 ns |    646.21 ns |   337.98 ns |  0.35 |    0.01 |    2 |         - |          NA |
-| PDQSortBranchless            | 8192 | Reversed           |    15,718.3 ns |    323.08 ns |   168.98 ns |  0.43 |    0.01 |    3 |         - |          NA |
-| Ipnsort                      | 8192 | Reversed           |     5,670.1 ns |    234.15 ns |   122.46 ns |  0.15 |    0.00 |    1 |         - |          NA |
-| StdSort                      | 8192 | Reversed           |    18,086.5 ns |    175.50 ns |    91.79 ns |  0.49 |    0.01 |    3 |         - |          NA |
-| BlockQuickSort               | 8192 | Reversed           |    80,402.0 ns |  1,101.36 ns |   489.01 ns |  2.18 |    0.04 |    5 |         - |          NA |
-| Ips4oSort                    | 8192 | Reversed           |     5,526.8 ns |    503.32 ns |   263.24 ns |  0.15 |    0.01 |    1 |         - |          NA |
-| FluxSort                     | 8192 | Reversed           |     6,738.5 ns |    264.51 ns |   138.34 ns |  0.18 |    0.00 |    1 |         - |          NA |
-| CrumSort                     | 8192 | Reversed           |     6,744.2 ns |    313.96 ns |   164.21 ns |  0.18 |    0.01 |    1 |         - |          NA |
-| BlitSort                     | 8192 | Reversed           |     6,699.9 ns |    240.42 ns |   125.75 ns |  0.18 |    0.00 |    1 |         - |          NA |
-| DotnetSort                   | 8192 | Reversed           |    60,012.3 ns |  2,911.70 ns | 1,292.81 ns |  1.63 |    0.04 |    5 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **8192** | **PipeOrgan**          | **4,741,471.4 ns** | **20,696.52 ns** | **9,189.38 ns** | **1.000** |    **0.00** |    **5** |         **-** |          **NA** |
-| QuickSort3way                | 8192 | PipeOrgan          |   207,539.5 ns | 12,635.19 ns | 6,608.45 ns | 0.044 |    0.00 |    4 |         - |          NA |
-| QuickSortMedian3             | 8192 | PipeOrgan          |   150,067.2 ns |  2,109.18 ns | 1,103.14 ns | 0.032 |    0.00 |    4 |         - |          NA |
-| QuickSortMedian9             | 8192 | PipeOrgan          |    90,391.8 ns |  4,434.35 ns | 2,319.25 ns | 0.019 |    0.00 |    3 |         - |          NA |
-| SampleSort                   | 8192 | PipeOrgan          |   301,743.2 ns |  2,658.11 ns | 1,180.22 ns | 0.064 |    0.00 |    4 |         - |          NA |
-| SimdQuickSort                | 8192 | PipeOrgan          |    64,244.6 ns |    356.63 ns |   186.52 ns | 0.014 |    0.00 |    3 |         - |          NA |
-| DualPivotQuickSort           | 8192 | PipeOrgan          |    77,610.0 ns |  2,148.15 ns |   953.79 ns | 0.016 |    0.00 |    3 |         - |          NA |
-| StableQuickSort              | 8192 | PipeOrgan          |   323,939.5 ns |  2,259.95 ns | 1,182.00 ns | 0.068 |    0.00 |    4 |         - |          NA |
-| BidirectionalStableQuickSort | 8192 | PipeOrgan          |   150,502.1 ns |    764.87 ns |   339.61 ns | 0.032 |    0.00 |    4 |         - |          NA |
-| DestswapStableQuickSort      | 8192 | PipeOrgan          |   375,790.3 ns |  1,312.39 ns |   582.71 ns | 0.079 |    0.00 |    4 |         - |          NA |
-| IntroSort                    | 8192 | PipeOrgan          |   231,635.5 ns |  2,521.27 ns | 1,318.67 ns | 0.049 |    0.00 |    4 |         - |          NA |
-| IntroSortDotnet              | 8192 | PipeOrgan          |   272,224.7 ns |  2,461.67 ns | 1,093.00 ns | 0.057 |    0.00 |    4 |         - |          NA |
-| PDQSort                      | 8192 | PipeOrgan          |    68,093.4 ns |  2,288.98 ns | 1,197.18 ns | 0.014 |    0.00 |    3 |         - |          NA |
-| PDQSortBranchless            | 8192 | PipeOrgan          |   101,655.1 ns |  1,023.02 ns |   535.06 ns | 0.021 |    0.00 |    3 |         - |          NA |
-| Ipnsort                      | 8192 | PipeOrgan          |   185,908.2 ns |    411.69 ns |   182.79 ns | 0.039 |    0.00 |    4 |         - |          NA |
-| StdSort                      | 8192 | PipeOrgan          |   248,832.4 ns |  1,677.28 ns |   877.25 ns | 0.052 |    0.00 |    4 |         - |          NA |
-| BlockQuickSort               | 8192 | PipeOrgan          |   157,821.4 ns |  1,387.40 ns |   725.63 ns | 0.033 |    0.00 |    4 |         - |          NA |
-| Ips4oSort                    | 8192 | PipeOrgan          |   142,279.7 ns |    516.11 ns |   229.15 ns | 0.030 |    0.00 |    4 |         - |          NA |
-| FluxSort                     | 8192 | PipeOrgan          |    17,966.3 ns |    190.65 ns |    84.65 ns | 0.004 |    0.00 |    1 |         - |          NA |
-| CrumSort                     | 8192 | PipeOrgan          |    22,960.8 ns |    458.02 ns |   239.55 ns | 0.005 |    0.00 |    2 |         - |          NA |
-| BlitSort                     | 8192 | PipeOrgan          |    22,797.8 ns |    201.47 ns |   105.37 ns | 0.005 |    0.00 |    2 |         - |          NA |
-| DotnetSort                   | 8192 | PipeOrgan          |   278,296.5 ns |  5,250.08 ns | 2,745.89 ns | 0.059 |    0.00 |    4 |         - |          NA |
-|      |                    |                |              |             |       |         |      |           |             |
-| **QuickSort**                    | **8192** | **ManyDuplicates**     |   **205,891.8 ns** |  **1,927.41 ns** | **1,008.07 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| QuickSort3way                | 8192 | ManyDuplicates     |   146,580.9 ns |    306.87 ns |   109.43 ns |  0.71 |    0.00 |    3 |         - |          NA |
-| QuickSortMedian3             | 8192 | ManyDuplicates     |   222,606.9 ns |    757.36 ns |   336.27 ns |  1.08 |    0.01 |    4 |         - |          NA |
-| QuickSortMedian9             | 8192 | ManyDuplicates     |   235,575.6 ns |  2,201.36 ns | 1,151.36 ns |  1.14 |    0.01 |    4 |         - |          NA |
-| SampleSort                   | 8192 | ManyDuplicates     |   311,057.4 ns |  1,923.78 ns |   854.17 ns |  1.51 |    0.01 |    5 |         - |          NA |
-| SimdQuickSort                | 8192 | ManyDuplicates     |    49,496.8 ns |    136.84 ns |    71.57 ns |  0.24 |    0.00 |    1 |         - |          NA |
-| DualPivotQuickSort           | 8192 | ManyDuplicates     |   143,876.1 ns |    609.91 ns |   270.80 ns |  0.70 |    0.00 |    3 |         - |          NA |
-| StableQuickSort              | 8192 | ManyDuplicates     |   346,435.8 ns |  5,740.68 ns | 3,002.49 ns |  1.68 |    0.02 |    5 |         - |          NA |
-| BidirectionalStableQuickSort | 8192 | ManyDuplicates     |   152,877.9 ns |    485.00 ns |   215.34 ns |  0.74 |    0.00 |    3 |         - |          NA |
-| DestswapStableQuickSort      | 8192 | ManyDuplicates     |   252,127.3 ns |  1,104.81 ns |   490.54 ns |  1.22 |    0.01 |    4 |         - |          NA |
-| IntroSort                    | 8192 | ManyDuplicates     |   193,316.5 ns |    940.60 ns |   491.95 ns |  0.94 |    0.00 |    4 |         - |          NA |
-| IntroSortDotnet              | 8192 | ManyDuplicates     |   207,991.5 ns |    926.25 ns |   411.26 ns |  1.01 |    0.01 |    4 |         - |          NA |
-| PDQSort                      | 8192 | ManyDuplicates     |   144,150.7 ns |    728.65 ns |   381.10 ns |  0.70 |    0.00 |    3 |         - |          NA |
-| PDQSortBranchless            | 8192 | ManyDuplicates     |    48,649.8 ns |    211.20 ns |   110.46 ns |  0.24 |    0.00 |    1 |         - |          NA |
-| Ipnsort                      | 8192 | ManyDuplicates     |    93,578.5 ns |    411.06 ns |   182.51 ns |  0.45 |    0.00 |    2 |         - |          NA |
-| StdSort                      | 8192 | ManyDuplicates     |    77,569.1 ns |    299.47 ns |   106.79 ns |  0.38 |    0.00 |    2 |         - |          NA |
-| BlockQuickSort               | 8192 | ManyDuplicates     |   108,799.0 ns |    171.08 ns |    61.01 ns |  0.53 |    0.00 |    2 |         - |          NA |
-| Ips4oSort                    | 8192 | ManyDuplicates     |    62,140.2 ns |    168.52 ns |    74.83 ns |  0.30 |    0.00 |    1 |         - |          NA |
-| FluxSort                     | 8192 | ManyDuplicates     |    57,180.1 ns |    219.93 ns |    97.65 ns |  0.28 |    0.00 |    1 |         - |          NA |
-| CrumSort                     | 8192 | ManyDuplicates     |    56,548.9 ns |    379.96 ns |   198.73 ns |  0.27 |    0.00 |    1 |         - |          NA |
-| BlitSort                     | 8192 | ManyDuplicates     |    79,903.5 ns |    285.03 ns |   126.56 ns |  0.39 |    0.00 |    2 |         - |          NA |
-| DotnetSort                   | 8192 | ManyDuplicates     |   191,297.2 ns |  2,102.54 ns | 1,099.67 ns |  0.93 |    0.01 |    4 |         - |          NA |
+| Method                       | Size | Pattern            | Mean           | Error        | StdDev       | Median         | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+| ----------------------------- |----- |------------------- |---------------:|-------------:|-------------:|---------------:|------:|--------:|-----:|----------:|------------:|
+| **QuickSort**                    | **256**  | **Random**             |     **8,623.5 ns** |    **318.85 ns** |    **141.57 ns** |     **8,568.2 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| QuickSort3way                | 256  | Random             |     9,420.9 ns |    250.86 ns |    111.38 ns |     9,460.8 ns |  1.09 |    0.02 |    4 |         - |          NA |
+| QuickSortMedian3             | 256  | Random             |     9,152.7 ns |    279.08 ns |    145.96 ns |     9,206.1 ns |  1.06 |    0.02 |    4 |         - |          NA |
+| QuickSortMedian9             | 256  | Random             |     9,577.4 ns |    464.46 ns |    242.92 ns |     9,504.1 ns |  1.11 |    0.03 |    4 |         - |          NA |
+| SampleSort                   | 256  | Random             |    10,937.2 ns |    284.61 ns |    126.37 ns |    10,930.1 ns |  1.27 |    0.02 |    4 |         - |          NA |
+| SimdQuickSort                | 256  | Random             |       686.5 ns |     26.39 ns |     11.72 ns |       681.6 ns |  0.08 |    0.00 |    1 |         - |          NA |
+| DualPivotQuickSort           | 256  | Random             |     6,032.4 ns |    119.60 ns |     53.11 ns |     6,035.3 ns |  0.70 |    0.01 |    3 |         - |          NA |
+| StableQuickSort              | 256  | Random             |    19,685.0 ns |    145.34 ns |     64.53 ns |    19,699.7 ns |  2.28 |    0.04 |    5 |         - |          NA |
+| BidirectionalStableQuickSort | 256  | Random             |    11,433.4 ns |    233.12 ns |    103.51 ns |    11,437.6 ns |  1.33 |    0.02 |    4 |         - |          NA |
+| DestswapStableQuickSort      | 256  | Random             |    19,166.8 ns |    244.23 ns |    127.74 ns |    19,153.5 ns |  2.22 |    0.04 |    5 |         - |          NA |
+| IntroSort                    | 256  | Random             |     6,961.4 ns |    223.94 ns |     99.43 ns |     6,910.0 ns |  0.81 |    0.02 |    3 |         - |          NA |
+| IntroSortDotnet              | 256  | Random             |     6,441.6 ns |    351.67 ns |    183.93 ns |     6,443.4 ns |  0.75 |    0.02 |    3 |         - |          NA |
+| PDQSort                      | 256  | Random             |     5,912.2 ns |    100.82 ns |     44.77 ns |     5,899.5 ns |  0.69 |    0.01 |    3 |         - |          NA |
+| PDQSortBranchless            | 256  | Random             |     4,308.9 ns |    409.69 ns |    181.90 ns |     4,291.2 ns |  0.50 |    0.02 |    2 |         - |          NA |
+| Ipnsort                      | 256  | Random             |     3,905.2 ns |    550.45 ns |    287.89 ns |     3,785.2 ns |  0.45 |    0.03 |    2 |         - |          NA |
+| StdSort                      | 256  | Random             |     4,408.4 ns |    285.15 ns |    149.14 ns |     4,413.4 ns |  0.51 |    0.02 |    2 |         - |          NA |
+| BlockQuickSort               | 256  | Random             |     4,745.0 ns |    407.28 ns |    213.01 ns |     4,626.7 ns |  0.55 |    0.02 |    2 |         - |          NA |
+| Ips4oSort                    | 256  | Random             |    10,739.7 ns |    271.86 ns |    142.19 ns |    10,755.4 ns |  1.25 |    0.02 |    4 |         - |          NA |
+| FluxSort                     | 256  | Random             |     6,187.6 ns |    217.25 ns |    113.63 ns |     6,199.8 ns |  0.72 |    0.02 |    3 |         - |          NA |
+| CrumSort                     | 256  | Random             |     3,606.2 ns |    330.95 ns |    173.09 ns |     3,627.0 ns |  0.42 |    0.02 |    2 |         - |          NA |
+| BlitSort                     | 256  | Random             |     6,328.0 ns |    157.33 ns |     69.85 ns |     6,345.9 ns |  0.73 |    0.01 |    3 |         - |          NA |
+| DotnetSort                   | 256  | Random             |     5,987.3 ns |    219.10 ns |    114.59 ns |     6,006.3 ns |  0.69 |    0.02 |    3 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **256**  | **SingleElementMoved** |     **1,159.5 ns** |    **259.37 ns** |    **135.66 ns** |     **1,091.9 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| QuickSort3way                | 256  | SingleElementMoved |     2,159.6 ns |     71.32 ns |     31.67 ns |     2,155.8 ns |  1.88 |    0.19 |    4 |         - |          NA |
+| QuickSortMedian3             | 256  | SingleElementMoved |     1,698.5 ns |    250.07 ns |    130.79 ns |     1,658.5 ns |  1.48 |    0.18 |    3 |         - |          NA |
+| QuickSortMedian9             | 256  | SingleElementMoved |     1,785.4 ns |    245.18 ns |    108.86 ns |     1,746.2 ns |  1.56 |    0.18 |    3 |         - |          NA |
+| SampleSort                   | 256  | SingleElementMoved |     5,743.6 ns |    709.28 ns |    370.97 ns |     5,585.8 ns |  5.01 |    0.59 |    6 |         - |          NA |
+| SimdQuickSort                | 256  | SingleElementMoved |       918.5 ns |     42.12 ns |     18.70 ns |       912.1 ns |  0.80 |    0.08 |    2 |         - |          NA |
+| DualPivotQuickSort           | 256  | SingleElementMoved |       821.1 ns |    129.07 ns |     57.31 ns |       805.9 ns |  0.72 |    0.09 |    2 |         - |          NA |
+| StableQuickSort              | 256  | SingleElementMoved |     6,211.3 ns |    366.82 ns |    191.85 ns |     6,098.2 ns |  5.42 |    0.57 |    6 |         - |          NA |
+| BidirectionalStableQuickSort | 256  | SingleElementMoved |     3,671.7 ns |    167.01 ns |     87.35 ns |     3,647.7 ns |  3.20 |    0.33 |    5 |         - |          NA |
+| DestswapStableQuickSort      | 256  | SingleElementMoved |     7,453.3 ns |    247.06 ns |    129.22 ns |     7,409.7 ns |  6.50 |    0.67 |    7 |         - |          NA |
+| IntroSort                    | 256  | SingleElementMoved |     2,153.7 ns |    147.32 ns |     77.05 ns |     2,129.2 ns |  1.88 |    0.20 |    4 |         - |          NA |
+| IntroSortDotnet              | 256  | SingleElementMoved |     1,084.2 ns |    148.40 ns |     77.62 ns |     1,045.4 ns |  0.95 |    0.12 |    2 |         - |          NA |
+| PDQSort                      | 256  | SingleElementMoved |       836.9 ns |     69.32 ns |     30.78 ns |       834.3 ns |  0.73 |    0.08 |    2 |         - |          NA |
+| PDQSortBranchless            | 256  | SingleElementMoved |     1,049.1 ns |    104.90 ns |     54.87 ns |     1,026.1 ns |  0.91 |    0.10 |    2 |         - |          NA |
+| Ipnsort                      | 256  | SingleElementMoved |     2,867.2 ns |     98.29 ns |     51.41 ns |     2,847.1 ns |  2.50 |    0.26 |    4 |         - |          NA |
+| StdSort                      | 256  | SingleElementMoved |       990.8 ns |     83.54 ns |     43.69 ns |       983.6 ns |  0.86 |    0.09 |    2 |         - |          NA |
+| BlockQuickSort               | 256  | SingleElementMoved |     1,603.3 ns |    159.60 ns |     83.48 ns |     1,572.7 ns |  1.40 |    0.16 |    3 |         - |          NA |
+| Ips4oSort                    | 256  | SingleElementMoved |       470.2 ns |      9.01 ns |      4.71 ns |       469.1 ns |  0.41 |    0.04 |    1 |         - |          NA |
+| FluxSort                     | 256  | SingleElementMoved |     1,266.8 ns |     84.32 ns |     37.44 ns |     1,254.3 ns |  1.10 |    0.12 |    2 |         - |          NA |
+| CrumSort                     | 256  | SingleElementMoved |       511.0 ns |     49.72 ns |     22.08 ns |       506.4 ns |  0.45 |    0.05 |    1 |         - |          NA |
+| BlitSort                     | 256  | SingleElementMoved |     2,480.0 ns |    205.35 ns |    107.40 ns |     2,424.8 ns |  2.16 |    0.24 |    4 |         - |          NA |
+| DotnetSort                   | 256  | SingleElementMoved |     1,152.3 ns |    192.60 ns |     85.52 ns |     1,125.6 ns |  1.00 |    0.12 |    2 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **256**  | **Sorted**             |       **688.5 ns** |     **20.77 ns** |     **10.86 ns** |       **684.6 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| QuickSort3way                | 256  | Sorted             |     1,429.0 ns |     31.36 ns |     13.92 ns |     1,429.4 ns |  2.08 |    0.04 |    7 |         - |          NA |
+| QuickSortMedian3             | 256  | Sorted             |       934.0 ns |     35.17 ns |     15.62 ns |       926.2 ns |  1.36 |    0.03 |    6 |         - |          NA |
+| QuickSortMedian9             | 256  | Sorted             |     1,002.5 ns |     39.04 ns |     20.42 ns |       996.9 ns |  1.46 |    0.04 |    6 |         - |          NA |
+| SampleSort                   | 256  | Sorted             |     3,533.0 ns |    149.31 ns |     66.30 ns |     3,519.9 ns |  5.13 |    0.12 |    8 |         - |          NA |
+| SimdQuickSort                | 256  | Sorted             |       657.5 ns |      8.57 ns |      4.48 ns |       654.8 ns |  0.96 |    0.02 |    5 |         - |          NA |
+| DualPivotQuickSort           | 256  | Sorted             |       581.7 ns |     10.48 ns |      4.65 ns |       578.8 ns |  0.85 |    0.01 |    5 |         - |          NA |
+| StableQuickSort              | 256  | Sorted             |     5,893.1 ns |    100.09 ns |     35.69 ns |     5,899.6 ns |  8.56 |    0.13 |    9 |         - |          NA |
+| BidirectionalStableQuickSort | 256  | Sorted             |     3,412.1 ns |     19.35 ns |      6.90 ns |     3,412.8 ns |  4.96 |    0.07 |    8 |         - |          NA |
+| DestswapStableQuickSort      | 256  | Sorted             |     7,404.9 ns |    221.08 ns |    115.63 ns |     7,349.9 ns | 10.76 |    0.22 |   10 |         - |          NA |
+| IntroSort                    | 256  | Sorted             |       625.6 ns |      9.37 ns |      4.16 ns |       625.0 ns |  0.91 |    0.01 |    5 |         - |          NA |
+| IntroSortDotnet              | 256  | Sorted             |       757.7 ns |     14.32 ns |      6.36 ns |       754.7 ns |  1.10 |    0.02 |    5 |         - |          NA |
+| PDQSort                      | 256  | Sorted             |       314.9 ns |     15.60 ns |      6.92 ns |       312.3 ns |  0.46 |    0.01 |    4 |         - |          NA |
+| PDQSortBranchless            | 256  | Sorted             |       327.7 ns |     13.79 ns |      7.21 ns |       330.6 ns |  0.48 |    0.01 |    4 |         - |          NA |
+| Ipnsort                      | 256  | Sorted             |       153.9 ns |      5.04 ns |      2.63 ns |       152.9 ns |  0.22 |    0.00 |    2 |         - |          NA |
+| StdSort                      | 256  | Sorted             |       334.5 ns |      3.01 ns |      1.07 ns |       334.3 ns |  0.49 |    0.01 |    4 |         - |          NA |
+| BlockQuickSort               | 256  | Sorted             |     1,267.4 ns |     33.70 ns |     14.96 ns |     1,262.8 ns |  1.84 |    0.03 |    7 |         - |          NA |
+| Ips4oSort                    | 256  | Sorted             |       125.7 ns |     14.02 ns |      6.23 ns |       123.2 ns |  0.18 |    0.01 |    1 |         - |          NA |
+| FluxSort                     | 256  | Sorted             |       221.7 ns |      6.62 ns |      2.94 ns |       221.1 ns |  0.32 |    0.01 |    3 |         - |          NA |
+| CrumSort                     | 256  | Sorted             |       248.7 ns |      7.64 ns |      4.00 ns |       247.2 ns |  0.36 |    0.01 |    3 |         - |          NA |
+| BlitSort                     | 256  | Sorted             |       211.4 ns |      7.96 ns |      3.53 ns |       210.8 ns |  0.31 |    0.01 |    3 |         - |          NA |
+| DotnetSort                   | 256  | Sorted             |       658.2 ns |     20.81 ns |      9.24 ns |       654.9 ns |  0.96 |    0.02 |    5 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **256**  | **Reversed**           |       **805.5 ns** |     **12.83 ns** |      **5.70 ns** |       **807.1 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| QuickSort3way                | 256  | Reversed           |     1,583.2 ns |     31.60 ns |     11.27 ns |     1,581.2 ns |  1.97 |    0.02 |    6 |         - |          NA |
+| QuickSortMedian3             | 256  | Reversed           |     1,004.2 ns |     34.71 ns |     18.16 ns |       997.8 ns |  1.25 |    0.02 |    5 |         - |          NA |
+| QuickSortMedian9             | 256  | Reversed           |     1,145.8 ns |     26.96 ns |     11.97 ns |     1,141.5 ns |  1.42 |    0.02 |    5 |         - |          NA |
+| SampleSort                   | 256  | Reversed           |     3,932.3 ns |    216.17 ns |    113.06 ns |     3,886.3 ns |  4.88 |    0.14 |    7 |         - |          NA |
+| SimdQuickSort                | 256  | Reversed           |       923.8 ns |     16.87 ns |      6.02 ns |       922.1 ns |  1.15 |    0.01 |    5 |         - |          NA |
+| DualPivotQuickSort           | 256  | Reversed           |       761.5 ns |    153.39 ns |     68.11 ns |       729.7 ns |  0.95 |    0.08 |    5 |         - |          NA |
+| StableQuickSort              | 256  | Reversed           |     6,191.5 ns |    449.23 ns |    234.96 ns |     6,134.2 ns |  7.69 |    0.28 |    8 |         - |          NA |
+| BidirectionalStableQuickSort | 256  | Reversed           |     4,848.7 ns |  3,603.07 ns |  1,884.48 ns |     3,566.8 ns |  6.02 |    2.21 |    7 |         - |          NA |
+| DestswapStableQuickSort      | 256  | Reversed           |     6,603.2 ns |    117.74 ns |     52.28 ns |     6,625.4 ns |  8.20 |    0.08 |    8 |         - |          NA |
+| IntroSort                    | 256  | Reversed           |       701.8 ns |     26.58 ns |     13.90 ns |       700.2 ns |  0.87 |    0.02 |    5 |         - |          NA |
+| IntroSortDotnet              | 256  | Reversed           |     1,091.9 ns |     21.35 ns |      9.48 ns |     1,091.0 ns |  1.36 |    0.01 |    5 |         - |          NA |
+| PDQSort                      | 256  | Reversed           |       451.1 ns |      6.62 ns |      2.94 ns |       451.3 ns |  0.56 |    0.01 |    3 |         - |          NA |
+| PDQSortBranchless            | 256  | Reversed           |       585.9 ns |     60.08 ns |     26.68 ns |       580.1 ns |  0.73 |    0.03 |    4 |         - |          NA |
+| Ipnsort                      | 256  | Reversed           |       194.2 ns |     13.08 ns |      5.81 ns |       192.6 ns |  0.24 |    0.01 |    1 |         - |          NA |
+| StdSort                      | 256  | Reversed           |       694.9 ns |     27.72 ns |     12.31 ns |       690.1 ns |  0.86 |    0.02 |    5 |         - |          NA |
+| BlockQuickSort               | 256  | Reversed           |     1,692.2 ns |     46.87 ns |     20.81 ns |     1,684.7 ns |  2.10 |    0.03 |    6 |         - |          NA |
+| Ips4oSort                    | 256  | Reversed           |       186.5 ns |      8.19 ns |      3.64 ns |       185.4 ns |  0.23 |    0.00 |    1 |         - |          NA |
+| FluxSort                     | 256  | Reversed           |       278.8 ns |     14.51 ns |      6.44 ns |       276.0 ns |  0.35 |    0.01 |    2 |         - |          NA |
+| CrumSort                     | 256  | Reversed           |       244.0 ns |      5.61 ns |      2.00 ns |       243.6 ns |  0.30 |    0.00 |    2 |         - |          NA |
+| BlitSort                     | 256  | Reversed           |       315.8 ns |     13.05 ns |      5.80 ns |       316.6 ns |  0.39 |    0.01 |    2 |         - |          NA |
+| DotnetSort                   | 256  | Reversed           |     1,068.5 ns |    195.16 ns |    102.07 ns |     1,013.7 ns |  1.33 |    0.12 |    5 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **256**  | **PipeOrgan**          |     **5,842.2 ns** |    **162.79 ns** |     **85.14 ns** |     **5,803.1 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| QuickSort3way                | 256  | PipeOrgan          |     2,834.5 ns |    231.22 ns |    120.93 ns |     2,778.0 ns |  0.49 |    0.02 |    5 |         - |          NA |
+| QuickSortMedian3             | 256  | PipeOrgan          |     2,430.7 ns |     62.58 ns |     22.32 ns |     2,439.5 ns |  0.42 |    0.01 |    5 |         - |          NA |
+| QuickSortMedian9             | 256  | PipeOrgan          |     1,986.9 ns |     80.31 ns |     28.64 ns |     1,980.6 ns |  0.34 |    0.01 |    4 |         - |          NA |
+| SampleSort                   | 256  | PipeOrgan          |     3,803.6 ns |    117.75 ns |     52.28 ns |     3,816.1 ns |  0.65 |    0.01 |    5 |         - |          NA |
+| SimdQuickSort                | 256  | PipeOrgan          |       907.4 ns |     17.78 ns |      9.30 ns |       904.0 ns |  0.16 |    0.00 |    2 |         - |          NA |
+| DualPivotQuickSort           | 256  | PipeOrgan          |     1,543.5 ns |     31.69 ns |     14.07 ns |     1,544.3 ns |  0.26 |    0.00 |    4 |         - |          NA |
+| StableQuickSort              | 256  | PipeOrgan          |     6,071.7 ns |    348.75 ns |    182.40 ns |     6,036.5 ns |  1.04 |    0.03 |    6 |         - |          NA |
+| BidirectionalStableQuickSort | 256  | PipeOrgan          |     3,429.5 ns |     28.20 ns |     12.52 ns |     3,425.8 ns |  0.59 |    0.01 |    5 |         - |          NA |
+| DestswapStableQuickSort      | 256  | PipeOrgan          |     8,963.4 ns |    332.96 ns |    174.14 ns |     8,961.5 ns |  1.53 |    0.04 |    7 |         - |          NA |
+| IntroSort                    | 256  | PipeOrgan          |     3,177.0 ns |    142.05 ns |     74.29 ns |     3,143.9 ns |  0.54 |    0.01 |    5 |         - |          NA |
+| IntroSortDotnet              | 256  | PipeOrgan          |     1,699.4 ns |    148.28 ns |     77.55 ns |     1,679.0 ns |  0.29 |    0.01 |    4 |         - |          NA |
+| PDQSort                      | 256  | PipeOrgan          |     1,216.1 ns |     71.30 ns |     25.42 ns |     1,206.9 ns |  0.21 |    0.00 |    3 |         - |          NA |
+| PDQSortBranchless            | 256  | PipeOrgan          |     2,006.5 ns |     52.51 ns |     18.73 ns |     2,002.5 ns |  0.34 |    0.01 |    4 |         - |          NA |
+| Ipnsort                      | 256  | PipeOrgan          |     3,079.7 ns |     70.85 ns |     31.46 ns |     3,067.2 ns |  0.53 |    0.01 |    5 |         - |          NA |
+| StdSort                      | 256  | PipeOrgan          |     3,728.4 ns |    154.15 ns |     80.62 ns |     3,691.0 ns |  0.64 |    0.02 |    5 |         - |          NA |
+| BlockQuickSort               | 256  | PipeOrgan          |     3,593.7 ns |     74.05 ns |     32.88 ns |     3,581.3 ns |  0.62 |    0.01 |    5 |         - |          NA |
+| Ips4oSort                    | 256  | PipeOrgan          |     9,761.8 ns |    132.88 ns |     59.00 ns |     9,770.1 ns |  1.67 |    0.02 |    7 |         - |          NA |
+| FluxSort                     | 256  | PipeOrgan          |     3,054.2 ns |    162.16 ns |     84.81 ns |     3,005.2 ns |  0.52 |    0.02 |    5 |         - |          NA |
+| CrumSort                     | 256  | PipeOrgan          |       699.2 ns |     62.91 ns |     32.90 ns |       687.4 ns |  0.12 |    0.01 |    1 |         - |          NA |
+| BlitSort                     | 256  | PipeOrgan          |     3,151.5 ns |     28.38 ns |     10.12 ns |     3,149.3 ns |  0.54 |    0.01 |    5 |         - |          NA |
+| DotnetSort                   | 256  | PipeOrgan          |     1,921.4 ns |    274.42 ns |    143.52 ns |     1,874.6 ns |  0.33 |    0.02 |    4 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **256**  | **ManyDuplicates**     |     **6,616.5 ns** |    **180.10 ns** |     **79.96 ns** |     **6,581.7 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| QuickSort3way                | 256  | ManyDuplicates     |     5,837.8 ns |    110.87 ns |     49.23 ns |     5,844.4 ns |  0.88 |    0.01 |    3 |         - |          NA |
+| QuickSortMedian3             | 256  | ManyDuplicates     |     7,738.5 ns |    288.66 ns |    128.17 ns |     7,804.4 ns |  1.17 |    0.02 |    3 |         - |          NA |
+| QuickSortMedian9             | 256  | ManyDuplicates     |     8,189.3 ns |    336.28 ns |    175.88 ns |     8,248.1 ns |  1.24 |    0.03 |    3 |         - |          NA |
+| SampleSort                   | 256  | ManyDuplicates     |     9,735.9 ns |    333.67 ns |    174.52 ns |     9,788.8 ns |  1.47 |    0.03 |    3 |         - |          NA |
+| SimdQuickSort                | 256  | ManyDuplicates     |       680.5 ns |     57.13 ns |     25.37 ns |       666.1 ns |  0.10 |    0.00 |    1 |         - |          NA |
+| DualPivotQuickSort           | 256  | ManyDuplicates     |     5,258.8 ns |    193.86 ns |    101.39 ns |     5,298.3 ns |  0.79 |    0.02 |    3 |         - |          NA |
+| StableQuickSort              | 256  | ManyDuplicates     |    12,774.6 ns |    271.21 ns |    141.85 ns |    12,796.9 ns |  1.93 |    0.03 |    3 |         - |          NA |
+| BidirectionalStableQuickSort | 256  | ManyDuplicates     |     6,485.2 ns |    112.44 ns |     49.92 ns |     6,482.2 ns |  0.98 |    0.01 |    3 |         - |          NA |
+| DestswapStableQuickSort      | 256  | ManyDuplicates     |    10,948.2 ns |    360.40 ns |    188.50 ns |    10,919.5 ns |  1.65 |    0.03 |    3 |         - |          NA |
+| IntroSort                    | 256  | ManyDuplicates     |     6,118.9 ns |     72.32 ns |     25.79 ns |     6,122.6 ns |  0.92 |    0.01 |    3 |         - |          NA |
+| IntroSortDotnet              | 256  | ManyDuplicates     |     6,192.2 ns |    327.44 ns |    171.26 ns |     6,152.0 ns |  0.94 |    0.03 |    3 |         - |          NA |
+| PDQSort                      | 256  | ManyDuplicates     |     5,481.6 ns |    256.72 ns |    134.27 ns |     5,439.2 ns |  0.83 |    0.02 |    3 |         - |          NA |
+| PDQSortBranchless            | 256  | ManyDuplicates     |     3,874.4 ns |    477.57 ns |    249.78 ns |     3,779.2 ns |  0.59 |    0.04 |    2 |         - |          NA |
+| Ipnsort                      | 256  | ManyDuplicates     |     3,785.2 ns |    359.79 ns |    188.18 ns |     3,835.3 ns |  0.57 |    0.03 |    2 |         - |          NA |
+| StdSort                      | 256  | ManyDuplicates     |     4,131.2 ns |    281.49 ns |    147.23 ns |     4,144.4 ns |  0.62 |    0.02 |    2 |         - |          NA |
+| BlockQuickSort               | 256  | ManyDuplicates     |     4,391.0 ns |    475.32 ns |    248.60 ns |     4,249.1 ns |  0.66 |    0.04 |    2 |         - |          NA |
+| Ips4oSort                    | 256  | ManyDuplicates     |    10,593.5 ns |    335.43 ns |    175.44 ns |    10,629.8 ns |  1.60 |    0.03 |    3 |         - |          NA |
+| FluxSort                     | 256  | ManyDuplicates     |     5,995.2 ns |    168.62 ns |     74.87 ns |     5,965.3 ns |  0.91 |    0.01 |    3 |         - |          NA |
+| CrumSort                     | 256  | ManyDuplicates     |     3,669.1 ns |    448.27 ns |    234.45 ns |     3,560.9 ns |  0.55 |    0.03 |    2 |         - |          NA |
+| BlitSort                     | 256  | ManyDuplicates     |     6,236.7 ns |    196.73 ns |    102.89 ns |     6,273.4 ns |  0.94 |    0.02 |    3 |         - |          NA |
+| DotnetSort                   | 256  | ManyDuplicates     |     5,561.5 ns |    355.70 ns |    186.04 ns |     5,464.7 ns |  0.84 |    0.03 |    3 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **1024** | **Random**             |    **40,730.0 ns** |    **716.99 ns** |    **375.00 ns** |    **40,582.6 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| QuickSort3way                | 1024 | Random             |    44,181.1 ns |    270.09 ns |    141.26 ns |    44,252.4 ns |  1.08 |    0.01 |    2 |         - |          NA |
+| QuickSortMedian3             | 1024 | Random             |    42,894.4 ns |    399.81 ns |    209.11 ns |    42,965.4 ns |  1.05 |    0.01 |    2 |         - |          NA |
+| QuickSortMedian9             | 1024 | Random             |    45,054.0 ns |    473.66 ns |    210.31 ns |    45,112.5 ns |  1.11 |    0.01 |    2 |         - |          NA |
+| SampleSort                   | 1024 | Random             |    51,567.4 ns |    636.69 ns |    333.00 ns |    51,451.0 ns |  1.27 |    0.01 |    2 |         - |          NA |
+| SimdQuickSort                | 1024 | Random             |     3,737.3 ns |    318.28 ns |    141.32 ns |     3,721.7 ns |  0.09 |    0.00 |    1 |         - |          NA |
+| DualPivotQuickSort           | 1024 | Random             |    29,958.9 ns |    269.91 ns |    141.17 ns |    29,925.8 ns |  0.74 |    0.01 |    2 |         - |          NA |
+| StableQuickSort              | 1024 | Random             |    98,204.9 ns |    521.16 ns |    231.40 ns |    98,109.1 ns |  2.41 |    0.02 |    3 |         - |          NA |
+| BidirectionalStableQuickSort | 1024 | Random             |    53,568.4 ns |    383.49 ns |    170.27 ns |    53,554.0 ns |  1.32 |    0.01 |    2 |         - |          NA |
+| DestswapStableQuickSort      | 1024 | Random             |    87,068.2 ns |    582.39 ns |    258.58 ns |    86,966.8 ns |  2.14 |    0.02 |    3 |         - |          NA |
+| IntroSort                    | 1024 | Random             |    34,006.2 ns |    198.01 ns |    103.56 ns |    33,964.7 ns |  0.83 |    0.01 |    2 |         - |          NA |
+| IntroSortDotnet              | 1024 | Random             |    32,318.0 ns |    101.96 ns |     45.27 ns |    32,319.4 ns |  0.79 |    0.01 |    2 |         - |          NA |
+| PDQSort                      | 1024 | Random             |    30,775.0 ns |    299.55 ns |    156.67 ns |    30,732.6 ns |  0.76 |    0.01 |    2 |         - |          NA |
+| PDQSortBranchless            | 1024 | Random             |    19,347.3 ns |     58.03 ns |     25.76 ns |    19,330.1 ns |  0.48 |    0.00 |    2 |         - |          NA |
+| Ipnsort                      | 1024 | Random             |    19,135.6 ns |    293.96 ns |    153.75 ns |    19,084.5 ns |  0.47 |    0.01 |    2 |         - |          NA |
+| StdSort                      | 1024 | Random             |    20,287.1 ns |    222.22 ns |    116.22 ns |    20,285.2 ns |  0.50 |    0.01 |    2 |         - |          NA |
+| BlockQuickSort               | 1024 | Random             |    21,878.2 ns |    268.47 ns |    140.42 ns |    21,838.0 ns |  0.54 |    0.01 |    2 |         - |          NA |
+| Ips4oSort                    | 1024 | Random             |    18,825.0 ns |    186.43 ns |     82.77 ns |    18,782.1 ns |  0.46 |    0.00 |    2 |         - |          NA |
+| FluxSort                     | 1024 | Random             |    25,627.4 ns |    361.33 ns |    188.98 ns |    25,608.2 ns |  0.63 |    0.01 |    2 |         - |          NA |
+| CrumSort                     | 1024 | Random             |    25,622.7 ns |    307.74 ns |    160.95 ns |    25,610.4 ns |  0.63 |    0.01 |    2 |         - |          NA |
+| BlitSort                     | 1024 | Random             |    26,714.2 ns |    259.86 ns |    135.91 ns |    26,647.7 ns |  0.66 |    0.01 |    2 |         - |          NA |
+| DotnetSort                   | 1024 | Random             |    29,894.6 ns |    359.67 ns |    188.12 ns |    29,858.1 ns |  0.73 |    0.01 |    2 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **1024** | **SingleElementMoved** |     **4,618.9 ns** |    **208.54 ns** |    **109.07 ns** |     **4,604.5 ns** |  **1.00** |    **0.00** |    **2** |         **-** |          **NA** |
+| QuickSort3way                | 1024 | SingleElementMoved |     8,303.4 ns |    458.08 ns |    203.39 ns |     8,315.0 ns |  1.80 |    0.06 |    2 |         - |          NA |
+| QuickSortMedian3             | 1024 | SingleElementMoved |     6,520.0 ns |    536.20 ns |    280.44 ns |     6,418.3 ns |  1.41 |    0.07 |    2 |         - |          NA |
+| QuickSortMedian9             | 1024 | SingleElementMoved |     7,366.1 ns |    298.47 ns |    156.11 ns |     7,419.3 ns |  1.60 |    0.05 |    2 |         - |          NA |
+| SampleSort                   | 1024 | SingleElementMoved |    25,720.5 ns |    913.05 ns |    405.40 ns |    25,877.9 ns |  5.57 |    0.15 |    5 |         - |          NA |
+| SimdQuickSort                | 1024 | SingleElementMoved |     3,658.7 ns |    233.67 ns |    103.75 ns |     3,624.4 ns |  0.79 |    0.03 |    2 |         - |          NA |
+| DualPivotQuickSort           | 1024 | SingleElementMoved |     3,918.5 ns |    502.90 ns |    263.02 ns |     3,925.1 ns |  0.85 |    0.06 |    2 |         - |          NA |
+| StableQuickSort              | 1024 | SingleElementMoved |    31,665.1 ns |  3,059.11 ns |  1,358.27 ns |    31,044.4 ns |  6.86 |    0.31 |    6 |         - |          NA |
+| BidirectionalStableQuickSort | 1024 | SingleElementMoved |    16,262.3 ns |    186.58 ns |     97.59 ns |    16,242.3 ns |  3.52 |    0.08 |    4 |         - |          NA |
+| DestswapStableQuickSort      | 1024 | SingleElementMoved |    44,746.8 ns | 31,634.62 ns | 16,545.52 ns |    33,228.3 ns |  9.69 |    3.39 |    6 |         - |          NA |
+| IntroSort                    | 1024 | SingleElementMoved |    11,302.6 ns |    201.27 ns |     89.37 ns |    11,248.1 ns |  2.45 |    0.06 |    3 |         - |          NA |
+| IntroSortDotnet              | 1024 | SingleElementMoved |     4,856.6 ns |    369.09 ns |    193.04 ns |     4,730.8 ns |  1.05 |    0.05 |    2 |         - |          NA |
+| PDQSort                      | 1024 | SingleElementMoved |     3,180.0 ns |    184.48 ns |     96.49 ns |     3,156.4 ns |  0.69 |    0.02 |    2 |         - |          NA |
+| PDQSortBranchless            | 1024 | SingleElementMoved |     3,708.9 ns |    181.84 ns |     80.74 ns |     3,690.6 ns |  0.80 |    0.02 |    2 |         - |          NA |
+| Ipnsort                      | 1024 | SingleElementMoved |    14,598.2 ns |    274.85 ns |    143.75 ns |    14,595.4 ns |  3.16 |    0.08 |    4 |         - |          NA |
+| StdSort                      | 1024 | SingleElementMoved |     3,428.0 ns |    177.98 ns |     79.02 ns |     3,409.2 ns |  0.74 |    0.02 |    2 |         - |          NA |
+| BlockQuickSort               | 1024 | SingleElementMoved |     7,410.0 ns |    325.15 ns |    170.06 ns |     7,413.7 ns |  1.61 |    0.05 |    2 |         - |          NA |
+| Ips4oSort                    | 1024 | SingleElementMoved |    11,844.3 ns |    282.68 ns |    147.85 ns |    11,865.8 ns |  2.57 |    0.06 |    3 |         - |          NA |
+| FluxSort                     | 1024 | SingleElementMoved |     1,369.7 ns |     56.70 ns |     25.17 ns |     1,371.7 ns |  0.30 |    0.01 |    1 |         - |          NA |
+| CrumSort                     | 1024 | SingleElementMoved |     1,308.0 ns |     82.52 ns |     36.64 ns |     1,301.8 ns |  0.28 |    0.01 |    1 |         - |          NA |
+| BlitSort                     | 1024 | SingleElementMoved |     1,303.7 ns |     72.85 ns |     32.35 ns |     1,291.6 ns |  0.28 |    0.01 |    1 |         - |          NA |
+| DotnetSort                   | 1024 | SingleElementMoved |     5,523.0 ns |    224.87 ns |    117.61 ns |     5,554.6 ns |  1.20 |    0.04 |    2 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **1024** | **Sorted**             |     **3,485.6 ns** |    **265.86 ns** |    **139.05 ns** |     **3,434.3 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| QuickSort3way                | 1024 | Sorted             |     6,299.1 ns |    463.18 ns |    242.25 ns |     6,230.6 ns |  1.81 |    0.09 |    5 |         - |          NA |
+| QuickSortMedian3             | 1024 | Sorted             |     4,398.9 ns |    261.77 ns |    116.23 ns |     4,347.6 ns |  1.26 |    0.06 |    4 |         - |          NA |
+| QuickSortMedian9             | 1024 | Sorted             |     4,598.6 ns |     61.11 ns |     27.13 ns |     4,596.9 ns |  1.32 |    0.05 |    4 |         - |          NA |
+| SampleSort                   | 1024 | Sorted             |    15,527.4 ns |    469.10 ns |    208.28 ns |    15,483.1 ns |  4.46 |    0.18 |    6 |         - |          NA |
+| SimdQuickSort                | 1024 | Sorted             |     4,569.6 ns |    391.20 ns |    204.60 ns |     4,572.3 ns |  1.31 |    0.07 |    4 |         - |          NA |
+| DualPivotQuickSort           | 1024 | Sorted             |     3,303.3 ns |    391.13 ns |    204.57 ns |     3,181.6 ns |  0.95 |    0.07 |    4 |         - |          NA |
+| StableQuickSort              | 1024 | Sorted             |    30,826.1 ns |    750.02 ns |    392.27 ns |    30,794.2 ns |  8.86 |    0.35 |    7 |         - |          NA |
+| BidirectionalStableQuickSort | 1024 | Sorted             |    15,756.7 ns |    156.06 ns |     69.29 ns |    15,774.9 ns |  4.53 |    0.17 |    6 |         - |          NA |
+| DestswapStableQuickSort      | 1024 | Sorted             |    31,864.3 ns |    327.27 ns |    145.31 ns |    31,817.4 ns |  9.15 |    0.34 |    7 |         - |          NA |
+| IntroSort                    | 1024 | Sorted             |     3,108.4 ns |     20.99 ns |      7.49 ns |     3,109.6 ns |  0.89 |    0.03 |    4 |         - |          NA |
+| IntroSortDotnet              | 1024 | Sorted             |     3,807.9 ns |    398.88 ns |    208.62 ns |     3,689.6 ns |  1.09 |    0.07 |    4 |         - |          NA |
+| PDQSort                      | 1024 | Sorted             |     1,226.5 ns |    114.50 ns |     50.84 ns |     1,207.9 ns |  0.35 |    0.02 |    3 |         - |          NA |
+| PDQSortBranchless            | 1024 | Sorted             |     1,200.2 ns |     16.23 ns |      7.21 ns |     1,201.3 ns |  0.34 |    0.01 |    3 |         - |          NA |
+| Ipnsort                      | 1024 | Sorted             |       537.3 ns |    128.60 ns |     67.26 ns |       498.7 ns |  0.15 |    0.02 |    1 |         - |          NA |
+| StdSort                      | 1024 | Sorted             |     1,240.2 ns |     46.61 ns |     16.62 ns |     1,242.2 ns |  0.36 |    0.01 |    3 |         - |          NA |
+| BlockQuickSort               | 1024 | Sorted             |     6,368.5 ns |    309.70 ns |    161.98 ns |     6,267.2 ns |  1.83 |    0.08 |    5 |         - |          NA |
+| Ips4oSort                    | 1024 | Sorted             |       439.9 ns |     15.61 ns |      6.93 ns |       440.2 ns |  0.13 |    0.01 |    1 |         - |          NA |
+| FluxSort                     | 1024 | Sorted             |       604.5 ns |     15.04 ns |      6.68 ns |       607.0 ns |  0.17 |    0.01 |    2 |         - |          NA |
+| CrumSort                     | 1024 | Sorted             |       623.3 ns |     12.56 ns |      5.58 ns |       620.8 ns |  0.18 |    0.01 |    2 |         - |          NA |
+| BlitSort                     | 1024 | Sorted             |       639.1 ns |     38.68 ns |     17.17 ns |       636.7 ns |  0.18 |    0.01 |    2 |         - |          NA |
+| DotnetSort                   | 1024 | Sorted             |     3,473.3 ns |    647.67 ns |    338.74 ns |     3,419.3 ns |  1.00 |    0.10 |    4 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **1024** | **Reversed**           |     **3,645.5 ns** |     **92.03 ns** |     **48.13 ns** |     **3,636.7 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| QuickSort3way                | 1024 | Reversed           |     6,880.0 ns |    269.66 ns |    119.73 ns |     6,856.5 ns |  1.89 |    0.04 |    7 |         - |          NA |
+| QuickSortMedian3             | 1024 | Reversed           |     4,581.3 ns |     77.52 ns |     34.42 ns |     4,562.0 ns |  1.26 |    0.02 |    7 |         - |          NA |
+| QuickSortMedian9             | 1024 | Reversed           |     4,984.3 ns |    232.16 ns |    121.43 ns |     4,945.5 ns |  1.37 |    0.04 |    7 |         - |          NA |
+| SampleSort                   | 1024 | Reversed           |    16,876.4 ns |    909.65 ns |    475.77 ns |    16,730.1 ns |  4.63 |    0.14 |    9 |         - |          NA |
+| SimdQuickSort                | 1024 | Reversed           |     3,404.2 ns |    305.72 ns |    159.90 ns |     3,391.1 ns |  0.93 |    0.04 |    6 |         - |          NA |
+| DualPivotQuickSort           | 1024 | Reversed           |     3,720.4 ns |    373.73 ns |    195.47 ns |     3,604.7 ns |  1.02 |    0.05 |    6 |         - |          NA |
+| StableQuickSort              | 1024 | Reversed           |    31,313.0 ns |    803.23 ns |    356.64 ns |    31,362.6 ns |  8.59 |    0.14 |   10 |         - |          NA |
+| BidirectionalStableQuickSort | 1024 | Reversed           |    15,852.6 ns |    259.10 ns |    135.51 ns |    15,778.8 ns |  4.35 |    0.06 |    9 |         - |          NA |
+| DestswapStableQuickSort      | 1024 | Reversed           |    30,816.2 ns |    599.19 ns |    313.39 ns |    30,780.2 ns |  8.45 |    0.13 |   10 |         - |          NA |
+| IntroSort                    | 1024 | Reversed           |     3,395.3 ns |    310.09 ns |    162.19 ns |     3,307.5 ns |  0.93 |    0.04 |    6 |         - |          NA |
+| IntroSortDotnet              | 1024 | Reversed           |     5,620.9 ns |    275.89 ns |    144.30 ns |     5,610.9 ns |  1.54 |    0.04 |    7 |         - |          NA |
+| PDQSort                      | 1024 | Reversed           |     1,617.2 ns |     21.21 ns |      9.42 ns |     1,612.2 ns |  0.44 |    0.01 |    3 |         - |          NA |
+| PDQSortBranchless            | 1024 | Reversed           |     2,012.1 ns |     31.65 ns |     11.29 ns |     2,014.4 ns |  0.55 |    0.01 |    4 |         - |          NA |
+| Ipnsort                      | 1024 | Reversed           |       807.8 ns |    209.12 ns |    109.37 ns |       751.0 ns |  0.22 |    0.03 |    1 |         - |          NA |
+| StdSort                      | 1024 | Reversed           |     2,520.7 ns |    306.14 ns |    160.12 ns |     2,447.4 ns |  0.69 |    0.04 |    5 |         - |          NA |
+| BlockQuickSort               | 1024 | Reversed           |     8,449.3 ns |    223.01 ns |     99.02 ns |     8,452.6 ns |  2.32 |    0.04 |    8 |         - |          NA |
+| Ips4oSort                    | 1024 | Reversed           |       711.0 ns |     15.55 ns |      8.14 ns |       713.8 ns |  0.20 |    0.00 |    1 |         - |          NA |
+| FluxSort                     | 1024 | Reversed           |       896.8 ns |     28.46 ns |     12.64 ns |       895.1 ns |  0.25 |    0.00 |    2 |         - |          NA |
+| CrumSort                     | 1024 | Reversed           |       988.7 ns |     72.23 ns |     32.07 ns |       980.8 ns |  0.27 |    0.01 |    2 |         - |          NA |
+| BlitSort                     | 1024 | Reversed           |       908.8 ns |     13.95 ns |      4.98 ns |       908.8 ns |  0.25 |    0.00 |    2 |         - |          NA |
+| DotnetSort                   | 1024 | Reversed           |     6,020.9 ns |    846.26 ns |    442.61 ns |     6,185.4 ns |  1.65 |    0.12 |    7 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **1024** | **PipeOrgan**          |    **84,141.1 ns** |    **513.16 ns** |    **227.85 ns** |    **84,074.8 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| QuickSort3way                | 1024 | PipeOrgan          |    15,334.4 ns |    691.23 ns |    306.91 ns |    15,390.2 ns |  0.18 |    0.00 |    3 |         - |          NA |
+| QuickSortMedian3             | 1024 | PipeOrgan          |    12,597.2 ns |    759.87 ns |    397.42 ns |    12,524.8 ns |  0.15 |    0.00 |    3 |         - |          NA |
+| QuickSortMedian9             | 1024 | PipeOrgan          |     9,464.2 ns |    534.61 ns |    279.61 ns |     9,453.6 ns |  0.11 |    0.00 |    3 |         - |          NA |
+| SampleSort                   | 1024 | PipeOrgan          |    17,315.6 ns |    640.89 ns |    284.56 ns |    17,391.6 ns |  0.21 |    0.00 |    3 |         - |          NA |
+| SimdQuickSort                | 1024 | PipeOrgan          |     6,158.7 ns |    173.88 ns |     90.94 ns |     6,146.1 ns |  0.07 |    0.00 |    2 |         - |          NA |
+| DualPivotQuickSort           | 1024 | PipeOrgan          |     7,808.3 ns |    313.12 ns |    163.77 ns |     7,817.0 ns |  0.09 |    0.00 |    2 |         - |          NA |
+| StableQuickSort              | 1024 | PipeOrgan          |    30,939.9 ns |    809.29 ns |    423.28 ns |    30,840.8 ns |  0.37 |    0.00 |    4 |         - |          NA |
+| BidirectionalStableQuickSort | 1024 | PipeOrgan          |    15,945.4 ns |    352.69 ns |    184.46 ns |    15,866.4 ns |  0.19 |    0.00 |    3 |         - |          NA |
+| DestswapStableQuickSort      | 1024 | PipeOrgan          |    40,408.8 ns |    579.16 ns |    302.91 ns |    40,268.2 ns |  0.48 |    0.00 |    5 |         - |          NA |
+| IntroSort                    | 1024 | PipeOrgan          |    20,357.8 ns |    344.14 ns |    179.99 ns |    20,336.1 ns |  0.24 |    0.00 |    3 |         - |          NA |
+| IntroSortDotnet              | 1024 | PipeOrgan          |    11,139.6 ns |    435.40 ns |    193.32 ns |    11,194.9 ns |  0.13 |    0.00 |    3 |         - |          NA |
+| PDQSort                      | 1024 | PipeOrgan          |     6,854.8 ns |    422.84 ns |    221.15 ns |     6,915.9 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| PDQSortBranchless            | 1024 | PipeOrgan          |    10,636.5 ns |    789.06 ns |    412.70 ns |    10,532.0 ns |  0.13 |    0.00 |    3 |         - |          NA |
+| Ipnsort                      | 1024 | PipeOrgan          |    16,769.8 ns |    141.55 ns |     62.85 ns |    16,761.8 ns |  0.20 |    0.00 |    3 |         - |          NA |
+| StdSort                      | 1024 | PipeOrgan          |    18,415.3 ns |     96.74 ns |     42.95 ns |    18,404.7 ns |  0.22 |    0.00 |    3 |         - |          NA |
+| BlockQuickSort               | 1024 | PipeOrgan          |    18,409.2 ns |    519.37 ns |    271.64 ns |    18,352.2 ns |  0.22 |    0.00 |    3 |         - |          NA |
+| Ips4oSort                    | 1024 | PipeOrgan          |    13,462.0 ns |    339.14 ns |    150.58 ns |    13,487.6 ns |  0.16 |    0.00 |    3 |         - |          NA |
+| FluxSort                     | 1024 | PipeOrgan          |     2,307.0 ns |     81.10 ns |     36.01 ns |     2,297.3 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| CrumSort                     | 1024 | PipeOrgan          |     2,558.9 ns |    552.66 ns |    289.05 ns |     2,378.9 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| BlitSort                     | 1024 | PipeOrgan          |     2,489.5 ns |    258.69 ns |    135.30 ns |     2,463.4 ns |  0.03 |    0.00 |    1 |         - |          NA |
+| DotnetSort                   | 1024 | PipeOrgan          |    13,384.0 ns |  1,157.62 ns |    605.46 ns |    13,272.6 ns |  0.16 |    0.01 |    3 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **1024** | **ManyDuplicates**     |    **26,504.0 ns** |    **324.96 ns** |    **144.29 ns** |    **26,509.2 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| QuickSort3way                | 1024 | ManyDuplicates     |    20,160.6 ns |    233.21 ns |    121.97 ns |    20,177.2 ns |  0.76 |    0.01 |    5 |         - |          NA |
+| QuickSortMedian3             | 1024 | ManyDuplicates     |    29,925.2 ns |    226.09 ns |    118.25 ns |    29,937.7 ns |  1.13 |    0.01 |    5 |         - |          NA |
+| QuickSortMedian9             | 1024 | ManyDuplicates     |    31,670.1 ns |    218.19 ns |    114.12 ns |    31,609.6 ns |  1.19 |    0.01 |    5 |         - |          NA |
+| SampleSort                   | 1024 | ManyDuplicates     |    39,761.7 ns |    481.00 ns |    251.57 ns |    39,767.4 ns |  1.50 |    0.01 |    5 |         - |          NA |
+| SimdQuickSort                | 1024 | ManyDuplicates     |     3,963.4 ns |    426.99 ns |    223.32 ns |     3,972.8 ns |  0.15 |    0.01 |    1 |         - |          NA |
+| DualPivotQuickSort           | 1024 | ManyDuplicates     |    19,602.1 ns |    282.29 ns |    147.64 ns |    19,595.0 ns |  0.74 |    0.01 |    5 |         - |          NA |
+| StableQuickSort              | 1024 | ManyDuplicates     |    46,213.8 ns |  1,082.64 ns |    566.24 ns |    46,509.8 ns |  1.74 |    0.02 |    5 |         - |          NA |
+| BidirectionalStableQuickSort | 1024 | ManyDuplicates     |    20,872.2 ns |    193.90 ns |    101.41 ns |    20,863.3 ns |  0.79 |    0.01 |    5 |         - |          NA |
+| DestswapStableQuickSort      | 1024 | ManyDuplicates     |    35,274.3 ns |    541.15 ns |    240.28 ns |    35,247.7 ns |  1.33 |    0.01 |    5 |         - |          NA |
+| IntroSort                    | 1024 | ManyDuplicates     |    24,766.8 ns |    285.45 ns |    149.29 ns |    24,788.1 ns |  0.93 |    0.01 |    5 |         - |          NA |
+| IntroSortDotnet              | 1024 | ManyDuplicates     |    25,413.5 ns |    212.91 ns |    111.36 ns |    25,424.1 ns |  0.96 |    0.01 |    5 |         - |          NA |
+| PDQSort                      | 1024 | ManyDuplicates     |    20,556.1 ns |    256.92 ns |    114.07 ns |    20,584.3 ns |  0.78 |    0.01 |    5 |         - |          NA |
+| PDQSortBranchless            | 1024 | ManyDuplicates     |     9,504.8 ns |    188.51 ns |     83.70 ns |     9,519.3 ns |  0.36 |    0.00 |    2 |         - |          NA |
+| Ipnsort                      | 1024 | ManyDuplicates     |    15,424.7 ns |    423.65 ns |    221.58 ns |    15,421.4 ns |  0.58 |    0.01 |    4 |         - |          NA |
+| StdSort                      | 1024 | ManyDuplicates     |    15,063.3 ns |    214.28 ns |     95.14 ns |    15,042.4 ns |  0.57 |    0.00 |    4 |         - |          NA |
+| BlockQuickSort               | 1024 | ManyDuplicates     |    16,250.0 ns |    521.14 ns |    272.57 ns |    16,105.1 ns |  0.61 |    0.01 |    4 |         - |          NA |
+| Ips4oSort                    | 1024 | ManyDuplicates     |    12,291.6 ns |    107.90 ns |     38.48 ns |    12,301.4 ns |  0.46 |    0.00 |    3 |         - |          NA |
+| FluxSort                     | 1024 | ManyDuplicates     |    24,866.3 ns |    546.59 ns |    285.88 ns |    24,845.1 ns |  0.94 |    0.01 |    5 |         - |          NA |
+| CrumSort                     | 1024 | ManyDuplicates     |    24,932.2 ns |    402.68 ns |    210.61 ns |    24,958.0 ns |  0.94 |    0.01 |    5 |         - |          NA |
+| BlitSort                     | 1024 | ManyDuplicates     |    25,792.6 ns |    135.16 ns |     60.01 ns |    25,806.8 ns |  0.97 |    0.01 |    5 |         - |          NA |
+| DotnetSort                   | 1024 | ManyDuplicates     |    23,375.4 ns |    542.50 ns |    283.74 ns |    23,341.9 ns |  0.88 |    0.01 |    5 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **4096** | **Random**             |   **185,658.2 ns** |    **506.25 ns** |    **224.78 ns** |   **185,714.8 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| QuickSort3way                | 4096 | Random             |   203,414.8 ns |  2,595.50 ns |  1,357.50 ns |   203,287.6 ns |  1.10 |    0.01 |    3 |         - |          NA |
+| QuickSortMedian3             | 4096 | Random             |   194,707.1 ns |  1,370.63 ns |    716.86 ns |   194,560.4 ns |  1.05 |    0.00 |    3 |         - |          NA |
+| QuickSortMedian9             | 4096 | Random             |   206,695.3 ns |  1,154.52 ns |    512.61 ns |   206,642.3 ns |  1.11 |    0.00 |    3 |         - |          NA |
+| SampleSort                   | 4096 | Random             |   237,545.3 ns |  1,895.44 ns |    841.58 ns |   237,629.5 ns |  1.28 |    0.00 |    3 |         - |          NA |
+| SimdQuickSort                | 4096 | Random             |    19,875.4 ns |    379.15 ns |    198.31 ns |    19,852.4 ns |  0.11 |    0.00 |    1 |         - |          NA |
+| DualPivotQuickSort           | 4096 | Random             |   144,372.8 ns |    614.98 ns |    273.05 ns |   144,318.7 ns |  0.78 |    0.00 |    3 |         - |          NA |
+| StableQuickSort              | 4096 | Random             |   469,073.5 ns |  2,183.24 ns |  1,141.88 ns |   468,508.7 ns |  2.53 |    0.01 |    4 |         - |          NA |
+| BidirectionalStableQuickSort | 4096 | Random             |   241,812.6 ns |    589.27 ns |    210.14 ns |   241,786.6 ns |  1.30 |    0.00 |    3 |         - |          NA |
+| DestswapStableQuickSort      | 4096 | Random             |   390,732.5 ns |  1,541.62 ns |    684.49 ns |   390,631.1 ns |  2.10 |    0.00 |    4 |         - |          NA |
+| IntroSort                    | 4096 | Random             |   160,924.1 ns |    937.72 ns |    490.45 ns |   160,812.5 ns |  0.87 |    0.00 |    3 |         - |          NA |
+| IntroSortDotnet              | 4096 | Random             |   155,736.1 ns |    550.24 ns |    244.31 ns |   155,702.6 ns |  0.84 |    0.00 |    3 |         - |          NA |
+| PDQSort                      | 4096 | Random             |   149,376.4 ns |    824.03 ns |    430.98 ns |   149,196.5 ns |  0.80 |    0.00 |    3 |         - |          NA |
+| PDQSortBranchless            | 4096 | Random             |    84,326.8 ns |  2,380.88 ns |  1,057.12 ns |    83,813.3 ns |  0.45 |    0.01 |    2 |         - |          NA |
+| Ipnsort                      | 4096 | Random             |    90,976.9 ns |    642.02 ns |    285.06 ns |    90,954.7 ns |  0.49 |    0.00 |    2 |         - |          NA |
+| StdSort                      | 4096 | Random             |    89,134.3 ns |    978.36 ns |    434.40 ns |    89,038.1 ns |  0.48 |    0.00 |    2 |         - |          NA |
+| BlockQuickSort               | 4096 | Random             |    96,460.9 ns |    598.69 ns |    265.82 ns |    96,396.6 ns |  0.52 |    0.00 |    2 |         - |          NA |
+| Ips4oSort                    | 4096 | Random             |    82,143.1 ns |    434.37 ns |    192.87 ns |    82,222.3 ns |  0.44 |    0.00 |    2 |         - |          NA |
+| FluxSort                     | 4096 | Random             |   110,376.2 ns |    916.32 ns |    406.85 ns |   110,292.5 ns |  0.59 |    0.00 |    2 |         - |          NA |
+| CrumSort                     | 4096 | Random             |   110,688.7 ns |  1,741.47 ns |    773.22 ns |   110,398.9 ns |  0.60 |    0.00 |    2 |         - |          NA |
+| BlitSort                     | 4096 | Random             |   118,650.8 ns |    809.44 ns |    359.40 ns |   118,783.2 ns |  0.64 |    0.00 |    2 |         - |          NA |
+| DotnetSort                   | 4096 | Random             |   145,259.6 ns |  2,121.70 ns |  1,109.69 ns |   145,257.3 ns |  0.78 |    0.01 |    3 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **4096** | **SingleElementMoved** |    **19,787.8 ns** |  **1,107.93 ns** |    **579.47 ns** |    **19,494.7 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| QuickSort3way                | 4096 | SingleElementMoved |    35,346.7 ns |  2,940.00 ns |  1,537.68 ns |    34,971.2 ns |  1.79 |    0.09 |    3 |         - |          NA |
+| QuickSortMedian3             | 4096 | SingleElementMoved |    27,118.0 ns |  1,006.00 ns |    526.16 ns |    27,213.5 ns |  1.37 |    0.05 |    3 |         - |          NA |
+| QuickSortMedian9             | 4096 | SingleElementMoved |    31,202.8 ns |    537.94 ns |    281.36 ns |    31,227.9 ns |  1.58 |    0.05 |    3 |         - |          NA |
+| SampleSort                   | 4096 | SingleElementMoved |   133,472.2 ns |  3,913.50 ns |  2,046.83 ns |   133,615.2 ns |  6.75 |    0.21 |    6 |         - |          NA |
+| SimdQuickSort                | 4096 | SingleElementMoved |    41,410.4 ns |    358.40 ns |    159.13 ns |    41,451.2 ns |  2.09 |    0.06 |    3 |         - |          NA |
+| DualPivotQuickSort           | 4096 | SingleElementMoved |    16,965.3 ns |    917.64 ns |    479.94 ns |    16,817.9 ns |  0.86 |    0.03 |    3 |         - |          NA |
+| StableQuickSort              | 4096 | SingleElementMoved |   149,111.9 ns |  1,579.03 ns |    701.10 ns |   148,832.2 ns |  7.54 |    0.21 |    6 |         - |          NA |
+| BidirectionalStableQuickSort | 4096 | SingleElementMoved |    71,807.2 ns |    369.08 ns |    193.03 ns |    71,747.3 ns |  3.63 |    0.10 |    5 |         - |          NA |
+| DestswapStableQuickSort      | 4096 | SingleElementMoved |   144,181.4 ns |  4,578.40 ns |  2,032.84 ns |   144,022.3 ns |  7.29 |    0.22 |    6 |         - |          NA |
+| IntroSort                    | 4096 | SingleElementMoved |    52,940.9 ns |    471.58 ns |    246.64 ns |    52,977.9 ns |  2.68 |    0.07 |    4 |         - |          NA |
+| IntroSortDotnet              | 4096 | SingleElementMoved |    22,208.8 ns |  1,420.09 ns |    630.53 ns |    21,892.8 ns |  1.12 |    0.04 |    3 |         - |          NA |
+| PDQSort                      | 4096 | SingleElementMoved |    12,858.9 ns |    745.61 ns |    389.97 ns |    12,971.5 ns |  0.65 |    0.03 |    3 |         - |          NA |
+| PDQSortBranchless            | 4096 | SingleElementMoved |    14,497.6 ns |    807.39 ns |    422.28 ns |    14,326.1 ns |  0.73 |    0.03 |    3 |         - |          NA |
+| Ipnsort                      | 4096 | SingleElementMoved |    71,180.3 ns |    306.59 ns |    136.13 ns |    71,196.6 ns |  3.60 |    0.10 |    5 |         - |          NA |
+| StdSort                      | 4096 | SingleElementMoved |    13,914.8 ns |    593.15 ns |    310.23 ns |    13,782.1 ns |  0.70 |    0.02 |    3 |         - |          NA |
+| BlockQuickSort               | 4096 | SingleElementMoved |    34,826.8 ns |    335.76 ns |    175.61 ns |    34,844.7 ns |  1.76 |    0.05 |    3 |         - |          NA |
+| Ips4oSort                    | 4096 | SingleElementMoved |    51,935.4 ns |  1,110.62 ns |    493.12 ns |    51,869.9 ns |  2.63 |    0.08 |    4 |         - |          NA |
+| FluxSort                     | 4096 | SingleElementMoved |     4,508.4 ns |    283.80 ns |    148.43 ns |     4,483.4 ns |  0.23 |    0.01 |    1 |         - |          NA |
+| CrumSort                     | 4096 | SingleElementMoved |     5,905.8 ns |    325.05 ns |    170.01 ns |     5,956.2 ns |  0.30 |    0.01 |    2 |         - |          NA |
+| BlitSort                     | 4096 | SingleElementMoved |     5,752.6 ns |    182.55 ns |     81.05 ns |     5,725.6 ns |  0.29 |    0.01 |    2 |         - |          NA |
+| DotnetSort                   | 4096 | SingleElementMoved |    25,052.0 ns |    695.64 ns |    363.83 ns |    25,177.2 ns |  1.27 |    0.04 |    3 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **4096** | **Sorted**             |    **16,306.2 ns** |    **774.71 ns** |    **405.19 ns** |    **16,389.3 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| QuickSort3way                | 4096 | Sorted             |    28,026.7 ns |  2,231.32 ns |    990.72 ns |    27,786.3 ns |  1.72 |    0.07 |    5 |         - |          NA |
+| QuickSortMedian3             | 4096 | Sorted             |    20,526.7 ns |    395.81 ns |    175.74 ns |    20,522.0 ns |  1.26 |    0.03 |    4 |         - |          NA |
+| QuickSortMedian9             | 4096 | Sorted             |    22,096.5 ns |    664.81 ns |    347.71 ns |    22,144.1 ns |  1.36 |    0.04 |    4 |         - |          NA |
+| SampleSort                   | 4096 | Sorted             |    72,614.5 ns |  3,748.24 ns |  1,960.40 ns |    72,232.7 ns |  4.46 |    0.15 |    7 |         - |          NA |
+| SimdQuickSort                | 4096 | Sorted             |    43,814.2 ns |    169.29 ns |     88.54 ns |    43,828.3 ns |  2.69 |    0.06 |    6 |         - |          NA |
+| DualPivotQuickSort           | 4096 | Sorted             |    15,227.7 ns |    971.27 ns |    431.25 ns |    15,228.9 ns |  0.93 |    0.03 |    4 |         - |          NA |
+| StableQuickSort              | 4096 | Sorted             |   148,470.7 ns |  2,608.38 ns |  1,158.14 ns |   147,985.0 ns |  9.11 |    0.22 |    8 |         - |          NA |
+| BidirectionalStableQuickSort | 4096 | Sorted             |    71,541.0 ns |  1,007.63 ns |    447.40 ns |    71,403.6 ns |  4.39 |    0.11 |    7 |         - |          NA |
+| DestswapStableQuickSort      | 4096 | Sorted             |   142,731.4 ns |  2,079.14 ns |  1,087.43 ns |   142,388.8 ns |  8.76 |    0.21 |    8 |         - |          NA |
+| IntroSort                    | 4096 | Sorted             |    15,334.2 ns |    400.63 ns |    177.88 ns |    15,337.8 ns |  0.94 |    0.02 |    4 |         - |          NA |
+| IntroSortDotnet              | 4096 | Sorted             |    17,803.7 ns |    614.10 ns |    321.19 ns |    17,770.3 ns |  1.09 |    0.03 |    4 |         - |          NA |
+| PDQSort                      | 4096 | Sorted             |     5,013.2 ns |    362.43 ns |    160.92 ns |     4,989.2 ns |  0.31 |    0.01 |    3 |         - |          NA |
+| PDQSortBranchless            | 4096 | Sorted             |     5,414.7 ns |    742.19 ns |    388.18 ns |     5,395.3 ns |  0.33 |    0.02 |    3 |         - |          NA |
+| Ipnsort                      | 4096 | Sorted             |     1,989.2 ns |    167.85 ns |     74.53 ns |     1,975.7 ns |  0.12 |    0.01 |    2 |         - |          NA |
+| StdSort                      | 4096 | Sorted             |     5,085.6 ns |    823.13 ns |    430.51 ns |     5,014.6 ns |  0.31 |    0.03 |    3 |         - |          NA |
+| BlockQuickSort               | 4096 | Sorted             |    30,702.2 ns |    526.37 ns |    275.30 ns |    30,771.8 ns |  1.88 |    0.05 |    5 |         - |          NA |
+| Ips4oSort                    | 4096 | Sorted             |     1,596.7 ns |    289.65 ns |    151.49 ns |     1,526.5 ns |  0.10 |    0.01 |    1 |         - |          NA |
+| FluxSort                     | 4096 | Sorted             |     2,367.4 ns |    259.90 ns |    135.93 ns |     2,349.1 ns |  0.15 |    0.01 |    2 |         - |          NA |
+| CrumSort                     | 4096 | Sorted             |     2,220.6 ns |      7.04 ns |      2.51 ns |     2,220.8 ns |  0.14 |    0.00 |    2 |         - |          NA |
+| BlitSort                     | 4096 | Sorted             |     2,334.6 ns |    256.65 ns |    134.24 ns |     2,289.6 ns |  0.14 |    0.01 |    2 |         - |          NA |
+| DotnetSort                   | 4096 | Sorted             |    16,310.5 ns |  2,259.85 ns |  1,181.95 ns |    15,668.2 ns |  1.00 |    0.07 |    4 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **4096** | **Reversed**           |    **17,239.5 ns** |    **719.23 ns** |    **376.17 ns** |    **17,219.4 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| QuickSort3way                | 4096 | Reversed           |    31,176.9 ns |  1,698.12 ns |    888.15 ns |    31,009.4 ns |  1.81 |    0.06 |    6 |         - |          NA |
+| QuickSortMedian3             | 4096 | Reversed           |    21,100.3 ns |    364.79 ns |    190.79 ns |    21,032.2 ns |  1.22 |    0.03 |    5 |         - |          NA |
+| QuickSortMedian9             | 4096 | Reversed           |    22,372.4 ns |    717.19 ns |    318.44 ns |    22,451.4 ns |  1.30 |    0.03 |    5 |         - |          NA |
+| SampleSort                   | 4096 | Reversed           |    76,264.5 ns |  2,593.74 ns |  1,356.58 ns |    75,873.9 ns |  4.43 |    0.12 |    8 |         - |          NA |
+| SimdQuickSort                | 4096 | Reversed           |    27,930.0 ns |    245.65 ns |    109.07 ns |    27,928.7 ns |  1.62 |    0.03 |    6 |         - |          NA |
+| DualPivotQuickSort           | 4096 | Reversed           |    17,096.7 ns |  1,344.84 ns |    703.38 ns |    17,169.5 ns |  0.99 |    0.04 |    4 |         - |          NA |
+| StableQuickSort              | 4096 | Reversed           |   152,732.4 ns |  2,870.97 ns |  1,501.57 ns |   151,997.2 ns |  8.86 |    0.20 |    9 |         - |          NA |
+| BidirectionalStableQuickSort | 4096 | Reversed           |    71,081.7 ns |    433.60 ns |    192.52 ns |    70,967.8 ns |  4.12 |    0.09 |    8 |         - |          NA |
+| DestswapStableQuickSort      | 4096 | Reversed           |   136,873.5 ns |  1,450.30 ns |    758.54 ns |   136,589.7 ns |  7.94 |    0.17 |    9 |         - |          NA |
+| IntroSort                    | 4096 | Reversed           |    15,800.2 ns |    567.08 ns |    296.60 ns |    15,747.3 ns |  0.92 |    0.02 |    4 |         - |          NA |
+| IntroSortDotnet              | 4096 | Reversed           |    27,162.6 ns |    612.26 ns |    320.22 ns |    27,172.4 ns |  1.58 |    0.04 |    6 |         - |          NA |
+| PDQSort                      | 4096 | Reversed           |     6,483.7 ns |    371.35 ns |    194.23 ns |     6,462.1 ns |  0.38 |    0.01 |    2 |         - |          NA |
+| PDQSortBranchless            | 4096 | Reversed           |     8,025.5 ns |    450.39 ns |    235.56 ns |     7,962.2 ns |  0.47 |    0.02 |    3 |         - |          NA |
+| Ipnsort                      | 4096 | Reversed           |     3,032.3 ns |    482.60 ns |    252.41 ns |     2,966.9 ns |  0.18 |    0.01 |    1 |         - |          NA |
+| StdSort                      | 4096 | Reversed           |     9,296.0 ns |    278.49 ns |    145.66 ns |     9,312.6 ns |  0.54 |    0.01 |    3 |         - |          NA |
+| BlockQuickSort               | 4096 | Reversed           |    37,914.2 ns |    435.78 ns |    227.92 ns |    37,967.3 ns |  2.20 |    0.05 |    7 |         - |          NA |
+| Ips4oSort                    | 4096 | Reversed           |     2,983.2 ns |    355.23 ns |    157.73 ns |     2,998.9 ns |  0.17 |    0.01 |    1 |         - |          NA |
+| FluxSort                     | 4096 | Reversed           |     3,579.2 ns |    364.83 ns |    190.81 ns |     3,531.4 ns |  0.21 |    0.01 |    1 |         - |          NA |
+| CrumSort                     | 4096 | Reversed           |     3,423.0 ns |    263.08 ns |    116.81 ns |     3,377.9 ns |  0.20 |    0.01 |    1 |         - |          NA |
+| BlitSort                     | 4096 | Reversed           |     3,505.7 ns |    232.17 ns |    103.09 ns |     3,523.9 ns |  0.20 |    0.01 |    1 |         - |          NA |
+| DotnetSort                   | 4096 | Reversed           |    28,393.0 ns |  2,514.03 ns |  1,314.89 ns |    28,244.8 ns |  1.65 |    0.08 |    6 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **4096** | **PipeOrgan**          | **1,217,408.2 ns** |  **6,533.74 ns** |  **2,901.02 ns** | **1,216,382.3 ns** | **1.000** |    **0.00** |    **7** |         **-** |          **NA** |
+| QuickSort3way                | 4096 | PipeOrgan          |    80,929.8 ns |  6,146.84 ns |  2,192.02 ns |    81,887.9 ns | 0.066 |    0.00 |    3 |         - |          NA |
+| QuickSortMedian3             | 4096 | PipeOrgan          |    63,669.0 ns |    997.13 ns |    442.73 ns |    63,621.3 ns | 0.052 |    0.00 |    3 |         - |          NA |
+| QuickSortMedian9             | 4096 | PipeOrgan          |    43,396.9 ns |  3,468.83 ns |  1,814.27 ns |    42,672.3 ns | 0.036 |    0.00 |    2 |         - |          NA |
+| SampleSort                   | 4096 | PipeOrgan          |    77,696.9 ns |  4,041.49 ns |  2,113.78 ns |    77,838.1 ns | 0.064 |    0.00 |    3 |         - |          NA |
+| SimdQuickSort                | 4096 | PipeOrgan          |    30,993.7 ns |    280.88 ns |    124.71 ns |    30,973.5 ns | 0.025 |    0.00 |    2 |         - |          NA |
+| DualPivotQuickSort           | 4096 | PipeOrgan          |    35,990.6 ns |    922.80 ns |    409.73 ns |    35,955.6 ns | 0.030 |    0.00 |    2 |         - |          NA |
+| StableQuickSort              | 4096 | PipeOrgan          |   150,330.4 ns |  4,195.96 ns |  2,194.57 ns |   149,615.9 ns | 0.123 |    0.00 |    5 |         - |          NA |
+| BidirectionalStableQuickSort | 4096 | PipeOrgan          |    71,513.7 ns |    483.65 ns |    214.74 ns |    71,481.1 ns | 0.059 |    0.00 |    3 |         - |          NA |
+| DestswapStableQuickSort      | 4096 | PipeOrgan          |   180,321.2 ns |    759.19 ns |    337.09 ns |   180,155.9 ns | 0.148 |    0.00 |    6 |         - |          NA |
+| IntroSort                    | 4096 | PipeOrgan          |   105,324.3 ns |    750.46 ns |    333.21 ns |   105,341.9 ns | 0.087 |    0.00 |    4 |         - |          NA |
+| IntroSortDotnet              | 4096 | PipeOrgan          |    65,906.2 ns |    961.96 ns |    427.12 ns |    66,067.7 ns | 0.054 |    0.00 |    3 |         - |          NA |
+| PDQSort                      | 4096 | PipeOrgan          |    31,923.0 ns |    686.21 ns |    304.68 ns |    31,916.4 ns | 0.026 |    0.00 |    2 |         - |          NA |
+| PDQSortBranchless            | 4096 | PipeOrgan          |    48,140.9 ns |    785.84 ns |    411.01 ns |    47,951.6 ns | 0.040 |    0.00 |    2 |         - |          NA |
+| Ipnsort                      | 4096 | PipeOrgan          |    83,952.6 ns |    299.85 ns |    133.13 ns |    83,971.0 ns | 0.069 |    0.00 |    3 |         - |          NA |
+| StdSort                      | 4096 | PipeOrgan          |   102,104.6 ns |    952.29 ns |    422.82 ns |   101,902.8 ns | 0.084 |    0.00 |    4 |         - |          NA |
+| BlockQuickSort               | 4096 | PipeOrgan          |    83,070.6 ns |  5,253.14 ns |  2,747.50 ns |    81,673.7 ns | 0.068 |    0.00 |    3 |         - |          NA |
+| Ips4oSort                    | 4096 | PipeOrgan          |    60,802.4 ns |  1,737.24 ns |    908.61 ns |    60,749.3 ns | 0.050 |    0.00 |    3 |         - |          NA |
+| FluxSort                     | 4096 | PipeOrgan          |     8,941.5 ns |    356.91 ns |    186.67 ns |     8,946.7 ns | 0.007 |    0.00 |    1 |         - |          NA |
+| CrumSort                     | 4096 | PipeOrgan          |    10,672.3 ns |    243.65 ns |    127.43 ns |    10,685.6 ns | 0.009 |    0.00 |    1 |         - |          NA |
+| BlitSort                     | 4096 | PipeOrgan          |    10,699.8 ns |    251.96 ns |    131.78 ns |    10,692.3 ns | 0.009 |    0.00 |    1 |         - |          NA |
+| DotnetSort                   | 4096 | PipeOrgan          |    73,159.3 ns |  3,493.51 ns |  1,827.17 ns |    73,132.2 ns | 0.060 |    0.00 |    3 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **4096** | **ManyDuplicates**     |   **103,736.3 ns** |    **627.29 ns** |    **278.52 ns** |   **103,607.5 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| QuickSort3way                | 4096 | ManyDuplicates     |    74,934.4 ns |    558.84 ns |    199.29 ns |    74,962.6 ns |  0.72 |    0.00 |    4 |         - |          NA |
+| QuickSortMedian3             | 4096 | ManyDuplicates     |   113,915.0 ns |  1,558.43 ns |    691.95 ns |   113,549.3 ns |  1.10 |    0.01 |    5 |         - |          NA |
+| QuickSortMedian9             | 4096 | ManyDuplicates     |   119,916.4 ns |  1,995.41 ns |    885.97 ns |   119,863.1 ns |  1.16 |    0.01 |    5 |         - |          NA |
+| SampleSort                   | 4096 | ManyDuplicates     |   158,050.5 ns |  1,722.48 ns |    900.89 ns |   157,930.3 ns |  1.52 |    0.01 |    5 |         - |          NA |
+| SimdQuickSort                | 4096 | ManyDuplicates     |    22,989.4 ns |    387.73 ns |    202.79 ns |    22,972.2 ns |  0.22 |    0.00 |    1 |         - |          NA |
+| DualPivotQuickSort           | 4096 | ManyDuplicates     |    73,298.5 ns |  1,030.22 ns |    538.83 ns |    73,294.0 ns |  0.71 |    0.01 |    4 |         - |          NA |
+| StableQuickSort              | 4096 | ManyDuplicates     |   179,001.7 ns |  5,185.76 ns |  2,712.25 ns |   179,964.1 ns |  1.73 |    0.03 |    5 |         - |          NA |
+| BidirectionalStableQuickSort | 4096 | ManyDuplicates     |    78,283.8 ns |  1,029.15 ns |    538.27 ns |    78,029.4 ns |  0.75 |    0.01 |    4 |         - |          NA |
+| DestswapStableQuickSort      | 4096 | ManyDuplicates     |   131,700.5 ns |  1,201.66 ns |    628.49 ns |   131,750.6 ns |  1.27 |    0.01 |    5 |         - |          NA |
+| IntroSort                    | 4096 | ManyDuplicates     |    96,983.4 ns |    626.04 ns |    277.97 ns |    97,164.8 ns |  0.93 |    0.00 |    5 |         - |          NA |
+| IntroSortDotnet              | 4096 | ManyDuplicates     |   103,445.9 ns |    766.31 ns |    340.24 ns |   103,470.3 ns |  1.00 |    0.00 |    5 |         - |          NA |
+| PDQSort                      | 4096 | ManyDuplicates     |    73,849.0 ns |    384.80 ns |    137.22 ns |    73,872.4 ns |  0.71 |    0.00 |    4 |         - |          NA |
+| PDQSortBranchless            | 4096 | ManyDuplicates     |    27,131.2 ns |    432.87 ns |    192.20 ns |    27,161.8 ns |  0.26 |    0.00 |    1 |         - |          NA |
+| Ipnsort                      | 4096 | ManyDuplicates     |    49,007.4 ns |    307.86 ns |    136.69 ns |    49,006.5 ns |  0.47 |    0.00 |    3 |         - |          NA |
+| StdSort                      | 4096 | ManyDuplicates     |    42,657.4 ns |    179.72 ns |     94.00 ns |    42,641.8 ns |  0.41 |    0.00 |    3 |         - |          NA |
+| BlockQuickSort               | 4096 | ManyDuplicates     |    55,816.3 ns |    593.10 ns |    310.20 ns |    55,796.3 ns |  0.54 |    0.00 |    3 |         - |          NA |
+| Ips4oSort                    | 4096 | ManyDuplicates     |    42,279.8 ns |  1,690.67 ns |    884.25 ns |    42,005.8 ns |  0.41 |    0.01 |    3 |         - |          NA |
+| FluxSort                     | 4096 | ManyDuplicates     |    34,458.2 ns |    566.90 ns |    251.71 ns |    34,417.7 ns |  0.33 |    0.00 |    2 |         - |          NA |
+| CrumSort                     | 4096 | ManyDuplicates     |    34,871.9 ns |    484.13 ns |    253.21 ns |    34,868.0 ns |  0.34 |    0.00 |    2 |         - |          NA |
+| BlitSort                     | 4096 | ManyDuplicates     |    44,317.8 ns |    502.06 ns |    222.92 ns |    44,319.0 ns |  0.43 |    0.00 |    3 |         - |          NA |
+| DotnetSort                   | 4096 | ManyDuplicates     |    94,699.5 ns |    953.39 ns |    423.31 ns |    94,729.9 ns |  0.91 |    0.00 |    5 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **8192** | **Random**             |   **395,042.8 ns** |  **2,358.28 ns** |  **1,233.42 ns** |   **394,791.4 ns** |  **1.00** |    **0.00** |    **3** |         **-** |          **NA** |
+| QuickSort3way                | 8192 | Random             |   434,046.3 ns |  3,310.36 ns |  1,731.38 ns |   434,611.4 ns |  1.10 |    0.01 |    3 |         - |          NA |
+| QuickSortMedian3             | 8192 | Random             |   414,932.6 ns |  4,735.96 ns |  2,477.00 ns |   414,718.2 ns |  1.05 |    0.01 |    3 |         - |          NA |
+| QuickSortMedian9             | 8192 | Random             |   439,524.0 ns |  1,424.10 ns |    744.83 ns |   439,524.5 ns |  1.11 |    0.00 |    3 |         - |          NA |
+| SampleSort                   | 8192 | Random             |   503,802.9 ns |    732.01 ns |    325.02 ns |   503,686.2 ns |  1.28 |    0.00 |    3 |         - |          NA |
+| SimdQuickSort                | 8192 | Random             |    53,299.1 ns |    634.91 ns |    281.90 ns |    53,351.6 ns |  0.13 |    0.00 |    1 |         - |          NA |
+| DualPivotQuickSort           | 8192 | Random             |   312,754.3 ns |  1,177.97 ns |    523.03 ns |   312,570.2 ns |  0.79 |    0.00 |    3 |         - |          NA |
+| StableQuickSort              | 8192 | Random             | 1,011,578.9 ns |  1,451.53 ns |    759.18 ns | 1,011,614.2 ns |  2.56 |    0.01 |    5 |         - |          NA |
+| BidirectionalStableQuickSort | 8192 | Random             |   519,888.2 ns |  1,052.73 ns |    550.60 ns |   519,796.3 ns |  1.32 |    0.00 |    3 |         - |          NA |
+| DestswapStableQuickSort      | 8192 | Random             |   824,608.5 ns |  2,805.06 ns |  1,245.46 ns |   824,173.4 ns |  2.09 |    0.01 |    4 |         - |          NA |
+| IntroSort                    | 8192 | Random             |   346,704.3 ns |    510.27 ns |    181.97 ns |   346,689.0 ns |  0.88 |    0.00 |    3 |         - |          NA |
+| IntroSortDotnet              | 8192 | Random             |   337,263.0 ns |    954.27 ns |    423.70 ns |   337,167.4 ns |  0.85 |    0.00 |    3 |         - |          NA |
+| PDQSort                      | 8192 | Random             |   323,349.3 ns |  1,017.40 ns |    451.73 ns |   323,219.8 ns |  0.82 |    0.00 |    3 |         - |          NA |
+| PDQSortBranchless            | 8192 | Random             |   174,905.7 ns |  1,196.78 ns |    531.38 ns |   174,992.0 ns |  0.44 |    0.00 |    2 |         - |          NA |
+| Ipnsort                      | 8192 | Random             |   196,154.9 ns |    456.80 ns |    202.82 ns |   196,079.7 ns |  0.50 |    0.00 |    2 |         - |          NA |
+| StdSort                      | 8192 | Random             |   187,389.8 ns |    803.33 ns |    420.16 ns |   187,319.3 ns |  0.47 |    0.00 |    2 |         - |          NA |
+| BlockQuickSort               | 8192 | Random             |   200,701.7 ns |  1,263.92 ns |    661.06 ns |   200,507.3 ns |  0.51 |    0.00 |    2 |         - |          NA |
+| Ips4oSort                    | 8192 | Random             |   175,176.5 ns |  1,323.07 ns |    691.99 ns |   175,044.7 ns |  0.44 |    0.00 |    2 |         - |          NA |
+| FluxSort                     | 8192 | Random             |   227,736.0 ns |  1,057.64 ns |    469.60 ns |   227,668.9 ns |  0.58 |    0.00 |    2 |         - |          NA |
+| CrumSort                     | 8192 | Random             |   228,892.7 ns |    555.65 ns |    246.71 ns |   228,861.3 ns |  0.58 |    0.00 |    2 |         - |          NA |
+| BlitSort                     | 8192 | Random             |   252,982.1 ns |  1,161.64 ns |    515.78 ns |   252,707.6 ns |  0.64 |    0.00 |    2 |         - |          NA |
+| DotnetSort                   | 8192 | Random             |   315,224.0 ns |  3,444.04 ns |  1,801.30 ns |   314,477.5 ns |  0.80 |    0.00 |    3 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **8192** | **SingleElementMoved** |    **41,082.0 ns** |  **1,282.70 ns** |    **569.53 ns** |    **41,013.4 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| QuickSort3way                | 8192 | SingleElementMoved |    72,040.3 ns |  4,118.98 ns |  2,154.31 ns |    72,669.6 ns |  1.75 |    0.05 |    5 |         - |          NA |
+| QuickSortMedian3             | 8192 | SingleElementMoved |    55,049.0 ns |    962.36 ns |    503.34 ns |    55,108.3 ns |  1.34 |    0.02 |    5 |         - |          NA |
+| QuickSortMedian9             | 8192 | SingleElementMoved |    63,354.8 ns |    985.52 ns |    515.44 ns |    63,449.2 ns |  1.54 |    0.02 |    5 |         - |          NA |
+| SampleSort                   | 8192 | SingleElementMoved |   325,828.3 ns |  3,540.84 ns |  1,851.93 ns |   325,211.5 ns |  7.93 |    0.11 |    8 |         - |          NA |
+| SimdQuickSort                | 8192 | SingleElementMoved |   138,392.7 ns |    749.94 ns |    332.98 ns |   138,333.7 ns |  3.37 |    0.04 |    7 |         - |          NA |
+| DualPivotQuickSort           | 8192 | SingleElementMoved |    39,899.4 ns |  1,411.87 ns |    738.44 ns |    39,783.4 ns |  0.97 |    0.02 |    4 |         - |          NA |
+| StableQuickSort              | 8192 | SingleElementMoved |   327,045.9 ns | 16,987.60 ns |  7,542.60 ns |   324,637.2 ns |  7.96 |    0.20 |    8 |         - |          NA |
+| BidirectionalStableQuickSort | 8192 | SingleElementMoved |   152,586.5 ns |  1,305.25 ns |    579.54 ns |   152,712.0 ns |  3.71 |    0.05 |    7 |         - |          NA |
+| DestswapStableQuickSort      | 8192 | SingleElementMoved |   299,326.1 ns |    585.69 ns |    208.86 ns |   299,332.3 ns |  7.29 |    0.09 |    8 |         - |          NA |
+| IntroSort                    | 8192 | SingleElementMoved |   109,856.3 ns |    396.97 ns |    176.26 ns |   109,853.7 ns |  2.67 |    0.03 |    6 |         - |          NA |
+| IntroSortDotnet              | 8192 | SingleElementMoved |    45,221.9 ns |  1,193.07 ns |    624.00 ns |    45,291.5 ns |  1.10 |    0.02 |    4 |         - |          NA |
+| PDQSort                      | 8192 | SingleElementMoved |    24,958.2 ns |    547.57 ns |    286.39 ns |    25,045.5 ns |  0.61 |    0.01 |    3 |         - |          NA |
+| PDQSortBranchless            | 8192 | SingleElementMoved |    27,666.6 ns |    367.64 ns |    163.23 ns |    27,671.3 ns |  0.67 |    0.01 |    3 |         - |          NA |
+| Ipnsort                      | 8192 | SingleElementMoved |   154,868.1 ns |    709.68 ns |    315.10 ns |   154,724.1 ns |  3.77 |    0.05 |    7 |         - |          NA |
+| StdSort                      | 8192 | SingleElementMoved |    26,011.0 ns |    639.44 ns |    334.44 ns |    25,841.8 ns |  0.63 |    0.01 |    3 |         - |          NA |
+| BlockQuickSort               | 8192 | SingleElementMoved |    73,693.7 ns |  1,158.78 ns |    514.51 ns |    73,518.0 ns |  1.79 |    0.03 |    5 |         - |          NA |
+| Ips4oSort                    | 8192 | SingleElementMoved |   100,269.5 ns |  1,078.17 ns |    478.71 ns |   100,434.1 ns |  2.44 |    0.03 |    6 |         - |          NA |
+| FluxSort                     | 8192 | SingleElementMoved |     8,699.2 ns |    317.82 ns |    166.22 ns |     8,711.7 ns |  0.21 |    0.00 |    1 |         - |          NA |
+| CrumSort                     | 8192 | SingleElementMoved |    11,227.0 ns |    203.78 ns |     72.67 ns |    11,256.1 ns |  0.27 |    0.00 |    2 |         - |          NA |
+| BlitSort                     | 8192 | SingleElementMoved |    11,421.9 ns |    529.83 ns |    277.11 ns |    11,351.9 ns |  0.28 |    0.01 |    2 |         - |          NA |
+| DotnetSort                   | 8192 | SingleElementMoved |    54,819.3 ns |  2,144.90 ns |  1,121.82 ns |    54,293.4 ns |  1.33 |    0.03 |    5 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **8192** | **Sorted**             |    **34,730.4 ns** |    **505.67 ns** |    **264.48 ns** |    **34,634.7 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| QuickSort3way                | 8192 | Sorted             |    58,966.2 ns |  1,971.65 ns |  1,031.21 ns |    59,034.5 ns |  1.70 |    0.03 |    5 |         - |          NA |
+| QuickSortMedian3             | 8192 | Sorted             |    42,121.4 ns |    615.30 ns |    321.81 ns |    42,026.3 ns |  1.21 |    0.01 |    4 |         - |          NA |
+| QuickSortMedian9             | 8192 | Sorted             |    45,699.7 ns |    421.00 ns |    186.92 ns |    45,768.3 ns |  1.32 |    0.01 |    4 |         - |          NA |
+| SampleSort                   | 8192 | Sorted             |   214,426.1 ns | 14,739.06 ns |  7,708.81 ns |   216,239.9 ns |  6.17 |    0.21 |    7 |         - |          NA |
+| SimdQuickSort                | 8192 | Sorted             |   145,698.3 ns |    557.70 ns |    247.62 ns |   145,810.3 ns |  4.20 |    0.03 |    6 |         - |          NA |
+| DualPivotQuickSort           | 8192 | Sorted             |    37,178.5 ns |    985.90 ns |    437.75 ns |    37,146.6 ns |  1.07 |    0.01 |    4 |         - |          NA |
+| StableQuickSort              | 8192 | Sorted             |   323,848.8 ns |  2,998.71 ns |  1,331.44 ns |   324,135.6 ns |  9.33 |    0.08 |    8 |         - |          NA |
+| BidirectionalStableQuickSort | 8192 | Sorted             |   150,948.5 ns |  1,426.38 ns |    746.03 ns |   150,715.4 ns |  4.35 |    0.04 |    6 |         - |          NA |
+| DestswapStableQuickSort      | 8192 | Sorted             |   294,101.2 ns |  1,766.38 ns |    923.85 ns |   293,849.7 ns |  8.47 |    0.07 |    8 |         - |          NA |
+| IntroSort                    | 8192 | Sorted             |    32,753.3 ns |    655.62 ns |    342.90 ns |    32,851.0 ns |  0.94 |    0.01 |    4 |         - |          NA |
+| IntroSortDotnet              | 8192 | Sorted             |    37,206.1 ns |    705.40 ns |    313.20 ns |    37,271.6 ns |  1.07 |    0.01 |    4 |         - |          NA |
+| PDQSort                      | 8192 | Sorted             |     9,840.0 ns |    965.60 ns |    505.03 ns |     9,935.8 ns |  0.28 |    0.01 |    3 |         - |          NA |
+| PDQSortBranchless            | 8192 | Sorted             |     9,823.7 ns |  1,144.29 ns |    598.49 ns |     9,614.4 ns |  0.28 |    0.02 |    3 |         - |          NA |
+| Ipnsort                      | 8192 | Sorted             |     3,638.1 ns |    250.99 ns |    111.44 ns |     3,590.3 ns |  0.10 |    0.00 |    1 |         - |          NA |
+| StdSort                      | 8192 | Sorted             |    10,007.1 ns |    971.47 ns |    508.10 ns |    10,155.2 ns |  0.29 |    0.01 |    3 |         - |          NA |
+| BlockQuickSort               | 8192 | Sorted             |    66,950.2 ns |    605.51 ns |    268.85 ns |    66,880.9 ns |  1.93 |    0.02 |    5 |         - |          NA |
+| Ips4oSort                    | 8192 | Sorted             |     3,318.1 ns |    374.22 ns |    195.72 ns |     3,293.2 ns |  0.10 |    0.01 |    1 |         - |          NA |
+| FluxSort                     | 8192 | Sorted             |     4,386.5 ns |    162.05 ns |     71.95 ns |     4,351.4 ns |  0.13 |    0.00 |    2 |         - |          NA |
+| CrumSort                     | 8192 | Sorted             |     4,570.8 ns |    437.98 ns |    229.07 ns |     4,486.8 ns |  0.13 |    0.01 |    2 |         - |          NA |
+| BlitSort                     | 8192 | Sorted             |     4,588.5 ns |    396.34 ns |    207.29 ns |     4,482.3 ns |  0.13 |    0.01 |    2 |         - |          NA |
+| DotnetSort                   | 8192 | Sorted             |    34,257.6 ns |  2,464.93 ns |  1,094.45 ns |    33,818.4 ns |  0.99 |    0.03 |    4 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **8192** | **Reversed**           |    **37,421.9 ns** |    **924.53 ns** |    **483.55 ns** |    **37,560.2 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| QuickSort3way                | 8192 | Reversed           |    65,490.2 ns |  2,637.07 ns |  1,379.24 ns |    64,877.5 ns |  1.75 |    0.04 |    5 |         - |          NA |
+| QuickSortMedian3             | 8192 | Reversed           |    43,865.6 ns |    315.10 ns |    139.91 ns |    43,854.1 ns |  1.17 |    0.01 |    4 |         - |          NA |
+| QuickSortMedian9             | 8192 | Reversed           |    47,005.8 ns |    488.14 ns |    255.31 ns |    46,903.1 ns |  1.26 |    0.02 |    4 |         - |          NA |
+| SampleSort                   | 8192 | Reversed           |   284,750.3 ns |  8,670.06 ns |  4,534.61 ns |   283,359.8 ns |  7.61 |    0.15 |    7 |         - |          NA |
+| SimdQuickSort                | 8192 | Reversed           |    74,129.3 ns |    737.90 ns |    327.63 ns |    74,207.6 ns |  1.98 |    0.03 |    5 |         - |          NA |
+| DualPivotQuickSort           | 8192 | Reversed           |    39,703.0 ns |  3,504.04 ns |  1,832.68 ns |    39,105.6 ns |  1.06 |    0.05 |    4 |         - |          NA |
+| StableQuickSort              | 8192 | Reversed           |   331,035.5 ns |  2,646.92 ns |  1,175.25 ns |   331,018.6 ns |  8.85 |    0.11 |    7 |         - |          NA |
+| BidirectionalStableQuickSort | 8192 | Reversed           |   151,985.6 ns |  2,579.78 ns |  1,349.28 ns |   151,363.5 ns |  4.06 |    0.06 |    6 |         - |          NA |
+| DestswapStableQuickSort      | 8192 | Reversed           |   286,465.1 ns |  3,461.09 ns |  1,810.22 ns |   286,073.9 ns |  7.66 |    0.10 |    7 |         - |          NA |
+| IntroSort                    | 8192 | Reversed           |    33,935.8 ns |    695.36 ns |    363.69 ns |    33,853.0 ns |  0.91 |    0.01 |    4 |         - |          NA |
+| IntroSortDotnet              | 8192 | Reversed           |    58,511.1 ns |    605.35 ns |    268.78 ns |    58,616.4 ns |  1.56 |    0.02 |    5 |         - |          NA |
+| PDQSort                      | 8192 | Reversed           |    12,887.6 ns |    633.47 ns |    331.31 ns |    12,835.6 ns |  0.34 |    0.01 |    2 |         - |          NA |
+| PDQSortBranchless            | 8192 | Reversed           |    15,993.6 ns |    562.11 ns |    293.99 ns |    15,939.1 ns |  0.43 |    0.01 |    3 |         - |          NA |
+| Ipnsort                      | 8192 | Reversed           |     6,184.2 ns |    518.23 ns |    271.04 ns |     6,210.0 ns |  0.17 |    0.01 |    1 |         - |          NA |
+| StdSort                      | 8192 | Reversed           |    18,152.3 ns |    509.64 ns |    226.28 ns |    18,048.1 ns |  0.49 |    0.01 |    3 |         - |          NA |
+| BlockQuickSort               | 8192 | Reversed           |    80,934.7 ns |    909.10 ns |    403.65 ns |    80,961.0 ns |  2.16 |    0.03 |    5 |         - |          NA |
+| Ips4oSort                    | 8192 | Reversed           |     5,578.2 ns |    439.66 ns |    229.95 ns |     5,478.4 ns |  0.15 |    0.01 |    1 |         - |          NA |
+| FluxSort                     | 8192 | Reversed           |     6,679.4 ns |    211.07 ns |     93.72 ns |     6,621.0 ns |  0.18 |    0.00 |    1 |         - |          NA |
+| CrumSort                     | 8192 | Reversed           |     6,678.3 ns |    243.95 ns |    108.32 ns |     6,623.3 ns |  0.18 |    0.00 |    1 |         - |          NA |
+| BlitSort                     | 8192 | Reversed           |     7,181.6 ns |    505.39 ns |    264.33 ns |     7,109.9 ns |  0.19 |    0.01 |    1 |         - |          NA |
+| DotnetSort                   | 8192 | Reversed           |    60,633.0 ns |  3,295.55 ns |  1,723.64 ns |    60,821.8 ns |  1.62 |    0.05 |    5 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **8192** | **PipeOrgan**          | **4,739,133.4 ns** | **28,573.80 ns** | **12,686.94 ns** | **4,733,300.1 ns** | **1.000** |    **0.00** |    **5** |         **-** |          **NA** |
+| QuickSort3way                | 8192 | PipeOrgan          |   211,525.8 ns | 17,318.90 ns |  9,058.12 ns |   212,997.0 ns | 0.045 |    0.00 |    4 |         - |          NA |
+| QuickSortMedian3             | 8192 | PipeOrgan          |   150,438.6 ns |  3,486.19 ns |  1,823.35 ns |   149,731.5 ns | 0.032 |    0.00 |    4 |         - |          NA |
+| QuickSortMedian9             | 8192 | PipeOrgan          |    90,160.9 ns |    915.41 ns |    406.45 ns |    90,130.8 ns | 0.019 |    0.00 |    3 |         - |          NA |
+| SampleSort                   | 8192 | PipeOrgan          |   311,449.1 ns |  4,041.39 ns |  2,113.73 ns |   310,857.8 ns | 0.066 |    0.00 |    4 |         - |          NA |
+| SimdQuickSort                | 8192 | PipeOrgan          |    65,907.5 ns |    358.30 ns |    127.77 ns |    65,892.7 ns | 0.014 |    0.00 |    3 |         - |          NA |
+| DualPivotQuickSort           | 8192 | PipeOrgan          |    77,055.2 ns |  1,275.54 ns |    667.13 ns |    76,942.8 ns | 0.016 |    0.00 |    3 |         - |          NA |
+| StableQuickSort              | 8192 | PipeOrgan          |   323,817.6 ns |  4,003.38 ns |  1,427.65 ns |   324,445.3 ns | 0.068 |    0.00 |    4 |         - |          NA |
+| BidirectionalStableQuickSort | 8192 | PipeOrgan          |   151,559.0 ns |    917.03 ns |    407.17 ns |   151,623.0 ns | 0.032 |    0.00 |    4 |         - |          NA |
+| DestswapStableQuickSort      | 8192 | PipeOrgan          |   377,236.3 ns |  2,038.36 ns |  1,066.10 ns |   377,194.8 ns | 0.080 |    0.00 |    4 |         - |          NA |
+| IntroSort                    | 8192 | PipeOrgan          |   232,391.0 ns |  3,605.55 ns |  1,885.77 ns |   232,187.5 ns | 0.049 |    0.00 |    4 |         - |          NA |
+| IntroSortDotnet              | 8192 | PipeOrgan          |   275,060.9 ns |  5,262.95 ns |  2,752.62 ns |   274,910.6 ns | 0.058 |    0.00 |    4 |         - |          NA |
+| PDQSort                      | 8192 | PipeOrgan          |    69,082.7 ns |  1,802.15 ns |    942.56 ns |    68,853.3 ns | 0.015 |    0.00 |    3 |         - |          NA |
+| PDQSortBranchless            | 8192 | PipeOrgan          |   103,243.6 ns |  1,509.62 ns |    670.28 ns |   103,058.2 ns | 0.022 |    0.00 |    3 |         - |          NA |
+| Ipnsort                      | 8192 | PipeOrgan          |   186,560.6 ns |    532.09 ns |    236.25 ns |   186,619.3 ns | 0.039 |    0.00 |    4 |         - |          NA |
+| StdSort                      | 8192 | PipeOrgan          |   249,852.1 ns |  2,475.76 ns |  1,099.25 ns |   249,693.6 ns | 0.053 |    0.00 |    4 |         - |          NA |
+| BlockQuickSort               | 8192 | PipeOrgan          |   159,378.8 ns |  2,219.00 ns |    985.25 ns |   159,410.1 ns | 0.034 |    0.00 |    4 |         - |          NA |
+| Ips4oSort                    | 8192 | PipeOrgan          |   145,110.3 ns |  2,897.96 ns |  1,515.69 ns |   144,401.3 ns | 0.031 |    0.00 |    4 |         - |          NA |
+| FluxSort                     | 8192 | PipeOrgan          |    18,291.4 ns |    503.87 ns |    263.53 ns |    18,187.7 ns | 0.004 |    0.00 |    1 |         - |          NA |
+| CrumSort                     | 8192 | PipeOrgan          |    23,156.2 ns |    514.26 ns |    268.97 ns |    23,064.2 ns | 0.005 |    0.00 |    2 |         - |          NA |
+| BlitSort                     | 8192 | PipeOrgan          |    23,120.5 ns |    493.48 ns |    258.10 ns |    23,059.4 ns | 0.005 |    0.00 |    2 |         - |          NA |
+| DotnetSort                   | 8192 | PipeOrgan          |   279,762.5 ns |  6,747.06 ns |  3,528.84 ns |   278,976.4 ns | 0.059 |    0.00 |    4 |         - |          NA |
+|      |                    |                |              |              |                |       |         |      |           |             |
+| **QuickSort**                    | **8192** | **ManyDuplicates**     |   **206,211.6 ns** |  **1,426.20 ns** |    **633.24 ns** |   **205,993.8 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| QuickSort3way                | 8192 | ManyDuplicates     |   146,946.9 ns |    700.17 ns |    310.88 ns |   146,836.0 ns |  0.71 |    0.00 |    3 |         - |          NA |
+| QuickSortMedian3             | 8192 | ManyDuplicates     |   223,572.9 ns |  1,648.56 ns |    862.23 ns |   223,333.7 ns |  1.08 |    0.01 |    4 |         - |          NA |
+| QuickSortMedian9             | 8192 | ManyDuplicates     |   235,340.1 ns |  1,896.11 ns |    841.88 ns |   235,073.7 ns |  1.14 |    0.01 |    4 |         - |          NA |
+| SampleSort                   | 8192 | ManyDuplicates     |   317,661.9 ns |  2,071.51 ns |  1,083.44 ns |   317,686.7 ns |  1.54 |    0.01 |    5 |         - |          NA |
+| SimdQuickSort                | 8192 | ManyDuplicates     |    54,606.7 ns |    177.99 ns |     79.03 ns |    54,600.0 ns |  0.26 |    0.00 |    1 |         - |          NA |
+| DualPivotQuickSort           | 8192 | ManyDuplicates     |   144,912.0 ns |  1,126.39 ns |    500.12 ns |   145,075.1 ns |  0.70 |    0.00 |    3 |         - |          NA |
+| StableQuickSort              | 8192 | ManyDuplicates     |   349,447.5 ns |  6,589.84 ns |  3,446.62 ns |   350,002.5 ns |  1.69 |    0.02 |    5 |         - |          NA |
+| BidirectionalStableQuickSort | 8192 | ManyDuplicates     |   154,032.0 ns |    738.27 ns |    327.80 ns |   154,159.2 ns |  0.75 |    0.00 |    3 |         - |          NA |
+| DestswapStableQuickSort      | 8192 | ManyDuplicates     |   254,644.9 ns |  1,676.26 ns |    876.71 ns |   254,731.4 ns |  1.23 |    0.01 |    4 |         - |          NA |
+| IntroSort                    | 8192 | ManyDuplicates     |   193,464.3 ns |    680.26 ns |    302.04 ns |   193,247.8 ns |  0.94 |    0.00 |    4 |         - |          NA |
+| IntroSortDotnet              | 8192 | ManyDuplicates     |   208,353.7 ns |    643.53 ns |    285.73 ns |   208,344.5 ns |  1.01 |    0.00 |    4 |         - |          NA |
+| PDQSort                      | 8192 | ManyDuplicates     |   144,824.8 ns |  1,340.10 ns |    700.90 ns |   144,538.1 ns |  0.70 |    0.00 |    3 |         - |          NA |
+| PDQSortBranchless            | 8192 | ManyDuplicates     |    49,459.7 ns |    650.10 ns |    340.02 ns |    49,497.3 ns |  0.24 |    0.00 |    1 |         - |          NA |
+| Ipnsort                      | 8192 | ManyDuplicates     |    94,731.3 ns |  1,045.81 ns |    464.34 ns |    94,792.4 ns |  0.46 |    0.00 |    2 |         - |          NA |
+| StdSort                      | 8192 | ManyDuplicates     |    77,745.8 ns |    967.80 ns |    429.71 ns |    77,693.2 ns |  0.38 |    0.00 |    2 |         - |          NA |
+| BlockQuickSort               | 8192 | ManyDuplicates     |   109,702.0 ns |  1,033.95 ns |    459.08 ns |   109,673.6 ns |  0.53 |    0.00 |    2 |         - |          NA |
+| Ips4oSort                    | 8192 | ManyDuplicates     |    62,232.6 ns |  1,013.85 ns |    530.26 ns |    62,241.7 ns |  0.30 |    0.00 |    1 |         - |          NA |
+| FluxSort                     | 8192 | ManyDuplicates     |    58,268.0 ns |  1,199.11 ns |    627.16 ns |    58,233.8 ns |  0.28 |    0.00 |    1 |         - |          NA |
+| CrumSort                     | 8192 | ManyDuplicates     |    57,638.0 ns |    471.35 ns |    246.52 ns |    57,634.3 ns |  0.28 |    0.00 |    1 |         - |          NA |
+| BlitSort                     | 8192 | ManyDuplicates     |    81,511.1 ns |  1,283.32 ns |    671.20 ns |    81,458.4 ns |  0.40 |    0.00 |    2 |         - |          NA |
+| DotnetSort                   | 8192 | ManyDuplicates     |   191,131.0 ns |    914.37 ns |    405.99 ns |   191,018.5 ns |  0.93 |    0.00 |    4 |         - |          NA |
 
 ### SelectionBenchmark
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V74 3.69GHz, 1 CPU, 4 logical and 2 physical cores
-Memory: 15.61 GB Total, 12.49 GB Available
+AMD EPYC 9V74 3.59GHz, 1 CPU, 4 logical and 2 physical cores
+Memory: 15.61 GB Total, 12.44 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
@@ -2715,122 +2715,122 @@ EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCo
 UnrollFactor=1  WarmupCount=2  
 ```
 
-| Method                  | Size | Pattern            | Mean         | Error        | StdDev      | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
-| ------------------------ |----- |------------------- |-------------:|-------------:|------------:|------:|--------:|-----:|----------:|------------:|
-| **SelectionSort**           | **256**  | **Random**             |  **26,060.6 ns** |    **314.26 ns** |   **164.37 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| SelectionSortSimd       | 256  | Random             |   9,592.4 ns |    334.12 ns |   174.75 ns |  0.37 |    0.01 |    2 |         - |          NA |
-| DoubleSelectionSort     | 256  | Random             |  18,443.3 ns |     72.27 ns |    32.09 ns |  0.71 |    0.00 |    3 |         - |          NA |
-| DoubleSelectionSortSimd | 256  | Random             |  10,957.6 ns |    216.64 ns |   113.31 ns |  0.42 |    0.00 |    2 |         - |          NA |
-| CycleSort               | 256  | Random             |  48,939.9 ns |    274.22 ns |   143.42 ns |  1.88 |    0.01 |    5 |         - |          NA |
-| PancakeSort             | 256  | Random             |  32,729.4 ns |    409.54 ns |   214.20 ns |  1.26 |    0.01 |    4 |         - |          NA |
-| BingoSort               | 256  | Random             |  29,224.6 ns |    265.67 ns |   138.95 ns |  1.12 |    0.01 |    4 |         - |          NA |
-| DotnetSort              | 256  | Random             |   5,870.7 ns |    375.02 ns |   196.14 ns |  0.23 |    0.01 |    1 |         - |          NA |
-|      |                    |              |              |             |       |         |      |           |             |
-| **SelectionSort**           | **256**  | **SingleElementMoved** |  **19,298.6 ns** |    **161.89 ns** |    **84.67 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| SelectionSortSimd       | 256  | SingleElementMoved |   4,933.1 ns |    330.75 ns |   172.99 ns |  0.26 |    0.01 |    2 |         - |          NA |
-| DoubleSelectionSort     | 256  | SingleElementMoved |  10,827.9 ns |    294.15 ns |   153.85 ns |  0.56 |    0.01 |    3 |         - |          NA |
-| DoubleSelectionSortSimd | 256  | SingleElementMoved |   4,136.2 ns |    378.03 ns |   197.72 ns |  0.21 |    0.01 |    2 |         - |          NA |
-| CycleSort               | 256  | SingleElementMoved |  25,391.0 ns |    125.30 ns |    65.54 ns |  1.32 |    0.01 |    6 |         - |          NA |
-| PancakeSort             | 256  | SingleElementMoved |  15,884.3 ns |    229.55 ns |   101.92 ns |  0.82 |    0.01 |    4 |         - |          NA |
-| BingoSort               | 256  | SingleElementMoved |  19,572.3 ns |    196.95 ns |    87.45 ns |  1.01 |    0.01 |    5 |         - |          NA |
-| DotnetSort              | 256  | SingleElementMoved |   1,132.4 ns |    159.28 ns |    83.30 ns |  0.06 |    0.00 |    1 |         - |          NA |
-|      |                    |              |              |             |       |         |      |           |             |
-| **SelectionSort**           | **256**  | **Sorted**             |  **19,142.7 ns** |    **256.57 ns** |   **134.19 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| SelectionSortSimd       | 256  | Sorted             |   3,534.5 ns |     80.29 ns |    28.63 ns |  0.18 |    0.00 |    3 |         - |          NA |
-| DoubleSelectionSort     | 256  | Sorted             |   8,143.2 ns |    273.23 ns |   142.90 ns |  0.43 |    0.01 |    4 |         - |          NA |
-| DoubleSelectionSortSimd | 256  | Sorted             |   2,919.5 ns |     47.16 ns |    16.82 ns |  0.15 |    0.00 |    2 |         - |          NA |
-| CycleSort               | 256  | Sorted             |  17,435.2 ns |     78.86 ns |    41.25 ns |  0.91 |    0.01 |    6 |         - |          NA |
-| PancakeSort             | 256  | Sorted             |  13,116.3 ns |     44.17 ns |    19.61 ns |  0.69 |    0.00 |    5 |         - |          NA |
-| BingoSort               | 256  | Sorted             |  19,124.4 ns |    174.17 ns |    91.09 ns |  1.00 |    0.01 |    6 |         - |          NA |
-| DotnetSort              | 256  | Sorted             |     642.3 ns |     41.29 ns |    18.33 ns |  0.03 |    0.00 |    1 |         - |          NA |
-|      |                    |              |              |             |       |         |      |           |             |
-| **SelectionSort**           | **256**  | **Reversed**           |  **17,760.9 ns** |  **1,389.34 ns** |   **726.65 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| SelectionSortSimd       | 256  | Reversed           |   5,863.2 ns |    298.53 ns |   156.14 ns |  0.33 |    0.02 |    3 |         - |          NA |
-| DoubleSelectionSort     | 256  | Reversed           |   8,146.0 ns |    283.15 ns |   148.09 ns |  0.46 |    0.02 |    4 |         - |          NA |
-| DoubleSelectionSortSimd | 256  | Reversed           |   4,194.7 ns |     89.48 ns |    39.73 ns |  0.24 |    0.01 |    2 |         - |          NA |
-| CycleSort               | 256  | Reversed           |  30,321.0 ns |     88.21 ns |    46.14 ns |  1.71 |    0.07 |    8 |         - |          NA |
-| PancakeSort             | 256  | Reversed           |  14,255.7 ns |  1,394.54 ns |   619.19 ns |  0.80 |    0.04 |    5 |         - |          NA |
-| BingoSort               | 256  | Reversed           |  22,542.4 ns |  3,015.46 ns | 1,577.15 ns |  1.27 |    0.10 |    7 |         - |          NA |
-| DotnetSort              | 256  | Reversed           |   1,154.5 ns |     11.29 ns |     5.91 ns |  0.07 |    0.00 |    1 |         - |          NA |
-|      |                    |              |              |             |       |         |      |           |             |
-| **SelectionSort**           | **256**  | **PipeOrgan**          |  **18,398.9 ns** |    **565.99 ns** |   **296.02 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| SelectionSortSimd       | 256  | PipeOrgan          |   6,875.0 ns |     72.69 ns |    38.02 ns |  0.37 |    0.01 |    3 |         - |          NA |
-| DoubleSelectionSort     | 256  | PipeOrgan          |   9,283.4 ns |    376.52 ns |   196.93 ns |  0.50 |    0.01 |    4 |         - |          NA |
-| DoubleSelectionSortSimd | 256  | PipeOrgan          |   4,403.2 ns |    308.42 ns |   161.31 ns |  0.24 |    0.01 |    2 |         - |          NA |
-| CycleSort               | 256  | PipeOrgan          |  42,885.8 ns |    235.12 ns |   122.97 ns |  2.33 |    0.04 |    6 |         - |          NA |
-| PancakeSort             | 256  | PipeOrgan          |  20,523.3 ns |    195.03 ns |   102.01 ns |  1.12 |    0.02 |    5 |         - |          NA |
-| BingoSort               | 256  | PipeOrgan          |  20,681.1 ns |    399.64 ns |   209.02 ns |  1.12 |    0.02 |    5 |         - |          NA |
-| DotnetSort              | 256  | PipeOrgan          |   1,923.0 ns |    378.48 ns |   197.95 ns |  0.10 |    0.01 |    1 |         - |          NA |
-|      |                    |              |              |             |       |         |      |           |             |
-| **SelectionSort**           | **256**  | **ManyDuplicates**     |  **24,420.4 ns** |    **791.59 ns** |   **414.02 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| SelectionSortSimd       | 256  | ManyDuplicates     |   9,248.8 ns |    290.18 ns |   128.84 ns |  0.38 |    0.01 |    2 |         - |          NA |
-| DoubleSelectionSort     | 256  | ManyDuplicates     |  19,503.6 ns |    354.06 ns |   185.18 ns |  0.80 |    0.01 |    3 |         - |          NA |
-| DoubleSelectionSortSimd | 256  | ManyDuplicates     |  10,739.6 ns |    158.17 ns |    70.23 ns |  0.44 |    0.01 |    2 |         - |          NA |
-| CycleSort               | 256  | ManyDuplicates     |  49,949.3 ns |    130.75 ns |    58.05 ns |  2.05 |    0.03 |    6 |         - |          NA |
-| PancakeSort             | 256  | ManyDuplicates     |  30,542.9 ns |    125.42 ns |    55.69 ns |  1.25 |    0.02 |    5 |         - |          NA |
-| BingoSort               | 256  | ManyDuplicates     |   6,132.6 ns |    323.31 ns |   169.10 ns |  0.25 |    0.01 |    1 |         - |          NA |
-| DotnetSort              | 256  | ManyDuplicates     |   5,560.5 ns |    431.46 ns |   225.66 ns |  0.23 |    0.01 |    1 |         - |          NA |
-|      |                    |              |              |             |       |         |      |           |             |
-| **SelectionSort**           | **1024** | **Random**             | **326,342.0 ns** |    **825.26 ns** |   **366.42 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| SelectionSortSimd       | 1024 | Random             |  58,328.6 ns |    283.78 ns |   148.42 ns |  0.18 |    0.00 |    2 |         - |          NA |
-| DoubleSelectionSort     | 1024 | Random             | 194,406.6 ns |    479.06 ns |   212.71 ns |  0.60 |    0.00 |    3 |         - |          NA |
-| DoubleSelectionSortSimd | 1024 | Random             |  58,565.1 ns |    434.66 ns |   192.99 ns |  0.18 |    0.00 |    2 |         - |          NA |
-| CycleSort               | 1024 | Random             | 772,464.5 ns |  1,020.55 ns |   533.77 ns |  2.37 |    0.00 |    5 |         - |          NA |
-| PancakeSort             | 1024 | Random             | 376,655.4 ns |  2,889.12 ns | 1,511.06 ns |  1.15 |    0.00 |    4 |         - |          NA |
-| BingoSort               | 1024 | Random             | 340,111.5 ns |    711.74 ns |   316.02 ns |  1.04 |    0.00 |    4 |         - |          NA |
-| DotnetSort              | 1024 | Random             |  29,852.8 ns |    421.09 ns |   220.24 ns |  0.09 |    0.00 |    1 |         - |          NA |
-|      |                    |              |              |             |       |         |      |           |             |
-| **SelectionSort**           | **1024** | **SingleElementMoved** | **292,507.7 ns** |    **666.19 ns** |   **295.79 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| SelectionSortSimd       | 1024 | SingleElementMoved |  33,052.9 ns |    682.86 ns |   357.15 ns |  0.11 |    0.00 |    3 |         - |          NA |
-| DoubleSelectionSort     | 1024 | SingleElementMoved | 144,972.2 ns | 13,144.05 ns | 6,874.59 ns |  0.50 |    0.02 |    4 |         - |          NA |
-| DoubleSelectionSortSimd | 1024 | SingleElementMoved |  22,318.0 ns |    448.39 ns |   234.51 ns |  0.08 |    0.00 |    2 |         - |          NA |
-| CycleSort               | 1024 | SingleElementMoved | 390,257.7 ns |  1,250.43 ns |   654.00 ns |  1.33 |    0.00 |    7 |         - |          NA |
-| PancakeSort             | 1024 | SingleElementMoved | 239,791.1 ns | 14,321.93 ns | 7,490.65 ns |  0.82 |    0.02 |    5 |         - |          NA |
-| BingoSort               | 1024 | SingleElementMoved | 293,220.3 ns |    283.37 ns |   101.05 ns |  1.00 |    0.00 |    6 |         - |          NA |
-| DotnetSort              | 1024 | SingleElementMoved |   5,190.5 ns |     69.81 ns |    31.00 ns |  0.02 |    0.00 |    1 |         - |          NA |
-|      |                    |              |              |             |       |         |      |           |             |
-| **SelectionSort**           | **1024** | **Sorted**             | **291,213.9 ns** |    **678.20 ns** |   **241.85 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
-| SelectionSortSimd       | 1024 | Sorted             |  25,101.4 ns |    358.40 ns |   127.81 ns |  0.09 |    0.00 |    3 |         - |          NA |
-| DoubleSelectionSort     | 1024 | Sorted             | 124,301.0 ns |    640.17 ns |   284.24 ns |  0.43 |    0.00 |    4 |         - |          NA |
-| DoubleSelectionSortSimd | 1024 | Sorted             |  16,391.8 ns |    304.13 ns |   135.03 ns |  0.06 |    0.00 |    2 |         - |          NA |
-| CycleSort               | 1024 | Sorted             | 263,020.2 ns |  1,465.39 ns |   650.64 ns |  0.90 |    0.00 |    6 |         - |          NA |
-| PancakeSort             | 1024 | Sorted             | 196,904.3 ns |    837.54 ns |   298.67 ns |  0.68 |    0.00 |    5 |         - |          NA |
-| BingoSort               | 1024 | Sorted             | 292,337.1 ns |  1,308.81 ns |   581.12 ns |  1.00 |    0.00 |    6 |         - |          NA |
-| DotnetSort              | 1024 | Sorted             |   3,138.0 ns |     33.81 ns |    12.06 ns |  0.01 |    0.00 |    1 |         - |          NA |
-|      |                    |              |              |             |       |         |      |           |             |
-| **SelectionSort**           | **1024** | **Reversed**           | **265,386.8 ns** | **21,534.24 ns** | **9,561.33 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| SelectionSortSimd       | 1024 | Reversed           |  39,321.3 ns |    187.90 ns |    83.43 ns |  0.15 |    0.00 |    2 |         - |          NA |
-| DoubleSelectionSort     | 1024 | Reversed           | 124,663.4 ns |    363.63 ns |   129.67 ns |  0.47 |    0.02 |    3 |         - |          NA |
-| DoubleSelectionSortSimd | 1024 | Reversed           |  38,598.8 ns |    452.58 ns |   236.71 ns |  0.15 |    0.00 |    2 |         - |          NA |
-| CycleSort               | 1024 | Reversed           | 461,216.0 ns |  1,902.97 ns |   995.29 ns |  1.74 |    0.06 |    7 |         - |          NA |
-| PancakeSort             | 1024 | Reversed           | 215,572.7 ns | 17,334.72 ns | 9,066.39 ns |  0.81 |    0.04 |    4 |         - |          NA |
-| BingoSort               | 1024 | Reversed           | 341,912.1 ns | 11,777.87 ns | 6,160.05 ns |  1.29 |    0.05 |    6 |         - |          NA |
-| DotnetSort              | 1024 | Reversed           |   5,782.4 ns |    966.97 ns |   505.74 ns |  0.02 |    0.00 |    1 |         - |          NA |
-|      |                    |              |              |             |       |         |      |           |             |
-| **SelectionSort**           | **1024** | **PipeOrgan**          | **302,081.5 ns** |  **2,341.35 ns** | **1,224.57 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
-| SelectionSortSimd       | 1024 | PipeOrgan          |  49,564.8 ns |    265.98 ns |   118.10 ns |  0.16 |    0.00 |    3 |         - |          NA |
-| DoubleSelectionSort     | 1024 | PipeOrgan          | 154,325.2 ns |    736.11 ns |   326.84 ns |  0.51 |    0.00 |    4 |         - |          NA |
-| DoubleSelectionSortSimd | 1024 | PipeOrgan          |  30,354.8 ns |    220.17 ns |   115.15 ns |  0.10 |    0.00 |    2 |         - |          NA |
-| CycleSort               | 1024 | PipeOrgan          | 678,585.0 ns |  2,876.12 ns | 1,277.02 ns |  2.25 |    0.01 |    6 |         - |          NA |
-| PancakeSort             | 1024 | PipeOrgan          | 314,135.3 ns |  1,298.63 ns |   679.21 ns |  1.04 |    0.00 |    5 |         - |          NA |
-| BingoSort               | 1024 | PipeOrgan          | 332,607.9 ns |  3,902.99 ns | 2,041.34 ns |  1.10 |    0.01 |    5 |         - |          NA |
-| DotnetSort              | 1024 | PipeOrgan          |  12,901.2 ns |    406.03 ns |   180.28 ns |  0.04 |    0.00 |    1 |         - |          NA |
-|      |                    |              |              |             |       |         |      |           |             |
-| **SelectionSort**           | **1024** | **ManyDuplicates**     | **313,366.3 ns** |  **1,277.30 ns** |   **567.13 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
-| SelectionSortSimd       | 1024 | ManyDuplicates     |  56,575.4 ns |    238.88 ns |   124.94 ns |  0.18 |    0.00 |    2 |         - |          NA |
-| DoubleSelectionSort     | 1024 | ManyDuplicates     | 213,792.0 ns |  1,867.57 ns |   829.21 ns |  0.68 |    0.00 |    3 |         - |          NA |
-| DoubleSelectionSortSimd | 1024 | ManyDuplicates     |  57,504.3 ns |    329.76 ns |   172.47 ns |  0.18 |    0.00 |    2 |         - |          NA |
-| CycleSort               | 1024 | ManyDuplicates     | 765,560.9 ns |    801.72 ns |   419.32 ns |  2.44 |    0.00 |    5 |         - |          NA |
-| PancakeSort             | 1024 | ManyDuplicates     | 357,405.9 ns |    826.38 ns |   366.92 ns |  1.14 |    0.00 |    4 |         - |          NA |
-| BingoSort               | 1024 | ManyDuplicates     |  20,333.8 ns |    277.48 ns |   145.13 ns |  0.06 |    0.00 |    1 |         - |          NA |
-| DotnetSort              | 1024 | ManyDuplicates     |  23,289.6 ns |    395.57 ns |   206.89 ns |  0.07 |    0.00 |    1 |         - |          NA |
+| Method                  | Size | Pattern            | Mean         | Error        | StdDev      | Median       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+| ------------------------ |----- |------------------- |-------------:|-------------:|------------:|-------------:|------:|--------:|-----:|----------:|------------:|
+| **SelectionSort**           | **256**  | **Random**             |  **25,925.3 ns** |    **504.28 ns** |   **223.90 ns** |  **25,840.3 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| SelectionSortSimd       | 256  | Random             |   9,731.1 ns |    491.52 ns |   218.24 ns |   9,672.0 ns |  0.38 |    0.01 |    2 |         - |          NA |
+| DoubleSelectionSort     | 256  | Random             |  18,475.2 ns |    101.66 ns |    45.14 ns |  18,455.2 ns |  0.71 |    0.01 |    3 |         - |          NA |
+| DoubleSelectionSortSimd | 256  | Random             |  11,106.0 ns |    306.39 ns |   160.25 ns |  11,084.8 ns |  0.43 |    0.01 |    2 |         - |          NA |
+| CycleSort               | 256  | Random             |  48,836.7 ns |    229.72 ns |   120.15 ns |  48,834.5 ns |  1.88 |    0.02 |    5 |         - |          NA |
+| PancakeSort             | 256  | Random             |  32,716.0 ns |    432.92 ns |   226.43 ns |  32,611.5 ns |  1.26 |    0.01 |    4 |         - |          NA |
+| BingoSort               | 256  | Random             |  29,318.2 ns |    358.87 ns |   187.69 ns |  29,241.7 ns |  1.13 |    0.01 |    4 |         - |          NA |
+| DotnetSort              | 256  | Random             |   5,865.3 ns |    212.42 ns |   111.10 ns |   5,836.0 ns |  0.23 |    0.00 |    1 |         - |          NA |
+|      |                    |              |              |             |              |       |         |      |           |             |
+| **SelectionSort**           | **256**  | **SingleElementMoved** |  **19,407.8 ns** |    **136.71 ns** |    **71.50 ns** |  **19,382.2 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| SelectionSortSimd       | 256  | SingleElementMoved |   4,998.1 ns |    169.23 ns |    60.35 ns |   5,020.6 ns |  0.26 |    0.00 |    3 |         - |          NA |
+| DoubleSelectionSort     | 256  | SingleElementMoved |  10,846.7 ns |    304.65 ns |   159.34 ns |  10,878.9 ns |  0.56 |    0.01 |    4 |         - |          NA |
+| DoubleSelectionSortSimd | 256  | SingleElementMoved |   4,145.9 ns |    327.47 ns |   171.27 ns |   4,159.3 ns |  0.21 |    0.01 |    2 |         - |          NA |
+| CycleSort               | 256  | SingleElementMoved |  25,328.6 ns |    252.73 ns |    90.13 ns |  25,375.2 ns |  1.31 |    0.01 |    7 |         - |          NA |
+| PancakeSort             | 256  | SingleElementMoved |  15,898.4 ns |    153.18 ns |    80.12 ns |  15,873.6 ns |  0.82 |    0.00 |    5 |         - |          NA |
+| BingoSort               | 256  | SingleElementMoved |  19,580.2 ns |    282.51 ns |   147.76 ns |  19,568.6 ns |  1.01 |    0.01 |    6 |         - |          NA |
+| DotnetSort              | 256  | SingleElementMoved |   1,147.7 ns |    239.34 ns |   125.18 ns |   1,099.0 ns |  0.06 |    0.01 |    1 |         - |          NA |
+|      |                    |              |              |             |              |       |         |      |           |             |
+| **SelectionSort**           | **256**  | **Sorted**             |  **19,209.0 ns** |    **459.22 ns** |   **240.18 ns** |  **19,280.6 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| SelectionSortSimd       | 256  | Sorted             |   3,682.3 ns |    217.93 ns |   113.98 ns |   3,649.3 ns |  0.19 |    0.01 |    2 |         - |          NA |
+| DoubleSelectionSort     | 256  | Sorted             |   8,189.3 ns |    206.93 ns |    91.88 ns |   8,147.9 ns |  0.43 |    0.01 |    3 |         - |          NA |
+| DoubleSelectionSortSimd | 256  | Sorted             |   5,355.1 ns |  6,402.09 ns | 3,348.42 ns |   3,369.2 ns |  0.28 |    0.16 |    2 |         - |          NA |
+| CycleSort               | 256  | Sorted             |  17,449.4 ns |    245.75 ns |   128.53 ns |  17,412.6 ns |  0.91 |    0.01 |    5 |         - |          NA |
+| PancakeSort             | 256  | Sorted             |  13,071.9 ns |    294.35 ns |   153.95 ns |  13,025.9 ns |  0.68 |    0.01 |    4 |         - |          NA |
+| BingoSort               | 256  | Sorted             |  19,179.4 ns |     66.26 ns |    29.42 ns |  19,186.3 ns |  1.00 |    0.01 |    5 |         - |          NA |
+| DotnetSort              | 256  | Sorted             |     634.3 ns |     13.61 ns |     6.04 ns |     630.5 ns |  0.03 |    0.00 |    1 |         - |          NA |
+|      |                    |              |              |             |              |       |         |      |           |             |
+| **SelectionSort**           | **256**  | **Reversed**           |  **16,904.2 ns** |    **405.44 ns** |   **212.05 ns** |  **16,795.1 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| SelectionSortSimd       | 256  | Reversed           |   5,731.3 ns |    133.16 ns |    69.65 ns |   5,716.5 ns |  0.34 |    0.01 |    3 |         - |          NA |
+| DoubleSelectionSort     | 256  | Reversed           |   8,179.1 ns |    310.61 ns |   162.46 ns |   8,103.5 ns |  0.48 |    0.01 |    4 |         - |          NA |
+| DoubleSelectionSortSimd | 256  | Reversed           |   4,362.5 ns |    249.98 ns |   130.74 ns |   4,333.7 ns |  0.26 |    0.01 |    2 |         - |          NA |
+| CycleSort               | 256  | Reversed           |  30,325.9 ns |    215.49 ns |    95.68 ns |  30,305.0 ns |  1.79 |    0.02 |    7 |         - |          NA |
+| PancakeSort             | 256  | Reversed           |  14,381.9 ns |    222.90 ns |    98.97 ns |  14,371.3 ns |  0.85 |    0.01 |    5 |         - |          NA |
+| BingoSort               | 256  | Reversed           |  22,313.8 ns |  3,769.63 ns | 1,673.74 ns |  22,636.4 ns |  1.32 |    0.09 |    6 |         - |          NA |
+| DotnetSort              | 256  | Reversed           |   1,111.1 ns |    165.35 ns |    58.96 ns |   1,127.2 ns |  0.07 |    0.00 |    1 |         - |          NA |
+|      |                    |              |              |             |              |       |         |      |           |             |
+| **SelectionSort**           | **256**  | **PipeOrgan**          |  **18,435.5 ns** |    **506.12 ns** |   **264.71 ns** |  **18,469.2 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| SelectionSortSimd       | 256  | PipeOrgan          |   7,104.6 ns |    177.00 ns |    92.57 ns |   7,087.9 ns |  0.39 |    0.01 |    3 |         - |          NA |
+| DoubleSelectionSort     | 256  | PipeOrgan          |   8,821.5 ns |    891.42 ns |   466.23 ns |   8,649.6 ns |  0.48 |    0.02 |    4 |         - |          NA |
+| DoubleSelectionSortSimd | 256  | PipeOrgan          |   4,292.1 ns |    182.69 ns |    81.12 ns |   4,252.7 ns |  0.23 |    0.01 |    2 |         - |          NA |
+| CycleSort               | 256  | PipeOrgan          |  42,868.6 ns |    208.09 ns |    92.39 ns |  42,885.2 ns |  2.33 |    0.03 |    6 |         - |          NA |
+| PancakeSort             | 256  | PipeOrgan          |  20,608.1 ns |    272.61 ns |   142.58 ns |  20,557.3 ns |  1.12 |    0.02 |    5 |         - |          NA |
+| BingoSort               | 256  | PipeOrgan          |  20,007.4 ns |    983.10 ns |   514.18 ns |  19,970.9 ns |  1.09 |    0.03 |    5 |         - |          NA |
+| DotnetSort              | 256  | PipeOrgan          |   1,913.9 ns |    314.39 ns |   139.59 ns |   1,835.2 ns |  0.10 |    0.01 |    1 |         - |          NA |
+|      |                    |              |              |             |              |       |         |      |           |             |
+| **SelectionSort**           | **256**  | **ManyDuplicates**     |  **24,215.7 ns** |    **210.58 ns** |   **110.14 ns** |  **24,239.7 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| SelectionSortSimd       | 256  | ManyDuplicates     |   9,195.7 ns |    227.87 ns |    81.26 ns |   9,219.4 ns |  0.38 |    0.00 |    2 |         - |          NA |
+| DoubleSelectionSort     | 256  | ManyDuplicates     |  19,328.2 ns |    188.44 ns |    98.56 ns |  19,306.5 ns |  0.80 |    0.01 |    3 |         - |          NA |
+| DoubleSelectionSortSimd | 256  | ManyDuplicates     |  10,923.9 ns |    407.15 ns |   212.95 ns |  10,851.3 ns |  0.45 |    0.01 |    2 |         - |          NA |
+| CycleSort               | 256  | ManyDuplicates     |  50,099.1 ns |    257.02 ns |   114.12 ns |  50,082.6 ns |  2.07 |    0.01 |    6 |         - |          NA |
+| PancakeSort             | 256  | ManyDuplicates     |  30,665.0 ns |    329.61 ns |   172.39 ns |  30,671.8 ns |  1.27 |    0.01 |    5 |         - |          NA |
+| BingoSort               | 256  | ManyDuplicates     |   6,253.2 ns |    155.10 ns |    81.12 ns |   6,214.4 ns |  0.26 |    0.00 |    1 |         - |          NA |
+| DotnetSort              | 256  | ManyDuplicates     |   5,574.5 ns |    272.04 ns |   142.28 ns |   5,614.6 ns |  0.23 |    0.01 |    1 |         - |          NA |
+|      |                    |              |              |             |              |       |         |      |           |             |
+| **SelectionSort**           | **1024** | **Random**             | **327,979.3 ns** |  **4,050.43 ns** | **1,798.42 ns** | **326,946.7 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| SelectionSortSimd       | 1024 | Random             |  58,504.8 ns |    282.80 ns |   147.91 ns |  58,484.3 ns |  0.18 |    0.00 |    2 |         - |          NA |
+| DoubleSelectionSort     | 1024 | Random             | 194,856.2 ns |    285.50 ns |   101.81 ns | 194,854.7 ns |  0.59 |    0.00 |    3 |         - |          NA |
+| DoubleSelectionSortSimd | 1024 | Random             |  59,005.8 ns |    302.90 ns |   134.49 ns |  59,038.8 ns |  0.18 |    0.00 |    2 |         - |          NA |
+| CycleSort               | 1024 | Random             | 773,969.0 ns |  2,914.76 ns | 1,524.47 ns | 773,594.5 ns |  2.36 |    0.01 |    5 |         - |          NA |
+| PancakeSort             | 1024 | Random             | 376,113.8 ns |  2,674.49 ns | 1,398.81 ns | 375,460.6 ns |  1.15 |    0.01 |    4 |         - |          NA |
+| BingoSort               | 1024 | Random             | 340,412.0 ns |    572.25 ns |   254.08 ns | 340,457.9 ns |  1.04 |    0.01 |    4 |         - |          NA |
+| DotnetSort              | 1024 | Random             |  29,983.1 ns |    301.45 ns |   157.67 ns |  29,986.5 ns |  0.09 |    0.00 |    1 |         - |          NA |
+|      |                    |              |              |             |              |       |         |      |           |             |
+| **SelectionSort**           | **1024** | **SingleElementMoved** | **293,187.3 ns** |  **1,174.78 ns** |   **521.61 ns** | **293,131.0 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| SelectionSortSimd       | 1024 | SingleElementMoved |  33,266.9 ns |    307.42 ns |   136.50 ns |  33,267.8 ns |  0.11 |    0.00 |    3 |         - |          NA |
+| DoubleSelectionSort     | 1024 | SingleElementMoved | 150,524.9 ns |  1,987.44 ns |   882.44 ns | 150,311.1 ns |  0.51 |    0.00 |    4 |         - |          NA |
+| DoubleSelectionSortSimd | 1024 | SingleElementMoved |  22,433.8 ns |    673.07 ns |   352.03 ns |  22,586.7 ns |  0.08 |    0.00 |    2 |         - |          NA |
+| CycleSort               | 1024 | SingleElementMoved | 390,389.5 ns |  1,079.15 ns |   479.15 ns | 390,297.2 ns |  1.33 |    0.00 |    7 |         - |          NA |
+| PancakeSort             | 1024 | SingleElementMoved | 242,167.6 ns | 15,129.49 ns | 7,913.01 ns | 241,904.5 ns |  0.83 |    0.03 |    5 |         - |          NA |
+| BingoSort               | 1024 | SingleElementMoved | 294,368.8 ns |    864.80 ns |   383.97 ns | 294,348.3 ns |  1.00 |    0.00 |    6 |         - |          NA |
+| DotnetSort              | 1024 | SingleElementMoved |   5,143.2 ns |     57.01 ns |    25.31 ns |   5,147.4 ns |  0.02 |    0.00 |    1 |         - |          NA |
+|      |                    |              |              |             |              |       |         |      |           |             |
+| **SelectionSort**           | **1024** | **Sorted**             | **292,329.3 ns** |  **1,733.34 ns** |   **769.61 ns** | **292,393.9 ns** |  **1.00** |    **0.00** |    **6** |         **-** |          **NA** |
+| SelectionSortSimd       | 1024 | Sorted             |  25,057.2 ns |    291.01 ns |   152.20 ns |  25,083.3 ns |  0.09 |    0.00 |    3 |         - |          NA |
+| DoubleSelectionSort     | 1024 | Sorted             | 124,918.2 ns |    456.87 ns |   202.86 ns | 124,910.7 ns |  0.43 |    0.00 |    4 |         - |          NA |
+| DoubleSelectionSortSimd | 1024 | Sorted             |  16,543.5 ns |    410.69 ns |   214.80 ns |  16,530.3 ns |  0.06 |    0.00 |    2 |         - |          NA |
+| CycleSort               | 1024 | Sorted             | 262,883.6 ns |    430.84 ns |   191.30 ns | 262,887.5 ns |  0.90 |    0.00 |    6 |         - |          NA |
+| PancakeSort             | 1024 | Sorted             | 197,188.7 ns |    866.98 ns |   453.45 ns | 197,222.3 ns |  0.67 |    0.00 |    5 |         - |          NA |
+| BingoSort               | 1024 | Sorted             | 292,418.1 ns |    961.16 ns |   426.76 ns | 292,483.8 ns |  1.00 |    0.00 |    6 |         - |          NA |
+| DotnetSort              | 1024 | Sorted             |   3,185.5 ns |    152.86 ns |    67.87 ns |   3,177.0 ns |  0.01 |    0.00 |    1 |         - |          NA |
+|      |                    |              |              |             |              |       |         |      |           |             |
+| **SelectionSort**           | **1024** | **Reversed**           | **264,693.8 ns** | **11,016.66 ns** | **5,761.93 ns** | **263,738.8 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| SelectionSortSimd       | 1024 | Reversed           |  39,262.5 ns |    315.21 ns |   164.86 ns |  39,257.0 ns |  0.15 |    0.00 |    2 |         - |          NA |
+| DoubleSelectionSort     | 1024 | Reversed           | 124,912.0 ns |    228.53 ns |   101.47 ns | 124,924.1 ns |  0.47 |    0.01 |    3 |         - |          NA |
+| DoubleSelectionSortSimd | 1024 | Reversed           |  38,375.5 ns |    369.29 ns |   193.15 ns |  38,413.9 ns |  0.15 |    0.00 |    2 |         - |          NA |
+| CycleSort               | 1024 | Reversed           | 462,508.1 ns |  2,451.64 ns | 1,282.25 ns | 461,968.4 ns |  1.75 |    0.04 |    7 |         - |          NA |
+| PancakeSort             | 1024 | Reversed           | 213,801.1 ns | 15,898.06 ns | 7,058.84 ns | 213,864.5 ns |  0.81 |    0.03 |    4 |         - |          NA |
+| BingoSort               | 1024 | Reversed           | 342,941.0 ns | 18,787.17 ns | 9,826.05 ns | 338,489.1 ns |  1.30 |    0.04 |    6 |         - |          NA |
+| DotnetSort              | 1024 | Reversed           |   5,953.5 ns |    985.71 ns |   515.54 ns |   5,935.8 ns |  0.02 |    0.00 |    1 |         - |          NA |
+|      |                    |              |              |             |              |       |         |      |           |             |
+| **SelectionSort**           | **1024** | **PipeOrgan**          | **302,224.6 ns** |  **3,182.00 ns** | **1,664.25 ns** | **302,488.4 ns** |  **1.00** |    **0.00** |    **5** |         **-** |          **NA** |
+| SelectionSortSimd       | 1024 | PipeOrgan          |  49,331.6 ns |    293.88 ns |   153.70 ns |  49,310.6 ns |  0.16 |    0.00 |    3 |         - |          NA |
+| DoubleSelectionSort     | 1024 | PipeOrgan          | 154,673.4 ns |  2,145.01 ns | 1,121.88 ns | 154,379.2 ns |  0.51 |    0.00 |    4 |         - |          NA |
+| DoubleSelectionSortSimd | 1024 | PipeOrgan          |  30,374.5 ns |    326.37 ns |   144.91 ns |  30,318.1 ns |  0.10 |    0.00 |    2 |         - |          NA |
+| CycleSort               | 1024 | PipeOrgan          | 678,795.3 ns |  1,095.44 ns |   486.38 ns | 678,718.3 ns |  2.25 |    0.01 |    6 |         - |          NA |
+| PancakeSort             | 1024 | PipeOrgan          | 316,800.3 ns |  1,203.03 ns |   534.15 ns | 316,672.5 ns |  1.05 |    0.01 |    5 |         - |          NA |
+| BingoSort               | 1024 | PipeOrgan          | 333,573.9 ns |  4,822.39 ns | 2,522.20 ns | 334,010.5 ns |  1.10 |    0.01 |    5 |         - |          NA |
+| DotnetSort              | 1024 | PipeOrgan          |  16,145.7 ns |    989.13 ns |   517.34 ns |  16,079.9 ns |  0.05 |    0.00 |    1 |         - |          NA |
+|      |                    |              |              |             |              |       |         |      |           |             |
+| **SelectionSort**           | **1024** | **ManyDuplicates**     | **313,922.4 ns** |  **3,140.96 ns** | **1,394.61 ns** | **313,207.4 ns** |  **1.00** |    **0.00** |    **4** |         **-** |          **NA** |
+| SelectionSortSimd       | 1024 | ManyDuplicates     |  57,147.0 ns |  1,261.25 ns |   560.00 ns |  56,943.6 ns |  0.18 |    0.00 |    2 |         - |          NA |
+| DoubleSelectionSort     | 1024 | ManyDuplicates     | 215,589.6 ns |  4,500.29 ns | 2,353.74 ns | 214,469.0 ns |  0.69 |    0.01 |    3 |         - |          NA |
+| DoubleSelectionSortSimd | 1024 | ManyDuplicates     |  57,823.4 ns |    349.21 ns |   182.64 ns |  57,862.2 ns |  0.18 |    0.00 |    2 |         - |          NA |
+| CycleSort               | 1024 | ManyDuplicates     | 765,685.5 ns |    943.71 ns |   493.58 ns | 765,721.4 ns |  2.44 |    0.01 |    5 |         - |          NA |
+| PancakeSort             | 1024 | ManyDuplicates     | 357,963.5 ns |    666.41 ns |   295.89 ns | 357,871.9 ns |  1.14 |    0.00 |    4 |         - |          NA |
+| BingoSort               | 1024 | ManyDuplicates     |  20,409.8 ns |    457.76 ns |   203.25 ns |  20,411.1 ns |  0.07 |    0.00 |    1 |         - |          NA |
+| DotnetSort              | 1024 | ManyDuplicates     |  23,409.3 ns |    409.75 ns |   214.31 ns |  23,440.6 ns |  0.07 |    0.00 |    1 |         - |          NA |
 
 ### TreeBenchmark
 
 ```
 BenchmarkDotNet v0.16.0-preview.2, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-AMD EPYC 9V74 3.69GHz, 1 CPU, 4 logical and 2 physical cores
-Memory: 15.61 GB Total, 12.49 GB Available
+AMD EPYC 9V74 3.59GHz, 1 CPU, 4 logical and 2 physical cores
+Memory: 15.61 GB Total, 12.44 GB Available
 .NET SDK 11.0.100
   [Host]     : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
   Job-GKDVVL : .NET 11.0.0 (11.0.0, 11.0.26.53018), X64 RyuJIT x86-64-v4
@@ -2838,223 +2838,223 @@ EnvironmentVariables=DOTNET_TieredCompilation=0  InvocationCount=64  IterationCo
 UnrollFactor=1  WarmupCount=2  
 ```
 
-| Method                 | Size | Pattern            | Mean            | Error         | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
-| ----------------------- |----- |------------------- |----------------:|--------------:|-------------:|------:|--------:|-----:|----------:|------------:|
-| **BalancedBinaryTreeSort** | **256**  | **Random**             |     **16,320.8 ns** |     **344.66 ns** |    **153.03 ns** |  **1.38** |    **0.02** |    **2** |         **-** |          **NA** |
-| BTreeSort              | 256  | Random             |     15,914.7 ns |     145.22 ns |     75.95 ns |  1.35 |    0.01 |    2 |         - |          NA |
-| BPlusTreeSort          | 256  | Random             |     15,523.9 ns |     277.74 ns |    145.26 ns |  1.32 |    0.02 |    2 |         - |          NA |
-| CartesianTreeSort      | 256  | Random             |     12,998.7 ns |     278.21 ns |    145.51 ns |  1.10 |    0.02 |    2 |         - |          NA |
-| BinaryTreeSort         | 256  | Random             |     11,787.2 ns |     208.59 ns |    109.10 ns |  1.00 |    0.00 |    2 |         - |          NA |
-| SplaySort              | 256  | Random             |     30,495.2 ns |     578.91 ns |    302.78 ns |  2.59 |    0.03 |    3 |         - |          NA |
-| TreapSort              | 256  | Random             |     17,896.9 ns |     200.82 ns |    105.03 ns |  1.52 |    0.02 |    2 |         - |          NA |
-| DotnetSort             | 256  | Random             |      5,913.6 ns |     489.41 ns |    255.97 ns |  0.50 |    0.02 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **256**  | **SingleElementMoved** |      **6,517.0 ns** |      **78.54 ns** |     **41.08 ns** |  **0.12** |    **0.00** |    **5** |         **-** |          **NA** |
-| BTreeSort              | 256  | SingleElementMoved |      4,748.6 ns |     240.37 ns |    125.72 ns |  0.09 |    0.00 |    4 |         - |          NA |
-| BPlusTreeSort          | 256  | SingleElementMoved |      4,413.7 ns |     318.31 ns |    166.48 ns |  0.08 |    0.00 |    4 |         - |          NA |
-| CartesianTreeSort      | 256  | SingleElementMoved |      1,597.3 ns |       5.77 ns |      2.56 ns |  0.03 |    0.00 |    2 |         - |          NA |
-| BinaryTreeSort         | 256  | SingleElementMoved |     53,651.2 ns |      91.23 ns |     32.53 ns |  1.00 |    0.00 |    6 |         - |          NA |
-| SplaySort              | 256  | SingleElementMoved |      3,338.2 ns |      10.83 ns |      3.86 ns |  0.06 |    0.00 |    3 |         - |          NA |
-| TreapSort              | 256  | SingleElementMoved |      4,665.9 ns |     492.54 ns |    218.69 ns |  0.09 |    0.00 |    4 |         - |          NA |
-| DotnetSort             | 256  | SingleElementMoved |      1,147.1 ns |     249.16 ns |    110.63 ns |  0.02 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **256**  | **Sorted**             |      **6,228.9 ns** |     **201.82 ns** |    **105.56 ns** |  **0.11** |    **0.00** |    **5** |         **-** |          **NA** |
-| BTreeSort              | 256  | Sorted             |      4,428.0 ns |      58.27 ns |     20.78 ns |  0.08 |    0.00 |    4 |         - |          NA |
-| BPlusTreeSort          | 256  | Sorted             |      4,004.6 ns |      36.29 ns |     16.11 ns |  0.07 |    0.00 |    4 |         - |          NA |
-| CartesianTreeSort      | 256  | Sorted             |      1,540.5 ns |      13.28 ns |      5.90 ns |  0.03 |    0.00 |    2 |         - |          NA |
-| BinaryTreeSort         | 256  | Sorted             |     58,564.0 ns |     249.73 ns |    130.62 ns |  1.00 |    0.00 |    6 |         - |          NA |
-| SplaySort              | 256  | Sorted             |      2,976.4 ns |      19.18 ns |      6.84 ns |  0.05 |    0.00 |    3 |         - |          NA |
-| TreapSort              | 256  | Sorted             |      3,922.7 ns |     144.35 ns |     75.50 ns |  0.07 |    0.00 |    4 |         - |          NA |
-| DotnetSort             | 256  | Sorted             |        655.4 ns |      12.60 ns |      6.59 ns |  0.01 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **256**  | **Reversed**           |      **6,214.3 ns** |     **207.19 ns** |    **108.37 ns** |  **0.10** |    **0.00** |    **5** |         **-** |          **NA** |
-| BTreeSort              | 256  | Reversed           |      7,245.3 ns |      62.65 ns |     32.77 ns |  0.12 |    0.00 |    5 |         - |          NA |
-| BPlusTreeSort          | 256  | Reversed           |      6,646.4 ns |     243.24 ns |    127.22 ns |  0.11 |    0.00 |    5 |         - |          NA |
-| CartesianTreeSort      | 256  | Reversed           |      1,509.2 ns |       7.96 ns |      2.84 ns |  0.02 |    0.00 |    2 |         - |          NA |
-| BinaryTreeSort         | 256  | Reversed           |     61,802.8 ns |     269.88 ns |    141.15 ns |  1.00 |    0.00 |    6 |         - |          NA |
-| SplaySort              | 256  | Reversed           |      2,975.4 ns |     243.72 ns |    127.47 ns |  0.05 |    0.00 |    3 |         - |          NA |
-| TreapSort              | 256  | Reversed           |      3,846.3 ns |     155.44 ns |     81.30 ns |  0.06 |    0.00 |    4 |         - |          NA |
-| DotnetSort             | 256  | Reversed           |      1,109.2 ns |     128.56 ns |     67.24 ns |  0.02 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **256**  | **PipeOrgan**          |      **5,235.5 ns** |     **261.84 ns** |    **136.95 ns** |  **0.18** |    **0.00** |    **4** |         **-** |          **NA** |
-| BTreeSort              | 256  | PipeOrgan          |      5,376.9 ns |     367.70 ns |    192.31 ns |  0.18 |    0.01 |    4 |         - |          NA |
-| BPlusTreeSort          | 256  | PipeOrgan          |      4,866.1 ns |     343.96 ns |    179.90 ns |  0.17 |    0.01 |    4 |         - |          NA |
-| CartesianTreeSort      | 256  | PipeOrgan          |      1,677.2 ns |       7.49 ns |      3.92 ns |  0.06 |    0.00 |    1 |         - |          NA |
-| BinaryTreeSort         | 256  | PipeOrgan          |     29,185.7 ns |     292.56 ns |    153.01 ns |  1.00 |    0.00 |    5 |         - |          NA |
-| SplaySort              | 256  | PipeOrgan          |      3,401.7 ns |      20.66 ns |      7.37 ns |  0.12 |    0.00 |    3 |         - |          NA |
-| TreapSort              | 256  | PipeOrgan          |      5,370.6 ns |     334.78 ns |    175.09 ns |  0.18 |    0.01 |    4 |         - |          NA |
-| DotnetSort             | 256  | PipeOrgan          |      1,972.2 ns |     339.83 ns |    177.74 ns |  0.07 |    0.01 |    2 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **256**  | **ManyDuplicates**     |     **15,646.4 ns** |      **70.69 ns** |     **31.39 ns** |  **1.49** |    **0.02** |    **3** |         **-** |          **NA** |
-| BTreeSort              | 256  | ManyDuplicates     |     15,384.7 ns |     140.19 ns |     62.24 ns |  1.46 |    0.02 |    3 |         - |          NA |
-| BPlusTreeSort          | 256  | ManyDuplicates     |     14,756.9 ns |     359.07 ns |    187.80 ns |  1.40 |    0.02 |    3 |         - |          NA |
-| CartesianTreeSort      | 256  | ManyDuplicates     |     15,576.8 ns |     168.17 ns |     87.96 ns |  1.48 |    0.02 |    3 |         - |          NA |
-| BinaryTreeSort         | 256  | ManyDuplicates     |     10,509.9 ns |     219.94 ns |    115.03 ns |  1.00 |    0.00 |    2 |         - |          NA |
-| SplaySort              | 256  | ManyDuplicates     |     28,613.9 ns |     530.70 ns |    277.57 ns |  2.72 |    0.04 |    4 |         - |          NA |
-| TreapSort              | 256  | ManyDuplicates     |     17,734.1 ns |     259.28 ns |    115.12 ns |  1.69 |    0.02 |    3 |         - |          NA |
-| DotnetSort             | 256  | ManyDuplicates     |      5,586.0 ns |     434.70 ns |    227.36 ns |  0.53 |    0.02 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **1024** | **Random**             |     **74,571.3 ns** |   **1,146.65 ns** |    **599.72 ns** |  **1.36** |    **0.01** |    **2** |         **-** |          **NA** |
-| BTreeSort              | 1024 | Random             |     75,327.9 ns |     654.09 ns |    342.10 ns |  1.37 |    0.01 |    2 |         - |          NA |
-| BPlusTreeSort          | 1024 | Random             |     73,089.7 ns |     453.87 ns |    201.52 ns |  1.33 |    0.00 |    2 |         - |          NA |
-| CartesianTreeSort      | 1024 | Random             |     64,434.9 ns |     619.81 ns |    275.20 ns |  1.17 |    0.00 |    2 |         - |          NA |
-| BinaryTreeSort         | 1024 | Random             |     54,880.0 ns |     132.63 ns |     69.37 ns |  1.00 |    0.00 |    2 |         - |          NA |
-| SplaySort              | 1024 | Random             |    156,892.6 ns |     848.21 ns |    376.61 ns |  2.86 |    0.01 |    3 |         - |          NA |
-| TreapSort              | 1024 | Random             |     81,339.3 ns |     596.09 ns |    264.67 ns |  1.48 |    0.00 |    2 |         - |          NA |
-| DotnetSort             | 1024 | Random             |     29,990.3 ns |     349.42 ns |    182.76 ns |  0.55 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **1024** | **SingleElementMoved** |     **28,287.5 ns** |     **275.48 ns** |    **144.08 ns** | **0.033** |    **0.00** |    **4** |         **-** |          **NA** |
-| BTreeSort              | 1024 | SingleElementMoved |     21,313.6 ns |     572.04 ns |    299.19 ns | 0.025 |    0.00 |    3 |         - |          NA |
-| BPlusTreeSort          | 1024 | SingleElementMoved |     19,598.6 ns |     181.76 ns |     80.70 ns | 0.023 |    0.00 |    3 |         - |          NA |
-| CartesianTreeSort      | 1024 | SingleElementMoved |      6,154.8 ns |     325.14 ns |    170.06 ns | 0.007 |    0.00 |    1 |         - |          NA |
-| BinaryTreeSort         | 1024 | SingleElementMoved |    852,032.1 ns |   1,199.26 ns |    627.24 ns | 1.000 |    0.00 |    5 |         - |          NA |
-| SplaySort              | 1024 | SingleElementMoved |     13,185.6 ns |     234.14 ns |    103.96 ns | 0.015 |    0.00 |    2 |         - |          NA |
-| TreapSort              | 1024 | SingleElementMoved |     20,034.1 ns |     905.49 ns |    473.59 ns | 0.024 |    0.00 |    3 |         - |          NA |
-| DotnetSort             | 1024 | SingleElementMoved |      5,330.2 ns |     324.00 ns |    143.86 ns | 0.006 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **1024** | **Sorted**             |     **27,466.8 ns** |     **374.42 ns** |    **195.83 ns** | **0.029** |    **0.00** |    **5** |         **-** |          **NA** |
-| BTreeSort              | 1024 | Sorted             |     20,337.4 ns |     122.12 ns |     54.22 ns | 0.022 |    0.00 |    4 |         - |          NA |
-| BPlusTreeSort          | 1024 | Sorted             |     18,993.6 ns |      97.84 ns |     51.17 ns | 0.020 |    0.00 |    4 |         - |          NA |
-| CartesianTreeSort      | 1024 | Sorted             |      6,063.8 ns |     294.86 ns |    154.22 ns | 0.006 |    0.00 |    2 |         - |          NA |
-| BinaryTreeSort         | 1024 | Sorted             |    933,170.8 ns |     981.28 ns |    435.70 ns | 1.000 |    0.00 |    6 |         - |          NA |
-| SplaySort              | 1024 | Sorted             |     11,850.7 ns |     198.45 ns |     88.11 ns | 0.013 |    0.00 |    3 |         - |          NA |
-| TreapSort              | 1024 | Sorted             |     17,946.9 ns |     500.26 ns |    261.64 ns | 0.019 |    0.00 |    4 |         - |          NA |
-| DotnetSort             | 1024 | Sorted             |      3,148.6 ns |      55.17 ns |     19.68 ns | 0.003 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **1024** | **Reversed**           |     **26,675.2 ns** |     **365.13 ns** |    **162.12 ns** | **0.027** |    **0.00** |    **4** |         **-** |          **NA** |
-| BTreeSort              | 1024 | Reversed           |     31,343.6 ns |     127.99 ns |     56.83 ns | 0.032 |    0.00 |    4 |         - |          NA |
-| BPlusTreeSort          | 1024 | Reversed           |     28,928.2 ns |     259.12 ns |    135.53 ns | 0.029 |    0.00 |    4 |         - |          NA |
-| CartesianTreeSort      | 1024 | Reversed           |      5,966.4 ns |     245.88 ns |    128.60 ns | 0.006 |    0.00 |    1 |         - |          NA |
-| BinaryTreeSort         | 1024 | Reversed           |    992,088.4 ns |   1,284.47 ns |    671.80 ns | 1.000 |    0.00 |    5 |         - |          NA |
-| SplaySort              | 1024 | Reversed           |     11,564.8 ns |     332.03 ns |    147.42 ns | 0.012 |    0.00 |    2 |         - |          NA |
-| TreapSort              | 1024 | Reversed           |     17,332.3 ns |     461.12 ns |    241.18 ns | 0.017 |    0.00 |    3 |         - |          NA |
-| DotnetSort             | 1024 | Reversed           |      5,937.2 ns |   1,123.52 ns |    587.62 ns | 0.006 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **1024** | **PipeOrgan**          |     **23,731.3 ns** |     **461.95 ns** |    **241.61 ns** |  **0.05** |    **0.00** |    **3** |         **-** |          **NA** |
-| BTreeSort              | 1024 | PipeOrgan          |     23,437.1 ns |     500.71 ns |    261.88 ns |  0.05 |    0.00 |    3 |         - |          NA |
-| BPlusTreeSort          | 1024 | PipeOrgan          |     21,917.1 ns |     310.48 ns |    162.39 ns |  0.05 |    0.00 |    3 |         - |          NA |
-| CartesianTreeSort      | 1024 | PipeOrgan          |      6,626.3 ns |     270.07 ns |    141.25 ns |  0.01 |    0.00 |    1 |         - |          NA |
-| BinaryTreeSort         | 1024 | PipeOrgan          |    468,491.0 ns |     454.93 ns |    201.99 ns |  1.00 |    0.00 |    4 |         - |          NA |
-| SplaySort              | 1024 | PipeOrgan          |     13,395.4 ns |     224.55 ns |    117.44 ns |  0.03 |    0.00 |    2 |         - |          NA |
-| TreapSort              | 1024 | PipeOrgan          |     24,586.2 ns |     603.90 ns |    315.85 ns |  0.05 |    0.00 |    3 |         - |          NA |
-| DotnetSort             | 1024 | PipeOrgan          |     12,895.0 ns |     474.05 ns |    210.48 ns |  0.03 |    0.00 |    2 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **1024** | **ManyDuplicates**     |     **64,886.3 ns** |     **624.79 ns** |    **326.77 ns** |  **1.12** |    **0.01** |    **2** |         **-** |          **NA** |
-| BTreeSort              | 1024 | ManyDuplicates     |     68,252.0 ns |     200.40 ns |    104.81 ns |  1.17 |    0.00 |    2 |         - |          NA |
-| BPlusTreeSort          | 1024 | ManyDuplicates     |     65,454.4 ns |     238.47 ns |    105.88 ns |  1.13 |    0.00 |    2 |         - |          NA |
-| CartesianTreeSort      | 1024 | ManyDuplicates     |     76,560.9 ns |     388.10 ns |    138.40 ns |  1.32 |    0.00 |    2 |         - |          NA |
-| BinaryTreeSort         | 1024 | ManyDuplicates     |     58,156.4 ns |     443.02 ns |    196.71 ns |  1.00 |    0.00 |    2 |         - |          NA |
-| SplaySort              | 1024 | ManyDuplicates     |    123,647.6 ns |   1,724.40 ns |    901.89 ns |  2.13 |    0.02 |    3 |         - |          NA |
-| TreapSort              | 1024 | ManyDuplicates     |     78,405.5 ns |     775.39 ns |    344.28 ns |  1.35 |    0.01 |    2 |         - |          NA |
-| DotnetSort             | 1024 | ManyDuplicates     |     23,266.1 ns |     289.10 ns |    151.21 ns |  0.40 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **4096** | **Random**             |    **345,232.2 ns** |   **2,807.41 ns** |  **1,246.51 ns** |  **1.33** |    **0.00** |    **3** |         **-** |          **NA** |
-| BTreeSort              | 4096 | Random             |    356,379.4 ns |   1,365.78 ns |    606.42 ns |  1.37 |    0.00 |    3 |         - |          NA |
-| BPlusTreeSort          | 4096 | Random             |    347,371.3 ns |   1,543.07 ns |    807.05 ns |  1.34 |    0.00 |    3 |         - |          NA |
-| CartesianTreeSort      | 4096 | Random             |    323,132.6 ns |   1,371.05 ns |    717.09 ns |  1.24 |    0.00 |    3 |         - |          NA |
-| BinaryTreeSort         | 4096 | Random             |    260,002.9 ns |     847.22 ns |    443.11 ns |  1.00 |    0.00 |    2 |         - |          NA |
-| SplaySort              | 4096 | Random             |    776,419.8 ns |   2,395.66 ns |  1,252.98 ns |  2.99 |    0.01 |    4 |         - |          NA |
-| TreapSort              | 4096 | Random             |    387,533.1 ns |   1,967.24 ns |  1,028.90 ns |  1.49 |    0.00 |    3 |         - |          NA |
-| DotnetSort             | 4096 | Random             |    144,510.9 ns |   1,357.15 ns |    602.58 ns |  0.56 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **4096** | **SingleElementMoved** |    **127,063.0 ns** |     **770.55 ns** |    **342.13 ns** | **0.009** |    **0.00** |    **4** |         **-** |          **NA** |
-| BTreeSort              | 4096 | SingleElementMoved |    102,528.8 ns |     429.54 ns |    190.72 ns | 0.008 |    0.00 |    3 |         - |          NA |
-| BPlusTreeSort          | 4096 | SingleElementMoved |     94,818.7 ns |     358.45 ns |    159.15 ns | 0.007 |    0.00 |    3 |         - |          NA |
-| CartesianTreeSort      | 4096 | SingleElementMoved |     24,294.9 ns |     323.70 ns |    169.30 ns | 0.002 |    0.00 |    1 |         - |          NA |
-| BinaryTreeSort         | 4096 | SingleElementMoved | 13,518,903.0 ns |  21,244.36 ns | 11,111.21 ns | 1.000 |    0.00 |    5 |         - |          NA |
-| SplaySort              | 4096 | SingleElementMoved |     51,888.3 ns |     298.51 ns |    156.13 ns | 0.004 |    0.00 |    2 |         - |          NA |
-| TreapSort              | 4096 | SingleElementMoved |     87,683.5 ns |   5,021.66 ns |  2,626.43 ns | 0.006 |    0.00 |    3 |         - |          NA |
-| DotnetSort             | 4096 | SingleElementMoved |     24,520.0 ns |     398.72 ns |    208.54 ns | 0.002 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **4096** | **Sorted**             |    **123,264.0 ns** |   **1,755.37 ns** |    **625.98 ns** | **0.008** |    **0.00** |    **6** |         **-** |          **NA** |
-| BTreeSort              | 4096 | Sorted             |     98,893.7 ns |     630.84 ns |    280.09 ns | 0.007 |    0.00 |    5 |         - |          NA |
-| BPlusTreeSort          | 4096 | Sorted             |     91,479.5 ns |     222.61 ns |     98.84 ns | 0.006 |    0.00 |    5 |         - |          NA |
-| CartesianTreeSort      | 4096 | Sorted             |     23,947.7 ns |     414.32 ns |    216.70 ns | 0.002 |    0.00 |    2 |         - |          NA |
-| BinaryTreeSort         | 4096 | Sorted             | 14,869,875.3 ns |  23,309.19 ns | 12,191.16 ns | 1.000 |    0.00 |    7 |         - |          NA |
-| SplaySort              | 4096 | Sorted             |     47,568.9 ns |     214.86 ns |    112.37 ns | 0.003 |    0.00 |    3 |         - |          NA |
-| TreapSort              | 4096 | Sorted             |     74,740.2 ns |   2,472.89 ns |  1,097.98 ns | 0.005 |    0.00 |    4 |         - |          NA |
-| DotnetSort             | 4096 | Sorted             |     15,013.5 ns |      86.54 ns |     38.42 ns | 0.001 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **4096** | **Reversed**           |    **120,993.9 ns** |   **1,743.01 ns** |    **911.63 ns** | **0.008** |    **0.00** |    **4** |         **-** |          **NA** |
-| BTreeSort              | 4096 | Reversed           |    137,502.7 ns |     885.28 ns |    463.02 ns | 0.009 |    0.00 |    4 |         - |          NA |
-| BPlusTreeSort          | 4096 | Reversed           |    127,489.4 ns |     756.30 ns |    335.80 ns | 0.008 |    0.00 |    4 |         - |          NA |
-| CartesianTreeSort      | 4096 | Reversed           |     23,490.7 ns |     250.39 ns |    111.18 ns | 0.001 |    0.00 |    1 |         - |          NA |
-| BinaryTreeSort         | 4096 | Reversed           | 15,946,875.1 ns |  11,061.87 ns |  4,911.54 ns | 1.000 |    0.00 |    5 |         - |          NA |
-| SplaySort              | 4096 | Reversed           |     45,657.1 ns |     341.47 ns |    151.61 ns | 0.003 |    0.00 |    2 |         - |          NA |
-| TreapSort              | 4096 | Reversed           |     73,855.6 ns |   2,298.46 ns |  1,020.53 ns | 0.005 |    0.00 |    3 |         - |          NA |
-| DotnetSort             | 4096 | Reversed           |     28,175.3 ns |   2,420.82 ns |  1,266.14 ns | 0.002 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **4096** | **PipeOrgan**          |    **113,144.5 ns** |   **4,675.63 ns** |  **2,445.45 ns** | **0.015** |    **0.00** |    **4** |         **-** |          **NA** |
-| BTreeSort              | 4096 | PipeOrgan          |    112,962.5 ns |   5,497.62 ns |  2,875.36 ns | 0.015 |    0.00 |    4 |         - |          NA |
-| BPlusTreeSort          | 4096 | PipeOrgan          |    105,852.4 ns |   1,101.28 ns |    575.99 ns | 0.014 |    0.00 |    4 |         - |          NA |
-| CartesianTreeSort      | 4096 | PipeOrgan          |     26,101.4 ns |     384.18 ns |    200.93 ns | 0.004 |    0.00 |    1 |         - |          NA |
-| BinaryTreeSort         | 4096 | PipeOrgan          |  7,419,707.2 ns |   7,274.20 ns |  3,229.79 ns | 1.000 |    0.00 |    5 |         - |          NA |
-| SplaySort              | 4096 | PipeOrgan          |     53,062.4 ns |     132.33 ns |     58.76 ns | 0.007 |    0.00 |    2 |         - |          NA |
-| TreapSort              | 4096 | PipeOrgan          |    117,243.0 ns |   4,705.66 ns |  2,461.15 ns | 0.016 |    0.00 |    4 |         - |          NA |
-| DotnetSort             | 4096 | PipeOrgan          |     71,943.3 ns |   1,975.55 ns |  1,033.25 ns | 0.010 |    0.00 |    3 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **4096** | **ManyDuplicates**     |    **261,788.5 ns** |   **3,343.86 ns** |  **1,748.90 ns** |  **0.45** |    **0.00** |    **2** |         **-** |          **NA** |
-| BTreeSort              | 4096 | ManyDuplicates     |    291,405.7 ns |   1,725.94 ns |    766.33 ns |  0.50 |    0.00 |    2 |         - |          NA |
-| BPlusTreeSort          | 4096 | ManyDuplicates     |    278,604.1 ns |   1,673.53 ns |    875.29 ns |  0.48 |    0.00 |    2 |         - |          NA |
-| CartesianTreeSort      | 4096 | ManyDuplicates     |    365,569.5 ns |     797.40 ns |    284.36 ns |  0.63 |    0.00 |    2 |         - |          NA |
-| BinaryTreeSort         | 4096 | ManyDuplicates     |    579,338.6 ns |   1,296.01 ns |    575.44 ns |  1.00 |    0.00 |    3 |         - |          NA |
-| SplaySort              | 4096 | ManyDuplicates     |    504,555.9 ns |   1,664.72 ns |    870.68 ns |  0.87 |    0.00 |    3 |         - |          NA |
-| TreapSort              | 4096 | ManyDuplicates     |    340,196.3 ns |   3,189.02 ns |  1,415.95 ns |  0.59 |    0.00 |    2 |         - |          NA |
-| DotnetSort             | 4096 | ManyDuplicates     |     94,502.6 ns |     975.12 ns |    510.00 ns |  0.16 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **8192** | **Random**             |    **755,244.2 ns** |   **4,778.58 ns** |  **2,121.72 ns** |  **1.29** |    **0.01** |    **3** |         **-** |          **NA** |
-| BTreeSort              | 8192 | Random             |    778,980.4 ns |   3,644.05 ns |  1,905.91 ns |  1.33 |    0.01 |    3 |         - |          NA |
-| BPlusTreeSort          | 8192 | Random             |    747,725.2 ns |   1,901.44 ns |    844.25 ns |  1.27 |    0.01 |    3 |         - |          NA |
-| CartesianTreeSort      | 8192 | Random             |    718,848.2 ns |   3,811.69 ns |  1,692.42 ns |  1.22 |    0.01 |    3 |         - |          NA |
-| BinaryTreeSort         | 8192 | Random             |    586,931.9 ns |   6,049.33 ns |  3,163.92 ns |  1.00 |    0.00 |    2 |         - |          NA |
-| SplaySort              | 8192 | Random             |  1,734,815.2 ns |   5,029.78 ns |  2,233.26 ns |  2.96 |    0.02 |    4 |         - |          NA |
-| TreapSort              | 8192 | Random             |    870,341.7 ns |     984.05 ns |    436.93 ns |  1.48 |    0.01 |    3 |         - |          NA |
-| DotnetSort             | 8192 | Random             |    315,378.0 ns |   2,154.37 ns |  1,126.78 ns |  0.54 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **8192** | **SingleElementMoved** |    **265,494.4 ns** |   **2,364.01 ns** |  **1,049.64 ns** | **0.005** |    **0.00** |    **4** |         **-** |          **NA** |
-| BTreeSort              | 8192 | SingleElementMoved |    214,250.5 ns |   1,114.90 ns |    495.02 ns | 0.004 |    0.00 |    3 |         - |          NA |
-| BPlusTreeSort          | 8192 | SingleElementMoved |    202,025.8 ns |     523.13 ns |    232.27 ns | 0.004 |    0.00 |    3 |         - |          NA |
-| CartesianTreeSort      | 8192 | SingleElementMoved |     48,350.3 ns |     343.68 ns |    152.60 ns | 0.001 |    0.00 |    1 |         - |          NA |
-| BinaryTreeSort         | 8192 | SingleElementMoved | 53,864,160.1 ns |  47,320.48 ns | 21,010.59 ns | 1.000 |    0.00 |    5 |         - |          NA |
-| SplaySort              | 8192 | SingleElementMoved |    103,317.7 ns |     623.60 ns |    276.88 ns | 0.002 |    0.00 |    2 |         - |          NA |
-| TreapSort              | 8192 | SingleElementMoved |    190,195.6 ns |   5,301.89 ns |  2,772.99 ns | 0.004 |    0.00 |    3 |         - |          NA |
-| DotnetSort             | 8192 | SingleElementMoved |     53,422.8 ns |   2,191.49 ns |  1,146.19 ns | 0.001 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **8192** | **Sorted**             |    **258,318.9 ns** |   **1,206.21 ns** |    **535.57 ns** | **0.004** |    **0.00** |    **6** |         **-** |          **NA** |
-| BTreeSort              | 8192 | Sorted             |    207,437.7 ns |     561.73 ns |    249.41 ns | 0.004 |    0.00 |    5 |         - |          NA |
-| BPlusTreeSort          | 8192 | Sorted             |    195,881.1 ns |     852.85 ns |    378.67 ns | 0.003 |    0.00 |    5 |         - |          NA |
-| CartesianTreeSort      | 8192 | Sorted             |     47,517.3 ns |     227.20 ns |    100.88 ns | 0.001 |    0.00 |    2 |         - |          NA |
-| BinaryTreeSort         | 8192 | Sorted             | 58,709,738.7 ns |   5,873.03 ns |  3,071.71 ns | 1.000 |    0.00 |    7 |         - |          NA |
-| SplaySort              | 8192 | Sorted             |     95,233.3 ns |     891.55 ns |    395.85 ns | 0.002 |    0.00 |    3 |         - |          NA |
-| TreapSort              | 8192 | Sorted             |    159,502.5 ns |  16,803.01 ns |  8,788.30 ns | 0.003 |    0.00 |    4 |         - |          NA |
-| DotnetSort             | 8192 | Sorted             |     33,539.2 ns |   3,137.32 ns |  1,640.88 ns | 0.001 |    0.00 |    1 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **8192** | **Reversed**           |    **258,897.9 ns** |   **2,140.16 ns** |  **1,119.34 ns** | **0.004** |    **0.00** |    **5** |         **-** |          **NA** |
-| BTreeSort              | 8192 | Reversed           |    284,498.0 ns |   1,998.81 ns |    887.48 ns | 0.004 |    0.00 |    5 |         - |          NA |
-| BPlusTreeSort          | 8192 | Reversed           |    261,066.7 ns |   1,313.26 ns |    583.09 ns | 0.004 |    0.00 |    5 |         - |          NA |
-| CartesianTreeSort      | 8192 | Reversed           |     46,676.7 ns |      97.11 ns |     43.12 ns | 0.001 |    0.00 |    1 |         - |          NA |
-| BinaryTreeSort         | 8192 | Reversed           | 63,553,675.5 ns |  17,097.32 ns |  7,591.32 ns | 1.000 |    0.00 |    6 |         - |          NA |
-| SplaySort              | 8192 | Reversed           |     91,172.6 ns |   1,199.37 ns |    627.29 ns | 0.001 |    0.00 |    3 |         - |          NA |
-| TreapSort              | 8192 | Reversed           |    152,453.6 ns |   7,341.90 ns |  3,839.96 ns | 0.002 |    0.00 |    4 |         - |          NA |
-| DotnetSort             | 8192 | Reversed           |     59,208.4 ns |   3,880.89 ns |  2,029.78 ns | 0.001 |    0.00 |    2 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **8192** | **PipeOrgan**          |    **275,429.9 ns** |  **15,682.65 ns** |  **8,202.33 ns** | **0.009** |    **0.00** |    **3** |         **-** |          **NA** |
-| BTreeSort              | 8192 | PipeOrgan          |    261,550.1 ns |   9,441.93 ns |  4,938.31 ns | 0.009 |    0.00 |    3 |         - |          NA |
-| BPlusTreeSort          | 8192 | PipeOrgan          |    239,873.9 ns |   5,064.11 ns |  2,248.50 ns | 0.008 |    0.00 |    3 |         - |          NA |
-| CartesianTreeSort      | 8192 | PipeOrgan          |     52,253.2 ns |     489.24 ns |    255.88 ns | 0.002 |    0.00 |    1 |         - |          NA |
-| BinaryTreeSort         | 8192 | PipeOrgan          | 29,551,951.5 ns | 100,437.78 ns | 44,595.00 ns | 1.000 |    0.00 |    5 |         - |          NA |
-| SplaySort              | 8192 | PipeOrgan          |    106,634.3 ns |     895.95 ns |    468.60 ns | 0.004 |    0.00 |    2 |         - |          NA |
-| TreapSort              | 8192 | PipeOrgan          |    412,788.2 ns |   7,147.58 ns |  3,738.32 ns | 0.014 |    0.00 |    4 |         - |          NA |
-| DotnetSort             | 8192 | PipeOrgan          |    278,388.9 ns |   5,056.42 ns |  2,644.61 ns | 0.009 |    0.00 |    3 |         - |          NA |
-|      |                    |                 |               |              |       |         |      |           |             |
-| **BalancedBinaryTreeSort** | **8192** | **ManyDuplicates**     |    **522,646.5 ns** |   **2,530.40 ns** |  **1,323.45 ns** |  **0.19** |    **0.00** |    **2** |         **-** |          **NA** |
-| BTreeSort              | 8192 | ManyDuplicates     |    579,092.3 ns |   1,523.17 ns |    796.65 ns |  0.21 |    0.00 |    2 |         - |          NA |
-| BPlusTreeSort          | 8192 | ManyDuplicates     |    560,745.3 ns |   1,750.11 ns |    915.34 ns |  0.20 |    0.00 |    2 |         - |          NA |
-| CartesianTreeSort      | 8192 | ManyDuplicates     |    796,382.0 ns |   5,505.34 ns |  2,444.41 ns |  0.28 |    0.00 |    3 |         - |          NA |
-| BinaryTreeSort         | 8192 | ManyDuplicates     |  2,824,319.0 ns |   2,493.66 ns |  1,107.20 ns |  1.00 |    0.00 |    5 |         - |          NA |
-| SplaySort              | 8192 | ManyDuplicates     |  1,014,336.9 ns |   2,570.10 ns |  1,344.21 ns |  0.36 |    0.00 |    4 |         - |          NA |
-| TreapSort              | 8192 | ManyDuplicates     |    705,885.2 ns |   1,732.69 ns |    906.23 ns |  0.25 |    0.00 |    3 |         - |          NA |
-| DotnetSort             | 8192 | ManyDuplicates     |    190,348.9 ns |     628.29 ns |    278.96 ns |  0.07 |    0.00 |    1 |         - |          NA |
+| Method                 | Size | Pattern            | Mean            | Error        | StdDev       | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+| ----------------------- |----- |------------------- |----------------:|-------------:|-------------:|------:|--------:|-----:|----------:|------------:|
+| **BalancedBinaryTreeSort** | **256**  | **Random**             |     **16,489.1 ns** |    **389.87 ns** |    **173.11 ns** |  **1.37** |    **0.03** |    **2** |         **-** |          **NA** |
+| BTreeSort              | 256  | Random             |     15,867.4 ns |    273.22 ns |    121.31 ns |  1.32 |    0.02 |    2 |         - |          NA |
+| BPlusTreeSort          | 256  | Random             |     15,347.5 ns |    198.51 ns |     88.14 ns |  1.27 |    0.02 |    2 |         - |          NA |
+| CartesianTreeSort      | 256  | Random             |     12,938.5 ns |    316.43 ns |    165.50 ns |  1.07 |    0.02 |    2 |         - |          NA |
+| BinaryTreeSort         | 256  | Random             |     12,059.6 ns |    418.48 ns |    218.87 ns |  1.00 |    0.00 |    2 |         - |          NA |
+| SplaySort              | 256  | Random             |     30,496.4 ns |    351.78 ns |    183.99 ns |  2.53 |    0.04 |    3 |         - |          NA |
+| TreapSort              | 256  | Random             |     17,954.0 ns |    349.65 ns |    182.88 ns |  1.49 |    0.03 |    2 |         - |          NA |
+| DotnetSort             | 256  | Random             |      5,949.9 ns |    396.90 ns |    207.58 ns |  0.49 |    0.02 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **256**  | **SingleElementMoved** |      **6,636.3 ns** |    **205.54 ns** |     **91.26 ns** |  **0.12** |    **0.00** |    **5** |         **-** |          **NA** |
+| BTreeSort              | 256  | SingleElementMoved |      4,798.7 ns |    331.65 ns |    173.46 ns |  0.09 |    0.00 |    4 |         - |          NA |
+| BPlusTreeSort          | 256  | SingleElementMoved |      4,358.2 ns |    275.77 ns |    144.23 ns |  0.08 |    0.00 |    4 |         - |          NA |
+| CartesianTreeSort      | 256  | SingleElementMoved |      1,607.2 ns |     19.69 ns |      8.74 ns |  0.03 |    0.00 |    2 |         - |          NA |
+| BinaryTreeSort         | 256  | SingleElementMoved |     53,705.7 ns |    293.06 ns |    153.27 ns |  1.00 |    0.00 |    6 |         - |          NA |
+| SplaySort              | 256  | SingleElementMoved |      3,345.3 ns |     21.86 ns |      7.80 ns |  0.06 |    0.00 |    3 |         - |          NA |
+| TreapSort              | 256  | SingleElementMoved |      4,731.4 ns |    308.42 ns |    161.31 ns |  0.09 |    0.00 |    4 |         - |          NA |
+| DotnetSort             | 256  | SingleElementMoved |      1,060.4 ns |     99.81 ns |     44.32 ns |  0.02 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **256**  | **Sorted**             |      **6,183.2 ns** |     **52.55 ns** |     **23.33 ns** |  **0.11** |    **0.00** |    **5** |         **-** |          **NA** |
+| BTreeSort              | 256  | Sorted             |      4,467.1 ns |    184.92 ns |     96.72 ns |  0.08 |    0.00 |    4 |         - |          NA |
+| BPlusTreeSort          | 256  | Sorted             |      4,016.2 ns |     57.93 ns |     25.72 ns |  0.07 |    0.00 |    4 |         - |          NA |
+| CartesianTreeSort      | 256  | Sorted             |      1,548.1 ns |     11.13 ns |      5.82 ns |  0.03 |    0.00 |    2 |         - |          NA |
+| BinaryTreeSort         | 256  | Sorted             |     58,544.6 ns |    378.09 ns |    197.75 ns |  1.00 |    0.00 |    6 |         - |          NA |
+| SplaySort              | 256  | Sorted             |      2,960.4 ns |     10.48 ns |      3.74 ns |  0.05 |    0.00 |    3 |         - |          NA |
+| TreapSort              | 256  | Sorted             |      4,115.5 ns |    332.31 ns |    173.81 ns |  0.07 |    0.00 |    4 |         - |          NA |
+| DotnetSort             | 256  | Sorted             |        681.1 ns |     94.38 ns |     49.36 ns |  0.01 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **256**  | **Reversed**           |      **5,893.8 ns** |    **186.18 ns** |     **97.38 ns** |  **0.10** |    **0.00** |    **5** |         **-** |          **NA** |
+| BTreeSort              | 256  | Reversed           |      7,383.5 ns |    354.58 ns |    185.45 ns |  0.12 |    0.00 |    5 |         - |          NA |
+| BPlusTreeSort          | 256  | Reversed           |      6,723.8 ns |    257.20 ns |    134.52 ns |  0.11 |    0.00 |    5 |         - |          NA |
+| CartesianTreeSort      | 256  | Reversed           |      1,532.1 ns |     67.25 ns |     23.98 ns |  0.02 |    0.00 |    2 |         - |          NA |
+| BinaryTreeSort         | 256  | Reversed           |     61,649.3 ns |    144.19 ns |     64.02 ns |  1.00 |    0.00 |    6 |         - |          NA |
+| SplaySort              | 256  | Reversed           |      2,877.0 ns |     36.67 ns |     13.08 ns |  0.05 |    0.00 |    3 |         - |          NA |
+| TreapSort              | 256  | Reversed           |      3,817.5 ns |    119.17 ns |     52.91 ns |  0.06 |    0.00 |    4 |         - |          NA |
+| DotnetSort             | 256  | Reversed           |      1,184.4 ns |     91.93 ns |     40.82 ns |  0.02 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **256**  | **PipeOrgan**          |      **5,218.8 ns** |    **203.48 ns** |    **106.43 ns** |  **0.18** |    **0.00** |    **3** |         **-** |          **NA** |
+| BTreeSort              | 256  | PipeOrgan          |      5,338.9 ns |    404.30 ns |    211.46 ns |  0.18 |    0.01 |    3 |         - |          NA |
+| BPlusTreeSort          | 256  | PipeOrgan          |      4,850.7 ns |    215.96 ns |    112.95 ns |  0.17 |    0.00 |    3 |         - |          NA |
+| CartesianTreeSort      | 256  | PipeOrgan          |      1,675.3 ns |     10.64 ns |      4.72 ns |  0.06 |    0.00 |    1 |         - |          NA |
+| BinaryTreeSort         | 256  | PipeOrgan          |     29,258.5 ns |    348.41 ns |    182.23 ns |  1.00 |    0.00 |    4 |         - |          NA |
+| SplaySort              | 256  | PipeOrgan          |      3,383.8 ns |     21.28 ns |      7.59 ns |  0.12 |    0.00 |    2 |         - |          NA |
+| TreapSort              | 256  | PipeOrgan          |      5,498.5 ns |    217.76 ns |    113.89 ns |  0.19 |    0.00 |    3 |         - |          NA |
+| DotnetSort             | 256  | PipeOrgan          |      1,812.7 ns |    142.33 ns |     63.20 ns |  0.06 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **256**  | **ManyDuplicates**     |     **15,679.7 ns** |    **259.82 ns** |    **135.89 ns** |  **1.49** |    **0.03** |    **3** |         **-** |          **NA** |
+| BTreeSort              | 256  | ManyDuplicates     |     15,391.9 ns |     91.75 ns |     40.74 ns |  1.46 |    0.02 |    3 |         - |          NA |
+| BPlusTreeSort          | 256  | ManyDuplicates     |     14,682.4 ns |    285.77 ns |    149.46 ns |  1.40 |    0.03 |    3 |         - |          NA |
+| CartesianTreeSort      | 256  | ManyDuplicates     |     15,697.2 ns |    183.07 ns |     81.28 ns |  1.49 |    0.02 |    3 |         - |          NA |
+| BinaryTreeSort         | 256  | ManyDuplicates     |     10,521.7 ns |    343.05 ns |    179.42 ns |  1.00 |    0.00 |    2 |         - |          NA |
+| SplaySort              | 256  | ManyDuplicates     |     28,666.0 ns |    558.77 ns |    248.10 ns |  2.73 |    0.05 |    4 |         - |          NA |
+| TreapSort              | 256  | ManyDuplicates     |     17,815.8 ns |    141.55 ns |     74.03 ns |  1.69 |    0.03 |    3 |         - |          NA |
+| DotnetSort             | 256  | ManyDuplicates     |      5,561.6 ns |    358.79 ns |    187.66 ns |  0.53 |    0.02 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **1024** | **Random**             |     **74,830.9 ns** |    **287.60 ns** |    **127.70 ns** |  **1.36** |    **0.00** |    **2** |         **-** |          **NA** |
+| BTreeSort              | 1024 | Random             |     75,166.6 ns |    381.39 ns |    169.34 ns |  1.36 |    0.00 |    2 |         - |          NA |
+| BPlusTreeSort          | 1024 | Random             |     73,039.7 ns |    421.35 ns |    187.08 ns |  1.32 |    0.00 |    2 |         - |          NA |
+| CartesianTreeSort      | 1024 | Random             |     64,511.7 ns |    398.16 ns |    176.79 ns |  1.17 |    0.00 |    2 |         - |          NA |
+| BinaryTreeSort         | 1024 | Random             |     55,143.1 ns |    237.93 ns |    124.44 ns |  1.00 |    0.00 |    2 |         - |          NA |
+| SplaySort              | 1024 | Random             |    155,006.8 ns |  1,642.57 ns |    729.31 ns |  2.81 |    0.01 |    3 |         - |          NA |
+| TreapSort              | 1024 | Random             |     81,840.3 ns |    996.29 ns |    442.36 ns |  1.48 |    0.01 |    2 |         - |          NA |
+| DotnetSort             | 1024 | Random             |     29,784.8 ns |    455.82 ns |    238.40 ns |  0.54 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **1024** | **SingleElementMoved** |     **28,434.7 ns** |    **279.61 ns** |    **124.15 ns** | **0.033** |    **0.00** |    **4** |         **-** |          **NA** |
+| BTreeSort              | 1024 | SingleElementMoved |     21,203.3 ns |    240.50 ns |    125.79 ns | 0.025 |    0.00 |    3 |         - |          NA |
+| BPlusTreeSort          | 1024 | SingleElementMoved |     19,650.8 ns |    177.73 ns |     92.96 ns | 0.023 |    0.00 |    3 |         - |          NA |
+| CartesianTreeSort      | 1024 | SingleElementMoved |      6,195.6 ns |    256.48 ns |    134.14 ns | 0.007 |    0.00 |    1 |         - |          NA |
+| BinaryTreeSort         | 1024 | SingleElementMoved |    852,099.8 ns |  1,314.50 ns |    468.76 ns | 1.000 |    0.00 |    5 |         - |          NA |
+| SplaySort              | 1024 | SingleElementMoved |     13,112.6 ns |    264.86 ns |    138.53 ns | 0.015 |    0.00 |    2 |         - |          NA |
+| TreapSort              | 1024 | SingleElementMoved |     20,037.1 ns |    767.61 ns |    401.48 ns | 0.024 |    0.00 |    3 |         - |          NA |
+| DotnetSort             | 1024 | SingleElementMoved |      5,390.2 ns |    277.63 ns |    145.21 ns | 0.006 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **1024** | **Sorted**             |     **27,561.9 ns** |    **154.39 ns** |     **80.75 ns** | **0.030** |    **0.00** |    **5** |         **-** |          **NA** |
+| BTreeSort              | 1024 | Sorted             |     20,092.1 ns |     53.81 ns |     23.89 ns | 0.022 |    0.00 |    4 |         - |          NA |
+| BPlusTreeSort          | 1024 | Sorted             |     18,807.3 ns |    172.24 ns |     76.48 ns | 0.020 |    0.00 |    4 |         - |          NA |
+| CartesianTreeSort      | 1024 | Sorted             |      6,079.8 ns |    345.91 ns |    180.92 ns | 0.007 |    0.00 |    2 |         - |          NA |
+| BinaryTreeSort         | 1024 | Sorted             |    933,464.8 ns |    661.65 ns |    346.05 ns | 1.000 |    0.00 |    6 |         - |          NA |
+| SplaySort              | 1024 | Sorted             |     12,011.7 ns |    325.86 ns |    170.43 ns | 0.013 |    0.00 |    3 |         - |          NA |
+| TreapSort              | 1024 | Sorted             |     17,834.3 ns |    494.74 ns |    258.76 ns | 0.019 |    0.00 |    4 |         - |          NA |
+| DotnetSort             | 1024 | Sorted             |      3,221.9 ns |    302.57 ns |    134.34 ns | 0.003 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **1024** | **Reversed**           |     **26,762.8 ns** |    **301.90 ns** |    **157.90 ns** | **0.027** |    **0.00** |    **4** |         **-** |          **NA** |
+| BTreeSort              | 1024 | Reversed           |     31,623.2 ns |    578.91 ns |    302.78 ns | 0.032 |    0.00 |    4 |         - |          NA |
+| BPlusTreeSort          | 1024 | Reversed           |     28,588.7 ns |    202.71 ns |    106.02 ns | 0.029 |    0.00 |    4 |         - |          NA |
+| CartesianTreeSort      | 1024 | Reversed           |      5,928.6 ns |    274.81 ns |    143.73 ns | 0.006 |    0.00 |    1 |         - |          NA |
+| BinaryTreeSort         | 1024 | Reversed           |    992,175.0 ns |  1,012.56 ns |    529.59 ns | 1.000 |    0.00 |    5 |         - |          NA |
+| SplaySort              | 1024 | Reversed           |     11,622.0 ns |    231.99 ns |    121.34 ns | 0.012 |    0.00 |    2 |         - |          NA |
+| TreapSort              | 1024 | Reversed           |     17,085.3 ns |    448.71 ns |    234.68 ns | 0.017 |    0.00 |    3 |         - |          NA |
+| DotnetSort             | 1024 | Reversed           |      5,567.4 ns |    554.54 ns |    246.22 ns | 0.006 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **1024** | **PipeOrgan**          |     **24,005.1 ns** |    **721.67 ns** |    **377.45 ns** |  **0.05** |    **0.00** |    **3** |         **-** |          **NA** |
+| BTreeSort              | 1024 | PipeOrgan          |     23,490.8 ns |    292.31 ns |    129.79 ns |  0.05 |    0.00 |    3 |         - |          NA |
+| BPlusTreeSort          | 1024 | PipeOrgan          |     24,418.2 ns |    573.31 ns |    254.55 ns |  0.05 |    0.00 |    3 |         - |          NA |
+| CartesianTreeSort      | 1024 | PipeOrgan          |      6,483.0 ns |      9.83 ns |      3.51 ns |  0.01 |    0.00 |    1 |         - |          NA |
+| BinaryTreeSort         | 1024 | PipeOrgan          |    469,360.2 ns |  1,738.20 ns |    909.11 ns |  1.00 |    0.00 |    4 |         - |          NA |
+| SplaySort              | 1024 | PipeOrgan          |     13,506.4 ns |    255.43 ns |    133.59 ns |  0.03 |    0.00 |    2 |         - |          NA |
+| TreapSort              | 1024 | PipeOrgan          |     24,418.7 ns |    494.88 ns |    176.48 ns |  0.05 |    0.00 |    3 |         - |          NA |
+| DotnetSort             | 1024 | PipeOrgan          |     12,998.6 ns |    672.04 ns |    298.39 ns |  0.03 |    0.00 |    2 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **1024** | **ManyDuplicates**     |     **64,811.4 ns** |    **313.00 ns** |    **163.71 ns** |  **1.11** |    **0.01** |    **2** |         **-** |          **NA** |
+| BTreeSort              | 1024 | ManyDuplicates     |     68,286.7 ns |    464.12 ns |    242.74 ns |  1.17 |    0.01 |    2 |         - |          NA |
+| BPlusTreeSort          | 1024 | ManyDuplicates     |     65,398.4 ns |    310.11 ns |    162.19 ns |  1.12 |    0.01 |    2 |         - |          NA |
+| CartesianTreeSort      | 1024 | ManyDuplicates     |     76,669.2 ns |    221.41 ns |    115.80 ns |  1.32 |    0.01 |    2 |         - |          NA |
+| BinaryTreeSort         | 1024 | ManyDuplicates     |     58,168.4 ns |    816.06 ns |    426.82 ns |  1.00 |    0.00 |    2 |         - |          NA |
+| SplaySort              | 1024 | ManyDuplicates     |    122,794.5 ns |  1,839.94 ns |    816.95 ns |  2.11 |    0.02 |    3 |         - |          NA |
+| TreapSort              | 1024 | ManyDuplicates     |     78,249.4 ns |    301.76 ns |    133.98 ns |  1.35 |    0.01 |    2 |         - |          NA |
+| DotnetSort             | 1024 | ManyDuplicates     |     23,214.3 ns |    297.57 ns |    155.64 ns |  0.40 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **4096** | **Random**             |    **346,457.1 ns** |  **1,083.06 ns** |    **566.46 ns** |  **1.33** |    **0.01** |    **3** |         **-** |          **NA** |
+| BTreeSort              | 4096 | Random             |    357,102.3 ns |  1,821.21 ns |    808.63 ns |  1.37 |    0.01 |    3 |         - |          NA |
+| BPlusTreeSort          | 4096 | Random             |    353,929.2 ns |  1,666.80 ns |    740.07 ns |  1.36 |    0.01 |    3 |         - |          NA |
+| CartesianTreeSort      | 4096 | Random             |    323,329.9 ns |  1,850.86 ns |    821.79 ns |  1.24 |    0.01 |    3 |         - |          NA |
+| BinaryTreeSort         | 4096 | Random             |    260,488.8 ns |  2,749.47 ns |  1,438.03 ns |  1.00 |    0.00 |    2 |         - |          NA |
+| SplaySort              | 4096 | Random             |    776,854.5 ns |  5,046.50 ns |  2,240.68 ns |  2.98 |    0.02 |    4 |         - |          NA |
+| TreapSort              | 4096 | Random             |    390,923.5 ns | 17,224.25 ns |  6,142.34 ns |  1.50 |    0.02 |    3 |         - |          NA |
+| DotnetSort             | 4096 | Random             |    145,092.0 ns |  1,817.97 ns |    950.83 ns |  0.56 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **4096** | **SingleElementMoved** |    **125,852.9 ns** |    **553.00 ns** |    **245.53 ns** | **0.009** |    **0.00** |    **4** |         **-** |          **NA** |
+| BTreeSort              | 4096 | SingleElementMoved |    102,141.9 ns |    505.11 ns |    224.27 ns | 0.008 |    0.00 |    3 |         - |          NA |
+| BPlusTreeSort          | 4096 | SingleElementMoved |     94,589.0 ns |    352.05 ns |    156.31 ns | 0.007 |    0.00 |    3 |         - |          NA |
+| CartesianTreeSort      | 4096 | SingleElementMoved |     24,418.1 ns |    318.34 ns |    166.50 ns | 0.002 |    0.00 |    1 |         - |          NA |
+| BinaryTreeSort         | 4096 | SingleElementMoved | 13,526,156.3 ns |  6,946.71 ns |  3,633.27 ns | 1.000 |    0.00 |    5 |         - |          NA |
+| SplaySort              | 4096 | SingleElementMoved |     52,077.0 ns |    541.37 ns |    283.15 ns | 0.004 |    0.00 |    2 |         - |          NA |
+| TreapSort              | 4096 | SingleElementMoved |     88,598.3 ns |  2,406.23 ns |  1,258.50 ns | 0.007 |    0.00 |    3 |         - |          NA |
+| DotnetSort             | 4096 | SingleElementMoved |     25,291.0 ns |  1,270.97 ns |    664.74 ns | 0.002 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **4096** | **Sorted**             |    **123,416.9 ns** |    **442.37 ns** |    **157.75 ns** | **0.008** |    **0.00** |    **5** |         **-** |          **NA** |
+| BTreeSort              | 4096 | Sorted             |     98,803.5 ns |    246.51 ns |    109.45 ns | 0.007 |    0.00 |    4 |         - |          NA |
+| BPlusTreeSort          | 4096 | Sorted             |     91,518.1 ns |    390.42 ns |    173.35 ns | 0.006 |    0.00 |    4 |         - |          NA |
+| CartesianTreeSort      | 4096 | Sorted             |     24,110.6 ns |    671.70 ns |    351.31 ns | 0.002 |    0.00 |    2 |         - |          NA |
+| BinaryTreeSort         | 4096 | Sorted             | 14,785,041.9 ns |  7,110.42 ns |  3,157.07 ns | 1.000 |    0.00 |    6 |         - |          NA |
+| SplaySort              | 4096 | Sorted             |     47,888.9 ns |    227.97 ns |    119.23 ns | 0.003 |    0.00 |    3 |         - |          NA |
+| TreapSort              | 4096 | Sorted             |     77,083.7 ns |  2,918.59 ns |  1,295.87 ns | 0.005 |    0.00 |    4 |         - |          NA |
+| DotnetSort             | 4096 | Sorted             |     15,681.7 ns |  1,646.51 ns |    731.06 ns | 0.001 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **4096** | **Reversed**           |    **122,672.4 ns** |  **1,582.43 ns** |    **702.61 ns** | **0.008** |    **0.00** |    **4** |         **-** |          **NA** |
+| BTreeSort              | 4096 | Reversed           |    139,398.2 ns |  1,048.31 ns |    548.28 ns | 0.009 |    0.00 |    4 |         - |          NA |
+| BPlusTreeSort          | 4096 | Reversed           |    127,071.2 ns |    800.68 ns |    355.51 ns | 0.008 |    0.00 |    4 |         - |          NA |
+| CartesianTreeSort      | 4096 | Reversed           |     23,369.8 ns |    382.41 ns |    200.01 ns | 0.001 |    0.00 |    1 |         - |          NA |
+| BinaryTreeSort         | 4096 | Reversed           | 15,947,134.8 ns |  6,068.19 ns |  2,694.31 ns | 1.000 |    0.00 |    5 |         - |          NA |
+| SplaySort              | 4096 | Reversed           |     45,703.2 ns |    390.91 ns |    204.45 ns | 0.003 |    0.00 |    2 |         - |          NA |
+| TreapSort              | 4096 | Reversed           |     73,495.8 ns |  1,824.41 ns |    954.20 ns | 0.005 |    0.00 |    3 |         - |          NA |
+| DotnetSort             | 4096 | Reversed           |     26,961.6 ns |  1,979.28 ns |  1,035.20 ns | 0.002 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **4096** | **PipeOrgan**          |    **115,045.7 ns** |  **5,534.71 ns** |  **2,894.76 ns** | **0.016** |    **0.00** |    **4** |         **-** |          **NA** |
+| BTreeSort              | 4096 | PipeOrgan          |    112,748.2 ns |  3,333.39 ns |  1,743.43 ns | 0.015 |    0.00 |    4 |         - |          NA |
+| BPlusTreeSort          | 4096 | PipeOrgan          |    105,942.3 ns |    585.02 ns |    305.98 ns | 0.014 |    0.00 |    4 |         - |          NA |
+| CartesianTreeSort      | 4096 | PipeOrgan          |     26,192.8 ns |    301.85 ns |    157.87 ns | 0.004 |    0.00 |    1 |         - |          NA |
+| BinaryTreeSort         | 4096 | PipeOrgan          |  7,417,524.2 ns |  4,629.84 ns |  2,055.68 ns | 1.000 |    0.00 |    5 |         - |          NA |
+| SplaySort              | 4096 | PipeOrgan          |     53,136.2 ns |    382.03 ns |    169.62 ns | 0.007 |    0.00 |    2 |         - |          NA |
+| TreapSort              | 4096 | PipeOrgan          |    118,744.6 ns |  3,762.13 ns |  1,967.67 ns | 0.016 |    0.00 |    4 |         - |          NA |
+| DotnetSort             | 4096 | PipeOrgan          |     71,317.1 ns |  2,777.70 ns |  1,233.32 ns | 0.010 |    0.00 |    3 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **4096** | **ManyDuplicates**     |    **261,697.6 ns** |  **2,103.00 ns** |    **933.75 ns** |  **0.45** |    **0.00** |    **2** |         **-** |          **NA** |
+| BTreeSort              | 4096 | ManyDuplicates     |    288,785.6 ns |  1,105.30 ns |    490.76 ns |  0.50 |    0.00 |    2 |         - |          NA |
+| BPlusTreeSort          | 4096 | ManyDuplicates     |    278,260.2 ns |  1,593.30 ns |    833.32 ns |  0.48 |    0.00 |    2 |         - |          NA |
+| CartesianTreeSort      | 4096 | ManyDuplicates     |    366,283.3 ns |  2,557.66 ns |  1,337.71 ns |  0.63 |    0.00 |    2 |         - |          NA |
+| BinaryTreeSort         | 4096 | ManyDuplicates     |    579,259.1 ns |  1,040.43 ns |    461.96 ns |  1.00 |    0.00 |    3 |         - |          NA |
+| SplaySort              | 4096 | ManyDuplicates     |    511,354.7 ns | 31,267.22 ns | 13,882.84 ns |  0.88 |    0.02 |    3 |         - |          NA |
+| TreapSort              | 4096 | ManyDuplicates     |    340,276.8 ns |  2,051.06 ns |  1,072.75 ns |  0.59 |    0.00 |    2 |         - |          NA |
+| DotnetSort             | 4096 | ManyDuplicates     |     94,483.2 ns |    368.53 ns |    163.63 ns |  0.16 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **8192** | **Random**             |    **765,456.7 ns** |  **3,675.96 ns** |  **1,922.60 ns** |  **1.31** |    **0.00** |    **3** |         **-** |          **NA** |
+| BTreeSort              | 8192 | Random             |    799,597.6 ns |  1,740.29 ns |    910.21 ns |  1.36 |    0.00 |    3 |         - |          NA |
+| BPlusTreeSort          | 8192 | Random             |    748,219.3 ns |  1,523.97 ns |    797.07 ns |  1.28 |    0.00 |    3 |         - |          NA |
+| CartesianTreeSort      | 8192 | Random             |    717,831.2 ns |  2,246.07 ns |  1,174.74 ns |  1.22 |    0.00 |    3 |         - |          NA |
+| BinaryTreeSort         | 8192 | Random             |    586,131.4 ns |  2,751.02 ns |  1,221.47 ns |  1.00 |    0.00 |    2 |         - |          NA |
+| SplaySort              | 8192 | Random             |  1,736,959.8 ns |  5,261.05 ns |  2,335.94 ns |  2.96 |    0.01 |    4 |         - |          NA |
+| TreapSort              | 8192 | Random             |    871,859.9 ns |  1,985.63 ns |  1,038.52 ns |  1.49 |    0.00 |    3 |         - |          NA |
+| DotnetSort             | 8192 | Random             |    315,496.3 ns |  3,229.05 ns |  1,688.85 ns |  0.54 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **8192** | **SingleElementMoved** |    **267,342.8 ns** |  **3,266.99 ns** |  **1,708.70 ns** | **0.005** |    **0.00** |    **4** |         **-** |          **NA** |
+| BTreeSort              | 8192 | SingleElementMoved |    215,126.7 ns |    850.12 ns |    303.16 ns | 0.004 |    0.00 |    3 |         - |          NA |
+| BPlusTreeSort          | 8192 | SingleElementMoved |    202,913.3 ns |  1,186.98 ns |    527.03 ns | 0.004 |    0.00 |    3 |         - |          NA |
+| CartesianTreeSort      | 8192 | SingleElementMoved |     48,554.4 ns |    284.76 ns |    126.44 ns | 0.001 |    0.00 |    1 |         - |          NA |
+| BinaryTreeSort         | 8192 | SingleElementMoved | 54,011,812.6 ns | 43,470.56 ns | 19,301.20 ns | 1.000 |    0.00 |    5 |         - |          NA |
+| SplaySort              | 8192 | SingleElementMoved |    103,409.0 ns |    950.64 ns |    497.21 ns | 0.002 |    0.00 |    2 |         - |          NA |
+| TreapSort              | 8192 | SingleElementMoved |    201,597.1 ns | 10,769.99 ns |  5,632.91 ns | 0.004 |    0.00 |    3 |         - |          NA |
+| DotnetSort             | 8192 | SingleElementMoved |     53,538.0 ns |  1,396.42 ns |    730.36 ns | 0.001 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **8192** | **Sorted**             |    **258,975.1 ns** |  **1,395.49 ns** |    **729.87 ns** | **0.004** |    **0.00** |    **6** |         **-** |          **NA** |
+| BTreeSort              | 8192 | Sorted             |    209,110.5 ns |  2,036.69 ns |    904.30 ns | 0.004 |    0.00 |    5 |         - |          NA |
+| BPlusTreeSort          | 8192 | Sorted             |    196,499.4 ns |  1,544.39 ns |    685.72 ns | 0.003 |    0.00 |    5 |         - |          NA |
+| CartesianTreeSort      | 8192 | Sorted             |     47,377.1 ns |    167.14 ns |     87.42 ns | 0.001 |    0.00 |    2 |         - |          NA |
+| BinaryTreeSort         | 8192 | Sorted             | 58,919,500.8 ns | 12,764.28 ns |  5,667.42 ns | 1.000 |    0.00 |    7 |         - |          NA |
+| SplaySort              | 8192 | Sorted             |     95,269.1 ns |    739.12 ns |    328.17 ns | 0.002 |    0.00 |    3 |         - |          NA |
+| TreapSort              | 8192 | Sorted             |    162,501.9 ns | 10,713.12 ns |  5,603.17 ns | 0.003 |    0.00 |    4 |         - |          NA |
+| DotnetSort             | 8192 | Sorted             |     32,377.4 ns |    377.32 ns |    167.53 ns | 0.001 |    0.00 |    1 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **8192** | **Reversed**           |    **260,430.9 ns** |    **994.04 ns** |    **441.36 ns** | **0.004** |    **0.00** |    **5** |         **-** |          **NA** |
+| BTreeSort              | 8192 | Reversed           |    283,096.3 ns |  2,326.01 ns |  1,032.76 ns | 0.004 |    0.00 |    5 |         - |          NA |
+| BPlusTreeSort          | 8192 | Reversed           |    261,758.2 ns |  1,197.72 ns |    531.79 ns | 0.004 |    0.00 |    5 |         - |          NA |
+| CartesianTreeSort      | 8192 | Reversed           |     46,848.5 ns |    149.25 ns |     66.27 ns | 0.001 |    0.00 |    1 |         - |          NA |
+| BinaryTreeSort         | 8192 | Reversed           | 63,565,833.5 ns | 32,594.02 ns | 14,471.95 ns | 1.000 |    0.00 |    6 |         - |          NA |
+| SplaySort              | 8192 | Reversed           |     92,211.1 ns |    544.19 ns |    241.62 ns | 0.001 |    0.00 |    3 |         - |          NA |
+| TreapSort              | 8192 | Reversed           |    157,162.8 ns | 12,488.10 ns |  6,531.52 ns | 0.002 |    0.00 |    4 |         - |          NA |
+| DotnetSort             | 8192 | Reversed           |     60,021.9 ns |  3,730.23 ns |  1,656.25 ns | 0.001 |    0.00 |    2 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **8192** | **PipeOrgan**          |    **274,785.0 ns** | **12,992.26 ns** |  **6,795.20 ns** | **0.009** |    **0.00** |    **3** |         **-** |          **NA** |
+| BTreeSort              | 8192 | PipeOrgan          |    256,141.6 ns |  9,124.66 ns |  4,772.37 ns | 0.009 |    0.00 |    3 |         - |          NA |
+| BPlusTreeSort          | 8192 | PipeOrgan          |    238,664.8 ns |  1,719.94 ns |    899.56 ns | 0.008 |    0.00 |    3 |         - |          NA |
+| CartesianTreeSort      | 8192 | PipeOrgan          |     52,246.9 ns |    286.63 ns |    127.27 ns | 0.002 |    0.00 |    1 |         - |          NA |
+| BinaryTreeSort         | 8192 | PipeOrgan          | 29,541,895.9 ns | 92,744.24 ns | 41,179.02 ns | 1.000 |    0.00 |    5 |         - |          NA |
+| SplaySort              | 8192 | PipeOrgan          |    106,584.9 ns |    305.56 ns |    135.67 ns | 0.004 |    0.00 |    2 |         - |          NA |
+| TreapSort              | 8192 | PipeOrgan          |    413,337.0 ns |  6,870.54 ns |  3,593.42 ns | 0.014 |    0.00 |    4 |         - |          NA |
+| DotnetSort             | 8192 | PipeOrgan          |    280,451.9 ns |  8,280.75 ns |  4,330.99 ns | 0.009 |    0.00 |    3 |         - |          NA |
+|      |                    |                 |              |              |       |         |      |           |             |
+| **BalancedBinaryTreeSort** | **8192** | **ManyDuplicates**     |    **526,138.1 ns** |  **2,454.39 ns** |  **1,089.77 ns** |  **0.19** |    **0.00** |    **2** |         **-** |          **NA** |
+| BTreeSort              | 8192 | ManyDuplicates     |    578,978.8 ns |  3,138.62 ns |  1,641.56 ns |  0.21 |    0.00 |    2 |         - |          NA |
+| BPlusTreeSort          | 8192 | ManyDuplicates     |    563,454.3 ns |  1,464.43 ns |    765.93 ns |  0.20 |    0.00 |    2 |         - |          NA |
+| CartesianTreeSort      | 8192 | ManyDuplicates     |    798,654.6 ns |  5,502.80 ns |  2,878.07 ns |  0.28 |    0.00 |    3 |         - |          NA |
+| BinaryTreeSort         | 8192 | ManyDuplicates     |  2,823,198.5 ns |  1,452.40 ns |    759.64 ns |  1.00 |    0.00 |    5 |         - |          NA |
+| SplaySort              | 8192 | ManyDuplicates     |  1,012,456.7 ns |  4,707.03 ns |  2,461.87 ns |  0.36 |    0.00 |    4 |         - |          NA |
+| TreapSort              | 8192 | ManyDuplicates     |    704,563.3 ns |  1,866.14 ns |    976.03 ns |  0.25 |    0.00 |    3 |         - |          NA |
+| DotnetSort             | 8192 | ManyDuplicates     |    190,495.0 ns |    932.54 ns |    487.73 ns |  0.07 |    0.00 |    1 |         - |          NA |
 
 </details>
 
