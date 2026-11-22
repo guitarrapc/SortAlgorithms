@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generated": "2026-11-22T04:43:18Z",
+  "generated": "2026-11-22T05:38:02Z",
   "latest": "20261122T0443Z-30d5b6b",
   "runs": [
     {
@@ -159,7 +159,7 @@
       "timestamp": "2026-11-22T04:43:15Z",
       "commit": "30d5b6b293c94f0be6877692eef327333f45e856",
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/44984332332",
-      "cpu": "AMD EPYC 9V74",
+      "cpu": "AMD EPYC 9V74 3.69GHz",
       "file": "runs/20261122T0443Z-30d5b6b.json",
       "cases": 2640
     }
