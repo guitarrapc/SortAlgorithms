@@ -51,7 +51,7 @@ jobs:
             echo "::error::Benchmark requires a CPU containing '${REQUIRED_CPU}', but this runner has '${model:-(unknown)}'. Re-run the job to get another runner, or run the workflow with allow-any-cpu checked."
             exit 1
           fi
-          echo "CPU OK: ${model}"
+          echo "::notice::CPU OK: ${model}"
         env:
           REQUIRED_CPU: EPYC 9V74
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

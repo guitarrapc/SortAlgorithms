@@ -25,6 +25,16 @@ A filtered run (any value other than `*`) updates neither the README nor the dat
 
 Until `benchmark-data` exists, `pages.yaml` deploys the site without data, and the site shows a "no data" message.
 
+## Running The Benchmark
+
+```powershell
+./scripts/run-benchmark.ps1                  # full run on main
+./scripts/run-benchmark.ps1 -Wait            # also wait for the README, data, and site jobs
+./scripts/run-benchmark.ps1 -RunId <id>      # continue with a run that is already re-running
+```
+
+GitHub-hosted runners come with several CPU models. The workflow's `Check runner CPU` step fails within a minute on any model other than the pinned one. The script reads that runner's CPU from the step's annotation and re-runs the failed jobs until the check passes. On 2026-11-22 the pinned CPU came on the 20th attempt, and 14 of the 19 misses were Xeon 6975P-C.
+
 ## Scripts
 
 Both scripts are file-based apps. Run them from the repository root.
