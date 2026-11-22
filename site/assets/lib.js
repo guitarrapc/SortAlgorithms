@@ -98,7 +98,8 @@ export function frontier(list) {
 
 const f3 = v => d3.format(".3~r")(v);
 export const fmtT = ns => ns == null || Number.isNaN(ns) ? "—" : ns < 1e3 ? f3(ns) + " ns" : ns < 1e6 ? f3(ns / 1e3) + " μs" : ns < 1e9 ? f3(ns / 1e6) + " ms" : f3(ns / 1e9) + " s";
-export const fmtX = r => "×" + (r < 10 ? r.toFixed(2) : r < 100 ? r.toFixed(1) : Math.round(r));
+// Three significant digits, so ratios below ×1 (faster than the reference) keep their order visible.
+export const fmtX = r => "×" + (r < 1 ? r.toPrecision(3) : r < 10 ? r.toFixed(2) : r < 100 ? r.toFixed(1) : Math.round(r));
 export const pct = v => (v * 100).toFixed(1) + "%";
 export const fmtDate = iso => iso ? iso.replace("T", " ").replace(/:\d\dZ$/, " UTC") : "";
 export const esc = s => String(s ?? "").replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);

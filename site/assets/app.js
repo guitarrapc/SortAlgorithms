@@ -36,6 +36,12 @@ function renderNav(route, params) {
     `<a href="#${id}${keep}"${id === route ? ' aria-current="page"' : ""}>${label}</a>`).join("");
 }
 
+// Sticky headers inside a view sit just below the sticky tabs, whose height differs between phone and desktop.
+// Set when the tabs are rendered, since a ResizeObserver first reports only on the next rendered frame.
+function setTabsHeight() {
+  document.documentElement.style.setProperty("--tabs-h", document.querySelector(".tabs").offsetHeight + "px");
+}
+
 function renderRunPicker(entry, route, params) {
   const runs = [...index.runs].reverse();
   const host = document.getElementById("run-pick");
@@ -52,6 +58,7 @@ async function render() {
   onResize = null;
   const { route, params } = parseHash();
   renderNav(route, params);
+  setTabsHeight();
   if (!index) {
     try {
       index = await loadIndex();
@@ -97,6 +104,7 @@ new ResizeObserver(entries => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => { hideTip(); onResize?.(); }, 150);
 }).observe(root);
+new ResizeObserver(setTabsHeight).observe(document.querySelector(".tabs"));
 // Touch has no pointerleave after a tap: a tap outside a chart or a scroll closes the tooltip.
 document.addEventListener("pointerdown", e => { if (!e.target.closest("svg.chart")) hideTip(); });
 window.addEventListener("scroll", hideTip, { passive: true });

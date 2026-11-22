@@ -90,7 +90,7 @@ dotnet run --file .github/scripts/UpdateBenchmarkReadme.cs -- BenchmarkDotNet.Ar
 
 Views keep their state in the hash, so a view can be linked with its filters.
 
-Phones break at 600px (`narrow()` in `lib.js` matches the CSS), and tablets at 900px, where tables switch to short dates and CPU models. Charts are drawn at the pixel width of their container (`chartWidth`), so a view that draws an SVG registers its drawing function with `context.onResize`; `app.js` calls it when the content width changes. Explorer and Leagues are HTML and reflow with CSS alone. Tooltips also open on tap, because touch screens have no hover.
+Phones break at 600px (`narrow()` in `lib.js` matches the CSS), and tablets at 900px, where tables switch to short dates and CPU models. Charts are drawn at the pixel width of their container (`chartWidth`), so a view that draws an SVG registers its drawing function with `context.onResize`; `app.js` calls it when the content width changes. Explorer and Leagues are HTML and reflow with CSS alone. On phones a League row keeps a fixed-width right column, because each row is its own grid: an `auto` column sized to the row's text would give every row, and the axis row, a different bar width. A sticky header inside a view uses `top: var(--tabs-h)`; `app.js` sets that variable to the height of the sticky tabs whenever it renders them, because a `ResizeObserver` reports only on the next rendered frame. Tooltips also open on tap, because touch screens have no hover.
 
 ## Local Preview
 
