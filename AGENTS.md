@@ -24,6 +24,7 @@ src/SortAlgorithm.Benchmark/  BenchmarkDotNet suites.
 tests/SortAlgorithm.Tests/    TUnit correctness and behavior tests.
 sandbox/                      Exploratory apps and standalone verification files.
 scripts/                      Repository maintenance scripts.
+site/                         Static benchmark site (GitHub Pages); data comes from the benchmark-data branch.
 ```
 
 ## Implementation Guidance
@@ -47,6 +48,7 @@ scripts/                      Repository maintenance scripts.
 - For classification or branching logic, enumerate true and false equivalence classes and test each class.
 - Run the narrowest relevant tests first, then the full suite when practical.
 - Benchmark performance-sensitive changes in Release and compare allocation results against a meaningful baseline.
+- Every benchmark class keeps its `DotnetSort` reference method and measures non-quadratic algorithms up to 8192; see `.github/docs/references/benchmark_site.md`.
 
 ## Documentation
 

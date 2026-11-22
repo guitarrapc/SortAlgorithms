@@ -58,6 +58,8 @@ if (audit)
 else
 {
     config.AddFilter(new SimpleFilter(static b => !b.Descriptor.Type.Name.StartsWith("SortAudit", StringComparison.Ordinal)));
+    // Per-iteration measurements feed the benchmark site (.github/scripts/BenchmarkData.cs).
+    config.AddExporter(JsonExporter.FullCompressed);
 }
 
 // Every job MUST pin InvocationCount to the SortBuffers pool size (with UnrollFactor=1):

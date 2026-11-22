@@ -4,7 +4,7 @@ namespace SortAlgorithm.Benchmark;
 [RankColumn]
 public class TreeBenchmark
 {
-    [Params(256, 1024)]
+    [Params(256, 1024, 4096, 8192)]
     public int Size { get; set; }
 
     [Params(DataPattern.Random, DataPattern.SingleElementMoved, DataPattern.Sorted, DataPattern.Reversed, DataPattern.PipeOrgan, DataPattern.ManyDuplicates)]
@@ -62,5 +62,12 @@ public class TreeBenchmark
     public void TreapSort()
     {
         SortAlgorithm.Algorithms.TreapSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    // Same call in every benchmark class: a shared reference for comparing results across classes.
+    [Benchmark]
+    public void DotnetSort()
+    {
+        _buffers.Next().AsSpan().Sort();
     }
 }

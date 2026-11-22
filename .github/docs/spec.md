@@ -17,6 +17,7 @@ The library prefers explicit generic contracts, because sorting performance depe
 | Natural-order and custom-comparer overloads | [Sorting API](specs/sorting_api.md) |
 | Statistics and visualization callbacks | [Observation](specs/observation.md) |
 | Performance guarantees, allocation, and required evidence | [Performance](specs/performance.md) |
+| Published CI benchmark figures, size leagues, and the benchmark site | [Benchmark Results](specs/benchmark_results.md) |
 | Correctness and stability expectations | [Validation](specs/validation.md) |
 
 [README.md](../../README.md#implemented-sort-algorithm) lists the implemented algorithms.
@@ -36,5 +37,7 @@ The library prefers explicit generic contracts, because sorting performance depe
 - [specs/observation.md](specs/observation.md): context events and buffer identity
 - [specs/performance.md](specs/performance.md): performance guarantees, required evidence, and vector-code policy
 - [specs/validation.md](specs/validation.md): required behavioral evidence
+- [specs/benchmark_results.md](specs/benchmark_results.md): what the README and the benchmark site publish, and how each figure is defined
+- [references/benchmark_site.md](references/benchmark_site.md): benchmark data flow, file formats, and local preview
 - [references/implementation_guidelines.md](references/implementation_guidelines.md): implementation patterns for contributors
 - [references/sandbox.md](references/sandbox.md): workflow for standalone experiments

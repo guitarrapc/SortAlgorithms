@@ -403,3 +403,6 @@ FodyWeavers.xsd
 
 # Custom
 .references
+
+# Benchmark site local preview data (published from the benchmark-data branch)
+site/data/

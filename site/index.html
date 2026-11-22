@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SortAlgorithms Benchmarks</title>
+<meta name="description" content="CI benchmark results of the SortAlgorithms library: speed, run-to-run stability, allocation, scaling and input-pattern behavior.">
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" integrity="sha512-vc58qvvBdrDR4etbxMdlTt4GBQk1qjvyORR2nrsPsFPyrs+/u5c3+1Ct6upOgdZoIl7eq6k3a1UPDSNAQi/32A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script type="module" src="assets/app.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <a class="title" href="#explorer">SortAlgorithms Benchmarks</a>
+      <div class="meta" id="meta">Loading…</div>
+    </div>
+    <div class="run-pick" id="run-pick"></div>
+  </div>
+  <nav class="tabs" aria-label="Views"><div class="wrap tabs-in" id="nav"></div></nav>
+</header>
+<main class="wrap" id="view" tabindex="-1"></main>
+<footer class="wrap foot">
+  <p>Results come from the <a href="https://github.com/guitarrapc/SortAlgorithms/blob/main/.github/workflows/benchmark.yaml">Benchmark workflow</a> on a GitHub-hosted runner with a pinned CPU model. Absolute times are specific to that machine; compare algorithms within a run, and compare runs only on the same CPU.</p>
+  <p><a href="https://github.com/guitarrapc/SortAlgorithms">Repository</a> · <a href="data/index.json">Run index (JSON)</a></p>
+</footer>
+<div id="tip" role="tooltip" hidden></div>
+</body>
+</html>

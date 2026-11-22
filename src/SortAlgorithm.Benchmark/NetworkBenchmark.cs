@@ -75,4 +75,11 @@ public class NetworkBenchmark
     {
         SortAlgorithm.Algorithms.PairwiseSortingNetworkBranchless.Sort(_buffers.Next().AsSpan());
     }
+
+    // Same call in every benchmark class: a shared reference for comparing results across classes.
+    [Benchmark]
+    public void DotnetSort()
+    {
+        _buffers.Next().AsSpan().Sort();
+    }
 }

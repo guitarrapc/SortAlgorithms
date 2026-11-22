@@ -141,6 +141,13 @@ public class MergeBenchmark
     {
         SortAlgorithm.Algorithms.SimdMergeSort.Sort(_buffers.Next().AsSpan());
     }
+
+    // Same call in every benchmark class: a shared reference for comparing results across classes.
+    [Benchmark]
+    public void DotnetSort()
+    {
+        _buffers.Next().AsSpan().Sort();
+    }
 }
 
 /// <summary>
@@ -173,5 +180,12 @@ public class MergeSlowBenchmark
     public void StrandSort()
     {
         SortAlgorithm.Algorithms.StrandSort.Sort(_buffers.Next().AsSpan());
+    }
+
+    // Same call in every benchmark class: a shared reference for comparing results across classes.
+    [Benchmark]
+    public void DotnetSort()
+    {
+        _buffers.Next().AsSpan().Sort();
     }
 }

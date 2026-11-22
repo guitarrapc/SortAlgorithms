@@ -1,6 +1,6 @@
 # Performance Specification
 
-This document states the performance guarantees of SortAlgorithm and the evidence that each kind of performance claim needs. The [README](../../../README.md#benchmark) publishes the benchmark results.
+This document states the performance guarantees of SortAlgorithm and the evidence that each kind of performance claim needs. The [README](../../../README.md#benchmark) and the benchmark site publish the benchmark results; [benchmark_results.md](benchmark_results.md) defines what they show.
 
 ## Unobserved Sorting And `NullContext`
 

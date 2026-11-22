@@ -148,6 +148,7 @@ public class PartitionBenchmark
         SortAlgorithm.Algorithms.BlitSort.Sort(_buffers.Next().AsSpan());
     }
 
+    // Same call in every benchmark class: a shared reference for comparing results across classes.
     [Benchmark]
     public void DotnetSort()
     {
