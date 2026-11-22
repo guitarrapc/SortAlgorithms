@@ -66,6 +66,8 @@ else
 // each measured iteration consumes exactly one pre-copied buffer per invocation, keeping
 // the Array.Copy restore cost in [IterationSetup] — outside the timed region. A pinned
 // invocation count also skips the pilot stage, so per-case time stays bounded.
+// ScalingBenchmark overrides the count with [InvocationCount(SortBuffers.LargeInvocationsPerIteration)]
+// and builds its pool with the same count.
 //
 // DOTNET_TieredCompilation=0: with the short fixed warmup, tier-1 background compilation
 // can land in the middle of the measured iterations (observed as a sharp drop partway

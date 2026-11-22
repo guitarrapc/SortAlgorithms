@@ -48,7 +48,7 @@ site/                         Static benchmark site (GitHub Pages); data comes f
 - For classification or branching logic, enumerate true and false equivalence classes and test each class.
 - Run the narrowest relevant tests first, then the full suite when practical.
 - Benchmark performance-sensitive changes in Release and compare allocation results against a meaningful baseline.
-- Every benchmark class keeps its `DotnetSort` reference method and measures non-quadratic algorithms up to 8192; see `.github/docs/references/benchmark_site.md`.
+- Every benchmark class keeps its `DotnetSort` reference method and measures non-quadratic algorithms up to 8192. `ScalingBenchmark` measures every algorithm that is not quadratic on any pattern again, from 16384 to 1048576; see `.github/docs/references/benchmark_site.md`.
 
 ## Documentation
 

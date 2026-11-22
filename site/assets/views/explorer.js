@@ -1,11 +1,11 @@
-import { d3, PATTERNS, fmtT, fmtX, esc, cvBadge, allocBadge, refChip, selectEl, caseKey, intro } from "../lib.js";
+import { d3, PATTERNS, fmtT, fmtX, esc, cvBadge, allocBadge, refChip, selectEl, caseKey, intro, defaultLeague, SCALING, homeOf } from "../lib.js";
 
 // Every case of one (category, size, pattern) slice, sortable. "All categories" shows the whole size league.
 // On phones and tablets the table rows become two-line cards and a select replaces the sortable headers.
 export function render(root, { run, params, setParams }) {
   const cat = params.c && (params.c === "*" || run.categories.includes(params.c)) ? params.c : (run.categories.includes("Partition") ? "Partition" : run.categories[0]);
   const sizes = run.allSizes;
-  const size = sizes.includes(+params.n) ? +params.n : sizes.at(-1);
+  const size = sizes.includes(+params.n) ? +params.n : cat === "*" ? defaultLeague(run) : run.maxSize(cat);
   const pattern = PATTERNS.includes(params.p) ? params.p : "Random";
   root.innerHTML = `
     <section class="panel">
@@ -30,9 +30,11 @@ export function render(root, { run, params, setParams }) {
     setParams({ c, n, p });
     const host = root.querySelector("#x-t");
     let list = run.slice(c, n, p);
-    if (c === "*") list = list.filter(r => !r.ref || r.c === "Partition" || !run.methodsOf("Partition").includes(run.reference));
+    // All categories keep one reference row: Partition's, or the one of the class that measures this size.
+    if (c === "*") { const refs = list.filter(r => r.ref), keep = refs.find(r => r.c === "Partition") ?? refs[0]; list = list.filter(r => !r.ref || r === keep); }
     // The ratio divides by the reference row; a name filter can hide that row, so it is found first.
     const ref = list.find(r => r.ref);
+    const catOf = r => r.c === SCALING && !r.ref ? homeOf(run, r.m) : r.c;
     list = list.filter(r => !q || r.m.toLowerCase().includes(q));
     if (!list.length) {
       host.innerHTML = `<p class="empty">Not measured. ${c !== "*" ? `${esc(c)} is measured at n = ${run.sizesOf(c).join(", ")}.` : ""}</p>`;
@@ -49,8 +51,8 @@ export function render(root, { run, params, setParams }) {
     for (const r of list) {
       const e0 = x(r.mean - r.err), e1 = x(r.mean + r.err);
       const hist = `#history?${new URLSearchParams({ k: caseKey(r.c, r.m, r.n, r.p) })}`;
-      h += `<tr class="${r.ref ? "ref" : ""}"><td class="num rk">${r.ref ? "" : rank.get(r)}</td><td class="nm"><a href="${hist}">${esc(r.m)}</a>${refChip(r)}</td>${c === "*" ? `<td class="ct"><span class="cat">${esc(r.c)}</span></td>` : ""}<td class="num mn">${fmtT(r.mean)}</td>
-        <td class="br">${c === "*" ? `<span class="cat md-only">${esc(r.c)}</span>` : ""}<div class="xbar${r.ref ? " ref" : ""}" role="img" aria-label="${fmtT(r.mean)} ± ${fmtT(r.err)}"><b style="width:${x(r.mean).toFixed(1)}%"></b><i style="left:${e0.toFixed(1)}%;width:${Math.max(0.5, e1 - e0).toFixed(1)}%"></i></div></td>
+      h += `<tr class="${r.ref ? "ref" : ""}"><td class="num rk">${r.ref ? "" : rank.get(r)}</td><td class="nm"><a href="${hist}">${esc(r.m)}</a>${refChip(r)}</td>${c === "*" ? `<td class="ct"><span class="cat">${esc(catOf(r))}</span></td>` : ""}<td class="num mn">${fmtT(r.mean)}</td>
+        <td class="br">${c === "*" ? `<span class="cat md-only">${esc(catOf(r))}</span>` : ""}<div class="xbar${r.ref ? " ref" : ""}" role="img" aria-label="${fmtT(r.mean)} ± ${fmtT(r.err)}"><b style="width:${x(r.mean).toFixed(1)}%"></b><i style="left:${e0.toFixed(1)}%;width:${Math.max(0.5, e1 - e0).toFixed(1)}%"></i></div></td>
         <td class="cv">${cvBadge(r.cv)}</td><td class="al">${allocBadge(r.alloc)}</td><td class="num vb">${fmtX(r.mean / base)}</td></tr>`;
     }
     host.innerHTML = h + "</tbody></table>";

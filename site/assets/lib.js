@@ -7,7 +7,12 @@ export const PATTERNS = ["Random", "SingleElementMoved", "Sorted", "Reversed", "
 export const PATTERN_SHORT = { Random: "Random", SingleElementMoved: "1-Moved", Sorted: "Sorted", Reversed: "Reversed", PipeOrgan: "PipeOrgan", ManyDuplicates: "ManyDup" };
 // Column headers that may wrap in narrow matrix cells (soft hyphens).
 export const PATTERN_HEAD = { Random: "Random", SingleElementMoved: "1-Moved", Sorted: "Sorted", Reversed: "Re&shy;versed", PipeOrgan: "Pipe&shy;Organ", ManyDuplicates: "Many&shy;Dup" };
-const CATEGORY_ORDER = ["Exchange", "Selection", "SelectionSimd", "Insertion", "Merge", "MergeSlow", "Heap", "Partition", "Distribution", "Network", "Tree"];
+const CATEGORY_ORDER = ["Exchange", "Selection", "SelectionSimd", "Insertion", "Merge", "MergeSlow", "Heap", "Partition", "Distribution", "Network", "Tree", "Scaling"];
+// The Scaling class measures algorithms of the other classes again at sizes no other class measures.
+export const SCALING = "Scaling";
+// The class an algorithm belongs to, for a case measured by the Scaling class.
+export const homeOf = (run, m) => run.categories.find(c => c !== SCALING && run.methodsOf(c).includes(m)) ?? SCALING;
+export const shortN = n => n >= 1 << 20 ? n / (1 << 20) + "M" : n >= 1024 ? n / 1024 + "k" : String(n);
 const REPO = "https://github.com/guitarrapc/SortAlgorithms";
 
 // ---------------------------------------------------------------- data
@@ -56,11 +61,15 @@ export function prepare(raw, entry) {
 // "AMD EPYC 9V74 3.69GHz" -> "EPYC 9V74". The reported clock varies between runners of the same model.
 export const cpuModel = s => (s || "unknown").replace(/^(AMD|Intel\(R\)|Intel)\s+/, "").replace(/\s+[\d.]+\s*GHz.*$/, "").trim();
 
-// Sizes measured by at least two categories, largest first; every size when no size qualifies.
+// Sizes measured by at least two categories, and the sizes only the Scaling class measures, largest first;
+// every size when no size qualifies.
 export function leagueSizes(run) {
   const shared = run.allSizes.filter(n => run.categories.filter(c => run.sizesOf(c).includes(n)).length >= 2);
-  return (shared.length ? shared : run.allSizes).slice().reverse();
+  const large = run.sizesOf(SCALING).filter(n => !shared.includes(n));
+  return (shared.length ? [...shared, ...large].sort((a, b) => a - b) : run.allSizes).slice().reverse();
 }
+// The league shown first: the largest size that two or more categories measure.
+export const defaultLeague = run => leagueSizes(run).find(n => run.categories.filter(c => run.sizesOf(c).includes(n)).length >= 2) ?? leagueSizes(run)[0];
 
 // Anchor-based correction: one factor per category, the geometric mean of base/category reference
 // times over every size and pattern both measured. A per-cell factor would carry the noise of a single

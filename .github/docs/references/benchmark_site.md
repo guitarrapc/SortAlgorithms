@@ -61,6 +61,9 @@ dotnet run --file .github/scripts/UpdateBenchmarkReadme.cs -- BenchmarkDotNet.Ar
 - One method per algorithm that calls `SortAlgorithm.Algorithms.<Type>.Sort(...)` directly, so the converter can find the documentation.
 - A `DotnetSort` method that calls `_buffers.Next().AsSpan().Sort()`. It is the cross-class reference.
 - Algorithms that are not quadratic should be measured up to 8192, so that they enter the largest league.
+- An algorithm that is not quadratic on any of the six patterns also gets a method in `ScalingBenchmark`, which measures 16384 to 1048576. Before adding one, time a single sort of each pattern at 2^20 elements: a pattern whose time grows about 16-fold per 4-fold size is quadratic, and the algorithm stays out. `SimdQuickSort` stays out for that reason on Sorted, Reversed, and ManyDuplicates.
+- `ScalingBenchmark` overrides the job with `[InvocationCount(SortBuffers.LargeInvocationsPerIteration)]` and builds its pool with the same count. A pool of 64 inputs at 2^20 elements would hold 512 MB, and one sort already takes milliseconds.
+- Its sizes start above every other class, so no league or Explorer table ranks the same algorithm twice at one size. The README omits its table, which alone would push the README past the size GitHub renders.
 
 ## Data Files
 
@@ -91,6 +94,8 @@ dotnet run --file .github/scripts/UpdateBenchmarkReadme.cs -- BenchmarkDotNet.Ar
 Views keep their state in the hash, so a view can be linked with its filters.
 
 Phones break at 600px (`narrow()` in `lib.js` matches the CSS), and tablets at 900px, where tables switch to short dates and CPU models and Explorer rows become cards.
+
+The `Scaling` category is the `ScalingBenchmark` class. `lib.js` names it `SCALING`, and `homeOf` gives the class an algorithm belongs to. Compare chooses an algorithm by its own class and continues its line with the `Scaling` points, dividing those by the `DotnetSort` of `Scaling`. Leagues adds the sizes only `Scaling` measures and opens on `defaultLeague`, the largest size two classes share; Explorer and Stability open on that size too. Leagues and Explorer label a `Scaling` row with its own class.
 
 Compare keeps its choice in the URL: `a` lists the eight color slots in order, with an empty entry for a free slot, so that removing an algorithm does not repaint the others; `a=-` means no algorithm. `y` selects the y value and `ys=one` the shared y axis. Complexity links to `#compare?add=<category>|<method>`, which adds that algorithm to the default set. Six tabs need about 357px at the phone tab size, so screens up to 360px get tighter tabs.
 

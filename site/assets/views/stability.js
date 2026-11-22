@@ -1,10 +1,10 @@
-import { d3, PATTERNS, fmtT, pct, esc, svg, logTicks, showTip, hideTip, caseTip, frontier, selectEl, leagueSizes as sizesForLeagues, intro, chartWidth } from "../lib.js";
+import { d3, PATTERNS, fmtT, pct, esc, svg, logTicks, showTip, hideTip, caseTip, frontier, selectEl, leagueSizes as sizesForLeagues, defaultLeague, intro, chartWidth } from "../lib.js";
 
 // Speed against run-to-run variation for one size league, then the per-iteration measurements
 // behind the CV for one category.
 export function render(root, { run, params, setParams, onResize }) {
   const leagueSizes = sizesForLeagues(run);
-  const n0 = leagueSizes.includes(+params.n) ? +params.n : leagueSizes[0];
+  const n0 = leagueSizes.includes(+params.n) ? +params.n : defaultLeague(run);
   const p0 = PATTERNS.includes(params.p) ? params.p : "Random";
   const c0 = run.categories.includes(params.c) ? params.c : (run.categories.includes("Partition") ? "Partition" : run.categories[0]);
   root.innerHTML = `

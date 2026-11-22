@@ -10,6 +10,12 @@ public static class SortBuffers
     /// </summary>
     public const int InvocationsPerIteration = 64;
 
+    /// <summary>
+    /// Invocations per iteration for <see cref="ScalingBenchmark"/>, which overrides the job with [InvocationCount].
+    /// One sort of a large input already takes milliseconds, and a pool of 64 inputs of 2^20 ints with their copies would hold 512 MB.
+    /// </summary>
+    public const int LargeInvocationsPerIteration = 4;
+
     /// <summary>Seed for buffer 0. Buffer <c>i</c> uses <c>FirstSeed + i</c>.</summary>
     public const int FirstSeed = 42;
 }
@@ -33,10 +39,12 @@ public sealed class SortBuffers<T>
 
     /// <param name="generate">Returns the input for a seed. Called once per buffer with
     /// <see cref="SortBuffers.FirstSeed"/> + its index. All inputs must have the same length.</param>
-    public SortBuffers(Func<int, T[]> generate)
+    /// <param name="count">Number of buffers; must equal the invocation count of the job that uses the pool.</param>
+    public SortBuffers(Func<int, T[]> generate, int count = SortBuffers.InvocationsPerIteration)
     {
-        _sources = new T[SortBuffers.InvocationsPerIteration][];
-        _buffers = new T[SortBuffers.InvocationsPerIteration][];
+        ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
+        _sources = new T[count][];
+        _buffers = new T[count][];
         for (var i = 0; i < _buffers.Length; i++)
         {
             _sources[i] = generate(SortBuffers.FirstSeed + i);

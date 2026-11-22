@@ -17,6 +17,7 @@ on:
           - "*MergeSlowBenchmark*"
           - "*NetworkBenchmark*"
           - "*PartitionBenchmark*"
+          - "*ScalingBenchmark*"
           - "*SelectionBenchmark*"
           - "*TreeBenchmark*"
           - "*IntKeyBenchmark*"
@@ -31,7 +32,8 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    # ScalingBenchmark (2^14 to 2^20 elements) takes most of a full run; the limit leaves room for a slower runner.
+    timeout-minutes: 180
     steps:
       - name: CPU Info
         run: |

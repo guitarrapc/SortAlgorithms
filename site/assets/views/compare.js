@@ -1,4 +1,4 @@
-import { d3, PATTERNS, PATTERN_SHORT, esc, svg, logTicks, showTip, hideTip, SER, anchorBase, anchorFactor, geo, fmtX, intro, chartWidth, seg, bindSeg } from "../lib.js";
+import { d3, PATTERNS, PATTERN_SHORT, esc, svg, logTicks, showTip, hideTip, SER, anchorBase, anchorFactor, geo, fmtX, intro, chartWidth, seg, bindSeg, SCALING, homeOf, shortN } from "../lib.js";
 
 // Chosen algorithms side by side across sizes, one small chart per input pattern, in the form papers use:
 // divided by n log₂ n, an n log n sort is flat, so where each algorithm sits reads directly.
@@ -11,31 +11,37 @@ const METRICS = {
   n: { label: "÷ n", axis: "time per element", f: (t, n) => t / n, fmt: v => f3(v) + " ns", tick: v => fTick(v) + " ns" },
   ref: { label: "÷ DotnetSort", axis: "time ÷ DotnetSort", f: (t, n, r) => t / r, fmt: fmtX, tick: v => "×" + fTick(v) },
 };
-const shortN = n => n >= 1024 ? n / 1024 + "k" : String(n);
 
 export function render(root, { run, params, setParams, onResize }) {
   const base = anchorBase(run);
   const ref = run.reference;
-  const known = new Set(run.categories.flatMap(c => run.methodsOf(c).filter(m => m !== ref).map(m => c + "|" + m)));
+  // An algorithm is chosen by its own class; the sizes the Scaling class adds extend the same line.
+  const homes = run.categories.filter(c => c !== SCALING);
+  const known = new Set(homes.flatMap(c => run.methodsOf(c).filter(m => m !== ref).map(m => c + "|" + m)));
   const factors = new Map(run.categories.map(c => [c, base ? anchorFactor(run, c, base) ?? 1 : 1]));
   let metric = METRICS[params.y] ? params.y : "nlogn";
   let shared = params.ys === "one";
   const slots = Array(MAX).fill(null);
   (params.a != null ? params.a.split(",") : DEFAULTS).slice(0, MAX).forEach((id, i) => { if (known.has(id) && !slots.includes(id)) slots[i] = id; });
   // Complexity links here with add=: the algorithm joins the current set, replacing the last slot when all are taken.
-  if (known.has(params.add) && !slots.includes(params.add)) { const i = slots.indexOf(null); slots[i >= 0 ? i : MAX - 1] = params.add; }
-  const bytes = run.allSizes.at(-1) * 4;
+  const [addC, addM] = (params.add ?? "").split("|");
+  const add = addC === SCALING ? homeOf(run, addM) + "|" + addM : params.add;
+  if (known.has(add) && !slots.includes(add)) { const i = slots.indexOf(null); slots[i >= 0 ? i : MAX - 1] = add; }
+  const large = run.sizesOf(SCALING), small = Math.max(...homes.map(c => run.maxSize(c) ?? 0));
+  const sizeNote = large.length
+    ? `Every class measures n = ${run.allSizes[0]} to ${small}. The ${SCALING} class measures the algorithms that are not quadratic on any pattern again, from n = ${large[0]} to ${large.at(-1)} (${large.at(-1) * 4 / 1048576} MB of int input); those points continue each line. ${SCALING} shares no size with the other classes, so its times are not drift-corrected.`
+    : `The sizes are the ones the benchmark measures, n = ${run.allSizes[0]} to ${run.allSizes.at(-1)} int elements, which is at most ${run.allSizes.at(-1) * 4 / 1024} KB of input. Papers usually go on to millions of elements, where memory effects dominate; these charts cover only the small sizes.`;
 
   root.innerHTML = `
     <section class="panel">
       <h2>Compare</h2>
       ${intro("Chosen algorithms, one chart per input pattern. Divided by n log₂ n, an n log n sort stays flat, a linear one falls and a quadratic one rises.",
         `Pick up to eight algorithms. The dashed gray line is ${esc(ref)} (.NET Span.Sort). Both axes are logarithmic. With one y axis for every pattern, the charts can be compared with each other; with an axis per chart, close algorithms separate more. Times from the other benchmark classes are scaled by one drift factor per class, so that their ${esc(ref)} matches the one in ${esc(base ?? "Partition")}.`,
-        `The sizes are the ones the benchmark measures, n = ${run.allSizes[0]} to ${run.allSizes.at(-1)} int elements, which is at most ${bytes / 1024} KB of input. Papers usually go on to millions of elements, where memory effects dominate; these charts cover only the small sizes.`)}
+        sizeNote)}
       <div class="filters">
         ${seg("c-y", "Scale", Object.entries(METRICS).map(([k, v]) => [k, v.label]), metric).replace('class="fl"', 'class="fl wide"')}
         <div id="c-addw"></div>
-        <label for="c-q">Quick pick<select id="c-q"><option value="">Choose…</option><option value="mix">One per complexity class</option>${run.categories.filter(c => run.sizesOf(c).length >= 2).map(c => `<option value="${esc(c)}">${esc(c)}: ${MAX} fastest</option>`).join("")}</select></label>
+        <label for="c-q">Quick pick<select id="c-q"><option value="">Choose…</option><option value="mix">One per complexity class</option>${homes.filter(c => run.sizesOf(c).length >= 2).map(c => `<option value="${esc(c)}">${esc(c)}: ${MAX} fastest</option>`).join("")}</select></label>
         <label class="check"><input type="checkbox" id="c-ys"${shared ? " checked" : ""}> One y axis for every pattern</label>
       </div>
       <div class="cmp-chips" id="c-k"></div>
@@ -51,7 +57,7 @@ export function render(root, { run, params, setParams, onResize }) {
 
   const drawControls = () => {
     const full = slots.every(Boolean);
-    root.querySelector("#c-addw").outerHTML = `<label for="c-add" id="c-addw">Add algorithm<select id="c-add"${full ? " disabled" : ""}><option value="">${full ? `${MAX} chosen; remove one first` : "Choose…"}</option>${run.categories.map(c => {
+    root.querySelector("#c-addw").outerHTML = `<label for="c-add" id="c-addw">Add algorithm<select id="c-add"${full ? " disabled" : ""}><option value="">${full ? `${MAX} chosen; remove one first` : "Choose…"}</option>${homes.map(c => {
       const ms = run.methodsOf(c).filter(m => m !== ref && !slots.includes(c + "|" + m));
       return ms.length ? `<optgroup label="${esc(c)}">${ms.map(m => `<option value="${esc(c + "|" + m)}">${esc(m)}</option>`).join("")}</optgroup>` : "";
     }).join("")}</select></label>`;
@@ -64,12 +70,17 @@ export function render(root, { run, params, setParams, onResize }) {
 
   const drawCharts = () => {
     const M = METRICS[metric], grid = root.querySelector("#c-g");
-    const refOf = (n, p) => base ? run.get(base, ref, n, p)?.mean : undefined;
-    const value = (t, n, p) => { const r = refOf(n, p); return t > 0 && (metric !== "ref" || r > 0) ? M.f(t, n, r) : NaN; };
+    // The reference of the class that measured size n: the base class up to its largest size, Scaling beyond.
+    const refAt = (n, p) => run.get(base, ref, n, p)?.mean ?? (run.get(SCALING, ref, n, p)?.mean ?? NaN) * factors.get(SCALING);
+    const value = (t, n, p) => { const r = refAt(n, p); return t > 0 && (metric !== "ref" || r > 0) ? M.f(t, n, r) : NaN; };
+    const pointsOf = (c, m, p) => [
+      ...run.sizesOf(c).map(n => [n, run.get(c, m, n, p)?.mean * factors.get(c)]),
+      ...run.sizesOf(SCALING).filter(n => !run.sizesOf(c).includes(n)).map(n => [n, run.get(SCALING, m, n, p)?.mean * factors.get(SCALING)]),
+    ].map(([n, t]) => ({ n, v: value(t, n, p) })).filter(q => q.v > 0);
     const chosen = slots.map((id, i) => id && { id, i, c: parts(id)[0], m: parts(id)[1] }).filter(Boolean);
     const seriesOf = p => [
-      ...chosen.map(s => ({ ...s, pts: run.sizesOf(s.c).map(n => ({ n, v: value((run.get(s.c, s.m, n, p)?.mean ?? NaN) * factors.get(s.c), n, p) })).filter(q => q.v > 0) })),
-      ...(base ? [{ id: "ref", ref: true, m: ref, pts: run.sizesOf(base).map(n => ({ n, v: value(refOf(n, p), n, p) })).filter(q => q.v > 0) }] : []),
+      ...chosen.map(s => ({ ...s, pts: pointsOf(s.c, s.m, p) })),
+      ...(base ? [{ id: "ref", ref: true, m: ref, pts: pointsOf(base, ref, p) }] : []),
     ];
     const all = PATTERNS.map(p => ({ p, ss: seriesOf(p) }));
     const values = all.flatMap(a => a.ss.flatMap(s => s.pts.map(q => q.v)));

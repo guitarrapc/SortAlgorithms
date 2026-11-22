@@ -1,4 +1,4 @@
-import { d3, PATTERNS, PATTERN_SHORT, fmtX, esc, logTicks, geo, anchorBase, anchorFactor, pct, cvBadge, leagueSizes as sizesForLeagues, intro } from "../lib.js";
+import { d3, PATTERNS, PATTERN_SHORT, fmtX, esc, logTicks, geo, anchorBase, anchorFactor, pct, cvBadge, leagueSizes as sizesForLeagues, defaultLeague, SCALING, homeOf, shortN, intro } from "../lib.js";
 
 // Overall ranking per size. Each league holds only algorithms measured at that size, so
 // O(n log n) and linear sorts are never ranked against each other at a size too small to separate them.
@@ -7,9 +7,11 @@ import { d3, PATTERNS, PATTERN_SHORT, fmtX, esc, logTicks, geo, anchorBase, anch
 // shows its ratio for every pattern.
 export function render(root, { run, params, setParams }) {
   const leagueSizes = sizesForLeagues(run);
-  let n = leagueSizes.includes(+params.n) ? +params.n : leagueSizes[0];
+  let n = leagueSizes.includes(+params.n) ? +params.n : defaultLeague(run);
   const base = anchorBase(run);
   const ref = run.reference;
+  // A row measured by the Scaling class names the class the algorithm belongs to.
+  const cat = d => d.c === SCALING ? homeOf(run, d.m) : d.c;
   let corrected = params.raw !== "1" && !!base;
   let showAll = false;
   const open = new Set();
@@ -18,9 +20,9 @@ export function render(root, { run, params, setParams }) {
       <h2>Leagues</h2>
       ${intro(`Overall ranking at one input size, across all six input patterns. Left of the ×1 line is faster than ${esc(ref)}.`,
         `Score = geometric mean, over the six input patterns, of the algorithm's time divided by ${esc(ref)}'s time for that pattern. ×0.5 means half the time of ${esc(ref)} on average. The tick marks the algorithm's worst pattern, because a good average can hide an adversarial one. Select a row to see every pattern.`,
-        `A league holds only the algorithms measured at that size. ${esc(ref)} stays at the top with the scale while the list scrolls, and is not ranked; a dashed line marks where it would rank. Every benchmark class measures it; ratios use the measurement in ${esc(base ?? "Partition")}. Drift correction scales each class by one factor so that its ${esc(ref)} matches that one.`)}
+        `A league holds only the algorithms measured at that size. ${esc(ref)} stays at the top with the scale while the list scrolls, and is not ranked; a dashed line marks where it would rank. Every benchmark class measures it; ratios use the measurement in ${esc(base ?? "Partition")}, or in ${SCALING} at the sizes only that class measures. Drift correction scales each class by one factor so that its ${esc(ref)} matches that one.`)}
       <div class="filters">
-        <div class="fl wide"><span>League</span><div class="seg" role="group" id="l-n">${leagueSizes.map(s => `<button type="button" data-v="${s}" aria-pressed="${s === n}">n = ${s}</button>`).join("")}</div></div>
+        <div class="fl wide"><span>League (n)</span><div class="seg" role="group" id="l-n">${leagueSizes.map(s => `<button type="button" data-v="${s}" aria-pressed="${s === n}"><span class="sm-hide">n = </span>${shortN(s)}</button>`).join("")}</div></div>
         <label class="check"><input type="checkbox" id="l-corr"${corrected ? " checked" : ""}${base ? "" : " disabled"}> Correct drift between benchmark classes</label>
       </div>
       <div class="legend" id="l-k"></div>
@@ -36,11 +38,12 @@ export function render(root, { run, params, setParams }) {
       .filter(d => d.rows.every(Boolean))
       .map(d => ({ ...d, adj: d.rows.map(r => r.mean * (factors.get(d.c) ?? 1)) }));
     if (!list.length) return { list, cats, drift: [], byRef: false, fastest: [] };
-    // Older imported runs lack the reference at some sizes; those leagues fall back to the fastest per pattern.
-    const refRows = base ? PATTERNS.map(p => run.get(base, ref, n, p)) : [];
-    const byRef = refRows.length > 0 && refRows.every(Boolean);
+    // The reference of the base class, or of the class that measures this size; older imported runs lack it
+    // at some sizes, and those leagues fall back to the fastest per pattern.
+    const refCat = [base, ...cats.filter(c => c !== base)].find(c => c && PATTERNS.every(p => run.get(c, ref, n, p)));
+    const byRef = !!refCat;
     const fastest = PATTERNS.map((p, i) => d3.least(list, d => d.adj[i]));
-    const denom = byRef ? refRows.map(r => r.mean) : fastest.map((d, i) => d.adj[i]);
+    const denom = byRef ? PATTERNS.map(p => run.get(refCat, ref, n, p).mean * (factors.get(refCat) ?? 1)) : fastest.map((d, i) => d.adj[i]);
     for (const d of list) {
       d.ratios = d.adj.map((v, i) => ({ p: PATTERNS[i], v: v / denom[i] }));
       d.score = geo(d.ratios.map(r => r.v));
@@ -48,12 +51,12 @@ export function render(root, { run, params, setParams }) {
       d.cvMax = d3.max(d.rows, r => r.cv);
     }
     const drift = corrected ? cats.filter(c => c !== base && factors.get(c) != null).map(c => ({ c, f: factors.get(c) })) : [];
-    return { list: list.sort((a, b) => a.score - b.score), cats, drift, byRef, fastest: fastest.map((d, i) => ({ p: PATTERNS[i], d, v: d.adj[i] / denom[i] })) };
+    return { list: list.sort((a, b) => a.score - b.score), cats, drift, byRef, refCat, fastest: fastest.map((d, i) => ({ p: PATTERNS[i], d, v: d.adj[i] / denom[i] })) };
   };
 
   const draw = () => {
     setParams({ n, raw: corrected ? undefined : "1" });
-    const { list, cats, drift, byRef, fastest } = scores();
+    const { list, cats, drift, byRef, refCat, fastest } = scores();
     const legend = root.querySelector("#l-k");
     if (!list.length) {
       legend.innerHTML = "";
@@ -66,7 +69,9 @@ export function render(root, { run, params, setParams }) {
     const missing = corrected ? cats.filter(c => c !== base && !run.methodsOf(c).includes(ref)) : [];
     root.querySelector("#l-note").innerHTML = (byRef ? "" : `This run has no ${esc(ref)} at n = ${n}, so ratios are against the fastest algorithm for each pattern. `) +
       `Fastest per pattern: ${fastest.map(f => `${PATTERN_SHORT[f.p]} <b>${esc(f.d.m)}</b> ${fmtX(f.v)}`).join(", ")}. ` +
-      `${list.length} algorithms from ${cats.length} categories: ${cats.map(esc).join(", ")}.` +
+      (cats.length === 1 && cats[0] === SCALING
+        ? `${list.length} algorithms, measured at this size by the ${SCALING} class; each row names its own class. Ratios use the ${esc(ref)} of that class.`
+        : `${list.length} algorithms from ${cats.length} categories: ${cats.map(esc).join(", ")}.` + (byRef && refCat !== base ? ` Ratios use the ${esc(ref)} of ${esc(refCat)}.` : "")) +
       (corrected && drift.length ? ` Drift correction against ${esc(base)}: ${drift.map(d => `${esc(d.c)} ${d.f >= 1 ? "+" : "−"}${pct(Math.abs(d.f - 1))}`).join(", ")}.` : "") +
       (missing.length ? ` No reference in ${missing.map(esc).join(", ")}; those classes are not corrected.` : "");
 
@@ -81,11 +86,11 @@ export function render(root, { run, params, setParams }) {
       const id = d.c + "|" + d.m;
       return `<div class="lg-row${open.has(id) ? " open" : ""}" role="listitem" tabindex="0" aria-expanded="${open.has(id)}" data-id="${esc(id)}">
         <span class="lg-rk">${rank}</span>
-        <span class="lg-nm"><b>${esc(d.m)}</b><span class="cat">${esc(d.c)}</span></span>
+        <span class="lg-nm"><b>${esc(d.m)}</b><span class="cat">${esc(cat(d))}</span></span>
         <span class="lg-bar" role="img" aria-label="score ${fmtX(d.score)}, worst ${fmtX(d.worst.v)} on ${PATTERN_SHORT[d.worst.p]}"><b style="${span(d.score)}"></b><i style="left:calc(${at(d.worst.v)} - 1px)"></i></span>
         <span class="lg-sc">${fmtX(d.score)}</span>
         <span class="lg-wr"><span class="sm-hide">worst </span>${fmtX(d.worst.v)} ${PATTERN_SHORT[d.worst.p]}</span>
-        <span class="lg-det"><span class="cat sm-only">${esc(d.c)}</span>${d.ratios.map(r => `<span>${PATTERN_SHORT[r.p]} ${fmtX(r.v)}</span>`).join("")}<span>max CV ${cvBadge(d.cvMax)}</span></span>
+        <span class="lg-det"><span class="cat sm-only">${esc(cat(d))}</span>${d.ratios.map(r => `<span>${PATTERN_SHORT[r.p]} ${fmtX(r.v)}</span>`).join("")}<span>max CV ${cvBadge(d.cvMax)}</span></span>
       </div>`;
     };
     // The axis and the reference stay at the top of the list while it scrolls, so every row can be read against them.

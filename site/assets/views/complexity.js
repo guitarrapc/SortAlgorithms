@@ -1,10 +1,9 @@
-import { d3, PATTERNS, PATTERN_SHORT, PATTERN_HEAD, fmtT, fmtX, esc, svg, logTicks, showTip, hideTip, fitExponent, selectEl, SER, nudge, anchorBase, sourceUrl, intro, narrow, chartWidth } from "../lib.js";
+import { d3, PATTERNS, PATTERN_SHORT, PATTERN_HEAD, fmtT, fmtX, esc, svg, logTicks, showTip, hideTip, fitExponent, selectEl, SER, nudge, anchorBase, sourceUrl, intro, narrow, chartWidth, shortN, SCALING } from "../lib.js";
 
 // Measured scaling exponent k (time ∝ n^k) per algorithm and input pattern, next to the complexity the
 // algorithm's XML documentation states. Reference values depend on the size range, so they are fitted
 // over the same sizes as the measurement.
 const CLASSES = ["≈ n", "≈ n log n", "≈ n log² n", "n log² n – n²", "≈ n²"];
-const shortN = n => n >= 1024 ? n / 1024 + "k" : String(n);
 const shortC = s => s ? s.split(" - ")[0].split(" (")[0].trim() : "—";
 const refs = sz => ({ nl: fitExponent(sz.map(n => [n, n * Math.log2(n)])), nl2: fitExponent(sz.map(n => [n, n * Math.log2(n) ** 2])) });
 const edgesOf = sz => { const r = refs(sz); return [(1 + r.nl) / 2, (r.nl + r.nl2) / 2, r.nl2 + 0.15, 1.8]; };
@@ -56,7 +55,8 @@ export function render(root, { run, params, setParams, onResize }) {
   const table = root.querySelector("#k-t");
 
   const drawLegend = () => {
-    const big = run.allSizes.filter(n => n >= 256);
+    // The sizes every class shares; the Scaling group shows its own reference values in its header row.
+    const big = run.allSizes.filter(n => n >= 256 && !run.sizesOf(SCALING).includes(n));
     const r4 = refs(mode === "fit" ? big : big.slice(-2)), r2 = refs([256, 1024]);
     root.querySelector("#k-l").innerHTML = `<span>k (time ∝ nᵏ)</span>` + CLASSES.map((t, i) => `<span><span class="sq kb${i}"></span>${t}</span>`).join("") +
       `<span class="note sm-hide">n log n / n log² n reference: ${r4.nl.toFixed(2)} / ${r4.nl2.toFixed(2)} for ${shortN(big[mode === "fit" ? 0 : big.length - 2])}–${shortN(big.at(-1))}, ${r2.nl.toFixed(2)} / ${r2.nl2.toFixed(2)} for 256–1k</span>`;

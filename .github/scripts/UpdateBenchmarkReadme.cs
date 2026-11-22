@@ -61,6 +61,15 @@ static string BuildBenchmarkSection(string artifactsDir, string runUrl)
     {
         foreach (var report in reportFiles)
         {
+            // Its table alone would push the README past the size GitHub renders.
+            if (report.Key == "ScalingBenchmark")
+            {
+                builder.AppendLine($"### {report.Title}");
+                builder.AppendLine();
+                builder.AppendLine("The table is not listed here because of its length. The results are on the benchmark site (category Scaling) and in the artifacts of the workflow run.");
+                builder.AppendLine();
+                continue;
+            }
             AppendReport(builder, report);
         }
     }
