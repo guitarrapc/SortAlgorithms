@@ -1,24 +1,28 @@
-import { d3, PATTERNS, PATTERN_SHORT, fmtX, esc, svg, logTicks, showTip, hideTip, geo, anchorBase, anchorFactor, pct, cvBadge, leagueSizes as sizesForLeagues } from "../lib.js";
+import { d3, PATTERNS, PATTERN_SHORT, fmtX, esc, logTicks, geo, anchorBase, anchorFactor, pct, cvBadge, leagueSizes as sizesForLeagues, intro } from "../lib.js";
 
 // Overall ranking per size. Each league holds only algorithms measured at that size, so
 // O(n log n) and linear sorts are never ranked against each other at a size too small to separate them.
+// Rows are HTML so they reflow to any width; selecting a row shows its ratio for every pattern.
 export function render(root, { run, params, setParams }) {
   const leagueSizes = sizesForLeagues(run);
   let n = leagueSizes.includes(+params.n) ? +params.n : leagueSizes[0];
   const base = anchorBase(run);
   let corrected = params.raw !== "1" && !!base;
   let showAll = false;
+  const open = new Set();
   root.innerHTML = `
     <section class="panel">
       <h2>Leagues</h2>
-      <p class="lead">Score = geometric mean, over the six input patterns, of each algorithm's time divided by the fastest algorithm in the league for that pattern. The tick marks the algorithm's worst pattern. The reference sort is excluded from the ranking.</p>
+      ${intro("Overall ranking at one input size, across all six input patterns. Shorter bars are faster.",
+        "Score = geometric mean, over the six input patterns, of the algorithm's time divided by the fastest algorithm in the league for that pattern. ×1 means fastest on every pattern. The tick marks the algorithm's worst pattern, because a good average can hide an adversarial one.",
+        "A league holds only the algorithms measured at that size. The reference sort (DotnetSort) is not ranked. Drift correction scales each benchmark class by one factor so that its reference matches the reference in Partition.")}
       <div class="filters">
-        <div class="fl"><span>League</span><div class="seg" role="group" id="l-n">${leagueSizes.map(s => `<button type="button" data-v="${s}" aria-pressed="${s === n}">n = ${s}</button>`).join("")}</div></div>
-        <label class="check"><input type="checkbox" id="l-corr"${corrected ? " checked" : ""}${base ? "" : " disabled"}> Correct for drift between benchmark classes with the reference sort</label>
+        <div class="fl wide"><span>League</span><div class="seg" role="group" id="l-n">${leagueSizes.map(s => `<button type="button" data-v="${s}" aria-pressed="${s === n}">n = ${s}</button>`).join("")}</div></div>
+        <label class="check"><input type="checkbox" id="l-corr"${corrected ? " checked" : ""}${base ? "" : " disabled"}> Correct drift between benchmark classes</label>
       </div>
-      <div id="l-note" class="note"></div>
-      <div class="scroll" id="l-c"></div>
+      <div id="l-c"></div>
       <div id="l-more"></div>
+      <div id="l-note" class="note"></div>
     </section>`;
 
   const scores = () => {
@@ -43,37 +47,42 @@ export function render(root, { run, params, setParams }) {
     const { list, cats, drift } = scores();
     const missing = corrected ? cats.filter(c => c !== base && !run.methodsOf(c).includes(run.reference)) : [];
     root.querySelector("#l-note").innerHTML = `${list.length} algorithms from ${cats.length} categories: ${cats.map(esc).join(", ")}.` +
-      (corrected && drift.length ? ` Correction against ${esc(base)}, one factor per class from the reference over all its sizes and patterns: ${drift.map(d => `${esc(d.c)} ${d.f >= 1 ? "+" : "−"}${pct(Math.abs(d.f - 1))}`).join(", ")}.` : "") +
+      (corrected && drift.length ? ` Drift correction against ${esc(base)}: ${drift.map(d => `${esc(d.c)} ${d.f >= 1 ? "+" : "−"}${pct(Math.abs(d.f - 1))}`).join(", ")}.` : "") +
       (missing.length ? ` No reference in ${missing.map(esc).join(", ")}; those classes are not corrected.` : "");
     const shown = showAll ? list : list.slice(0, 20);
-    const host = root.querySelector("#l-c");
-    host.innerHTML = "";
-    const W = 900, rowH = 24, L = 270, R = 230, T = 26;
-    const H = T + shown.length * rowH + 30;
-    const s = svg(host, W, H, `League n=${n}`);
-    const x = d3.scaleLog().domain([1, Math.max(2, d3.max(shown, d => d.worst.v) * 1.1)]).range([L, W - R]);
-    s.append("g").attr("class", "grid").selectAll("line").data(logTicks(x)).join("line").attr("x1", x).attr("x2", x).attr("y1", T - 4).attr("y2", T + shown.length * rowH);
-    s.append("g").attr("class", "axis").attr("transform", `translate(0,${T + shown.length * rowH + 2})`).call(d3.axisBottom(x).tickValues(logTicks(x)).tickFormat(v => "×" + v).tickSizeOuter(0));
-    s.append("text").attr("x", L).attr("y", 12).attr("class", "t-muted").text("bar = score (geometric mean of pattern ratios) · tick = worst pattern");
+    const x = d3.scaleLog().domain([1, Math.max(2, d3.max(shown, d => d.worst.v) * 1.1)]).range([0, 100]);
+    const at = v => x(v).toFixed(2) + "%";
+    let h = `<div class="lg" role="list"><div class="lg-row head" aria-hidden="true"><span class="lg-bar axis">${logTicks(x, 6).map(v => `<span style="left:${at(v)}">×${v}</span>`).join("")}</span></div>`;
     shown.forEach((d, i) => {
-      const cy = T + i * rowH + rowH / 2;
-      const g = s.append("g")
-        .on("pointermove", ev => showTip(ev, `<b>${esc(d.m)}</b> <span class="cat">${esc(d.c)}</span><br>${d.ratios.map(r => `<span class="mono">${PATTERN_SHORT[r.p].padEnd(10, " ")} ${fmtX(r.v)}</span>`).join("<br>")}<br>max CV ${cvBadge(d.cvMax)}`))
-        .on("pointerleave", hideTip);
-      g.append("rect").attr("x", 0).attr("y", cy - rowH / 2).attr("width", W).attr("height", rowH).style("fill", "transparent");
-      g.append("text").attr("x", 30).attr("y", cy + 4).attr("text-anchor", "end").attr("class", "t-mono t-muted").text(i + 1);
-      g.append("text").attr("x", 40).attr("y", cy + 4).attr("class", "t-ink").text(d.m);
-      g.append("text").attr("x", L - 10).attr("y", cy + 4).attr("text-anchor", "end").attr("class", "t-muted").style("font-size", "10.5px").text(d.c);
-      g.append("rect").attr("x", L).attr("y", cy - 6).attr("width", Math.max(2, x(d.score) - L)).attr("height", 12).attr("rx", 3).style("fill", "var(--s1)");
-      g.append("line").attr("x1", x(d.worst.v)).attr("x2", x(d.worst.v)).attr("y1", cy - 8).attr("y2", cy + 8).style("stroke", "var(--v-ink)").style("stroke-width", 2);
-      g.append("text").attr("x", W - R + 12).attr("y", cy + 4).attr("class", "t-mono").text(`${fmtX(d.score)}  worst ${fmtX(d.worst.v)} ${PATTERN_SHORT[d.worst.p]}`);
+      const id = d.c + "|" + d.m;
+      h += `<div class="lg-row${open.has(id) ? " open" : ""}" role="listitem" tabindex="0" aria-expanded="${open.has(id)}" data-id="${esc(id)}">
+        <span class="lg-rk">${i + 1}</span>
+        <span class="lg-nm"><b>${esc(d.m)}</b><span class="cat">${esc(d.c)}</span></span>
+        <span class="lg-bar" role="img" aria-label="score ${fmtX(d.score)}, worst ${fmtX(d.worst.v)} on ${PATTERN_SHORT[d.worst.p]}"><b style="width:${at(d.score)}"></b><i style="left:calc(${at(d.worst.v)} - 1px)"></i></span>
+        <span class="lg-sc">${fmtX(d.score)}</span>
+        <span class="lg-wr">worst ${fmtX(d.worst.v)} ${PATTERN_SHORT[d.worst.p]}</span>
+        <span class="lg-det"><span class="cat sm-only">${esc(d.c)}</span>${d.ratios.map(r => `<span>${PATTERN_SHORT[r.p]} ${fmtX(r.v)}</span>`).join("")}<span>max CV ${cvBadge(d.cvMax)}</span></span>
+      </div>`;
     });
+    root.querySelector("#l-c").innerHTML = h + "</div>";
     const more = root.querySelector("#l-more");
     more.innerHTML = list.length > 20 ? `<button class="btn" type="button">${showAll ? "Show top 20" : `Show all ${list.length}`}</button>` : "";
     const btn = more.querySelector("button");
     if (btn) btn.onclick = () => { showAll = !showAll; draw(); };
   };
 
+  const toggle = row => {
+    const id = row.dataset.id;
+    if (open.has(id)) open.delete(id); else open.add(id);
+    row.classList.toggle("open", open.has(id));
+    row.setAttribute("aria-expanded", String(open.has(id)));
+  };
+  const host = root.querySelector("#l-c");
+  host.addEventListener("click", e => { const row = e.target.closest(".lg-row[data-id]"); if (row) toggle(row); });
+  host.addEventListener("keydown", e => {
+    const row = e.target.closest(".lg-row[data-id]");
+    if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(row); }
+  });
   root.querySelector("#l-n").addEventListener("click", e => {
     const b = e.target.closest("button");
     if (!b) return;

@@ -1,8 +1,8 @@
-import { d3, PATTERNS, fmtT, pct, esc, svg, showTip, hideTip, selectEl, loadHistory, caseKey, cpuModel, SER, fmtDate } from "../lib.js";
+import { d3, PATTERNS, fmtT, pct, esc, svg, showTip, hideTip, selectEl, loadHistory, caseKey, cpuModel, SER, fmtDate, intro, chartWidth } from "../lib.js";
 
 // One case across all published runs. Runs on different CPU models are not comparable, so lines only
 // connect consecutive runs on the same model and a vertical rule marks each change of model.
-export async function render(root, { run, index, params, setParams }) {
+export async function render(root, { run, index, params, setParams, onResize }) {
   root.innerHTML = `<section class="panel"><h2>History</h2><p class="note">Loading history…</p></section>`;
   const hist = await loadHistory();
   const keys = Object.keys(hist.series);
@@ -15,7 +15,8 @@ export async function render(root, { run, index, params, setParams }) {
   root.innerHTML = `
     <section class="panel">
       <h2>History</h2>
-      <p class="lead">Mean of one case in every published run, with ±StdDev as a band. Colors are CPU models; compare only points of the same color.</p>
+      ${intro("One case across every published run. Compare only points of the same color: each color is one CPU model.",
+        "Each point is the mean of one run, with ±StdDev as a band. A vertical rule marks a change of CPU model, and lines connect only consecutive runs on the same model. The table compares each run with the previous run on the same model; \"within error\" means the 99.9% confidence intervals overlap.")}
       <div class="filters" id="h-f"></div>
       <div class="legend">${models.map((mdl, i) => `<span><span class="sw" style="background:${SER(i)}"></span>${esc(mdl)}</span>`).join("")}<span>vertical rule = CPU model changed</span></div>
       <div class="scroll" id="h-c"></div>
@@ -29,7 +30,7 @@ export async function render(root, { run, index, params, setParams }) {
     if (!ns.includes(+n)) n = String(ns.at(-1));
     const ps = PATTERNS.filter(x => hist.series[caseKey(c, m, n, x)]);
     if (!ps.includes(p)) p = ps[0];
-    root.querySelector("#h-f").innerHTML = selectEl("h-c1", "Category", cats, c) + selectEl("h-m", "Method", ms, m) + selectEl("h-n", "Size", ns.map(v => [v, "n = " + v]), n) + selectEl("h-p", "Pattern", ps, p);
+    root.querySelector("#h-f").innerHTML = selectEl("h-c1", "Category", cats, c) + selectEl("h-m", "Method", ms, m, "wide") + selectEl("h-n", "Size", ns.map(v => [v, "n = " + v]), n) + selectEl("h-p", "Pattern", ps, p);
   };
 
   const drawChart = () => {
@@ -38,14 +39,14 @@ export async function render(root, { run, index, params, setParams }) {
     const pts = hist.series[key].map(([i, mean, err, sd]) => ({ i, mean, err, sd, run: runs[i], model: cpuModel(runs[i].cpu) }));
     const host = root.querySelector("#h-c");
     host.innerHTML = "";
-    const W = 900, H = 340, M = { l: 66, r: 20, t: 34, b: 52 };
+    const W = chartWidth(host, 280, 1000), H = Math.round(Math.max(240, Math.min(340, W * 0.5))), M = { l: W < 560 ? 54 : 66, r: 16, t: 34, b: 52 };
     const s = svg(host, W, H, `History of ${key}`);
     const x = d3.scalePoint().domain(runs.map((_, i) => i)).range([M.l + 10, W - M.r - 10]);
     const lo = d3.min(pts, q => q.mean - q.sd), hi = d3.max(pts, q => q.mean + q.sd);
     const y = d3.scaleLinear().domain([lo - (hi - lo) * 0.1, hi + (hi - lo) * 0.1 || hi * 1.05]).nice().range([H - M.b, M.t]);
     s.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).join("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y).attr("y2", y);
     s.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(fmtT).tickSize(0).tickPadding(6));
-    const step = Math.ceil(runs.length / 24);
+    const step = Math.ceil(runs.length / Math.max(4, Math.floor((W - M.l - M.r) / 36)));
     s.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`)
       .call(d3.axisBottom(x).tickValues(runs.map((_, i) => i).filter(i => i % step === 0 || i === runs.length - 1)).tickFormat(i => runs[i].timestamp.slice(5, 10)).tickSizeOuter(0))
       .selectAll("text").attr("transform", "rotate(-35)").attr("text-anchor", "end").attr("dx", "-4").attr("dy", "6");
@@ -53,7 +54,7 @@ export async function render(root, { run, index, params, setParams }) {
     runs.forEach((r, i) => {
       if (i === 0 || cpuModel(r.cpu) === cpuModel(runs[i - 1].cpu)) return;
       const xx = (x(i) + x(i - 1)) / 2;
-      lift = xx - lastX < 90 ? (lift ? 0 : 12) : 0;
+      lift = xx - lastX < 80 ? (lift ? 0 : 12) : 0;
       lastX = xx;
       s.append("line").attr("x1", xx).attr("x2", xx).attr("y1", M.t - 14 + lift).attr("y2", H - M.b).style("stroke", "var(--v-ink-2)");
       s.append("text").attr("x", xx + 4).attr("y", M.t - 18 + lift).attr("class", "t-muted").style("font-size", "10px").text("→ " + cpuModel(r.cpu));
@@ -65,15 +66,23 @@ export async function render(root, { run, index, params, setParams }) {
       seg.push(q);
     });
     flush();
+    const tipOf = q => `<b>${esc(fmtDate(q.run.timestamp))}</b><br>${esc(q.run.cpu)}<br>Mean <b class="mono">${fmtT(q.mean)}</b> ± SD ${fmtT(q.sd)}${q.run.commit ? `<br><span class="mono">${esc(q.run.commit.slice(0, 7))}</span>` : ""}`;
     pts.forEach(q => {
       const col = SER(models.indexOf(q.model));
       s.append("line").attr("x1", x(q.i)).attr("x2", x(q.i)).attr("y1", y(q.mean - q.sd)).attr("y2", y(q.mean + q.sd)).style("stroke", col).style("stroke-width", 6).style("stroke-opacity", 0.25).style("stroke-linecap", "round");
-      s.append("circle").attr("cx", x(q.i)).attr("cy", y(q.mean)).attr("r", 4.5).style("fill", col).style("stroke", "var(--panel)").style("stroke-width", 2)
-        .on("pointermove", ev => showTip(ev, `<b>${esc(fmtDate(q.run.timestamp))}</b><br>${esc(q.run.cpu)}<br>Mean <b class="mono">${fmtT(q.mean)}</b> ± SD ${fmtT(q.sd)}${q.run.commit ? `<br><span class="mono">${esc(q.run.commit.slice(0, 7))}</span>` : ""}`))
-        .on("pointerleave", hideTip);
+      s.append("circle").attr("cx", x(q.i)).attr("cy", y(q.mean)).attr("r", 4.5).style("fill", col).style("stroke", "var(--panel)").style("stroke-width", 2);
     });
+    const ring = s.append("circle").attr("r", 8).style("fill", "none").style("stroke", "var(--v-ink)").style("stroke-width", 1.5).style("display", "none");
+    const hover = ev => {
+      const [px] = d3.pointer(ev, s.node());
+      const q = d3.least(pts, o => Math.abs(x(o.i) - px));
+      ring.attr("cx", x(q.i)).attr("cy", y(q.mean)).style("display", null);
+      showTip(ev, tipOf(q));
+    };
+    s.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r).attr("height", H - M.t - M.b).style("fill", "transparent")
+      .on("pointermove", hover).on("pointerdown", hover).on("pointerleave", () => { ring.style("display", "none"); hideTip(); });
 
-    let t = `<table class="st"><thead><tr><th>Run</th><th>CPU</th><th>Mean</th><th>Error</th><th>CV</th><th>Change vs previous run on the same CPU model</th><th>Source</th></tr></thead><tbody>`;
+    let t = `<table class="st"><thead><tr><th>Run</th><th>CPU</th><th>Mean</th><th class="sm-hide">Error</th><th>CV</th><th>Change vs previous run, same CPU</th><th class="sm-hide">Source</th></tr></thead><tbody>`;
     const rows = [...pts].reverse();
     rows.forEach(q => {
       const prev = pts.filter(o => o.i < q.i && o.model === q.model).at(-1);
@@ -84,7 +93,7 @@ export async function render(root, { run, index, params, setParams }) {
         change = `${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}% ${sig}`;
       }
       const link = q.run.runUrl ? `<a href="${esc(q.run.runUrl)}">${q.run.source === "readme" ? "README import" : "workflow run"}</a>` : esc(q.run.source);
-      t += `<tr${q.run.id === run.entry.id ? ' class="on"' : ""}><td>${esc(fmtDate(q.run.timestamp))}</td><td>${esc(q.run.cpu)}</td><td class="num">${fmtT(q.mean)}</td><td class="num">${q.err == null ? "—" : "±" + fmtT(q.err)}</td><td class="num">${pct(q.sd / q.mean)}</td><td class="num">${change}</td><td>${link}</td></tr>`;
+      t += `<tr${q.run.id === run.entry.id ? ' class="on"' : ""}><td><span class="sm-hide">${esc(fmtDate(q.run.timestamp))}</span><span class="sm-only">${esc(fmtDate(q.run.timestamp).slice(5, 16))}</span></td><td><span class="sm-hide">${esc(q.run.cpu)}</span><span class="sm-only">${esc(q.model)}</span></td><td class="num">${fmtT(q.mean)}</td><td class="num sm-hide">${q.err == null ? "—" : "±" + fmtT(q.err)}</td><td class="num">${pct(q.sd / q.mean)}</td><td class="num">${change}</td><td class="sm-hide">${link}</td></tr>`;
     });
     root.querySelector("#h-t").innerHTML = t + "</tbody></table>";
   };
@@ -96,4 +105,5 @@ export async function render(root, { run, index, params, setParams }) {
   });
   drawFilters();
   drawChart();
+  onResize(drawChart);
 }

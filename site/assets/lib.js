@@ -5,6 +5,8 @@ export { d3 };
 
 export const PATTERNS = ["Random", "SingleElementMoved", "Sorted", "Reversed", "PipeOrgan", "ManyDuplicates"];
 export const PATTERN_SHORT = { Random: "Random", SingleElementMoved: "1-Moved", Sorted: "Sorted", Reversed: "Reversed", PipeOrgan: "PipeOrgan", ManyDuplicates: "ManyDup" };
+// Column headers that may wrap in narrow matrix cells (soft hyphens).
+export const PATTERN_HEAD = { Random: "Random", SingleElementMoved: "1-Moved", Sorted: "Sorted", Reversed: "Re&shy;versed", PipeOrgan: "Pipe&shy;Organ", ManyDuplicates: "Many&shy;Dup" };
 const CATEGORY_ORDER = ["Exchange", "Selection", "SelectionSimd", "Insertion", "Merge", "MergeSlow", "Heap", "Partition", "Distribution", "Network", "Tree"];
 const REPO = "https://github.com/guitarrapc/SortAlgorithms";
 
@@ -124,10 +126,22 @@ export function showTip(ev, html) {
 export function hideTip() { tip().hidden = true; }
 export const caseTip = r => `<b>${esc(r.m)}</b> <span class="cat">${esc(r.c)}</span><br><span class="mono">n=${r.n} · ${esc(r.p)}</span><br>Mean <b class="mono">${fmtT(r.mean)}</b> ± ${fmtT(r.err)}<br>CV ${cvBadge(r.cv)} · Alloc ${allocBadge(r.alloc)}`;
 
+// ---------------------------------------------------------------- layout
+
+// Phone layout, matching the 600px breakpoint in style.css.
+export const narrow = () => matchMedia("(max-width: 600px)").matches;
+// One visible sentence, and the full explanation in a disclosure that starts open only on wide screens.
+export function intro(short, ...more) {
+  return `<p class="lead">${short}</p>` + (more.length
+    ? `<details class="more"${matchMedia("(min-width: 761px)").matches ? " open" : ""}><summary>How to read this</summary>${more.map(p => `<p>${p}</p>`).join("")}</details>` : "");
+}
+// Charts are drawn at the pixel width of their container, so text stays at its CSS size on every screen.
+export const chartWidth = (host, min = 280, max = 1000) => Math.round(Math.max(min, Math.min(max, host.clientWidth || max)));
+
 // ---------------------------------------------------------------- controls
 
-export function selectEl(id, label, options, value) {
-  return `<label for="${id}">${esc(label)}<select id="${id}">${options.map(o => {
+export function selectEl(id, label, options, value, cls = "") {
+  return `<label for="${id}"${cls ? ` class="${cls}"` : ""}>${esc(label)}<select id="${id}">${options.map(o => {
     const [v, t] = Array.isArray(o) ? o : [o, o];
     return `<option value="${esc(v)}"${String(v) === String(value) ? " selected" : ""}>${esc(t)}</option>`;
   }).join("")}</select></label>`;

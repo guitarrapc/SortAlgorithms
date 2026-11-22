@@ -85,10 +85,12 @@ dotnet run --file .github/scripts/UpdateBenchmarkReadme.cs -- BenchmarkDotNet.Ar
 |---|---|
 | `index.html`, `assets/style.css` | Shell, header, run picker, tabs; color tokens for light and dark |
 | `assets/app.js` | Hash router (`#view?param=…`) and run loading |
-| `assets/lib.js` | Data access, formatting, CPU-model grouping, anchor correction, chart helpers |
+| `assets/lib.js` | Data access, formatting, CPU-model grouping, anchor correction, layout helpers (`intro`, `chartWidth`, `narrow`), chart helpers |
 | `assets/views/*.js` | One module per view; each exports `render(root, context)` |
 
 Views keep their state in the hash, so a view can be linked with its filters.
+
+The layout has one breakpoint for phones at 600px (`narrow()` in `lib.js` matches the CSS). Charts are drawn at the pixel width of their container (`chartWidth`), so a view that draws an SVG registers its drawing function with `context.onResize`; `app.js` calls it when the content width changes. Explorer and Leagues are HTML and reflow with CSS alone. Tooltips also open on tap, because touch screens have no hover.
 
 ## Local Preview
 

@@ -5,7 +5,7 @@ This document states what the project publishes from its CI benchmarks, how each
 ## Where Results Appear
 
 - **README.** The benchmark section starts with a summary: a chart of mean time against run-to-run variation, and the fastest algorithm for each category and input pattern. The full BenchmarkDotNet tables follow in a collapsed block. A full Benchmark workflow run regenerates the section.
-- **Benchmark site.** A static site on GitHub Pages reads the published run files. It has five views: Explorer, Leagues, Complexity, Stability, and History.
+- **Benchmark site.** A static site on GitHub Pages reads the published run files. It has five views: Explorer, Leagues, Complexity, Stability, and History. On a phone, each view shows its ranking, matrix, or chart in the first screen; explanations are one sentence, with the rest behind a disclosure.
 - **SortVivo** ranks algorithms in the browser through WebAssembly. Those numbers depend on the viewer's machine. The CI results are the machine-fixed counterpart.
 
 ## Measurement Environment

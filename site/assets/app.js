@@ -15,6 +15,7 @@ const VIEWS = [
 
 const root = document.getElementById("view");
 let index = null;
+let onResize = null;
 
 function parseHash() {
   const [route, qs] = location.hash.slice(1).split("?");
@@ -48,6 +49,7 @@ function renderRunPicker(entry, route, params) {
 
 async function render() {
   hideTip();
+  onResize = null;
   const { route, params } = parseHash();
   renderNav(route, params);
   if (!index) {
@@ -65,11 +67,12 @@ async function render() {
     return;
   }
   renderRunPicker(entry, route, params);
+  // The run picker already shows the date and CPU.
   document.getElementById("meta").innerHTML = [
-    esc(fmtDate(entry.timestamp)), esc(entry.cpu), `${entry.cases.toLocaleString("en-US")} cases`,
+    `<span class="sm-hide">${entry.cases.toLocaleString("en-US")} cases</span>`,
     entry.runUrl ? `<a href="${esc(entry.runUrl)}">workflow run</a>` : null,
-    entry.source === "readme" ? "imported from README history (no per-iteration data)" : null,
-  ].filter(Boolean).join(" · ");
+    entry.source === "readme" ? `<span class="sm-hide">imported from README history (no per-iteration data)</span>` : null,
+  ].filter(Boolean).join(`<span class="sm-hide"> · </span>`);
 
   const run = await loadRun(entry);
   const view = VIEWS.find(v => v[0] === route)[2];
@@ -78,8 +81,25 @@ async function render() {
   await view.render(root, {
     run, index, params,
     setParams: p => { Object.assign(current, p); writeHash(route, current); },
+    // Views register the charts that depend on the container width.
+    onResize: fn => { onResize = fn; },
   });
 }
+
+// Redraw width-dependent charts when the content width changes; height-only changes (mobile URL bar) are ignored.
+// ResizeObserver also sees changes that fire no window resize event.
+const contentWidth = el => { const cs = getComputedStyle(el); return Math.round(el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)); };
+let lastWidth = contentWidth(root), resizeTimer = 0;
+new ResizeObserver(entries => {
+  const width = Math.round(entries[0].contentRect.width);
+  if (width === lastWidth) return;
+  lastWidth = width;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { hideTip(); onResize?.(); }, 150);
+}).observe(root);
+// Touch has no pointerleave after a tap: a tap outside a chart or a scroll closes the tooltip.
+document.addEventListener("pointerdown", e => { if (!e.target.closest("svg.chart")) hideTip(); });
+window.addEventListener("scroll", hideTip, { passive: true });
 
 window.addEventListener("hashchange", render);
 render().catch(err => {

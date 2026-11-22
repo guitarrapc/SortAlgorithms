@@ -1,16 +1,16 @@
-import { d3, PATTERNS, PATTERN_SHORT, fmtT, fmtX, esc, svg, logTicks, showTip, hideTip, fitExponent, selectEl, SER, nudge, anchorBase, sourceUrl } from "../lib.js";
+import { d3, PATTERNS, PATTERN_SHORT, PATTERN_HEAD, fmtT, fmtX, esc, svg, logTicks, showTip, hideTip, fitExponent, selectEl, SER, nudge, anchorBase, sourceUrl, intro, narrow, chartWidth } from "../lib.js";
 
 // Measured scaling exponent k (time ∝ n^k) per algorithm and input pattern, next to the complexity the
 // algorithm's XML documentation states. Reference values depend on the size range, so they are fitted
 // over the same sizes as the measurement.
-const CLASSES = ["≈ n", "≈ n log n", "≈ n log² n", "between n log² n and n²", "≈ n²"];
+const CLASSES = ["≈ n", "≈ n log n", "≈ n log² n", "n log² n – n²", "≈ n²"];
 const shortN = n => n >= 1024 ? n / 1024 + "k" : String(n);
 const shortC = s => s ? s.split(" - ")[0].split(" (")[0].trim() : "—";
 const refs = sz => ({ nl: fitExponent(sz.map(n => [n, n * Math.log2(n)])), nl2: fitExponent(sz.map(n => [n, n * Math.log2(n) ** 2])) });
 const edgesOf = sz => { const r = refs(sz); return [(1 + r.nl) / 2, (r.nl + r.nl2) / 2, r.nl2 + 0.15, 1.8]; };
 const kclass = (k, e) => { let i = 0; while (i < e.length && k > e[i]) i++; return i; };
 
-export function render(root, { run, params, setParams }) {
+export function render(root, { run, params, setParams, onResize }) {
   let mode = params.mode === "last" ? "last" : "fit";
   const base = anchorBase(run);
   const groups = [...run.categories.filter(c => run.sizesOf(c).length >= 2).map(c => ({ c, label: c, methods: run.methodsOf(c).filter(m => m !== run.reference) })),
@@ -26,14 +26,16 @@ export function render(root, { run, params, setParams }) {
   root.innerHTML = `
     <section class="panel">
       <h2>Complexity</h2>
-      <p class="lead">k is the slope of log(time) against log(n). Cells are colored by the nearest reference: n is 1.00 and n² is 2.00 at any size range, while n log n and n log² n depend on the sizes used. The right column shows Best / Average / Worst from each algorithm's documentation, so a pattern that reaches the documented worst case stands out.</p>
+      ${intro("How each algorithm's time grows with n. Select a cell to compare it with the documented complexity.",
+        "k is the slope of log(time) against log(n). Cells are colored by the nearest reference: n is 1.00 and n² is 2.00 at any size range, while n log n and n log² n depend on the sizes used.",
+        "The documented Best / Average / Worst cases come from each algorithm's XML documentation, so a pattern that reaches the documented worst case stands out. k also includes fixed costs, cache effects and branch prediction; the detail shows the slope of each size interval.")}
       <div class="filters">
-        ${selectEl("k-c", "Category", [["*", "All categories"], ...groups.filter(g => g.label !== "Reference").map(g => [g.c, g.c])], params.cat || "*")}
-        <div class="fl"><span>Fit</span><div class="seg" role="group" id="k-mode"><button type="button" data-v="fit" aria-pressed="${mode === "fit"}">All sizes</button><button type="button" data-v="last" aria-pressed="${mode === "last"}">Last interval only</button></div></div>
+        ${selectEl("k-c", "Category", [["*", "All categories"], ...groups.filter(g => g.label !== "Reference").map(g => [g.c, g.c])], params.cat || "*", "wide")}
+        <div class="fl wide"><span>Fit</span><div class="seg" role="group" id="k-mode"><button type="button" data-v="fit" aria-pressed="${mode === "fit"}">All sizes</button><button type="button" data-v="last" aria-pressed="${mode === "last"}">Last interval only</button></div></div>
       </div>
       <div class="legend" id="k-l"></div>
       <div id="k-n" class="note"></div>
-      <div class="vscroll" id="k-t" style="max-height:460px"></div>
+      <div class="vscroll" id="k-t" style="max-height:min(460px, 62vh)"></div>
     </section>
     <section class="panel" id="k-d"></section>`;
 
@@ -57,7 +59,7 @@ export function render(root, { run, params, setParams }) {
     const big = run.allSizes.filter(n => n >= 256);
     const r4 = refs(mode === "fit" ? big : big.slice(-2)), r2 = refs([256, 1024]);
     root.querySelector("#k-l").innerHTML = `<span>k (time ∝ nᵏ)</span>` + CLASSES.map((t, i) => `<span><span class="sq kb${i}"></span>${t}</span>`).join("") +
-      `<span class="note">n log n / n log² n reference: ${r4.nl.toFixed(2)} / ${r4.nl2.toFixed(2)} for ${shortN(big[mode === "fit" ? 0 : big.length - 2])}–${shortN(big.at(-1))}, ${r2.nl.toFixed(2)} / ${r2.nl2.toFixed(2)} for 256–1k</span>`;
+      `<span class="note sm-hide">n log n / n log² n reference: ${r4.nl.toFixed(2)} / ${r4.nl2.toFixed(2)} for ${shortN(big[mode === "fit" ? 0 : big.length - 2])}–${shortN(big.at(-1))}, ${r2.nl.toFixed(2)} / ${r2.nl2.toFixed(2)} for 256–1k</span>`;
   };
   const drawNotes = () => {
     const beyond = [], within = [];
@@ -79,21 +81,22 @@ export function render(root, { run, params, setParams }) {
     const chips = list => list.length ? list.map(w =>
       `<button type="button" data-c="${esc(w.c)}" data-m="${esc(w.m)}" data-p="${w.p}" aria-pressed="${w.c === sel.c && w.m === sel.m && w.p === sel.p}">${esc(w.m)} · ${PATTERN_SHORT[w.p]}</button>`).join("") : "<span>none</span>";
     root.querySelector("#k-n").innerHTML =
-      `<div class="mchips"><span>Reaches ≈ n² although the documented worst case is below n² (${beyond.length}):</span>${chips(beyond)}</div>` +
+      `<div class="mchips"><span>≈ n² although the documented worst case is below n²:</span>${chips(beyond)}</div>` +
       (beyond.some(w => w.p !== "Random") ? `<div>Sorted, Reversed and PipeOrgan give every iteration the same input, so the branch predictor can learn it at small sizes and steepen the slope. StatisticsContext operation counts tell that apart from extra work.</div>` : "") +
-      `<div class="mchips"><span>Reaches ≈ n² within its documented worst case (n², or a bound in another variable such as m) (${within.length}):</span>${chips(within)}</div>
-      <div>Cells whose class is lower than the same algorithm on Random (best-case behavior): ${lower}.</div>`;
+      `<details class="more"><summary>Reaches ≈ n² within its documented worst case: ${within.length} · faster class than on Random: ${lower}</summary>
+        <div class="mchips"><span>Within a documented worst case of n², or of a bound in another variable such as m:</span>${chips(within)}</div>
+        <p>${lower} cells have a lower class than the same algorithm on Random (best-case behavior).</p></details>`;
   };
   const drawMatrix = () => {
     const cf = root.querySelector("#k-c").value;
-    let h = `<table class="hm"><thead><tr><th></th>${PATTERNS.map(p => `<th>${PATTERN_SHORT[p]}</th>`).join("")}<th style="text-align:left">Documented best / average / worst</th></tr></thead><tbody>`;
+    let h = `<table class="hm"><thead><tr><th></th>${PATTERNS.map(p => `<th>${PATTERN_HEAD[p]}</th>`).join("")}<th class="doc" style="text-align:left">Documented best / average / worst</th></tr></thead><tbody>`;
     for (const g of groups) {
       if (cf !== "*" && g.c !== cf && g.label !== "Reference") continue;
       const sz = sizesFor(g.c), r = refs(sz), e = edgesOf(sz);
-      h += `<tr><td class="g" colspan="8">${esc(g.label)}<span class="gs">${sz.map(shortN).join("→")} · n log n = ${r.nl.toFixed(2)}, n log² n = ${r.nl2.toFixed(2)}</span></td></tr>`;
+      h += `<tr><td class="g" colspan="8"><span>${esc(g.label)}</span><span class="gs">${sz.map(shortN).join("→")} · n log n = ${r.nl.toFixed(2)}, n log² n = ${r.nl2.toFixed(2)}</span></td></tr>`;
       for (const m of g.methods) {
         const a = algo(m);
-        h += `<tr><td class="l">${esc(m)}</td>`;
+        h += `<tr><td class="l" title="${esc(m)}">${esc(m)}</td>`;
         for (const p of PATTERNS) {
           const k = kOf(g.c, m, p);
           if (Number.isNaN(k)) { h += `<td class="c">—</td>`; continue; }
@@ -111,17 +114,17 @@ export function render(root, { run, params, setParams }) {
     const src = sourceUrl(a.file);
     host.innerHTML = `<div class="legend" style="gap:8px 12px"><h3>${esc(m)}</h3><span class="cat">${esc(c)}</span>${src ? `<a href="${src}">source</a>` : ""}<span class="note">selected pattern: ${esc(p)}. Thin gray lines: n, n log n and n² growth from the selected pattern's smallest size.</span></div>
       <div class="legend">${PATTERNS.map((pp, i) => `<span><span class="sw" style="background:${SER(i)}"></span>${PATTERN_SHORT[pp]}</span>`).join("")}</div>
-      <div class="twocol"><div class="scroll" id="k-g"></div><div id="k-r"></div></div>`;
-    const W = 540, H = 330, M = { l: 60, r: 86, t: 12, b: 32 };
+      <div class="twocol"><div id="k-g"></div><div id="k-r"></div></div>`;
+    const W = chartWidth(host.querySelector("#k-g"), 280, 620), H = Math.round(Math.max(240, Math.min(330, W * 0.62)));
+    const M = { l: W < 420 ? 52 : 60, r: 74, t: 12, b: 32 };
     const s = svg(host.querySelector("#k-g"), W, H, `${m} scaling`);
-    s.style("min-width", "460px");
     const series = PATTERNS.map((pp, i) => ({ p: pp, i, pts: sz.map(n => ({ n, t: run.get(c, m, n, pp)?.mean })).filter(q => q.t > 0) })).filter(z => z.pts.length);
     const all = series.flatMap(z => z.pts.map(q => q.t));
     const x = d3.scaleLog().base(2).domain([sz[0], sz.at(-1)]).range([M.l, W - M.r]);
     const y = d3.scaleLog().domain([d3.min(all) * 0.8, d3.max(all) * 1.25]).range([H - M.b, M.t]);
     s.append("defs").append("clipPath").attr("id", "k-clip").append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r).attr("height", H - M.t - M.b);
     s.append("g").attr("class", "grid").selectAll("line").data(logTicks(y)).join("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y).attr("y2", y);
-    s.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).tickValues(sz).tickFormat(n => "n=" + n).tickSizeOuter(0));
+    s.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).tickValues(sz).tickFormat(n => W < 420 ? shortN(n) : "n=" + n).tickSizeOuter(0));
     s.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).tickValues(logTicks(y)).tickFormat(fmtT).tickSize(0).tickPadding(6));
     const line = d3.line().x(q => x(q.n)).y(q => y(q.t));
     const start = (series.find(z => z.p === p) || series[0]).pts[0];
@@ -159,10 +162,12 @@ export function render(root, { run, params, setParams }) {
   };
 
   const select = (c, m, p) => { sel = { c, m, p }; setParams({ c, m, p, mode: mode === "last" ? "last" : undefined }); drawNotes(); drawMatrix(); drawDetail(); };
-  const pick = el => { const td = el.closest("[data-m]"); if (td) select(td.dataset.c, td.dataset.m, td.dataset.p); };
+  const reveal = () => { if (narrow()) root.querySelector("#k-d").scrollIntoView({ behavior: "smooth", block: "start" }); };
+  const pick = el => { const td = el.closest("[data-m]"); if (td) { select(td.dataset.c, td.dataset.m, td.dataset.p); reveal(); } };
   table.addEventListener("click", e => pick(e.target));
   table.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(e.target); } });
   table.addEventListener("pointermove", ev => {
+    if (ev.pointerType === "touch") return;
     const td = ev.target.closest("td.c[data-m]");
     if (!td) return hideTip();
     const k = +td.dataset.k, a = algo(td.dataset.m);
@@ -176,6 +181,7 @@ export function render(root, { run, params, setParams }) {
     select(b.dataset.c, b.dataset.m, b.dataset.p);
     const cell = table.querySelector("td.sel");
     if (cell) table.scrollTop = cell.offsetTop - 60;
+    reveal();
   });
   root.querySelector("#k-c").addEventListener("input", e => { setParams({ cat: e.target.value === "*" ? undefined : e.target.value }); drawMatrix(); });
   root.querySelector("#k-mode").addEventListener("click", e => {
@@ -186,4 +192,5 @@ export function render(root, { run, params, setParams }) {
   });
   drawLegend();
   select(sel.c, sel.m, sel.p);
+  onResize(drawDetail);
 }
