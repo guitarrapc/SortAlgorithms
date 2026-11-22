@@ -89,7 +89,7 @@ int ConvertReports(Dictionary<string, string> o)
         var root = doc.RootElement;
         if (env.Count == 0 && root.TryGetProperty("HostEnvironmentInfo", out var host))
         {
-            env["cpu"] = Str(host, "ProcessorName");
+            env["cpu"] = CpuWithClock(file, Str(host, "ProcessorName"));
             env["cores"] = $"{Num(host, "PhysicalProcessorCount")} CPU, {Num(host, "LogicalCoreCount")} logical and {Num(host, "PhysicalCoreCount")} physical cores";
             env["os"] = Str(host, "OsVersion");
             env["runtime"] = Str(host, "RuntimeVersion");
@@ -174,6 +174,27 @@ static string Str(JsonElement e, string name) =>
 
 static string Num(JsonElement e, string name) =>
     e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetRawText() : "?";
+
+// The JSON report names the processor without its clock; the Markdown report of the same class has it
+// ("AMD EPYC 9V74 3.69GHz, 1 CPU, ..."). README imports read that line, so CI runs use it too.
+static string CpuWithClock(string jsonReport, string processor)
+{
+    var name = Path.GetFileName(jsonReport);
+    var cut = name.IndexOf("-report-full", StringComparison.Ordinal);
+    var md = Path.Combine(Path.GetDirectoryName(jsonReport) ?? ".", name[..cut] + "-report-github.md");
+    if (processor.Length == 0 || !File.Exists(md))
+    {
+        return processor;
+    }
+    foreach (var line in File.ReadLines(md))
+    {
+        if (line.StartsWith(processor, StringComparison.Ordinal))
+        {
+            return line.Split(',')[0].Trim();
+        }
+    }
+    return processor;
+}
 
 // ---------------------------------------------------------------- import-readme
 

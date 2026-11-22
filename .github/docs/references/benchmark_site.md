@@ -61,7 +61,7 @@ dotnet run --file .github/scripts/UpdateBenchmarkReadme.cs -- BenchmarkDotNet.Ar
 | `source` | `ci` or `readme` |
 | `timestamp`, `commit`, `runUrl` | When the run was converted, the benchmarked commit (null for imports), and the workflow run |
 | `reference` | Name of the reference method (`DotnetSort`) |
-| `environment` | `cpu`, `cores`, `os`, `runtime`, `sdk`, `benchmarkDotNet` |
+| `environment` | `cpu` (processor and clock; `convert` takes the clock from the class's `*-report-github.md`), `cores`, `os`, `runtime`, `sdk`, `benchmarkDotNet` |
 | `algorithms.<method>` | `type`, `file`, `family`, `stable`, `inPlace`, `best`, `average`, `worst`; `reference: true` for the reference |
 | `cases[]` | `category`, `method`, `size`, `pattern`, `mean`, `median`, `stdDev`, `error`, `n`, `allocated`, `measurements[]` (ns per sort for each WorkloadActual iteration) |
 

@@ -23,10 +23,10 @@ export function render(root, { run, params, setParams }) {
 
   const scores = () => {
     const cats = run.categories.filter(c => run.sizesOf(c).includes(n));
-    const factor = (c, p) => corrected ? (anchorFactor(run, c, n, p, base) ?? 1) : 1;
+    const factors = new Map(cats.map(c => [c, corrected ? anchorFactor(run, c, base) : 1]));
     const list = cats.flatMap(c => run.methodsOf(c).filter(m => m !== run.reference).map(m => ({ c, m, rows: PATTERNS.map(p => run.get(c, m, n, p)) })))
       .filter(d => d.rows.every(Boolean))
-      .map(d => ({ ...d, adj: d.rows.map(r => r.mean * factor(d.c, r.p)) }));
+      .map(d => ({ ...d, adj: d.rows.map(r => r.mean * (factors.get(d.c) ?? 1)) }));
     const best = PATTERNS.map((p, i) => d3.min(list, d => d.adj[i]));
     for (const d of list) {
       d.ratios = d.adj.map((v, i) => ({ p: PATTERNS[i], v: v / best[i] }));
@@ -34,7 +34,7 @@ export function render(root, { run, params, setParams }) {
       d.worst = d.ratios.reduce((a, b) => b.v > a.v ? b : a);
       d.cvMax = d3.max(d.rows, r => r.cv);
     }
-    const drift = corrected ? cats.filter(c => c !== base).flatMap(c => PATTERNS.map(p => anchorFactor(run, c, n, p, base)).filter(v => v != null).map(v => Math.abs(v - 1))) : [];
+    const drift = corrected ? cats.filter(c => c !== base && factors.get(c) != null).map(c => ({ c, f: factors.get(c) })) : [];
     return { list: list.sort((a, b) => a.score - b.score), cats, drift };
   };
 
@@ -43,7 +43,7 @@ export function render(root, { run, params, setParams }) {
     const { list, cats, drift } = scores();
     const missing = corrected ? cats.filter(c => c !== base && !run.methodsOf(c).includes(run.reference)) : [];
     root.querySelector("#l-note").innerHTML = `${list.length} algorithms from ${cats.length} categories: ${cats.map(esc).join(", ")}.` +
-      (corrected && drift.length ? ` Reference drift between classes: median ${pct(d3.median(drift))}, max ${pct(d3.max(drift))} (base: ${esc(base)}).` : "") +
+      (corrected && drift.length ? ` Correction against ${esc(base)}, one factor per class from the reference over all its sizes and patterns: ${drift.map(d => `${esc(d.c)} ${d.f >= 1 ? "+" : "−"}${pct(Math.abs(d.f - 1))}`).join(", ")}.` : "") +
       (missing.length ? ` No reference in ${missing.map(esc).join(", ")}; those classes are not corrected.` : "");
     const shown = showAll ? list : list.slice(0, 20);
     const host = root.querySelector("#l-c");

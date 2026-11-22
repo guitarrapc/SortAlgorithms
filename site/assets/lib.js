@@ -60,11 +60,16 @@ export function leagueSizes(run) {
   return (shared.length ? shared : run.allSizes).slice().reverse();
 }
 
-// Anchor-based correction: scales a category's times so its reference run matches the reference run of `base`.
-export function anchorFactor(run, c, n, p, base) {
+// Anchor-based correction: one factor per category, the geometric mean of base/category reference
+// times over every size and pattern both measured. A per-cell factor would carry the noise of a single
+// reference measurement into every algorithm of the category.
+export function anchorFactor(run, c, base) {
   if (c === base) return 1;
-  const a = run.get(base, run.reference, n, p), b = run.get(c, run.reference, n, p);
-  return a && b ? a.mean / b.mean : null;
+  const ratios = run.sizesOf(c).flatMap(n => PATTERNS.map(p => {
+    const a = run.get(base, run.reference, n, p), b = run.get(c, run.reference, n, p);
+    return a && b ? a.mean / b.mean : null;
+  })).filter(v => v != null);
+  return ratios.length ? geo(ratios) : null;
 }
 export function anchorBase(run) {
   const withRef = run.categories.filter(c => run.methodsOf(c).includes(run.reference));

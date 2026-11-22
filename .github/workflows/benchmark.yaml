@@ -198,16 +198,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Outside the checkout: main tracks its own data/ folder.
+          data="${RUNNER_TEMP}/benchmark-data"
           remote="https://github-actions:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}"
           if git ls-remote --exit-code --heads "${remote}" benchmark-data > /dev/null; then
-            git clone --depth 1 --branch benchmark-data "${remote}" data
+            git clone --depth 1 --branch benchmark-data "${remote}" "${data}"
           else
             echo "::notice::benchmark-data does not exist yet; creating it with the results in the README history."
-            git init -b benchmark-data data
-            git -C data remote add origin "${remote}"
-            mkdir -p data/runs
-            dotnet run --file .github/scripts/BenchmarkData.cs -- import-readme --repo . --out-dir data/runs
-            cat > data/README.md <<'MD'
+            git init -b benchmark-data "${data}"
+            git -C "${data}" remote add origin "${remote}"
+            mkdir -p "${data}/runs"
+            dotnet run --file .github/scripts/BenchmarkData.cs -- import-readme --repo . --out-dir "${data}/runs"
+            cat > "${data}/README.md" <<'MD'
           # benchmark-data
 
           Benchmark results published by the Benchmark workflow on `main` and read by the benchmark site.
@@ -216,13 +218,13 @@ jobs:
           MD
           fi
           id="$(jq -r .id "${RUNNER_TEMP}/run.json")"
-          cp "${RUNNER_TEMP}/run.json" "data/runs/${id}.json"
-          dotnet run --file .github/scripts/BenchmarkData.cs -- index --data data
-          git -C data config user.name "github-actions[bot]"
-          git -C data config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C data add -A
-          git -C data commit -m "data: benchmark run ${id}" -m "published from ${RUN_URL}"
-          git -C data push origin HEAD:benchmark-data
+          cp "${RUNNER_TEMP}/run.json" "${data}/runs/${id}.json"
+          dotnet run --file .github/scripts/BenchmarkData.cs -- index --data "${data}"
+          git -C "${data}" config user.name "github-actions[bot]"
+          git -C "${data}" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "${data}" add -A
+          git -C "${data}" commit -m "data: benchmark run ${id}" -m "published from ${RUN_URL}"
+          git -C "${data}" push origin HEAD:benchmark-data
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
