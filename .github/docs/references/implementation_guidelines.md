@@ -47,6 +47,7 @@ Prefer no auxiliary storage when the algorithm permits it. For required storage,
 - Keep loops simple and cache repeatedly used values.
 - Use aggressive inlining only for small, measured hot helpers.
 - Avoid LINQ, closures, iterator state machines, boxing, exception-driven control flow, and per-element allocation in hot paths.
+- In vector code, keep the vectors that one step hands to the next in locals. The JIT keeps the elements of a span or an inline array in memory. A vector that a non-inlined call returns goes through a return buffer, which the inlined caller shares among all its return paths. Either way, every step stores the vector and loads it back. Look for vector loads and stores at `[rsp+…]` inside the loop in the disassembly. In `SimdMergeSort` such round trips made the 512-bit path slower than the 256-bit one. To compare the two paths on one machine, run the same build again with `DOTNET_PreferredVectorBitWidth=256`. This setting turns off `Vector512.IsHardwareAccelerated` but keeps the AVX-512 instructions.
 - Add a small-sort stage only when the algorithm's definition contains one, and take its threshold from the definition or its reference source. A benchmark result does not justify adding or retuning one (see the Core Principles in [AGENTS.md](../../../AGENTS.md)).
 
 ## Documentation Checklist

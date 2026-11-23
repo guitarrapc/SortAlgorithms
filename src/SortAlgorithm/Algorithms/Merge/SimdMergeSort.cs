@@ -2,7 +2,6 @@
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 
 namespace SortAlgorithm.Algorithms;
@@ -372,6 +371,13 @@ public static class SimdMergeSort
         TVec element;
     }
 
+    /// <summary>64 bytes, the size of the widest vector.</summary>
+    [InlineArray(64)]
+    struct Scratch
+    {
+        byte element;
+    }
+
     /// <summary>The state of one merge of a group: the read positions and ends of both lists, and the next output position.</summary>
     struct MergeState
     {
@@ -424,77 +430,132 @@ public static class SimdMergeSort
                 states[j] = new MergeState { X = x, XEnd = x + run, Y = x + run, YEnd = (int)Math.Min((long)x + 2L * run, hi), Out = x };
             }
 
-            if (width == 1)
-            {
-                MergeGroupOneVector(src, dst, states[..starts.Length], n);
-                return;
-            }
+            // A group of 2K-wide units holds two merges, and a group of 4K-wide units one.
+            if (width == 1) MergeGroupOneVector(src, dst, states[..starts.Length], n);
+            else if (width == 2) MergeGroupTwoVectors(src, dst, states[..starts.Length], n);
+            else MergeFourVectors(src, dst, ref states[0], n);
+        }
 
-            var unit = width * TLanes.Count;
+        // The merges below hold the vectors of a network in locals, not in a span: the JIT keeps a span's vectors in memory, and storing a
+        // vector and loading it back at each stage of the network made the 512-bit path slower than the 256-bit one.
+
+        /// <summary>
+        /// Merges a group whose units are two vectors, each merge advancing one network in turn.
+        /// </summary>
+        static void MergeGroupTwoVectors(in SortSpan<T, TComparer, TContext> src, in SortSpan<T, TComparer, TContext> dst, Span<MergeState> states, int n)
+        {
+            var k = TLanes.Count;
             Unsafe.SkipInit(out Vectors4<TVec> carryBuffer);
-            Unsafe.SkipInit(out Vectors4<TVec> loadedBuffer);
-            Unsafe.SkipInit(out Vectors4<TVec> firstBuffer);
-            Unsafe.SkipInit(out Vectors4<TVec> lowBuffer);
             Span<TVec> carries = carryBuffer;
-            var loaded = ((Span<TVec>)loadedBuffer)[..width];
-            var first = ((Span<TVec>)firstBuffer)[..width];
-            var low = ((Span<TVec>)lowBuffer)[..width];
 
-            var active = starts.Length;
+            var active = states.Length;
             while (active > 0)
             {
-                for (var j = 0; j < starts.Length; j++)
+                for (var j = 0; j < states.Length; j++)
                 {
                     ref var s = ref states[j];
                     if (s.Step == 2) continue;
-                    var carry = carries.Slice(j * width, width);
 
+                    // c holds the first unit, then the kept upper half; the unit at p is merged with it.
+                    TVec c0, c1;
+                    int p;
                     if (s.Step == 0)
                     {
-                        LoadUnit(src, s.X, n, first);
-                        LoadUnit(src, s.Y, n, loaded);
-                        s.X += unit;
-                        s.Y += unit;
-                        Network(src, first, loaded, low, carry);
-                        StoreUnit(dst, s.Out, n, low);
-                        s.Out += unit;
+                        c0 = Load(src, s.X, n);
+                        c1 = Load(src, s.X + k, n);
+                        s.X += 2 * k;
+                        p = s.Y;
+                        s.Y += 2 * k;
                         s.Step = 1;
-                        continue;
-                    }
-
-                    bool fromX;
-                    if (s.X < s.XEnd) fromX = s.Y >= s.YEnd || !src.IsLessAt(s.Y, s.X);
-                    else if (s.Y < s.YEnd) fromX = false;
-                    else
-                    {
-                        StoreUnit(dst, s.Out, n, carry);
-                        s.Step = 2;
-                        active--;
-                        continue;
-                    }
-
-                    if (fromX)
-                    {
-                        LoadUnit(src, s.X, n, loaded);
-                        s.X += unit;
                     }
                     else
                     {
-                        LoadUnit(src, s.Y, n, loaded);
-                        s.Y += unit;
+                        if (s.X < s.XEnd && (s.Y >= s.YEnd || !src.IsLessAt(s.Y, s.X)))
+                        {
+                            p = s.X;
+                            s.X += 2 * k;
+                        }
+                        else if (s.Y < s.YEnd)
+                        {
+                            p = s.Y;
+                            s.Y += 2 * k;
+                        }
+                        else
+                        {
+                            Store(dst, s.Out, n, carries[2 * j]);
+                            Store(dst, s.Out + k, n, carries[2 * j + 1]);
+                            s.Step = 2;
+                            active--;
+                            continue;
+                        }
+                        c0 = carries[2 * j];
+                        c1 = carries[2 * j + 1];
                     }
-                    carry.CopyTo(first);
-                    Network(src, first, loaded, low, carry);
-                    StoreUnit(dst, s.Out, n, low);
-                    s.Out += unit;
+
+                    var b0 = Load(src, p, n);
+                    var b1 = Load(src, p + k, n);
+                    Network(src, ref c0, ref c1, b0, b1, out var low0, out var low1);
+                    carries[2 * j] = c0;
+                    carries[2 * j + 1] = c1;
+                    Store(dst, s.Out, n, low0);
+                    Store(dst, s.Out + k, n, low1);
+                    s.Out += 2 * k;
                 }
             }
         }
 
         /// <summary>
-        /// Merges a group whose units are single vectors, each merge advancing one network in turn; the kept halves stay in registers.
+        /// Merges one pair with units of four vectors.
         /// </summary>
-        static void MergeGroupOneVector(SortSpan<T, TComparer, TContext> src, SortSpan<T, TComparer, TContext> dst, Span<MergeState> states, int n)
+        static void MergeFourVectors(in SortSpan<T, TComparer, TContext> src, in SortSpan<T, TComparer, TContext> dst, ref MergeState s, int n)
+        {
+            var k = TLanes.Count;
+            // c holds the first unit, then the kept upper half; the unit at p is merged with it.
+            var c0 = Load(src, s.X, n);
+            var c1 = Load(src, s.X + k, n);
+            var c2 = Load(src, s.X + 2 * k, n);
+            var c3 = Load(src, s.X + 3 * k, n);
+            s.X += 4 * k;
+            var p = s.Y;
+            s.Y += 4 * k;
+
+            while (true)
+            {
+                var b0 = Load(src, p, n);
+                var b1 = Load(src, p + k, n);
+                var b2 = Load(src, p + 2 * k, n);
+                var b3 = Load(src, p + 3 * k, n);
+                Network(src, ref c0, ref c1, ref c2, ref c3, b0, b1, b2, b3, out var low0, out var low1, out var low2, out var low3);
+                Store(dst, s.Out, n, low0);
+                Store(dst, s.Out + k, n, low1);
+                Store(dst, s.Out + 2 * k, n, low2);
+                Store(dst, s.Out + 3 * k, n, low3);
+                s.Out += 4 * k;
+
+                if (s.X < s.XEnd && (s.Y >= s.YEnd || !src.IsLessAt(s.Y, s.X)))
+                {
+                    p = s.X;
+                    s.X += 4 * k;
+                }
+                else if (s.Y < s.YEnd)
+                {
+                    p = s.Y;
+                    s.Y += 4 * k;
+                }
+                else break;
+            }
+
+            Store(dst, s.Out, n, c0);
+            Store(dst, s.Out + k, n, c1);
+            Store(dst, s.Out + 2 * k, n, c2);
+            Store(dst, s.Out + 3 * k, n, c3);
+            s.Step = 2;
+        }
+
+        /// <summary>
+        /// Merges a group whose units are single vectors, each merge advancing one network in turn.
+        /// </summary>
+        static void MergeGroupOneVector(in SortSpan<T, TComparer, TContext> src, in SortSpan<T, TComparer, TContext> dst, Span<MergeState> states, int n)
         {
             var k = TLanes.Count;
             Unsafe.SkipInit(out Vectors4<TVec> carryBuffer);
@@ -515,7 +576,8 @@ public static class SimdMergeSort
                         var second = Load(src, s.Y, n);
                         s.X += k;
                         s.Y += k;
-                        Network(src, first, second, out low, out carries[j]);
+                        Network(src, first, second, out low, out var high);
+                        carries[j] = high;
                         s.Step = 1;
                     }
                     else
@@ -538,7 +600,8 @@ public static class SimdMergeSort
                             active--;
                             continue;
                         }
-                        Network(src, carries[j], loaded, out low, out carries[j]);
+                        Network(src, carries[j], loaded, out low, out var high);
+                        carries[j] = high;
                     }
 
                     Store(dst, s.Out, n, low);
@@ -552,7 +615,7 @@ public static class SimdMergeSort
         /// vector is cleaned at distances K/2, …, 1.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void Network(SortSpan<T, TComparer, TContext> s, TVec a, TVec b, out TVec low, out TVec high)
+        static void Network(in SortSpan<T, TComparer, TContext> s, TVec a, TVec b, out TVec low, out TVec high)
         {
             var reversed = TLanes.Partner(b, TLanes.Count - 1);
             if (typeof(TContext) != typeof(NullContext)) s.ReportHeldLaneCompares(TLanes.Count, TLanes.LessBits(a, reversed), TLanes.GreaterBits(a, reversed));
@@ -562,41 +625,102 @@ public static class SimdMergeSort
         }
 
         /// <summary>
-        /// The bitonic merge network of two sorted units a and b of width vectors each: b is reversed, element i is compared with element
-        /// i + U, then each half is cleaned at distances U/2, …, 1. low and high receive the lower and the upper half.
+        /// The bitonic merge network of two sorted units of two vectors, c and b: b is reversed, element i is compared with element i + U,
+        /// then each half is cleaned at distances U/2, …, 1, first between the vectors and then inside them. low receives the lower half and
+        /// c the upper.
         /// </summary>
-        static void Network(SortSpan<T, TComparer, TContext> s, ReadOnlySpan<TVec> a, ReadOnlySpan<TVec> b, Span<TVec> low, Span<TVec> high)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void Network(in SortSpan<T, TComparer, TContext> s, ref TVec c0, ref TVec c1, TVec b0, TVec b1, out TVec low0, out TVec low1)
         {
             var k = TLanes.Count;
-            var width = a.Length;
-            for (var i = 0; i < width; i++)
-            {
-                var reversed = TLanes.Partner(b[width - 1 - i], k - 1);
-                if (typeof(TContext) != typeof(NullContext)) s.ReportHeldLaneCompares(k, TLanes.LessBits(a[i], reversed), TLanes.GreaterBits(a[i], reversed));
-                low[i] = TLanes.Min(a[i], reversed);
-                high[i] = TLanes.Max(a[i], reversed);
-            }
+            low0 = c0;
+            low1 = c1;
+            c0 = TLanes.Partner(b1, k - 1);
+            c1 = TLanes.Partner(b0, k - 1);
+            Exchange(s, ref low0, ref c0);
+            Exchange(s, ref low1, ref c1);
 
-            // Distances of at least K are between vectors, the shorter ones inside them; each stage runs on the lower half, then the upper.
-            for (var vd = width / 2; vd >= 1; vd >>= 1)
-            {
-                CleanVectors(s, low, vd);
-                CleanVectors(s, high, vd);
-            }
-            for (var d = k / 2; d >= 1; d >>= 1)
-            {
-                for (var i = 0; i < width; i++) CleanLanes(s, ref low[i], d);
-                for (var i = 0; i < width; i++) CleanLanes(s, ref high[i], d);
-            }
+            Exchange(s, ref low0, ref low1);
+            Exchange(s, ref c0, ref c1);
+            CleanLanes(s, ref low0, ref low1, ref c0, ref c1);
         }
 
-        /// <summary>One stage at a distance of <paramref name="vd"/> vectors: the smaller of each pair to the lower vector.</summary>
-        static void CleanVectors(SortSpan<T, TComparer, TContext> s, Span<TVec> v, int vd)
+        /// <summary>
+        /// The bitonic merge network of two sorted units of four vectors, c and b: b is reversed, element i is compared with element i + U,
+        /// then each half is cleaned at distances U/2, …, 1, first between the vectors and then inside them. low receives the lower half and
+        /// c the upper.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void Network(in SortSpan<T, TComparer, TContext> s, ref TVec c0, ref TVec c1, ref TVec c2, ref TVec c3, TVec b0, TVec b1, TVec b2, TVec b3,
+            out TVec low0, out TVec low1, out TVec low2, out TVec low3)
         {
-            for (var i = 0; i < v.Length; i++)
+            var k = TLanes.Count;
+            low0 = c0;
+            low1 = c1;
+            low2 = c2;
+            low3 = c3;
+            c0 = TLanes.Partner(b3, k - 1);
+            c1 = TLanes.Partner(b2, k - 1);
+            c2 = TLanes.Partner(b1, k - 1);
+            c3 = TLanes.Partner(b0, k - 1);
+            Exchange(s, ref low0, ref c0);
+            Exchange(s, ref low1, ref c1);
+            Exchange(s, ref low2, ref c2);
+            Exchange(s, ref low3, ref c3);
+
+            Exchange(s, ref low0, ref low2);
+            Exchange(s, ref low1, ref low3);
+            Exchange(s, ref c0, ref c2);
+            Exchange(s, ref c1, ref c3);
+            Exchange(s, ref low0, ref low1);
+            Exchange(s, ref low2, ref low3);
+            Exchange(s, ref c0, ref c1);
+            Exchange(s, ref c2, ref c3);
+            CleanLanes(s, ref low0, ref low1, ref low2, ref low3, ref c0, ref c1, ref c2, ref c3);
+        }
+
+        /// <summary>The stages at distances K/2, …, 1 inside four vectors, each stage applied to them in order.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void CleanLanes(in SortSpan<T, TComparer, TContext> s, ref TVec v0, ref TVec v1, ref TVec v2, ref TVec v3)
+        {
+            if (TLanes.Count >= 16) CleanLanes(s, 8, ref v0, ref v1, ref v2, ref v3);
+            if (TLanes.Count >= 8) CleanLanes(s, 4, ref v0, ref v1, ref v2, ref v3);
+            if (TLanes.Count >= 4) CleanLanes(s, 2, ref v0, ref v1, ref v2, ref v3);
+            CleanLanes(s, 1, ref v0, ref v1, ref v2, ref v3);
+        }
+
+        /// <summary>The stages at distances K/2, …, 1 inside eight vectors, each stage applied to them in order.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void CleanLanes(in SortSpan<T, TComparer, TContext> s, ref TVec v0, ref TVec v1, ref TVec v2, ref TVec v3,
+            ref TVec v4, ref TVec v5, ref TVec v6, ref TVec v7)
+        {
+            if (TLanes.Count >= 16)
             {
-                if ((i & vd) == 0) Exchange(s, ref v[i], ref v[i + vd]);
+                CleanLanes(s, 8, ref v0, ref v1, ref v2, ref v3);
+                CleanLanes(s, 8, ref v4, ref v5, ref v6, ref v7);
             }
+            if (TLanes.Count >= 8)
+            {
+                CleanLanes(s, 4, ref v0, ref v1, ref v2, ref v3);
+                CleanLanes(s, 4, ref v4, ref v5, ref v6, ref v7);
+            }
+            if (TLanes.Count >= 4)
+            {
+                CleanLanes(s, 2, ref v0, ref v1, ref v2, ref v3);
+                CleanLanes(s, 2, ref v4, ref v5, ref v6, ref v7);
+            }
+            CleanLanes(s, 1, ref v0, ref v1, ref v2, ref v3);
+            CleanLanes(s, 1, ref v4, ref v5, ref v6, ref v7);
+        }
+
+        /// <summary>One stage at lane distance <paramref name="d"/> inside four vectors, in order.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void CleanLanes(in SortSpan<T, TComparer, TContext> s, int d, ref TVec v0, ref TVec v1, ref TVec v2, ref TVec v3)
+        {
+            CleanLanes(s, ref v0, d);
+            CleanLanes(s, ref v1, d);
+            CleanLanes(s, ref v2, d);
+            CleanLanes(s, ref v3, d);
         }
 
         /// <summary>
@@ -604,7 +728,7 @@ public static class SimdMergeSort
         /// The distances are constants, so each stage's permutation and mask are too.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void CleanLanes(SortSpan<T, TComparer, TContext> s, ref TVec low, ref TVec high)
+        static void CleanLanes(in SortSpan<T, TComparer, TContext> s, ref TVec low, ref TVec high)
         {
             if (TLanes.Count >= 16)
             {
@@ -627,7 +751,7 @@ public static class SimdMergeSort
 
         /// <summary>One stage inside a vector at lane distance <paramref name="d"/>: the smaller of each pair to the lower lane.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void CleanLanes(SortSpan<T, TComparer, TContext> s, ref TVec v, int d)
+        static void CleanLanes(in SortSpan<T, TComparer, TContext> s, ref TVec v, int d)
         {
             var partner = TLanes.Partner(v, d);
             if (typeof(TContext) != typeof(NullContext)) s.ReportSelectedHeldLaneCompares(TLanes.LanesWithout(d), TLanes.LessBits(v, partner), TLanes.GreaterBits(v, partner));
@@ -636,7 +760,7 @@ public static class SimdMergeSort
 
         /// <summary>A comparator between two vectors: the lane minima to <paramref name="lo"/> and the maxima to <paramref name="hi"/>.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void Exchange(SortSpan<T, TComparer, TContext> s, ref TVec lo, ref TVec hi)
+        static void Exchange(in SortSpan<T, TComparer, TContext> s, ref TVec lo, ref TVec hi)
         {
             if (typeof(TContext) != typeof(NullContext)) s.ReportHeldLaneCompares(TLanes.Count, TLanes.LessBits(lo, hi), TLanes.GreaterBits(lo, hi));
             var min = TLanes.Min(lo, hi);
@@ -664,40 +788,32 @@ public static class SimdMergeSort
             }
         }
 
-        static void LoadUnit(SortSpan<T, TComparer, TContext> s, int p, int n, Span<TVec> into)
-        {
-            for (var v = 0; v < into.Length; v++) into[v] = Load(s, p + v * TLanes.Count, n);
-        }
-
-        static void StoreUnit(SortSpan<T, TComparer, TContext> s, int p, int n, ReadOnlySpan<TVec> from)
-        {
-            for (var v = 0; v < from.Length; v++) Store(s, p + v * TLanes.Count, n, from[v]);
-        }
-
         /// <summary>The vector at <paramref name="p"/>, its lanes from <paramref name="n"/> on holding the largest key.</summary>
+        // The partial vector is filled in memory by a call that returns nothing: a call returning the vector would make the JIT keep every
+        // vector this method returns in memory, as the call's return buffer.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static TVec Load(SortSpan<T, TComparer, TContext> s, int p, int n)
+        static TVec Load(in SortSpan<T, TComparer, TContext> s, int p, int n)
         {
             var k = TLanes.Count;
             if (n - p >= k) return TLanes.Load(ref s.ReadBlock(p, k));
-            return LoadPartial(s, p, n - p);
+            Unsafe.SkipInit(out Scratch scratch);
+            ref var lanes = ref Unsafe.As<Scratch, T>(ref scratch);
+            FillPartial(s, p, n - p, ref lanes);
+            return TLanes.Load(ref lanes);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        static TVec LoadPartial(SortSpan<T, TComparer, TContext> s, int p, int count)
+        static void FillPartial(in SortSpan<T, TComparer, TContext> s, int p, int count, ref T lanes)
         {
-            if (count <= 0) return TLanes.Broadcast(LargestKey<T>());
-            Span<byte> bytes = stackalloc byte[64];
-            ref var scratch = ref Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(bytes));
-            TLanes.Store(ref scratch, TLanes.Broadcast(LargestKey<T>()));
+            TLanes.Store(ref lanes, TLanes.Broadcast(LargestKey<T>()));
+            if (count <= 0) return;
             ref var from = ref s.ReadBlock(p, count);
-            for (var i = 0; i < count; i++) Unsafe.Add(ref scratch, i) = Unsafe.Add(ref from, i);
-            return TLanes.Load(ref scratch);
+            for (var i = 0; i < count; i++) Unsafe.Add(ref lanes, i) = Unsafe.Add(ref from, i);
         }
 
         /// <summary>Stores the lanes of <paramref name="v"/> that fall before <paramref name="n"/>.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void Store(SortSpan<T, TComparer, TContext> s, int p, int n, TVec v)
+        static void Store(in SortSpan<T, TComparer, TContext> s, int p, int n, TVec v)
         {
             var k = TLanes.Count;
             if (n - p >= k)
@@ -710,10 +826,10 @@ public static class SimdMergeSort
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        static void StorePartial(SortSpan<T, TComparer, TContext> s, int p, int count, TVec v)
+        static void StorePartial(in SortSpan<T, TComparer, TContext> s, int p, int count, TVec v)
         {
-            Span<byte> bytes = stackalloc byte[64];
-            ref var scratch = ref Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(bytes));
+            Unsafe.SkipInit(out Scratch buffer);
+            ref var scratch = ref Unsafe.As<Scratch, T>(ref buffer);
             TLanes.Store(ref scratch, v);
             ref var to = ref s.BlockRef(p);
             for (var i = 0; i < count; i++) Unsafe.Add(ref to, i) = Unsafe.Add(ref scratch, i);
