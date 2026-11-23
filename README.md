@@ -46,19 +46,19 @@ Measured at each category's largest size. "≈ 2nd" means the 99.9% confidence i
 
 | Category | n | Random | 1-Moved | Sorted | Reversed | PipeOrgan | ManyDup |
 |---|--:|---|---|---|---|---|---|
-| Exchange | 1024 | **CombSort**<br>×3.08 vs 2nd 🟢 | **CocktailShakerSort**<br>×10.21 vs 2nd 🔴 | **CocktailShakerSort**<br>×1.26 vs 2nd 🟢 | **CombSort**<br>×1.18 vs 2nd 🟢 | **CombSort**<br>×6.43 vs 2nd 🟢 | **CombSort**<br>×3.71 vs 2nd 🟢 |
-| Selection | 1024 | **DoubleSelectionSortSimd**<br>×1.19 vs 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.59 vs 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.75 vs 2nd 🟢 | **SelectionSortSimd**<br>≈ 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.81 vs 2nd 🟢 | **BingoSort**<br>×2.56 vs 2nd 🟢 |
-| Insertion | 8192 | **ShellSortKnuth1973**<br>×1.06 vs 2nd 🟢 | **InsertionSort**<br>×1.17 vs 2nd 🟢 | **InsertionSort**<br>×1.24 vs 2nd 🟡 | **ShellSortKnuth1973**<br>×1.15 vs 2nd 🟢 | **ShellSortKnuth1973**<br>×1.16 vs 2nd 🟢 | **ShellSortSedgewick1986**<br>×1.03 vs 2nd 🟢 |
-| Merge | 8192 | **SimdMergeSort**<br>×1.31 vs 2nd 🟢 | **TimSort**<br>×1.34 vs 2nd 🟡 | **Glidesort**<br>≈ 2nd 🟡 | **TimSort**<br>≈ 2nd 🟡 | **Driftsort**<br>×1.14 vs 2nd 🟢 | **Driftsort**<br>×1.16 vs 2nd 🟢 |
+| Exchange | 1024 | **CombSort**<br>×2.92 vs 2nd 🟢 | **CocktailShakerSort**<br>×11.40 vs 2nd 🟢 | **CocktailShakerSort**<br>×1.33 vs 2nd 🟢 | **CombSort**<br>×1.14 vs 2nd 🟢 | **CombSort**<br>×6.22 vs 2nd 🟢 | **CombSort**<br>×3.49 vs 2nd 🟢 |
+| Selection | 1024 | **SelectionSortSimd**<br>≈ 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.51 vs 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.52 vs 2nd 🟢 | **DoubleSelectionSortSimd**<br>≈ 2nd 🟢 | **DoubleSelectionSortSimd**<br>×1.84 vs 2nd 🟢 | **BingoSort**<br>×2.83 vs 2nd 🟢 |
+| Insertion | 8192 | **ShellSortKnuth1973**<br>×1.08 vs 2nd 🟢 | **InsertionSort**<br>×1.17 vs 2nd 🟡 | **InsertionSort**<br>×1.24 vs 2nd 🟡 | **ShellSortKnuth1973**<br>×1.15 vs 2nd 🟢 | **ShellSortKnuth1973**<br>×1.12 vs 2nd 🟢 | **ShellSortSedgewick1986**<br>×1.03 vs 2nd 🟢 |
+| Merge | 8192 | **Driftsort**<br>×1.02 vs 2nd 🟢 | **TimSort**<br>×1.59 vs 2nd 🟢 | **SpinSort**<br>≈ 2nd 🟡 | **TimSort**<br>≈ 2nd 🟢 | **Driftsort**<br>×1.14 vs 2nd 🟡 | **Driftsort**<br>×1.39 vs 2nd 🟢 |
 | MergeSlow | 1024 | **StrandSort**<br>only one 🟢 | **StrandSort**<br>only one 🔴 | **StrandSort**<br>only one 🟡 | **StrandSort**<br>only one 🟢 | **StrandSort**<br>only one 🟢 | **StrandSort**<br>only one 🟢 |
-| Heap | 8192 | **HeapSort**<br>×1.01 vs 2nd 🟢 | **SmoothSort**<br>×2.95 vs 2nd 🟢 | **SmoothSort**<br>×3.37 vs 2nd 🟢 | **PairingHeapSort**<br>×3.12 vs 2nd 🟢 | **PairingHeapSort**<br>×1.08 vs 2nd 🟢 | **HeapSort**<br>≈ 2nd 🟢 |
-| Partition | 8192 | **SimdQuickSort**<br>×1.28 vs 2nd 🟢 | **FluxSort**<br>×1.34 vs 2nd 🟢 | **Ips4oSort**<br>×1.17 vs 2nd 🟡 | **Ips4oSort**<br>≈ 2nd 🟡 | **FluxSort**<br>×1.26 vs 2nd 🟢 | **PDQSortBranchless**<br>×1.16 vs 2nd 🟢 |
-| Distribution | 8192 | **PigeonSortInteger**<br>×1.39 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.36 vs 2nd 🟡 | **SpreadSort**<br>×4.91 vs 2nd 🟡 | **PigeonSortInteger**<br>×1.42 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.26 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.28 vs 2nd 🟢 |
-| Network | 8192 | **BitonicSortAnyLengthSimd**<br>×1.58 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×1.28 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×1.34 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×1.32 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×1.33 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×1.58 vs 2nd 🟢 |
-| Tree | 8192 | **BinaryTreeSort**<br>×1.27 vs 2nd 🟢 | **CartesianTreeSort**<br>×2.13 vs 2nd 🟢 | **CartesianTreeSort**<br>×1.92 vs 2nd 🟢 | **CartesianTreeSort**<br>×1.95 vs 2nd 🟢 | **CartesianTreeSort**<br>×1.99 vs 2nd 🟢 | **BalancedBinaryTreeSort**<br>×1.06 vs 2nd 🟢 |
-| Scaling | 1048576 | **PigeonSortInteger**<br>×1.78 vs 2nd 🟢 | **TimSort**<br>≈ 2nd 🟢 | **Ips4oSort**<br>≈ 2nd 🟢 | **Driftsort**<br>≈ 2nd 🟢 | **Driftsort**<br>×1.18 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.35 vs 2nd 🟢 |
+| Heap | 8192 | **HeapSort**<br>×1.02 vs 2nd 🟢 | **SmoothSort**<br>×3.13 vs 2nd 🟢 | **SmoothSort**<br>×3.62 vs 2nd 🟢 | **PairingHeapSort**<br>×3.12 vs 2nd 🟢 | **PairingHeapSort**<br>×1.10 vs 2nd 🟢 | **HeapSort**<br>×1.02 vs 2nd 🟢 |
+| Partition | 8192 | **SimdQuickSort**<br>×4.11 vs 2nd 🟢 | **FluxSort**<br>×1.32 vs 2nd 🟡 | **Ips4oSort**<br>≈ 2nd 🔴 | **Ips4oSort**<br>≈ 2nd 🟡 | **FluxSort**<br>×1.27 vs 2nd 🟢 | **SimdQuickSort**<br>×1.16 vs 2nd 🟢 |
+| Distribution | 8192 | **PigeonSortInteger**<br>×1.41 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.23 vs 2nd 🟢 | **SpreadSort**<br>×4.92 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.37 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.35 vs 2nd 🟢 | **PigeonSortInteger**<br>×1.29 vs 2nd 🟢 |
+| Network | 8192 | **BitonicSortAnyLengthSimd**<br>×3.02 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.61 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.61 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.61 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×2.53 vs 2nd 🟢 | **BitonicSortAnyLengthSimd**<br>×3.06 vs 2nd 🟢 |
+| Tree | 8192 | **BinaryTreeSort**<br>×1.23 vs 2nd 🟢 | **CartesianTreeSort**<br>×2.15 vs 2nd 🟢 | **CartesianTreeSort**<br>×2.00 vs 2nd 🟢 | **CartesianTreeSort**<br>×1.95 vs 2nd 🟢 | **CartesianTreeSort**<br>×2.04 vs 2nd 🟢 | **BalancedBinaryTreeSort**<br>×1.07 vs 2nd 🟢 |
+| Scaling | 1048576 | **PigeonSortInteger**<br>×1.84 vs 2nd 🟢 | **FlatStableSort**<br>≈ 2nd 🟢 | **Glidesort**<br>≈ 2nd 🟢 | **Glidesort**<br>≈ 2nd 🟢 | **Driftsort**<br>×1.17 vs 2nd 🟢 | **Driftsort**<br>×1.12 vs 2nd 🟢 |
 
-Measured 2026-11-22 20:28 UTC on AMD EPYC 9V74 2.86GHz in [workflow run](https://github.com/guitarrapc/SortAlgorithms/actions/runs/45053462105). The full BenchmarkDotNet tables are in that run's artifacts.
+Measured 2026-11-23 07:14 UTC on AMD EPYC 9V74 3.68GHz in [workflow run](https://github.com/guitarrapc/SortAlgorithms/actions/runs/45121423240). The full BenchmarkDotNet tables are in that run's artifacts.
 
 <!-- BENCHMARK_END -->
 
