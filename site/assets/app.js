@@ -56,6 +56,8 @@ function renderRunPicker(entry, route, params) {
 }
 
 async function render() {
+  // An enlarged chart belongs to the view it was opened from.
+  document.querySelector("dialog.big")?.close();
   hideTip();
   onResize = null;
   const { route, params } = parseHash();

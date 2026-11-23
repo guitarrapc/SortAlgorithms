@@ -36,7 +36,7 @@ Error and StdDev are not shown as two independent measures. Error is t·StdDev/�
 
 ## Compare View
 
-The Compare view places up to eight chosen algorithms in one chart per input pattern, with n on the x axis. This is the form that papers and sort announcements use to show where an algorithm stands. The default y value is time ÷ n log₂ n: an n log n sort stays flat, a linear sort falls, and a quadratic sort rises, so the class and the constant factor read together. Time per element and the ratio to `DotnetSort` are the alternatives. Each chart has its own y axis by default, as in papers; one axis for all six charts is an option for comparing patterns. Times from other benchmark classes carry the same per-class drift factor as Leagues.
+The Compare view places up to eight chosen algorithms in one chart per input pattern, with n on the x axis. This is the form that papers and sort announcements use to show where an algorithm stands. The default y value is time ÷ n log₂ n: an n log n sort stays flat, a linear sort falls, and a quadratic sort rises, so the class and the constant factor read together. Time per element and the ratio to `DotnetSort` are the alternatives. Each chart has its own y axis by default, as in papers; one axis for all six charts is an option for comparing patterns. Times from other benchmark classes carry the same per-class drift factor as Leagues. Eight series colors include pairs that are hard to tell apart where lines cross, so pointing at a line or its chip brings that algorithm forward in every chart, and a click or tap keeps it there. Any chart can be enlarged to the screen.
 
 Every class measures 256 to 8192 int elements, and the Scaling class continues the lines of the algorithms that are not quadratic up to 1048576 elements (4 MB). Non-goal for now: the sizes beyond that, where papers show the input leaving the last-level cache. Each 4-fold step there multiplies the job time, so it would need a schedule of its own.
 
@@ -45,6 +45,8 @@ Every class measures 256 to 8192 int elements, and the Scaling class continues t
 The site fits k, the slope of log(time) against log(n), for every algorithm and pattern. It classifies k against reference slopes that are fitted over the same sizes. Only n (1.00) and n² (2.00) are independent of the size range; n log n is 1.14 over 256–8192 and 1.16 over 256–1024. Next to k, the view shows the Best, Average, and Worst cases from the algorithm's XML documentation. A pattern that reaches the documented worst case is therefore visible, as the textbook-fidelity rule in [AGENTS.md](../../../AGENTS.md) expects. Cells that reach ≈ n² fall into two lists. One list holds cells whose documented worst case is below n²; these need a check of the implementation. The other list holds cells within a documented worst case of n², or within a bound in another variable, such as Θ(n·m) with m distinct keys.
 
 k also includes fixed costs, cache effects, and branch prediction. For this reason the view shows the slope of each size interval too, not only the fit over all sizes.
+
+The detail chart draws the n, n log n, and n² guides from the selected pattern's smallest size. A pattern that follows a guide lies under it, so the guides are dashed and drawn above the data, and the labels at the right edge are moved apart. Pointing at a line brings that pattern forward; selecting it re-anchors the guides. The chart can be enlarged to the screen.
 
 ## Data Retention
 

@@ -183,8 +183,58 @@ export function logTicks(scale, max = 7) {
   if (out.length > max) return out.filter(v => /^1/.test(v.toExponential()));
   return out.length >= 2 ? out : scale.ticks(4);
 }
-export function nudge(labels, gap = 12) {
+// Moves labels at least gap apart, and back above hi when the last one would fall below it.
+export function nudge(labels, gap = 12, lo = -Infinity, hi = Infinity) {
   labels.sort((a, b) => a.y - b.y);
-  for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < gap) labels[i].y = labels[i - 1].y + gap;
+  for (let i = 0; i < labels.length; i++) labels[i].y = Math.max(labels[i].y, i ? labels[i - 1].y + gap : lo);
+  for (let i = labels.length - 1; i >= 0; i--) labels[i].y = Math.min(labels[i].y, i < labels.length - 1 ? labels[i + 1].y - gap : hi);
   return labels;
+}
+// The series whose line passes nearest to (px, py), with that distance in pixels. Lines are straight between points.
+export function nearestLine(series, px, py, X, Y) {
+  const toSeg = (x1, y1, x2, y2) => {
+    const dx = x2 - x1, dy = y2 - y1, l = dx * dx + dy * dy, t = l ? Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / l)) : 0;
+    return Math.hypot(px - x1 - t * dx, py - y1 - t * dy);
+  };
+  let z = null, d = Infinity;
+  for (const s of series) {
+    const p = s.pts.map(q => [X(q), Y(q)]);
+    const ds = p.length === 1 ? toSeg(...p[0], ...p[0]) : Math.min(...d3.pairs(p).map(([a, b]) => toSeg(...a, ...b)));
+    if (ds < d) { d = ds; z = s; }
+  }
+  return { z, d };
+}
+// How close the pointer must be to a line to pick it; a finger covers more than a mouse pointer.
+export const pickRadius = ev => ev.pointerType === "touch" ? 24 : 12;
+
+// ---------------------------------------------------------------- expanded chart
+
+export const EXPAND_ICON = `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>`;
+// A chart enlarged to most of the screen. draw(host, width, height) fills host, and runs again when the dialog changes size.
+// A modal dialog sits above every other element, so the tooltip moves into it while it is open.
+export function chartDialog(title, draw, tools = "") {
+  document.querySelector("dialog.big")?.close();
+  const dlg = document.createElement("dialog");
+  dlg.className = "big";
+  dlg.setAttribute("aria-label", title);
+  dlg.innerHTML = `<div class="big-head"><b>${esc(title)}</b><button type="button" class="big-x" aria-label="Close">×</button>${tools ? `<div class="big-tools">${tools}</div>` : ""}</div><div class="big-body"></div>`;
+  document.body.append(dlg);
+  const body = dlg.querySelector(".big-body");
+  let w = 0, h = 0;
+  const redraw = () => {
+    const cs = getComputedStyle(body);
+    hideTip();
+    body.replaceChildren();
+    draw(body, body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), body.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
+  };
+  const ro = new ResizeObserver(() => { if (body.clientWidth !== w || body.clientHeight !== h) { w = body.clientWidth; h = body.clientHeight; redraw(); } });
+  dlg.addEventListener("close", () => { ro.disconnect(); hideTip(); document.body.append(tip()); dlg.remove(); });
+  dlg.addEventListener("click", e => { if (e.target === dlg || e.target.closest(".big-x")) dlg.close(); });
+  dlg.append(tip());
+  dlg.showModal();
+  // The first drawing does not wait for the observer, which reports only on the next rendered frame.
+  w = body.clientWidth; h = body.clientHeight;
+  redraw();
+  ro.observe(body);
+  return { dlg, redraw };
 }
