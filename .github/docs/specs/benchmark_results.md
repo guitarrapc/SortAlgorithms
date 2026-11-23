@@ -10,7 +10,7 @@ This document states what the project publishes from its CI benchmarks, how each
 
 ## Measurement Environment
 
-The workflow runs on a GitHub-hosted runner and fails early unless the CPU model is the pinned one. Absolute times are valid only for that model. The site therefore compares a run only with earlier runs on the same CPU model. All benchmark classes run one after another in the same job.
+The workflow runs on a GitHub-hosted runner and fails early unless the CPU model is the pinned one and the runner has AVX-512. Absolute times are valid only for that model and instruction set. The site therefore compares a run only with earlier runs on the same CPU model. All benchmark classes run one after another in the same job.
 
 ## Published Figures
 
@@ -75,3 +75,4 @@ Each full run produces one run file. Run files are kept on the orphan branch `be
 - In that run, the slope from 4096 to 8192 alone was about 2 on Sorted, Reversed, or PipeOrgan input in eleven cells of seven algorithms whose documented worst case is below n², among them `TernaryHeapSort`, `SmoothSort`, `TournamentSort`, and `IntroSortDotnet`. Their comparison and write counts grew as n log n over the same interval. These patterns give every iteration the same input. Random input, which differs per iteration, showed no such step. The step is therefore consistent with the branch predictor learning the repeated input at the smaller size. A large slope on these patterns alone is therefore a timing effect until the operation counts show otherwise.
 - The twelfth such cell, `StdStableSort` on Reversed input, was real work. Its insertion-sort leaves alternate between 64 and 128 elements as the recursion depth changes parity, so comparisons per element alternate between about 34 and 66 at successive powers of two. The order stays n log n, but a single interval can show a slope of 0.1 or 2.0.
 - `SelectionSortSimd` is Θ(n²), yet in the 2026-11-20 run its interval slopes were 1.30, 1.59, and 1.83 from 256 to 8192. Fixed costs dominate small sizes, so a single fitted k understates the order.
+- The 2026-11-22 20:28 run passed the model check on an EPYC 9V74 runner without AVX-512, which reported 2.86 GHz; the 08:54 run had AVX-512 at 3.59 GHz. Over the 2,640 cases both runs measured, the later run took a median 1.29 times as long. `SimdQuickSort`, which then uses 256-bit vectors, took 3.3 times as long on Random at n = 8192 and 14.7 times as long on Sorted. The README history already had both kinds of 9V74 runner in August 2026: the JIT reported x86-64-v3 on some runs and x86-64-v4 on others. The CPU check therefore also requires AVX-512, and each run file records the x86-64 level.

@@ -24,7 +24,7 @@ on:
           - "*StringBenchmark*"
       allow-any-cpu:
         type: boolean
-        description: Skip the AMD EPYC 9V74 CPU requirement check.
+        description: Skip the runner CPU check (AMD EPYC 9V74 with AVX-512).
         default: false
 
 jobs:
@@ -43,14 +43,17 @@ jobs:
           echo "=== AVX512 info ==="
           grep -o 'avx512[a-z0-9_]*' /proc/cpuinfo | sort -u | tr '\n' ' '; echo
       # Fail before setup-dotnet and build when the runner has the wrong CPU.
-      # Program.cs repeats this check (RequiredCpu); keep the two values in sync.
+      # Some runners of the pinned model have no AVX-512, which makes every case slower and the SIMD sorts much slower.
+      # Program.cs repeats this check (RequiredCpu); keep the two in sync.
       - name: Check runner CPU
         if: ${{ !inputs.allow-any-cpu }}
         run: |
           model=$(sed -n '/^model name/{s/^[^:]*:[[:space:]]*//p;q;}' /proc/cpuinfo)
+          model="${model:-(unknown)}"
+          grep -qw avx512f /proc/cpuinfo || model="${model} (no AVX-512)"
           shopt -s nocasematch
-          if [[ "${model}" != *"${REQUIRED_CPU}"* ]]; then
-            echo "::error::Benchmark requires a CPU containing '${REQUIRED_CPU}', but this runner has '${model:-(unknown)}'. Re-run the job to get another runner, or run the workflow with allow-any-cpu checked."
+          if [[ "${model}" != *"${REQUIRED_CPU}"* || "${model}" == *"(no AVX-512)" ]]; then
+            echo "::error::Benchmark requires a CPU containing '${REQUIRED_CPU}' with AVX-512, but this runner has '${model}'. Re-run the job to get another runner, or run the workflow with allow-any-cpu checked."
             exit 1
           fi
           echo "::notice::CPU OK: ${model}"

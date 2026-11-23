@@ -33,7 +33,7 @@ Until `benchmark-data` exists, `pages.yaml` deploys the site without data, and t
 ./scripts/run-benchmark.ps1 -RunId <id>      # continue with a run that is already re-running
 ```
 
-GitHub-hosted runners come with several CPU models. The workflow's `Check runner CPU` step fails within a minute on any model other than the pinned one. The script reads that runner's CPU from the step's annotation and re-runs the failed jobs until the check passes. On 2026-11-22 the pinned CPU came on the 20th attempt, and 14 of the 19 misses were Xeon 6975P-C.
+GitHub-hosted runners come with several CPU models, and runners of one model differ in AVX-512. The workflow's `Check runner CPU` step fails within a minute on any model other than the pinned one, and on a runner of that model without the `avx512f` flag; `Program.cs` repeats both checks. The script reads that runner's CPU from the step's annotation and re-runs the failed jobs until the check passes. On 2026-11-22 the pinned CPU came on the 20th attempt, and 14 of the 19 misses were Xeon 6975P-C.
 
 ## Scripts
 
@@ -75,11 +75,11 @@ dotnet run --file .github/scripts/UpdateBenchmarkReadme.cs -- README.md <run-url
 | `source` | `ci` or `readme` |
 | `timestamp`, `commit`, `runUrl` | When the run was converted, the benchmarked commit (null for imports), and the workflow run |
 | `reference` | Name of the reference method (`DotnetSort`) |
-| `environment` | `cpu` (processor and clock; `convert` takes the clock from the class's `*-report-github.md`), `cores`, `os`, `runtime`, `sdk`, `benchmarkDotNet` |
+| `environment` | `cpu` (processor and clock), `cores`, `os`, `runtime` (with the JIT and its x86-64 level, such as `X64 RyuJIT x86-64-v4`), `sdk`, `benchmarkDotNet`. `convert` takes the clock and the runtime from the class's `*-report-github.md`, because the JSON report has neither. |
 | `algorithms.<method>` | `type`, `file`, `family`, `stable`, `inPlace`, `best`, `average`, `worst`; `reference: true` for the reference |
 | `cases[]` | `category`, `method`, `size`, `pattern`, `mean`, `median`, `stdDev`, `error`, `n`, `allocated`, `measurements[]` (ns per sort for each WorkloadActual iteration) |
 
-`index.json` lists runs in time order with `id`, `source`, `timestamp`, `commit`, `runUrl`, `cpu`, `file`, and `cases`. `latest` names the newest run. `history.json` maps `category|method|size|pattern` to rows of `[runIndex, mean, error, stdDev]`. `runIndex` refers to `index.json` `runs`. `history.json` grows with every run, by about 50 KB per run at the current case count.
+`index.json` lists runs in time order with `id`, `source`, `timestamp`, `commit`, `runUrl`, `cpu`, `isa`, `file`, and `cases`. `isa` is the x86-64 level from `environment.runtime` (`x86-64-v4` has AVX-512), or null when the runtime does not name one. `latest` names the newest run. `history.json` maps `category|method|size|pattern` to rows of `[runIndex, mean, error, stdDev]`. `runIndex` refers to `index.json` `runs`. `history.json` grows with every run, by about 50 KB per run at the current case count.
 
 ## Site Code
 

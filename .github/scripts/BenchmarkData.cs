@@ -89,10 +89,12 @@ int ConvertReports(Dictionary<string, string> o)
         var root = doc.RootElement;
         if (env.Count == 0 && root.TryGetProperty("HostEnvironmentInfo", out var host))
         {
-            env["cpu"] = CpuWithClock(file, Str(host, "ProcessorName"));
+            var processor = Str(host, "ProcessorName");
+            var (cpuLine, hostLine) = MarkdownEnvironment(file, processor);
+            env["cpu"] = cpuLine ?? processor;
             env["cores"] = $"{Num(host, "PhysicalProcessorCount")} CPU, {Num(host, "LogicalCoreCount")} logical and {Num(host, "PhysicalCoreCount")} physical cores";
             env["os"] = Str(host, "OsVersion");
-            env["runtime"] = Str(host, "RuntimeVersion");
+            env["runtime"] = hostLine ?? Str(host, "RuntimeVersion");
             env["sdk"] = Str(host, "DotNetCliVersion");
             env["benchmarkDotNet"] = Str(host, "BenchmarkDotNetVersion");
         }
@@ -175,25 +177,32 @@ static string Str(JsonElement e, string name) =>
 static string Num(JsonElement e, string name) =>
     e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetRawText() : "?";
 
-// The JSON report names the processor without its clock; the Markdown report of the same class has it
-// ("AMD EPYC 9V74 3.69GHz, 1 CPU, ..."). README imports read that line, so CI runs use it too.
-static string CpuWithClock(string jsonReport, string processor)
+// The JSON report names the processor without its clock and the runtime without its JIT and x86-64 level;
+// the Markdown report of the same class has both ("AMD EPYC 9V74 3.69GHz, 1 CPU, ...",
+// "[Host] : .NET 11.0.0 (...), X64 RyuJIT x86-64-v4"). README imports read those lines, so CI runs use them too.
+static (string? Cpu, string? Runtime) MarkdownEnvironment(string jsonReport, string processor)
 {
     var name = Path.GetFileName(jsonReport);
     var cut = name.IndexOf("-report-full", StringComparison.Ordinal);
     var md = Path.Combine(Path.GetDirectoryName(jsonReport) ?? ".", name[..cut] + "-report-github.md");
-    if (processor.Length == 0 || !File.Exists(md))
+    if (!File.Exists(md))
     {
-        return processor;
+        return (null, null);
     }
-    foreach (var line in File.ReadLines(md))
+    string? cpu = null, runtime = null;
+    foreach (var raw in File.ReadLines(md))
     {
-        if (line.StartsWith(processor, StringComparison.Ordinal))
+        var line = raw.Trim();
+        if (cpu is null && processor.Length > 0 && line.StartsWith(processor, StringComparison.Ordinal))
         {
-            return line.Split(',')[0].Trim();
+            cpu = line.Split(',')[0].Trim();
+        }
+        else if (runtime is null && line.StartsWith("[Host]", StringComparison.Ordinal))
+        {
+            runtime = line[(line.IndexOf(':') + 1)..].Trim();
         }
     }
-    return processor;
+    return (cpu, runtime);
 }
 
 // ---------------------------------------------------------------- import-readme
@@ -449,8 +458,12 @@ int BuildIndex(Dictionary<string, string> o)
                     w.WritePropertyName(key);
                     r.GetProperty(key).WriteTo(w);
                 }
-                w.WriteString("cpu", r.GetProperty("environment").TryGetProperty("cpu", out var cpu) ? cpu.GetString() : null);
-                w.WriteString("file", "runs/" + Path.GetFileName(runs[i].File));
+                var environment = r.GetProperty("environment");
+                w.WriteString("cpu", environment.TryGetProperty("cpu", out var cpu) ? cpu.GetString() : null);
+                // The x86-64 level of the JIT ("x86-64-v4" has AVX-512). Runners of one CPU model differ in it.
+                var level = environment.TryGetProperty("runtime", out var rt) ? Regex.Match(rt.GetString() ?? "", @"x86-64-v\d") : Match.Empty;
+                w.WriteString("isa", level.Success ? level.Value : null);
+                w.WriteString("file","runs/" + Path.GetFileName(runs[i].File));
                 w.WriteNumber("cases", cases.GetArrayLength());
                 w.WriteEndObject();
                 foreach (var c in cases.EnumerateArray())

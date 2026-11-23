@@ -8,6 +8,8 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Reports;
 using SortAlgorithm.Benchmark;
 using System.Reflection;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 const string RequiredCpu = "EPYC 9V74";
 
@@ -25,11 +27,13 @@ args = Array.FindAll(args, static a => a != "--allow-any-cpu");
 
 if (!allowAnyCpu && IsCiEnvironment())
 {
+    // Some runners of the required model have no AVX-512; the SIMD sorts then fall back to 256-bit vectors.
     var processorName = CpuDetector.Cpu?.ProcessorName;
-    if (processorName is null || !processorName.Contains(RequiredCpu, StringComparison.OrdinalIgnoreCase))
+    var avx512 = Avx512F.IsSupported && Vector512.IsHardwareAccelerated;
+    if (processorName is null || !processorName.Contains(RequiredCpu, StringComparison.OrdinalIgnoreCase) || !avx512)
     {
-        Console.Error.WriteLine($"Benchmark CI requires CPU containing '{RequiredCpu}'.");
-        Console.Error.WriteLine($"Detected: {processorName ?? "(unknown)"}");
+        Console.Error.WriteLine($"Benchmark CI requires CPU containing '{RequiredCpu}' with AVX-512.");
+        Console.Error.WriteLine($"Detected: {processorName ?? "(unknown)"}{(avx512 ? "" : " (no AVX-512)")}");
         Console.Error.WriteLine("Pass --allow-any-cpu to override.");
         Environment.Exit(1);
     }

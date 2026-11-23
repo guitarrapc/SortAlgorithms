@@ -1,4 +1,4 @@
-# Starts the Benchmark workflow and re-runs its benchmark job until the runner has the pinned CPU.
+# Starts the Benchmark workflow and re-runs its benchmark job until the runner has the pinned CPU with AVX-512.
 # The workflow's "Check runner CPU" step fails within a minute on any other CPU. This script waits for
 # that step, reports the runner's CPU from the step's annotation, and re-runs the failed jobs.
 # Requires PowerShell 7.3+ and an authenticated gh. Run it from the repository root.
