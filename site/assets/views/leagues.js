@@ -1,4 +1,4 @@
-import { d3, PATTERNS, PATTERN_SHORT, fmtX, esc, logTicks, geo, anchorBase, anchorFactor, pct, cvBadge, leagueSizes as sizesForLeagues, defaultLeague, SCALING, homeOf, shortN, intro } from "../lib.js";
+import { d3, PATTERNS, PATTERN_SHORT, fmtX, esc, logTicks, geo, anchorBase, anchorFactor, pct, cvBadge, leagueSizes as sizesForLeagues, defaultLeague, SCALING, homeOf, shortN, intro, KEYED } from "../lib.js";
 
 // Overall ranking per size. Each league holds only algorithms measured at that size, so
 // O(n log n) and linear sorts are never ranked against each other at a size too small to separate them.
@@ -13,6 +13,8 @@ export function render(root, { run, params, setParams }) {
   // A row measured by the Scaling class names the class the algorithm belongs to.
   const cat = d => d.c === SCALING ? homeOf(run, d.m) : d.c;
   let corrected = params.raw !== "1" && !!base;
+  // Distribution sorts need integer keys, so a reader choosing a general-purpose sort can leave them out.
+  let comparisonOnly = params.cmp === "1";
   let showAll = false;
   const open = new Set();
   root.innerHTML = `
@@ -23,6 +25,7 @@ export function render(root, { run, params, setParams }) {
         `A league holds only the algorithms measured at that size. ${esc(ref)} stays at the top with the scale while the list scrolls, and is not ranked; a dashed line marks where it would rank. Every benchmark class measures it; ratios use the measurement in ${esc(base ?? "Partition")}, or in ${SCALING} at the sizes only that class measures. Drift correction scales each class by one factor so that its ${esc(ref)} matches that one.`)}
       <div class="filters">
         <div class="fl wide"><span>League (n)</span><div class="seg" role="group" id="l-n">${leagueSizes.map(s => `<button type="button" data-v="${s}" aria-pressed="${s === n}"><span class="sm-hide">n = </span>${shortN(s)}</button>`).join("")}</div></div>
+        <label class="check"><input type="checkbox" id="l-cmp"${comparisonOnly ? " checked" : ""}> Comparison sorts only</label>
         <label class="check"><input type="checkbox" id="l-corr"${corrected ? " checked" : ""}${base ? "" : " disabled"}> Correct drift between benchmark classes</label>
       </div>
       <div class="legend" id="l-k"></div>
@@ -34,10 +37,12 @@ export function render(root, { run, params, setParams }) {
   const scores = () => {
     const cats = run.categories.filter(c => run.sizesOf(c).includes(n));
     const factors = new Map(cats.map(c => [c, corrected ? anchorFactor(run, c, base) : 1]));
-    const list = cats.flatMap(c => run.methodsOf(c).filter(m => m !== ref).map(m => ({ c, m, rows: PATTERNS.map(p => run.get(c, m, n, p)) })))
-      .filter(d => d.rows.every(Boolean))
+    const all = cats.flatMap(c => run.methodsOf(c).filter(m => m !== ref).map(m => ({ c, m, rows: PATTERNS.map(p => run.get(c, m, n, p)) })))
+      .filter(d => d.rows.every(Boolean));
+    const keyed = all.filter(d => cat(d) === KEYED).length;
+    const list = all.filter(d => !comparisonOnly || cat(d) !== KEYED)
       .map(d => ({ ...d, adj: d.rows.map(r => r.mean * (factors.get(d.c) ?? 1)) }));
-    if (!list.length) return { list, cats, drift: [], byRef: false, fastest: [] };
+    if (!list.length) return { list, cats, drift: [], byRef: false, fastest: [], keyed };
     // The reference of the base class, or of the class that measures this size; older imported runs lack it
     // at some sizes, and those leagues fall back to the fastest per pattern.
     const refCat = [base, ...cats.filter(c => c !== base)].find(c => c && PATTERNS.every(p => run.get(c, ref, n, p)));
@@ -51,12 +56,12 @@ export function render(root, { run, params, setParams }) {
       d.cvMax = d3.max(d.rows, r => r.cv);
     }
     const drift = corrected ? cats.filter(c => c !== base && factors.get(c) != null).map(c => ({ c, f: factors.get(c) })) : [];
-    return { list: list.sort((a, b) => a.score - b.score), cats, drift, byRef, refCat, fastest: fastest.map((d, i) => ({ p: PATTERNS[i], d, v: d.adj[i] / denom[i] })) };
+    return { list: list.sort((a, b) => a.score - b.score), cats, drift, byRef, refCat, keyed, fastest: fastest.map((d, i) => ({ p: PATTERNS[i], d, v: d.adj[i] / denom[i] })) };
   };
 
   const draw = () => {
-    setParams({ n, raw: corrected ? undefined : "1" });
-    const { list, cats, drift, byRef, refCat, fastest } = scores();
+    setParams({ n, raw: corrected ? undefined : "1", cmp: comparisonOnly ? "1" : undefined });
+    const { list, cats, drift, byRef, refCat, fastest, keyed } = scores();
     const legend = root.querySelector("#l-k");
     if (!list.length) {
       legend.innerHTML = "";
@@ -67,13 +72,16 @@ export function render(root, { run, params, setParams }) {
     legend.innerHTML = `<span><span class="sw bar"></span>Score</span><span><span class="sw tick"></span>Worst pattern</span>` +
       `<span><span class="sw one"></span>×1 = ${byRef ? `${esc(ref)} (.NET Span.Sort)` : "fastest for each pattern"}</span>`;
     const missing = corrected ? cats.filter(c => c !== base && !run.methodsOf(c).includes(ref)) : [];
+    const shownCats = cats.filter(c => list.some(d => d.c === c));
+    const shownDrift = drift.filter(d => shownCats.includes(d.c));
     root.querySelector("#l-note").innerHTML = (byRef ? "" : `This run has no ${esc(ref)} at n = ${n}, so ratios are against the fastest algorithm for each pattern. `) +
       `Fastest per pattern: ${fastest.map(f => `${PATTERN_SHORT[f.p]} <b>${esc(f.d.m)}</b> ${fmtX(f.v)}`).join(", ")}. ` +
       (cats.length === 1 && cats[0] === SCALING
         ? `${list.length} algorithms, measured at this size by the ${SCALING} class; each row names its own class. Ratios use the ${esc(ref)} of that class.`
-        : `${list.length} algorithms from ${cats.length} categories: ${cats.map(esc).join(", ")}.` + (byRef && refCat !== base ? ` Ratios use the ${esc(ref)} of ${esc(refCat)}.` : "")) +
-      (corrected && drift.length ? ` Drift correction against ${esc(base)}: ${drift.map(d => `${esc(d.c)} ${d.f >= 1 ? "+" : "−"}${pct(Math.abs(d.f - 1))}`).join(", ")}.` : "") +
-      (missing.length ? ` No reference in ${missing.map(esc).join(", ")}; those classes are not corrected.` : "");
+        : `${list.length} algorithms from ${shownCats.length} categories: ${shownCats.map(esc).join(", ")}.` + (byRef && refCat !== base ? ` Ratios use the ${esc(ref)} of ${esc(refCat)}.` : "")) +
+      (corrected && shownDrift.length ? ` Drift correction against ${esc(base)}: ${shownDrift.map(d => `${esc(d.c)} ${d.f >= 1 ? "+" : "−"}${pct(Math.abs(d.f - 1))}`).join(", ")}.` : "") +
+      (missing.length ? ` No reference in ${missing.map(esc).join(", ")}; those classes are not corrected.` : "") +
+      (keyed ? (comparisonOnly ? ` ${keyed} ${KEYED} sorts are hidden: they read integer keys instead of comparing.` : ` ${keyed} of these are ${KEYED} sorts, which read integer keys instead of comparing.`) : "");
 
     const shown = showAll ? list : list.slice(0, 20);
     const values = [1, ...shown.map(d => d.score), ...shown.map(d => d.worst.v)];
@@ -127,5 +135,6 @@ export function render(root, { run, params, setParams }) {
     n = +b.dataset.v; draw();
   });
   root.querySelector("#l-corr").addEventListener("change", e => { corrected = e.target.checked; draw(); });
+  root.querySelector("#l-cmp").addEventListener("change", e => { comparisonOnly = e.target.checked; draw(); });
   draw();
 }

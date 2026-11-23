@@ -1,4 +1,4 @@
-import { d3, PATTERNS, PATTERN_SHORT, esc, svg, logTicks, showTip, hideTip, SER, anchorBase, anchorFactor, geo, fmtX, intro, chartWidth, seg, bindSeg, SCALING, homeOf, shortN, nearestLine, pickRadius, chartDialog, EXPAND_ICON } from "../lib.js";
+import { d3, PATTERNS, PATTERN_SHORT, esc, svg, logTicks, showTip, hideTip, SER, anchorBase, anchorFactor, geo, fmtX, intro, chartWidth, seg, bindSeg, SCALING, homeOf, shortN, nearestLine, pickRadius, chartDialog, EXPAND_ICON, selectEl } from "../lib.js";
 
 // Chosen algorithms side by side across sizes, one small chart per input pattern, in the form papers use:
 // divided by n log₂ n, an n log n sort is flat, so where each algorithm sits reads directly.
@@ -37,7 +37,7 @@ export function render(root, { run, params, setParams, onResize }) {
       <h2>Compare</h2>
       ${intro("Chosen algorithms, one chart per input pattern. Divided by n log₂ n, an n log n sort stays flat, a linear one falls and a quadratic one rises.",
         `Pick up to eight algorithms. The dashed gray line is ${esc(ref)} (.NET Span.Sort). Both axes are logarithmic. With one y axis for every pattern, the charts can be compared with each other; with an axis per chart, close algorithms separate more. Times from the other benchmark classes are scaled by one drift factor per class, so that their ${esc(ref)} matches the one in ${esc(base ?? "Partition")}.`,
-        "Point at a line or a chip to bring that algorithm forward; click or tap to keep it there. The button beside each pattern name opens that chart at the size of the screen.",
+        "Point at a line or a chip to bring that algorithm forward; click or tap to keep it there. The button beside each pattern name opens that chart at the size of the screen. The table below the charts lists the same values for one pattern.",
         sizeNote)}
       <div class="filters">
         ${seg("c-y", "Scale", Object.entries(METRICS).map(([k, v]) => [k, v.label]), metric).replace('class="fl"', 'class="fl wide"')}
@@ -48,6 +48,10 @@ export function render(root, { run, params, setParams, onResize }) {
       <div class="cmp-chips" id="c-k"></div>
       <p class="note sm-hide" id="c-n"></p>
       <div class="cmp-grid plots" id="c-g"></div>
+      <details class="more cmp-tw"><summary>Values as a table</summary>
+        <div class="filters">${selectEl("c-tp", "Pattern", PATTERNS.map(p => [p, PATTERN_SHORT[p]]), "Random")}</div>
+        <div class="scroll" id="c-t"></div>
+      </details>
     </section>`;
 
   const parts = id => id.split("|");
@@ -161,8 +165,19 @@ export function render(root, { run, params, setParams, onResize }) {
       .on("pointerleave", ev => { if (ev.pointerType === "touch") return; guide.style("display", "none"); hideTip(); setHot(null); });
   };
 
+  // The values of one pattern's chart, for reading exact numbers and for readers who cannot use the charts.
+  const drawTable = () => {
+    const host = root.querySelector("#c-t"), p = root.querySelector("#c-tp").value;
+    const { M, all, sizes } = model, ss = all.get(p) ?? [];
+    if (!ss.length) { host.innerHTML = ""; return; }
+    host.innerHTML = `<table class="st cmp-t"><caption class="sr-only">${esc(PATTERN_SHORT[p])}: ${esc(M.axis)}</caption><thead><tr><th>Algorithm</th>${sizes.map(n => `<th class="num">${shortN(n)}</th>`).join("")}</tr></thead><tbody>` +
+      ss.map(z => `<tr><td><i class="ln${z.ref ? " dash" : ""}" style="--c:${z.ref ? "var(--v-muted)" : SER(z.i)}"></i>${esc(z.m)}</td>${sizes.map(n => { const q = z.pts.find(o => o.n === n); return `<td class="num">${q ? M.fmt(q.v) : "—"}</td>`; }).join("")}</tr>`).join("") +
+      `</tbody></table><p class="note">${esc(M.axis)} · columns are n</p>`;
+  };
+
   const drawCharts = () => {
     build();
+    drawTable();
     const grid = root.querySelector("#c-g");
     root.querySelector("#c-n").textContent = `y: ${model.M.axis}, ${shared ? "one axis for all six charts" : "an axis per chart"} · x: n · both logarithmic`;
     if (!model.values.length) { grid.innerHTML = `<p class="empty">Add an algorithm to compare.</p>`; return; }
@@ -232,6 +247,7 @@ export function render(root, { run, params, setParams, onResize }) {
     }
   });
   bindSeg(root, "c-y", v => { metric = v; save(); drawCharts(); });
+  root.querySelector("#c-tp").addEventListener("change", drawTable);
   update();
   onResize(drawCharts);
 }

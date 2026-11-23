@@ -1,4 +1,4 @@
-import { loadIndex, loadRun, esc, fmtDate, hideTip } from "./lib.js";
+import { loadIndex, loadRun, esc, fmtDate, hideTip, isaName } from "./lib.js";
 import * as explorer from "./views/explorer.js";
 import * as leagues from "./views/leagues.js";
 import * as compare from "./views/compare.js";
@@ -6,9 +6,10 @@ import * as complexity from "./views/complexity.js";
 import * as stability from "./views/stability.js";
 import * as historyView from "./views/history.js";
 
+// The first view opens when the URL names none: a first visit asks which sort is fastest.
 const VIEWS = [
-  ["explorer", "Explorer", explorer],
   ["leagues", "Leagues", leagues],
+  ["explorer", "Explorer", explorer],
   ["compare", "Compare", compare],
   ["complexity", "Complexity", complexity],
   ["stability", "Stability", stability],
@@ -22,7 +23,7 @@ let onResize = null;
 function parseHash() {
   const [route, qs] = location.hash.slice(1).split("?");
   return {
-    route: VIEWS.some(v => v[0] === route) ? route : "explorer",
+    route: VIEWS.some(v => v[0] === route) ? route : VIEWS[0][0],
     params: Object.fromEntries(new URLSearchParams(qs || "")),
   };
 }
@@ -48,7 +49,7 @@ function renderRunPicker(entry, route, params) {
   const runs = [...index.runs].reverse();
   const host = document.getElementById("run-pick");
   host.innerHTML = `<label for="run-select">Run <select id="run-select">${runs.map(r =>
-    `<option value="${esc(r.id)}"${r.id === entry.id ? " selected" : ""}>${esc(fmtDate(r.timestamp))} · ${esc(r.cpu)}${r.source === "readme" ? " (imported)" : ""}</option>`).join("")}</select></label>`;
+    `<option value="${esc(r.id)}"${r.id === entry.id ? " selected" : ""}>${esc(fmtDate(r.timestamp))} · ${esc(r.cpu)}${r.isa ? " · " + esc(isaName(r.isa)) : ""}${r.source === "readme" ? " (imported)" : ""}</option>`).join("")}</select></label>`;
   host.querySelector("select").addEventListener("change", e => {
     const next = { ...params, run: e.target.value === index.latest ? undefined : e.target.value };
     location.hash = "#" + route + (Object.keys(next).some(k => next[k]) ? "?" + new URLSearchParams(Object.entries(next).filter(([, v]) => v)).toString() : "");

@@ -1,4 +1,4 @@
-import { d3, PATTERNS, fmtT, pct, esc, svg, logTicks, showTip, hideTip, caseTip, frontier, selectEl, leagueSizes as sizesForLeagues, defaultLeague, intro, chartWidth } from "../lib.js";
+import { d3, PATTERNS, fmtT, pct, esc, svg, logTicks, showTip, hideTip, caseTip, frontier, selectEl, leagueSizes as sizesForLeagues, defaultLeague, intro, chartWidth, SCALING, homeOf } from "../lib.js";
 
 // Speed against run-to-run variation for one size league, then the per-iteration measurements
 // behind the CV for one category.
@@ -6,7 +6,10 @@ export function render(root, { run, params, setParams, onResize }) {
   const leagueSizes = sizesForLeagues(run);
   const n0 = leagueSizes.includes(+params.n) ? +params.n : defaultLeague(run);
   const p0 = PATTERNS.includes(params.p) ? params.p : "Random";
-  const c0 = run.categories.includes(params.c) ? params.c : (run.categories.includes("Partition") ? "Partition" : run.categories[0]);
+  // A case measured by the Scaling class belongs to the class of its algorithm; the reference belongs to every class.
+  const homes = run.categories.filter(c => c !== SCALING);
+  const inClass = (r, c) => r.c === c || (r.c === SCALING && (r.ref || homeOf(run, r.m) === c));
+  const c0 = homes.includes(params.c) ? params.c : (homes.includes("Partition") ? "Partition" : homes[0]);
   root.innerHTML = `
     <section class="panel">
       <h2>Stability</h2>
@@ -16,7 +19,7 @@ export function render(root, { run, params, setParams, onResize }) {
       <div class="filters">
         ${selectEl("s-n", "League", leagueSizes.map(s => [s, "n = " + s]), n0)}
         ${selectEl("s-p", "Pattern", PATTERNS, p0)}
-        ${selectEl("s-h", "Highlight", [["", "Frontier"], ...run.categories.map(c => [c, c])], params.h || "", "wide")}
+        ${selectEl("s-h", "Highlight", [["", "Frontier"], ...homes.map(c => [c, c])], homes.includes(params.h) ? params.h : "", "wide")}
       </div>
       <div class="legend" id="s-l"></div>
       <div class="scroll" id="s-c"></div>
@@ -24,7 +27,7 @@ export function render(root, { run, params, setParams, onResize }) {
     </section>
     <section class="panel">
       <h3>Per-iteration measurements</h3>
-      <div class="filters">${selectEl("s-c2", "Category", run.categories, c0)}</div>
+      <div class="filters">${selectEl("s-c2", "Category", homes, c0)}</div>
       <div class="note" id="s-dn"></div>
       <div class="scroll" id="s-d"></div>
     </section>`;
@@ -45,39 +48,28 @@ export function render(root, { run, params, setParams, onResize }) {
     const pts = ref ? [...list, ref] : list;
     const x = d3.scaleLog().domain(d3.extent(pts, r => r.mean)).nice().range([M.l, W - M.r]);
     // Square-root scale: one noisy case must not flatten the sub-percent CVs of everything else.
-    const y = d3.scaleSqrt().domain([0, Math.max(0.03, d3.max(pts, r => r.cv) * 1.05)]).range([H - M.b, M.t]);
-    const yTicks = [0, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5].filter(v => v <= y.domain()[1]);
+    // The axis ends just above the largest CV, so a run where every case is stable still spreads its points.
+    const y = d3.scaleSqrt().domain([0, Math.max(0.004, d3.max(pts, r => r.cv) * 1.1)]).range([H - M.b, M.t]);
+    const yTicks = [0, 0.0025, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5].filter(v => v <= y.domain()[1]);
     s.append("g").attr("class", "grid").selectAll("line").data(yTicks).join("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y).attr("y2", y);
     s.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).tickValues(logTicks(x, small ? 4 : 7)).tickFormat(fmtT).tickSizeOuter(0));
-    s.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).tickValues(yTicks).tickFormat(d3.format(".1~%")).tickSize(0).tickPadding(6));
+    s.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).tickValues(yTicks).tickFormat(d3.format(".2~%")).tickSize(0).tickPadding(6));
     s.append("text").attr("x", W - M.r).attr("y", H - 6).attr("text-anchor", "end").attr("class", "t-muted").text("Mean (log) → slower");
     s.append("text").attr("x", M.l + 4).attr("y", M.t - 14).attr("class", "t-muted").text("↑ CV, square-root scale (less stable)");
     const fl = [...f].sort((a, b) => a.mean - b.mean);
     const step = [];
     fl.forEach((r, i) => { step.push([x(r.mean), y(r.cv)]); if (fl[i + 1]) step.push([x(fl[i + 1].mean), y(r.cv)]); });
     if (step.length > 1) s.append("path").attr("d", d3.line()(step)).style("fill", "none").style("stroke", "var(--v-ink-2)").style("stroke-width", 1.5);
-    const on = r => hl ? r.c === hl : f.has(r);
+    const on = r => hl ? !r.ref && inClass(r, hl) : f.has(r);
     s.append("g").selectAll("circle").data([...list].sort((a, b) => on(a) - on(b))).join("circle")
       .attr("cx", r => x(r.mean)).attr("cy", r => y(r.cv)).attr("r", r => on(r) ? 5 : 3.6)
       .style("fill", r => on(r) ? "var(--s1)" : "var(--v-muted)").style("fill-opacity", r => on(r) ? 1 : 0.5)
       .style("stroke", "var(--panel)").style("stroke-width", r => on(r) ? 2 : 1);
     if (ref) s.append("circle").attr("cx", x(ref.mean)).attr("cy", y(ref.cv)).attr("r", 5.5).style("fill", "none").style("stroke", "var(--v-ink)").style("stroke-width", 1.5);
-    // Labels sit above-right of their dot and move up past overlapping labels; moved labels get a leader line.
     const labeled = hl ? list.filter(on) : fl;
     // Small charts list the names below instead: labels would cover the points.
     root.querySelector("#s-fl").innerHTML = small && labeled.length ? `${hl ? esc(hl) : "Frontier"}, fastest first: ${[...labeled].sort((a, b) => a.mean - b.mean).map(r => esc(r.m)).join(" · ")}` : "";
-    if (!small && labeled.length <= 14) {
-      const placed = [];
-      for (const r of [...labeled].sort((a, b) => a.mean - b.mean)) {
-        const px = x(r.mean), py = y(r.cv), tw = r.m.length * 6.2, left = px + 7 + tw > W - 2;
-        const x0 = left ? px - 7 - tw : px + 7, x1 = x0 + tw, y0 = Math.min(py - 9, H - M.b - 6);
-        let ly = y0;
-        while (placed.some(q => q.x0 < x1 && x0 < q.x1 && Math.abs(q.y - ly) < 13) && ly > M.t + 24) ly -= 13;
-        placed.push({ x0, x1, y: ly });
-        if (y0 - ly > 3) s.append("line").attr("x1", left ? px - 2 : px + 2).attr("y1", py - 4).attr("x2", left ? x1 + 1 : x0 - 1).attr("y2", ly + 2).style("stroke", "var(--v-muted)").style("stroke-width", 0.8);
-        s.append("text").attr("x", x0).attr("y", ly + 4).attr("class", "t-ink").style("font-size", "10.5px").text(r.m);
-      }
-    }
+    if (!small && labeled.length <= 14) placeLabels(s, labeled, pts.map(r => [x(r.mean), y(r.cv)]), d3.pairs(step), x, y, { x0: M.l, x1: W - 2, y0: M.t - 6, y1: H - M.b });
     const del = d3.Delaunay.from(pts, r => x(r.mean), r => y(r.cv));
     const ring = s.append("circle").attr("r", 8).style("fill", "none").style("stroke", "var(--v-ink)").style("stroke-width", 1.5).style("display", "none");
     const hover = ev => {
@@ -91,14 +83,46 @@ export function render(root, { run, params, setParams, onResize }) {
       .on("pointerleave", () => { ring.style("display", "none"); hideTip(); });
   };
 
+  // Each label takes the candidate spot beside its dot that covers the fewest other labels, step-line segments and dots;
+  // a label moved away from its dot gets a leader line.
+  const placeLabels = (s, labeled, dots, segs, x, y, box) => {
+    const placed = [];
+    const overlaps = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+    const crosses = (b, [[ax, ay], [bx, by]]) => overlaps(b, { x0: Math.min(ax, bx) - 0.5, x1: Math.max(ax, bx) + 0.5, y0: Math.min(ay, by) - 0.5, y1: Math.max(ay, by) + 0.5 });
+    for (const r of [...labeled].sort((a, b) => a.mean - b.mean)) {
+      const px = x(r.mean), py = y(r.cv);
+      const t = s.append("text").attr("class", "t-ink").style("font-size", "10.5px").text(r.m);
+      const tw = t.node().getComputedTextLength();
+      const spots = [];
+      for (const dy of [0, -13, 13, -26, 26, -39, 39]) {
+        spots.push({ x0: px + 7, cy: py + dy, dy }, { x0: px - 7 - tw, cy: py + dy, dy });
+        if (dy === 0) spots.push({ x0: px - tw / 2, cy: py - 12, dy: 0 }, { x0: px - tw / 2, cy: py + 13, dy: 0 });
+      }
+      let best = null;
+      for (const sp of spots) {
+        const b = { x0: sp.x0 - 1, x1: sp.x0 + tw + 1, y0: sp.cy - 6, y1: sp.cy + 6 };
+        const out = b.x0 < box.x0 || b.x1 > box.x1 || b.y0 < box.y0 || b.y1 > box.y1;
+        const score = (out ? 1e6 : 0) + 1000 * placed.filter(q => overlaps(q, b)).length + 40 * segs.filter(g => crosses(b, g)).length +
+          10 * dots.filter(([dx, dy]) => dx > b.x0 - 3 && dx < b.x1 + 3 && dy > b.y0 - 3 && dy < b.y1 + 3).length + Math.abs(sp.dy) + (sp.x0 < px ? 2 : 0);
+        if (!best || score < best.score) best = { ...sp, b, score };
+      }
+      placed.push(best.b);
+      t.attr("x", best.x0).attr("y", best.cy + 4);
+      if (Math.abs(best.dy) > 8) {
+        const left = best.x0 < px;
+        s.insert("line", ":scope > text").attr("x1", px + (left ? -3 : 3)).attr("y1", py).attr("x2", left ? best.b.x1 : best.b.x0).attr("y2", best.cy).style("stroke", "var(--v-muted)").style("stroke-width", 0.8);
+      }
+    }
+  };
+
   const drawDistribution = () => {
     const n = +root.querySelector("#s-n").value, p = root.querySelector("#s-p").value, c = root.querySelector("#s-c2").value;
     setParams({ c });
     const host = root.querySelector("#s-d");
     host.innerHTML = "";
     const note = root.querySelector("#s-dn");
-    const rows = run.slice(c, n, p).filter(r => r.ms.length > 0).sort((a, b) => b.cv - a.cv);
-    if (!run.sizesOf(c).includes(n)) { note.textContent = `${c} is not measured at n = ${n}.`; return; }
+    const rows = run.slice("*", n, p).filter(r => inClass(r, c) && r.ms.length > 0).sort((a, b) => b.cv - a.cv);
+    if (!run.slice("*", n, p).some(r => !r.ref && inClass(r, c))) { note.textContent = `${c} is not measured at n = ${n}.`; return; }
     if (!rows.length) { note.textContent = "This run has no per-iteration measurements (runs imported from README history keep only summary statistics)."; return; }
     note.innerHTML = `${esc(c)} · n = ${n} · ${esc(p)}. Each dot is one measured iteration, shown as its deviation from the median; the box spans the quartiles. Sorted by CV, least stable first.`;
     const dev = r => { const med = d3.median(r.ms); return r.ms.map(v => v / med - 1); };

@@ -60,6 +60,14 @@ export function prepare(raw, entry) {
 
 // "AMD EPYC 9V74 3.69GHz" -> "EPYC 9V74". The reported clock varies between runners of the same model.
 export const cpuModel = s => (s || "unknown").replace(/^(AMD|Intel\(R\)|Intel)\s+/, "").replace(/\s+[\d.]+\s*GHz.*$/, "").trim();
+// The JIT's x86-64 level by the widest vector instructions it allows.
+const ISA = { "x86-64-v4": "AVX-512", "x86-64-v3": "AVX2", "x86-64-v2": "SSE4.2" };
+export const isaName = isa => isa ? ISA[isa] ?? isa : "";
+// Runs are comparable only on the same CPU model and instruction set: runners of one model differ in AVX-512.
+export const machineOf = entry => cpuModel(entry.cpu) + (entry.isa ? " · " + isaName(entry.isa) : "");
+// The Distribution class holds the sorts that read the key's value (radix, counting, bucket) instead of only
+// comparing; they need integer or numeric keys.
+export const KEYED = "Distribution";
 
 // Sizes measured by at least two categories, and the sizes only the Scaling class measures, largest first;
 // every size when no size qualifies.
@@ -218,6 +226,8 @@ export function chartDialog(title, draw, tools = "") {
   dlg.className = "big";
   dlg.setAttribute("aria-label", title);
   dlg.innerHTML = `<div class="big-head"><b>${esc(title)}</b><button type="button" class="big-x" aria-label="Close">×</button>${tools ? `<div class="big-tools">${tools}</div>` : ""}</div><div class="big-body"></div>`;
+  // The dialog itself takes the focus, so that the close button does not open with a focus ring; Tab reaches it.
+  dlg.tabIndex = -1;
   document.body.append(dlg);
   const body = dlg.querySelector(".big-body");
   let w = 0, h = 0;
@@ -232,6 +242,7 @@ export function chartDialog(title, draw, tools = "") {
   dlg.addEventListener("click", e => { if (e.target === dlg || e.target.closest(".big-x")) dlg.close(); });
   dlg.append(tip());
   dlg.showModal();
+  dlg.focus();
   // The first drawing does not wait for the observer, which reports only on the next rendered frame.
   w = body.clientWidth; h = body.clientHeight;
   redraw();
