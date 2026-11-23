@@ -3,6 +3,7 @@ import * as explorer from "./views/explorer.js";
 import * as leagues from "./views/leagues.js";
 import * as compare from "./views/compare.js";
 import * as complexity from "./views/complexity.js";
+import * as patterns from "./views/patterns.js";
 import * as stability from "./views/stability.js";
 import * as historyView from "./views/history.js";
 
@@ -12,6 +13,7 @@ const VIEWS = [
   ["explorer", "Explorer", explorer],
   ["compare", "Compare", compare],
   ["complexity", "Complexity", complexity],
+  ["patterns", "Patterns", patterns],
   ["stability", "Stability", stability],
   ["history", "History", historyView],
 ];
@@ -33,11 +35,25 @@ function writeHash(route, params) {
   history.replaceState(null, "", "#" + route + (qs ? "?" + qs : ""));
 }
 
+const nav = document.getElementById("nav");
 function renderNav(route, params) {
   const keep = params.run ? "?run=" + encodeURIComponent(params.run) : "";
-  document.getElementById("nav").innerHTML = VIEWS.map(([id, label]) =>
+  nav.innerHTML = VIEWS.map(([id, label]) =>
     `<a href="#${id}${keep}"${id === route ? ' aria-current="page"' : ""}>${label}</a>`).join("");
+  // On a phone the tab row scrolls sideways; the current tab is brought to its middle.
+  const cur = nav.querySelector('[aria-current="page"]');
+  if (cur && nav.scrollWidth > nav.clientWidth) {
+    const a = cur.getBoundingClientRect(), b = nav.getBoundingClientRect();
+    nav.scrollLeft += a.left - b.left - (b.width - a.width) / 2;
+  }
+  tabEdges();
 }
+// Fades the ends of the tab row that hide more tabs.
+function tabEdges() {
+  nav.classList.toggle("more-l", nav.scrollLeft > 2);
+  nav.classList.toggle("more-r", nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 2);
+}
+nav.addEventListener("scroll", tabEdges, { passive: true });
 
 // Sticky headers inside a view sit just below the sticky tabs, whose height differs between phone and desktop.
 // Set when the tabs are rendered, since a ResizeObserver first reports only on the next rendered frame.
@@ -109,7 +125,7 @@ new ResizeObserver(entries => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => { hideTip(); onResize?.(); }, 150);
 }).observe(root);
-new ResizeObserver(setTabsHeight).observe(document.querySelector(".tabs"));
+new ResizeObserver(() => { setTabsHeight(); tabEdges(); }).observe(document.querySelector(".tabs"));
 // Touch has no pointerleave after a tap: a tap outside a chart or a scroll closes the tooltip.
 document.addEventListener("pointerdown", e => { if (!e.target.closest("svg.chart")) hideTip(); });
 window.addEventListener("scroll", hideTip, { passive: true });

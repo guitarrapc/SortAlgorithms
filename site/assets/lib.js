@@ -198,6 +198,38 @@ export function nudge(labels, gap = 12, lo = -Infinity, hi = Infinity) {
   for (let i = labels.length - 1; i >= 0; i--) labels[i].y = Math.min(labels[i].y, i < labels.length - 1 ? labels[i + 1].y - gap : hi);
   return labels;
 }
+// Labels points of a scatter chart. Each label ({ px, py, text }, placed in the given order) takes the candidate spot beside its
+// dot that covers the fewest other labels, line segments ([[x1, y1], [x2, y2]]) and dots ([x, y]) inside box; a label moved
+// away from its dot gets a leader line.
+export function placeLabels(s, labels, dots, segs, box) {
+  const placed = [];
+  const overlaps = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  const crosses = (b, [[ax, ay], [bx, by]]) => overlaps(b, { x0: Math.min(ax, bx) - 0.5, x1: Math.max(ax, bx) + 0.5, y0: Math.min(ay, by) - 0.5, y1: Math.max(ay, by) + 0.5 });
+  for (const { px, py, text } of labels) {
+    const t = s.append("text").attr("class", "t-ink").style("font-size", "10.5px").text(text);
+    const tw = t.node().getComputedTextLength();
+    const spots = [];
+    for (const dy of [0, -13, 13, -26, 26, -39, 39]) {
+      spots.push({ x0: px + 7, cy: py + dy, dy }, { x0: px - 7 - tw, cy: py + dy, dy });
+      if (dy === 0) spots.push({ x0: px - tw / 2, cy: py - 12, dy: 0 }, { x0: px - tw / 2, cy: py + 13, dy: 0 });
+    }
+    let best = null;
+    for (const sp of spots) {
+      const b = { x0: sp.x0 - 1, x1: sp.x0 + tw + 1, y0: sp.cy - 6, y1: sp.cy + 6 };
+      const out = b.x0 < box.x0 || b.x1 > box.x1 || b.y0 < box.y0 || b.y1 > box.y1;
+      const score = (out ? 1e6 : 0) + 1000 * placed.filter(q => overlaps(q, b)).length + 40 * segs.filter(g => crosses(b, g)).length +
+        10 * dots.filter(([dx, dy]) => dx > b.x0 - 3 && dx < b.x1 + 3 && dy > b.y0 - 3 && dy < b.y1 + 3).length + Math.abs(sp.dy) + (sp.x0 < px ? 2 : 0);
+      if (!best || score < best.score) best = { ...sp, b, score };
+    }
+    placed.push(best.b);
+    t.attr("x", best.x0).attr("y", best.cy + 4);
+    if (Math.abs(best.dy) > 8) {
+      const left = best.x0 < px;
+      s.insert("line", ":scope > text").attr("x1", px + (left ? -3 : 3)).attr("y1", py).attr("x2", left ? best.b.x1 : best.b.x0).attr("y2", best.cy).style("stroke", "var(--v-muted)").style("stroke-width", 0.8);
+    }
+  }
+}
+
 // The series whose line passes nearest to (px, py), with that distance in pixels. Lines are straight between points.
 export function nearestLine(series, px, py, X, Y) {
   const toSeg = (x1, y1, x2, y2) => {

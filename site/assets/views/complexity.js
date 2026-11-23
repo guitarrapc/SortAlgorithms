@@ -25,9 +25,9 @@ export function render(root, { run, params, setParams, onResize }) {
   root.innerHTML = `
     <section class="panel">
       <h2>Complexity</h2>
-      ${intro("How each algorithm's time grows with n. Select an algorithm or a cell to see it on every pattern, next to its documented complexity.",
-        "k is the slope of log(time) against log(n). Cells are colored by the nearest reference: n is 1.00 and n² is 2.00 at any size range, while n log n and n log² n depend on the sizes used.",
-        "The documented Best / Average / Worst cases come from each algorithm's XML documentation, so a pattern that reaches the documented worst case stands out. k also includes fixed costs, cache effects and branch prediction; the detail shows the slope of each size interval.")}
+      ${intro(`How time grows with n: time ∝ nᵏ. At k = 1.00, time doubles when n doubles. At k = 2.00, it grows 4 times. k is not a speed: <a href="#leagues">Leagues</a> compares speed.`,
+        "k is the slope of log(time) against log(n). Each cell has the color of the nearest reference in the legend. n log n and n log² n give different k for different size ranges, so each class row shows its own values.",
+        "The last column is the documented best, average and worst case. A cell that reaches the documented worst case stands out. k also includes fixed costs, cache effects and branch prediction. Select an algorithm or a cell to see the slope of each size interval.")}
       <div class="filters">
         ${selectEl("k-c", "Category", [["*", "All categories"], ...groups.filter(g => g.label !== "Reference").map(g => [g.c, g.c])], params.cat || "*", "wide")}
         <div class="fl wide"><span>Fit</span><div class="seg" role="group" id="k-mode"><button type="button" data-v="fit" aria-pressed="${mode === "fit"}">All sizes</button><button type="button" data-v="last" aria-pressed="${mode === "last"}">Last interval only</button></div></div>
@@ -55,11 +55,12 @@ export function render(root, { run, params, setParams, onResize }) {
   const table = root.querySelector("#k-t");
 
   const drawLegend = () => {
-    // The sizes every class shares; the Scaling group shows its own reference values in its header row.
+    // Each class gets its reference k for the sizes most classes share; a class with other sizes shows its own in its row.
     const big = run.allSizes.filter(n => n >= 256 && !run.sizesOf(SCALING).includes(n));
-    const r4 = refs(mode === "fit" ? big : big.slice(-2)), r2 = refs([256, 1024]);
-    root.querySelector("#k-l").innerHTML = `<span>k (time ∝ nᵏ)</span>` + CLASSES.map((t, i) => `<span><span class="sq kb${i}"></span>${t}</span>`).join("") +
-      `<span class="note sm-hide">n log n / n log² n reference: ${r4.nl.toFixed(2)} / ${r4.nl2.toFixed(2)} for ${shortN(big[mode === "fit" ? 0 : big.length - 2])}–${shortN(big.at(-1))}, ${r2.nl.toFixed(2)} / ${r2.nl2.toFixed(2)} for 256–1k</span>`;
+    const sz = mode === "fit" ? big : big.slice(-2), r = refs(sz);
+    const ks = ["1.00", r.nl.toFixed(2), r.nl2.toFixed(2), "", "2.00"];
+    root.querySelector("#k-l").innerHTML = `<span>k:</span>` + CLASSES.map((t, i) => `<span><span class="sq kb${i}"></span>${t}${ks[i] ? ` <b class="mono">${ks[i]}</b>` : ""}</span>`).join("") +
+      `<span class="note">for n = ${shortN(sz[0])}–${shortN(sz.at(-1))}</span>`;
   };
   const drawNotes = () => {
     const beyond = [], within = [];
@@ -82,10 +83,10 @@ export function render(root, { run, params, setParams, onResize }) {
       `<button type="button" data-c="${esc(w.c)}" data-m="${esc(w.m)}" data-p="${w.p}" aria-pressed="${w.c === sel.c && w.m === sel.m && w.p === sel.p}">${esc(w.m)} · ${PATTERN_SHORT[w.p]}</button>`).join("") : "<span>none</span>";
     root.querySelector("#k-n").innerHTML =
       `<div class="mchips"><span>≈ n² although the documented worst case is below n²:</span>${chips(beyond)}</div>` +
-      (beyond.some(w => w.p !== "Random") ? `<div>Sorted, Reversed and PipeOrgan give every iteration the same input, so the branch predictor can learn it at small sizes and steepen the slope. StatisticsContext operation counts tell that apart from extra work.</div>` : "") +
-      `<details class="more"><summary>Reaches ≈ n² within its documented worst case: ${within.length} · faster class than on Random: ${lower}</summary>
-        <div class="mchips"><span>Within a documented worst case of n², or of a bound in another variable such as m:</span>${chips(within)}</div>
-        <p>${lower} cells have a lower class than the same algorithm on Random (best-case behavior).</p></details>`;
+      (beyond.some(w => w.p !== "Random") ? `<div>Sorted, Reversed and PipeOrgan repeat one input in every iteration. At small sizes the branch predictor learns it, which can steepen the slope. StatisticsContext operation counts separate this from extra work.</div>` : "") +
+      `<details class="more"><summary>≈ n² within the documented worst case: ${within.length} · lower class than on Random: ${lower}</summary>
+        <div class="mchips"><span>Documented worst case n², or a bound in another variable such as m:</span>${chips(within)}</div>
+        <p>${lower} cells grow slower than the same algorithm on Random (best-case behavior).</p></details>`;
   };
   const drawMatrix = () => {
     const cf = root.querySelector("#k-c").value;
@@ -205,7 +206,7 @@ export function render(root, { run, params, setParams, onResize }) {
     const src = sourceUrl(a.file);
     const options = groups.map(g => `<optgroup label="${esc(g.label)}">${g.methods.map(mm =>
       `<option value="${esc(g.c + "|" + mm)}"${g.c === c && mm === m ? " selected" : ""}>${esc(mm)}</option>`).join("")}</optgroup>`).join("");
-    host.innerHTML = `<div class="legend" style="gap:8px 12px"><select id="k-m" class="pick-m" aria-label="Algorithm">${options}</select><span class="cat">${esc(c)}</span>${src ? `<a href="${src}">source</a>` : ""}${m !== run.reference ? `<a href="#compare?${new URLSearchParams({ add: c + "|" + m, ...(params.run ? { run: params.run } : {}) })}">compare with others</a>` : ""}<span class="note">selected pattern: ${esc(p)}. Dashed gray lines: n, n log n and n² growth from the selected pattern's smallest size.</span></div>
+    host.innerHTML = `<div class="legend" style="gap:8px 12px"><select id="k-m" class="pick-m" aria-label="Algorithm">${options}</select><span class="cat">${esc(c)}</span>${src ? `<a href="${src}">source</a>` : ""}${m !== run.reference ? `<a href="#compare?${new URLSearchParams({ add: c + "|" + m, ...(params.run ? { run: params.run } : {}) })}">compare with others</a>` : ""}<span class="note">Pattern: ${esc(p)}. Dashed lines: n, n log n and n² growth from its smallest size.</span></div>
       <div class="legend" id="k-pl">${legendHtml()}<button type="button" class="btn xp" id="k-x">${EXPAND_ICON} Enlarge</button></div>
       <div class="twocol"><div id="k-g" class="plots kx"></div><div id="k-r"></div></div>`;
     const W = chartWidth(host.querySelector("#k-g"), 280, 620), H = Math.round(Math.max(240, Math.min(330, W * 0.62)));
@@ -225,7 +226,7 @@ export function render(root, { run, params, setParams, onResize }) {
         ivs.map(([u, v]) => { const k = fitExponent([[u, run.get(c, m, u, pp).mean], [v, run.get(c, m, v, pp).mean]]); return `<td class="num"><span class="kchip kb${kclass(k, edgesOf([u, v]))}">${k.toFixed(2)}</span></td>`; }).join("") +
         `<td class="num">${fmtX(run.get(c, m, maxN, pp).mean / run.get(c, m, maxN, "Random").mean)}</td></tr>`;
     });
-    host.querySelector("#k-r").innerHTML = t + `</tbody></table></div><p class="note" style="margin-top:6px">Each interval is classified against the reference values of that interval. "vs Random" compares the constant factor at the largest size.</p>`;
+    host.querySelector("#k-r").innerHTML = t + `</tbody></table></div><p class="note" style="margin-top:6px">Each interval uses its own reference values. "vs Random" is the time ratio at the largest size.</p>`;
     bindPatterns(host.querySelector("#k-r tbody"));
   };
 

@@ -1,4 +1,4 @@
-import { d3, PATTERNS, fmtT, pct, esc, svg, logTicks, showTip, hideTip, caseTip, frontier, selectEl, leagueSizes as sizesForLeagues, defaultLeague, intro, chartWidth, SCALING, homeOf } from "../lib.js";
+import { d3, PATTERNS, fmtT, pct, esc, svg, logTicks, showTip, hideTip, caseTip, frontier, selectEl, leagueSizes as sizesForLeagues, defaultLeague, intro, chartWidth, SCALING, homeOf, placeLabels } from "../lib.js";
 
 // Speed against run-to-run variation for one size league, then the per-iteration measurements
 // behind the CV for one category.
@@ -69,7 +69,10 @@ export function render(root, { run, params, setParams, onResize }) {
     const labeled = hl ? list.filter(on) : fl;
     // Small charts list the names below instead: labels would cover the points.
     root.querySelector("#s-fl").innerHTML = small && labeled.length ? `${hl ? esc(hl) : "Frontier"}, fastest first: ${[...labeled].sort((a, b) => a.mean - b.mean).map(r => esc(r.m)).join(" · ")}` : "";
-    if (!small && labeled.length <= 14) placeLabels(s, labeled, pts.map(r => [x(r.mean), y(r.cv)]), d3.pairs(step), x, y, { x0: M.l, x1: W - 2, y0: M.t - 6, y1: H - M.b });
+    if (!small && labeled.length <= 14) {
+      placeLabels(s, [...labeled].sort((a, b) => a.mean - b.mean).map(r => ({ px: x(r.mean), py: y(r.cv), text: r.m })),
+        pts.map(r => [x(r.mean), y(r.cv)]), d3.pairs(step), { x0: M.l, x1: W - 2, y0: M.t - 6, y1: H - M.b });
+    }
     const del = d3.Delaunay.from(pts, r => x(r.mean), r => y(r.cv));
     const ring = s.append("circle").attr("r", 8).style("fill", "none").style("stroke", "var(--v-ink)").style("stroke-width", 1.5).style("display", "none");
     const hover = ev => {
@@ -81,38 +84,6 @@ export function render(root, { run, params, setParams, onResize }) {
     s.append("rect").attr("x", M.l).attr("y", M.t).attr("width", Math.min(W - M.l, W - M.l - M.r + 40)).attr("height", H - M.t - M.b).style("fill", "transparent")
       .on("pointermove", hover).on("pointerdown", hover)
       .on("pointerleave", () => { ring.style("display", "none"); hideTip(); });
-  };
-
-  // Each label takes the candidate spot beside its dot that covers the fewest other labels, step-line segments and dots;
-  // a label moved away from its dot gets a leader line.
-  const placeLabels = (s, labeled, dots, segs, x, y, box) => {
-    const placed = [];
-    const overlaps = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
-    const crosses = (b, [[ax, ay], [bx, by]]) => overlaps(b, { x0: Math.min(ax, bx) - 0.5, x1: Math.max(ax, bx) + 0.5, y0: Math.min(ay, by) - 0.5, y1: Math.max(ay, by) + 0.5 });
-    for (const r of [...labeled].sort((a, b) => a.mean - b.mean)) {
-      const px = x(r.mean), py = y(r.cv);
-      const t = s.append("text").attr("class", "t-ink").style("font-size", "10.5px").text(r.m);
-      const tw = t.node().getComputedTextLength();
-      const spots = [];
-      for (const dy of [0, -13, 13, -26, 26, -39, 39]) {
-        spots.push({ x0: px + 7, cy: py + dy, dy }, { x0: px - 7 - tw, cy: py + dy, dy });
-        if (dy === 0) spots.push({ x0: px - tw / 2, cy: py - 12, dy: 0 }, { x0: px - tw / 2, cy: py + 13, dy: 0 });
-      }
-      let best = null;
-      for (const sp of spots) {
-        const b = { x0: sp.x0 - 1, x1: sp.x0 + tw + 1, y0: sp.cy - 6, y1: sp.cy + 6 };
-        const out = b.x0 < box.x0 || b.x1 > box.x1 || b.y0 < box.y0 || b.y1 > box.y1;
-        const score = (out ? 1e6 : 0) + 1000 * placed.filter(q => overlaps(q, b)).length + 40 * segs.filter(g => crosses(b, g)).length +
-          10 * dots.filter(([dx, dy]) => dx > b.x0 - 3 && dx < b.x1 + 3 && dy > b.y0 - 3 && dy < b.y1 + 3).length + Math.abs(sp.dy) + (sp.x0 < px ? 2 : 0);
-        if (!best || score < best.score) best = { ...sp, b, score };
-      }
-      placed.push(best.b);
-      t.attr("x", best.x0).attr("y", best.cy + 4);
-      if (Math.abs(best.dy) > 8) {
-        const left = best.x0 < px;
-        s.insert("line", ":scope > text").attr("x1", px + (left ? -3 : 3)).attr("y1", py).attr("x2", left ? best.b.x1 : best.b.x0).attr("y2", best.cy).style("stroke", "var(--v-muted)").style("stroke-width", 0.8);
-      }
-    }
   };
 
   const drawDistribution = () => {

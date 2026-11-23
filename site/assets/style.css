@@ -10,6 +10,8 @@
   --good: #0ca30c; --warn: #fab219; --crit: #d03b3b;
   --k0: #f29a72; --k1: #e97843; --k2: #d25b25; --k3: #a64317; --k4: #6f2c0e;
   --ki0: #0b0b0b; --ki1: #0b0b0b; --ki2: #0b0b0b; --ki3: #ffffff; --ki4: #ffffff;
+  /* Diverging pair around ×1 (Patterns): blue is faster than on Random, red slower, gray unchanged; ink for the strongest cells. */
+  --dv-lo: #2a78d6; --dv-hi: #e34948; --dv-mid: #f0efec; --dv-ink-lo: #ffffff; --dv-ink-hi: #0b0b0b;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -19,6 +21,7 @@
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
     --k0: #93391a; --k1: #bb4b1d; --k2: #e0622c; --k3: #f08d62; --k4: #f8c1a6;
     --ki0: #f0efec; --ki1: #f0efec; --ki2: #0b0b0b; --ki3: #0b0b0b; --ki4: #0b0b0b;
+    --dv-lo: #3987e5; --dv-hi: #e66767; --dv-mid: #383835; --dv-ink-lo: #0b0b0b; --dv-ink-hi: #0b0b0b;
     color-scheme: dark;
   }
 }
@@ -49,6 +52,10 @@ code, .mono { font-family: var(--mono); font-size: .9em; }
 .tabs a { flex: none; padding: 7px 12px 8px; font-size: .9rem; color: var(--ink-2); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
 .tabs a:hover { color: var(--ink); }
 .tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+/* app.js marks the ends of a tab row that scrolls, so the hidden tabs show as a fade. */
+.tabs-in.more-r { mask-image: linear-gradient(to left, transparent, #000 32px); }
+.tabs-in.more-l { mask-image: linear-gradient(to right, transparent, #000 32px); }
+.tabs-in.more-l.more-r { mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent); }
 
 main.wrap { padding-block: 20px 40px; display: grid; gap: 18px; }
 main:focus { outline: none; }
@@ -218,6 +225,22 @@ table.hm td.l.on { color: var(--ink); font-weight: 600; }
 table.hm td.doc { padding: 0 6px 0 10px; white-space: nowrap; font: 11px var(--mono); color: var(--muted); }
 .kb0 { background: var(--k0); color: var(--ki0); } .kb1 { background: var(--k1); color: var(--ki1); } .kb2 { background: var(--k2); color: var(--ki2); }
 .kb3 { background: var(--k3); color: var(--ki3); } .kb4 { background: var(--k4); color: var(--ki4); }
+/* Patterns: the quadrant lines, and the adaptivity matrix, whose header sticks below the tabs. */
+svg.chart .quad line { stroke: var(--v-ink-2); stroke-width: 1; stroke-dasharray: 4 3; }
+svg.chart .quad-l { font-size: 10.5px; }
+.dvbar { display: inline-block; width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(to right, var(--dv-lo), var(--dv-mid), var(--dv-hi)); }
+.tbox table.hm th { top: var(--tabs-h, 0px); }
+table.pa th[data-sort] { cursor: pointer; }
+table.pa th[data-sort]:hover { color: var(--ink); }
+table.pa th.l { text-align: left; padding-left: 2px; }
+table.pa td.c { cursor: default; }
+table.pa td.x { padding: 0 8px; text-align: right; font: 10.5px var(--mono); color: var(--ink-2); white-space: nowrap; }
+table.pa td.l .cat { font-size: 10px; margin-left: 4px; }
+table.pa tr[data-id] { cursor: pointer; }
+table.pa tr[data-id]:hover td.l { color: var(--ink); text-decoration: underline; }
+table.pa tr.on td.l { color: var(--ink); font-weight: 600; box-shadow: inset 3px 0 var(--accent); padding-left: 6px; }
+table.pa tr.ref td.l { color: var(--muted); }
+.dvl.s2 { color: var(--dv-ink-lo); } .dvh.s2 { color: var(--dv-ink-hi); }
 .kchip { display: inline-block; min-width: 3.4em; text-align: center; border-radius: 3px; padding: 0 4px; }
 .docbox { display: grid; gap: 4px; font-size: .8rem; color: var(--ink-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
 .docbox span { display: inline-block; width: 5.4em; color: var(--muted); font: 500 11px var(--mono); }
@@ -263,8 +286,9 @@ table.hm td.doc { padding: 0 6px 0 10px; white-space: nowrap; font: 11px var(--m
   .title { font-size: 1rem; }
   .meta { font-size: .75rem; text-align: right; white-space: nowrap; }
   .run-pick select { font-size: 12.5px; }
-  .tabs-in { gap: 0; justify-content: space-between; }
-  .tabs a { flex: 1 1 auto; text-align: center; padding: 8px 3px 9px; font-size: 13px; }
+  /* Seven tabs do not fit a phone: they keep their width and the row scrolls. */
+  .tabs-in { gap: 0; }
+  .tabs a { flex: 1 0 auto; text-align: center; padding: 8px 6px 9px; font-size: 13px; }
   main.wrap { padding-block: 10px 28px; gap: 12px; }
   .panel { padding: 12px; gap: 10px; border-radius: 8px; }
   .panel > h2:first-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -308,9 +332,8 @@ table.hm td.doc { padding: 0 6px 0 10px; white-space: nowrap; font: 11px var(--m
   table.hm th { font-size: 9.5px; padding: 3px 1px; }
   table.hm .doc { display: none; }
   table.hm .gs { display: block; margin-left: 0; }
-}
-/* Six tabs need about 357px at the phone size; the narrowest phones get tighter tabs instead of a scrolling tab row. */
-@media (max-width: 360px) {
-  .tabs a { font-size: 12px; padding-inline: 1px; letter-spacing: -.1px; }
+  /* Five pattern columns and the name fit a 320px screen; the class and the two summary columns are hidden. */
+  table.pa td.c { width: 34px; min-width: 34px; }
+  table.pa td.l { max-width: 84px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

@@ -5,7 +5,7 @@ This document states what the project publishes from its CI benchmarks, how each
 ## Where Results Appear
 
 - **README.** The benchmark section is a summary only: a chart of mean time against run-to-run variation, the fastest algorithm for each category and input pattern, and a link to the workflow run. A full Benchmark workflow run regenerates it. The full BenchmarkDotNet tables are not in the README: the site and the `benchmark-data` branch hold every case, and the tables of the other classes had grown to about 475 KB, close to the size GitHub renders, while the Scaling class alone has about 2,100 rows. The tables of a run remain in its workflow artifacts until they expire.
-- **Benchmark site.** A static site on GitHub Pages reads the published run files. It has six views: Leagues, Explorer, Compare, Complexity, Stability, and History. It opens on Leagues, because a first visit asks which sort is fastest; Explorer's single class, size, and pattern answer a narrower question. On a phone, each view shows its ranking, matrix, or chart in the first screen; explanations are one sentence, with the rest behind a disclosure.
+- **Benchmark site.** A static site on GitHub Pages reads the published run files. It has seven views: Leagues, Explorer, Compare, Complexity, Patterns, Stability, and History. It opens on Leagues, because a first visit asks which sort is fastest; Explorer's single class, size, and pattern answer a narrower question. On a phone, each view shows its ranking, matrix, or chart in the first screen; explanations are one sentence, with the rest behind a disclosure.
 - **SortVivo** ranks algorithms in the browser through WebAssembly. Those numbers depend on the viewer's machine. The CI results are the machine-fixed counterpart.
 
 ## Measurement Environment
@@ -48,6 +48,17 @@ The site fits k, the slope of log(time) against log(n), for every algorithm and 
 k also includes fixed costs, cache effects, and branch prediction. For this reason the view shows the slope of each size interval too, not only the fit over all sizes.
 
 The detail chart draws the n, n log n, and n² guides from the selected pattern's smallest size. A pattern that follows a guide lies under it, so the guides are dashed and drawn above the data, and the labels at the right edge are moved apart. Pointing at a line brings that pattern forward; selecting it re-anchors the guides. The chart can be enlarged to the screen.
+
+## Patterns View
+
+The Patterns view splits what the Leagues score combines: speed on Random, and how the other patterns change that time. A quadrant chart places each algorithm on two axes:
+
+- x: time on Random ÷ `DotnetSort`'s time on Random.
+- y: time on the other patterns ÷ the algorithm's own time on Random.
+
+y does not use the reference, so the axes do not repeat each other. An adaptive sort falls below ×1 on y at any speed on Random. By default y is the geometric mean of the other five patterns. The best, the worst, or one pattern can replace it, because a mean can hide one adversarial pattern. As in Stability, a line joins the algorithms that no other algorithm beats on both axes.
+
+A matrix below the chart shows the ratio to Random for each pattern, on a diverging color scale around ×1. Sorted, Reversed, and PipeOrgan repeat one input in every iteration, so their ratios at small sizes include what the branch predictor learned.
 
 ## Data Retention
 
