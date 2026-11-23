@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generated": "2026-11-22T20:28:22Z",
+  "generated": "2026-11-23T06:01:11Z",
   "latest": "20261122T2028Z-20b1610",
   "runs": [
     {
@@ -10,6 +10,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/29228570923",
       "cpu": "AMD EPYC 7763 2.45GHz",
+      "isa": "x86-64-v3",
       "file": "runs/20260713T0651Z-readme.json",
       "cases": 1495
     },
@@ -20,6 +21,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/29234215979",
       "cpu": "AMD EPYC 7763 2.45GHz",
+      "isa": "x86-64-v3",
       "file": "runs/20260713T0839Z-readme.json",
       "cases": 1495
     },
@@ -30,6 +32,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/29342864381",
       "cpu": "AMD EPYC 7763 2.78GHz",
+      "isa": "x86-64-v3",
       "file": "runs/20260714T1526Z-readme.json",
       "cases": 1495
     },
@@ -40,6 +43,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/30269084385",
       "cpu": "AMD EPYC 7763 2.45GHz",
+      "isa": "x86-64-v3",
       "file": "runs/20260727T1512Z-readme.json",
       "cases": 1555
     },
@@ -50,6 +54,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/30279363441",
       "cpu": "AMD EPYC 7763 2.45GHz",
+      "isa": "x86-64-v3",
       "file": "runs/20260727T1604Z-readme.json",
       "cases": 1345
     },
@@ -60,6 +65,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/30700719933",
       "cpu": "AMD EPYC 9V74 2.60GHz",
+      "isa": "x86-64-v4",
       "file": "runs/20260801T1320Z-readme.json",
       "cases": 1410
     },
@@ -70,6 +76,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/30760616046",
       "cpu": "AMD EPYC 9V74 2.60GHz",
+      "isa": "x86-64-v3",
       "file": "runs/20260802T1831Z-readme.json",
       "cases": 1752
     },
@@ -80,6 +87,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/30761537820",
       "cpu": "AMD EPYC 9V74 2.60GHz",
+      "isa": "x86-64-v3",
       "file": "runs/20260802T1855Z-readme.json",
       "cases": 1752
     },
@@ -90,6 +98,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/30784297297",
       "cpu": "AMD EPYC 9V74 2.60GHz",
+      "isa": "x86-64-v3",
       "file": "runs/20260803T0441Z-readme.json",
       "cases": 1752
     },
@@ -100,6 +109,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/30830296658",
       "cpu": "AMD EPYC 9V74 2.87GHz",
+      "isa": "x86-64-v3",
       "file": "runs/20260803T1620Z-readme.json",
       "cases": 1776
     },
@@ -110,6 +120,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/43912034337",
       "cpu": "AMD EPYC 9V45 4.27GHz",
+      "isa": "x86-64-v4",
       "file": "runs/20261116T1713Z-readme.json",
       "cases": 1908
     },
@@ -120,6 +131,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/44135744703",
       "cpu": "AMD EPYC 9V74 3.69GHz",
+      "isa": "x86-64-v4",
       "file": "runs/20261117T1744Z-readme.json",
       "cases": 1956
     },
@@ -130,6 +142,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/44803469267",
       "cpu": "AMD EPYC 9V74 3.69GHz",
+      "isa": "x86-64-v4",
       "file": "runs/20261120T1955Z-readme.json",
       "cases": 2124
     },
@@ -140,6 +153,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/44882177098",
       "cpu": "AMD EPYC 9V74 3.69GHz",
+      "isa": "x86-64-v4",
       "file": "runs/20261121T0826Z-readme.json",
       "cases": 2124
     },
@@ -150,6 +164,7 @@
       "commit": null,
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/44978772219",
       "cpu": "AMD EPYC 9V74 3.67GHz",
+      "isa": "x86-64-v4",
       "file": "runs/20261122T0320Z-readme.json",
       "cases": 2244
     },
@@ -160,6 +175,7 @@
       "commit": "30d5b6b293c94f0be6877692eef327333f45e856",
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/44984332332",
       "cpu": "AMD EPYC 9V74 3.69GHz",
+      "isa": "x86-64-v4",
       "file": "runs/20261122T0443Z-30d5b6b.json",
       "cases": 2640
     },
@@ -170,6 +186,7 @@
       "commit": "e8bc2f298e221dfeb0f9eb307c3c544ce74124b7",
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/45002371533",
       "cpu": "AMD EPYC 9V74 3.59GHz",
+      "isa": "x86-64-v4",
       "file": "runs/20261122T0854Z-e8bc2f2.json",
       "cases": 2640
     },
@@ -180,6 +197,7 @@
       "commit": "20b1610e00a27195657b2ac303ceafd3ef0c97ef",
       "runUrl": "https://github.com/guitarrapc/SortAlgorithms/actions/runs/45053462105",
       "cpu": "AMD EPYC 9V74 2.86GHz",
+      "isa": "x86-64-v3",
       "file": "runs/20261122T2028Z-20b1610.json",
       "cases": 4776
     }
