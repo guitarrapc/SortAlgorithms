@@ -10,9 +10,12 @@
 /// Each iteration runs <see cref="SortBuffers.LargeInvocationsPerIteration"/> invocations instead of 64, since one sort of a
 /// large input already takes milliseconds. The sizes start above those of the other classes, so the site never ranks
 /// the same algorithm twice at one size. A new algorithm that is not quadratic on any pattern gets a method here too.
+/// <para>
+/// DotnetSort is not marked as the baseline, and the class has no rank column: with this many cases, the ratio and rank
+/// columns make the BenchmarkDotNet summary take longer than the measurement. The site divides by DotnetSort itself.
+/// </para>
 /// </remarks>
 [MemoryDiagnoser]
-[RankColumn]
 [InvocationCount(SortBuffers.LargeInvocationsPerIteration)]
 public class ScalingBenchmark
 {
@@ -34,7 +37,7 @@ public class ScalingBenchmark
     [IterationSetup]
     public void IterationSetup() => _buffers.Reset();
 
-    [Benchmark(Baseline = true)]
+    [Benchmark]
     public void DotnetSort()
     {
         _buffers.Next().AsSpan().Sort();

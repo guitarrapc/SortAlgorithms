@@ -1,128 +1,38 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
-if (args.Length < 3)
+// The README keeps a summary only; the benchmark site holds every case, and the workflow run's
+// artifacts hold the BenchmarkDotNet tables.
+if (args.Length < 2)
 {
-    Console.Error.WriteLine("Usage: UpdateBenchmarkReadme.cs <artifacts-dir> <readme-path> <workflow-run-url> [--run <run.json> --image-dir <dir> --site-url <url>]");
+    Console.Error.WriteLine("Usage: UpdateBenchmarkReadme.cs <readme-path> <workflow-run-url> --run <run.json> [--image-dir <dir>] [--site-url <url>]");
     Environment.Exit(1);
 }
 
-var artifactsDir = args[0];
-var readmePath = args[1];
-var runUrl = args[2];
+var readmePath = args[0];
+var runUrl = args[1];
 var options = new Dictionary<string, string>(StringComparer.Ordinal);
-for (var i = 3; i + 1 < args.Length; i += 2)
+for (var i = 2; i + 1 < args.Length; i += 2)
 {
     options[args[i].TrimStart('-')] = args[i + 1];
+}
+if (!options.TryGetValue("run", out var runJson))
+{
+    Console.Error.WriteLine("--run <run.json> is required: the summary is built from the run file written by BenchmarkData.cs.");
+    Environment.Exit(1);
 }
 
 const string StartMarker = "<!-- BENCHMARK_START -->";
 const string EndMarker = "<!-- BENCHMARK_END -->";
 
-var summary = "";
-if (options.TryGetValue("run", out var runJson))
-{
-    var imageDir = options.GetValueOrDefault("image-dir", ".github/images/benchmark");
-    var siteUrl = options.GetValueOrDefault("site-url", "");
-    var readmeDir = Path.GetDirectoryName(Path.GetFullPath(readmePath))!;
-    summary = BenchmarkSummary.Build(runJson, imageDir, Path.GetRelativePath(readmeDir, Path.GetFullPath(imageDir)).Replace('\\', '/'), siteUrl);
-}
-
-var section = summary + BuildBenchmarkSection(artifactsDir, runUrl);
+var imageDir = options.GetValueOrDefault("image-dir", ".github/images/benchmark");
+var siteUrl = options.GetValueOrDefault("site-url", "");
+var readmeDir = Path.GetDirectoryName(Path.GetFullPath(readmePath))!;
+var section = BenchmarkSummary.Build(runJson, imageDir, Path.GetRelativePath(readmeDir, Path.GetFullPath(imageDir)).Replace('\\', '/'), siteUrl, runUrl);
 var readme = File.ReadAllText(readmePath);
 var updated = ReplaceMarkedSection(readme, StartMarker, EndMarker, section);
 File.WriteAllText(readmePath, updated, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-
-static string BuildBenchmarkSection(string artifactsDir, string runUrl)
-{
-    var reportFiles = Directory
-        .EnumerateFiles(artifactsDir, "*-report-*.md", SearchOption.AllDirectories)
-        .Select(path => new ReportFile(path))
-        .Where(report => report.Key is not null)
-        .GroupBy(report => report.Key!)
-        .Select(group => group.OrderBy(report => report.PreferGitHub).First())
-        .OrderBy(report => report.Key, StringComparer.Ordinal)
-        .ToList();
-
-    var builder = new StringBuilder();
-    builder.AppendLine("<details>");
-    builder.AppendLine($"<summary>Benchmark results ({DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC)</summary>");
-    builder.AppendLine();
-    builder.AppendLine($"Workflow run: {runUrl}");
-    builder.AppendLine();
-
-    if (reportFiles.Count == 0)
-    {
-        builder.AppendLine("_No benchmark report files found in artifacts._");
-    }
-    else
-    {
-        foreach (var report in reportFiles)
-        {
-            // Its table alone would push the README past the size GitHub renders.
-            if (report.Key == "ScalingBenchmark")
-            {
-                builder.AppendLine($"### {report.Title}");
-                builder.AppendLine();
-                builder.AppendLine("The table is not listed here because of its length. The results are on the benchmark site (category Scaling) and in the artifacts of the workflow run.");
-                builder.AppendLine();
-                continue;
-            }
-            AppendReport(builder, report);
-        }
-    }
-
-    builder.AppendLine("</details>");
-    return builder.ToString().TrimEnd() + Environment.NewLine;
-}
-
-static void AppendReport(StringBuilder builder, ReportFile report)
-{
-    builder.AppendLine($"### {report.Title}");
-    builder.AppendLine();
-
-    var lines = File.ReadAllLines(report.FilePath);
-    // The header ends where the result table begins. Its line count varies with the
-    // BenchmarkDotNet version (0.16 added a "Memory:" line) and with the job count.
-    var machineInfo = lines
-        .TakeWhile(static line => !line.Contains('|', StringComparison.Ordinal))
-        .Where(static line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("```", StringComparison.Ordinal))
-        .ToList();
-
-    if (machineInfo.Count > 0)
-    {
-        builder.AppendLine("```");
-        foreach (var line in machineInfo)
-        {
-            builder.AppendLine(line);
-        }
-        builder.AppendLine("```");
-        builder.AppendLine();
-    }
-
-    foreach (var tableLine in ExtractTableLines(lines))
-    {
-        builder.AppendLine(tableLine);
-    }
-
-    builder.AppendLine();
-}
-
-static IEnumerable<string> ExtractTableLines(string[] lines)
-{
-    if (lines.Any(static line => line.StartsWith('|')))
-    {
-        return lines.Where(static line => line.StartsWith('|'));
-    }
-
-    return lines
-        .Select(static line => line.TrimStart())
-        .Where(static line => line.Contains('|', StringComparison.Ordinal))
-        .Select(static line => line.StartsWith('|') ? line : "| " + line)
-        .Select(static line => line.StartsWith("| |", StringComparison.Ordinal) ? "|" + line[2..] : line);
-}
 
 static string ReplaceMarkedSection(string readme, string startMarker, string endMarker, string section)
 {
@@ -139,30 +49,8 @@ static string ReplaceMarkedSection(string readme, string startMarker, string end
     return before + Environment.NewLine + section + Environment.NewLine + after;
 }
 
-internal sealed partial class ReportFile(string filePath)
-{
-    private static readonly Regex NameRegex = new(
-        @"SortAlgorithm\.Benchmark\.([^/\\]+)-report-(github|default)\.md$",
-        RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
-
-    public string FilePath { get; } = filePath;
-
-    public string? Key { get; } = ExtractKey(filePath);
-
-    public bool PreferGitHub { get; } = filePath.Contains("-report-github.md", StringComparison.Ordinal);
-
-    public string Title => Key ?? System.IO.Path.GetFileName(FilePath);
-
-    private static string? ExtractKey(string filePath)
-    {
-        var fileName = System.IO.Path.GetFileName(filePath);
-        var match = NameRegex.Match(fileName);
-        return match.Success ? match.Groups[1].Value : null;
-    }
-}
-
-// Summary placed above the full tables: a speed-versus-stability chart (SVG, light and dark) and the
-// fastest algorithm per category and input pattern. Reads the run file written by BenchmarkData.cs.
+// The README benchmark section: a speed-versus-stability chart (SVG, light and dark), the fastest algorithm
+// per category and input pattern, and the workflow run. Reads the run file written by BenchmarkData.cs.
 internal static class BenchmarkSummary
 {
     private static readonly string[] Patterns = ["Random", "SingleElementMoved", "Sorted", "Reversed", "PipeOrgan", "ManyDuplicates"];
@@ -184,7 +72,7 @@ internal static class BenchmarkSummary
     private static readonly Theme Light = new("light", "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#2a78d6", "#ffffff");
     private static readonly Theme Dark = new("dark", "#f0efec", "#c3c2b7", "#898781", "#2c2c2a", "#3987e5", "#0d1117");
 
-    public static string Build(string runPath, string imageDir, string imageRel, string siteUrl)
+    public static string Build(string runPath, string imageDir, string imageRel, string siteUrl, string runUrl)
     {
         using var doc = JsonDocument.Parse(File.ReadAllBytes(runPath));
         var root = doc.RootElement;
@@ -210,7 +98,7 @@ internal static class BenchmarkSummary
         var sb = new StringBuilder();
         if (siteUrl.Length > 0)
         {
-            sb.AppendLine($"Interactive results: {siteUrl} (rankings per size, scaling exponents, run-to-run stability, history).");
+            sb.AppendLine($"Interactive results: {siteUrl} (rankings per size, chosen algorithms compared across sizes, scaling exponents, run-to-run stability, history).");
             sb.AppendLine();
         }
         sb.AppendLine("<picture>");
@@ -245,6 +133,9 @@ internal static class BenchmarkSummary
             sb.AppendLine();
         }
         sb.AppendLine();
+        var stamp = root.TryGetProperty("timestamp", out var ts) && ts.GetString() is { } t ? DateTime.Parse(t, Inv, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal).ToString("yyyy-MM-dd HH:mm", Inv) + " UTC" : "";
+        var cpu = root.TryGetProperty("environment", out var env) && env.TryGetProperty("cpu", out var c) ? c.GetString() ?? "" : "";
+        sb.AppendLine($"Measured{(stamp.Length > 0 ? $" {stamp}" : "")}{(cpu.Length > 0 ? $" on {cpu}" : "")} in [workflow run]({runUrl}). The full BenchmarkDotNet tables are in that run's artifacts.");
         return sb.ToString();
     }
 

@@ -32,7 +32,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-24.04
-    # ScalingBenchmark (2^14 to 2^20 elements) takes most of a full run; the limit leaves room for a slower runner.
+    # Measurement takes about 80 min of a full run, 53 of them in ScalingBenchmark (2026-11-22). The limit leaves room for a slower runner.
     timeout-minutes: 180
     steps:
       - name: CPU Info
@@ -133,7 +133,6 @@ jobs:
       - name: Update README benchmark section
         run: |
           dotnet run --file .github/scripts/UpdateBenchmarkReadme.cs -- \
-            artifacts \
             README.md \
             "${RUN_URL}" \
             --run "${RUNNER_TEMP}/run.json" \

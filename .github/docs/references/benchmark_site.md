@@ -49,8 +49,8 @@ dotnet run --file .github/scripts/BenchmarkData.cs -- import-readme --repo . --o
 # runs/*.json -> index.json + history.json
 dotnet run --file .github/scripts/BenchmarkData.cs -- index --data out/data
 
-# README summary + SVG charts + full tables
-dotnet run --file .github/scripts/UpdateBenchmarkReadme.cs -- BenchmarkDotNet.Artifacts/results README.md <run-url> --run out/run.json --image-dir .github/images/benchmark --site-url https://guitarrapc.github.io/SortAlgorithms/
+# README summary + SVG charts (no BenchmarkDotNet tables)
+dotnet run --file .github/scripts/UpdateBenchmarkReadme.cs -- README.md <run-url> --run out/run.json --image-dir .github/images/benchmark --site-url https://guitarrapc.github.io/SortAlgorithms/
 ```
 
 `convert` reads only benchmarks that have `Size` and `Pattern` parameters. It maps each benchmark method to an algorithm type through the `SortAlgorithm.Algorithms.<Type>.` call in the method body. It then reads Family, Stable, In-place, Best case, Average case, and Worst case from that type's Performance Characteristics.
@@ -63,7 +63,8 @@ dotnet run --file .github/scripts/UpdateBenchmarkReadme.cs -- BenchmarkDotNet.Ar
 - Algorithms that are not quadratic should be measured up to 8192, so that they enter the largest league.
 - An algorithm that is not quadratic on any of the six patterns also gets a method in `ScalingBenchmark`, which measures 16384 to 1048576. Before adding one, time a single sort of each pattern at 2^20 elements: a pattern whose time grows about 16-fold per 4-fold size is quadratic, and the algorithm stays out. `SimdQuickSort` stays out for that reason on Sorted, Reversed, and ManyDuplicates.
 - `ScalingBenchmark` overrides the job with `[InvocationCount(SortBuffers.LargeInvocationsPerIteration)]` and builds its pool with the same count. A pool of 64 inputs at 2^20 elements would hold 512 MB, and one sort already takes milliseconds.
-- Its sizes start above every other class, so no league or Explorer table ranks the same algorithm twice at one size. The README omits its table, which alone would push the README past the size GitHub renders.
+- `ScalingBenchmark` marks no method `Baseline = true` and has no `[RankColumn]`. Both make the BenchmarkDotNet summary of a class grow with about the cube of its case count; at 2,136 cases they cost 52 minutes. The converter finds the reference by its method name, so the run file does not need them.
+- Its sizes start above every other class, so no league or Explorer table ranks the same algorithm twice at one size.
 
 ## Data Files
 
