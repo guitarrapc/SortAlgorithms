@@ -149,9 +149,37 @@ export const caseTip = r => `<b>${esc(r.m)}</b> <span class="cat">${esc(r.c)}</s
 // Phone layout, matching the 600px breakpoint in style.css.
 export const narrow = () => matchMedia("(max-width: 600px)").matches;
 // One visible sentence, and the full explanation in a disclosure that starts open only on wide screens.
+// On phones the sentence moves into the disclosure, so the first screen shows the content.
 export function intro(short, ...more) {
-  return `<p class="lead">${short}</p>` + (more.length
-    ? `<details class="more"${matchMedia("(min-width: 761px)").matches ? " open" : ""}><summary>How to read this</summary>${more.map(p => `<p>${p}</p>`).join("")}</details>` : "");
+  return `<p class="lead${more.length ? " sm-hide" : ""}">${short}</p>` + (more.length
+    ? `<details class="more"${matchMedia("(min-width: 761px)").matches ? " open" : ""}><summary>How to read this</summary><p class="sm-only">${short}</p>${more.map(p => `<p>${p}</p>`).join("")}</details>` : "");
+}
+// On phones the filters at the top of a panel fold into one button that names the current choices.
+// A label's data-sum replaces a checked box's text in that line; an empty one leaves the control out.
+// Call after the panel's HTML is in place.
+export function foldFilters(panel) {
+  const fs = [...panel.querySelectorAll(":scope > .filters")];
+  if (!fs.length) return;
+  const bar = document.createElement("div");
+  bar.className = "fbar";
+  bar.innerHTML = `<button type="button" class="fsum" aria-expanded="false"><span class="k">Options</span><span class="v"></span></button><div class="fbody"></div>`;
+  fs[0].before(bar);
+  const [btn, body] = bar.children, v = btn.lastChild;
+  body.append(...fs);
+  const part = c => {
+    const sum = c.closest("[data-sum]")?.dataset.sum;
+    if (sum === "") return null;
+    if (c.matches(".seg")) return c.querySelector('[aria-pressed="true"]')?.textContent.trim();
+    if (c.type === "checkbox") return c.checked && !c.disabled ? sum ?? c.closest("label")?.textContent.trim() : null;
+    if (c.tagName === "SELECT") return c.selectedOptions[0]?.textContent.trim();
+    return c.value ? `“${c.value}”` : null;
+  };
+  const update = () => { v.textContent = [...body.querySelectorAll("select, .seg, input")].map(part).filter(Boolean).join(" · "); };
+  btn.addEventListener("click", () => btn.setAttribute("aria-expanded", String(bar.classList.toggle("open"))));
+  body.addEventListener("change", update);
+  body.addEventListener("input", update);
+  new MutationObserver(update).observe(body, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-pressed"] });
+  update();
 }
 // Charts are drawn at the pixel width of their container, so text stays at its CSS size on every screen.
 export const chartWidth = (host, min = 280, max = 1000) => Math.round(Math.max(min, Math.min(max, host.clientWidth || max)));

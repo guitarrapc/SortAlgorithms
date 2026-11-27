@@ -1,4 +1,4 @@
-import { d3, PATTERNS, fmtT, fmtX, pct, esc, svg, showTip, hideTip, selectEl, seg, bindSeg, loadHistory, caseKey, machineOf, isaName, SER, fmtDate, intro, chartWidth } from "../lib.js";
+import { d3, PATTERNS, fmtT, fmtX, pct, esc, svg, showTip, hideTip, selectEl, seg, bindSeg, loadHistory, caseKey, machineOf, isaName, SER, fmtDate, intro, foldFilters, chartWidth } from "../lib.js";
 
 // One case across all published runs. Runs on different machines (CPU model and instruction set) are not
 // comparable, so lines only connect consecutive runs on the same machine and a vertical rule marks each change.
@@ -24,10 +24,11 @@ export async function render(root, { run, index, params, setParams, onResize }) 
         `÷ ${esc(ref)} divides each run's time by that run's ${esc(ref)} in the same class, size, and pattern. A slower or faster runner then cancels out, so a change that remains comes from the code or from the instruction set.`)}
       <div class="filters" id="h-f"></div>
       <div class="filters">${seg("h-y", "Value", [["t", "Time"], ["ref", "÷ " + ref]], byRef ? "ref" : "t")}</div>
-      <div class="legend">${machines.map((mdl, i) => `<span><span class="sw" style="background:${SER(i)}"></span>${esc(mdl)}</span>`).join("")}<span>vertical rule = machine changed</span></div>
+      <div class="legend after-sm">${machines.map((mdl, i) => `<span><span class="sw" style="background:${SER(i)}"></span>${esc(mdl)}</span>`).join("")}<span>vertical rule = machine changed</span></div>
       <div class="scroll" id="h-c"></div>
       <div class="tbox" id="h-t"></div>
     </section>`;
+  foldFilters(root.querySelector(".panel"));
 
   const drawFilters = () => {
     const ms = [...new Set(parts.filter(q => q[0] === c).map(q => q[1]))].sort();

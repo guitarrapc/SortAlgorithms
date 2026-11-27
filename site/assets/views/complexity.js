@@ -1,4 +1,4 @@
-import { d3, PATTERNS, PATTERN_SHORT, PATTERN_HEAD, fmtT, fmtX, esc, svg, logTicks, showTip, hideTip, fitExponent, selectEl, SER, nudge, anchorBase, sourceUrl, intro, narrow, chartWidth, shortN, SCALING, nearestLine, pickRadius, chartDialog, EXPAND_ICON } from "../lib.js";
+import { d3, PATTERNS, PATTERN_SHORT, PATTERN_HEAD, fmtT, fmtX, esc, svg, logTicks, showTip, hideTip, fitExponent, selectEl, SER, nudge, anchorBase, sourceUrl, intro, foldFilters, narrow, chartWidth, shortN, SCALING, nearestLine, pickRadius, chartDialog, EXPAND_ICON } from "../lib.js";
 
 // Measured scaling exponent k (time ∝ n^k) per algorithm and input pattern, next to the complexity the
 // algorithm's XML documentation states. Reference values depend on the size range, so they are fitted
@@ -33,10 +33,11 @@ export function render(root, { run, params, setParams, onResize }) {
         <div class="fl wide"><span>Fit</span><div class="seg" role="group" id="k-mode"><button type="button" data-v="fit" aria-pressed="${mode === "fit"}">All sizes</button><button type="button" data-v="last" aria-pressed="${mode === "last"}">Last interval only</button></div></div>
       </div>
       <div class="legend" id="k-l"></div>
-      <div id="k-n" class="note"></div>
+      <div id="k-n" class="note after-sm"></div>
       <div class="vscroll" id="k-t" style="max-height:min(460px, 62vh)"></div>
     </section>
     <section class="panel" id="k-d"></section>`;
+  foldFilters(root.querySelector(".panel"));
 
   const sizesFor = c => mode === "fit" ? run.sizesOf(c) : run.sizesOf(c).slice(-2);
   const kOf = (c, m, p) => {

@@ -1,4 +1,4 @@
-import { d3, PATTERNS, PATTERN_SHORT, esc, svg, logTicks, showTip, hideTip, SER, anchorBase, anchorFactor, geo, fmtX, intro, chartWidth, seg, bindSeg, SCALING, homeOf, shortN, nearestLine, pickRadius, chartDialog, EXPAND_ICON, selectEl } from "../lib.js";
+import { d3, PATTERNS, PATTERN_SHORT, esc, svg, logTicks, showTip, hideTip, SER, anchorBase, anchorFactor, geo, fmtX, intro, foldFilters, chartWidth, seg, bindSeg, SCALING, homeOf, shortN, nearestLine, pickRadius, chartDialog, EXPAND_ICON, selectEl } from "../lib.js";
 
 // Chosen algorithms side by side across sizes, one small chart per input pattern, in the form papers use:
 // divided by n log₂ n, an n log n sort is flat, so where each algorithm sits reads directly.
@@ -42,7 +42,7 @@ export function render(root, { run, params, setParams, onResize }) {
       <div class="filters">
         ${seg("c-y", "Scale", Object.entries(METRICS).map(([k, v]) => [k, v.label]), metric).replace('class="fl"', 'class="fl wide"')}
         <div id="c-addw"></div>
-        <label for="c-q">Quick pick<select id="c-q"><option value="">Choose…</option><option value="mix">One per complexity class</option>${homes.filter(c => run.sizesOf(c).length >= 2).map(c => `<option value="${esc(c)}">${esc(c)}: ${MAX} fastest</option>`).join("")}</select></label>
+        <label for="c-q" data-sum="">Quick pick<select id="c-q"><option value="">Choose…</option><option value="mix">One per complexity class</option>${homes.filter(c => run.sizesOf(c).length >= 2).map(c => `<option value="${esc(c)}">${esc(c)}: ${MAX} fastest</option>`).join("")}</select></label>
         <label class="check"><input type="checkbox" id="c-ys"${shared ? " checked" : ""}> One y axis for every pattern</label>
       </div>
       <div class="cmp-chips" id="c-k"></div>
@@ -53,6 +53,7 @@ export function render(root, { run, params, setParams, onResize }) {
         <div class="scroll" id="c-t"></div>
       </details>
     </section>`;
+  foldFilters(root.querySelector(".panel"));
 
   const parts = id => id.split("|");
   const save = () => {
@@ -99,7 +100,7 @@ export function render(root, { run, params, setParams, onResize }) {
 
   const drawControls = () => {
     const full = slots.every(Boolean);
-    root.querySelector("#c-addw").outerHTML = `<label for="c-add" id="c-addw">Add algorithm<select id="c-add"${full ? " disabled" : ""}><option value="">${full ? `${MAX} chosen; remove one first` : "Choose…"}</option>${homes.map(c => {
+    root.querySelector("#c-addw").outerHTML = `<label for="c-add" id="c-addw" data-sum="">Add algorithm<select id="c-add"${full ? " disabled" : ""}><option value="">${full ? `${MAX} chosen; remove one first` : "Choose…"}</option>${homes.map(c => {
       const ms = run.methodsOf(c).filter(m => m !== ref && !slots.includes(c + "|" + m));
       return ms.length ? `<optgroup label="${esc(c)}">${ms.map(m => `<option value="${esc(c + "|" + m)}">${esc(m)}</option>`).join("")}</optgroup>` : "";
     }).join("")}</select></label>`;

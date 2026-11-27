@@ -1,4 +1,4 @@
-import { d3, PATTERNS, PATTERN_SHORT, PATTERN_HEAD, fmtT, fmtX, esc, svg, logTicks, showTip, hideTip, selectEl, geo, leagueSizes as sizesForLeagues, defaultLeague, intro, chartWidth, SCALING, homeOf, KEYED, anchorBase, placeLabels } from "../lib.js";
+import { d3, PATTERNS, PATTERN_SHORT, PATTERN_HEAD, fmtT, fmtX, esc, svg, logTicks, showTip, hideTip, selectEl, geo, leagueSizes as sizesForLeagues, defaultLeague, intro, foldFilters, chartWidth, SCALING, homeOf, KEYED, anchorBase, placeLabels } from "../lib.js";
 
 // How the input pattern changes each algorithm's time. x is the time on Random against the reference. y is the time on the other
 // patterns against the algorithm's own time on Random, so it does not repeat x. x × y is the time on those patterns against the
@@ -50,6 +50,7 @@ export function render(root, { run, params, setParams, onResize }) {
       <div class="filters sm-only">${selectEl("a-s", "Sort by", SORTS, sortKey, "wide")}</div>
       <div class="tbox" id="a-t"></div>
     </section>`;
+  foldFilters(root.querySelector(".panel"));
 
   const yOf = d => d[yMode] ?? d.ratios[yMode];
 

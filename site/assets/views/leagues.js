@@ -1,4 +1,4 @@
-import { d3, PATTERNS, PATTERN_SHORT, fmtX, esc, logTicks, geo, anchorBase, anchorFactor, pct, cvBadge, leagueSizes as sizesForLeagues, defaultLeague, SCALING, homeOf, shortN, intro, KEYED } from "../lib.js";
+import { d3, PATTERNS, PATTERN_SHORT, fmtX, esc, logTicks, geo, anchorBase, anchorFactor, pct, cvBadge, leagueSizes as sizesForLeagues, defaultLeague, SCALING, homeOf, shortN, intro, foldFilters, KEYED } from "../lib.js";
 
 // Overall ranking per size. Each league holds only algorithms measured at that size, so
 // O(n log n) and linear sorts are never ranked against each other at a size too small to separate them.
@@ -26,13 +26,14 @@ export function render(root, { run, params, setParams }) {
       <div class="filters">
         <div class="fl wide"><span>League (n)</span><div class="seg" role="group" id="l-n">${leagueSizes.map(s => `<button type="button" data-v="${s}" aria-pressed="${s === n}"><span class="sm-hide">n = </span>${shortN(s)}</button>`).join("")}</div></div>
         <label class="check"><input type="checkbox" id="l-cmp"${comparisonOnly ? " checked" : ""}> Comparison sorts only</label>
-        <label class="check"><input type="checkbox" id="l-corr"${corrected ? " checked" : ""}${base ? "" : " disabled"}> Correct drift between benchmark classes</label>
+        <label class="check" data-sum="Drift corrected"><input type="checkbox" id="l-corr"${corrected ? " checked" : ""}${base ? "" : " disabled"}> Correct drift between benchmark classes</label>
       </div>
       <div class="legend" id="l-k"></div>
       <div id="l-c"></div>
       <div id="l-more"></div>
       <div id="l-note" class="note"></div>
     </section>`;
+  foldFilters(root.querySelector(".panel"));
 
   const scores = () => {
     const cats = run.categories.filter(c => run.sizesOf(c).includes(n));

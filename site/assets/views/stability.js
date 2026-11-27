@@ -1,4 +1,4 @@
-import { d3, PATTERNS, fmtT, pct, esc, svg, logTicks, showTip, hideTip, caseTip, frontier, selectEl, leagueSizes as sizesForLeagues, defaultLeague, intro, chartWidth, SCALING, homeOf, placeLabels } from "../lib.js";
+import { d3, PATTERNS, fmtT, pct, esc, svg, logTicks, showTip, hideTip, caseTip, frontier, selectEl, leagueSizes as sizesForLeagues, defaultLeague, intro, foldFilters, chartWidth, SCALING, homeOf, placeLabels } from "../lib.js";
 
 // Speed against run-to-run variation for one size league, then the per-iteration measurements
 // behind the CV for one category.
@@ -31,6 +31,7 @@ export function render(root, { run, params, setParams, onResize }) {
       <div class="note" id="s-dn"></div>
       <div class="scroll" id="s-d"></div>
     </section>`;
+  foldFilters(root.querySelector(".panel"));
 
   const drawPareto = () => {
     const n = +root.querySelector("#s-n").value, p = root.querySelector("#s-p").value, hl = root.querySelector("#s-h").value;

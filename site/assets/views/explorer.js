@@ -1,4 +1,4 @@
-import { d3, PATTERNS, fmtT, fmtX, esc, cvBadge, allocBadge, refChip, selectEl, caseKey, intro, defaultLeague, SCALING, homeOf } from "../lib.js";
+import { d3, PATTERNS, fmtT, fmtX, esc, cvBadge, allocBadge, refChip, selectEl, caseKey, intro, foldFilters, defaultLeague, SCALING, homeOf } from "../lib.js";
 
 // Every case of one (category, size, pattern) slice, sortable. "All categories" shows the whole size league.
 // On phones and tablets the table rows become two-line cards and a select replaces the sortable headers.
@@ -22,6 +22,7 @@ export function render(root, { run, params, setParams }) {
       </div>
       <div class="tbox" id="x-t"></div>
     </section>`;
+  foldFilters(root.querySelector(".panel"));
   const f = root.querySelector(".filters");
   let sortKey = "mean", dir = 1;
   const draw = () => {
