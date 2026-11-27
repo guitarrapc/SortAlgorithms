@@ -112,7 +112,7 @@ export function render(root, { run, params, setParams, onResize }) {
     rows.forEach((r, i) => {
       const top = T + i * rowH, cy = top + rowH / 2 + stripY, dv = dev(r).sort((a, b) => a - b);
       const q1 = d3.quantile(dv, 0.25), q3 = d3.quantile(dv, 0.75);
-      const tipOf = ev => showTip(ev, `${caseTip(r)}<br><span class="mono">${r.ms.map(fmtT).join(", ")}</span>`);
+      const tipOf = ev => showTip(ev, `${caseTip(r)}<br><span>${r.ms.map(fmtT).join(", ")}</span>`);
       const g = s.append("g").on("pointermove", tipOf).on("pointerdown", tipOf).on("pointerleave", hideTip);
       g.append("rect").attr("x", 0).attr("y", top).attr("width", W).attr("height", rowH).style("fill", "transparent");
       g.append("text").attr("x", wide ? L - 12 : L).attr("y", wide ? cy + 4 : top + 12).attr("text-anchor", wide ? "end" : "start").attr("class", r.ref ? "t-muted" : "t-ink").text(r.m);
@@ -126,7 +126,7 @@ export function render(root, { run, params, setParams, onResize }) {
           .attr("cx", clipped ? null : x(v)).attr("cy", clipped ? null : cy + ((j % 3) - 1) * 4)
           .style("fill", "var(--s1)").style("stroke", "var(--panel)").style("stroke-width", 1);
       });
-      g.append("text").attr("x", wide ? W - R + 14 : W - 8).attr("y", wide ? cy + 4 : top + 12).attr("text-anchor", wide ? "start" : "end").attr("class", "t-mono").text(`${fmtT(r.mean)} ± ${fmtT(r.sd)} (${pct(r.cv)})`);
+      g.append("text").attr("x", wide ? W - R + 14 : W - 8).attr("y", wide ? cy + 4 : top + 12).attr("text-anchor", wide ? "start" : "end").text(`${fmtT(r.mean)} ± ${fmtT(r.sd)} (${pct(r.cv)})`);
     });
     if (rows.some(r => dev(r).some(v => Math.abs(v) > ext))) {
       s.append("text").attr("x", W - R).attr("y", T + rows.length * rowH + 30).attr("text-anchor", "end").attr("class", "t-muted").text(`▶ beyond ±${Math.round(ext * 100)}%`);

@@ -142,7 +142,7 @@ export function showTip(ev, html) {
   t.style.left = Math.max(8, x) + "px"; t.style.top = Math.max(8, y) + "px";
 }
 export function hideTip() { tip().hidden = true; }
-export const caseTip = r => `<b>${esc(r.m)}</b> <span class="cat">${esc(r.c)}</span><br><span class="mono">n=${r.n} · ${esc(r.p)}</span><br>Mean <b class="mono">${fmtT(r.mean)}</b> ± ${fmtT(r.err)}<br>CV ${cvBadge(r.cv)} · Alloc ${allocBadge(r.alloc)}`;
+export const caseTip = r => `<b>${esc(r.m)}</b> <span class="cat">${esc(r.c)}</span><br><span>n=${r.n} · ${esc(r.p)}</span><br>Mean <b>${fmtT(r.mean)}</b> ± ${fmtT(r.err)}<br>CV ${cvBadge(r.cv)} · Alloc ${allocBadge(r.alloc)}`;
 
 // ---------------------------------------------------------------- layout
 

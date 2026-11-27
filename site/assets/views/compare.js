@@ -159,7 +159,7 @@ export function render(root, { run, params, setParams, onResize }) {
       guide.attr("x1", x(n)).attr("x2", x(n)).style("display", null);
       const rows = ss.map(z => ({ z, q: z.pts.find(q => q.n === n) })).filter(r => r.q).sort((a, b) => a.q.v - b.q.v);
       showTip(ev, `<b>${PATTERN_SHORT[p]} · n = ${n}</b>` + rows.map(({ z, q }) =>
-        `<div class="tr${z.id === on ? " on" : ""}"><i class="ln${z.ref ? " dash" : ""}" style="--c:${z.ref ? "var(--v-muted)" : SER(z.i)}"></i>${esc(z.m)} <b class="mono">${M.fmt(q.v)}</b></div>`).join(""));
+        `<div class="tr${z.id === on ? " on" : ""}"><i class="ln${z.ref ? " dash" : ""}" style="--c:${z.ref ? "var(--v-muted)" : SER(z.i)}"></i>${esc(z.m)} <b>${M.fmt(q.v)}</b></div>`).join(""));
     };
     s.append("rect").attr("class", "hit").attr("x", pad.l).attr("y", pad.t).attr("width", W - pad.l - pad.r).attr("height", H - pad.t - pad.b).style("fill", "transparent")
       .on("pointermove", hover).on("pointerdown", hover).on("click", ev => pin(near(ev) ?? pinned))

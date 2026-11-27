@@ -60,7 +60,7 @@ export function render(root, { run, params, setParams, onResize }) {
     const big = run.allSizes.filter(n => n >= 256 && !run.sizesOf(SCALING).includes(n));
     const sz = mode === "fit" ? big : big.slice(-2), r = refs(sz);
     const ks = ["1.00", r.nl.toFixed(2), r.nl2.toFixed(2), "", "2.00"];
-    root.querySelector("#k-l").innerHTML = `<span>k:</span>` + CLASSES.map((t, i) => `<span><span class="sq kb${i}"></span>${t}${ks[i] ? ` <b class="mono">${ks[i]}</b>` : ""}</span>`).join("") +
+    root.querySelector("#k-l").innerHTML = `<span>k:</span>` + CLASSES.map((t, i) => `<span><span class="sq kb${i}"></span>${t}${ks[i] ? ` <b>${ks[i]}</b>` : ""}</span>`).join("") +
       `<span class="note">for n = ${shortN(sz[0])}–${shortN(sz.at(-1))}</span>`;
   };
   const drawNotes = () => {
@@ -180,7 +180,7 @@ export function render(root, { run, params, setParams, onResize }) {
         if (ev.pointerType !== "touch") setHot(id);
         const rows = series.map(z => ({ z, q: z.pts.find(q => q.n === n) })).filter(r => r.q).sort((a1, b1) => b1.q.t - a1.q.t);
         showTip(ev, `<b>${esc(m)} · n = ${n}</b>` + rows.map(({ z, q }) =>
-          `<div class="tr${z.id === (id ?? p) ? " on" : ""}"><span class="sw" style="background:${SER(z.i)}"></span>${PATTERN_SHORT[z.id]} <b class="mono">${fmtT(q.t)}</b></div>`).join("") +
+          `<div class="tr${z.id === (id ?? p) ? " on" : ""}"><span class="sw" style="background:${SER(z.i)}"></span>${PATTERN_SHORT[z.id]} <b>${fmtT(q.t)}</b></div>`).join("") +
           `<span class="note">Click a line to select its pattern</span>`);
       })
       .on("click", ev => pickPattern(near(ev)))
@@ -258,7 +258,7 @@ export function render(root, { run, params, setParams, onResize }) {
     const td = ev.target.closest("td.c[data-m]");
     if (!td) return hideTip();
     const k = +td.dataset.k, a = algo(td.dataset.m);
-    showTip(ev, `<b>${esc(td.dataset.m)}</b> · ${esc(td.dataset.p)}<br>k = <b class="mono">${k.toFixed(2)}</b> (${CLASSES[kclass(k, edgesOf(sizesFor(td.dataset.c)))]})${a.average ? `<br><span class="mono">Avg ${esc(shortC(a.average))} · Worst ${esc(shortC(a.worst))}</span>` : ""}<br><span class="note">Click for details</span>`);
+    showTip(ev, `<b>${esc(td.dataset.m)}</b> · ${esc(td.dataset.p)}<br>k = <b>${k.toFixed(2)}</b> (${CLASSES[kclass(k, edgesOf(sizesFor(td.dataset.c)))]})${a.average ? `<br><span>Avg ${esc(shortC(a.average))} · Worst ${esc(shortC(a.worst))}</span>` : ""}<br><span class="note">Click for details</span>`);
   });
   table.addEventListener("pointerleave", hideTip);
   root.querySelector("#k-n").addEventListener("click", e => {

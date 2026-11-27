@@ -78,11 +78,11 @@ export function render(root, { run, params, setParams, onResize }) {
     return { list: rows.filter(d => !d.ref && (!comparisonOnly || d.home !== KEYED)), refRow: refs.find(d => d.c === base) ?? refs[0] ?? null };
   };
 
-  const tipOf = d => `<b>${esc(d.m)}</b> <span class="cat">${d.ref ? "reference" : esc(d.home)}</span><br>Random <b class="mono">${fmtT(d.rnd)}</b>` +
+  const tipOf = d => `<b>${esc(d.m)}</b> <span class="cat">${d.ref ? "reference" : esc(d.home)}</span><br>Random <b>${fmtT(d.rnd)}</b>` +
     (d.x != null && !d.ref ? ` · ${fmtX(d.x)} vs ${esc(ref)}` : "") +
-    OTHERS.filter(p => d.ratios[p] != null).map(p => `<div class="tr${p === (PATTERN_SHORT[yMode] ? yMode : null) ? " on" : ""}">${PATTERN_SHORT[p]} <b class="mono">${fmtX(d.ratios[p])}</b>` +
+    OTHERS.filter(p => d.ratios[p] != null).map(p => `<div class="tr${p === (PATTERN_SHORT[yMode] ? yMode : null) ? " on" : ""}">${PATTERN_SHORT[p]} <b>${fmtX(d.ratios[p])}</b>` +
       `${p === d.bestP ? " best" : p === d.worstP ? " worst" : ""}</div>`).join("") +
-    `<div>${esc(Y_LABEL[yMode])} vs ${esc(ref)} on Random <b class="mono">${fmtX(d.x * yOf(d))}</b></div>` +
+    `<div>${esc(Y_LABEL[yMode])} vs ${esc(ref)} on Random <b>${fmtX(d.x * yOf(d))}</b></div>` +
     `<span class="note">Geomean of other patterns: ${fmtX(d.mean)}${d.ref ? "" : " · click to select"}</span>`;
 
   const select = id => {

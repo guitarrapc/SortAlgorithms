@@ -3,9 +3,10 @@
    so each view's main chart or ranking starts in the first screen. */
 :root {
   --bg: #f4f5f2; --panel: #ffffff; --ink: #16191d; --ink-2: #4b5158; --muted: #6f757c; --line: #dcdfdb; --accent: #3a46c2; --accent-soft: #e7e9fb;
-  --font: Inter, "Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
-  /* One type scale for every view. A role keeps its size on every page, and figures in --mono take the size of their role.
+  /* The platform's UI font: SF on Apple devices, Segoe UI on Windows, Noto Sans or Roboto elsewhere. The site loads no font file.
+     system-ui is left out because Windows in a CJK locale maps it to a CJK UI font. */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Roboto, Helvetica, Arial, sans-serif;
+  /* One type scale for every view. A role keeps its size on every page. Figures use the same font with tabular digits (set on body) and the size of their role.
      xs: field labels, table headers, tags, chart text, compact figures. sm: notes, legends, tooltips, table text.
      md: controls. base: body text, the lead and the text behind How to read this, tabs. 2xs: only the phone matrices.
      field: selects and text inputs on phones, where iOS Safari zooms the page into a smaller field on focus. */
@@ -32,7 +33,10 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-body { background: var(--bg); color: var(--ink); font: var(--fs-base)/1.6 var(--font); -webkit-text-size-adjust: 100%; }
+/* Controls take the body font, digits included; later rules set only size, weight, or line height,
+   because the font shorthand would reset font-variant-numeric. */
+button, input, select { font: inherit; line-height: normal; }
+body { background: var(--bg); color: var(--ink); font: var(--fs-base)/1.6 var(--font); font-variant-numeric: tabular-nums; -webkit-text-size-adjust: 100%; }
 a { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -40,8 +44,6 @@ h1, h2, h3 { margin: 0; line-height: 1.3; text-wrap: balance; }
 h2 { font-size: var(--fs-h2); font-weight: 600; }
 h3 { font-size: var(--fs-h3); font-weight: 600; }
 p { margin: 0; }
-code { font-family: var(--mono); font-size: .9em; }
-.mono { font-family: var(--mono); }
 @media (min-width: 601px) { .sm-only { display: none !important; } }
 @media (min-width: 901px) { .md-only { display: none !important; } }
 
@@ -79,20 +81,20 @@ details.more p + p { margin-top: 6px; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end; }
 .filters label, .filters .fl { display: grid; gap: 2px; font-size: var(--fs-xs); color: var(--muted); min-width: 0; }
-select, input[type="search"] { font: var(--fs-md) var(--font); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; max-width: 100%; min-height: 30px; }
+select, input[type="search"] { font-size: var(--fs-md); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; max-width: 100%; min-height: 30px; }
 .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
-.seg button { font: 500 var(--fs-md) var(--font); color: var(--ink-2); background: var(--panel); border: 0; padding: 5px 12px; cursor: pointer; min-height: 30px; }
+.seg button { font-weight: 500; font-size: var(--fs-md); color: var(--ink-2); background: var(--panel); border: 0; padding: 5px 12px; cursor: pointer; min-height: 30px; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
 .check, .filters label.check { display: inline-flex; gap: 6px; align-items: center; font-size: var(--fs-md); color: var(--ink-2); }
 /* foldFilters: above phone width the wrapper takes no box and the filters lay out as before. */
 .fbar, .fbody { display: contents; }
-.fsum { display: none; align-items: center; gap: 8px; width: 100%; min-width: 0; min-height: 34px; padding: 5px 10px; font: var(--fs-md) var(--font); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; text-align: left; cursor: pointer; }
+.fsum { display: none; align-items: center; gap: 8px; width: 100%; min-width: 0; min-height: 34px; padding: 5px 10px; font-size: var(--fs-md); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; text-align: left; cursor: pointer; }
 .fsum .k { flex: none; font-size: var(--fs-xs); color: var(--muted); }
 .fsum .v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fsum::after { content: "▾"; flex: none; color: var(--muted); }
 .fbar.open > .fsum::after { content: "▴"; }
-.btn { display: inline-block; font: 500 var(--fs-md) var(--font); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 5px 12px; cursor: pointer; text-decoration: none; }
+.btn { display: inline-block; font-weight: 500; font-size: var(--fs-md); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 5px 12px; cursor: pointer; text-decoration: none; }
 
 .scroll { overflow-x: auto; min-width: 0; }
 .vscroll { max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
@@ -105,22 +107,22 @@ table.st th { position: sticky; top: 0; background: var(--panel); text-align: le
 table.st th[data-sort] { cursor: pointer; }
 table.st th[data-sort]:hover { color: var(--ink); }
 table.st td { border-bottom: 1px solid var(--line); padding: 4px 8px; white-space: nowrap; }
-table.st td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: var(--fs-sm); }
+table.st td.num { text-align: right; font-size: var(--fs-sm); }
 table.st tr:hover td { background: color-mix(in srgb, var(--s1) 7%, transparent); }
 table.st tr.ref td { color: var(--muted); }
 table.st tr.on td { background: color-mix(in srgb, var(--s1) 9%, transparent); }
 .cat { font-size: var(--fs-xs); color: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; white-space: nowrap; }
 .refchip { font-size: var(--fs-xs); color: var(--muted); border: 1px dashed var(--v-axis); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
-.cv { display: inline-flex; align-items: center; gap: 4px; font: var(--fs-sm) var(--mono); font-variant-numeric: tabular-nums; }
+.cv { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-sm); }
 .cv i { font-style: normal; font-size: var(--fs-xs); }
 .cv.good i { color: var(--good); } .cv.warn i { color: var(--warn); } .cv.crit i { color: var(--crit); }
-.alloc { font: var(--fs-sm) var(--mono); color: var(--ink-2); }
+.alloc { font-size: var(--fs-sm); color: var(--ink-2); }
 .alloc i { font-style: normal; color: var(--good); margin-right: 3px; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-sm); color: var(--ink-2); align-items: center; }
 .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
 .sq { display: inline-block; width: 14px; height: 10px; margin-right: 2px; vertical-align: -1px; border-radius: 2px; }
 .mchips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
-.mchips button { font: var(--fs-sm) var(--font); color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; cursor: pointer; }
+.mchips button { font-size: var(--fs-sm); color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; cursor: pointer; }
 .mchips button[aria-pressed="true"] { color: var(--ink); border-color: currentColor; }
 .twocol { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 .twocol > * { min-width: 0; }
@@ -137,14 +139,14 @@ table.st tr.on td { background: color-mix(in srgb, var(--s1) 9%, transparent); }
 .lg-row { display: grid; grid-template-columns: 28px minmax(0, 17rem) minmax(80px, 1fr) 4.2rem 10.5rem; grid-template-areas: "rk nm bar sc wr" ". det det det det"; align-items: center; column-gap: 10px; padding: 3px 6px; border-radius: 6px; cursor: pointer; }
 .lg-row:hover, .lg-row.open { background: color-mix(in srgb, var(--s1) 7%, transparent); }
 .lg-row.head { cursor: default; background: none; font-size: var(--fs-xs); color: var(--muted); padding-block: 0; }
-.lg-rk { grid-area: rk; text-align: right; font: var(--fs-xs) var(--mono); color: var(--muted); }
+.lg-rk { grid-area: rk; text-align: right; font-size: var(--fs-xs); color: var(--muted); }
 .lg-nm { grid-area: nm; min-width: 0; display: flex; gap: 6px; align-items: baseline; justify-content: space-between; }
 .lg-nm b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lg-bar { grid-area: bar; position: relative; height: 14px; }
 .lg-bar b { position: absolute; left: 0; top: 2px; height: 10px; border-radius: 3px; background: var(--s1); }
 .lg-bar i { position: absolute; top: 0; width: 2px; height: 14px; background: var(--v-ink); }
 .lg-bar.axis { height: 16px; }
-.lg-bar.axis span { position: absolute; transform: translateX(-50%); font: var(--fs-xs) var(--mono); color: var(--v-muted); white-space: nowrap; }
+.lg-bar.axis span { position: absolute; transform: translateX(-50%); font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
 /* The ×1 baseline crosses every row; --one is its position, set on .lg. */
 .lg-bar:not(.axis)::before { content: ""; position: absolute; left: var(--one, 0); top: -3px; bottom: -3px; width: 1px; background: var(--v-muted); }
 /* The axis and the reference row stick below the tabs (--tabs-h, set by app.js) while the list scrolls. */
@@ -157,9 +159,9 @@ table.st tr.on td { background: color-mix(in srgb, var(--s1) 9%, transparent); }
 .legend .sw.bar { width: 14px; height: 8px; border-radius: 2px; background: var(--s1); }
 .legend .sw.tick { width: 2px; height: 12px; border-radius: 0; background: var(--v-ink); vertical-align: -2px; }
 .legend .sw.one { width: 1px; height: 12px; border-radius: 0; background: var(--v-muted); vertical-align: -2px; }
-.lg-sc { grid-area: sc; font: 600 var(--fs-sm) var(--mono); text-align: right; }
-.lg-wr { grid-area: wr; font: var(--fs-xs) var(--mono); color: var(--ink-2); white-space: nowrap; }
-.lg-det { grid-area: det; display: none; flex-wrap: wrap; gap: 4px 12px; font: var(--fs-xs) var(--mono); color: var(--ink-2); padding: 2px 0 4px; }
+.lg-sc { grid-area: sc; font-weight: 600; font-size: var(--fs-sm); text-align: right; }
+.lg-wr { grid-area: wr; font-size: var(--fs-xs); color: var(--ink-2); white-space: nowrap; }
+.lg-det { grid-area: det; display: none; flex-wrap: wrap; gap: 4px 12px; font-size: var(--fs-xs); color: var(--ink-2); padding: 2px 0 4px; }
 .lg-row.open .lg-det { display: flex; }
 
 /* Compare: removable chips that double as the legend, and one small chart per pattern. --c is the series color. */
@@ -212,13 +214,14 @@ html:has(dialog.big[open]) { overflow: hidden; }
 .big-wrap { display: grid; gap: 8px; }
 
 svg.chart { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
-svg.chart text { fill: var(--v-ink-2); font: var(--fs-xs) var(--font); }
+/* d3 axes put font-family="sans-serif" on their group, so chart text names the page font itself. */
+svg.chart text { fill: var(--v-ink-2); font-family: var(--font); font-size: var(--fs-xs); }
 svg.chart .t-ink { fill: var(--v-ink); }
-svg.chart .t-mono { font-family: var(--mono); }
-svg.chart .t-muted { fill: var(--v-muted); }
+/* Chart text uses the page's muted ink: --v-muted is for marks, and as text it falls below 4.5:1 on a light panel. */
+svg.chart .t-muted { fill: var(--muted); }
 svg.chart .grid line { stroke: var(--v-grid); }
 svg.chart .axis path, svg.chart .axis line { stroke: var(--v-axis); }
-svg.chart .axis text { fill: var(--v-muted); font: var(--fs-xs) var(--mono); }
+svg.chart .axis text { fill: var(--muted); }
 svg.chart .axis .domain { display: none; }
 svg.chart .guides path { fill: none; stroke: var(--v-ink-2); stroke-width: 1; stroke-dasharray: 5 4; opacity: .6; }
 svg.chart .guide-l { font-style: italic; }
@@ -230,14 +233,14 @@ table.hm td.l { padding: 0 8px 0 2px; white-space: nowrap; color: var(--ink-2); 
 table.hm td.g { padding: 10px 2px 2px; font-weight: 600; color: var(--ink); }
 table.hm td.g > span:first-child { position: sticky; left: 2px; }
 table.hm .gs { font-weight: 400; font-size: var(--fs-xs); color: var(--muted); margin-left: 8px; }
-table.hm td.c { width: 72px; min-width: 72px; height: 22px; text-align: center; font: var(--fs-xs) var(--mono); border-radius: 3px; cursor: pointer; outline-offset: -2px; }
+table.hm td.c { width: 72px; min-width: 72px; height: 22px; text-align: center; font-size: var(--fs-xs); border-radius: 3px; cursor: pointer; outline-offset: -2px; }
 table.hm td.c.sel { outline: 2px solid var(--v-ink); }
 table.hm td.l[data-m] { cursor: pointer; }
 table.hm td.l[data-m]:hover { color: var(--ink); text-decoration: underline; }
 table.hm td.l.on { color: var(--ink); font-weight: 600; }
 /* min-width: 0 lets the picker shrink in its flex row on a phone; a select is otherwise as wide as its longest option. */
-.pick-m { font: 600 var(--fs-h3) var(--font); min-height: 32px; min-width: 0; max-width: 100%; }
-table.hm td.doc { padding: 0 6px 0 10px; white-space: nowrap; font: var(--fs-xs) var(--mono); color: var(--muted); }
+.pick-m { font-weight: 600; font-size: var(--fs-h3); min-height: 32px; min-width: 0; max-width: 100%; }
+table.hm td.doc { padding: 0 6px 0 10px; white-space: nowrap; font-size: var(--fs-xs); color: var(--muted); }
 .kb0 { background: var(--k0); color: var(--ki0); } .kb1 { background: var(--k1); color: var(--ki1); } .kb2 { background: var(--k2); color: var(--ki2); }
 .kb3 { background: var(--k3); color: var(--ki3); } .kb4 { background: var(--k4); color: var(--ki4); }
 /* Patterns: the quadrant lines, and the adaptivity matrix, whose header sticks below the tabs. */
@@ -248,7 +251,7 @@ table.pa th[data-sort] { cursor: pointer; }
 table.pa th[data-sort]:hover { color: var(--ink); }
 table.pa th.l { text-align: left; padding-left: 2px; }
 table.pa td.c { cursor: default; }
-table.pa td.x { padding: 0 8px; text-align: right; font: var(--fs-xs) var(--mono); color: var(--ink-2); white-space: nowrap; }
+table.pa td.x { padding: 0 8px; text-align: right; font-size: var(--fs-xs); color: var(--ink-2); white-space: nowrap; }
 table.pa td.l .cat { margin-left: 4px; }
 table.pa tr[data-id] { cursor: pointer; }
 table.pa tr[data-id]:hover td.l { color: var(--ink); text-decoration: underline; }
@@ -263,7 +266,7 @@ table.pa tr.ref td.l { color: var(--muted); }
 .dvl.s2 { color: var(--dv-ink-lo); } .dvh.s2 { color: var(--dv-ink-hi); }
 .kchip { display: inline-block; min-width: 3.4em; text-align: center; border-radius: 3px; padding: 0 4px; }
 .docbox { display: grid; gap: 4px; font-size: var(--fs-sm); color: var(--ink-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
-.docbox span { display: inline-block; width: 5.4em; color: var(--muted); font: 500 var(--fs-xs) var(--mono); }
+.docbox span { display: inline-block; width: 5.4em; color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 
 #tip { position: fixed; z-index: 50; pointer-events: none; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; font-size: var(--fs-sm); line-height: 1.5; box-shadow: 0 4px 18px rgba(0, 0, 0, .14); max-width: min(340px, calc(100vw - 16px)); }
 #tip b { font-weight: 600; }
@@ -274,7 +277,7 @@ table.pa tr.ref td.l { color: var(--muted); }
   .md-hide { display: none !important; }
   .lg-row { grid-template-columns: 26px minmax(0, 13rem) minmax(100px, 1fr) 3.8rem 9.8rem; column-gap: 8px; }
   table.st td.chg { white-space: normal; }
-  table.st td.chg .sig { display: block; font: var(--fs-xs)/1.2 var(--font); color: var(--muted); }
+  table.st td.chg .sig { display: block; font-size: var(--fs-xs); line-height: 1.2; color: var(--muted); }
 
   /* Explorer rows as two-line cards up to tablet width, where the full table no longer fits and a
      horizontally scrolling box would stop its header from sticking: rank, name, mean, ratio / bar, CV, allocation. */

@@ -112,7 +112,7 @@ export async function render(root, { run, index, params, setParams, onResize }) 
       line.push(q);
     });
     flush();
-    const tipOf = q => `<b>${esc(fmtDate(q.run.timestamp))}</b><br>${esc(q.model)} · ${esc(q.run.cpu)}<br>${byRef ? `÷ ${esc(ref)} <b class="mono">${fmtX(q.v)}</b> (${fmtT(q.mean)})` : `Mean <b class="mono">${fmtT(q.v)}</b> ± SD ${fmtT(q.s)}`}${q.run.commit ? `<br><span class="mono">${esc(q.run.commit.slice(0, 7))}</span>` : ""}`;
+    const tipOf = q => `<b>${esc(fmtDate(q.run.timestamp))}</b><br>${esc(q.model)} · ${esc(q.run.cpu)}<br>${byRef ? `÷ ${esc(ref)} <b>${fmtX(q.v)}</b> (${fmtT(q.mean)})` : `Mean <b>${fmtT(q.v)}</b> ± SD ${fmtT(q.s)}`}${q.run.commit ? `<br><span>${esc(q.run.commit.slice(0, 7))}</span>` : ""}`;
     pts.forEach(q => {
       const col = SER(machines.indexOf(q.model));
       s.append("line").attr("x1", x(q.i)).attr("x2", x(q.i)).attr("y1", y(q.v - q.s)).attr("y2", y(q.v + q.s)).style("stroke", col).style("stroke-width", 6).style("stroke-opacity", 0.25).style("stroke-linecap", "round");
