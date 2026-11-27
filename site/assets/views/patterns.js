@@ -1,7 +1,8 @@
 import { d3, PATTERNS, PATTERN_SHORT, PATTERN_HEAD, fmtT, fmtX, esc, svg, logTicks, showTip, hideTip, selectEl, geo, leagueSizes as sizesForLeagues, defaultLeague, intro, chartWidth, SCALING, homeOf, KEYED, anchorBase, placeLabels } from "../lib.js";
 
 // How the input pattern changes each algorithm's time. x is the time on Random against the reference. y is the time on the other
-// patterns against the algorithm's own time on Random, so it does not repeat x. The matrix shows y for each pattern.
+// patterns against the algorithm's own time on Random, so it does not repeat x. x × y is the time on those patterns against the
+// reference's time on Random. The matrix shows y for each pattern.
 const OTHERS = PATTERNS.filter(p => p !== "Random");
 const Y_MODES = [["mean", "Geomean of other patterns"], ["best", "Best pattern"], ["worst", "Worst pattern"], ...OTHERS.map(p => [p, PATTERN_SHORT[p]])];
 const Y_LABEL = { mean: "Geomean of other patterns", best: "Best pattern", worst: "Worst pattern", ...PATTERN_SHORT };
@@ -30,7 +31,7 @@ export function render(root, { run, params, setParams, onResize }) {
       <h2>Patterns</h2>
       ${intro(`Speed on Random against the effect of the other patterns. Left of the vertical line: faster than ${esc(ref)} on Random. Below the horizontal line: faster on the other patterns than on Random.`,
         `x: time on Random ÷ ${esc(ref)}'s time on Random, in the same class. y: time on the other patterns ÷ the algorithm's own time on Random. y is their geometric mean, the best, the worst, or one pattern. y does not use ${esc(ref)}, so the axes measure different things.`,
-        "An adaptive sort does less work on input that is partly in order, so it falls below ×1. A sort with an adversarial pattern rises above ×1. The line joins the algorithms that no other algorithm beats on both axes.",
+        `An adaptive sort does less work on input that is partly in order, so it falls below ×1. A sort with an adversarial pattern rises above ×1. x × y is the time on those patterns ÷ ${esc(ref)}'s time on Random. The line joins the algorithms that no other algorithm beats both on Random and on x × y. y alone would favor a sort that is slow on Random, because y divides by that time.`,
         "Sorted, Reversed and PipeOrgan repeat one input in every iteration. At small sizes the branch predictor can learn it, so these patterns can look faster than new input of the same shape.")}
       <div class="filters">
         ${selectEl("q-n", "Size", sizes.map(s => [s, "n = " + s]), n)}
@@ -80,6 +81,7 @@ export function render(root, { run, params, setParams, onResize }) {
     (d.x != null && !d.ref ? ` · ${fmtX(d.x)} vs ${esc(ref)}` : "") +
     OTHERS.filter(p => d.ratios[p] != null).map(p => `<div class="tr${p === (PATTERN_SHORT[yMode] ? yMode : null) ? " on" : ""}">${PATTERN_SHORT[p]} <b class="mono">${fmtX(d.ratios[p])}</b>` +
       `${p === d.bestP ? " best" : p === d.worstP ? " worst" : ""}</div>`).join("") +
+    `<div>${esc(Y_LABEL[yMode])} vs ${esc(ref)} on Random <b class="mono">${fmtX(d.x * yOf(d))}</b></div>` +
     `<span class="note">Geomean of other patterns: ${fmtX(d.mean)}${d.ref ? "" : " · click to select"}</span>`;
 
   const select = id => {
@@ -103,10 +105,11 @@ export function render(root, { run, params, setParams, onResize }) {
     }
     const rp = refRow && refRow.x != null && yOf(refRow) > 0 ? refRow : null;
     const all = rp ? [...pts, rp] : pts;
-    // The frontier: algorithms that no other algorithm beats on both axes.
+    // The frontier: algorithms that no other algorithm beats both on Random (x) and on the time on the y patterns (x × y).
+    const t = d => d.x * yOf(d);
     const front = new Set();
     let low = Infinity;
-    for (const d of [...pts].sort((a, b) => a.x - b.x || yOf(a) - yOf(b))) if (yOf(d) < low) { front.add(d); low = yOf(d); }
+    for (const d of [...pts].sort((a, b) => a.x - b.x || t(a) - t(b))) if (t(d) < low) { front.add(d); low = t(d); }
     const on = d => cls ? d.home === cls : front.has(d);
     const picked = pts.find(d => d.id === sel);
     root.querySelector("#q-l").innerHTML = `<span><span class="sw" style="background:var(--s1)"></span>${cls ? esc(cls) : "Frontier"}</span><span><span class="sw" style="background:var(--v-muted);opacity:.5"></span>Other</span>` +
@@ -136,7 +139,8 @@ export function render(root, { run, params, setParams, onResize }) {
 
     const fl = [...front].sort((a, b) => a.x - b.x);
     const step = [];
-    fl.forEach((d, i) => { step.push([x(d.x), y(yOf(d))]); if (fl[i + 1]) step.push([x(fl[i + 1].x), y(yOf(d))]); });
+    // From each frontier point the line keeps its x × y up to the next point's x, then drops to that point.
+    fl.forEach((d, i) => { step.push([x(d.x), y(yOf(d))]); const e = fl[i + 1]; if (e) step.push([x(e.x), y(t(d) / e.x)]); });
     if (!cls && step.length > 1) s.append("path").attr("d", d3.line()(step)).style("fill", "none").style("stroke", "var(--v-ink-2)").style("stroke-width", 1.5);
     s.append("g").selectAll("circle").data([...pts].sort((a, b) => on(a) - on(b))).join("circle")
       .attr("cx", d => x(d.x)).attr("cy", d => y(yOf(d))).attr("r", d => on(d) ? 5 : 3.6)
