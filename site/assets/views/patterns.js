@@ -3,8 +3,8 @@ import { d3, PATTERNS, PATTERN_SHORT, PATTERN_HEAD, fmtT, fmtX, esc, svg, logTic
 // How the input pattern changes each algorithm's time. x is the time on Random against the reference. y is the time on the other
 // patterns against the algorithm's own time on Random, so it does not repeat x. The matrix shows y for each pattern.
 const OTHERS = PATTERNS.filter(p => p !== "Random");
-const Y_MODES = [["mean", "Mean of the others"], ["best", "Best pattern"], ["worst", "Worst pattern"], ...OTHERS.map(p => [p, PATTERN_SHORT[p]])];
-const Y_LABEL = { mean: "Mean of the other patterns", best: "Best pattern", worst: "Worst pattern", ...PATTERN_SHORT };
+const Y_MODES = [["mean", "Geomean of other patterns"], ["best", "Best pattern"], ["worst", "Worst pattern"], ...OTHERS.map(p => [p, PATTERN_SHORT[p]])];
+const Y_LABEL = { mean: "Geomean of other patterns", best: "Best pattern", worst: "Worst pattern", ...PATTERN_SHORT };
 // At most five characters keep five columns on a phone: two significant digits, no leading zero; the title has the full ratio.
 const fmtR = v => v < 0.001 ? "<.001" : v < 1 ? v.toPrecision(2).replace(/^0/, "") : v < 10 ? v.toFixed(1) : String(Math.round(v));
 // Diverging cell color: blue below ×1 (faster than on Random), red above, full strength at 32 times either way.
@@ -23,7 +23,7 @@ export function render(root, { run, params, setParams, onResize }) {
   let comparisonOnly = params.cmp === "1";
   let sel = params.m || null;
   let sortKey = "mean", dir = 1;
-  const SORTS = [["mean", "Mean of the others"], ["x", `Random vs ${ref}`], ...OTHERS.map(p => [p, PATTERN_SHORT[p]]), ["m", "Name"]];
+  const SORTS = [["mean", "Geomean of other patterns"], ["x", `Random vs ${ref}`], ...OTHERS.map(p => [p, PATTERN_SHORT[p]]), ["m", "Name"]];
 
   root.innerHTML = `
     <section class="panel">
@@ -34,7 +34,7 @@ export function render(root, { run, params, setParams, onResize }) {
         "Sorted, Reversed and PipeOrgan repeat one input in every iteration. At small sizes the branch predictor can learn it, so these patterns can look faster than new input of the same shape.")}
       <div class="filters">
         ${selectEl("q-n", "Size", sizes.map(s => [s, "n = " + s]), n)}
-        ${selectEl("q-y", "y axis", Y_MODES, yMode)}
+        ${selectEl("q-y", "y axis", Y_MODES, yMode, "wide")}
         ${selectEl("q-cls", "Class", [["", "All (label the frontier)"], ...homes.map(c => [c, c])], cls, "wide")}
         <label class="check"><input type="checkbox" id="q-cmp"${comparisonOnly ? " checked" : ""}> Comparison sorts only</label>
       </div>
@@ -80,7 +80,7 @@ export function render(root, { run, params, setParams, onResize }) {
     (d.x != null && !d.ref ? ` · ${fmtX(d.x)} vs ${esc(ref)}` : "") +
     OTHERS.filter(p => d.ratios[p] != null).map(p => `<div class="tr${p === (PATTERN_SHORT[yMode] ? yMode : null) ? " on" : ""}">${PATTERN_SHORT[p]} <b class="mono">${fmtX(d.ratios[p])}</b>` +
       `${p === d.bestP ? " best" : p === d.worstP ? " worst" : ""}</div>`).join("") +
-    `<span class="note">Mean of the others: ${fmtX(d.mean)}${d.ref ? "" : " · click to select"}</span>`;
+    `<span class="note">Geomean of other patterns: ${fmtX(d.mean)}${d.ref ? "" : " · click to select"}</span>`;
 
   const select = id => {
     sel = sel === id ? null : id;
@@ -191,7 +191,7 @@ export function render(root, { run, params, setParams, onResize }) {
       `<td class="x sm-hide">${d.x == null ? "—" : fmtX(d.x)}</td>${OTHERS.map(p => cell(d.ratios[p])).join("")}${cell(d.mean, " sm-hide")}</tr>`;
     const host = root.querySelector("#a-t");
     if (!rows.length && !refRow) { host.innerHTML = `<p class="empty">Nothing is measured at n = ${n}.</p>`; return; }
-    host.innerHTML = `<table class="hm pa"><thead><tr>${th("m", "Algorithm", "l")}${th("x", `Random vs ${esc(ref)}`, "sm-hide")}${OTHERS.map(p => th(p, PATTERN_HEAD[p])).join("")}${th("mean", "Mean", "sm-hide")}</tr></thead>` +
+    host.innerHTML = `<table class="hm pa"><thead><tr>${th("m", "Algorithm", "l")}${th("x", `Random vs ${esc(ref)}`, "sm-hide")}${OTHERS.map(p => th(p, PATTERN_HEAD[p])).join("")}${th("mean", "Geo&shy;mean", "sm-hide")}</tr></thead>` +
       `<tbody>${refRow ? tr(refRow) : ""}${rows.map(tr).join("")}</tbody></table>`;
   };
 

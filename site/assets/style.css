@@ -240,6 +240,12 @@ table.pa tr[data-id] { cursor: pointer; }
 table.pa tr[data-id]:hover td.l { color: var(--ink); text-decoration: underline; }
 table.pa tr.on td.l { color: var(--ink); font-weight: 600; box-shadow: inset 3px 0 var(--accent); padding-left: 6px; }
 table.pa tr.ref td.l { color: var(--muted); }
+/* Above phone width the name column takes what the ratio columns leave and ends in an ellipsis, so the matrix fits its box. */
+@media (min-width: 601px) {
+  table.pa { width: 100%; max-width: 52rem; }
+  table.pa td.l { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (min-width: 601px) and (max-width: 760px) { table.pa td.c { width: 44px; min-width: 44px; } }
 .dvl.s2 { color: var(--dv-ink-lo); } .dvh.s2 { color: var(--dv-ink-hi); }
 .kchip { display: inline-block; min-width: 3.4em; text-align: center; border-radius: 3px; padding: 0 4px; }
 .docbox { display: grid; gap: 4px; font-size: .8rem; color: var(--ink-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
