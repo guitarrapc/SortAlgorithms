@@ -7,8 +7,9 @@
   --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   /* One type scale for every view. A role keeps its size on every page, and figures in --mono take the size of their role.
      xs: field labels, table headers, tags, chart text, compact figures. sm: notes, legends, tooltips, table text.
-     md: controls and the text behind How to read this. base: body text, the lead, tabs. 2xs: only the phone matrices. */
-  --fs-2xs: 10px; --fs-xs: 11px; --fs-sm: 12px; --fs-md: 13px; --fs-base: 14px; --fs-h3: 16px; --fs-title: 18px; --fs-h2: 20px;
+     md: controls. base: body text, the lead and the text behind How to read this, tabs. 2xs: only the phone matrices.
+     field: selects and text inputs on phones, where iOS Safari zooms the page into a smaller field on focus. */
+  --fs-2xs: 10px; --fs-xs: 11px; --fs-sm: 12px; --fs-md: 13px; --fs-base: 14px; --fs-h3: 16px; --fs-title: 18px; --fs-h2: 20px; --fs-field: 16px;
   --v-ink: #0b0b0b; --v-ink-2: #52514e; --v-muted: #898781; --v-grid: #e1e0d9; --v-axis: #c3c2b7; --v-band: rgba(42, 120, 214, .12);
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
   --good: #0ca30c; --warn: #fab219; --crit: #d03b3b;
@@ -66,7 +67,7 @@ main.wrap { padding-block: 20px 40px; display: grid; gap: 18px; }
 main:focus { outline: none; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; scroll-margin-top: 48px; }
 .lead { color: var(--ink-2); max-width: 80ch; }
-details.more { color: var(--ink-2); max-width: 80ch; font-size: var(--fs-md); }
+details.more { color: var(--ink-2); max-width: 80ch; }
 details.more summary { cursor: pointer; color: var(--muted); font-size: var(--fs-sm); width: fit-content; }
 details.more[open] summary { margin-bottom: 4px; }
 details.more p + p { margin-top: 6px; }
@@ -304,7 +305,7 @@ table.pa tr.ref td.l { color: var(--muted); }
   .top-in { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title meta" "pick pick"; gap: 4px 10px; padding-block: 8px 6px; }
   .title { font-size: var(--fs-h3); }
   .meta { text-align: right; white-space: nowrap; }
-  .run-pick select { font-size: var(--fs-sm); }
+  select, input[type="search"] { font-size: var(--fs-field); }
   /* Seven tabs do not fit a phone: they keep their width and the row scrolls. */
   .tabs-in { gap: 0; }
   .tabs a { flex: 1 0 auto; text-align: center; padding: 8px 6px 9px; font-size: var(--fs-md); }
