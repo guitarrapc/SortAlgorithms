@@ -170,7 +170,7 @@ export function render(root, { run, params, setParams, onResize }) {
     for (const l of labels) {
       const into = l.g ?? s;
       if (Math.abs(l.y - l.y0) > 2) into.append("path").attr("class", "leader").attr("d", `M${W - M.r + 4},${l.y0}L${lx - 3},${l.y}`);
-      into.append("text").attr("x", lx).attr("y", l.y + 4).attr("class", l.guide ? "t-muted guide-l" : "t-ink").style("font-weight", l.on ? 600 : null).style("font-size", "10.5px").text(l.t);
+      into.append("text").attr("x", lx).attr("y", l.y + 4).attr("class", l.guide ? "t-muted guide-l" : "t-ink").style("font-weight", l.on ? 600 : null).text(l.t);
     }
     const X = q => x(q.n), Y = q => y(q.t);
     const near = ev => { const [px, py] = d3.pointer(ev, s.node()), { z, d } = nearestLine(series, px, py, X, Y); return d <= pickRadius(ev) ? z.id : null; };

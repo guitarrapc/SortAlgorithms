@@ -129,7 +129,7 @@ export function render(root, { run, params, setParams, onResize }) {
       g.append("text").attr("x", wide ? W - R + 14 : W - 8).attr("y", wide ? cy + 4 : top + 12).attr("text-anchor", wide ? "start" : "end").attr("class", "t-mono").text(`${fmtT(r.mean)} ± ${fmtT(r.sd)} (${pct(r.cv)})`);
     });
     if (rows.some(r => dev(r).some(v => Math.abs(v) > ext))) {
-      s.append("text").attr("x", W - R).attr("y", T + rows.length * rowH + 30).attr("text-anchor", "end").attr("class", "t-muted").style("font-size", "10px").text(`▶ beyond ±${Math.round(ext * 100)}%`);
+      s.append("text").attr("x", W - R).attr("y", T + rows.length * rowH + 30).attr("text-anchor", "end").attr("class", "t-muted").text(`▶ beyond ±${Math.round(ext * 100)}%`);
     }
   };
 

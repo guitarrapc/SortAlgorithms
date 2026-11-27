@@ -70,10 +70,10 @@ export async function render(root, { run, index, params, setParams, onResize }) 
     // Machine changes are labeled left to right, each in the highest row where it overlaps no other label, its rule
     // crosses no label below, and no earlier rule crosses it. A label goes right of its rule, or left where it fits better.
     // A change with no free row keeps its rule without a label; the point colors still name the machine.
-    const ROW = 12, ROWS = 4, changes = [];
+    const ROW = 13, ROWS = 4, changes = [];
     runs.forEach((r, i) => {
       if (i === 0 || machine(i) === machine(i - 1)) return;
-      const xx = (x(i) + x(i - 1)) / 2, text = "→ " + machine(i), tw = text.length * 5.8;
+      const xx = (x(i) + x(i - 1)) / 2, text = "→ " + machine(i), tw = text.length * 6.4;
       const clash = (x0, x1, row) => changes.some(l => l.row >= 0 && ((l.row === row && l.x0 < x1 + 6 && x0 < l.x1 + 6) || (l.row > row && l.x0 <= xx && xx <= l.x1) || (l.row <= row && x0 <= l.xx && l.xx <= x1)));
       const spots = [xx + 4, xx - 4 - tw].filter(x0 => x0 >= 2 && x0 + tw <= W - 2).map(x0 => {
         let row = 0;
@@ -103,7 +103,7 @@ export async function render(root, { run, index, params, setParams, onResize }) 
     changes.forEach(l => {
       const ty = 12 + l.row * ROW;
       s.append("line").attr("x1", l.xx).attr("x2", l.xx).attr("y1", l.text ? ty - 8 : M.t).attr("y2", H - M.b).style("stroke", "var(--v-ink-2)");
-      if (l.text) s.append("text").attr("x", l.x0).attr("y", ty).attr("class", "t-muted").style("font-size", "10px").text(l.text);
+      if (l.text) s.append("text").attr("x", l.x0).attr("y", ty).attr("class", "t-muted").text(l.text);
     });
     let line = [];
     const flush = () => { if (line.length > 1) s.append("path").attr("d", d3.line().x(q => x(q.i)).y(q => y(q.v))(line)).style("fill", "none").style("stroke", SER(machines.indexOf(line[0].model))).style("stroke-width", 2); line = []; };

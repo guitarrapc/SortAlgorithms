@@ -234,7 +234,7 @@ export function placeLabels(s, labels, dots, segs, box) {
   const overlaps = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
   const crosses = (b, [[ax, ay], [bx, by]]) => overlaps(b, { x0: Math.min(ax, bx) - 0.5, x1: Math.max(ax, bx) + 0.5, y0: Math.min(ay, by) - 0.5, y1: Math.max(ay, by) + 0.5 });
   for (const { px, py, text } of labels) {
-    const t = s.append("text").attr("class", "t-ink").style("font-size", "10.5px").text(text);
+    const t = s.append("text").attr("class", "t-ink").text(text);
     const tw = t.node().getComputedTextLength();
     const spots = [];
     for (const dy of [0, -13, 13, -26, 26, -39, 39]) {
